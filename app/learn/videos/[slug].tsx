@@ -23,7 +23,7 @@ function getCategoryColor(category: VideoCategory): string {
     case 'how_to':          return '#e3a7a1';
     case 'research':        return '#c7d7e6';
     case 'education':       return '#f0d68a';
-    default:                return '#9ca3af';
+    default:                return '#6B7280';
   }
 }
 
@@ -49,7 +49,7 @@ export default function VideoPlayerScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.notFound}>
-          <Ionicons name="alert-circle-outline" size={48} color="#9ca3af" />
+          <Ionicons name="alert-circle-outline" size={48} color="#6B7280" />
           <Text style={styles.notFoundTitle}>Video Not Found</Text>
           <Text style={styles.notFoundSubtitle}>
             The requested video could not be found.
@@ -86,7 +86,7 @@ export default function VideoPlayerScreen() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={20} color="#e8e6e3" />
+          <Ionicons name="arrow-back" size={20} color="#2D2D2D" />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
 
@@ -98,12 +98,12 @@ export default function VideoPlayerScreen() {
         >
           <View style={styles.playButtonOuter}>
             <View style={styles.playButtonInner}>
-              <Ionicons name="play" size={32} color="#f7f2ec" />
+              <Ionicons name="play" size={32} color="#2D2D2D" />
             </View>
           </View>
           {video.duration && (
             <View style={styles.durationBadge}>
-              <Ionicons name="time-outline" size={12} color="#e8e6e3" />
+              <Ionicons name="time-outline" size={12} color="#2D2D2D" />
               <Text style={styles.durationText}>{video.duration}</Text>
             </View>
           )}
@@ -137,7 +137,7 @@ export default function VideoPlayerScreen() {
         {video.tags.length > 0 && (
           <View style={styles.tagsSection}>
             <View style={styles.tagsSectionHeader}>
-              <Ionicons name="pricetags-outline" size={14} color="#9ca3af" />
+              <Ionicons name="pricetags-outline" size={14} color="#6B7280" />
               <Text style={styles.tagsSectionTitle}>Tags</Text>
             </View>
             <View style={styles.tagsRow}>
@@ -179,7 +179,7 @@ export default function VideoPlayerScreen() {
           onPress={handleOpenVideo}
           activeOpacity={0.8}
         >
-          <Ionicons name="play-circle-outline" size={20} color="#0f1720" />
+          <Ionicons name="play-circle-outline" size={20} color="#2D2D2D" />
           <Text style={styles.openButtonText}>Watch Video</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -192,7 +192,7 @@ export default function VideoPlayerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1720',
+    backgroundColor: '#2D2D2D',
   },
   scrollView: {
     flex: 1,
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
 
   // ── Player Placeholder ─────────────────────────────────────
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   durationText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
   openInBrowserRow: {
     flexDirection: 'row',
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     letterSpacing: -0.5,
     marginBottom: 16,
     lineHeight: 30,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   },
   descriptionText: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 22,
   },
 
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
   tagsSectionTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   tagsRow: {
     flexDirection: 'row',
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
   tagPillText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
 
   // ── Related Peptides ───────────────────────────────────────
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
   relatedTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
   pillsRow: {
     flexDirection: 'row',
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   openButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0f1720',
+    color: '#2D2D2D',
   },
 
   // ── Not Found ──────────────────────────────────────────────
@@ -405,12 +405,12 @@ const styles = StyleSheet.create({
   notFoundTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     marginTop: 16,
   },
   notFoundSubtitle: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     textAlign: 'center',
     marginTop: 6,
   },
@@ -424,6 +424,6 @@ const styles = StyleSheet.create({
   backButtonPrimaryText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0f1720',
+    color: '#2D2D2D',
   },
 });

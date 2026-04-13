@@ -17,7 +17,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
 }) => {
   if (data.length < 3) {
     return (
-      <Text style={{ color: '#9ca3af', fontSize: 12, textAlign: 'center' }}>
+      <Text style={{ color: '#6B7280', fontSize: 12, textAlign: 'center' }}>
         Need more data
       </Text>
     );

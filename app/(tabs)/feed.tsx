@@ -247,7 +247,7 @@ export default function FeedScreen() {
               <Ionicons
                 name={cat.icon as any}
                 size={14}
-                color={isActive ? '#0f1720' : t.textSecondary}
+                color={isActive ? '#2D2D2D' : t.textSecondary}
               />
               <Text
                 style={[
@@ -350,7 +350,7 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1720',
+    backgroundColor: '#2D2D2D',
   },
   listContent: {
     paddingHorizontal: 20,
@@ -368,14 +368,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#f7f2ec',
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#2D2D2D',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginTop: 4,
   },
   learnButton: {
@@ -422,10 +422,10 @@ const styles = StyleSheet.create({
   filterChipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   filterChipTextActive: {
-    color: '#0f1720',
+    color: '#2D2D2D',
   },
 
   // Item count
@@ -480,13 +480,13 @@ const styles = StyleSheet.create({
   feedTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     lineHeight: 21,
     marginBottom: 6,
   },
   feedSummary: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 19,
     marginBottom: 6,
   },
@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#6B7280',
     textAlign: 'center',
   },
 
@@ -582,11 +582,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
   },
   emptyText: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 19,
     paddingHorizontal: 20,

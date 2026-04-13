@@ -18,7 +18,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       <Ionicons
         name="search-outline"
         size={20}
-        color="#9ca3af"
+        color="#6B7280"
         style={styles.icon}
       />
       <TextInput
@@ -26,7 +26,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor="#6B7280"
         selectionColor="#e3a7a1"
         autoCapitalize="none"
         autoCorrect={false}
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     padding: 0,
   },
 });

@@ -987,7 +987,7 @@ const styles = StyleSheet.create({
   },
   completenessTitle: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.darkText },
   progressBar: {
-    height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.1)',
+    height: 8, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.08)',
     marginTop: Spacing.sm, overflow: 'hidden',
   },
   progressFill: { height: '100%', borderRadius: 4, backgroundColor: Colors.rose },

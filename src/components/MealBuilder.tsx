@@ -374,7 +374,7 @@ export function MealBuilder({ visible, onClose, editMeal }: MealBuilderProps) {
                     )}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
-                    ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.05)' }} />}
+                    ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.04)' }} />}
                   />
                 </View>
               )}
@@ -397,7 +397,7 @@ const s = StyleSheet.create({
     paddingHorizontal: Spacing.lg, paddingTop: 12, paddingBottom: 32,
     minHeight: '85%', maxHeight: '95%',
   },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.15)', alignSelf: 'center', marginBottom: 16 },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(0,0,0,0.10)', alignSelf: 'center', marginBottom: 16 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   title: { fontSize: FontSizes.xl, fontWeight: '800', color: Colors.darkText },
   closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.glassWhite, alignItems: 'center', justifyContent: 'center' },
@@ -427,7 +427,7 @@ const s = StyleSheet.create({
 
   ingredientRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)',
   },
   ingredientImage: { width: 36, height: 36, borderRadius: 8 },
   ingredientEmoji: { fontSize: 20, width: 36, textAlign: 'center' },
@@ -453,7 +453,7 @@ const s = StyleSheet.create({
   totalItem: { alignItems: 'center', flex: 1 },
   totalValue: { fontSize: FontSizes.lg, fontWeight: '800' },
   totalLabel: { fontSize: 10, color: Colors.darkTextSecondary, marginTop: 2 },
-  totalDivider: { width: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.1)' },
+  totalDivider: { width: 1, height: 28, backgroundColor: 'rgba(0,0,0,0.08)' },
 
   // Search overlay
   searchOverlay: {

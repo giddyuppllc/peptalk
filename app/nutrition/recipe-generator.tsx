@@ -114,7 +114,7 @@ function RecipeCard({ recipe, onLog, mealType }: { recipe: GeneratedRecipe; onLo
             </Text>
           </View>
           <View style={[styles.macroPill, { backgroundColor: 'rgba(245, 158, 11, 0.12)' }]}>
-            <Text style={[styles.macroPillText, { color: '#f59e0b' }]}>
+            <Text style={[styles.macroPillText, { color: '#FFBF82' }]}>
               {recipe.macros.fat}g fat
             </Text>
           </View>
@@ -284,7 +284,7 @@ export default function RecipeGeneratorScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Meals by Pepe</Text>
+        <Text style={styles.headerTitle}>Meals by Aimee</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -309,9 +309,9 @@ export default function RecipeGeneratorScreen() {
           >
             <Ionicons name="sparkles" size={28} color="#fff" />
           </LinearGradient>
-          <Text style={styles.introTitle}>Meals by Pepe</Text>
+          <Text style={styles.introTitle}>Meals by Aimee</Text>
           <Text style={styles.introDesc}>
-            Get personalized meal ideas from Pepe based on your macro targets,
+            Get personalized meal ideas from Aimee based on your macro targets,
             dietary preferences, and available ingredients.
           </Text>
         </View>
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: 'rgba(0,0,0,0.05)',
   },
   recipeSubhead: {
     fontSize: FontSizes.sm,

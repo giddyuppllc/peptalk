@@ -137,7 +137,9 @@ export interface StackAnalysis {
 export interface User {
   id: string;
   email: string;
-  name?: string;
+  firstName?: string;
+  lastName?: string;
+  avatarUri?: string;
   savedStacks: string[];
   favoritePeptides: string[];
   isPro: boolean;
@@ -239,7 +241,7 @@ export interface ResearchArticle {
 
 export type ChatRole = 'user' | 'bot';
 
-/** Action button that Pepe can attach to responses for in-app navigation */
+/** Action button that Aimee can attach to responses for in-app navigation */
 export interface BotAction {
   label: string;
   route: string;

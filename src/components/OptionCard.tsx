@@ -61,14 +61,14 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
   labelSelected: {
     color: '#b9cbb6',
   },
   description: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginTop: 4,
   },
 });

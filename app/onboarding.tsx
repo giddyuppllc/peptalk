@@ -1,1140 +1,1090 @@
+/**
+ * Onboarding — 4-screen page-by-page questionnaire.
+ *
+ * Screen 1: Welcome (Get Started / Sign In)
+ * Screen 2: About You (gender, age, goals)
+ * Screen 3: Health Basics (weight, height, activity — optional)
+ * Screen 4: Create Account + Choose Plan
+ */
+
 import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  ScrollView,
-  Switch,
   TextInput,
+  Switch,
   StyleSheet,
   Alert,
-  Image,
+  Dimensions,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { PepTalkCharacter } from '../src/components/PepTalkCharacter';
-import { GradientButton } from '../src/components/GradientButton';
+import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useOnboardingStore } from '../src/store/useOnboardingStore';
 import { useHealthProfileStore } from '../src/store/useHealthProfileStore';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
-import { GlassCard } from '../src/components/GlassCard';
-import { OptionCard } from '../src/components/OptionCard';
-import { useTheme } from '../src/hooks/useTheme';
-import { CATEGORIES } from '../src/constants/categories';
-import { GOAL_OPTIONS } from '../src/constants/goals';
-import { trackOnboardingComplete } from '../src/services/analyticsEvents';
 import { calculateMacros } from '../src/utils/macroCalculator';
 import { useMealStore } from '../src/store/useMealStore';
 import { useProgressGoalsStore } from '../src/store/useProgressGoalsStore';
-import { AgeRange, Ethnicity, Gender, MaritalStatus, ReferralSource, ActivityLevel } from '../src/types';
+import { trackOnboardingComplete } from '../src/services/analyticsEvents';
+import { AgeRange, Gender, ActivityLevel } from '../src/types';
+import { GOAL_OPTIONS } from '../src/constants/goals';
 
-const GENDER_OPTIONS: Gender[] = ['Male', 'Female'];
-const AGE_OPTIONS: AgeRange[] = ['18-29', '30-44', '45-60', '60+'];
-const ETHNICITY_OPTIONS: { value: Ethnicity; label: string }[] = [
-  { value: 'white', label: 'White / Caucasian' },
-  { value: 'black', label: 'Black / African American' },
-  { value: 'hispanic', label: 'Hispanic / Latino' },
-  { value: 'asian', label: 'Asian / Asian American' },
-  { value: 'native_american', label: 'Native American / Alaska Native' },
-  { value: 'pacific_islander', label: 'Pacific Islander / Native Hawaiian' },
-  { value: 'middle_eastern', label: 'Middle Eastern / North African' },
-  { value: 'mixed_other', label: 'Mixed / Other' },
-];
-const MARITAL_OPTIONS: MaritalStatus[] = ['Single', 'Married', 'Other'];
-const REFERRAL_OPTIONS: ReferralSource[] = [
-  'Google / Search',
-  'Social Media',
-  'Podcast / YouTube',
-  'Friend / Referral',
-  'Ad / Sponsored',
-  'Other',
+const { width: SW } = Dimensions.get('window');
+
+// ─── Options ────────────────────────────────────────────────────────────────
+
+const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
+  { value: 'Male', label: 'Male', icon: 'man-outline' },
+  { value: 'Female', label: 'Female', icon: 'woman-outline' },
 ];
 
-const ACTIVITY_LEVELS: { value: ActivityLevel; label: string }[] = [
-  { value: 'sedentary', label: 'Sedentary' },
-  { value: 'light', label: 'Light' },
-  { value: 'moderate', label: 'Moderate' },
-  { value: 'active', label: 'Active' },
-  { value: 'very_active', label: 'Very Active' },
+
+const ACTIVITY_LEVELS: { value: ActivityLevel; label: string; desc: string }[] = [
+  { value: 'sedentary', label: 'Sedentary', desc: 'Little to no exercise' },
+  { value: 'light', label: 'Light', desc: '1-2 days/week' },
+  { value: 'moderate', label: 'Moderate', desc: '3-5 days/week' },
+  { value: 'active', label: 'Active', desc: '6-7 days/week' },
+  { value: 'very_active', label: 'Very Active', desc: 'Athlete / 2x daily' },
 ];
 
-const HEALTH_CONDITIONS = [
-  'Diabetes',
-  'Hypertension',
-  'Thyroid',
-  'Heart Disease',
-  'Autoimmune',
-  'PCOS',
-  'None',
+const PLANS: { tier: 'free' | 'plus' | 'pro'; name: string; price: string; badge?: string; features: string[] }[] = [
+  {
+    tier: 'free', name: 'Free', price: '$0',
+    features: ['Meal & calorie tracking', 'Peptide calculators', 'Exercise library', 'Learn hub'],
+  },
+  {
+    tier: 'plus', name: 'PepTalk+', price: '$9.99/mo', badge: 'POPULAR',
+    features: ['Everything in Free', 'Aimee AI assistant', 'Stack builder', 'Health tracking & integrations'],
+  },
+  {
+    tier: 'pro', name: 'PepTalk Pro', price: '$49.99/mo', badge: 'BEST VALUE',
+    features: ['Everything in Plus', 'Custom AI workouts', 'Meal plans & recipes', 'Health reports & exports'],
+  },
 ];
 
-const STEP_TITLES = [
-  'Welcome',
-  'Your Goals',
-  'About You',
-  'Topics of Interest',
-  'Your Data',
-  'Health Basics',
-  'Create Account',
-  'Choose Your Plan',
-];
+// Colors — gender-neutral until user selects gender
+const ACCENT = '#2D2D2D';       // Clean black (Jamie's "black glass" buttons)
+const ACCENT_LIGHT = '#4A4A4A';
+const SURFACE = '#F7F7F7';      // Neutral warm gray
+const HIGHLIGHT = '#F8A97A';    // Subtle warm pop for selected states
 
-const STEP_HERO_IMAGES: Record<number, string> = {
-  1: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80',
-  2: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&q=80',
-  3: 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=800&q=80',
-  4: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&q=80',
-  5: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80',
-};
+// ─── Component ──────────────────────────────────────────────────────────────
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const { edit } = useLocalSearchParams<{ edit?: string }>();
   const isEditMode = edit === 'true';
-  const t = useTheme();
-  // In edit mode, skip Welcome (0) and start at Goals (1)
+  const isAuthenticated = useAuthStore((st) => st.isAuthenticated);
+  const isComplete = useOnboardingStore((st) => st.isComplete);
+
   const [step, setStep] = useState(isEditMode ? 1 : 0);
 
-  // Health basics state (Step 5)
+  // Auto-route logged-in users after the welcome animation plays
+  React.useEffect(() => {
+    if (step === 0 && isAuthenticated && isComplete && !isEditMode) {
+      const timer = setTimeout(() => {
+        router.replace('/(tabs)');
+      }, 1800); // Let the animation play for 1.8s then auto-route
+      return () => clearTimeout(timer);
+    }
+  }, [step, isAuthenticated, isComplete, isEditMode]);
+
+  // Age (exact)
+  const [selectedAge, setSelectedAge] = useState(0);
+
+  const ageToRange = (age: number): AgeRange => {
+    if (age < 30) return '18-29';
+    if (age < 45) return '30-44';
+    if (age < 61) return '45-60';
+    return '60+';
+  };
+
+  // Health basics
   const [weightLbs, setWeightLbs] = useState('');
   const [heightFeet, setHeightFeet] = useState('');
   const [heightInches, setHeightInches] = useState('');
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>('moderate');
-  const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
 
-  // Account creation state (Step 6)
+  // Account
+  const [accountFirstName, setAccountFirstName] = useState('');
+  const [accountLastName, setAccountLastName] = useState('');
   const [accountEmail, setAccountEmail] = useState('');
   const [accountPassword, setAccountPassword] = useState('');
-  const [accountName, setAccountName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [accountError, setAccountError] = useState('');
-
-  // Plan selection state (Step 7)
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'plus' | 'pro'>('free');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
+  // Stores
   const login = useAuthStore((s) => s.login);
   const setTier = useSubscriptionStore((s) => s.setTier);
   const setMealTargets = useMealStore((s) => s.setTargets);
   const setGoalValue = useProgressGoalsStore((s) => s.setGoalValue);
-
   const {
-    profile,
-    setGender,
-    setAgeRange,
-    setEthnicity,
-    setMaritalStatus,
-    setReferralSource,
-    toggleHealthGoal,
-    toggleInterestCategory,
-    setAcceptedSafety,
-    setDataShareConsent,
-    completeOnboarding,
+    profile, setGender, setAgeRange, toggleHealthGoal,
+    setAcceptedSafety, completeOnboarding,
   } = useOnboardingStore();
+  const { setBodyMetrics, setLifestyle } = useHealthProfileStore();
 
-  const { setBodyMetrics, setLifestyle, addCondition, removeCondition } =
-    useHealthProfileStore();
+  // ── Navigation ────────────────────────────────────────────────────────────
+
+  const totalSteps = 4;
 
   const canContinue = useMemo(() => {
-    if (step === 0) return profile.acceptedSafety;
-    if (step === 1) return profile.healthGoals.length > 0;
-    if (step === 2) return Boolean(profile.gender && profile.ageRange);
-    if (step === 6) return accountEmail.includes('@') && accountPassword.length >= 6 && accountName.length > 0;
+    if (step === 0) return true; // Welcome — always can continue
+    if (step === 1) return Boolean(profile.gender && selectedAge >= 13 && profile.healthGoals.length > 0);
+    if (step === 2) return true; // Health basics is optional
+    if (step === 3) return accountFirstName.length > 0 && accountLastName.length > 0 && accountEmail.includes('@') && accountPassword.length >= 6 && acceptedTerms;
     return true;
-  }, [profile.acceptedSafety, profile.healthGoals.length, profile.ageRange, profile.gender, step, accountEmail, accountPassword, accountName]);
-
-  const saveHealthBasics = () => {
-    const weight = parseFloat(weightLbs);
-    const feet = parseInt(heightFeet, 10);
-    const inches = parseInt(heightInches, 10);
-
-    if (!isNaN(weight) && weight > 0) {
-      setBodyMetrics({ weightLbs: weight });
-    }
-    if (!isNaN(feet) && feet > 0) {
-      const totalInches = feet * 12 + (isNaN(inches) ? 0 : inches);
-      setBodyMetrics({ heightInches: totalInches });
-    }
-
-    setLifestyle({ activityLevel });
-
-    // Sync conditions: remove old, add new
-    const noneSelected = selectedConditions.includes('None');
-    if (!noneSelected) {
-      selectedConditions.forEach((c) => addCondition(c));
-    }
-  };
-
-  const toggleCondition = (condition: string) => {
-    setSelectedConditions((prev) => {
-      if (condition === 'None') {
-        return prev.includes('None') ? [] : ['None'];
-      }
-      const without = prev.filter((c) => c !== 'None');
-      if (without.includes(condition)) {
-        return without.filter((c) => c !== condition);
-      }
-      return [...without, condition];
-    });
-  };
+  }, [step, profile.gender, profile.ageRange, profile.healthGoals.length, accountFirstName, accountLastName, accountEmail, accountPassword]);
 
   const handleNext = async () => {
-    if (!canContinue) {
-      Alert.alert('Missing Info', 'Please complete the required fields to continue.');
+    if (!canContinue) return;
+
+    // Step 0: Accept safety
+    if (step === 0) {
+      setAcceptedSafety(true);
+      setStep(1);
       return;
     }
 
-    // Step 5 → save health basics
-    if (step === 5) {
-      saveHealthBasics();
+    // Step 1: About You — set age range from exact age, then advance
+    if (step === 1) {
+      setAgeRange(ageToRange(selectedAge));
       if (isEditMode) {
-        // In edit mode, save and go back to profile
-        Alert.alert('Profile Updated', 'Your research profile has been saved.', [
+        Alert.alert('Profile Updated', 'Your profile has been saved.', [
           { text: 'OK', onPress: () => router.back() },
         ]);
         return;
       }
-      setStep(6);
+      setStep(2);
       return;
     }
 
-    // Step 6: create account (new users only)
-    if (step === 6) {
-      setAccountError('');
-      await login(accountEmail, 'password123'); // stub login with email
-      setStep(7);
-      return;
-    }
-
-    // Step 7: final — apply plan, auto-calculate macros, go to dashboard
-    if (step === 7) {
-      setTier(selectedPlan);
-
-      // Auto-calculate personalized macro targets from user's stats
-      const bodyMetrics = useHealthProfileStore.getState().profile.bodyMetrics;
-      const lifestyle = useHealthProfileStore.getState().profile.lifestyle;
-      const macros = calculateMacros({
-        weightLbs: bodyMetrics.weightLbs,
-        heightInches: bodyMetrics.heightInches,
-        gender: profile.gender,
-        ageRange: profile.ageRange,
-        activityLevel: lifestyle.activityLevel,
-        goals: profile.healthGoals,
-      });
-      if (macros) {
-        setMealTargets({
-          calories: macros.calories, proteinGrams: macros.proteinGrams,
-          carbsGrams: macros.carbsGrams, fatGrams: macros.fatGrams,
-          fiberGrams: macros.fiberGrams, waterOz: macros.waterOz,
-        });
-        setGoalValue('cal', macros.calories);
-        setGoalValue('pro', macros.proteinGrams);
-        setGoalValue('carb', macros.carbsGrams);
-        setGoalValue('fat', macros.fatGrams);
-        setGoalValue('fiber', macros.fiberGrams);
-        setGoalValue('water', macros.waterOz);
+    // Step 2: Save health basics
+    if (step === 2) {
+      const weight = parseFloat(weightLbs);
+      const feet = parseInt(heightFeet, 10);
+      const inches = parseInt(heightInches, 10);
+      if (!isNaN(weight) && weight > 0) setBodyMetrics({ weightLbs: weight });
+      if (!isNaN(feet) && feet > 0) {
+        setBodyMetrics({ heightInches: feet * 12 + (isNaN(inches) ? 0 : inches) });
       }
-
-      completeOnboarding();
-      trackOnboardingComplete(profile.interestCategories.length);
-      router.replace('/(tabs)');
+      setLifestyle({ activityLevel });
+      setStep(3);
       return;
     }
 
-    if (step < STEP_TITLES.length - 1) {
-      setStep((prev) => prev + 1);
-    }
-  };
+    // Step 3: Create account + set plan + finish
+    if (step === 3) {
+      setAccountError('');
+      try {
+        await login(accountEmail, accountPassword);
+        setTier(selectedPlan);
 
-  const handleSkipHealthBasics = () => {
-    setStep(6); // Skip health basics → go to account creation
+        // Auto-calculate macros
+        const body = useHealthProfileStore.getState().profile.bodyMetrics;
+        const life = useHealthProfileStore.getState().profile.lifestyle;
+        const macros = calculateMacros({
+          weightLbs: body.weightLbs, heightInches: body.heightInches,
+          gender: profile.gender, ageRange: profile.ageRange,
+          activityLevel: life.activityLevel, goals: profile.healthGoals,
+        });
+        if (macros) {
+          setMealTargets({
+            calories: macros.calories, proteinGrams: macros.proteinGrams,
+            carbsGrams: macros.carbsGrams, fatGrams: macros.fatGrams,
+            fiberGrams: macros.fiberGrams, waterOz: macros.waterOz,
+          });
+          setGoalValue('cal', macros.calories);
+          setGoalValue('pro', macros.proteinGrams);
+          setGoalValue('carb', macros.carbsGrams);
+          setGoalValue('fat', macros.fatGrams);
+          setGoalValue('fiber', macros.fiberGrams);
+          setGoalValue('water', macros.waterOz);
+        }
+
+        completeOnboarding();
+        trackOnboardingComplete(0);
+        router.replace('/(tabs)');
+      } catch {
+        setAccountError('Something went wrong. Try again.');
+      }
+    }
   };
 
   const handleBack = () => {
     if (step === 0) return;
-    if (isEditMode && step === 1) {
-      router.back();
-      return;
-    }
-    setStep((prev) => prev - 1);
+    if (isEditMode && step === 1) { router.back(); return; }
+    setStep((s) => s - 1);
   };
 
+  // ── Render ────────────────────────────────────────────────────────────────
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top', 'bottom']}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: t.text }]}>{isEditMode ? 'Edit Profile' : 'Welcome to PepTalk'}</Text>
-          <Text style={[styles.subtitle, { color: t.textSecondary }]}>
-            Your personal health companion
-          </Text>
+    <SafeAreaView style={s.container} edges={['top', 'bottom']}>
+      {/* Progress bar */}
+      {step > 0 && (
+        <View style={s.progressWrap}>
+          <View style={s.progressTrack}>
+            <Animated.View
+              style={[s.progressFill, { width: `${(step / (totalSteps - 1)) * 100}%` }]}
+            />
+          </View>
+          <Text style={s.progressText}>Step {step} of {totalSteps - 1}</Text>
         </View>
+      )}
 
-        <View style={styles.stepHeader}>
-          <Text style={[styles.stepTitle, { color: t.text }]}>{STEP_TITLES[step]}</Text>
-          <View style={[styles.progressBarContainer, { backgroundColor: t.glass }]}>
-            <LinearGradient
-              colors={['#3B82F6', '#06B6D4']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[
-                styles.progressBarFill,
-                { width: `${((step + 1) / STEP_TITLES.length) * 100}%` },
-              ]}
-            />
-          </View>
-        </View>
+      {/* Back button — only on welcome screen (steps 1-3 have footer nav) */}
 
-        {/* Step 0: Welcome */}
-        {step === 0 && (
-          <View style={styles.section}>
-            <View style={styles.characterCenter}>
-              <PepTalkCharacter size={140} animated />
-            </View>
+      {/* ═══════════════════════════════════════════════════════════════════
+          SCREEN 0: WELCOME
+      ═══════════════════════════════════════════════════════════════════ */}
+      {step === 0 && (
+        <View style={s.screenCenter}>
+          {/* Logo — fades in first */}
+          <Animated.View entering={FadeInDown.delay(200).duration(700)} style={s.welcomeLogoWrap}>
+            <Text style={s.welcomeLogo}>PepTalk</Text>
+            <View style={s.welcomeAccentBar} />
+            <Text style={s.welcomeTagline}>Your health. Optimized.</Text>
+          </Animated.View>
 
-            <GlassCard variant="glow" style={styles.welcomeCard}>
-              <Text style={[styles.welcomeTitle, { color: t.text }]}>Hey there!</Text>
-              <Text style={[styles.welcomeText, { color: t.textSecondary }]}>
-                I'm Pepe — your friendly health companion for peptide
-                education, tracking, and personalized insights. Let's get you
-                set up!
-              </Text>
-            </GlassCard>
-
-            <View style={styles.trustRow}>
-              <View style={styles.trustBadge}>
-                <Ionicons name="lock-closed" size={20} color="#3B82F6" />
-                <Text style={[styles.trustText, { color: t.textSecondary }]}>Encrypted data</Text>
-              </View>
-              <View style={styles.trustBadge}>
-                <Ionicons name="cart-outline" size={20} color="#3B82F6" />
-                <Text style={[styles.trustText, { color: t.textSecondary }]}>We never sell</Text>
-              </View>
-              <View style={styles.trustBadge}>
-                <Ionicons name="trash-outline" size={20} color="#3B82F6" />
-                <Text style={[styles.trustText, { color: t.textSecondary }]}>Delete anytime</Text>
-              </View>
-            </View>
-
-            <Text style={[styles.softDisclaimer, { color: t.textMuted }]}>
-              PepTalk is an educational tool only — it does not provide medical
-              advice, diagnose conditions, or recommend treatments. Always
-              consult a licensed healthcare provider for medical decisions.
-            </Text>
-
-            <TouchableOpacity
-              style={styles.loginLink}
-              onPress={() => router.push('/auth')}
-            >
-              <Ionicons name="log-in-outline" size={18} color="#3B82F6" />
-              <Text style={styles.loginLinkText}>Already have an account? Sign In</Text>
-            </TouchableOpacity>
-
-            <GlassCard style={styles.card}>
-              <View style={styles.toggleRow}>
-                <View style={styles.toggleText}>
-                  <Text style={[styles.toggleTitle, { color: t.text }]}>I understand and agree</Text>
-                  <Text style={[styles.toggleSubtitle, { color: t.textSecondary }]}>
-                    I acknowledge PepTalk is for educational purposes only and
-                    does not provide medical advice. I accept full responsibility
-                    for my health decisions.
-                  </Text>
-                </View>
-                <Switch
-                  value={profile.acceptedSafety}
-                  onValueChange={setAcceptedSafety}
-                  trackColor={{
-                    false: t.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
-                    true: 'rgba(59, 130, 246, 0.4)',
-                  }}
-                  thumbColor={profile.acceptedSafety ? '#3B82F6' : '#9ca3af'}
-                />
-              </View>
-            </GlassCard>
-          </View>
-        )}
-
-        {/* Step 1: Health Goals (NEW) */}
-        {step === 1 && (
-          <View style={styles.section}>
-            <Image
-              source={{ uri: STEP_HERO_IMAGES[1] }}
-              style={styles.stepHeroImage}
-              resizeMode="cover"
-            />
-            <GlassCard style={styles.card}>
-              <Text style={[styles.cardTitle, { color: t.text }]}>What are your health objectives?</Text>
-              <Text style={[styles.cardText, { color: t.textSecondary }]}>
-                Select the goals that matter most to you. This helps PepTalk
-                show you relevant peptide research and personalized insights.
-              </Text>
-              <View style={styles.goalGrid}>
-                {GOAL_OPTIONS.map((goal) => {
-                  const selected = profile.healthGoals.includes(goal.value);
-                  return (
-                    <TouchableOpacity
-                      key={goal.value}
-                      style={[
-                        styles.goalChip,
-                        { borderColor: t.glassBorder, backgroundColor: t.glass },
-                        selected && { backgroundColor: goal.color + '25', borderColor: goal.color + '80' },
-                      ]}
-                      onPress={() => toggleHealthGoal(goal.value)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons
-                        name={goal.icon as any}
-                        size={18}
-                        color={selected ? goal.color : t.textSecondary}
-                      />
-                      <Text
-                        style={[
-                          styles.goalChipText,
-                          { color: t.textSecondary },
-                          selected && { color: goal.color },
-                        ]}
-                      >
-                        {goal.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-              {profile.healthGoals.length > 0 && (
-                <Text style={styles.selectedCount}>
-                  {profile.healthGoals.length} goal{profile.healthGoals.length !== 1 ? 's' : ''} selected
-                </Text>
-              )}
-            </GlassCard>
-          </View>
-        )}
-
-        {/* Step 2: Demographics */}
-        {step === 2 && (
-          <View style={styles.section}>
-            <Image
-              source={{ uri: STEP_HERO_IMAGES[2] }}
-              style={styles.stepHeroImage}
-              resizeMode="cover"
-            />
-            <GlassCard style={styles.card}>
-              <Text style={[styles.cardTitle, { color: t.text }]}>Demographics</Text>
-              <Text style={[styles.cardText, { color: t.textSecondary }]}>
-                This helps us personalize research summaries and recommended
-                stacks.
-              </Text>
-
-              <Text style={[styles.groupTitle, { color: t.textSecondary }]}>Gender</Text>
-              <View style={styles.optionStack}>
-                {GENDER_OPTIONS.map((gender) => (
-                  <OptionCard
-                    key={gender}
-                    label={gender}
-                    selected={profile.gender === gender}
-                    onPress={() => setGender(gender)}
-                  />
-                ))}
-              </View>
-
-              <Text style={[styles.groupTitle, { color: t.textSecondary }]}>Age Range</Text>
-              <View style={styles.optionStack}>
-                {AGE_OPTIONS.map((ageRange) => (
-                  <OptionCard
-                    key={ageRange}
-                    label={ageRange}
-                    selected={profile.ageRange === ageRange}
-                    onPress={() => setAgeRange(ageRange)}
-                  />
-                ))}
-              </View>
-
-              <Text style={[styles.groupTitle, { color: t.textSecondary }]}>Background (optional)</Text>
-              <Text style={[styles.groupSubtext, { color: t.textSecondary }]}>
-                Helps us surface research most relevant to your health profile.
-              </Text>
-              <View style={styles.optionStack}>
-                {ETHNICITY_OPTIONS.map((option) => (
-                  <OptionCard
-                    key={option.value}
-                    label={option.label}
-                    selected={profile.ethnicity === option.value}
-                    onPress={() => setEthnicity(option.value)}
-                  />
-                ))}
-              </View>
-
-              <Text style={[styles.groupTitle, { color: t.textSecondary }]}>Marital Status (optional)</Text>
-              <View style={styles.optionStack}>
-                {MARITAL_OPTIONS.map((status) => (
-                  <OptionCard
-                    key={status}
-                    label={status}
-                    selected={profile.maritalStatus === status}
-                    onPress={() => setMaritalStatus(status)}
-                  />
-                ))}
-              </View>
-
-              <Text style={[styles.groupTitle, { color: t.textSecondary }]}>How did you hear about us?</Text>
-              <View style={styles.optionStack}>
-                {REFERRAL_OPTIONS.map((source) => (
-                  <OptionCard
-                    key={source}
-                    label={source}
-                    selected={profile.referralSource === source}
-                    onPress={() => setReferralSource(source)}
-                  />
-                ))}
-              </View>
-            </GlassCard>
-          </View>
-        )}
-
-        {/* Step 3: Topics of Interest */}
-        {step === 3 && (
-          <View style={styles.section}>
-            <Image
-              source={{ uri: STEP_HERO_IMAGES[3] }}
-              style={styles.stepHeroImage}
-              resizeMode="cover"
-            />
-            <GlassCard style={styles.card}>
-              <Text style={[styles.cardTitle, { color: t.text }]}>Topics of Interest</Text>
-              <Text style={[styles.cardText, { color: t.textSecondary }]}>
-                Pick the topics you'd like to explore. You can always update
-                these later in your profile.
-              </Text>
-              <View style={styles.optionStack}>
-                {CATEGORIES.map((category) => (
-                  <OptionCard
-                    key={category.name}
-                    label={category.name}
-                    description={category.description}
-                    selected={profile.interestCategories.includes(
-                      category.name
-                    )}
-                    onPress={() => toggleInterestCategory(category.name)}
-                  />
-                ))}
-              </View>
-            </GlassCard>
-          </View>
-        )}
-
-        {/* Step 4: Your Data */}
-        {step === 4 && (
-          <View style={styles.section}>
-            <Image
-              source={{ uri: STEP_HERO_IMAGES[4] }}
-              style={styles.stepHeroImage}
-              resizeMode="cover"
-            />
-            <GlassCard style={styles.card}>
-              <Text style={[styles.cardTitle, { color: t.text }]}>Your Data, Your Control</Text>
-              <Text style={[styles.cardText, { color: t.textSecondary }]}>
-                All your health data is encrypted and stored locally on your device.
-                PepTalk does not transmit, sell, or share your personal health
-                information with any third party unless you explicitly opt in.
-                You can delete all your data at any time from Profile settings.
-              </Text>
-
-              <View style={styles.toggleRow}>
-                <View style={styles.toggleText}>
-                  <Text style={[styles.toggleTitle, { color: t.text }]}>Anonymous analytics</Text>
-                  <Text style={[styles.toggleSubtitle, { color: t.textSecondary }]}>
-                    Optionally share anonymous usage patterns (which features
-                    are used, screen navigation) to help improve PepTalk. This
-                    data cannot identify you and never includes health info.
-                  </Text>
-                </View>
-                <Switch
-                  value={profile.dataShareConsent}
-                  onValueChange={setDataShareConsent}
-                  trackColor={{
-                    false: t.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
-                    true: 'rgba(59, 130, 246, 0.4)',
-                  }}
-                  thumbColor={profile.dataShareConsent ? '#3B82F6' : '#9ca3af'}
-                />
-              </View>
-            </GlassCard>
-
-            <GlassCard style={styles.card}>
-              <View style={styles.infoRow}>
-                <Ionicons name="lock-closed-outline" size={18} color="#3B82F6" />
-                <Text style={[styles.infoText, { color: t.textSecondary }]}>
-                  Your data stays on your device unless you explicitly opt in
-                  to cloud features. You are always in control.
-                </Text>
-              </View>
-            </GlassCard>
-
-            <GlassCard style={styles.card}>
-              <View style={styles.infoRow}>
-                <Ionicons name="shield-checkmark-outline" size={18} color="#3B82F6" />
-                <Text style={[styles.infoText, { color: t.textSecondary }]}>
-                  By continuing, you agree to our Terms of Service and Privacy
-                  Policy. PepTalk is for educational purposes only — it does not
-                  provide medical advice. You accept responsibility for your own
-                  health decisions.
-                </Text>
-              </View>
-            </GlassCard>
-
-            <GlassCard style={styles.card}>
-              <View style={styles.infoRow}>
-                <Ionicons name="trash-outline" size={18} color="#6b7280" />
-                <Text style={[styles.infoText, { color: t.textSecondary }]}>
-                  You can delete all your data at any time from your Profile.
-                  We will never sell or share your personal health information.
-                </Text>
-              </View>
-            </GlassCard>
-          </View>
-        )}
-
-        {/* Step 5: Health Basics (optional) */}
-        {step === 5 && (
-          <View style={styles.section}>
-            <Image
-              source={{ uri: STEP_HERO_IMAGES[5] }}
-              style={styles.stepHeroImage}
-              resizeMode="cover"
-            />
-            <GlassCard variant="glow" style={styles.card}>
-              <Text style={[styles.cardTitle, { color: t.text }]}>Tell us more about you</Text>
-              <Text style={[styles.cardText, { color: t.textSecondary }]}>
-                This makes your dashboard feel personalized from day one. All
-                fields are optional.
-              </Text>
-
-              <Text style={[styles.groupTitle, { color: t.textSecondary }]}>Weight (lbs)</Text>
-              <TextInput
-                style={[styles.healthInput, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.text }]}
-                value={weightLbs}
-                onChangeText={setWeightLbs}
-                placeholder="e.g. 175"
-                placeholderTextColor={t.placeholder}
-                keyboardType="numeric"
-              />
-
-              <Text style={[styles.groupTitle, { color: t.textSecondary }]}>Height</Text>
-              <View style={styles.heightRow}>
-                <View style={styles.heightField}>
-                  <TextInput
-                    style={[styles.healthInput, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.text }]}
-                    value={heightFeet}
-                    onChangeText={setHeightFeet}
-                    placeholder="Feet"
-                    placeholderTextColor={t.placeholder}
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={styles.heightField}>
-                  <TextInput
-                    style={[styles.healthInput, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.text }]}
-                    value={heightInches}
-                    onChangeText={setHeightInches}
-                    placeholder="Inches"
-                    placeholderTextColor={t.placeholder}
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-
-              <Text style={[styles.groupTitle, { color: t.textSecondary }]}>Activity Level</Text>
-              <View style={styles.optionStack}>
-                {ACTIVITY_LEVELS.map((level) => (
-                  <OptionCard
-                    key={level.value}
-                    label={level.label}
-                    selected={activityLevel === level.value}
-                    onPress={() => setActivityLevel(level.value)}
-                  />
-                ))}
-              </View>
-
-              <Text style={[styles.groupTitle, { color: t.textSecondary }]}>Health Conditions</Text>
-              <Text style={[styles.groupSubtext, { color: t.textSecondary }]}>
-                Select any that apply. This helps personalize safety insights.
-              </Text>
-              <View style={styles.goalGrid}>
-                {HEALTH_CONDITIONS.map((condition) => {
-                  const selected = selectedConditions.includes(condition);
-                  return (
-                    <TouchableOpacity
-                      key={condition}
-                      style={[
-                        styles.goalChip,
-                        { borderColor: t.glassBorder, backgroundColor: t.glass },
-                        selected && {
-                          backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                          borderColor: 'rgba(59, 130, 246, 0.5)',
-                        },
-                      ]}
-                      onPress={() => toggleCondition(condition)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons
-                        name={
-                          condition === 'None'
-                            ? 'checkmark-circle-outline'
-                            : 'medkit-outline'
-                        }
-                        size={18}
-                        color={selected ? '#3B82F6' : t.textSecondary}
-                      />
-                      <Text
-                        style={[
-                          styles.goalChipText,
-                          { color: t.textSecondary },
-                          selected && { color: '#3B82F6' },
-                        ]}
-                      >
-                        {condition}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </GlassCard>
-
-            <TouchableOpacity
-              onPress={handleSkipHealthBasics}
-              style={styles.skipButton}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.skipText, { color: t.textMuted }]}>Skip for now</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Step 6: Create Account */}
-        {step === 6 && (
-          <View style={styles.section}>
-            <GlassCard variant="glow" style={styles.card}>
-              <Text style={[styles.cardTitle, { color: t.text }]}>Create Your Account</Text>
-              <Text style={[styles.cardSubtitle, { color: t.textSecondary }]}>Your data stays private and encrypted on your device.</Text>
-
-              <TextInput
-                style={[styles.accountInput, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.text }]}
-                placeholder="Full name"
-                placeholderTextColor={t.placeholder}
-                value={accountName}
-                onChangeText={setAccountName}
-                autoCapitalize="words"
-              />
-              <TextInput
-                style={[styles.accountInput, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.text }]}
-                placeholder="Email address"
-                placeholderTextColor={t.placeholder}
-                value={accountEmail}
-                onChangeText={(txt) => { setAccountEmail(txt); setAccountError(''); }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              <View style={styles.passwordRow}>
-                <TextInput
-                  style={[styles.accountInput, { flex: 1, marginBottom: 0, backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.text }]}
-                  placeholder="Password (min 6 characters)"
-                  placeholderTextColor={t.placeholder}
-                  value={accountPassword}
-                  onChangeText={setAccountPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity onPress={() => setShowPassword((v) => !v)} style={styles.eyeBtn}>
-                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
-                </TouchableOpacity>
-              </View>
-              {accountError ? <Text style={styles.errorText}>{accountError}</Text> : null}
-            </GlassCard>
-
-            <GlassCard style={{ marginTop: 12 }}>
-              <View style={styles.privacyRow}>
-                <Ionicons name="lock-closed" size={16} color="#3B82F6" />
-                <Text style={[styles.privacyText, { color: t.textMuted }]}>End-to-end encrypted · Never sold · Delete anytime</Text>
-              </View>
-            </GlassCard>
-
-            <TouchableOpacity
-              style={styles.loginLink}
-              onPress={() => router.push('/auth')}
-            >
-              <Ionicons name="log-in-outline" size={18} color="#3B82F6" />
-              <Text style={styles.loginLinkText}>Already have an account? Sign In</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Step 7: Choose Your Plan */}
-        {step === 7 && (
-          <View style={styles.section}>
-            <Text style={[styles.planIntro, { color: t.textSecondary }]}>Start free and upgrade anytime.</Text>
-
-            {([
-              { tier: 'free' as const, name: 'Free', price: '$0', color: '#6b7280', badge: '', features: ['Peptide library (55+ peptides)', 'Dosing & reconstitution calculators', 'Calorie & macro tracking', 'Dose logging & calendar', 'Journal & check-ins', 'Learn hub'] },
-              { tier: 'plus' as const, name: 'PepTalk+', price: '$9.99/mo', color: '#3B82F6', badge: 'Most Popular', features: ['Everything in Free', 'Aimee AI assistant', 'Stack builder', 'Health calendar & tracking', 'Watch & device integrations'] },
-              { tier: 'pro' as const, name: 'PepTalk Pro', price: '$49.99/mo', color: '#F59E0B', badge: 'All Access', features: ['Everything in Plus', 'Workout programs & videos', 'Aimee meal & workout plans', 'Full nutrition tools', 'Health reports & exports'] },
-            ]).map((plan) => (
-              <TouchableOpacity
-                key={plan.tier}
-                onPress={() => setSelectedPlan(plan.tier)}
-                activeOpacity={0.8}
-                style={[styles.planCard, { borderColor: t.glassBorder }, selectedPlan === plan.tier && { borderColor: plan.color, borderWidth: 2 }]}
+          {/* Features — stagger in one by one */}
+          <View style={s.welcomeFeatures}>
+            {[
+              { icon: 'nutrition-outline', title: 'Eat', desc: 'Track meals & macros', color: '#F8A97A', bg: '#F8A97A18' },
+              { icon: 'barbell-outline', title: 'Train', desc: 'Log workouts & progress', color: '#D4A853', bg: '#F4E28520' },
+              { icon: 'flask-outline', title: 'Learn', desc: 'Peptide education & dosing', color: '#E8948E', bg: '#F2B6B118' },
+              { icon: 'heart-outline', title: 'Track', desc: 'Health, sleep & recovery', color: '#8FAA8B', bg: '#A9C4A618' },
+            ].map((f, i) => (
+              <Animated.View
+                key={f.title}
+                entering={FadeInDown.delay(500 + i * 120).duration(500)}
+                style={s.welcomeFeatureRow}
               >
-                <LinearGradient
-                  colors={selectedPlan === plan.tier ? [`${plan.color}22`, 'transparent'] : ['transparent', 'transparent']}
-                  style={styles.planCardInner}
-                >
-                  <View style={styles.planHeader}>
-                    <View>
-                      <Text style={[styles.planName, { color: plan.color }]}>{plan.name}</Text>
-                      <Text style={[styles.planPrice, { color: t.textSecondary }]}>{plan.price}</Text>
-                    </View>
-                    <View style={styles.planRight}>
-                      {plan.badge && (
-                        <View style={[styles.planBadge, { backgroundColor: plan.color }]}>
-                          <Text style={styles.planBadgeText}>{plan.badge}</Text>
-                        </View>
-                      )}
-                      <View style={[styles.planRadio, { borderColor: t.glassBorder }, selectedPlan === plan.tier && { borderColor: plan.color, backgroundColor: plan.color }]}>
-                        {selectedPlan === plan.tier && <Ionicons name="checkmark" size={14} color="#fff" />}
-                      </View>
-                    </View>
-                  </View>
-                  {plan.features.map((f) => (
-                    <View key={f} style={styles.planFeatureRow}>
-                      <Ionicons name="checkmark-circle" size={14} color={plan.color} />
-                      <Text style={[styles.planFeatureText, { color: t.textSecondary }]}>{f}</Text>
-                    </View>
-                  ))}
-                </LinearGradient>
-              </TouchableOpacity>
+                <View style={[s.welcomeFeatureIcon, { backgroundColor: f.bg }]}>
+                  <Ionicons name={f.icon as any} size={22} color={f.color} />
+                </View>
+                <View style={s.welcomeFeatureText}>
+                  <Text style={s.welcomeFeatureTitle}>{f.title}</Text>
+                  <Text style={s.welcomeFeatureDesc}>{f.desc}</Text>
+                </View>
+              </Animated.View>
             ))}
-
-            <Text style={[styles.planFooter, { color: t.textMuted }]}>Cancel anytime. No commitment required.</Text>
           </View>
-        )}
 
-        <View style={styles.navRow}>
-          <TouchableOpacity
-            style={[styles.navButton, styles.backButton, { borderColor: t.glassBorder }]}
-            onPress={handleBack}
-            disabled={step === 0}
-          >
-            <Text style={[styles.backText, { color: t.textSecondary }]}>Back</Text>
-          </TouchableOpacity>
-          <GradientButton
-            label={isEditMode && step === 5 ? 'Save Changes' : step === 6 ? 'Create Account' : step === 7 ? "Let's Go!" : 'Next'}
-            onPress={handleNext}
-            disabled={!canContinue}
-            style={styles.navButton}
-          />
+          {/* CTA — fades up after features */}
+          <Animated.View entering={FadeInUp.delay(1100).duration(500)}>
+            <TouchableOpacity style={s.primaryBtn} onPress={handleNext} activeOpacity={0.85}>
+              <View style={s.blackBtn}>
+                <Text style={s.blackBtnText} numberOfLines={1}>Get Started</Text>
+                <Ionicons name="arrow-forward" size={18} color="#fff" style={{ marginLeft: 8 }} />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={s.signInLink} onPress={() => router.push('/auth')} activeOpacity={0.7}>
+              <Text style={s.signInLinkText}>Already have an account? <Text style={{ color: HIGHLIGHT, fontWeight: '700' }}>Sign In</Text></Text>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Trust badges — fade in last */}
+          <Animated.View entering={FadeInUp.delay(1400).duration(500)} style={s.welcomeTrust}>
+            <View style={s.trustItem}>
+              <Ionicons name="lock-closed" size={16} color="#9CA3AF" />
+              <Text style={s.trustText}>Encrypted</Text>
+            </View>
+            <View style={s.trustItem}>
+              <Ionicons name="shield-checkmark" size={16} color="#9CA3AF" />
+              <Text style={s.trustText}>Private</Text>
+            </View>
+            <View style={s.trustItem}>
+              <Ionicons name="eye-off" size={16} color="#9CA3AF" />
+              <Text style={s.trustText}>No ads</Text>
+            </View>
+            <View style={s.trustItem}>
+              <Ionicons name="gift-outline" size={16} color="#9CA3AF" />
+              <Text style={s.trustText}>Free to start</Text>
+            </View>
+          </Animated.View>
         </View>
-      </ScrollView>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          SCREEN 1: ABOUT YOU
+      ═══════════════════════════════════════════════════════════════════ */}
+      {step === 1 && (
+        <Animated.View entering={FadeIn.duration(400)} style={{ flex: 1 }}>
+          <FlatList
+            data={[1]} // Single item to enable scrolling
+            keyExtractor={() => 'about'}
+            showsVerticalScrollIndicator={false}
+            overScrollMode="never"
+            contentContainerStyle={s.scrollPadding}
+            renderItem={() => (
+              <View>
+                <Text style={s.stepTitle}>About You</Text>
+                <Text style={s.stepSub}>Help us personalize your experience</Text>
+
+                {/* Gender */}
+                <Text style={s.label}>I am</Text>
+                <View style={s.genderRow}>
+                  {GENDER_OPTIONS.map((g) => {
+                    const active = profile.gender === g.value;
+                    return (
+                      <TouchableOpacity
+                        key={g.value}
+                        style={[s.genderCard, active && { borderColor: ACCENT, backgroundColor: `${HIGHLIGHT}15` }]}
+                        onPress={() => setGender(g.value)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name={g.icon as any} size={28} color={active ? ACCENT : '#6B7280'} />
+                        <Text style={[s.genderLabel, active && { color: ACCENT, fontWeight: '700' }]}>{g.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Age */}
+                <Text style={s.label}>Your age</Text>
+                <TextInput
+                  style={s.ageInput}
+                  placeholder="e.g. 30"
+                  placeholderTextColor="#C7C7CC"
+                  value={selectedAge > 0 ? String(selectedAge) : ''}
+                  onChangeText={(val) => {
+                    const num = parseInt(val, 10);
+                    if (!val) setSelectedAge(0);
+                    else if (!isNaN(num) && num >= 0 && num <= 120) setSelectedAge(num);
+                  }}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                />
+
+                {/* Goals */}
+                <Text style={s.label}>What are your goals?</Text>
+                <Text style={s.labelSub}>Select all that apply</Text>
+                <View style={s.chipGrid}>
+                  {GOAL_OPTIONS.map((goal) => {
+                    const active = profile.healthGoals.includes(goal.value);
+                    return (
+                      <TouchableOpacity
+                        key={goal.value}
+                        style={[s.chip, active && { backgroundColor: `${HIGHLIGHT}18`, borderColor: HIGHLIGHT }]}
+                        onPress={() => toggleHealthGoal(goal.value)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[s.chipText, active && { color: ACCENT, fontWeight: '600' }]}>
+                          {goal.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+          />
+          {/* Fixed footer */}
+          <View style={s.footer}>
+            <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7}>
+              <Ionicons name="arrow-back" size={20} color="#6B7280" />
+              <Text style={s.footerBackText}>Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.footerNextBtn, !canContinue && { opacity: 0.4 }]}
+              onPress={handleNext}
+              disabled={!canContinue}
+              activeOpacity={0.85}
+            >
+              <Text style={s.footerNextText}>Continue</Text>
+              <Ionicons name="arrow-forward" size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          SCREEN 2: HEALTH BASICS (optional)
+      ═══════════════════════════════════════════════════════════════════ */}
+      {step === 2 && (
+        <Animated.View entering={FadeIn.duration(400)} style={{ flex: 1 }}>
+          <FlatList
+            data={[1]}
+            keyExtractor={() => 'health'}
+            showsVerticalScrollIndicator={false}
+            overScrollMode="never"
+            contentContainerStyle={s.scrollPadding}
+            keyboardShouldPersistTaps="handled"
+            renderItem={() => (
+              <View>
+                <Text style={s.stepTitle}>Health Basics</Text>
+                <Text style={s.stepSub}>Optional — helps us calculate your targets</Text>
+
+                <Text style={s.label}>Weight (lbs)</Text>
+                <TextInput
+                  style={s.input}
+                  placeholder="e.g. 165"
+                  placeholderTextColor="#9CA3AF"
+                  value={weightLbs}
+                  onChangeText={setWeightLbs}
+                  keyboardType="numeric"
+                />
+
+                <Text style={s.label}>Height</Text>
+                <View style={s.heightRow}>
+                  <View style={{ flex: 1 }}>
+                    <TextInput style={s.input} placeholder="Feet" placeholderTextColor="#9CA3AF" value={heightFeet} onChangeText={setHeightFeet} keyboardType="numeric" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <TextInput style={s.input} placeholder="Inches" placeholderTextColor="#9CA3AF" value={heightInches} onChangeText={setHeightInches} keyboardType="numeric" />
+                  </View>
+                </View>
+
+                <Text style={s.label}>Activity Level</Text>
+                {ACTIVITY_LEVELS.map((al) => {
+                  const active = activityLevel === al.value;
+                  return (
+                    <TouchableOpacity
+                      key={al.value}
+                      style={[s.activityRow, active && { borderColor: ACCENT, backgroundColor: `${HIGHLIGHT}10` }]}
+                      onPress={() => setActivityLevel(al.value)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[s.radio, active && { borderColor: ACCENT }]}>
+                        {active && <View style={[s.radioDot, { backgroundColor: ACCENT }]} />}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.activityLabel, active && { color: ACCENT }]}>{al.label}</Text>
+                        <Text style={s.activityDesc}>{al.desc}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          />
+          <View style={s.footer}>
+            <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7}>
+              <Ionicons name="arrow-back" size={20} color="#6B7280" />
+              <Text style={s.footerBackText}>Back</Text>
+            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity style={s.footerSkipBtn} onPress={() => setStep(3)} activeOpacity={0.7}>
+                <Text style={s.footerSkipText}>Skip</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.footerNextBtn} onPress={handleNext} activeOpacity={0.85}>
+                <Text style={s.footerNextText}>Continue</Text>
+                <Ionicons name="arrow-forward" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Animated.View>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          SCREEN 3: CREATE ACCOUNT + PLAN
+      ═══════════════════════════════════════════════════════════════════ */}
+      {step === 3 && (
+        <Animated.View entering={FadeIn.duration(400)} style={{ flex: 1 }}>
+          <FlatList
+            data={[1]}
+            keyExtractor={() => 'account'}
+            showsVerticalScrollIndicator={false}
+            overScrollMode="never"
+            contentContainerStyle={s.scrollPadding}
+            keyboardShouldPersistTaps="handled"
+            renderItem={() => (
+              <View>
+                <Text style={s.stepTitle}>Create Account</Text>
+                <Text style={s.stepSub}>Almost there!</Text>
+
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  <TextInput style={[s.input, { flex: 1 }]} placeholder="First name" placeholderTextColor="#9CA3AF" value={accountFirstName} onChangeText={setAccountFirstName} />
+                  <TextInput style={[s.input, { flex: 1 }]} placeholder="Last name" placeholderTextColor="#9CA3AF" value={accountLastName} onChangeText={setAccountLastName} />
+                </View>
+                <TextInput style={s.input} placeholder="Email" placeholderTextColor="#9CA3AF" value={accountEmail} onChangeText={setAccountEmail} autoCapitalize="none" keyboardType="email-address" />
+                <View style={s.passwordWrap}>
+                  <TextInput style={[s.input, { flex: 1, marginBottom: 0 }]} placeholder="Password (6+ characters)" placeholderTextColor="#9CA3AF" value={accountPassword} onChangeText={setAccountPassword} secureTextEntry={!showPassword} />
+                  <TouchableOpacity style={s.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
+                    <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#6B7280" />
+                  </TouchableOpacity>
+                </View>
+
+                {!!accountError && <Text style={s.errorText}>{accountError}</Text>}
+
+                <Text style={[s.label, { marginTop: 20 }]}>Choose your plan</Text>
+                {PLANS.map((plan) => {
+                  const active = selectedPlan === plan.tier;
+                  return (
+                    <TouchableOpacity
+                      key={plan.tier}
+                      style={[s.planCard, active && { borderColor: ACCENT, backgroundColor: `${HIGHLIGHT}08` }]}
+                      onPress={() => setSelectedPlan(plan.tier)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={s.planHeader}>
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Text style={s.planName}>{plan.name}</Text>
+                            {plan.badge && (
+                              <View style={[s.planBadge, { backgroundColor: HIGHLIGHT }]}>
+                                <Text style={s.planBadgeText}>{plan.badge}</Text>
+                              </View>
+                            )}
+                          </View>
+                          <Text style={s.planPrice}>{plan.price}</Text>
+                        </View>
+                        <View style={[s.radio, active && { borderColor: ACCENT }]}>
+                          {active && <View style={[s.radioDot, { backgroundColor: ACCENT }]} />}
+                        </View>
+                      </View>
+                      {plan.features.map((f) => (
+                        <View key={f} style={s.planFeatureRow}>
+                          <Ionicons name="checkmark" size={14} color={active ? HIGHLIGHT : '#6B7280'} />
+                          <Text style={[s.planFeatureText, active && { color: '#2D2D2D' }]}>{f}</Text>
+                        </View>
+                      ))}
+                    </TouchableOpacity>
+                  );
+                })}
+
+                {/* Trust icons */}
+                <View style={s.trustRow}>
+                  <View style={s.trustItem}>
+                    <Ionicons name="lock-closed" size={18} color={HIGHLIGHT} />
+                    <Text style={s.trustText}>Encrypted</Text>
+                  </View>
+                  <View style={s.trustItem}>
+                    <Ionicons name="shield-checkmark" size={18} color={HIGHLIGHT} />
+                    <Text style={s.trustText}>Private</Text>
+                  </View>
+                  <View style={s.trustItem}>
+                    <Ionicons name="eye-off" size={18} color={HIGHLIGHT} />
+                    <Text style={s.trustText}>No ads</Text>
+                  </View>
+                </View>
+
+                {/* Terms agreement */}
+                <View style={s.termsRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.termsTitle}>I understand and agree</Text>
+                    <Text style={s.termsBody}>
+                      PepTalk is for educational purposes only and does not provide medical advice. I accept full responsibility for my health decisions.
+                    </Text>
+                  </View>
+                  <Switch
+                    value={acceptedTerms}
+                    onValueChange={setAcceptedTerms}
+                    trackColor={{ false: 'rgba(0,0,0,0.10)', true: `${HIGHLIGHT}55` }}
+                    thumbColor={acceptedTerms ? HIGHLIGHT : '#ccc'}
+                  />
+                </View>
+              </View>
+            )}
+          />
+          <View style={s.footer}>
+            <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7}>
+              <Ionicons name="arrow-back" size={20} color="#6B7280" />
+              <Text style={s.footerBackText}>Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.footerNextBtn, !canContinue && { opacity: 0.4 }]}
+              onPress={handleNext}
+              disabled={!canContinue}
+              activeOpacity={0.85}
+            >
+              <Text style={s.footerNextText}>Create Account</Text>
+              <Ionicons name="checkmark" size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1720',
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-  },
-  header: {
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#f7f2ec',
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#9ca3af',
-    marginTop: 6,
-    lineHeight: 18,
-  },
-  stepHeader: {
-    marginTop: 12,
-    marginBottom: 12,
-  },
-  stepTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#e8e6e3',
-  },
-  progressBarContainer: {
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 2,
-    marginTop: 8,
-    marginBottom: 4,
-    overflow: 'hidden' as const,
-  },
-  progressBarFill: {
-    height: '100%' as any,
-    borderRadius: 2,
-  },
-  section: {
-    marginTop: 10,
-  },
-  stepHeroImage: {
-    width: '100%',
-    height: 180,
-    borderRadius: 16,
-    marginBottom: 20,
-    opacity: 0.85,
-  },
-  card: {
-    marginBottom: 12,
-  },
-  characterCenter: {
-    alignItems: 'center' as const,
-    marginVertical: 24,
-  },
-  welcomeCard: {
-    marginBottom: 16,
-  },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: '800' as const,
-    color: '#f7f2ec',
-    marginBottom: 8,
-    textAlign: 'center' as const,
-  },
-  welcomeText: {
-    fontSize: 14,
-    color: '#cbd5e1',
-    lineHeight: 22,
-    textAlign: 'center' as const,
-  },
-  trustRow: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-around' as const,
-    marginVertical: 16,
-  },
-  trustBadge: {
-    alignItems: 'center' as const,
-    gap: 4,
-  },
-  trustText: {
-    fontSize: 11,
-    color: '#9ca3af',
-    fontWeight: '600' as const,
-  },
-  softDisclaimer: {
-    fontSize: 12,
-    color: '#6b7280',
-    textAlign: 'center' as const,
-    lineHeight: 18,
-    marginBottom: 16,
-    fontStyle: 'italic' as const,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#f7f2ec',
-    marginBottom: 6,
-  },
-  cardText: {
-    fontSize: 12,
-    color: '#9ca3af',
-    lineHeight: 18,
-    marginBottom: 14,
-  },
-  groupTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#c7d7e6',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: 10,
-    marginBottom: 8,
-  },
-  groupSubtext: {
-    fontSize: 11,
-    color: '#9ca3af',
-    marginBottom: 8,
-    lineHeight: 16,
-  },
-  optionStack: {
-    gap: 10,
-  },
-  goalGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  goalChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-  },
-  goalChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#9ca3af',
-  },
-  selectedCount: {
-    fontSize: 12,
-    color: '#e3a7a1',
-    fontWeight: '600',
-    marginTop: 12,
-    textAlign: 'center',
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 12,
-  },
-  toggleText: {
-    flex: 1,
-    marginRight: 12,
-  },
-  toggleTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#e8e6e3',
-  },
-  toggleSubtitle: {
-    fontSize: 11,
-    color: '#9ca3af',
-    marginTop: 4,
-    lineHeight: 16,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  infoText: {
-    fontSize: 12,
-    color: '#9ca3af',
-    flex: 1,
-  },
-  navRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginTop: 16,
-  },
-  navButton: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButton: {
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  backText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#9ca3af',
-  },
-  healthInput: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    color: '#f7f2ec',
-    fontSize: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  heightRow: {
-    flexDirection: 'row' as const,
-    gap: 10,
-  },
-  heightField: {
-    flex: 1,
-  },
-  skipButton: {
-    alignItems: 'center' as const,
-    paddingVertical: 14,
-    marginTop: 4,
-  },
-  skipText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: '#6b7280',
-    textDecorationLine: 'underline' as const,
+    backgroundColor: '#FFFFFF',
   },
 
-  // Step 6 — Account creation
-  cardSubtitle: { fontSize: 13, color: '#9ca3af', marginBottom: 16 },
-  accountInput: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 14,
-    height: 48,
-    fontSize: 15,
-    color: '#f7f2ec',
-    marginBottom: 12,
+  // ── Progress ─────────────────────────────────────────────────────────────
+  progressWrap: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  passwordRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8, marginBottom: 12 },
-  eyeBtn: { padding: 8 },
-  errorText: { fontSize: 13, color: '#ef4444', marginTop: -6, marginBottom: 8 },
-  privacyRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8 },
-  privacyText: { fontSize: 12, color: '#6b7280', flex: 1 },
-  loginLink: {
+  progressTrack: {
+    flex: 1,
+    height: 4,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: HIGHLIGHT,
+    borderRadius: 2,
+  },
+  progressText: {
+    fontSize: 12,
+    fontFamily: 'DMSans-SemiBold',
+    color: '#6B7280',
+  },
+
+  // ── Back ─────────────────────────────────────────────────────────────────
+  backBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    alignSelf: 'flex-start',
+  },
+
+  // ── Screen layouts ───────────────────────────────────────────────────────
+  screenCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  screen: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+
+  // ── Welcome (Screen 0) ──────────────────────────────────────────────────
+  welcomeContent: {
+    paddingHorizontal: 24,
+  },
+  welcomeLogoWrap: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  welcomeLogo: {
+    fontSize: 48,
+    fontFamily: 'Playfair-Black',
+    color: '#2D2D2D',
+    letterSpacing: -1.5,
+  },
+  welcomeAccentBar: {
+    width: 40,
+    height: 3,
+    backgroundColor: HIGHLIGHT,
+    borderRadius: 2,
+    marginVertical: 12,
+  },
+  welcomeTagline: {
+    fontSize: 17,
+    fontFamily: 'DMSans-Medium',
+    color: '#6B7280',
+  },
+  welcomeFeatures: {
+    marginBottom: 36,
+    gap: 16,
+  },
+  welcomeFeatureRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 14,
+  },
+  welcomeFeatureIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  welcomeFeatureText: {
+    flex: 1,
+  },
+  welcomeFeatureTitle: {
+    fontSize: 16,
+    fontFamily: 'DMSans-Bold',
+    color: '#2D2D2D',
+    marginBottom: 2,
+  },
+  welcomeFeatureDesc: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Regular',
+    color: '#6B7280',
+  },
+  blackBtn: {
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#2D2D2D',
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    gap: 8,
-    paddingVertical: 16,
-    marginTop: 8,
+    paddingHorizontal: 24,
   },
-  loginLinkText: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: '#3B82F6',
+  blackBtnText: {
+    fontSize: 17,
+    fontFamily: 'DMSans-Bold',
+    color: '#FFFFFF',
+  },
+  welcomeTrust: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    marginTop: 24,
+    paddingHorizontal: 8,
   },
 
-  // Step 7 — Plan selection
-  planIntro: { fontSize: 14, color: '#9ca3af', textAlign: 'center' as const, marginBottom: 12 },
+  // ── Step header ──────────────────────────────────────────────────────────
+  stepTitle: {
+    fontSize: 28,
+    fontFamily: 'Playfair-Black',
+    color: '#2D2D2D',
+    letterSpacing: -0.3,
+    marginBottom: 4,
+  },
+  stepSub: {
+    fontSize: 16,
+    fontFamily: 'DMSans-Regular',
+    color: '#6B7280',
+    marginBottom: 24,
+  },
+
+  // ── Labels ───────────────────────────────────────────────────────────────
+  label: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Bold',
+    color: '#2D2D2D',
+    marginBottom: 10,
+    marginTop: 20,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  labelSub: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Regular',
+    color: '#9CA3AF',
+    marginBottom: 12,
+    marginTop: -6,
+  },
+
+  // ── Gender cards ─────────────────────────────────────────────────────────
+  genderRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  genderCard: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: SURFACE,
+    gap: 8,
+  },
+  genderLabel: {
+    fontSize: 16,
+    fontFamily: 'DMSans-SemiBold',
+    color: '#2D2D2D',
+  },
+
+  // ── Age input ─────────────────────────────────────────────────────────────
+  ageInput: {
+    height: 56,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: SURFACE,
+    paddingHorizontal: 20,
+    fontSize: 24,
+    fontFamily: 'Playfair-ExtraBold',
+    color: '#2D2D2D',
+    textAlign: 'center',
+  },
+
+  // ── Goal chips ───────────────────────────────────────────────────────────
+  chipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: SURFACE,
+  },
+  chipText: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Medium',
+    color: '#2D2D2D',
+  },
+
+  // ── Inputs ───────────────────────────────────────────────────────────────
+  input: {
+    height: 52,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: SURFACE,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    fontFamily: 'DMSans-Regular',
+    color: '#2D2D2D',
+    marginBottom: 12,
+  },
+  heightRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  passwordWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  eyeBtn: {
+    padding: 8,
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#DC2626',
+    marginBottom: 8,
+  },
+
+  // ── Activity levels ──────────────────────────────────────────────────────
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    marginBottom: 8,
+  },
+  activityLabel: {
+    fontSize: 15,
+    fontFamily: 'DMSans-SemiBold',
+    color: '#2D2D2D',
+  },
+  activityDesc: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Regular',
+    color: '#6B7280',
+    marginTop: 2,
+  },
+
+  // ── Radio ────────────────────────────────────────────────────────────────
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: 'rgba(0,0,0,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+
+  // ── Plans ────────────────────────────────────────────────────────────────
   planCard: {
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.08)',
+    padding: 16,
     marginBottom: 10,
-    overflow: 'hidden' as const,
   },
-  planCardInner: { padding: 16 },
-  planHeader: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'flex-start' as const, marginBottom: 10 },
-  planName: { fontSize: 18, fontWeight: '800' },
-  planPrice: { fontSize: 13, color: '#9ca3af', marginTop: 2 },
-  planRight: { alignItems: 'flex-end' as const, gap: 6 },
-  planBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  planBadgeText: { fontSize: 10, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
-  planRadio: {
-    width: 22, height: 22, borderRadius: 11,
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center' as const, justifyContent: 'center' as const,
+  planHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  planFeatureRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8, marginBottom: 4 },
-  planFeatureText: { fontSize: 13, color: '#d1d5db', flex: 1 },
-  planFooter: { fontSize: 12, color: '#6b7280', textAlign: 'center' as const, marginTop: 8 },
+  planName: {
+    fontSize: 17,
+    fontFamily: 'DMSans-Bold',
+    color: '#2D2D2D',
+  },
+  planPrice: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Medium',
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  planBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  planBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.5,
+  },
+  planFeatureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  planFeatureText: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Regular',
+    color: '#6B7280',
+    flex: 1,
+  },
+
+  // ── Buttons ──────────────────────────────────────────────────────────────
+  primaryBtn: {
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  primaryBtnGrad: {
+    height: 52,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryBtnText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  signInLink: {
+    paddingVertical: 16,
+  },
+  signInLinkText: {
+    fontSize: 15,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  skipBtn: {
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
+  skipText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  scrollPadding: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.06)',
+    backgroundColor: '#FFFFFF',
+  },
+  footerBackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  footerBackText: {
+    fontSize: 15,
+    fontFamily: 'DMSans-SemiBold',
+    color: '#6B7280',
+  },
+  footerNextBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: ACCENT,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 24,
+  },
+  footerNextText: {
+    fontSize: 15,
+    fontFamily: 'DMSans-Bold',
+    color: '#FFFFFF',
+  },
+  footerSkipBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.10)',
+  },
+  footerSkipText: {
+    fontSize: 15,
+    fontFamily: 'DMSans-SemiBold',
+    color: '#6B7280',
+  },
+  bottomAction: {
+    paddingBottom: 16,
+    paddingTop: 16,
+  },
+  legalText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 18,
+  },
+
+  // ── Trust icons ──────────────────────────────────────────────────────────
+  trustRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 20,
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.06)',
+  },
+  trustItem: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  trustText: {
+    fontSize: 11,
+    fontFamily: 'DMSans-SemiBold',
+    color: '#6B7280',
+  },
+
+  // ── Terms agreement ──────────────────────────────────────────────────────
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: SURFACE,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  termsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#2D2D2D',
+    marginBottom: 4,
+  },
+  termsBody: {
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 18,
+  },
 });

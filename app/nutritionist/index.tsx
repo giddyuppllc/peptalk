@@ -121,11 +121,11 @@ export default function NutritionistScreen() {
   const statusColor = (status: string) => {
     switch (status) {
       case 'submitted':
-        return '#f59e0b';
+        return '#FFBF82';
       case 'reviewed':
         return '#22c55e';
       default:
-        return '#9ca3af';
+        return '#6B7280';
     }
   };
 
@@ -135,7 +135,7 @@ export default function NutritionistScreen() {
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#f7f2ec" />
+            <Ionicons name="arrow-back" size={24} color="#2D2D2D" />
           </Pressable>
           <Text style={styles.headerTitle}>Nutritionist Consultation</Text>
           <View style={{ width: 32 }} />
@@ -228,7 +228,7 @@ export default function NutritionistScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#f7f2ec" />
+          <Ionicons name="arrow-back" size={24} color="#2D2D2D" />
         </Pressable>
         <Text style={styles.headerTitle}>Nutritionist Consultation</Text>
         <View style={{ width: 32 }} />
@@ -395,7 +395,7 @@ export default function NutritionistScreen() {
 
           {/* Submit */}
           <Pressable style={styles.submitBtn} onPress={handleSubmit}>
-            <Ionicons name="send" size={18} color="#0f1720" />
+            <Ionicons name="send" size={18} color="#2D2D2D" />
             <Text style={styles.submitBtnText}>Submit Request</Text>
           </Pressable>
 
@@ -413,7 +413,7 @@ export default function NutritionistScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#0f1720',
+    backgroundColor: '#2D2D2D',
   },
 
   // Header
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   backBtn: {
     width: 32,
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
   },
 
   // Content
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 20,
   },
 
@@ -465,30 +465,30 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     marginBottom: 4,
   },
   sectionSubtitle: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginBottom: 14,
   },
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: '#6B7280',
     marginBottom: 6,
     marginTop: 12,
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(0,0,0,0.08)',
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#f7f2ec',
+    color: '#2D2D2D',
   },
   multilineInput: {
     minHeight: 100,
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
   summaryLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
   },
   chipRow: {
     flexDirection: 'row',
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
   submitBtnText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0f1720',
+    color: '#2D2D2D',
   },
 
   // Status view
@@ -562,16 +562,16 @@ const styles = StyleSheet.create({
   statusTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
   },
   statusSubtext: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 20,
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.06)',
     marginVertical: 16,
   },
   statusRow: {
@@ -583,13 +583,13 @@ const styles = StyleSheet.create({
   statusLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: '#6B7280',
     width: 90,
   },
   statusValue: {
     flex: 1,
     fontSize: 14,
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     textAlign: 'right',
   },
   statusBadge: {

@@ -460,9 +460,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: FontSizes.xl,
-    fontWeight: '800',
-    color: Colors.darkText,
+    fontSize: 32,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    color: '#2D2D2D',
   },
 
   // Search
@@ -534,7 +535,7 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: Spacing.lg, paddingBottom: 40 },
   separator: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     marginVertical: 2,
   },
 

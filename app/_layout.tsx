@@ -1,3 +1,4 @@
+import '../global.css';
 import {
   Stack,
   useGlobalSearchParams,
@@ -9,6 +10,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Animated, Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFonts } from 'expo-font';
+import { PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display/700Bold';
+import { PlayfairDisplay_800ExtraBold } from '@expo-google-fonts/playfair-display/800ExtraBold';
+import { PlayfairDisplay_900Black } from '@expo-google-fonts/playfair-display/900Black';
+import { DMSans_400Regular } from '@expo-google-fonts/dm-sans/400Regular';
+import { DMSans_500Medium } from '@expo-google-fonts/dm-sans/500Medium';
+import { DMSans_600SemiBold } from '@expo-google-fonts/dm-sans/600SemiBold';
+import { DMSans_700Bold } from '@expo-google-fonts/dm-sans/700Bold';
+import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { CelebrationModal } from '../src/components/CelebrationModal';
 import { PepTalkCharacter } from '../src/components/PepTalkCharacter';
@@ -23,6 +33,17 @@ export default function RootLayout() {
   const isComplete = useOnboardingStore((state) => state.isComplete);
   const hasHydrated = useOnboardingStore((state) => state.hasHydrated);
   const t = useTheme();
+
+  // Load custom fonts
+  const [fontsLoaded] = useFonts({
+    'Playfair-Bold': PlayfairDisplay_700Bold,
+    'Playfair-ExtraBold': PlayfairDisplay_800ExtraBold,
+    'Playfair-Black': PlayfairDisplay_900Black,
+    'DMSans-Regular': DMSans_400Regular,
+    'DMSans-Medium': DMSans_500Medium,
+    'DMSans-SemiBold': DMSans_600SemiBold,
+    'DMSans-Bold': DMSans_700Bold,
+  });
 
   // Wait for the navigator (<Stack>) to mount before attempting navigation
   const [navReady, setNavReady] = useState(false);
@@ -60,17 +81,21 @@ export default function RootLayout() {
   useEffect(() => {
     if (!navReady || !hasHydrated) return;
     const inOnboarding = segments[0] === 'onboarding';
-    if (!isComplete && !inOnboarding) {
+    const inAuth = segments[0] === 'auth';
+
+    // If onboarding is complete, allow all routes freely (tabs, nutrition, learn, etc.)
+    if (isComplete) return;
+
+    // Not completed yet — only allow onboarding and auth screens
+    if (!inOnboarding && !inAuth) {
       router.replace('/onboarding');
       return;
-    }
-    if (isComplete && inOnboarding && edit !== 'true') {
-      router.replace('/(tabs)');
     }
   }, [edit, hasHydrated, isComplete, navReady, router, segments]);
 
   return (
     <ErrorBoundary>
+    <GluestackUIProvider colorMode="light">
     <SafeAreaProvider>
       <View style={[styles.container, { backgroundColor: t.bg }]}>
         <StatusBar style={t.statusBar} />
@@ -91,7 +116,7 @@ export default function RootLayout() {
               <Animated.View
                 style={{ transform: [{ scale: logoScale }], opacity: logoOpacity, alignItems: 'center' }}
               >
-                <PepTalkCharacter size={90} variant="full" animated glowColor="#14b8a6" />
+                <PepTalkCharacter size={90} variant="full" animated glowColor="#F8A97A" />
                 <Text style={[styles.splashTitle, { color: t.text }]}>PepTalk</Text>
                 <Text style={[styles.splashSub, { color: t.textMuted }]}>Your peptide journey starts here</Text>
               </Animated.View>
@@ -302,13 +327,6 @@ export default function RootLayout() {
               animation: 'slide_from_right',
             }}
           />
-          <Stack.Screen
-            name="nutrition/grocery-list"
-            options={{
-              headerShown: false,
-              animation: 'slide_from_right',
-            }}
-          />
           {/* Calculators */}
           <Stack.Screen
             name="calculators/index"
@@ -343,6 +361,7 @@ export default function RootLayout() {
         </Stack>
       </View>
     </SafeAreaProvider>
+    </GluestackUIProvider>
     </ErrorBoundary>
   );
 }
@@ -350,7 +369,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1720',
+    backgroundColor: '#2D2D2D',
   },
   splash: {
     ...StyleSheet.absoluteFillObject,
@@ -365,13 +384,13 @@ const styles = StyleSheet.create({
   splashTitle: {
     fontSize: 36,
     fontWeight: '900',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     letterSpacing: -1,
     marginTop: 12,
   },
   splashSub: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.45)',
+    color: 'rgba(0,0,0,0.30)',
     marginTop: 4,
   },
 });

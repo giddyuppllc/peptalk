@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   text: {
     flex: 1,
     fontSize: 11,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 16,
   },
 });

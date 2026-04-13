@@ -1212,7 +1212,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
   },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: FontSizes.xl, fontWeight: '800', color: Colors.darkText },
+  headerTitle: { fontSize: 32, fontWeight: '900', letterSpacing: -0.5, color: '#2D2D2D' },
 
   // Search
   searchContainer: { paddingHorizontal: Spacing.md, marginBottom: Spacing.sm },
@@ -1243,7 +1243,7 @@ const styles = StyleSheet.create({
   customUnitLabel: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.darkTextSecondary, width: 20 },
   customMacroRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
+    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)',
   },
   customMacroLabel: { fontSize: FontSizes.md, color: Colors.darkText, fontWeight: '500' },
   customMacroInput: {
@@ -1301,7 +1301,7 @@ const styles = StyleSheet.create({
   mealCardIngredients: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary },
   mealCardMacros: { fontSize: FontSizes.xs, color: Colors.pepTeal, fontWeight: '600', marginTop: 2 },
   mealCardActions: {
-    flexDirection: 'row', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)',
+    flexDirection: 'row', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.04)',
   },
   mealActionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -1311,7 +1311,7 @@ const styles = StyleSheet.create({
 
   // List
   listContent: { paddingHorizontal: Spacing.md, paddingBottom: 40 },
-  separator: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginVertical: 1 },
+  separator: { height: 1, backgroundColor: 'rgba(0,0,0,0.04)', marginVertical: 1 },
 
   // Food row
   foodRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 10 },
@@ -1348,7 +1348,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg, paddingTop: 12, paddingBottom: 32,
     minHeight: '70%', maxHeight: '92%',
   },
-  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.15)', alignSelf: 'center', marginBottom: 16 },
+  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(0,0,0,0.10)', alignSelf: 'center', marginBottom: 16 },
   modalHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
   modalFoodTitle: { flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   modalFoodImage: { width: 48, height: 48, borderRadius: 10, marginTop: 2 },
@@ -1387,7 +1387,7 @@ const styles = StyleSheet.create({
   },
   servingListItem: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)', gap: 8,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)', gap: 8,
   },
   servingListItemActive: { backgroundColor: Colors.pepTeal + '15' },
   servingListText: { flex: 1, fontSize: FontSizes.md, color: Colors.darkText, fontWeight: '500' },
@@ -1395,7 +1395,7 @@ const styles = StyleSheet.create({
   servingListTextActive: { color: Colors.pepTeal, fontWeight: '700' },
   servingSectionHeader: {
     paddingHorizontal: 16, paddingVertical: 6,
-    backgroundColor: 'rgba(255,255,255,0.04)', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.03)', borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)',
   },
   servingSectionText: {
     fontSize: 10, fontWeight: '700', color: Colors.darkTextSecondary,
@@ -1431,8 +1431,8 @@ const styles = StyleSheet.create({
   },
   nutritionTitle: { fontSize: FontSizes.lg, fontWeight: '900', color: Colors.darkText, marginBottom: 4 },
   nutritionSeparatorThick: { height: 3, backgroundColor: Colors.darkText, marginVertical: 4 },
-  nutritionSeparator: { height: 1, backgroundColor: 'rgba(255,255,255,0.15)', marginVertical: 2 },
-  nutritionSeparatorThin: { height: 1, backgroundColor: 'rgba(255,255,255,0.07)', marginVertical: 2 },
+  nutritionSeparator: { height: 1, backgroundColor: 'rgba(0,0,0,0.10)', marginVertical: 2 },
+  nutritionSeparatorThin: { height: 1, backgroundColor: 'rgba(0,0,0,0.06)', marginVertical: 2 },
   nutritionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 3 },
   nutritionRowLabel: { fontSize: FontSizes.md, color: Colors.darkText },
   nutritionRowLabelBold: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.darkText },
@@ -1466,7 +1466,7 @@ const styles = StyleSheet.create({
   },
   scannerCloseBtn: {
     width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.12)', borderRadius: 22,
   },
   scannerTitle: { fontSize: FontSizes.xl, fontWeight: '800', color: '#fff' },
   scannerPermission: {

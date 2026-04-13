@@ -32,7 +32,7 @@ function getCategoryColor(category: VideoCategory): string {
     case 'how_to':          return '#e3a7a1';
     case 'research':        return '#c7d7e6';
     case 'education':       return '#f0d68a';
-    default:                return '#9ca3af';
+    default:                return '#6B7280';
   }
 }
 
@@ -75,7 +75,7 @@ export default function VideoGalleryScreen() {
               onPress={() => router.back()}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={20} color="#e8e6e3" />
+              <Ionicons name="arrow-back" size={20} color="#2D2D2D" />
             </TouchableOpacity>
             <View style={styles.headerText}>
               <Text style={styles.headerTitle}>Videos</Text>
@@ -86,7 +86,7 @@ export default function VideoGalleryScreen() {
           </View>
 
           <GlassCard style={styles.emptyCard}>
-            <Ionicons name="videocam-outline" size={48} color="#9ca3af" />
+            <Ionicons name="videocam-outline" size={48} color="#6B7280" />
             <Text style={styles.emptyTitle}>Coming Soon</Text>
             <Text style={styles.emptyText}>
               Videos coming soon — check back for success stories, research talks, and how-to guides.
@@ -111,7 +111,7 @@ export default function VideoGalleryScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={20} color="#e8e6e3" />
+            <Ionicons name="arrow-back" size={20} color="#2D2D2D" />
           </TouchableOpacity>
           <View style={styles.headerText}>
             <Text style={styles.headerTitle}>Videos</Text>
@@ -213,7 +213,7 @@ export default function VideoGalleryScreen() {
         {/* All Videos (vertical list) */}
         {filteredVideos.length === 0 ? (
           <GlassCard style={styles.emptyCard}>
-            <Ionicons name="videocam-outline" size={32} color="#9ca3af" />
+            <Ionicons name="videocam-outline" size={32} color="#6B7280" />
             <Text style={styles.emptyText}>
               No videos found for this category.
             </Text>
@@ -234,7 +234,7 @@ export default function VideoGalleryScreen() {
                       <Ionicons
                         name="play-circle"
                         size={36}
-                        color="rgba(255,255,255,0.7)"
+                        color="rgba(0,0,0,0.50)"
                       />
                     </View>
 
@@ -255,7 +255,7 @@ export default function VideoGalleryScreen() {
                         </View>
                         {video.duration && (
                           <View style={styles.durationBadgeSmall}>
-                            <Ionicons name="time-outline" size={10} color="#9ca3af" />
+                            <Ionicons name="time-outline" size={10} color="#6B7280" />
                             <Text style={styles.durationSmallText}>
                               {video.duration}
                             </Text>
@@ -268,7 +268,7 @@ export default function VideoGalleryScreen() {
                     </View>
 
                     {/* Chevron */}
-                    <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+                    <Ionicons name="chevron-forward" size={18} color="#6B7280" />
                   </View>
                 </GlassCard>
               </TouchableOpacity>
@@ -285,7 +285,7 @@ export default function VideoGalleryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1720',
+    backgroundColor: '#2D2D2D',
   },
   scrollView: {
     flex: 1,
@@ -318,13 +318,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     letterSpacing: -0.5,
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 19,
   },
 
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   filterChipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   filterChipTextActive: {
     color: '#e3a7a1',
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
   durationText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
   categoryBadge: {
     alignSelf: 'flex-start',
@@ -416,13 +416,13 @@ const styles = StyleSheet.create({
   featuredCardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     marginBottom: 4,
     lineHeight: 22,
   },
   featuredCardDesc: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 18,
   },
 
@@ -470,12 +470,12 @@ const styles = StyleSheet.create({
   durationSmallText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   videoTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     lineHeight: 20,
   },
 
@@ -489,11 +489,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
   emptyText: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 20,
     paddingHorizontal: 20,

@@ -13,19 +13,19 @@ export const Colors = {
   powderDark: '#a3bad2',
   powderLight: '#e0eaf3',
 
-  // Dark mode
-  darkBg: '#0f1720',
-  darkCard: '#1a2535',
-  darkCardBorder: 'rgba(255,255,255,0.08)',
-  darkText: '#e8e6e3',
-  darkTextSecondary: '#9ca3af',
+  // Base colors (white-first design — Jamie's vision)
+  darkBg: '#FFFFFF',
+  darkCard: '#FFFFFF',
+  darkCardBorder: 'rgba(0,0,0,0.08)',
+  darkText: '#2D2D2D',
+  darkTextSecondary: '#6B7280',
 
-  // Light mode
-  lightBg: '#f7f2ec',
-  lightCard: '#ffffff',
+  // Light mode (same as base — no dark mode)
+  lightBg: '#FFFFFF',
+  lightCard: '#FFFFFF',
   lightCardBorder: 'rgba(0,0,0,0.06)',
-  lightText: '#1f2a36',
-  lightTextSecondary: '#6b7280',
+  lightText: '#2D2D2D',
+  lightTextSecondary: '#6B7280',
 
   // Utility
   white: '#ffffff',
@@ -34,34 +34,34 @@ export const Colors = {
   success: '#22c55e',
   warning: '#f59e0b',
 
-  // Glass
-  glassWhite: 'rgba(255,255,255,0.12)',
-  glassBorder: 'rgba(255,255,255,0.18)',
+  // Glass (light mode)
+  glassWhite: 'rgba(0,0,0,0.04)',
+  glassBorder: 'rgba(0,0,0,0.08)',
 
-  // PepTalk Character Palette
-  pepBlue: '#3B82F6',
-  pepBlueDark: '#2563EB',
-  pepBlueLight: '#60A5FA',
-  pepTeal: '#06B6D4',
-  pepTealLight: '#22D3EE',
-  pepCyan: '#67E8F9',
+  // PepTalk Brand Palette
+  pepBlue: '#5B8DB8',
+  pepBlueDark: '#3D7099',
+  pepBlueLight: '#8BB5D5',
+  pepTeal: '#F8A97A',
+  pepTealLight: '#FCCBA8',
+  pepCyan: '#FFBF82',
 
   // Glow
-  glowBlue: 'rgba(59, 130, 246, 0.35)',
-  glowTeal: 'rgba(6, 182, 212, 0.25)',
-  glowRose: 'rgba(227, 167, 161, 0.30)',
+  glowBlue: 'rgba(91, 141, 184, 0.25)',
+  glowTeal: 'rgba(248, 169, 122, 0.25)',
+  glowRose: 'rgba(242, 182, 177, 0.30)',
 
-  // Glass blue
-  glassBlue: 'rgba(59, 130, 246, 0.10)',
-  glassBlueBorder: 'rgba(59, 130, 246, 0.20)',
+  // Glass accent
+  glassBlue: 'rgba(248, 169, 122, 0.10)',
+  glassBlueBorder: 'rgba(248, 169, 122, 0.20)',
 } as const;
 
 export const Gradients = {
-  primary: ['#3B82F6', '#06B6D4'] as const,
-  character: ['#2563EB', '#0891B2'] as const,
-  card: ['rgba(59,130,246,0.12)', 'rgba(6,182,212,0.06)'] as const,
-  accent: ['#3B82F6', '#8B5CF6'] as const,
-  warm: ['#e3a7a1', '#f59e0b'] as const,
+  primary: ['#F8A97A', '#F2B6B1'] as const,
+  character: ['#F8A97A', '#FFBF82'] as const,
+  card: ['rgba(248,169,122,0.12)', 'rgba(242,182,177,0.06)'] as const,
+  accent: ['#F8A97A', '#F4E285'] as const,
+  warm: ['#F8A97A', '#F2B6B1'] as const,
 };
 
 export const CategoryColors: Record<string, string> = {
@@ -83,13 +83,19 @@ export const CategoryColors: Record<string, string> = {
 };
 
 export const Fonts = {
-  heading: 'System',
-  headingBold: 'System',
-  headingItalic: 'System',
-  body: 'System',
-  bodyMedium: 'System',
-  bodySemiBold: 'System',
-  bodyBold: 'System',
+  // Display / Editorial — Playfair Display (Jamie's magazine aesthetic)
+  display: 'Playfair-Bold',
+  displayBold: 'Playfair-ExtraBold',
+  displayBlack: 'Playfair-Black',
+  // Body — DM Sans (clean, modern, Sprinter-like)
+  body: 'DMSans-Regular',
+  bodyMedium: 'DMSans-Medium',
+  bodySemiBold: 'DMSans-SemiBold',
+  bodyBold: 'DMSans-Bold',
+  // Aliases for backward compat
+  heading: 'Playfair-ExtraBold',
+  headingBold: 'Playfair-Black',
+  headingItalic: 'Playfair-Bold',
 } as const;
 
 export const Spacing = {

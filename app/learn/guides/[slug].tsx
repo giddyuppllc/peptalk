@@ -21,9 +21,9 @@ function getCategoryColor(category: GuideCategory): string {
     case 'injection':      return '#e3a7a1';
     case 'storage':        return '#c7d7e6';
     case 'dosing':         return '#f0d68a';
-    case 'testing':        return '#f59e0b';
-    case 'general':        return '#9ca3af';
-    default:               return '#9ca3af';
+    case 'testing':        return '#FFBF82';
+    case 'general':        return '#6B7280';
+    default:               return '#6B7280';
   }
 }
 
@@ -49,7 +49,7 @@ export default function GuideDetailScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.notFound}>
-          <Ionicons name="alert-circle-outline" size={48} color="#9ca3af" />
+          <Ionicons name="alert-circle-outline" size={48} color="#6B7280" />
           <Text style={styles.notFoundTitle}>Guide Not Found</Text>
           <Text style={styles.notFoundSubtitle}>
             The requested guide could not be found.
@@ -80,7 +80,7 @@ export default function GuideDetailScreen() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={20} color="#e8e6e3" />
+          <Ionicons name="arrow-back" size={20} color="#2D2D2D" />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
 
@@ -173,7 +173,7 @@ export default function GuideDetailScreen() {
         {guide.warnings && guide.warnings.length > 0 && (
           <View style={styles.warningBox}>
             <View style={styles.warningHeader}>
-              <Ionicons name="warning" size={20} color="#f59e0b" />
+              <Ionicons name="warning" size={20} color="#FFBF82" />
               <Text style={styles.warningTitle}>Safety Warnings</Text>
             </View>
             {guide.warnings.map((warning, index) => (
@@ -210,7 +210,7 @@ export default function GuideDetailScreen() {
 
         {/* Disclaimer Footer */}
         <View style={styles.disclaimer}>
-          <Ionicons name="information-circle-outline" size={16} color="#9ca3af" />
+          <Ionicons name="information-circle-outline" size={16} color="#6B7280" />
           <Text style={styles.disclaimerText}>
             This guide is for educational purposes only and does not constitute medical advice.
             Always consult with a qualified healthcare provider before using any peptide.
@@ -226,7 +226,7 @@ export default function GuideDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1720',
+    backgroundColor: '#2D2D2D',
   },
   scrollView: {
     flex: 1,
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
 
   // ── Category Badge ─────────────────────────────────────────
@@ -269,14 +269,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     letterSpacing: -0.5,
     marginBottom: 8,
     lineHeight: 30,
   },
   summary: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 21,
     marginBottom: 16,
   },
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
   progressPercent: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
   progressBarBg: {
     height: 6,
@@ -355,12 +355,12 @@ const styles = StyleSheet.create({
   stepTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     marginBottom: 6,
   },
   stepContent: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 20,
   },
 
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   warningTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#f59e0b',
+    color: '#FFBF82',
   },
   warningRow: {
     flexDirection: 'row',
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   warningBullet: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#f59e0b',
+    color: '#FFBF82',
     width: 16,
     textAlign: 'center',
   },
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
   relatedTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
   pillsRow: {
     flexDirection: 'row',
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
   },
   disclaimerText: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 17,
     flex: 1,
   },
@@ -469,12 +469,12 @@ const styles = StyleSheet.create({
   notFoundTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     marginTop: 16,
   },
   notFoundSubtitle: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     textAlign: 'center',
     marginTop: 6,
   },
@@ -488,6 +488,6 @@ const styles = StyleSheet.create({
   backButtonPrimaryText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0f1720',
+    color: '#2D2D2D',
   },
 });

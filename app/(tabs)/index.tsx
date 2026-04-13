@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
+import { Divider } from '@gluestack-ui/themed';
 import { PepTalkCharacter } from '../../src/components/PepTalkCharacter';
 import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
@@ -69,30 +70,12 @@ const HEALTH_TIPS = [
   'Every check-in is a data point in your transformation story.',
 ];
 
-// ── Navigation search items ────────────────────────────────────────────────
-const NAV_SEARCH_ITEMS: { label: string; keywords: string[]; route: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { label: 'Nutrition', keywords: ['nutrition', 'food', 'meal', 'calories', 'macros', 'diet', 'eat', 'track'], route: '/nutrition', icon: 'nutrition-outline' },
-  { label: 'Food Search', keywords: ['food', 'search', 'log', 'scan', 'barcode'], route: '/nutrition/food-search', icon: 'search-outline' },
-  { label: 'Workouts', keywords: ['workout', 'exercise', 'gym', 'train', 'lift', 'cardio', 'fitness'], route: '/workouts', icon: 'barbell-outline' },
-  { label: 'Peptides', keywords: ['peptide', 'stack', 'protocol', 'bpc', 'tb500', 'semaglutide'], route: '/(tabs)/my-stacks', icon: 'flask-outline' },
-  { label: 'Dosing Calculator', keywords: ['dose', 'dosing', 'calculator', 'calc', 'mcg', 'mg'], route: '/calculators/dosing', icon: 'calculator-outline' },
-  { label: 'Reconstitution', keywords: ['recon', 'reconstitution', 'bac', 'water', 'mix'], route: '/calculators/reconstitution', icon: 'beaker-outline' },
-  { label: 'Check-In', keywords: ['checkin', 'check', 'mood', 'energy', 'sleep', 'recovery'], route: '/(tabs)/check-in', icon: 'heart-outline' },
-  { label: 'Calendar', keywords: ['calendar', 'history', 'timeline', 'log', 'past'], route: '/(tabs)/calendar', icon: 'calendar-outline' },
-  { label: 'Ask Aimee', keywords: ['aimee', 'ai', 'chat', 'ask', 'help', 'question'], route: '/(tabs)/peptalk', icon: 'chatbubble-outline' },
-  { label: 'Profile', keywords: ['profile', 'account', 'settings', 'preferences'], route: '/(tabs)/profile', icon: 'person-outline' },
-  { label: 'Journal', keywords: ['journal', 'notes', 'diary', 'write'], route: '/journal', icon: 'book-outline' },
-  { label: 'Body Map', keywords: ['body', 'map', 'injection', 'site', 'rotate'], route: '/body-map', icon: 'body-outline' },
-  { label: 'Learn', keywords: ['learn', 'education', 'article', 'guide', 'research'], route: '/learn', icon: 'school-outline' },
-  { label: 'Targets', keywords: ['target', 'goals', 'macro', 'calorie goal'], route: '/nutrition/targets', icon: 'flag-outline' },
-];
-
 const QUICK_ACTIONS = [
   { id: 'checkin', icon: 'heart-outline' as const, label: 'Check In', route: '/(tabs)/check-in', colors: ['#e3a7a1', '#c98a84'] as [string, string] },
-  { id: 'dose', icon: 'flask-outline' as const, label: 'Log Dose', route: '/(tabs)/calendar', colors: ['#14b8a6', '#0d9488'] as [string, string] },
-  { id: 'workout', icon: 'barbell-outline' as const, label: 'Workout', route: '/workouts', colors: ['#3b82f6', '#2563eb'] as [string, string] },
-  { id: 'nutrition', icon: 'nutrition-outline' as const, label: 'Nutrition', route: '/nutrition', colors: ['#f59e0b', '#d97706'] as [string, string] },
-  { id: 'peptalk', icon: 'chatbubble-outline' as const, label: 'Ask Aimee', route: '/(tabs)/peptalk', colors: ['#8b5cf6', '#7c3aed'] as [string, string] },
+  { id: 'dose', icon: 'flask-outline' as const, label: 'Log Dose', route: '/(tabs)/calendar', colors: ['#F8A97A', '#E8885A'] as [string, string] },
+  { id: 'workout', icon: 'barbell-outline' as const, label: 'Workout', route: '/workouts', colors: ['#F8A97A', '#E8885A'] as [string, string] },
+  { id: 'nutrition', icon: 'nutrition-outline' as const, label: 'Nutrition', route: '/nutrition', colors: ['#FFBF82', '#E8A05A'] as [string, string] },
+  { id: 'peptalk', icon: 'chatbubble-outline' as const, label: 'Ask Aimee', route: '/(tabs)/peptalk', colors: ['#D4A853', '#B8913D'] as [string, string] },
   { id: 'journal', icon: 'book-outline' as const, label: 'Journal', route: '/journal', colors: ['#06b6d4', '#0891b2'] as [string, string] },
   { id: 'bodymap', icon: 'body-outline' as const, label: 'Body Map', route: '/body-map', colors: ['#22c55e', '#16a34a'] as [string, string] },
 ];
@@ -139,6 +122,25 @@ function formatTime(timeStr: string): string {
   const ampm = h >= 12 ? 'PM' : 'AM';
   const hr = h % 12 || 12;
   return `${hr}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+function dateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function getWeekDays(referenceDate: Date): Date[] {
+  const day = referenceDate.getDay(); // 0=Sun
+  const start = new Date(referenceDate);
+  start.setDate(start.getDate() - day); // Go to Sunday
+  const days: Date[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    days.push(d);
+  }
+  return days;
 }
 
 // ─── Timeline Event Type ─────────────────────────────────────────────────────
@@ -202,19 +204,12 @@ export default function DashboardScreen() {
   // ── State ─────────────────────────────────────────────────────────────────
   const [showLibrary, setShowLibrary] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [navSearch, setNavSearch] = useState('');
-  const [navSearchFocused, setNavSearchFocused] = useState(false);
   const [chatText, setChatText] = useState('');
+  const [selectedDay, setSelectedDay] = useState(todayKey());
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = this week, -1 = last week
+  const [fabOpen, setFabOpen] = useState(false);
+  const fabAnim = useRef(new RNAnimated.Value(0)).current;
 
-  // ── Nav search results ───────────────────────────────────────────────────
-  const navResults = useMemo(() => {
-    const q = navSearch.toLowerCase().trim();
-    if (!q) return [];
-    return NAV_SEARCH_ITEMS.filter((item) =>
-      item.label.toLowerCase().includes(q) ||
-      item.keywords.some((kw) => kw.includes(q))
-    ).slice(0, 5);
-  }, [navSearch]);
 
   // ── Stores ────────────────────────────────────────────────────────────────
   const profile = useOnboardingStore((s) => s.profile);
@@ -404,15 +399,68 @@ export default function DashboardScreen() {
     };
   }, [entries]);
 
-  // ── Today's Timeline ──────────────────────────────────────────────────────
+  // ── Weekly Calendar Strip ──────────────────────────────────────────────────
+
+  const weekDays = useMemo(() => {
+    const ref = new Date();
+    ref.setDate(ref.getDate() + weekOffset * 7);
+    return getWeekDays(ref);
+  }, [weekOffset]);
+
+  const weekActivityMap = useMemo(() => {
+    const map: Record<string, { meals: boolean; workouts: boolean; checkins: boolean; doses: boolean }> = {};
+    weekDays.forEach((d) => {
+      const key = dateKey(d);
+      map[key] = {
+        meals: meals.some((m) => m.date === key),
+        workouts: workoutLogs.some((w) => w.date === key),
+        checkins: entries.some((e) => e.date === key),
+        doses: doses.some((dose) => dose.date === key),
+      };
+    });
+    return map;
+  }, [weekDays, meals, workoutLogs, entries, doses]);
+
+  const weekLabel = useMemo(() => {
+    const first = weekDays[0];
+    const last = weekDays[6];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (first.getMonth() === last.getMonth()) {
+      return `${months[first.getMonth()]} ${first.getDate()}–${last.getDate()}`;
+    }
+    return `${months[first.getMonth()]} ${first.getDate()} – ${months[last.getMonth()]} ${last.getDate()}`;
+  }, [weekDays]);
+
+  // ── Selected Day Timeline ─────────────────────────────────────────────────
+
+  const selectedDayCheckin = useMemo(
+    () => entries.find((e) => e.date === selectedDay) ?? null,
+    [entries, selectedDay],
+  );
+
+  const selectedDayMeals = useMemo(
+    () => meals.filter((m) => m.date === selectedDay),
+    [meals, selectedDay],
+  );
+  const selectedDayMealCals = useMemo(
+    () => selectedDayMeals.reduce((sum, m) => sum + m.foods.reduce((s2, f) => s2 + f.calories, 0) + (m.quickLog?.calories ?? 0), 0),
+    [selectedDayMeals],
+  );
+  const selectedDayWorkoutList = useMemo(
+    () => workoutLogs.filter((w) => w.date === selectedDay),
+    [workoutLogs, selectedDay],
+  );
+  const selectedDayDoseList = useMemo(
+    () => doses.filter((d) => d.date === selectedDay),
+    [doses, selectedDay],
+  );
 
   const timelineEvents = useMemo(() => {
     const events: TimelineEvent[] = [];
-    const today = todayKey();
+    const day = selectedDay;
 
-    // Doses logged today
-    const todayDoses = doses.filter((d) => d.date === today);
-    todayDoses.forEach((dose) => {
+    // Doses
+    doses.filter((d) => d.date === day).forEach((dose) => {
       const peptide = getPeptideById(dose.peptideId);
       events.push({
         id: dose.id,
@@ -421,81 +469,70 @@ export default function DashboardScreen() {
         title: peptide?.name ?? dose.peptideId,
         subtitle: `${dose.amount} ${dose.unit} - ${dose.route}`,
         icon: 'flask-outline',
-        color: '#14b8a6',
+        color: '#F8A97A',
         type: 'dose',
       });
     });
 
-    // Today's check-in
-    if (todayCheckin) {
+    // Check-in
+    const dayCheckin = selectedDayCheckin;
+    if (dayCheckin) {
       events.push({
-        id: 'checkin-today',
-        time: todayCheckin.createdAt
-          ? formatTime(
-              `${new Date(todayCheckin.createdAt).getHours()}:${new Date(todayCheckin.createdAt).getMinutes()}`,
-            )
-          : 'Today',
-        sortKey: todayCheckin.createdAt
-          ? `${String(new Date(todayCheckin.createdAt).getHours()).padStart(2, '0')}:${String(new Date(todayCheckin.createdAt).getMinutes()).padStart(2, '0')}`
+        id: `checkin-${day}`,
+        time: dayCheckin.createdAt
+          ? formatTime(`${new Date(dayCheckin.createdAt).getHours()}:${new Date(dayCheckin.createdAt).getMinutes()}`)
+          : 'Logged',
+        sortKey: dayCheckin.createdAt
+          ? `${String(new Date(dayCheckin.createdAt).getHours()).padStart(2, '0')}:${String(new Date(dayCheckin.createdAt).getMinutes()).padStart(2, '0')}`
           : '08:00',
         title: 'Daily Check-in',
-        subtitle: `Mood ${todayCheckin.mood}/5 | Energy ${todayCheckin.energy}/5`,
+        subtitle: `Mood ${dayCheckin.mood}/5 | Energy ${dayCheckin.energy}/5`,
         icon: 'heart-outline',
         color: '#e3a7a1',
         type: 'checkin',
       });
     }
 
-    // Today's workouts
-    workoutLogs
-      .filter((w) => w.date === today)
-      .forEach((workout) => {
-        const startDate = workout.startedAt ? new Date(workout.startedAt) : null;
-        events.push({
-          id: workout.id,
-          time: startDate
-            ? formatTime(`${startDate.getHours()}:${startDate.getMinutes()}`)
-            : 'Today',
-          sortKey: startDate
-            ? `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`
-            : '06:00',
-          title: 'Workout Complete',
-          subtitle: `${workout.sets?.length ?? 0} sets | ${workout.durationMinutes ?? 0} min`,
-          icon: 'barbell-outline',
-          color: '#3b82f6',
-          type: 'workout',
-        });
+    // Workouts
+    workoutLogs.filter((w) => w.date === day).forEach((workout) => {
+      const startDate = workout.startedAt ? new Date(workout.startedAt) : null;
+      events.push({
+        id: workout.id,
+        time: startDate ? formatTime(`${startDate.getHours()}:${startDate.getMinutes()}`) : 'Logged',
+        sortKey: startDate
+          ? `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`
+          : '06:00',
+        title: 'Workout Complete',
+        subtitle: `${workout.sets?.length ?? 0} sets | ${workout.durationMinutes ?? 0} min`,
+        icon: 'barbell-outline',
+        color: '#F8A97A',
+        type: 'workout',
       });
+    });
 
-    // Today's meals
-    meals
-      .filter((m) => m.date === today)
-      .forEach((meal) => {
-        const mealDate = meal.timestamp ? new Date(meal.timestamp) : null;
-        const mealTime = mealDate
-          ? `${mealDate.getHours()}:${mealDate.getMinutes()}`
-          : null;
-        const totalCal =
-          meal.foods.reduce((sum, f) => sum + f.calories, 0) +
-          (meal.quickLog?.calories ?? 0);
-        events.push({
-          id: meal.id,
-          time: mealTime ? formatTime(mealTime) : 'Today',
-          sortKey: mealTime
-            ? `${String(mealDate!.getHours()).padStart(2, '0')}:${String(mealDate!.getMinutes()).padStart(2, '0')}`
-            : '12:00',
-          title: meal.mealType.charAt(0).toUpperCase() + meal.mealType.slice(1),
-          subtitle: `${totalCal} cal`,
-          icon: 'nutrition-outline',
-          color: '#f59e0b',
-          type: 'meal',
-        });
+    // Meals
+    meals.filter((m) => m.date === day).forEach((meal) => {
+      const mealDate = meal.timestamp ? new Date(meal.timestamp) : null;
+      const mealTime = mealDate ? `${mealDate.getHours()}:${mealDate.getMinutes()}` : null;
+      const totalCal = meal.foods.reduce((sum, f) => sum + f.calories, 0) + (meal.quickLog?.calories ?? 0);
+      events.push({
+        id: meal.id,
+        time: mealTime ? formatTime(mealTime) : 'Logged',
+        sortKey: mealTime
+          ? `${String(mealDate!.getHours()).padStart(2, '0')}:${String(mealDate!.getMinutes()).padStart(2, '0')}`
+          : '12:00',
+        title: meal.mealType.charAt(0).toUpperCase() + meal.mealType.slice(1),
+        subtitle: `${totalCal} cal`,
+        icon: 'nutrition-outline',
+        color: '#FFBF82',
+        type: 'meal',
       });
+    });
 
     return events.sort((a, b) => (a.sortKey < b.sortKey ? -1 : 1));
-  }, [doses, todayCheckin, workoutLogs, meals]);
+  }, [selectedDay, selectedDayCheckin, doses, workoutLogs, meals]);
 
-  // ── Pepe Says (contextual suggestion) ─────────────────────────────────────
+  // ── Aimee Says (contextual suggestion) ─────────────────────────────────────
 
   const pepeSuggestion = useMemo(() => {
     const today = todayKey();
@@ -683,127 +720,155 @@ export default function DashboardScreen() {
   // ── Workout summary ──────────────────────────────────────────────────────
   const todayWorkouts = workoutLogs.filter((w) => w.date === todayDate);
 
+  // ── FAB Menu ─────────────────────────────────────────────────────────────
+  const toggleFab = () => {
+    const opening = !fabOpen;
+    setFabOpen(opening);
+    RNAnimated.spring(fabAnim, {
+      toValue: opening ? 1 : 0,
+      tension: 65,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeFab = () => {
+    setFabOpen(false);
+    RNAnimated.spring(fabAnim, {
+      toValue: 0,
+      tension: 65,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const FAB_ITEMS: { label: string; icon: keyof typeof Ionicons.glyphMap; color: string; route: string }[] = [
+    { label: 'Log Meal', icon: 'nutrition-outline', color: '#FFBF82', route: '/nutrition/food-search' },
+    { label: 'Log Dose', icon: 'flask-outline', color: '#F8A97A', route: '/(tabs)/calendar' },
+    { label: 'Check In', icon: 'heart-outline', color: '#e3a7a1', route: '/(tabs)/check-in' },
+    { label: 'Journal', icon: 'book-outline', color: '#D4A853', route: '/journal/new' },
+    { label: 'Workout', icon: 'barbell-outline', color: '#8faa8b', route: '/workouts' },
+  ];
+
   // ── Main Render ───────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        overScrollMode="never"
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}
       >
         {/* ═══════════════════════════════════════════════════════════════
-            HERO — Greeting + Search + Stats
+            HERO — Full-width warm gradient banner
         ═══════════════════════════════════════════════════════════════ */}
         <RNAnimated.View
-          style={[
-            styles.heroSection,
-            {
-              opacity: heroOpacity,
-              transform: [{ translateY: heroTranslateY }],
-            },
-          ]}
+          style={{
+            opacity: heroOpacity,
+            transform: [{ translateY: heroTranslateY }],
+          }}
         >
-          {/* Greeting */}
-          <Text style={[styles.heroGreeting, { color: t.text }]}>
-            {getGreeting()}{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
-          </Text>
-
-          {/* Navigation search bar */}
-          <View style={styles.searchSection}>
-            <View style={[styles.searchBar, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
-              <Ionicons name="search-outline" size={18} color={t.textSecondary} />
-              <TextInput
-                style={[styles.searchInput, { color: t.text }]}
-                placeholder="Search features, tools..."
-                placeholderTextColor={t.placeholder}
-                value={navSearch}
-                onChangeText={setNavSearch}
-                onFocus={() => setNavSearchFocused(true)}
-                onBlur={() => setTimeout(() => setNavSearchFocused(false), 200)}
-              />
-              {navSearch.length > 0 && (
-                <TouchableOpacity onPress={() => setNavSearch('')}>
-                  <Ionicons name="close-circle" size={18} color={t.textSecondary} />
-                </TouchableOpacity>
-              )}
-            </View>
-            {/* Search results dropdown */}
-            {navSearchFocused && navResults.length > 0 && (
-              <View style={[styles.searchResults, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-                {navResults.map((item) => (
-                  <TouchableOpacity
-                    key={item.route}
-                    style={styles.searchResultRow}
-                    onPress={() => {
-                      setNavSearch('');
-                      setNavSearchFocused(false);
-                      router.push(item.route as any);
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.searchResultIcon, { backgroundColor: t.glassAccent }]}>
-                      <Ionicons name={item.icon} size={16} color={t.primary} />
-                    </View>
-                    <Text style={[styles.searchResultText, { color: t.text }]}>{item.label}</Text>
-                    <Ionicons name="arrow-forward" size={14} color={t.textSecondary} />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
-
-          {/* Stat pills row */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.statPillsRow}
+          <LinearGradient
+            colors={[t.surface, `${t.primary}12`, t.bg]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.heroBanner}
           >
-            <View style={[styles.statPill, { backgroundColor: `${t.primary}15`, borderColor: `${t.primary}30` }]}>
-              <RNAnimated.View style={{ transform: [{ scale: pulseAnim }] }}>
-                <Ionicons name="flame" size={15} color={t.primary} />
-              </RNAnimated.View>
-              <Text style={[styles.statPillValue, { color: t.primary }]}>{streak}</Text>
-              <Text style={[styles.statPillLabel, { color: t.textSecondary }]}>streak</Text>
-            </View>
-
-            <View style={[styles.statPill, { backgroundColor: `${t.secondary}15`, borderColor: `${t.secondary}30` }]}>
-              <Ionicons name="trophy" size={15} color={t.secondary} />
-              <Text style={[styles.statPillValue, { color: t.secondary }]}>{workoutLogs.length}</Text>
-              <Text style={[styles.statPillLabel, { color: t.textSecondary }]}>workouts</Text>
-            </View>
-
-            <View style={[styles.statPill, { backgroundColor: `${t.accent}20`, borderColor: `${t.accent}35` }]}>
-              <Ionicons name="star" size={15} color={t.accent} />
-              <Text style={[styles.statPillValue, { color: t.text }]}>Lv {level.level}</Text>
-              <Text style={[styles.statPillLabel, { color: t.textSecondary }]}>{level.title}</Text>
-            </View>
-
-            <View style={[styles.statPill, {
-              backgroundColor: todayCheckin ? 'rgba(34,197,94,0.10)' : `${t.primary}15`,
-              borderColor: todayCheckin ? 'rgba(34,197,94,0.25)' : `${t.primary}30`,
-            }]}>
-              <Ionicons
-                name={todayCheckin ? 'checkmark-circle' : 'ellipse-outline'}
-                size={15}
-                color={todayCheckin ? '#22c55e' : t.primary}
-              />
-              <Text style={[styles.statPillValue, { color: todayCheckin ? '#22c55e' : t.text }]}>
-                {todayCheckin ? 'Done' : 'Due'}
+            {/* Top row: Greeting + Profile avatar */}
+            <View style={styles.heroTopRow}>
+              <Text style={[styles.heroGreeting, { color: t.text }]}>
+                {getGreeting()}{user?.firstName ? `,\n${user.firstName}` : ''}
               </Text>
-              <Text style={[styles.statPillLabel, { color: t.textSecondary }]}>check-in</Text>
+              <View style={styles.profileAvatarWrap}>
+                <TouchableOpacity
+                  style={[styles.profileAvatar, { borderColor: t.primary }]}
+                  onPress={() => router.push('/(tabs)/profile')}
+                  activeOpacity={0.7}
+                >
+                  {user?.avatarUri ? (
+                    <Image source={{ uri: user.avatarUri }} style={styles.profileAvatarImg} />
+                  ) : (
+                    <View style={[styles.profileAvatarFallback, { backgroundColor: t.surface }]}>
+                      <Text style={[styles.profileAvatarInitial, { color: t.primary }]}>
+                        {(user?.firstName ?? 'U')[0].toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => router.push('/(tabs)/profile')}
+                  activeOpacity={0.6}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <Text style={[styles.viewProfileLink, { color: t.primary }]}>View Profile</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Stats row — inline on the banner */}
+            <View style={styles.heroStatsRow}>
+              <View style={styles.heroStat}>
+                <RNAnimated.View style={{ transform: [{ scale: pulseAnim }] }}>
+                  <Ionicons name="flame" size={20} color={t.primary} />
+                </RNAnimated.View>
+                <View>
+                  <Text style={[styles.heroStatValue, { color: t.text }]}>{streak} day streak</Text>
+                  {nextMilestone && (
+                    <Text style={[styles.heroStatSub, { color: t.textSecondary }]}>
+                      {nextMilestone.daysLeft} to {nextMilestone.target}-day
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              <View style={styles.heroStat}>
+                <Ionicons name="trophy" size={20} color={t.secondary} />
+                <View>
+                  <Text style={[styles.heroStatValue, { color: t.text }]}>{workoutLogs.length} workouts</Text>
+                  <Text style={[styles.heroStatSub, { color: t.textSecondary }]}>logged</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.heroStatsRow}>
+              <View style={styles.heroStat}>
+                <Ionicons name="star" size={20} color={t.accent} />
+                <View>
+                  <Text style={[styles.heroStatValue, { color: t.text }]}>Level {level.level}</Text>
+                  <Text style={[styles.heroStatSub, { color: t.textSecondary }]}>{level.title}</Text>
+                </View>
+              </View>
+
+              <View style={styles.heroStat}>
+                <Ionicons
+                  name={todayCheckin ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={20}
+                  color={todayCheckin ? '#16A34A' : t.textSecondary}
+                />
+                <View>
+                  <Text style={[styles.heroStatValue, { color: t.text }]}>
+                    {todayCheckin ? 'Checked in' : 'Check-in due'}
+                  </Text>
+                  <Text style={[styles.heroStatSub, { color: t.textSecondary }]}>
+                    {todayCheckin ? `Mood ${todayCheckin.mood}/5` : 'Start your day'}
+                  </Text>
+                </View>
+              </View>
             </View>
 
             {activeProtocolCount > 0 && (
-              <View style={[styles.statPill, { backgroundColor: `${t.primary}15`, borderColor: `${t.primary}30` }]}>
-                <Ionicons name="flask" size={15} color={t.primary} />
-                <Text style={[styles.statPillValue, { color: t.primary }]}>{activeProtocolCount}</Text>
-                <Text style={[styles.statPillLabel, { color: t.textSecondary }]}>
-                  {activeProtocolCount === 1 ? 'protocol' : 'protocols'}
-                </Text>
+              <View style={[styles.heroStat, { marginTop: 4 }]}>
+                <Ionicons name="flask" size={20} color={t.primary} />
+                <View>
+                  <Text style={[styles.heroStatValue, { color: t.text }]}>
+                    {activeProtocolCount} active protocol{activeProtocolCount > 1 ? 's' : ''}
+                  </Text>
+                  <Text style={[styles.heroStatSub, { color: t.textSecondary }]}>tracking</Text>
+                </View>
               </View>
             )}
-          </ScrollView>
+          </LinearGradient>
         </RNAnimated.View>
 
         {/* ═══════════════════════════════════════════════════════════════
@@ -839,30 +904,180 @@ export default function DashboardScreen() {
         )}
 
         {/* ═══════════════════════════════════════════════════════════════
-            LOGGING PROGRESS — MFP-style nudge card
+            WEEKLY CALENDAR STRIP — Inline week view with activity dots
         ═══════════════════════════════════════════════════════════════ */}
-        <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.section}>
-          <AnimatedPress
-            onPress={() => router.push(todayMealCount === 0 ? '/nutrition' : todayCheckin ? '/workouts' : '/(tabs)/check-in')}
-            scaleTo={0.97}
-          >
-            <View style={[styles.nudgeCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
-              <Text style={[styles.nudgeTitle, { color: t.text }]}>
-                {todayMealCount === 0 && !todayCheckin
-                  ? `Hey${user?.name ? ` ${user.name.split(' ')[0]}` : ''}, ready to start?`
-                  : todayMealCount > 0 && todayCheckin && todayWorkouts.length > 0
-                    ? 'You\'re on fire today!'
-                    : 'Keep it going!'}
-              </Text>
-              <Text style={styles.nudgeBody}>
-                {todayMealCount === 0
-                  ? 'You haven\'t logged any meals yet — let\'s fuel your goals!'
-                  : <>You've logged <Text style={[styles.nudgeHighlight, { color: t.primary }]}>{todayMealCount} meal{todayMealCount !== 1 ? 's' : ''}</Text> and <Text style={[styles.nudgeHighlight, { color: t.primary }]}>{Math.round(dailyMacros.totals.proteinGrams)}g of protein</Text> today.</>
-                }
-              </Text>
-              <Ionicons name="chevron-forward" size={20} color={t.textSecondary} style={styles.nudgeChevron} />
+        <Animated.View entering={FadeInDown.delay(130).duration(400)} style={styles.section}>
+          {/* Header: week label + nav arrows + full calendar link */}
+          <View style={styles.weekHeader}>
+            <View style={styles.weekNav}>
+              <TouchableOpacity onPress={() => setWeekOffset(weekOffset - 1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="chevron-back" size={18} color={t.textSecondary} />
+              </TouchableOpacity>
+              <Text style={[styles.weekLabel, { color: t.text }]}>{weekLabel}</Text>
+              <TouchableOpacity
+                onPress={() => weekOffset < 0 && setWeekOffset(weekOffset + 1)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                disabled={weekOffset >= 0}
+              >
+                <Ionicons name="chevron-forward" size={18} color={weekOffset >= 0 ? 'transparent' : t.textSecondary} />
+              </TouchableOpacity>
             </View>
-          </AnimatedPress>
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/calendar')}
+              activeOpacity={0.7}
+              style={styles.calendarLink}
+            >
+              <Ionicons name="calendar-outline" size={15} color={t.primary} />
+              <Text style={[styles.calendarLinkText, { color: t.primary }]}>Full Calendar</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Day cells */}
+          <View style={[styles.weekStrip, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
+            {weekDays.map((d) => {
+              const key = dateKey(d);
+              const isToday = key === todayKey();
+              const isSelected = key === selectedDay;
+              const isFuture = d > new Date();
+              const activity = weekActivityMap[key];
+              return (
+                <TouchableOpacity
+                  key={key}
+                  style={[
+                    styles.weekDayCell,
+                    isSelected && [styles.weekDayCellSelected, { backgroundColor: t.primary }],
+                  ]}
+                  onPress={() => !isFuture && setSelectedDay(key)}
+                  activeOpacity={isFuture ? 1 : 0.7}
+                >
+                  <Text style={[
+                    styles.weekDayLabel,
+                    { color: isSelected ? '#fff' : t.textSecondary },
+                    isToday && !isSelected && { color: t.primary, fontFamily: 'DMSans-Bold' },
+                  ]}>
+                    {DAY_LABELS[d.getDay()]}
+                  </Text>
+                  <Text style={[
+                    styles.weekDayNumber,
+                    { color: isSelected ? '#fff' : isFuture ? '#D1D5DB' : t.text },
+                    isToday && !isSelected && { color: t.primary },
+                  ]}>
+                    {d.getDate()}
+                  </Text>
+                  {/* Activity dots */}
+                  <View style={styles.weekDots}>
+                    {activity?.meals && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#FFBF82' }]} />}
+                    {activity?.workouts && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#F8A97A' }]} />}
+                    {activity?.checkins && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#e3a7a1' }]} />}
+                    {activity?.doses && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#D4A853' }]} />}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Selected day detail */}
+          <View style={[styles.activityCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
+            <View style={styles.activityDayLabel}>
+              <Text style={[styles.activityDayText, { color: t.text }]}>
+                {selectedDay === todayKey() ? 'Today' : new Date(selectedDay + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+              </Text>
+              <Text style={[styles.activityDayCount, { color: t.textSecondary }]}>
+                {timelineEvents.length} event{timelineEvents.length !== 1 ? 's' : ''}
+              </Text>
+            </View>
+
+            {timelineEvents.length === 0 ? (
+              <View style={styles.activityEmpty}>
+                <Ionicons name="time-outline" size={22} color={t.textSecondary} />
+                <Text style={[styles.activityEmptyText, { color: t.textSecondary }]}>
+                  {selectedDay === todayKey() ? 'Nothing logged yet — tap + to start!' : 'No activity this day'}
+                </Text>
+              </View>
+            ) : (
+              <>
+                {/* Summary badges row */}
+                <View style={styles.daySummaryRow}>
+                  {selectedDayMeals.length > 0 && (
+                    <View style={[styles.daySummaryBadge, { backgroundColor: '#FFBF8215' }]}>
+                      <Ionicons name="nutrition" size={14} color="#FFBF82" />
+                      <Text style={[styles.daySummaryValue, { color: t.text }]}>{Math.round(selectedDayMealCals)}</Text>
+                      <Text style={[styles.daySummaryUnit, { color: t.textSecondary }]}>cal</Text>
+                    </View>
+                  )}
+                  {selectedDayWorkoutList.length > 0 && (
+                    <View style={[styles.daySummaryBadge, { backgroundColor: '#8faa8b15' }]}>
+                      <Ionicons name="barbell" size={14} color="#8faa8b" />
+                      <Text style={[styles.daySummaryValue, { color: t.text }]}>{selectedDayWorkoutList.reduce((s, w) => s + w.durationMinutes, 0)}</Text>
+                      <Text style={[styles.daySummaryUnit, { color: t.textSecondary }]}>min</Text>
+                    </View>
+                  )}
+                  {selectedDayDoseList.length > 0 && (
+                    <View style={[styles.daySummaryBadge, { backgroundColor: '#F8A97A15' }]}>
+                      <Ionicons name="flask" size={14} color="#F8A97A" />
+                      <Text style={[styles.daySummaryValue, { color: t.text }]}>{selectedDayDoseList.length}</Text>
+                      <Text style={[styles.daySummaryUnit, { color: t.textSecondary }]}>dose{selectedDayDoseList.length !== 1 ? 's' : ''}</Text>
+                    </View>
+                  )}
+                  {selectedDayCheckin && (
+                    <View style={[styles.daySummaryBadge, { backgroundColor: '#e3a7a115' }]}>
+                      <Ionicons name="heart" size={14} color="#e3a7a1" />
+                      <Text style={[styles.daySummaryValue, { color: t.text }]}>{selectedDayCheckin.mood}/5</Text>
+                      <Text style={[styles.daySummaryUnit, { color: t.textSecondary }]}>mood</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Check-in detail badges */}
+                {selectedDayCheckin && (
+                  <View style={styles.checkinStripRow}>
+                    <View style={[styles.checkinStripBadge, { backgroundColor: `${t.primary}10` }]}>
+                      <Text style={[styles.checkinStripLabel, { color: t.textSecondary }]}>Energy</Text>
+                      <Text style={[styles.checkinStripVal, { color: t.text }]}>{selectedDayCheckin.energy}/5</Text>
+                    </View>
+                    <View style={[styles.checkinStripBadge, { backgroundColor: `${t.primary}10` }]}>
+                      <Text style={[styles.checkinStripLabel, { color: t.textSecondary }]}>Sleep</Text>
+                      <Text style={[styles.checkinStripVal, { color: t.text }]}>{selectedDayCheckin.sleepQuality}/5</Text>
+                    </View>
+                    {selectedDayCheckin.weightLbs ? (
+                      <View style={[styles.checkinStripBadge, { backgroundColor: `${t.primary}10` }]}>
+                        <Text style={[styles.checkinStripLabel, { color: t.textSecondary }]}>Weight</Text>
+                        <Text style={[styles.checkinStripVal, { color: t.text }]}>{selectedDayCheckin.weightLbs}</Text>
+                      </View>
+                    ) : null}
+                    {selectedDayCheckin.steps ? (
+                      <View style={[styles.checkinStripBadge, { backgroundColor: `${t.primary}10` }]}>
+                        <Text style={[styles.checkinStripLabel, { color: t.textSecondary }]}>Steps</Text>
+                        <Text style={[styles.checkinStripVal, { color: t.text }]}>{selectedDayCheckin.steps.toLocaleString()}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                )}
+
+                {/* Timeline events */}
+                {timelineEvents.slice(0, 6).map((event, i) => (
+                  <View key={event.id} style={[styles.activityRow, i < Math.min(timelineEvents.length, 6) - 1 && { borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' }]}>
+                    <View style={[styles.activityDot, { backgroundColor: event.color }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.activityTitle, { color: t.text }]}>{event.title}</Text>
+                      {event.subtitle && <Text style={[styles.activitySub, { color: t.textSecondary }]}>{event.subtitle}</Text>}
+                    </View>
+                    <Text style={[styles.activityTime, { color: t.textSecondary }]}>{event.time}</Text>
+                  </View>
+                ))}
+                {timelineEvents.length > 6 && (
+                  <TouchableOpacity
+                    style={styles.seeMoreRow}
+                    onPress={() => router.push('/(tabs)/calendar')}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.seeMoreText, { color: t.primary }]}>See all {timelineEvents.length} events</Text>
+                    <Ionicons name="chevron-forward" size={14} color={t.primary} />
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
         </Animated.View>
 
         {/* ═══════════════════════════════════════════════════════════════
@@ -974,8 +1189,97 @@ export default function DashboardScreen() {
           </Animated.View>
         )}
 
-        <View style={{ height: 20 }} />
+        <View style={{ height: 80 }} />
       </ScrollView>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          FAB — Floating Action Button with fan menu
+      ═══════════════════════════════════════════════════════════════ */}
+      {fabOpen && (
+        <TouchableOpacity
+          style={styles.fabOverlay}
+          activeOpacity={1}
+          onPress={closeFab}
+        >
+          <View style={styles.fabOverlayBg} />
+        </TouchableOpacity>
+      )}
+
+      {/* Vertical stack menu — stacked above the FAB */}
+      {FAB_ITEMS.map((item, i) => {
+        // Reverse order so first item ends up closest to FAB
+        const index = FAB_ITEMS.length - 1 - i;
+        const spacing = 56;
+        const targetY = -(index + 1) * spacing;
+
+        return (
+          <RNAnimated.View
+            key={item.label}
+            style={[
+              styles.fabMenuItem,
+              {
+                opacity: fabAnim,
+                transform: [
+                  {
+                    translateY: fabAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, targetY],
+                    }),
+                  },
+                  {
+                    scale: fabAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.7, 1],
+                    }),
+                  },
+                ],
+              },
+            ]}
+            pointerEvents={fabOpen ? 'auto' : 'none'}
+          >
+            <TouchableOpacity
+              style={styles.fabMenuRow}
+              activeOpacity={0.7}
+              onPress={() => {
+                closeFab();
+                router.push(item.route as any);
+              }}
+            >
+              <View style={[styles.fabMenuLabel, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
+                <Text style={[styles.fabMenuLabelText, { color: t.text }]}>{item.label}</Text>
+              </View>
+              <View style={[styles.fabMenuIcon, { backgroundColor: item.color }]}>
+                <Ionicons name={item.icon} size={20} color="#fff" />
+              </View>
+            </TouchableOpacity>
+          </RNAnimated.View>
+        );
+      })}
+
+      {/* FAB button — pill with "Log" label */}
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: t.primary }]}
+        activeOpacity={0.85}
+        onPress={toggleFab}
+      >
+        <RNAnimated.View
+          style={{
+            transform: [{
+              rotate: fabAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0deg', '135deg'],
+              }),
+            }],
+          }}
+        >
+          <Ionicons name="add" size={24} color="#fff" />
+        </RNAnimated.View>
+        {!fabOpen && (
+          <Text style={styles.fabLabel} numberOfLines={1}>
+            Log
+          </Text>
+        )}
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -990,40 +1294,77 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
 
-  // ── Hero ──────────────────────────────────────────────────────────────────
-  heroSection: {
+  // ── Hero Banner ───────────────────────────────────────────────────────────
+  heroBanner: {
     paddingTop: Spacing.md,
-    marginBottom: Spacing.sm,
+    paddingBottom: 24,
+    paddingHorizontal: Spacing.lg,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
   },
   heroGreeting: {
     fontSize: 32,
-    fontWeight: '900',
-    letterSpacing: -0.5,
-    marginBottom: 16,
-    paddingHorizontal: Spacing.lg,
+    fontFamily: 'Playfair-Black',
+    letterSpacing: -0.3,
+    flex: 1,
   },
-  statPillsRow: {
+  profileAvatarWrap: {
+    alignItems: 'center',
+    marginLeft: 12,
+    marginTop: 4,
+  },
+  profileAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    overflow: 'hidden',
+    borderWidth: 2,
+  },
+  viewProfileLink: {
+    fontSize: 12,
+    fontFamily: 'DMSans-SemiBold',
+    textDecorationLine: 'underline',
+    marginTop: 6,
+  },
+  profileAvatarImg: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 32,
+  },
+  profileAvatarFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 32,
+  },
+  profileAvatarInitial: {
+    fontSize: 26,
+    fontFamily: 'DMSans-Bold',
+  },
+  heroStatsRow: {
     flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: Spacing.lg,
+    gap: 16,
+    marginBottom: 12,
   },
-  statPill: {
+  heroStat: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    borderRadius: 22,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    minHeight: 44,
-    borderWidth: 1,
+    gap: 10,
   },
-  statPillValue: {
+  heroStatValue: {
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: 'DMSans-Bold',
   },
-  statPillLabel: {
+  heroStatSub: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'DMSans-Medium',
+    marginTop: 1,
   },
 
   // ── Sections ─────────────────────────────────────────────────────────────
@@ -1040,8 +1381,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: -0.3,
+    fontFamily: 'Playfair-ExtraBold',
+    letterSpacing: -0.2,
     marginBottom: 8,
   },
   sectionAccent: {
@@ -1095,12 +1436,13 @@ const styles = StyleSheet.create({
   },
   nudgeTitle: {
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: 'Playfair-ExtraBold',
     marginBottom: 8,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   nudgeBody: {
     fontSize: 16,
+    fontFamily: 'DMSans-Regular',
     color: '#6B7280',
     lineHeight: 24,
     paddingRight: 32,
@@ -1133,70 +1475,192 @@ const styles = StyleSheet.create({
   },
   discoverTileTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Playfair-Bold',
     textAlign: 'center',
     marginTop: 4,
   },
   discoverTileSub: {
     fontSize: 14,
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: 'DMSans-Medium',
   },
 
-  // ── Search bar ───────────────────────────────────────────────────────────
-  searchSection: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: 14,
-    zIndex: 10,
-  },
-  searchBar: {
+  // ── Weekly Calendar Strip ─────────────────────────────────────────────────
+  weekHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 10,
-    borderRadius: 24,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    height: 48,
+    marginBottom: 12,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    height: 48,
-  },
-  searchResults: {
-    position: 'absolute',
-    top: 50,
-    left: Spacing.lg,
-    right: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    paddingVertical: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-    zIndex: 20,
-  },
-  searchResultRow: {
+  weekNav: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    minHeight: 48,
   },
-  searchResultIcon: {
-    width: 32,
-    height: 32,
+  weekLabel: {
+    fontSize: 15,
+    fontFamily: 'DMSans-SemiBold',
+  },
+  calendarLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  calendarLinkText: {
+    fontSize: 13,
+    fontFamily: 'DMSans-SemiBold',
+  },
+  weekStrip: {
+    flexDirection: 'row',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 6,
+    marginBottom: 12,
+  },
+  weekDayCell: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 12,
+    gap: 2,
+  },
+  weekDayCellSelected: {
+    borderRadius: 12,
+  },
+  weekDayLabel: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Medium',
+    textTransform: 'uppercase',
+  },
+  weekDayNumber: {
+    fontSize: 17,
+    fontFamily: 'DMSans-Bold',
+  },
+  weekDots: {
+    flexDirection: 'row',
+    gap: 3,
+    height: 6,
+    marginTop: 2,
+  },
+  weekDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  activityCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  activityDayLabel: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  activityDayText: {
+    fontSize: 14,
+    fontFamily: 'DMSans-SemiBold',
+  },
+  activityDayCount: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Medium',
+  },
+  activityEmpty: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    gap: 6,
+  },
+  activityEmptyText: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Regular',
+  },
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  activityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  activityTitle: {
+    fontSize: 15,
+    fontFamily: 'DMSans-SemiBold',
+  },
+  activitySub: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Regular',
+    marginTop: 2,
+  },
+  activityTime: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Medium',
+  },
+  daySummaryRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    paddingBottom: 8,
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  daySummaryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 10,
+  },
+  daySummaryValue: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Bold',
+  },
+  daySummaryUnit: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Regular',
+  },
+  checkinStripRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  checkinStripBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  checkinStripLabel: {
+    fontSize: 10,
+    fontFamily: 'DMSans-Medium',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  checkinStripVal: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Bold',
+  },
+  seeMoreRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 10,
+    gap: 4,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
   },
-  searchResultText: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
+  seeMoreText: {
+    fontSize: 13,
+    fontFamily: 'DMSans-SemiBold',
   },
 
   // ── Max Your Stack CTA (bottom banner) ───────────────────────────────────
@@ -1208,13 +1672,13 @@ const styles = StyleSheet.create({
   maxStackCTALabel: {
     fontSize: 10,
     fontWeight: '800',
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(0,0,0,0.40)',
     letterSpacing: 1.5,
     marginBottom: 6,
   },
   maxStackCTATitle: {
-    fontSize: 24,
-    fontWeight: '900',
+    fontSize: 26,
+    fontFamily: 'Playfair-Black',
     color: '#fff',
     marginBottom: 6,
     textAlign: 'center',
@@ -1239,5 +1703,79 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#2D2D2D',
+  },
+
+  // ── FAB ─────────────────────────────────────────────────────────────────
+  fabOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 50,
+  },
+  fabOverlayBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    height: 52,
+    borderRadius: 26,
+    paddingLeft: 16,
+    paddingRight: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 60,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  fabLabel: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'DMSans-Bold',
+    marginLeft: 6,
+    overflow: 'hidden',
+  },
+  fabMenuItem: {
+    position: 'absolute',
+    right: 20,
+    bottom: 46, // just above the FAB (20 + 52/2 = 46)
+    zIndex: 55,
+    alignItems: 'flex-end',
+  },
+  fabMenuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  fabMenuLabel: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginRight: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  fabMenuLabelText: {
+    fontSize: 14,
+    fontFamily: 'DMSans-SemiBold',
+  },
+  fabMenuIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4,
   },
 });

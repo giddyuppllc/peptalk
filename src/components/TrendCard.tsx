@@ -28,7 +28,7 @@ export const TrendCard: React.FC<TrendCardProps> = ({
       ? '#22c55e'
       : trend.direction === 'down'
         ? '#ef4444'
-        : '#9ca3af';
+        : '#6B7280';
 
   const deltaText =
     trend.delta >= 0 ? `+${trend.delta.toFixed(1)}` : trend.delta.toFixed(1);
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   label: {
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     fontSize: 13,
     fontWeight: '600',
     flex: 1,
@@ -100,12 +100,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   value: {
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     fontSize: 18,
     fontWeight: '700',
   },
   unit: {
-    color: '#9ca3af',
+    color: '#6B7280',
     fontSize: 12,
     fontWeight: '400',
   },

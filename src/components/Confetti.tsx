@@ -19,10 +19,10 @@ const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const PARTICLE_COUNT = 40;
 
 const COLORS = [
-  '#3B82F6', // pepBlue
-  '#06B6D4', // pepTeal
+  '#F8A97A', // pepBlue
+  '#F8A97A', // pepTeal
   '#06CEFF', // pepCyan
-  '#f59e0b', // gold
+  '#FFBF82', // gold
   '#10B981', // green
   '#a855f7', // purple
   '#ef4444', // red

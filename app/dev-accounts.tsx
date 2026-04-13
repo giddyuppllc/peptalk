@@ -331,7 +331,7 @@ export default function DevAccountsScreen() {
                 <Text style={[styles.name, { color: palette?.primary ?? Colors.pepTeal }]}>
                   {account.name}
                 </Text>
-                <View style={[styles.tierBadge, account.tier === 'pro' ? styles.proBadge : account.tier === 'plus' ? styles.plusBadge : [styles.freeBadge, { backgroundColor: t.isDark ? '#333' : '#9ca3af' }]]}>
+                <View style={[styles.tierBadge, account.tier === 'pro' ? styles.proBadge : account.tier === 'plus' ? styles.plusBadge : [styles.freeBadge, { backgroundColor: t.isDark ? '#333' : '#6B7280' }]]}>
                   <Text style={[styles.tierText, { color: t.text }]}>{account.tier.toUpperCase().replace(/_/g, ' ')}</Text>
                 </View>
               </View>

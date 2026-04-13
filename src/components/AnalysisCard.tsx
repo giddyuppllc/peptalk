@@ -21,7 +21,7 @@ const InteractionCard: React.FC<{ interaction: PeptideInteraction }> = ({
       ? '#22c55e'
       : interaction.interactionType === 'competitive' || interaction.interactionType === 'contraindicated'
         ? '#ef4444'
-        : '#f59e0b';
+        : '#FFBF82';
 
   return (
     <GlassCard style={styles.interactionCard}>
@@ -155,32 +155,32 @@ const styles = StyleSheet.create({
   overallScoreCard: { marginBottom: 16 },
   overallScoreRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12 },
   overallScoreInfo: { marginLeft: 20, flex: 1 },
-  scoreOutOf: { fontSize: 20, fontWeight: '700', color: '#f7f2ec' },
-  scoreSubtext: { fontSize: 13, color: '#9ca3af', marginTop: 2 },
+  scoreOutOf: { fontSize: 20, fontWeight: '700', color: '#2D2D2D' },
+  scoreSubtext: { fontSize: 13, color: '#6B7280', marginTop: 2 },
   sectionCard: { marginBottom: 16 },
   section: { marginBottom: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#f7f2ec', marginBottom: 8 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#2D2D2D', marginBottom: 8 },
   categoriesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   categoryPill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   categoryPillText: { fontSize: 12, fontWeight: '600' },
   interactionCard: { marginBottom: 12 },
   interactionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   peptidePair: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 12 },
-  peptideName: { fontSize: 14, fontWeight: '700', color: '#f7f2ec' },
-  interactionArrow: { fontSize: 14, color: '#9ca3af', marginHorizontal: 8 },
+  peptideName: { fontSize: 14, fontWeight: '700', color: '#2D2D2D' },
+  interactionArrow: { fontSize: 14, color: '#6B7280', marginHorizontal: 8 },
   interactionTypeBadge: { flexDirection: 'row', marginTop: 8 },
   typePill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
   typeText: { fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
   detailSection: { marginTop: 10 },
   detailLabel: { fontSize: 11, fontWeight: '700', color: '#c7d7e6', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 },
-  detailText: { fontSize: 13, color: '#9ca3af', lineHeight: 19 },
+  detailText: { fontSize: 13, color: '#6B7280', lineHeight: 19 },
   warningsCard: { marginBottom: 16 },
   warningsTitle: { fontSize: 16, fontWeight: '700', color: '#e3a7a1', marginBottom: 10 },
   warningRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
   warningBullet: { fontSize: 14, marginRight: 8, marginTop: 1 },
-  warningText: { fontSize: 13, color: '#e8e6e3', lineHeight: 19, flex: 1 },
+  warningText: { fontSize: 13, color: '#2D2D2D', lineHeight: 19, flex: 1 },
   summaryCard: { marginBottom: 16 },
-  summaryText: { fontSize: 14, color: '#9ca3af', lineHeight: 21 },
+  summaryText: { fontSize: 14, color: '#6B7280', lineHeight: 21 },
 });
 
 export default AnalysisCard;

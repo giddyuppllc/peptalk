@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   categoryName: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     textAlign: 'center',
     lineHeight: 18,
   },

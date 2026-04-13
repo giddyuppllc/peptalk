@@ -53,7 +53,7 @@ function LogItem({ log }: { log: WorkoutLog }) {
           </View>
           {log.rating && (
             <View style={styles.logMetaItem}>
-              <Ionicons name="star" size={12} color="#f59e0b" />
+              <Ionicons name="star" size={12} color="#FFBF82" />
               <Text style={styles.logMetaText}>{log.rating}/5</Text>
             </View>
           )}
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: Spacing.lg, paddingBottom: 40 },
   sep: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   logRow: {
     flexDirection: 'row',

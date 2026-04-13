@@ -39,21 +39,21 @@ export default function CalculatorsHubScreen() {
           onPress={() => router.push('/calculators/quick-dose')}
         >
           <LinearGradient
-            colors={['#3B82F6', '#06B6D4']}
+            colors={['#F8A97A', '#F8A97A']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={[styles.card, styles.primaryCard]}
           >
-            <View style={[styles.cardIcon, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+            <View style={[styles.cardIcon, { backgroundColor: 'rgba(0,0,0,0.12)' }]}>
               <Ionicons name="flash" size={32} color="#fff" />
             </View>
             <View style={styles.cardContent}>
               <Text style={[styles.cardTitle, { color: '#fff' }]}>Quick Dose Guide</Text>
-              <Text style={[styles.cardDesc, { color: 'rgba(255,255,255,0.8)' }]}>
+              <Text style={[styles.cardDesc, { color: 'rgba(0,0,0,0.60)' }]}>
                 Pick a peptide → get dosing, reconstitution, injection instructions, and cycling — all in one place.
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.7)" />
+            <Ionicons name="chevron-forward" size={20} color="rgba(0,0,0,0.50)" />
           </LinearGradient>
         </TouchableOpacity>
 
@@ -137,9 +137,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: FontSizes.xl,
-    fontWeight: '800',
-    color: Colors.darkText,
+    fontSize: 32,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    color: '#2D2D2D',
   },
   scroll: { paddingHorizontal: Spacing.lg, paddingBottom: 40 },
   subtitle: {
@@ -162,7 +163,7 @@ const styles = StyleSheet.create({
   primaryCard: {
     borderWidth: 0,
     marginBottom: Spacing.lg,
-    shadowColor: '#3B82F6',
+    shadowColor: '#F8A97A',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -179,7 +180,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: BorderRadius.md,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.md,

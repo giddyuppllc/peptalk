@@ -41,8 +41,8 @@ export function ProgressRing({
   progress,
   size = 120,
   strokeWidth = 10,
-  color = '#06B6D4',
-  trackColor = 'rgba(255,255,255,0.06)',
+  color = '#F8A97A',
+  trackColor = 'rgba(0,0,0,0.05)',
   label,
   subLabel,
   labelSize = 22,
@@ -120,11 +120,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontWeight: '800',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
   },
   subLabel: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginTop: 2,
   },
 });

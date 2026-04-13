@@ -60,7 +60,7 @@ export default function ConsultScreen() {
           </Text>
           <AnimatedPress onPress={() => router.push('/subscription')}>
             <LinearGradient
-              colors={['#3B82F6', '#06B6D4']}
+              colors={['#F8A97A', '#F8A97A']}
               style={styles.upgradeBtn}
             >
               <Text style={styles.upgradeBtnText}>View Plans</Text>
@@ -186,7 +186,7 @@ export default function ConsultScreen() {
         {/* Submit */}
         <AnimatedPress onPress={handleSubmit}>
           <LinearGradient
-            colors={['#f59e0b', '#ef4444']}
+            colors={['#FFBF82', '#ef4444']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.submitBtn}
@@ -212,10 +212,10 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.06)',
     alignItems: 'center', justifyContent: 'center',
   },
-  headerTitle: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.darkText },
+  headerTitle: { fontSize: 32, fontWeight: '900', letterSpacing: -0.5, color: '#2D2D2D' },
   scroll: { paddingHorizontal: Spacing.lg },
 
   // Jamie
@@ -241,9 +241,9 @@ const styles = StyleSheet.create({
   topicGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.lg },
   topicCard: {
     width: '48%', flexGrow: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: BorderRadius.md, borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(0,0,0,0.08)',
     padding: Spacing.md, alignItems: 'center', gap: Spacing.xs,
   },
   topicCardActive: {
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
 
   // Disclaimer
   disclaimer: {
-    fontSize: FontSizes.xs, color: 'rgba(255,255,255,0.35)',
+    fontSize: FontSizes.xs, color: 'rgba(0,0,0,0.20)',
     lineHeight: 16, textAlign: 'center', marginBottom: Spacing.lg,
   },
 
@@ -281,6 +281,6 @@ const styles = StyleSheet.create({
   successIcon: { marginBottom: Spacing.sm },
   successTitle: { fontSize: FontSizes.xxl, fontWeight: '800', color: Colors.darkText },
   successText: { fontSize: FontSizes.md, color: Colors.darkTextSecondary, textAlign: 'center', lineHeight: 22 },
-  doneBtn: { backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: BorderRadius.md, marginTop: Spacing.md },
+  doneBtn: { backgroundColor: 'rgba(0,0,0,0.08)', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: BorderRadius.md, marginTop: Spacing.md },
   doneBtnText: { color: Colors.darkText, fontSize: FontSizes.md, fontWeight: '600' },
 });

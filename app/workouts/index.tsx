@@ -1,8 +1,8 @@
 /**
- * Workout Programs screen — browse available programs and track active enrollment.
+ * Workouts — hub for active program, custom workout generation, Jamie's programs, and videos.
  */
 
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -10,26 +10,211 @@ import {
   ScrollView,
   StyleSheet,
   Image,
+  Modal,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { GlassCard } from '../../src/components/GlassCard';
-import { GradientButton } from '../../src/components/GradientButton';
-import { Colors, Fonts, Gradients, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
+import { Spacing } from '../../src/constants/theme';
 import { WORKOUT_PROGRAMS } from '../../src/data/workoutPrograms';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
+import { useOnboardingStore } from '../../src/store/useOnboardingStore';
 import type { WorkoutProgram } from '../../src/types/fitness';
 import { PaywallGate } from '../../src/hooks/useFeatureGate';
+import {
+  getTemplates,
+  getTemplatesForUser,
+  generateWorkout,
+  GOAL_LABELS,
+  type ProgramTemplate,
+} from '../../src/services/workoutGenerator';
+
+// ---------------------------------------------------------------------------
+// Custom Workout Generator Sheet
+// ---------------------------------------------------------------------------
+
+type Goal = 'transformation' | 'weight_loss' | 'circuit' | 'hypertrophy' | 'strength';
+type Days = 3 | 4 | 5;
+type Loc = 'any' | 'gym' | 'home';
+type Lvl = 'beginner' | 'intermediate' | 'advanced';
+
+interface GeneratorSheetProps {
+  visible: boolean;
+  onClose: () => void;
+  onGenerate: (template: ProgramTemplate) => void;
+  gender: 'male' | 'female';
+}
+
+function GeneratorSheet({ visible, onClose, onGenerate, gender }: GeneratorSheetProps) {
+  const t = useTheme();
+  const [goal, setGoal] = useState<Goal>(gender === 'female' ? 'transformation' : 'hypertrophy');
+  const [days, setDays] = useState<Days>(4);
+  const [location, setLocation] = useState<Loc>('any');
+  const [level, setLevel] = useState<Lvl>('beginner');
+
+  const availableGoals = useMemo(() => {
+    const set = new Set<string>();
+    getTemplates().forEach((tpl) => {
+      if (tpl.gender === 'anyone' || tpl.gender === gender) set.add(tpl.goal);
+    });
+    return Array.from(set) as Goal[];
+  }, [gender]);
+
+  const handleGenerate = () => {
+    // Find the best matching template
+    const matches = getTemplatesForUser({ gender, goal, daysPerWeek: days });
+    if (matches.length === 0) {
+      Alert.alert(
+        'No template found',
+        `No ${days}-day template for ${GOAL_LABELS[goal]?.label ?? goal}. Try a different combination.`,
+      );
+      return;
+    }
+    onGenerate(matches[0]);
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <TouchableOpacity style={s.sheetBackdrop} activeOpacity={1} onPress={onClose}>
+        <TouchableOpacity activeOpacity={1} style={[s.sheetContent, { backgroundColor: t.bg }]}>
+          <View style={s.sheetHandle} />
+          <Text style={[s.sheetTitle, { color: t.text }]}>Generate Workout</Text>
+          <Text style={[s.sheetSub, { color: t.textSecondary }]}>
+            Built from Jamie's exercise pool using her P1/P2/P3 priority system
+          </Text>
+
+          <ScrollView
+            style={{ maxHeight: 440 }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingTop: 20 }}
+          >
+            {/* Goal */}
+            <Text style={[s.fieldLabel, { color: t.textSecondary }]}>GOAL</Text>
+            <View style={s.chipRow}>
+              {availableGoals.map((g) => {
+                const active = goal === g;
+                return (
+                  <TouchableOpacity
+                    key={g}
+                    style={[
+                      s.chip,
+                      { backgroundColor: active ? t.primary : t.surface, borderColor: active ? t.primary : t.cardBorder },
+                    ]}
+                    onPress={() => setGoal(g)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[s.chipText, { color: active ? '#fff' : t.text }]}>
+                      {GOAL_LABELS[g]?.label ?? g}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Days */}
+            <Text style={[s.fieldLabel, { color: t.textSecondary }]}>DAYS PER WEEK</Text>
+            <View style={s.chipRow}>
+              {([3, 4, 5] as Days[]).map((d) => {
+                const active = days === d;
+                return (
+                  <TouchableOpacity
+                    key={d}
+                    style={[
+                      s.chip,
+                      { backgroundColor: active ? t.primary : t.surface, borderColor: active ? t.primary : t.cardBorder },
+                    ]}
+                    onPress={() => setDays(d)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[s.chipText, { color: active ? '#fff' : t.text }]}>{d} days</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Location */}
+            <Text style={[s.fieldLabel, { color: t.textSecondary }]}>LOCATION</Text>
+            <View style={s.chipRow}>
+              {([
+                { key: 'any', label: 'Anywhere', icon: 'globe-outline' },
+                { key: 'gym', label: 'Gym', icon: 'barbell-outline' },
+                { key: 'home', label: 'Home', icon: 'home-outline' },
+              ] as const).map((l) => {
+                const active = location === l.key;
+                return (
+                  <TouchableOpacity
+                    key={l.key}
+                    style={[
+                      s.chip,
+                      { backgroundColor: active ? t.primary : t.surface, borderColor: active ? t.primary : t.cardBorder },
+                    ]}
+                    onPress={() => setLocation(l.key as Loc)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={l.icon} size={14} color={active ? '#fff' : t.text} />
+                    <Text style={[s.chipText, { color: active ? '#fff' : t.text, marginLeft: 4 }]}>
+                      {l.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Level */}
+            <Text style={[s.fieldLabel, { color: t.textSecondary }]}>LEVEL</Text>
+            <View style={s.chipRow}>
+              {(['beginner', 'intermediate', 'advanced'] as Lvl[]).map((lv) => {
+                const active = level === lv;
+                return (
+                  <TouchableOpacity
+                    key={lv}
+                    style={[
+                      s.chip,
+                      { backgroundColor: active ? t.primary : t.surface, borderColor: active ? t.primary : t.cardBorder },
+                    ]}
+                    onPress={() => setLevel(lv)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[s.chipText, { color: active ? '#fff' : t.text }]}>
+                      {lv.charAt(0).toUpperCase() + lv.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+
+          {/* Generate button */}
+          <TouchableOpacity
+            style={[s.generateBtn, { backgroundColor: t.primary }]}
+            onPress={handleGenerate}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="sparkles" size={18} color="#fff" />
+            <Text style={s.generateBtnText}>Generate Workout</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={s.sheetCancel} onPress={onClose}>
+            <Text style={[s.sheetCancelText, { color: t.textSecondary }]}>Cancel</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Program Card
 // ---------------------------------------------------------------------------
 
 function ProgramCard({ program }: { program: WorkoutProgram }) {
+  const t = useTheme();
   const router = useRouter();
-  const { activeProgram, startProgram } = useWorkoutStore();
+  const { activeProgram } = useWorkoutStore();
   const isActive = activeProgram?.programId === program.id;
 
   const handlePress = () => {
@@ -42,85 +227,61 @@ function ProgramCard({ program }: { program: WorkoutProgram }) {
 
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={handlePress}>
-      <GlassCard variant={isActive ? 'glow' : 'default'} glowColor={Colors.pepTeal}>
-        {/* Cover Image */}
+      <View style={[s.programCard, { backgroundColor: t.surface, borderColor: isActive ? t.primary : t.cardBorder }]}>
         {program.imageUrl && (
-          <View style={styles.cardImageWrap}>
-            <Image
-              source={{ uri: program.imageUrl }}
-              style={styles.cardImage}
-              resizeMode="cover"
-            />
+          <View style={s.programImageWrap}>
+            <Image source={{ uri: program.imageUrl }} style={s.programImage} resizeMode="cover" />
             <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.7)']}
-              style={styles.cardImageOverlay}
+              colors={['transparent', 'rgba(0,0,0,0.55)']}
+              style={s.programImageOverlay}
             />
+            {program.isPremium && (
+              <View style={[s.proBadge, { backgroundColor: t.primary }]}>
+                <Text style={s.proBadgeText}>PRO</Text>
+              </View>
+            )}
           </View>
         )}
 
-        {/* Header */}
-        <View style={styles.cardHeader}>
-          <LinearGradient
-            colors={[Colors.pepTeal, Colors.pepBlue]}
-            style={styles.cardIcon}
-          >
-            <Ionicons name="barbell-outline" size={24} color="#fff" />
-          </LinearGradient>
-          <View style={styles.cardHeaderText}>
-            <Text style={styles.cardTitle}>{program.name}</Text>
-            <Text style={styles.cardCreator}>by {program.createdBy}</Text>
+        <View style={s.programBody}>
+          <Text style={[s.programTitle, { color: t.text }]}>{program.name}</Text>
+          <Text style={[s.programCreator, { color: t.textSecondary }]}>by {program.createdBy}</Text>
+
+          <Text style={[s.programDesc, { color: t.textSecondary }]} numberOfLines={2}>
+            {program.description}
+          </Text>
+
+          <View style={s.programMeta}>
+            <View style={s.programMetaItem}>
+              <Ionicons name="calendar-outline" size={13} color={t.primary} />
+              <Text style={[s.programMetaText, { color: t.textSecondary }]}>
+                {program.durationWeeks} weeks
+              </Text>
+            </View>
+            <View style={s.programMetaItem}>
+              <Ionicons name="fitness-outline" size={13} color={t.primary} />
+              <Text style={[s.programMetaText, { color: t.textSecondary }]}>
+                {program.weeks[0]?.days.length ?? 0} days/wk
+              </Text>
+            </View>
+            <View style={s.programMetaItem}>
+              <Ionicons name="trophy-outline" size={13} color={t.primary} />
+              <Text style={[s.programMetaText, { color: t.textSecondary }]}>
+                {program.difficulty}
+              </Text>
+            </View>
           </View>
-          {program.isPremium && (
-            <View style={styles.premiumBadge}>
-              <Ionicons name="star" size={12} color="#f59e0b" />
-              <Text style={styles.premiumText}>PRO</Text>
+
+          {isActive && (
+            <View style={[s.activeBanner, { backgroundColor: `${t.primary}18`, borderColor: `${t.primary}40` }]}>
+              <Ionicons name="play-circle" size={16} color={t.primary} />
+              <Text style={[s.activeBannerText, { color: t.primary }]}>
+                Week {activeProgram!.currentWeek}, Day {activeProgram!.currentDay + 1} — Continue
+              </Text>
             </View>
           )}
         </View>
-
-        {/* Description */}
-        <Text style={styles.cardDesc} numberOfLines={3}>
-          {program.description}
-        </Text>
-
-        {/* Meta */}
-        <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <Ionicons name="calendar-outline" size={14} color={Colors.pepTeal} />
-            <Text style={styles.metaText}>{program.durationWeeks} weeks</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="fitness-outline" size={14} color={Colors.pepTeal} />
-            <Text style={styles.metaText}>
-              {program.weeks[0]?.days.length ?? 0} days/wk
-            </Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="trophy-outline" size={14} color={Colors.pepTeal} />
-            <Text style={styles.metaText}>{program.difficulty}</Text>
-          </View>
-        </View>
-
-        {/* Tags */}
-        <View style={styles.tagRow}>
-          {program.category.map((cat) => (
-            <View key={cat} style={styles.tag}>
-              <Text style={styles.tagText}>{cat}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* CTA */}
-        {isActive ? (
-          <View style={styles.activeRow}>
-            <Ionicons name="play-circle" size={20} color={Colors.pepTeal} />
-            <Text style={styles.activeText}>
-              Week {activeProgram.currentWeek}, Day{' '}
-              {activeProgram.currentDay + 1} — Tap to continue
-            </Text>
-          </View>
-        ) : null}
-      </GlassCard>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -130,6 +291,7 @@ function ProgramCard({ program }: { program: WorkoutProgram }) {
 // ---------------------------------------------------------------------------
 
 function StatsBar() {
+  const t = useTheme();
   const { logs, getStreak } = useWorkoutStore();
   const streak = getStreak();
   const thisWeek = logs.filter((l) => {
@@ -140,21 +302,95 @@ function StatsBar() {
   }).length;
 
   return (
-    <View style={styles.statsRow}>
-      <View style={styles.statCard}>
-        <Text style={styles.statNumber}>{logs.length}</Text>
-        <Text style={styles.statLabel}>Total</Text>
+    <View style={s.statsRow}>
+      <View style={[s.statCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
+        <Text style={[s.statNumber, { color: t.text }]}>{logs.length}</Text>
+        <Text style={[s.statLabel, { color: t.textSecondary }]}>Total</Text>
       </View>
-      <View style={styles.statCard}>
-        <Text style={styles.statNumber}>{thisWeek}</Text>
-        <Text style={styles.statLabel}>This Week</Text>
+      <View style={[s.statCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
+        <Text style={[s.statNumber, { color: t.text }]}>{thisWeek}</Text>
+        <Text style={[s.statLabel, { color: t.textSecondary }]}>This Week</Text>
       </View>
-      <View style={styles.statCard}>
-        <Text style={[styles.statNumber, { color: Colors.pepTeal }]}>
-          {streak}
-        </Text>
-        <Text style={styles.statLabel}>Streak</Text>
+      <View style={[s.statCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
+        <Text style={[s.statNumber, { color: t.primary }]}>{streak}</Text>
+        <Text style={[s.statLabel, { color: t.textSecondary }]}>Streak</Text>
       </View>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Workout Videos (placeholder)
+// ---------------------------------------------------------------------------
+
+const VIDEO_PLACEHOLDERS = [
+  {
+    id: 'form-squat',
+    title: 'Perfect Squat Form',
+    category: 'Form Tutorial',
+    duration: '4:12',
+    thumbnail: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=600&q=80',
+  },
+  {
+    id: 'form-rdl',
+    title: 'RDL Technique & Common Mistakes',
+    category: 'Form Tutorial',
+    duration: '6:38',
+    thumbnail: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=600&q=80',
+  },
+  {
+    id: 'glute-activation',
+    title: '5-Minute Glute Activation',
+    category: 'Warm-up',
+    duration: '5:00',
+    thumbnail: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=80',
+  },
+  {
+    id: 'hiit-circuit',
+    title: '20-Minute HIIT Circuit',
+    category: 'Full Workout',
+    duration: '20:14',
+    thumbnail: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&q=80',
+  },
+];
+
+function WorkoutVideos() {
+  const t = useTheme();
+
+  return (
+    <View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: Spacing.lg, gap: 12 }}
+      >
+        {VIDEO_PLACEHOLDERS.map((v) => (
+          <TouchableOpacity
+            key={v.id}
+            style={[s.videoCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}
+            activeOpacity={0.85}
+            onPress={() => Alert.alert('Coming soon', 'Video playback will be added once Jamie delivers the video library.')}
+          >
+            <View style={s.videoThumbWrap}>
+              <Image source={{ uri: v.thumbnail }} style={s.videoThumb} />
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.65)']}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <View style={s.videoPlayBtn}>
+                <Ionicons name="play" size={18} color="#fff" />
+              </View>
+              <View style={s.videoDuration}>
+                <Text style={s.videoDurationText}>{v.duration}</Text>
+              </View>
+            </View>
+            <View style={s.videoInfo}>
+              <Text style={[s.videoCategory, { color: t.primary }]}>{v.category.toUpperCase()}</Text>
+              <Text style={[s.videoTitle, { color: t.text }]} numberOfLines={2}>{v.title}</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
     </View>
   );
 }
@@ -164,94 +400,191 @@ function StatsBar() {
 // ---------------------------------------------------------------------------
 
 export default function WorkoutsScreen() {
+  const t = useTheme();
   const router = useRouter();
+  const { activeProgram, startProgram } = useWorkoutStore();
+  const { profile } = useOnboardingStore();
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const gender: 'male' | 'female' = profile.gender === 'Male' ? 'male' : 'female';
+
+  const activeProgramDetails = activeProgram
+    ? WORKOUT_PROGRAMS.find((p) => p.id === activeProgram.programId)
+    : null;
+
+  const handleGenerated = (template: ProgramTemplate) => {
+    // Find the matching pre-built program in WORKOUT_PROGRAMS (if any)
+    // or use the template id directly. Route to the program view.
+    const matchingProgram = WORKOUT_PROGRAMS.find((p) => p.id.includes(template.goal));
+    if (matchingProgram) {
+      router.push(`/workouts/program?programId=${matchingProgram.id}`);
+    } else {
+      Alert.alert(
+        'Workout Generated',
+        `${template.label} — ${template.daysPerWeek} days/week. Full program view coming next — for now you can log individual workouts from the player.`,
+      );
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[s.container, { backgroundColor: t.bg }]} edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.iconBtn}>
+          <Ionicons name="chevron-back" size={24} color={t.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Workouts</Text>
+        <Text style={[s.headerTitle, { color: t.text }]}>Workouts</Text>
         <TouchableOpacity
           onPress={() => router.push('/workouts/exercises')}
-          style={styles.backBtn}
+          style={s.iconBtn}
         >
-          <Ionicons name="search" size={22} color={Colors.darkText} />
+          <Ionicons name="search" size={22} color={t.text} />
         </TouchableOpacity>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
+        overScrollMode="never"
+        contentContainerStyle={s.scroll}
       >
         {/* Stats */}
-        <StatsBar />
+        <View style={s.section}>
+          <StatsBar />
+        </View>
 
-        {/* Quick Actions */}
-        <View style={styles.quickRow}>
+        {/* Today's Workout / Active Program hero */}
+        {activeProgram ? (
+          <View style={s.section}>
+            <View style={[s.heroCard, { backgroundColor: t.surface, borderColor: `${t.primary}30` }]}>
+              <LinearGradient
+                colors={[`${t.primary}18`, `${t.secondary}08`]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={s.heroCardGradient}
+              >
+                <Text style={[s.heroCardLabel, { color: t.primary }]}>ACTIVE PROGRAM</Text>
+                <Text style={[s.heroCardTitle, { color: t.text }]}>
+                  {activeProgramDetails?.name ?? 'Your Program'}
+                </Text>
+                <Text style={[s.heroCardSub, { color: t.textSecondary }]}>
+                  Week {activeProgram.currentWeek} · Day {activeProgram.currentDay + 1}
+                </Text>
+                <TouchableOpacity
+                  style={[s.heroCardBtn, { backgroundColor: t.primary }]}
+                  onPress={() => router.push(`/workouts/player?programId=${activeProgram.programId}`)}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="play" size={16} color="#fff" />
+                  <Text style={s.heroCardBtnText}>Start Today's Workout</Text>
+                </TouchableOpacity>
+              </LinearGradient>
+            </View>
+          </View>
+        ) : null}
+
+        {/* Generate Custom Workout */}
+        <View style={s.section}>
           <TouchableOpacity
-            style={styles.quickBtn}
-            onPress={() => router.push('/workouts/exercises')}
+            style={[s.generateCard, { backgroundColor: t.surface, borderColor: `${t.primary}30` }]}
+            onPress={() => setSheetOpen(true)}
+            activeOpacity={0.85}
           >
-            <LinearGradient
-              colors={[Colors.pepBlue, Colors.pepCyan]}
-              style={styles.quickIcon}
-            >
-              <Ionicons name="list-outline" size={20} color="#fff" />
-            </LinearGradient>
-            <Text style={styles.quickLabel}>Exercise Library</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickBtn}
-            onPress={() => router.push('/workouts/history')}
-          >
-            <LinearGradient
-              colors={[Colors.pepTeal, Colors.pepBlue]}
-              style={styles.quickIcon}
-            >
-              <Ionicons name="time-outline" size={20} color="#fff" />
-            </LinearGradient>
-            <Text style={styles.quickLabel}>History</Text>
+            <View style={[s.generateIcon, { backgroundColor: `${t.primary}18` }]}>
+              <Ionicons name="sparkles" size={22} color={t.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.generateTitle, { color: t.text }]}>Generate Custom Workout</Text>
+              <Text style={[s.generateSub, { color: t.textSecondary }]}>
+                Pick your goal, days, and location
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={t.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        {/* Log Your Own Workout — free for everyone */}
-        <TouchableOpacity
-          style={styles.logOwnBtn}
-          onPress={() => router.push('/workouts/player')}
-          activeOpacity={0.8}
-        >
-          <LinearGradient colors={[Colors.pepTeal, Colors.pepBlue]} style={styles.logOwnGrad}>
-            <Ionicons name="add-circle-outline" size={22} color="#fff" />
-            <Text style={styles.logOwnText}>Log Your Own Workout</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
-        {/* Jamie's Programs — Pepe Plus required */}
-        <Text style={styles.sectionTitle}>Programs by Jamie</Text>
-        <PaywallGate feature="workout_programs">
-          <>
-            {WORKOUT_PROGRAMS.map((program) => (
-              <View key={program.id} style={styles.cardWrap}>
-                <ProgramCard program={program} />
+        {/* Quick Actions */}
+        <View style={s.section}>
+          <View style={s.quickRow}>
+            <TouchableOpacity
+              style={[s.quickBtn, { backgroundColor: t.surface, borderColor: t.cardBorder }]}
+              onPress={() => router.push('/workouts/player')}
+              activeOpacity={0.8}
+            >
+              <View style={[s.quickIcon, { backgroundColor: `${t.primary}18` }]}>
+                <Ionicons name="add" size={18} color={t.primary} />
               </View>
-            ))}
-            <View style={styles.cardWrap}>
-              <GlassCard>
-                <View style={styles.comingSoon}>
-                  <Ionicons name="add-circle-outline" size={32} color={Colors.darkTextSecondary} />
-                  <Text style={styles.comingSoonTitle}>More Programs Coming</Text>
-                  <Text style={styles.comingSoonDesc}>
-                    Jamie is building strength, HIIT, and postpartum recovery programs. Stay tuned!
-                  </Text>
+              <Text style={[s.quickLabel, { color: t.text }]}>Log Workout</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.quickBtn, { backgroundColor: t.surface, borderColor: t.cardBorder }]}
+              onPress={() => router.push('/workouts/exercises')}
+              activeOpacity={0.8}
+            >
+              <View style={[s.quickIcon, { backgroundColor: `${t.primary}18` }]}>
+                <Ionicons name="list-outline" size={18} color={t.primary} />
+              </View>
+              <Text style={[s.quickLabel, { color: t.text }]}>Exercises</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.quickBtn, { backgroundColor: t.surface, borderColor: t.cardBorder }]}
+              onPress={() => router.push('/workouts/history')}
+              activeOpacity={0.8}
+            >
+              <View style={[s.quickIcon, { backgroundColor: `${t.primary}18` }]}>
+                <Ionicons name="time-outline" size={18} color={t.primary} />
+              </View>
+              <Text style={[s.quickLabel, { color: t.text }]}>History</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Workout Videos */}
+        <View style={s.sectionHeaderRow}>
+          <Text style={[s.sectionTitle, { color: t.text }]}>Workout Videos</Text>
+          <TouchableOpacity onPress={() => Alert.alert('Coming soon', 'Full video library coming soon.')}>
+            <Text style={[s.seeAllText, { color: t.primary }]}>See all</Text>
+          </TouchableOpacity>
+        </View>
+        <WorkoutVideos />
+
+        {/* Programs by Jamie */}
+        <View style={[s.sectionHeaderRow, { marginTop: 24 }]}>
+          <Text style={[s.sectionTitle, { color: t.text }]}>Programs by Jamie</Text>
+        </View>
+        <View style={s.section}>
+          <PaywallGate feature="workout_programs">
+            <>
+              {WORKOUT_PROGRAMS.map((program) => (
+                <View key={program.id} style={{ marginBottom: 14 }}>
+                  <ProgramCard program={program} />
                 </View>
-              </GlassCard>
-            </View>
-          </>
-        </PaywallGate>
+              ))}
+              <View
+                style={[
+                  s.comingSoonCard,
+                  { backgroundColor: t.surface, borderColor: t.cardBorder },
+                ]}
+              >
+                <Ionicons name="add-circle-outline" size={28} color={t.textSecondary} />
+                <Text style={[s.comingSoonTitle, { color: t.text }]}>More Programs Coming</Text>
+                <Text style={[s.comingSoonDesc, { color: t.textSecondary }]}>
+                  Jamie is building strength, HIIT, and postpartum recovery programs.
+                </Text>
+              </View>
+            </>
+          </PaywallGate>
+        </View>
+
+        <View style={{ height: 60 }} />
       </ScrollView>
+
+      {/* Custom Workout Generator Sheet */}
+      <GeneratorSheet
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        onGenerate={handleGenerated}
+        gender={gender}
+      />
     </SafeAreaView>
   );
 }
@@ -260,8 +593,10 @@ export default function WorkoutsScreen() {
 // Styles
 // ---------------------------------------------------------------------------
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.darkBg },
+const s = StyleSheet.create({
+  container: { flex: 1 },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -269,240 +604,392 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
   },
-  backBtn: {
+  iconBtn: {
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: FontSizes.xl,
-    fontWeight: '800',
-    color: Colors.darkText,
+    fontSize: 32,
+    fontFamily: 'Playfair-Black',
+    letterSpacing: -0.5,
   },
+
   scroll: { paddingBottom: 40 },
+
+  section: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: 16,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontFamily: 'Playfair-Black',
+    letterSpacing: -0.3,
+  },
+  seeAllText: {
+    fontSize: 13,
+    fontFamily: 'DMSans-SemiBold',
+  },
 
   // Stats
   statsRow: {
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
+    gap: 10,
   },
   statCard: {
     flex: 1,
-    backgroundColor: Colors.glassBlue,
-    borderRadius: BorderRadius.md,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: Colors.glassBlueBorder,
     paddingVertical: 14,
     alignItems: 'center',
   },
   statNumber: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: Colors.darkText,
+    fontSize: 26,
+    fontFamily: 'Playfair-Black',
+    letterSpacing: -0.5,
   },
   statLabel: {
-    fontSize: FontSizes.xs,
-    color: Colors.darkTextSecondary,
+    fontSize: 11,
+    fontFamily: 'DMSans-Medium',
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
+  // Hero card (active program)
+  heroCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  heroCardGradient: {
+    padding: 20,
+  },
+  heroCardLabel: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  heroCardTitle: {
+    fontSize: 24,
+    fontFamily: 'Playfair-Black',
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  heroCardSub: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Medium',
+    marginBottom: 16,
+  },
+  heroCardBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 13,
+    borderRadius: 14,
+  },
+  heroCardBtnText: {
+    fontSize: 15,
+    fontFamily: 'DMSans-Bold',
+    color: '#fff',
+  },
+
+  // Generate custom card
+  generateCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  generateIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  generateTitle: {
+    fontSize: 15,
+    fontFamily: 'DMSans-Bold',
+  },
+  generateSub: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Regular',
     marginTop: 2,
   },
 
   // Quick actions
   quickRow: {
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
+    gap: 10,
   },
   quickBtn: {
     flex: 1,
-    backgroundColor: Colors.glassBlue,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.glassBlueBorder,
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 14,
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
   },
   quickIcon: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   quickLabel: {
-    fontSize: FontSizes.sm,
-    fontWeight: '600',
-    color: Colors.darkText,
-  },
-
-  // Section
-  sectionTitle: {
-    fontSize: FontSizes.lg,
-    fontWeight: '700',
-    color: Colors.darkText,
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.sm,
-  },
-  cardWrap: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-
-  // Program card image
-  cardImageWrap: {
-    height: 140,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    overflow: 'hidden' as const,
-    marginTop: -16,
-    marginLeft: -16,
-    marginRight: -16,
-    marginBottom: 12,
-  },
-  cardImage: {
-    width: '100%',
-    height: 140,
-  },
-  cardImageOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 60,
+    fontSize: 12,
+    fontFamily: 'DMSans-SemiBold',
   },
 
   // Program card
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 10,
+  programCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
-  cardIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+  programImageWrap: {
+    width: '100%',
+    height: 140,
+    position: 'relative',
   },
-  cardHeaderText: { flex: 1 },
-  cardTitle: {
-    fontSize: FontSizes.lg,
-    fontWeight: '700',
-    color: Colors.darkText,
+  programImage: {
+    width: '100%',
+    height: '100%',
   },
-  cardCreator: {
-    fontSize: FontSizes.xs,
-    color: Colors.darkTextSecondary,
-    marginTop: 2,
+  programImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
   },
-  premiumBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    borderRadius: 8,
+  proBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
+    borderRadius: 8,
   },
-  premiumText: {
+  proBadgeText: {
     fontSize: 10,
-    fontWeight: '800',
-    color: '#f59e0b',
+    fontFamily: 'DMSans-Bold',
+    color: '#fff',
+    letterSpacing: 0.5,
   },
-  cardDesc: {
-    fontSize: FontSizes.sm,
-    color: Colors.darkTextSecondary,
-    lineHeight: 20,
-    marginBottom: 12,
+  programBody: {
+    padding: 14,
   },
-  metaRow: {
-    flexDirection: 'row',
-    gap: 16,
+  programTitle: {
+    fontSize: 17,
+    fontFamily: 'DMSans-Bold',
+  },
+  programCreator: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Regular',
+    marginTop: 2,
+    marginBottom: 8,
+  },
+  programDesc: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Regular',
+    lineHeight: 19,
     marginBottom: 10,
   },
-  metaItem: {
+  programMeta: {
+    flexDirection: 'row',
+    gap: 14,
+  },
+  programMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  metaText: {
-    fontSize: FontSizes.xs,
-    color: Colors.darkTextSecondary,
+  programMetaText: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Medium',
   },
-  tagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 8,
-  },
-  tag: {
-    backgroundColor: 'rgba(6, 182, 212, 0.1)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  tagText: {
-    fontSize: 10,
-    color: Colors.pepTeal,
-    fontWeight: '600',
-  },
-  activeRow: {
+  activeBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    gap: 6,
+    marginTop: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
   },
-  activeText: {
-    fontSize: FontSizes.sm,
-    color: Colors.pepTeal,
-    fontWeight: '600',
+  activeBannerText: {
+    fontSize: 12,
+    fontFamily: 'DMSans-SemiBold',
   },
 
-  logOwnBtn: {
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-    borderRadius: BorderRadius.md,
+  // Video cards
+  videoCard: {
+    width: 220,
+    borderRadius: 14,
+    borderWidth: 1,
     overflow: 'hidden',
   },
-  logOwnGrad: {
+  videoThumbWrap: {
+    width: '100%',
+    height: 124,
+    position: 'relative',
+  },
+  videoThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  videoPlayBtn: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginLeft: -18,
+    marginTop: -18,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoDuration: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+  },
+  videoDurationText: {
+    fontSize: 10,
+    fontFamily: 'DMSans-Bold',
+    color: '#fff',
+  },
+  videoInfo: {
+    padding: 10,
+  },
+  videoCategory: {
+    fontSize: 10,
+    fontFamily: 'DMSans-Bold',
+    letterSpacing: 0.5,
+    marginBottom: 3,
+  },
+  videoTitle: {
+    fontSize: 13,
+    fontFamily: 'DMSans-SemiBold',
+    lineHeight: 17,
+  },
+
+  // Coming soon
+  comingSoonCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    padding: 20,
+    alignItems: 'center',
+    gap: 6,
+  },
+  comingSoonTitle: {
+    fontSize: 15,
+    fontFamily: 'DMSans-Bold',
+    marginTop: 4,
+  },
+  comingSoonDesc: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Regular',
+    textAlign: 'center',
+  },
+
+  // Generator sheet
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  sheetContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 32,
+    maxHeight: '90%',
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    alignSelf: 'center',
+    marginTop: 6,
+    marginBottom: 14,
+  },
+  sheetTitle: {
+    fontSize: 22,
+    fontFamily: 'Playfair-Black',
+    letterSpacing: -0.3,
+  },
+  sheetSub: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Regular',
+    marginTop: 4,
+  },
+  fieldLabel: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    letterSpacing: 0.8,
+    marginBottom: 10,
+    marginTop: 14,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 13,
+    fontFamily: 'DMSans-SemiBold',
+  },
+  generateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 14,
-    paddingHorizontal: Spacing.lg,
+    paddingVertical: 15,
+    borderRadius: 14,
+    marginTop: 20,
   },
-  logOwnText: {
+  generateBtnText: {
+    fontSize: 15,
+    fontFamily: 'DMSans-Bold',
     color: '#fff',
-    fontFamily: Fonts.bodyBold,
-    fontSize: FontSizes.md,
   },
-
-  // Coming soon
-  comingSoon: {
+  sheetCancel: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 12,
+    marginTop: 4,
   },
-  comingSoonTitle: {
-    fontSize: FontSizes.md,
-    fontWeight: '700',
-    color: Colors.darkText,
-    marginTop: 10,
-  },
-  comingSoonDesc: {
-    fontSize: FontSizes.sm,
-    color: Colors.darkTextSecondary,
-    textAlign: 'center',
-    marginTop: 6,
-    lineHeight: 20,
+  sheetCancelText: {
+    fontSize: 14,
+    fontFamily: 'DMSans-SemiBold',
   },
 });

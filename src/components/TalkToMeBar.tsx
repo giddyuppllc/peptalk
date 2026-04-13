@@ -29,7 +29,7 @@ export const TalkToMeBar: React.FC<TalkToMeBarProps> = ({
     >
       {/* Gradient border wrapper */}
       <LinearGradient
-        colors={['rgba(59,130,246,0.30)', 'rgba(6,182,212,0.15)', 'rgba(255,255,255,0.06)']}
+        colors={['rgba(59,130,246,0.30)', 'rgba(6,182,212,0.15)', 'rgba(0,0,0,0.05)']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.borderGradient}

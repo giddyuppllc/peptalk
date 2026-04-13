@@ -33,9 +33,9 @@ function getCategoryColor(category: GuideCategory): string {
     case 'injection':      return '#e3a7a1';
     case 'storage':        return '#c7d7e6';
     case 'dosing':         return '#f0d68a';
-    case 'testing':        return '#f59e0b';
-    case 'general':        return '#9ca3af';
-    default:               return '#9ca3af';
+    case 'testing':        return '#FFBF82';
+    case 'general':        return '#6B7280';
+    default:               return '#6B7280';
   }
 }
 
@@ -64,7 +64,7 @@ export default function AllGuidesScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={20} color="#e8e6e3" />
+            <Ionicons name="arrow-back" size={20} color="#2D2D2D" />
           </TouchableOpacity>
           <View style={styles.headerText}>
             <Text style={styles.headerTitle}>How-To Guides</Text>
@@ -109,7 +109,7 @@ export default function AllGuidesScreen() {
         {/* Guide Cards — 2-column grid */}
         {filteredGuides.length === 0 ? (
           <GlassCard style={styles.emptyCard}>
-            <Ionicons name="list-outline" size={32} color="#9ca3af" />
+            <Ionicons name="list-outline" size={32} color="#6B7280" />
             <Text style={styles.emptyText}>
               No guides found for this category.
             </Text>
@@ -146,7 +146,7 @@ export default function AllGuidesScreen() {
 
                     <View style={styles.guideFooter}>
                       <View style={styles.stepCountBadge}>
-                        <Ionicons name="footsteps-outline" size={12} color="#9ca3af" />
+                        <Ionicons name="footsteps-outline" size={12} color="#6B7280" />
                         <Text style={styles.stepCountText}>
                           {guide.steps.length} steps
                         </Text>
@@ -169,7 +169,7 @@ export default function AllGuidesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1720',
+    backgroundColor: '#2D2D2D',
   },
   scrollView: {
     flex: 1,
@@ -202,13 +202,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     letterSpacing: -0.5,
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 19,
   },
 
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   filterChipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   filterChipTextActive: {
     color: '#e3a7a1',
@@ -272,18 +272,18 @@ const styles = StyleSheet.create({
   stepCountText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   guideTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     marginBottom: 6,
     lineHeight: 20,
   },
   guideSummary: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 18,
     flex: 1,
   },
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     textAlign: 'center',
   },
 });

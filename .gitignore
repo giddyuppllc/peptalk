@@ -61,3 +61,12 @@ emulator-*.png
 
 # Logo concepts
 logo-concepts/
+.aidesigner/*
+!.aidesigner/.gitkeep
+
+# Local agent / tooling configs (not shared)
+.agents/
+.mcp.json
+.claude/agents/
+.claude/commands/
+.claude/skills/

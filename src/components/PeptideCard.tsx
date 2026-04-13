@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     flex: 1,
     marginRight: 8,
   },
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   },
   summary: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 19,
   },
 });

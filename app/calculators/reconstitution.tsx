@@ -246,7 +246,7 @@ export default function ReconstitutionCalculatorScreen() {
               <GlassCard>
                 <View style={styles.syringeContainer}>
                   {/* Syringe barrel */}
-                  <View style={[styles.syringeBarrel, { backgroundColor: t.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)', borderColor: t.isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)' }]}>
+                  <View style={[styles.syringeBarrel, { backgroundColor: t.isDark ? 'rgba(0,0,0,0.03)' : 'rgba(0,0,0,0.04)', borderColor: t.isDark ? 'rgba(0,0,0,0.10)' : 'rgba(0,0,0,0.15)' }]}>
                     {/* Tick marks */}
                     {Array.from({ length: 11 }, (_, i) => {
                       const pct = (i / 10) * 100;
@@ -285,7 +285,7 @@ export default function ReconstitutionCalculatorScreen() {
                     )}
                   </View>
                   {/* Needle tip */}
-                  <View style={[styles.needleTip, { backgroundColor: t.isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' }]} />
+                  <View style={[styles.needleTip, { backgroundColor: t.isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.3)' }]} />
                 </View>
               </GlassCard>
             </View>
@@ -357,9 +357,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: FontSizes.xl,
-    fontWeight: '800',
-    color: Colors.darkText,
+    fontSize: 32,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    color: '#2D2D2D',
   },
   scroll: { paddingBottom: 40 },
   section: {
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: BorderRadius.sm,
     paddingHorizontal: 14,
     height: 44,
@@ -405,7 +406,7 @@ const styles = StyleSheet.create({
   presetBtn: {
     flex: 1,
     paddingVertical: 8,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: BorderRadius.sm,
     alignItems: 'center',
     borderWidth: 1,
@@ -448,7 +449,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   resultLabel: {
     fontSize: FontSizes.md,
@@ -473,9 +474,9 @@ const styles = StyleSheet.create({
   syringeBarrel: {
     width: 60,
     height: 220,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(0,0,0,0.03)',
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: 'rgba(0,0,0,0.10)',
     borderRadius: 6,
     position: 'relative',
     overflow: 'hidden',
@@ -485,12 +486,12 @@ const styles = StyleSheet.create({
     left: 0,
     width: 12,
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'rgba(0,0,0,0.15)',
   },
   tickMajor: {
     width: 20,
     height: 2,
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   tickLabel: {
     position: 'absolute',
@@ -528,7 +529,7 @@ const styles = StyleSheet.create({
   needleTip: {
     width: 4,
     height: 20,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.15)',
     borderBottomLeftRadius: 2,
     borderBottomRightRadius: 2,
   },

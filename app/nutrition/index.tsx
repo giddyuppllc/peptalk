@@ -3,7 +3,7 @@
  * Supports quick-log, food-search logging, and inline meal editing.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,27 @@ import type { MealEntry, MealType } from '../../src/types/fitness';
 // ---------------------------------------------------------------------------
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+function dateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function getWeekDays(referenceDate: Date): Date[] {
+  const day = referenceDate.getDay();
+  const start = new Date(referenceDate);
+  start.setDate(start.getDate() - day);
+  const days: Date[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    days.push(d);
+  }
+  return days;
+}
+
+const MAIN_MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 const MEAL_ICONS: Record<MealType, string> = {
   breakfast:    'sunny-outline',
@@ -377,7 +398,7 @@ function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealMod
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             {/* Meal type badge (read-only) */}
             <View style={styles.editMealTypeBadge}>
-              <Ionicons name={MEAL_ICONS[meal.mealType] as any} size={16} color={Colors.pepTeal} />
+              <Ionicons name={MEAL_ICONS[meal.mealType] as any} size={16} color="#F8A97A" />
               <Text style={styles.editMealTypeLabel}>{MEAL_LABELS[meal.mealType]}</Text>
             </View>
 
@@ -496,6 +517,8 @@ function WaterRing({ pct, size = 100 }: { pct: number; size?: number }) {
   const ringSize   = size;
   const thickness  = 8;
   const innerSize  = ringSize - thickness * 2;
+  const trackColor = `${t.primary}1A`;
+  const fillColor  = t.primary;
 
   return (
     <View
@@ -513,7 +536,7 @@ function WaterRing({ pct, size = 100 }: { pct: number; size?: number }) {
           height: ringSize,
           borderRadius: ringSize / 2,
           borderWidth: thickness,
-          borderColor: 'rgba(6, 182, 212, 0.12)',
+          borderColor: trackColor,
           position: 'absolute',
         }}
       />
@@ -524,12 +547,12 @@ function WaterRing({ pct, size = 100 }: { pct: number; size?: number }) {
           height: ringSize,
           borderRadius: ringSize / 2,
           borderWidth: thickness,
-          borderColor: Colors.pepCyan,
+          borderColor: fillColor,
           position: 'absolute',
-          borderTopColor:    clampedPct >= 25 ? Colors.pepCyan : 'rgba(6, 182, 212, 0.12)',
-          borderRightColor:  clampedPct >= 50 ? Colors.pepCyan : 'rgba(6, 182, 212, 0.12)',
-          borderBottomColor: clampedPct >= 75 ? Colors.pepCyan : 'rgba(6, 182, 212, 0.12)',
-          borderLeftColor:   clampedPct >  0  ? Colors.pepCyan : 'rgba(6, 182, 212, 0.12)',
+          borderTopColor:    clampedPct >= 25 ? fillColor : trackColor,
+          borderRightColor:  clampedPct >= 50 ? fillColor : trackColor,
+          borderBottomColor: clampedPct >= 75 ? fillColor : trackColor,
+          borderLeftColor:   clampedPct >  0  ? fillColor : trackColor,
           transform: [{ rotate: '-90deg' }],
         }}
       />
@@ -544,7 +567,7 @@ function WaterRing({ pct, size = 100 }: { pct: number; size?: number }) {
           justifyContent: 'center',
         }}
       >
-        <Ionicons name="water" size={20} color={Colors.pepCyan} />
+        <Ionicons name="water" size={20} color={fillColor} />
         <Text style={{ fontSize: FontSizes.lg, fontWeight: '800', color: t.text, marginTop: 2 }}>
           {clampedPct}%
         </Text>
@@ -584,7 +607,7 @@ function WaterTracker() {
             <Text style={[styles.waterTarget, { color: t.textSecondary }]}>/ {target} oz</Text>
           </Text>
           <View style={styles.macroBarTrack}>
-            <View style={[styles.macroBarFill, { width: `${pct}%`, backgroundColor: Colors.pepCyan }]} />
+            <View style={[styles.macroBarFill, { width: `${pct}%`, backgroundColor: t.primary }]} />
           </View>
           <Text style={styles.waterRemaining}>
             {remaining > 0 ? `${remaining} oz remaining` : 'Daily target reached!'}
@@ -600,8 +623,8 @@ function WaterTracker() {
             onPress={() => logWater(dateKey, btn.oz)}
             activeOpacity={0.7}
           >
-            <Ionicons name={btn.icon as any} size={18} color={Colors.pepCyan} />
-            <Text style={styles.waterQuickLabel}>+{btn.label}</Text>
+            <Ionicons name={btn.icon as any} size={18} color={t.primary} />
+            <Text style={[styles.waterQuickLabel, { color: t.primary }]}>+{btn.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -617,6 +640,68 @@ function WaterTracker() {
 }
 
 // ---------------------------------------------------------------------------
+// Add Food Sheet — opens from + Add button, routes to appropriate logger
+// ---------------------------------------------------------------------------
+
+interface AddFoodSheetProps {
+  visible: boolean;
+  mealType: MealType | null;
+  onClose: () => void;
+  onPickOption: (option: 'search' | 'my_meals' | 'barcode' | 'ai_scanner' | 'quick') => void;
+}
+
+function AddFoodSheet({ visible, mealType, onClose, onPickOption }: AddFoodSheetProps) {
+  const t = useTheme();
+  if (!mealType) return null;
+
+  const options = [
+    { key: 'search' as const,     icon: 'search-outline' as const,    color: '#F8A97A', label: 'Search Foods',     sub: 'USDA & common items' },
+    { key: 'my_meals' as const,   icon: 'bookmark-outline' as const,  color: '#D4A853', label: 'My Meals',         sub: 'Recently logged' },
+    { key: 'barcode' as const,    icon: 'barcode-outline' as const,   color: '#FFBF82', label: 'Scan Barcode',     sub: 'Packaged foods' },
+    { key: 'ai_scanner' as const, icon: 'camera-outline' as const,    color: '#e3a7a1', label: 'AI Food Scanner',  sub: 'Photo → macros (Pro)' },
+    { key: 'quick' as const,      icon: 'create-outline' as const,    color: '#8faa8b', label: 'Quick Log',        sub: 'Enter macros manually' },
+  ];
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={onClose}>
+        <TouchableOpacity activeOpacity={1} style={[styles.sheetContent, { backgroundColor: t.bg }]}>
+          <View style={styles.sheetHandle} />
+          <Text style={[styles.sheetTitle, { color: t.text }]}>
+            Log {MEAL_LABELS[mealType]}
+          </Text>
+          <Text style={[styles.sheetSub, { color: t.textSecondary }]}>
+            Choose how you'd like to add food
+          </Text>
+          <View style={{ marginTop: 16 }}>
+            {options.map((opt) => (
+              <TouchableOpacity
+                key={opt.key}
+                style={[styles.sheetRow, { backgroundColor: t.surface, borderColor: t.cardBorder }]}
+                onPress={() => onPickOption(opt.key)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.sheetIcon, { backgroundColor: `${opt.color}20` }]}>
+                  <Ionicons name={opt.icon} size={20} color={opt.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.sheetRowLabel, { color: t.text }]}>{opt.label}</Text>
+                  <Text style={[styles.sheetRowSub, { color: t.textSecondary }]}>{opt.sub}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={t.textSecondary} />
+              </TouchableOpacity>
+            ))}
+          </View>
+          <TouchableOpacity style={styles.sheetCancel} onPress={onClose}>
+            <Text style={[styles.sheetCancelText, { color: t.textSecondary }]}>Cancel</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main Screen
 // ---------------------------------------------------------------------------
 
@@ -625,12 +710,31 @@ export default function NutritionScreen() {
   const t = useTheme();
   const { meals, addMeal, removeMeal, updateMeal, getDailyProgress, targets } = useMealStore();
 
-  const [showLog,     setShowLog]     = useState(false);
-  const [editingMeal, setEditingMeal] = useState<MealEntry | null>(null);
+  const [showLog,        setShowLog]        = useState(false);
+  const [editingMeal,    setEditingMeal]    = useState<MealEntry | null>(null);
+  const [selectedDay,    setSelectedDay]    = useState(today());
+  const [weekOffset,     setWeekOffset]     = useState(0);
+  const [addSheetMeal,   setAddSheetMeal]   = useState<MealType | null>(null);
 
-  const dateKey     = today();
-  const progress    = getDailyProgress(dateKey);
-  const todayMeals  = meals.filter((m) => m.date === dateKey);
+  const selectedProgress = getDailyProgress(selectedDay);
+  const dayMeals = useMemo(() => meals.filter((m) => m.date === selectedDay), [meals, selectedDay]);
+
+  const mealsByType = useMemo(() => {
+    const grouped: Record<MealType, MealEntry[]> = {
+      breakfast: [], lunch: [], dinner: [], snack: [], pre_workout: [], post_workout: [],
+    };
+    dayMeals.forEach((m) => {
+      const key = MAIN_MEAL_TYPES.includes(m.mealType) ? m.mealType : 'snack';
+      grouped[key].push(m);
+    });
+    return grouped;
+  }, [dayMeals]);
+
+  const weekDays = useMemo(() => {
+    const ref = new Date();
+    ref.setDate(ref.getDate() + weekOffset * 7);
+    return getWeekDays(ref);
+  }, [weekOffset]);
 
   const handleQuickLog = useCallback(
     (data: {
@@ -643,7 +747,7 @@ export default function NutritionScreen() {
     }) => {
       addMeal({
         id:       `meal-${Date.now()}`,
-        date:     dateKey,
+        date:     selectedDay,
         mealType: data.mealType,
         foods:    [],
         quickLog: {
@@ -656,8 +760,29 @@ export default function NutritionScreen() {
         timestamp: new Date().toISOString(),
       });
     },
-    [addMeal, dateKey],
+    [addMeal, selectedDay],
   );
+
+  const handleAddOption = useCallback(
+    (option: 'search' | 'my_meals' | 'barcode' | 'ai_scanner' | 'quick') => {
+      const mt = addSheetMeal;
+      setAddSheetMeal(null);
+      if (!mt) return;
+      const params = { mealType: mt, date: selectedDay } as any;
+      if (option === 'search')     router.push({ pathname: '/nutrition/food-search' as any, params });
+      if (option === 'my_meals')   router.push({ pathname: '/nutrition/food-search' as any, params: { ...params, tab: 'my_meals' } });
+      if (option === 'barcode')    router.push({ pathname: '/nutrition/food-search' as any, params: { ...params, scan: '1' } });
+      if (option === 'ai_scanner') router.push({ pathname: '/nutrition/food-scanner' as any, params });
+      if (option === 'quick')      setShowLog(true);
+    },
+    [addSheetMeal, router, selectedDay],
+  );
+
+  const selectedDayLabel = useMemo(() => {
+    if (selectedDay === today()) return 'Today';
+    const d = new Date(selectedDay + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  }, [selectedDay]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
@@ -667,174 +792,200 @@ export default function NutritionScreen() {
           <Ionicons name="chevron-back" size={24} color={t.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: t.text }]}>Nutrition</Text>
-        <TouchableOpacity
-          onPress={() => router.push('/nutrition/targets' as any)}
-          style={styles.backBtn}
-        >
-          <Ionicons name="settings-outline" size={22} color={t.text} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 4 }}>
+          <TouchableOpacity
+            onPress={() => router.push('/nutrition/recipe-generator' as any)}
+            style={styles.backBtn}
+          >
+            <Ionicons name="sparkles-outline" size={20} color={t.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push('/nutrition/targets' as any)}
+            style={styles.backBtn}
+          >
+            <Ionicons name="settings-outline" size={22} color={t.text} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        {/* Hero Image */}
+      <ScrollView showsVerticalScrollIndicator={false} overScrollMode="never" contentContainerStyle={styles.scroll}>
+        {/* Week strip */}
         <View style={styles.section}>
-          <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&q=80' }}
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
+          <View style={styles.weekHeader}>
+            <TouchableOpacity onPress={() => setWeekOffset(weekOffset - 1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="chevron-back" size={18} color={t.textSecondary} />
+            </TouchableOpacity>
+            <Text style={[styles.weekLabel, { color: t.text }]}>{selectedDayLabel}</Text>
+            <TouchableOpacity
+              onPress={() => weekOffset < 0 && setWeekOffset(weekOffset + 1)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              disabled={weekOffset >= 0}
+            >
+              <Ionicons name="chevron-forward" size={18} color={weekOffset >= 0 ? 'transparent' : t.textSecondary} />
+            </TouchableOpacity>
+          </View>
+          <View style={[styles.weekStrip, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
+            {weekDays.map((d) => {
+              const key = dateKey(d);
+              const isToday = key === today();
+              const isSelected = key === selectedDay;
+              const isFuture = d > new Date();
+              return (
+                <TouchableOpacity
+                  key={key}
+                  style={[
+                    styles.weekDayCell,
+                    isSelected && { backgroundColor: t.primary },
+                  ]}
+                  onPress={() => !isFuture && setSelectedDay(key)}
+                  activeOpacity={isFuture ? 1 : 0.7}
+                >
+                  <Text style={[
+                    styles.weekDayLabel,
+                    { color: isSelected ? '#fff' : t.textSecondary },
+                    isToday && !isSelected && { color: t.primary, fontFamily: 'DMSans-Bold' },
+                  ]}>
+                    {DAY_LABELS[d.getDay()]}
+                  </Text>
+                  <Text style={[
+                    styles.weekDayNumber,
+                    { color: isSelected ? '#fff' : isFuture ? '#D1D5DB' : t.text },
+                    isToday && !isSelected && { color: t.primary },
+                  ]}>
+                    {d.getDate()}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
-        {/* Calorie summary */}
+        {/* Calorie + macros summary */}
         <View style={styles.section}>
-          <GlassCard variant="gradient">
-            <View style={styles.calHeader}>
+          <View style={[styles.summaryCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
+            <View style={styles.summaryTopRow}>
               <View>
-                <Text style={[styles.calLabel, { color: t.textSecondary }]}>Calories Today</Text>
-                <Text style={[styles.calValue, { color: t.text }]}>
-                  {Math.round(progress.totals.calories)}
-                  <Text style={[styles.calTarget, { color: t.textSecondary }]}> / {targets.calories}</Text>
+                <Text style={[styles.summaryLabel, { color: t.textSecondary }]}>CALORIES</Text>
+                <Text style={[styles.summaryValue, { color: t.text }]}>
+                  {Math.round(selectedProgress.totals.calories)}
+                </Text>
+                <Text style={[styles.summaryTarget, { color: t.textSecondary }]}>
+                  of {targets.calories} goal
                 </Text>
               </View>
-              <View style={styles.calCircle}>
-                <Text style={styles.calPct}>{progress.caloriePercent}%</Text>
+              <View style={styles.summaryRingWrap}>
+                <View style={[styles.summaryRing, { borderColor: `${t.primary}20` }]}>
+                  <View
+                    style={[
+                      styles.summaryRingFill,
+                      {
+                        borderColor: t.primary,
+                        borderTopColor:    selectedProgress.caloriePercent >= 25 ? t.primary : `${t.primary}20`,
+                        borderRightColor:  selectedProgress.caloriePercent >= 50 ? t.primary : `${t.primary}20`,
+                        borderBottomColor: selectedProgress.caloriePercent >= 75 ? t.primary : `${t.primary}20`,
+                        borderLeftColor:   selectedProgress.caloriePercent >  0  ? t.primary : `${t.primary}20`,
+                      },
+                    ]}
+                  />
+                  <Text style={[styles.summaryRingPct, { color: t.text }]}>{selectedProgress.caloriePercent}%</Text>
+                </View>
               </View>
             </View>
-          </GlassCard>
+
+            <View style={[styles.summaryDivider, { backgroundColor: t.cardBorder }]} />
+
+            <MacroBar label="Protein" current={selectedProgress.totals.proteinGrams} target={targets.proteinGrams} color="#F8A97A" unit="g" />
+            <MacroBar label="Carbs"   current={selectedProgress.totals.carbsGrams}   target={targets.carbsGrams}   color="#D4A853" unit="g" />
+            <MacroBar label="Fat"     current={selectedProgress.totals.fatGrams}     target={targets.fatGrams}     color="#e3a7a1" unit="g" />
+            <MacroBar label="Fiber"   current={selectedProgress.totals.fiberGrams}   target={targets.fiberGrams ?? 25} color="#8faa8b" unit="g" />
+          </View>
         </View>
 
-        {/* Macros */}
+        {/* Hydration (slim) */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: t.text }]}>Macros</Text>
-          <GlassCard>
-            <MacroBar label="Protein" current={progress.totals.proteinGrams} target={targets.proteinGrams} color={Colors.pepTeal}  unit="g" />
-            <MacroBar label="Carbs"   current={progress.totals.carbsGrams}   target={targets.carbsGrams}   color={Colors.pepBlue}  unit="g" />
-            <MacroBar label="Fat"     current={progress.totals.fatGrams}     target={targets.fatGrams}     color="#a855f7"          unit="g" />
-          </GlassCard>
-        </View>
-
-        {/* Water */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: t.text }]}>Hydration</Text>
           <WaterTracker />
         </View>
 
-        {/* Today's meals */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>Today's Meals</Text>
-            {/* Action buttons: food search + quick log */}
-            <View style={styles.mealHeaderActions}>
-              <TouchableOpacity
-                style={styles.addFoodBtn}
-                onPress={() => router.push('/nutrition/food-scanner' as any)}
-              >
-                <LinearGradient
-                  colors={['#f59e0b', '#ef4444']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.addFoodBtnGradient}
-                >
-                  <Ionicons name="camera" size={14} color="#fff" />
-                  <Text style={styles.addFoodBtnText}>Scan</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.addFoodBtn}
-                onPress={() => router.push('/nutrition/food-search' as any)}
-              >
-                <LinearGradient
-                  colors={[Colors.pepBlue, Colors.pepTeal]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.addFoodBtnGradient}
-                >
-                  <Ionicons name="search" size={14} color="#fff" />
-                  <Text style={styles.addFoodBtnText}>Search</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setShowLog(true)}>
-                <Ionicons name="add-circle" size={28} color={Colors.pepTeal} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {todayMeals.length === 0 ? (
-            <GlassCard>
-              <View style={styles.emptyMeals}>
-                <Ionicons name="restaurant-outline" size={32} color={t.textSecondary} />
-                <Text style={[styles.emptyTitle, { color: t.text }]}>No meals logged</Text>
-                <Text style={[styles.emptyDesc, { color: t.textSecondary }]}>
-                  Tap the search button or + to log what you eat
-                </Text>
-              </View>
-            </GlassCard>
-          ) : (
-            todayMeals.map((meal) => (
-              <GlassCard key={meal.id} style={styles.mealCard}>
-                <View style={styles.mealRow}>
-                  <View style={styles.mealIcon}>
-                    <Ionicons
-                      name={MEAL_ICONS[meal.mealType] as any}
-                      size={18}
-                      color={Colors.pepTeal}
-                    />
+        {/* Meal sections */}
+        {MAIN_MEAL_TYPES.map((mealType) => {
+          const items = mealsByType[mealType];
+          const subtotal = items.reduce((sum, m) => sum + mealCalories(m), 0);
+          return (
+            <View key={mealType} style={styles.section}>
+              <View style={[styles.mealSectionCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
+                {/* Meal header */}
+                <View style={styles.mealSectionHeader}>
+                  <View style={[styles.mealSectionIcon, { backgroundColor: `${t.primary}18` }]}>
+                    <Ionicons name={MEAL_ICONS[mealType] as any} size={18} color={t.primary} />
                   </View>
-                  <View style={styles.mealInfo}>
-                    <Text style={[styles.mealTypeLabel, { color: t.text }]}>{MEAL_LABELS[meal.mealType]}</Text>
-                    <Text style={[styles.mealDesc, { color: t.textSecondary }]} numberOfLines={1}>
-                      {mealDescription(meal)}
-                    </Text>
-                    {meal.notes ? (
-                      <Text style={styles.mealNotes} numberOfLines={1}>
-                        {meal.notes}
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.mealSectionTitle, { color: t.text }]}>{MEAL_LABELS[mealType]}</Text>
+                    {items.length > 0 && (
+                      <Text style={[styles.mealSectionSub, { color: t.textSecondary }]}>
+                        {subtotal} cal · {items.length} item{items.length !== 1 ? 's' : ''}
                       </Text>
-                    ) : null}
+                    )}
                   </View>
-                  <View style={styles.mealCal}>
-                    <Text style={styles.mealCalNum}>{mealCalories(meal)}</Text>
-                    <Text style={[styles.mealCalLabel, { color: t.textSecondary }]}>cal</Text>
-                  </View>
-                  {/* Edit button */}
                   <TouchableOpacity
-                    style={[styles.editBtn, { backgroundColor: t.glass }]}
-                    onPress={() => setEditingMeal(meal)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={[styles.mealAddBtn, { backgroundColor: t.primary }]}
+                    onPress={() => setAddSheetMeal(mealType)}
+                    activeOpacity={0.85}
                   >
-                    <Ionicons name="pencil" size={15} color={t.textSecondary} />
+                    <Ionicons name="add" size={16} color="#fff" />
+                    <Text style={styles.mealAddBtnText}>Add</Text>
                   </TouchableOpacity>
                 </View>
-              </GlassCard>
-            ))
-          )}
-        </View>
 
-        {/* AI Recipe CTA */}
-        <View style={styles.section}>
-          <TouchableOpacity
-            onPress={() => router.push('/nutrition/recipe-generator' as any)}
-            activeOpacity={0.85}
-          >
-            <GlassCard variant="glow" glowColor={Colors.pepBlue}>
-              <View style={styles.aiRow}>
-                <LinearGradient
-                  colors={[Colors.pepBlue, Colors.pepCyan]}
-                  style={styles.aiIcon}
-                >
-                  <Ionicons name="sparkles" size={22} color="#fff" />
-                </LinearGradient>
-                <View style={styles.aiInfo}>
-                  <Text style={[styles.aiTitle, { color: t.text }]}>AI Recipe Generator</Text>
-                  <Text style={[styles.aiDesc, { color: t.textSecondary }]}>
-                    Get personalized recipes based on your macros and preferences
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={t.textSecondary} />
+                {/* Items or empty state */}
+                {items.length === 0 ? (
+                  <View style={[styles.mealSectionEmpty, { borderColor: t.cardBorder }]}>
+                    <Text style={[styles.mealSectionEmptyText, { color: t.textSecondary }]}>
+                      Nothing logged yet
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.mealItemList}>
+                    {items.map((meal, i) => (
+                      <TouchableOpacity
+                        key={meal.id}
+                        style={[
+                          styles.mealItemRow,
+                          i < items.length - 1 && { borderBottomWidth: 1, borderBottomColor: t.cardBorder },
+                        ]}
+                        onPress={() => setEditingMeal(meal)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.mealItemName, { color: t.text }]} numberOfLines={1}>
+                            {mealDescription(meal)}
+                          </Text>
+                          {meal.notes ? (
+                            <Text style={[styles.mealItemNotes, { color: t.textSecondary }]} numberOfLines={1}>
+                              {meal.notes}
+                            </Text>
+                          ) : null}
+                        </View>
+                        <Text style={[styles.mealItemCal, { color: t.text }]}>{mealCalories(meal)}</Text>
+                        <Text style={[styles.mealItemCalUnit, { color: t.textSecondary }]}>cal</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
-            </GlassCard>
-          </TouchableOpacity>
-        </View>
+            </View>
+          );
+        })}
+
+        <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Add Food Sheet */}
+      <AddFoodSheet
+        visible={addSheetMeal !== null}
+        mealType={addSheetMeal}
+        onClose={() => setAddSheetMeal(null)}
+        onPickOption={handleAddOption}
+      />
 
       {/* Quick Log Modal */}
       <QuickLogModal
@@ -876,9 +1027,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: FontSizes.xl,
-    fontWeight: '800',
-    color: Colors.darkText,
+    fontSize: 32,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    color: '#2D2D2D',
   },
 
   scroll: { paddingBottom: 40 },
@@ -898,6 +1050,245 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.darkText,
     marginBottom: 4,
+  },
+
+  // ── Week strip ─────────────────────────────────────────────────────────
+  weekHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    marginBottom: 10,
+  },
+  weekLabel: {
+    fontSize: 16,
+    fontFamily: 'DMSans-SemiBold',
+  },
+  weekStrip: {
+    flexDirection: 'row',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 6,
+  },
+  weekDayCell: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 2,
+  },
+  weekDayLabel: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Medium',
+    textTransform: 'uppercase',
+  },
+  weekDayNumber: {
+    fontSize: 17,
+    fontFamily: 'DMSans-Bold',
+  },
+
+  // ── Summary card ───────────────────────────────────────────────────────
+  summaryCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 20,
+  },
+  summaryTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  summaryLabel: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  summaryValue: {
+    fontSize: 42,
+    fontFamily: 'Playfair-Black',
+    letterSpacing: -1,
+    lineHeight: 46,
+  },
+  summaryTarget: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Medium',
+    marginTop: 2,
+  },
+  summaryRingWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryRing: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    borderWidth: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryRingFill: {
+    position: 'absolute',
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    borderWidth: 8,
+    transform: [{ rotate: '-90deg' }],
+  },
+  summaryRingPct: {
+    fontSize: 16,
+    fontFamily: 'DMSans-Bold',
+  },
+  summaryDivider: {
+    height: 1,
+    marginBottom: 12,
+  },
+
+  // ── Meal sections ──────────────────────────────────────────────────────
+  mealSectionCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+  },
+  mealSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  mealSectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mealSectionTitle: {
+    fontSize: 16,
+    fontFamily: 'DMSans-Bold',
+  },
+  mealSectionSub: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Medium',
+    marginTop: 2,
+  },
+  mealAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  mealAddBtnText: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Bold',
+    color: '#fff',
+  },
+  mealSectionEmpty: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  mealSectionEmptyText: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Regular',
+  },
+  mealItemList: {
+    // rows get their own borders
+  },
+  mealItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    gap: 8,
+  },
+  mealItemName: {
+    fontSize: 14,
+    fontFamily: 'DMSans-SemiBold',
+  },
+  mealItemNotes: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Regular',
+    marginTop: 2,
+  },
+  mealItemCal: {
+    fontSize: 15,
+    fontFamily: 'DMSans-Bold',
+  },
+  mealItemCalUnit: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Medium',
+  },
+
+  // ── Add Food Sheet ─────────────────────────────────────────────────────
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  sheetContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 32,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    alignSelf: 'center',
+    marginTop: 6,
+    marginBottom: 14,
+  },
+  sheetTitle: {
+    fontSize: 22,
+    fontFamily: 'Playfair-Black',
+    letterSpacing: -0.3,
+  },
+  sheetSub: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Regular',
+    marginTop: 4,
+  },
+  sheetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  sheetIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetRowLabel: {
+    fontSize: 15,
+    fontFamily: 'DMSans-Bold',
+  },
+  sheetRowSub: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Regular',
+    marginTop: 2,
+  },
+  sheetCancel: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginTop: 4,
+  },
+  sheetCancelText: {
+    fontSize: 14,
+    fontFamily: 'DMSans-SemiBold',
   },
 
   // Hero image
@@ -969,7 +1360,7 @@ const styles = StyleSheet.create({
   },
   macroBarTrack: {
     height: 6,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.06)',
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -1035,7 +1426,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: 'rgba(0,0,0,0.05)',
   },
   waterFooterText: {
     fontSize: FontSizes.xs,
@@ -1191,7 +1582,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(0,0,0,0.10)',
     alignSelf: 'center',
     marginBottom: 16,
   },

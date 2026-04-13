@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   },
   metricRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   metricIcon: {
     width: 36,

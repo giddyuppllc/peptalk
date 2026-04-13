@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   fieldLabel: {
     fontSize: FontSizes.md,
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   fieldText: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 8,
     paddingHorizontal: 14,
     height: 38,

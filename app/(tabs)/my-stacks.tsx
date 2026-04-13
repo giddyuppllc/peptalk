@@ -11,9 +11,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useStackStore } from '../../src/store/useStackStore';
+import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { getPeptideById } from '../../src/data/peptides';
 import { GlassCard } from '../../src/components/GlassCard';
 import { getCategoryColor } from '../../src/constants/categories';
+import { Colors } from '../../src/constants/theme';
 import { PeptideStack, PeptideCategory, GoalType } from '../../src/types';
 import { useTheme } from '../../src/hooks/useTheme';
 
@@ -36,11 +38,11 @@ function getEvidenceBadge(level: string): { label: string; color: string } {
     case 'established':
       return { label: 'Established', color: '#22c55e' };
     case 'moderate':
-      return { label: 'Moderate', color: '#f59e0b' };
+      return { label: 'Moderate', color: '#FFBF82' };
     case 'preliminary':
       return { label: 'Preliminary', color: '#f97316' };
     default:
-      return { label: level, color: '#9ca3af' };
+      return { label: level, color: '#6B7280' };
   }
 }
 
@@ -191,6 +193,8 @@ export default function MyStacksScreen() {
   const t = useTheme();
   const router = useRouter();
   const { savedStacks, loadStack, deleteStack } = useStackStore();
+  const protocols = useDoseLogStore((s) => s.protocols);
+  const activeProtocols = useMemo(() => protocols.filter((p) => p.isActive), [protocols]);
   const [selectedGoal, setSelectedGoal] = useState<GoalType | null>(null);
 
   const curatedStacks = useMemo(() => {
@@ -343,9 +347,46 @@ export default function MyStacksScreen() {
                 onPress={() => router.push('/(tabs)/stack-builder')}
                 activeOpacity={0.7}
               >
-                <Ionicons name="flask-outline" size={16} color="#0f1720" />
+                <Ionicons name="flask-outline" size={16} color="#2D2D2D" />
                 <Text style={styles.goToBuilderText}>Go to Stack Builder</Text>
               </TouchableOpacity>
+            </GlassCard>
+          )}
+        </View>
+
+        {/* My Schedules — Active protocols */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="repeat-outline" size={18} color={Colors.sage} />
+            <Text style={[styles.sectionTitle, { color: t.text }]}>My Schedules</Text>
+          </View>
+          {activeProtocols.length > 0 ? (
+            activeProtocols.map((proto) => (
+              <GlassCard key={proto.id} style={styles.scheduleCard}>
+                <View style={styles.scheduleHeader}>
+                  <View style={[styles.scheduleIcon, { backgroundColor: 'rgba(185, 203, 182, 0.15)' }]}>
+                    <Ionicons name="repeat" size={16} color={Colors.sage} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.scheduleName, { color: t.text }]}>{proto.peptideId}</Text>
+                    <Text style={[styles.scheduleInfo, { color: t.textSecondary }]}>
+                      {proto.dose} {proto.unit} · {proto.route} · {proto.frequency}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.scheduleDates, { color: t.textSecondary }]}>
+                  Started {proto.startDate}
+                  {proto.endDate ? ` · Ends ${proto.endDate}` : ''}
+                </Text>
+              </GlassCard>
+            ))
+          ) : (
+            <GlassCard style={styles.emptyCard}>
+              <Ionicons name="clipboard-outline" size={32} color="#4b5563" />
+              <Text style={[styles.emptyTitle, { color: t.text }]}>No active schedules</Text>
+              <Text style={[styles.emptySubtitle, { color: t.textSecondary }]}>
+                Create a schedule from the Calendar to track your personal routine.
+              </Text>
             </GlassCard>
           )}
         </View>
@@ -357,7 +398,7 @@ export default function MyStacksScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1720',
+    backgroundColor: '#2D2D2D',
   },
   scrollView: {
     flex: 1,
@@ -371,14 +412,14 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#f7f2ec',
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#2D2D2D',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginTop: 4,
   },
 
@@ -409,7 +450,7 @@ const styles = StyleSheet.create({
   filterChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   filterChipTextActive: {
     color: '#e3a7a1',
@@ -428,13 +469,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     flex: 1,
   },
   sectionCount: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#9ca3af',
+    color: '#6B7280',
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     paddingHorizontal: 10,
     paddingVertical: 3,
@@ -459,7 +500,7 @@ const styles = StyleSheet.create({
   stackName: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
   },
   curatedBadge: {
     flexDirection: 'row',
@@ -487,7 +528,7 @@ const styles = StyleSheet.create({
   },
   peptideCount: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
     fontWeight: '600',
   },
   evidencePill: {
@@ -502,7 +543,7 @@ const styles = StyleSheet.create({
 
   curatedBy: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginTop: 2,
   },
   peptideList: {
@@ -513,7 +554,7 @@ const styles = StyleSheet.create({
   },
   stackDescription: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 18,
     marginTop: 8,
   },
@@ -557,7 +598,7 @@ const styles = StyleSheet.create({
   },
   moreCats: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: '#6B7280',
     fontWeight: '600',
   },
 
@@ -588,12 +629,12 @@ const styles = StyleSheet.create({
   noResultsText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     marginTop: 12,
   },
   noResultsSub: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
     textAlign: 'center',
     marginTop: 6,
   },
@@ -606,12 +647,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     marginTop: 12,
   },
   emptySubtitle: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     textAlign: 'center',
     marginTop: 6,
     lineHeight: 18,
@@ -631,5 +672,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#1a1a1a',
+  },
+
+  // ── Schedules ──────────────────────────────────────────────────────────
+  scheduleCard: {
+    marginBottom: 10,
+    padding: 14,
+  },
+  scheduleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 6,
+  },
+  scheduleIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scheduleName: {
+    fontSize: 15,
+    fontFamily: 'DMSans-SemiBold',
+  },
+  scheduleInfo: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Regular',
+    marginTop: 2,
+  },
+  scheduleDates: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Regular',
+    marginLeft: 44,
   },
 });
