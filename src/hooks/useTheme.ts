@@ -80,14 +80,14 @@ const femaleAccents = {
 };
 
 const maleAccents = {
-  primary: '#5B8DB8',       // Muted Sky Blue
-  primaryLight: '#8BB5D5',
-  primaryDark: '#3D7099',
-  secondary: '#D4A853',     // Muted Amber
-  accent: '#E8C547',        // Butter Gold
-  surfaceTint: '#F5F7FA',   // Cool gray
-  tabActive: '#5B8DB8',
-  ctaGradient: ['#5B8DB8', '#D4A853'] as const,
+  primary: '#6B2D3E',       // Deep Burgundy / Wine
+  primaryLight: '#8A4A5A',
+  primaryDark: '#4E1F2D',
+  secondary: '#3D5A3E',     // Dark Olive / Forest Green
+  accent: '#4A4A4F',        // Charcoal / Graphite
+  surfaceTint: '#F0EAE0',   // Cloud Dancer (Pantone 2026)
+  tabActive: '#6B2D3E',
+  ctaGradient: ['#6B2D3E', '#3D5A3E'] as const,
 };
 
 // ── Build theme by gender ───────────────────────────────────────────────────
@@ -97,28 +97,28 @@ function buildTheme(gender: 'male' | 'female'): ThemeColors {
   return {
     isDark: false,
     gender,
-    bg: '#FFFFFF',
-    card: '#FFFFFF',
-    cardBorder: gender === 'female' ? '#F0EBE6' : '#E8ECF0',
-    tabBar: '#FFFFFF',
+    bg: gender === 'female' ? '#FFFFFF' : '#F0EAE0',
+    card: gender === 'female' ? '#FFFFFF' : '#F7F3ED',
+    cardBorder: gender === 'female' ? '#F0EBE6' : '#E0D8CE',
+    tabBar: gender === 'female' ? '#FFFFFF' : '#F0EAE0',
     surface: a.surfaceTint,
 
     text: '#2D2D2D',
     textSecondary: '#6B7280',  // 5.0:1 on white (AA)
     textMuted: '#9CA3AF',      // 3.3:1 on white (AA Large)
 
-    glass: 'rgba(255,255,255,0.85)',
-    glassBorder: gender === 'female' ? 'rgba(248,169,122,0.15)' : 'rgba(91,141,184,0.15)',
-    glassElevated: 'rgba(255,255,255,0.95)',
-    glassElevatedBorder: gender === 'female' ? 'rgba(248,169,122,0.20)' : 'rgba(91,141,184,0.20)',
-    glassAccent: gender === 'female' ? 'rgba(248,169,122,0.12)' : 'rgba(91,141,184,0.12)',
-    glassAccentBorder: gender === 'female' ? 'rgba(248,169,122,0.25)' : 'rgba(91,141,184,0.25)',
+    glass: gender === 'female' ? 'rgba(255,255,255,0.85)' : 'rgba(240,234,224,0.88)',
+    glassBorder: gender === 'female' ? 'rgba(248,169,122,0.15)' : 'rgba(107,45,62,0.15)',
+    glassElevated: gender === 'female' ? 'rgba(255,255,255,0.95)' : 'rgba(247,243,237,0.95)',
+    glassElevatedBorder: gender === 'female' ? 'rgba(248,169,122,0.20)' : 'rgba(107,45,62,0.20)',
+    glassAccent: gender === 'female' ? 'rgba(248,169,122,0.12)' : 'rgba(107,45,62,0.12)',
+    glassAccentBorder: gender === 'female' ? 'rgba(248,169,122,0.25)' : 'rgba(107,45,62,0.25)',
 
     statusBar: 'dark',
     headerTint: '#2D2D2D',
 
     inputBg: a.surfaceTint,
-    inputBorder: gender === 'female' ? '#F0EBE6' : '#E8ECF0',
+    inputBorder: gender === 'female' ? '#F0EBE6' : '#E0D8CE',
     placeholder: '#9CA3AF',  // 3.3:1 minimum contrast
 
     splashGradient: ['#FFFFFF', a.surfaceTint, '#FFFFFF'],
