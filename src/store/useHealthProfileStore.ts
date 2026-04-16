@@ -382,12 +382,14 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
           const chatStore = useChatStore.getState();
           const checkinStore = useCheckinStore.getState();
           // Clear doses and protocols
-          if (doseStore.doses) {
+          if (doseStore.doses && Array.isArray(doseStore.doses)) {
             doseStore.doses.forEach((d: { id: string }) => doseStore.deleteDose(d.id));
           }
-          doseStore.protocols
-            ?.filter((p: { isActive: boolean }) => p.isActive)
-            .forEach((p: { id: string }) => doseStore.deactivateProtocol(p.id));
+          if (doseStore.protocols && Array.isArray(doseStore.protocols)) {
+            doseStore.protocols
+              .filter((p: { isActive: boolean }) => p.isActive)
+              .forEach((p: { id: string }) => doseStore.deactivateProtocol(p.id));
+          }
           // Clear chat
           if (chatStore.clearChat) chatStore.clearChat();
           // Clear check-ins

@@ -17,7 +17,7 @@ import { useMealStore, type CachedFood } from '../store/useMealStore';
 // Unified food result type
 // ---------------------------------------------------------------------------
 
-export type FoodSource = 'local' | 'usda' | 'openfoodfacts' | 'nutritionix';
+export type FoodSource = 'local' | 'usda' | 'openfoodfacts' | 'nutritionix' | 'calorieninjas';
 
 export interface ServingOption {
   label: string;
@@ -496,7 +496,7 @@ async function searchCalorieNinjas(query: string): Promise<UnifiedFood[]> {
       return {
         id: `cn-${item.name?.replace(/\s/g, '-')}-${Date.now()}`,
         name: formatFoodName(item.name || query),
-        source: 'usda',
+        source: 'calorieninjas',
         per100g: {
           calories: Math.round((item.calories || 0) * scale),
           proteinGrams: round1((item.protein_g || 0) * scale),
