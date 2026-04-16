@@ -17,13 +17,15 @@ import { Platform } from 'react-native';
 let Notifications: any = null;
 let Device: any = null;
 
-try {
-  Notifications = require('expo-notifications');
-} catch {}
-
-try {
-  Device = require('expo-device');
-} catch {}
+// Disabled — native module throws NSException on init causing Hermes GC crash.
+// Re-enable after testing in a development build first.
+// try {
+//   Notifications = require('expo-notifications');
+// } catch {}
+//
+// try {
+//   Device = require('expo-device');
+// } catch {}
 
 // ---------------------------------------------------------------------------
 // Availability check
