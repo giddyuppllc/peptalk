@@ -309,11 +309,12 @@ function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealMod
   // Seed form when meal changes
   React.useEffect(() => {
     if (!meal) return;
-    const baseCal     = meal.quickLog?.calories     ?? meal.foods.reduce((s, f) => s + f.calories, 0);
-    const baseProt    = meal.quickLog?.proteinGrams  ?? meal.foods.reduce((s, f) => s + f.proteinGrams, 0);
-    const baseCarbs   = meal.quickLog?.carbsGrams    ?? meal.foods.reduce((s, f) => s + f.carbsGrams, 0);
-    const baseFat     = meal.quickLog?.fatGrams      ?? meal.foods.reduce((s, f) => s + f.fatGrams, 0);
-    const baseDesc    = meal.quickLog?.description   ?? meal.foods.map((f) => f.foodName).join(', ') ?? '';
+    const foods = meal.foods ?? [];
+    const baseCal     = meal.quickLog?.calories     ?? foods.reduce((s, f) => s + f.calories, 0);
+    const baseProt    = meal.quickLog?.proteinGrams  ?? foods.reduce((s, f) => s + f.proteinGrams, 0);
+    const baseCarbs   = meal.quickLog?.carbsGrams    ?? foods.reduce((s, f) => s + f.carbsGrams, 0);
+    const baseFat     = meal.quickLog?.fatGrams      ?? foods.reduce((s, f) => s + f.fatGrams, 0);
+    const baseDesc    = meal.quickLog?.description   ?? foods.map((f) => f.foodName).join(', ') ?? '';
     setDesc(baseDesc);
     setCal(String(baseCal));
     setProtein(String(baseProt));

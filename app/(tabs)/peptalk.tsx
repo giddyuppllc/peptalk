@@ -124,28 +124,28 @@ export default function PepTalkScreen() {
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
     const cutoff = fourteenDaysAgo.toISOString().slice(0, 10);
 
-    const activeProtos = protocols.filter((p) => p.isActive);
+    const activeProtos = (protocols ?? []).filter((p) => p.isActive);
 
     // Generate peptide ↔ Watch biometric correlations
     const insights = generateCorrelationInsights(
       activeProtos,
-      checkIns,
+      checkIns ?? [],
       (id) => getPeptideById(id)?.name ?? id,
     );
     const correlationSummary = buildCorrelationSummaryForBot(insights);
 
     const ctx: EnhancedBotContext & { _correlationSummary?: string } = {
       userProfile: profile,
-      recentCheckIns: checkIns.slice(0, 14),
+      recentCheckIns: (checkIns ?? []).slice(0, 14),
       currentStack,
-      savedStackNames: savedStacks
+      savedStackNames: (savedStacks ?? [])
         .filter((s) => !s.isCurated)
         .map((s) => s.name),
-      conversationHistory: messages.slice(-10),
-      recentDoses: doses.filter((d) => d.date >= cutoff),
+      conversationHistory: (messages ?? []).slice(-10),
+      recentDoses: (doses ?? []).filter((d) => d.date >= cutoff),
       activeProtocols: activeProtos,
       recentEffects: [],
-      healthAlerts: alerts.filter((a) => !a.dismissed),
+      healthAlerts: (alerts ?? []).filter((a) => !a.dismissed),
       healthProfile: healthProfile.setupComplete ? healthProfile : null,
       _correlationSummary: correlationSummary,
     };

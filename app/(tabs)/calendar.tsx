@@ -279,7 +279,7 @@ export default function CalendarScreen() {
 
   const datesWithDoses = useMemo(() => getDatesWithDoses(), [doses]);
   const checkinDates = useMemo(
-    () => new Set(checkins.map((c) => c.date)),
+    () => new Set((checkins ?? []).map((c) => c.date)),
     [checkins]
   );
   const journalDates = useMemo(

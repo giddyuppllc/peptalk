@@ -272,11 +272,11 @@ function ProgramCard({ program }: { program: WorkoutProgram }) {
             </View>
           </View>
 
-          {isActive && (
+          {isActive && activeProgram && (
             <View style={[s.activeBanner, { backgroundColor: `${t.primary}18`, borderColor: `${t.primary}40` }]}>
               <Ionicons name="play-circle" size={16} color={t.primary} />
               <Text style={[s.activeBannerText, { color: t.primary }]}>
-                Week {activeProgram!.currentWeek}, Day {activeProgram!.currentDay + 1} — Continue
+                Week {activeProgram.currentWeek}, Day {activeProgram.currentDay + 1} — Continue
               </Text>
             </View>
           )}

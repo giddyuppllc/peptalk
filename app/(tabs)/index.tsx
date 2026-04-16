@@ -285,7 +285,7 @@ export default function DashboardScreen() {
   }, [entries]);
 
   const activeProtocolCount = useMemo(
-    () => protocols.filter((p) => p.isActive).length,
+    () => (protocols ?? []).filter((p) => p.isActive).length,
     [protocols],
   );
 
@@ -314,7 +314,7 @@ export default function DashboardScreen() {
   const todayDoseCount = useMemo(() => doses.filter((d) => d.date === todayDate).length, [doses, todayDate]);
 
   const currentValues: Record<string, number> = useMemo(() => {
-    const tt = dailyMacros.totals;
+    const tt = dailyMacros?.totals ?? { calories: 0, proteinGrams: 0, carbsGrams: 0, fatGrams: 0, fiberGrams: 0 };
     return {
       cal: tt.calories, pro: tt.proteinGrams, carb: tt.carbsGrams, fat: tt.fatGrams,
       fiber: tt.fiberGrams, water: todayWater,
@@ -521,14 +521,14 @@ export default function DashboardScreen() {
     meals.filter((m) => m.date === day).forEach((meal) => {
       const mealDate = meal.timestamp ? new Date(meal.timestamp) : null;
       const mealTime = mealDate ? `${mealDate.getHours()}:${mealDate.getMinutes()}` : null;
-      const totalCal = meal.foods.reduce((sum, f) => sum + f.calories, 0) + (meal.quickLog?.calories ?? 0);
+      const totalCal = (meal.foods ?? []).reduce((sum, f) => sum + f.calories, 0) + (meal.quickLog?.calories ?? 0);
       events.push({
         id: meal.id,
         time: mealTime ? formatTime(mealTime) : 'Logged',
         sortKey: mealTime
           ? `${String(mealDate!.getHours()).padStart(2, '0')}:${String(mealDate!.getMinutes()).padStart(2, '0')}`
           : '12:00',
-        title: meal.mealType.charAt(0).toUpperCase() + meal.mealType.slice(1),
+        title: (meal.mealType ?? 'Meal').charAt(0).toUpperCase() + (meal.mealType ?? 'meal').slice(1),
         subtitle: `${totalCal} cal`,
         icon: 'nutrition-outline',
         color: '#FFBF82',
@@ -657,9 +657,9 @@ export default function DashboardScreen() {
   // ── Prompt Chips ──────────────────────────────────────────────────────────
 
   const promptChips = useMemo(() => {
-    const focusAreas = segment.focusAreas.slice(0, 3);
+    const focusAreas = (segment?.focusAreas ?? []).slice(0, 3);
     return focusAreas.map((area) => `Tell me about ${area.toLowerCase()}`);
-  }, [segment.focusAreas]);
+  }, [segment?.focusAreas]);
 
   // ── Peptide Library ───────────────────────────────────────────────────────
 

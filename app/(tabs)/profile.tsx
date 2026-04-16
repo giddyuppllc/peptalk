@@ -617,16 +617,16 @@ function HealthProfileCard() {
           </View>
         )}
 
-        {profile.primaryGoals.length > 0 && (
+        {(profile.primaryGoals?.length ?? 0) > 0 && (
           <View style={[styles.profileRow, { borderBottomColor: t.glassBorder }]}>
             <Text style={[styles.profileLabel, { color: t.textSecondary }]}>Goals</Text>
             <Text style={[styles.profileValue, { color: t.text }]} numberOfLines={2}>
-              {profile.primaryGoals.slice(0, 3).join(', ')}
+              {profile.primaryGoals?.slice(0, 3).join(', ')}
             </Text>
           </View>
         )}
 
-        {profile.medical.conditions.length > 0 && (
+        {(profile.medical?.conditions?.length ?? 0) > 0 && (
           <View style={[styles.profileRow, { borderBottomColor: t.glassBorder }]}>
             <Text style={[styles.profileLabel, { color: t.textSecondary }]}>Conditions</Text>
             <Text style={[styles.profileValue, { color: t.text }]} numberOfLines={2}>
@@ -635,7 +635,7 @@ function HealthProfileCard() {
           </View>
         )}
 
-        {profile.medical.allergies.length > 0 && (
+        {(profile.medical?.allergies?.length ?? 0) > 0 && (
           <View style={[styles.profileRow, { borderBottomColor: t.glassBorder }]}>
             <Text style={[styles.profileLabel, { color: t.textSecondary }]}>Allergies</Text>
             <Text style={[styles.profileValue, { color: t.text }]} numberOfLines={2}>
@@ -644,7 +644,7 @@ function HealthProfileCard() {
           </View>
         )}
 
-        {profile.peptideExperience !== 'none' && (
+        {profile.peptideExperience && profile.peptideExperience !== 'none' && (
           <View style={[styles.profileRow, { borderBottomWidth: 0 }]}>
             <Text style={[styles.profileLabel, { color: t.textSecondary }]}>Experience</Text>
             <Text style={[styles.profileValue, { color: t.text }]}>

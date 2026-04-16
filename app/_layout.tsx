@@ -23,6 +23,7 @@ import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { CelebrationModal } from '../src/components/CelebrationModal';
 import { PepTalkCharacter } from '../src/components/PepTalkCharacter';
 import { useOnboardingStore } from '../src/store/useOnboardingStore';
+import { useAuthStore } from '../src/store/useAuthStore';
 import { configureNotificationHandler } from '../src/services/notificationService';
 import { useTheme } from '../src/hooks/useTheme';
 
@@ -56,6 +57,7 @@ export default function RootLayout() {
   const logoOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (!fontsLoaded) return;
     // Logo entrance
     Animated.parallel([
       Animated.spring(logoScale, { toValue: 1, tension: 60, friction: 7, useNativeDriver: true }),
@@ -71,9 +73,10 @@ export default function RootLayout() {
     });
   }, []);
 
-  // Initialize notifications — no-ops gracefully in Expo Go
+  // Initialize notifications and restore session — no-ops gracefully in Expo Go
   useEffect(() => {
     configureNotificationHandler();
+    useAuthStore.getState().restoreSession();
     // Mark navigator as mounted on next frame so <Stack> is in the tree
     requestAnimationFrame(() => setNavReady(true));
   }, []);
