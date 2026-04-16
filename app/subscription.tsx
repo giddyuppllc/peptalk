@@ -52,7 +52,7 @@ const TIERS: TierInfo[] = [
       'Food nutritional info',
       'Learn hub (articles & guides)',
     ],
-    colors: ['#6b7280', '#9ca3af'],
+    colors: ['#6b7280', '#6B7280'],
     icon: 'flask-outline',
   },
   {
@@ -93,7 +93,7 @@ const TIERS: TierInfo[] = [
       'Ad-free experience',
       'Book consults with Jamie ($500/session)',
     ],
-    colors: ['#f59e0b', '#ef4444'],
+    colors: ['#FFBF82', '#ef4444'],
     icon: 'star-outline',
     badge: 'All Access',
   },
@@ -259,9 +259,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: FontSizes.xl,
-    fontWeight: '800',
-    color: Colors.darkText,
+    fontSize: 32,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    color: '#2D2D2D',
   },
   scroll: { paddingBottom: 40 },
 

@@ -257,6 +257,17 @@ export interface MealEntry {
     proteinGrams: number;
     carbsGrams: number;
     fatGrams: number;
+    fiberGrams?: number;
+    sodiumMg?: number;
+    sugarGrams?: number;
+    cholesterolMg?: number;
+    saturatedFatGrams?: number;
+    transFatGrams?: number;
+    potassiumMg?: number;
+    calciumMg?: number;
+    ironMg?: number;
+    vitaminAMcg?: number;
+    vitaminCMg?: number;
   }[];
   /** Quick-log: user can just enter totals without itemizing */
   quickLog?: {
@@ -355,26 +366,46 @@ export interface SubscriptionState {
 /** What each tier can access */
 export const TIER_FEATURES: Record<SubscriptionTier, string[]> = {
   free: [
+    // Nutrition — basic tracking
+    'calorie_counter',
+    'food_nutrition_info',       // calories + P/C/F macros
+    'water_tracking',
+    'macro_donut_chart',         // macros donut page
+    // Peptides — info & calculators
     'peptide_library',
     'peptide_info',
     'dosing_calculator',
     'reconstitution_calculator',
-    'calorie_counter',
-    'food_nutrition_info',
+    // Workouts — manual logging
+    'workout_logging',
+    'cardio_logging',
+    'exercise_library',
+    // General
     'learn_hub',
   ],
   plus: [
     // All free features
+    'calorie_counter',
+    'food_nutrition_info',
+    'water_tracking',
+    'macro_donut_chart',
     'peptide_library',
     'peptide_info',
     'dosing_calculator',
     'reconstitution_calculator',
-    'calorie_counter',
-    'food_nutrition_info',
+    'workout_logging',
+    'cardio_logging',
+    'exercise_library',
     'learn_hub',
-    // Plus features
+    // Nutrition — detailed analytics
+    'micronutrients_basic',      // fiber, sodium, sugar, cholesterol, sat fat
+    'vitamins_donut_chart',      // vitamins & minerals donut page
+    'nutrition_trends',          // weekly/monthly trend charts
+    'meal_history_full',         // meal history beyond 7 days
+    // Peptides — advanced
     'aimee_ai_limited',
     'stack_builder',
+    // Tracking & health
     'health_calendar',
     'manual_tracking',
     'health_checkins',
@@ -387,13 +418,22 @@ export const TIER_FEATURES: Record<SubscriptionTier, string[]> = {
   ],
   pro: [
     // All plus features
+    'calorie_counter',
+    'food_nutrition_info',
+    'water_tracking',
+    'macro_donut_chart',
     'peptide_library',
     'peptide_info',
     'dosing_calculator',
     'reconstitution_calculator',
-    'calorie_counter',
-    'food_nutrition_info',
+    'workout_logging',
+    'cardio_logging',
+    'exercise_library',
     'learn_hub',
+    'micronutrients_basic',
+    'vitamins_donut_chart',
+    'nutrition_trends',
+    'meal_history_full',
     'aimee_ai_limited',
     'stack_builder',
     'health_calendar',
@@ -405,20 +445,25 @@ export const TIER_FEATURES: Record<SubscriptionTier, string[]> = {
     'watch_sync',
     'biomarker_tracking',
     'calendar_timeline',
-    // Pro features
-    'aimee_ai_unlimited',
-    'aimee_meal_plans',
-    'aimee_workout_plans',
-    'aimee_health_scheduler',
-    'workout_programs',
-    'workout_videos',
-    'ai_meal_plans',
+    // Nutrition — full suite
+    'micronutrients_full',       // all vitamins A-K, B-complex, minerals
+    'ai_food_scanner',           // camera → auto macro calculation
+    'ai_meal_plans',             // custom meal plans for peptide stack
     'nutrition_planning',
     'grocery_from_plans',
     'recipe_generator',
+    // Workouts — AI powered
+    'aimee_ai_unlimited',
+    'aimee_workout_plans',       // custom AI workouts for goals + stack
+    'workout_programs',
+    'workout_videos',
+    // Health — reports & export
+    'aimee_meal_plans',
+    'aimee_health_scheduler',
     'health_reports',
     'pdf_export',
     'data_export',
+    // Premium perks
     'ad_free',
     'consult_booking',
   ],

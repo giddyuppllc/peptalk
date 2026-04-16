@@ -33,12 +33,12 @@ const CATEGORY_OPTIONS: {
   color: string;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { value: 'protocol_notes', label: 'Protocol Notes', color: '#3b82f6', icon: 'document-text-outline' },
+  { value: 'protocol_notes', label: 'Protocol Notes', color: '#F8A97A', icon: 'document-text-outline' },
   { value: 'side_effects', label: 'Side Effects', color: '#ef4444', icon: 'warning-outline' },
   { value: 'mood', label: 'Mood', color: '#10b981', icon: 'happy-outline' },
-  { value: 'progress', label: 'Progress', color: '#8b5cf6', icon: 'trending-up-outline' },
+  { value: 'progress', label: 'Progress', color: '#D4A853', icon: 'trending-up-outline' },
   { value: 'research', label: 'Research', color: '#06b6d4', icon: 'flask-outline' },
-  { value: 'questions', label: 'Questions', color: '#f59e0b', icon: 'help-circle-outline' },
+  { value: 'questions', label: 'Questions', color: '#FFBF82', icon: 'help-circle-outline' },
   { value: 'goals', label: 'Goals', color: '#ec4899', icon: 'flag-outline' },
   { value: 'general', label: 'General', color: '#6b7280', icon: 'create-outline' },
 ];
@@ -469,9 +469,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(0,0,0,0.08)',
     gap: 6,
   },
   categoryChipText: {
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: BorderRadius.sm,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.08)',
   },
   tagChipText: {
     fontSize: FontSizes.xs,
@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingBottom: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: 'rgba(0,0,0,0.06)',
     gap: Spacing.sm,
   },
   peptideSearchInput: {
@@ -599,9 +599,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderRadius: BorderRadius.md,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(0,0,0,0.08)',
     gap: 2,
   },
   moodNumber: {
@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(0,0,0,0.08)',
   },
   cancelBtnText: {
     fontSize: FontSizes.md,

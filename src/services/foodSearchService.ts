@@ -40,17 +40,39 @@ export interface UnifiedFood {
     carbsGrams: number;
     fatGrams: number;
     fiberGrams: number;
-    /** Additional micros when available */
+    // Fats breakdown
     sodiumMg?: number;
     sugarGrams?: number;
     cholesterolMg?: number;
     saturatedFatGrams?: number;
     transFatGrams?: number;
+    // Minerals
     potassiumMg?: number;
     calciumMg?: number;
     ironMg?: number;
+    magnesiumMg?: number;
+    phosphorusMg?: number;
+    zincMg?: number;
+    copperMg?: number;
+    manganeseMg?: number;
+    seleniumMcg?: number;
+    // Vitamins
     vitaminAMcg?: number;
     vitaminCMg?: number;
+    vitaminDMcg?: number;
+    vitaminEMg?: number;
+    vitaminKMcg?: number;
+    vitaminB1Mg?: number;   // Thiamin
+    vitaminB2Mg?: number;   // Riboflavin
+    vitaminB3Mg?: number;   // Niacin
+    vitaminB5Mg?: number;   // Pantothenic acid
+    vitaminB6Mg?: number;
+    vitaminB12Mcg?: number;
+    folateMcg?: number;
+    cholineMg?: number;
+    // Omega fatty acids
+    omega3Grams?: number;   // EPA + DHA + ALA
+    omega6Grams?: number;
   };
   /** Available serving sizes */
   servings: ServingOption[];
@@ -105,7 +127,7 @@ async function searchUSDA(query: string, limit = 25): Promise<UnifiedFood[]> {
       const getNutrient = (id: number) =>
         nutrients.find((n: any) => n.nutrientId === id)?.value ?? 0;
 
-      // USDA nutrient IDs
+      // USDA nutrient IDs — comprehensive extraction
       const calories = getNutrient(1008);
       const protein = getNutrient(1003);
       const carbs = getNutrient(1005);
@@ -115,11 +137,33 @@ async function searchUSDA(query: string, limit = 25): Promise<UnifiedFood[]> {
       const sugar = getNutrient(2000);
       const cholesterol = getNutrient(1253);
       const saturatedFat = getNutrient(1258);
+      // Minerals
       const potassium = getNutrient(1092);
       const calcium = getNutrient(1087);
       const iron = getNutrient(1089);
+      const magnesium = getNutrient(1090);
+      const phosphorus = getNutrient(1091);
+      const zinc = getNutrient(1095);
+      const copper = getNutrient(1098);
+      const manganese = getNutrient(1101);
+      const selenium = getNutrient(1103);
+      // Vitamins
       const vitA = getNutrient(1106);
       const vitC = getNutrient(1162);
+      const vitD = getNutrient(1114);
+      const vitE = getNutrient(1109);
+      const vitK = getNutrient(1185);
+      const vitB1 = getNutrient(1165);  // Thiamin
+      const vitB2 = getNutrient(1166);  // Riboflavin
+      const vitB3 = getNutrient(1167);  // Niacin
+      const vitB5 = getNutrient(1170);  // Pantothenic acid
+      const vitB6 = getNutrient(1175);
+      const vitB12 = getNutrient(1178);
+      const folate = getNutrient(1177);
+      const choline = getNutrient(1180);
+      // Omega fatty acids
+      const omega3 = getNutrient(1404) + getNutrient(1278) + getNutrient(1272); // ALA + EPA + DHA
+      const omega6 = getNutrient(1269); // Linoleic acid
 
       // Build serving options from available measures (food-specific first)
       const servings: ServingOption[] = [];
@@ -165,11 +209,34 @@ async function searchUSDA(query: string, limit = 25): Promise<UnifiedFood[]> {
           sugarGrams: round1(sugar),
           cholesterolMg: Math.round(cholesterol),
           saturatedFatGrams: round1(saturatedFat),
+          transFatGrams: round1(getNutrient(1257)),
+          // Minerals
           potassiumMg: Math.round(potassium),
           calciumMg: Math.round(calcium),
           ironMg: round1(iron),
+          magnesiumMg: Math.round(magnesium),
+          phosphorusMg: Math.round(phosphorus),
+          zincMg: round1(zinc),
+          copperMg: round1(copper),
+          manganeseMg: round1(manganese),
+          seleniumMcg: round1(selenium),
+          // Vitamins
           vitaminAMcg: Math.round(vitA),
           vitaminCMg: round1(vitC),
+          vitaminDMcg: round1(vitD),
+          vitaminEMg: round1(vitE),
+          vitaminKMcg: round1(vitK),
+          vitaminB1Mg: round1(vitB1),
+          vitaminB2Mg: round1(vitB2),
+          vitaminB3Mg: round1(vitB3),
+          vitaminB5Mg: round1(vitB5),
+          vitaminB6Mg: round1(vitB6),
+          vitaminB12Mcg: round1(vitB12),
+          folateMcg: round1(folate),
+          cholineMg: round1(choline),
+          // Omega fatty acids
+          omega3Grams: round1(omega3),
+          omega6Grams: round1(omega6),
         },
         servings: appendUniversalUnits(servings),
         defaultServingGrams: item.servingSize || 100,
@@ -765,16 +832,47 @@ function cachedToUnified(cached: CachedFood): UnifiedFood {
 export function calcUnifiedMacros(food: UnifiedFood, grams: number) {
   const scale = grams / 100;
   const p = food.per100g;
+  const s = (v: number | undefined) => v ? round1(v * scale) : undefined;
+  const si = (v: number | undefined) => v ? Math.round(v * scale) : undefined;
   return {
     calories: Math.round(p.calories * scale),
     proteinGrams: round1(p.proteinGrams * scale),
     carbsGrams: round1(p.carbsGrams * scale),
     fatGrams: round1(p.fatGrams * scale),
     fiberGrams: round1(p.fiberGrams * scale),
-    sodiumMg: p.sodiumMg ? Math.round(p.sodiumMg * scale) : undefined,
-    sugarGrams: p.sugarGrams ? round1(p.sugarGrams * scale) : undefined,
-    cholesterolMg: p.cholesterolMg ? Math.round(p.cholesterolMg * scale) : undefined,
-    saturatedFatGrams: p.saturatedFatGrams ? round1(p.saturatedFatGrams * scale) : undefined,
+    // All micronutrients
+    sodiumMg: si(p.sodiumMg),
+    sugarGrams: s(p.sugarGrams),
+    cholesterolMg: si(p.cholesterolMg),
+    saturatedFatGrams: s(p.saturatedFatGrams),
+    transFatGrams: s(p.transFatGrams),
+    // Minerals
+    potassiumMg: si(p.potassiumMg),
+    calciumMg: si(p.calciumMg),
+    ironMg: s(p.ironMg),
+    magnesiumMg: si(p.magnesiumMg),
+    phosphorusMg: si(p.phosphorusMg),
+    zincMg: s(p.zincMg),
+    copperMg: s(p.copperMg),
+    manganeseMg: s(p.manganeseMg),
+    seleniumMcg: s(p.seleniumMcg),
+    // Vitamins
+    vitaminAMcg: si(p.vitaminAMcg),
+    vitaminCMg: s(p.vitaminCMg),
+    vitaminDMcg: s(p.vitaminDMcg),
+    vitaminEMg: s(p.vitaminEMg),
+    vitaminKMcg: s(p.vitaminKMcg),
+    vitaminB1Mg: s(p.vitaminB1Mg),
+    vitaminB2Mg: s(p.vitaminB2Mg),
+    vitaminB3Mg: s(p.vitaminB3Mg),
+    vitaminB5Mg: s(p.vitaminB5Mg),
+    vitaminB6Mg: s(p.vitaminB6Mg),
+    vitaminB12Mcg: s(p.vitaminB12Mcg),
+    folateMcg: s(p.folateMcg),
+    cholineMg: s(p.cholineMg),
+    // Omega fatty acids
+    omega3Grams: s(p.omega3Grams),
+    omega6Grams: s(p.omega6Grams),
   };
 }
 

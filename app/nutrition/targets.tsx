@@ -19,10 +19,12 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 import { useMealStore } from '../../src/store/useMealStore';
+import { useProgressGoalsStore } from '../../src/store/useProgressGoalsStore';
 
 export default function MacroTargetsScreen() {
   const router = useRouter();
   const { targets, setTargets } = useMealStore();
+  const setGoalValue = useProgressGoalsStore((s) => s.setGoalValue);
   const [cal, setCal] = useState(String(targets.calories));
   const [protein, setProtein] = useState(String(targets.proteinGrams));
   const [carbs, setCarbs] = useState(String(targets.carbsGrams));
@@ -31,14 +33,22 @@ export default function MacroTargetsScreen() {
   const [water, setWater] = useState(String(targets.waterOz ?? 100));
 
   const handleSave = () => {
-    setTargets({
+    const newTargets = {
       calories: parseInt(cal, 10) || 2000,
       proteinGrams: parseInt(protein, 10) || 150,
       carbsGrams: parseInt(carbs, 10) || 200,
       fatGrams: parseInt(fat, 10) || 67,
       fiberGrams: parseInt(fiber, 10) || 30,
       waterOz: parseInt(water, 10) || 100,
-    });
+    };
+    setTargets(newTargets);
+    // Sync to donut chart goals
+    setGoalValue('cal', newTargets.calories);
+    setGoalValue('pro', newTargets.proteinGrams);
+    setGoalValue('carb', newTargets.carbsGrams);
+    setGoalValue('fat', newTargets.fatGrams);
+    setGoalValue('fiber', newTargets.fiberGrams);
+    setGoalValue('water', newTargets.waterOz);
     Alert.alert('Saved', 'Your macro targets have been updated.');
     router.back();
   };
@@ -185,7 +195,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   fieldLabel: {
     fontSize: FontSizes.md,
@@ -198,7 +208,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   fieldText: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 8,
     paddingHorizontal: 14,
     height: 38,

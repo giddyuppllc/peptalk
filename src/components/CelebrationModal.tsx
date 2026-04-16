@@ -128,7 +128,7 @@ export function CelebrationModal() {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    backgroundColor: 'rgba(255, 255, 255, 0.97)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(0,0,0,0.12)',
   },
   textContainer: {
     alignItems: 'center',
@@ -163,12 +163,12 @@ const styles = StyleSheet.create({
   badgeName: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#fff',
+    color: '#2D2D2D',
     marginBottom: 8,
   },
   badgeDesc: {
     fontSize: FontSizes.md,
-    color: '#9ca3af',
+    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 22,
   },

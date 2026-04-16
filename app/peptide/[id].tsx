@@ -31,12 +31,12 @@ import { getInteractionsByPeptideId } from '../../src/data/interactions';
 function getApprovalColor(status: string): string {
   switch (status) {
     case 'fda_approved': return '#22c55e';
-    case 'ema_approved': return '#3b82f6';
+    case 'ema_approved': return '#F8A97A';
     case 'approved_other': return '#06b6d4';
-    case 'phase_3': return '#f59e0b';
+    case 'phase_3': return '#FFBF82';
     case 'phase_2': return '#f97316';
     case 'phase_1': return '#ef4444';
-    case 'preclinical': return '#8b5cf6';
+    case 'preclinical': return '#D4A853';
     default: return '#6b7280';
   }
 }
@@ -57,7 +57,7 @@ function getApprovalLabel(status: string): string {
 function getEvidenceColor(grade: string): string {
   switch (grade) {
     case 'established': return '#22c55e';
-    case 'moderate': return '#f59e0b';
+    case 'moderate': return '#FFBF82';
     case 'preliminary': return '#f97316';
     default: return '#6b7280';
   }
@@ -88,7 +88,7 @@ export default function PeptideDetailScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.notFound}>
-          <Ionicons name="alert-circle-outline" size={48} color="#9ca3af" />
+          <Ionicons name="alert-circle-outline" size={48} color="#6B7280" />
           <Text style={styles.notFoundTitle}>Peptide Not Found</Text>
           <Text style={styles.notFoundSubtitle}>
             The requested peptide could not be found in the database.
@@ -208,7 +208,7 @@ export default function PeptideDetailScreen() {
         {peptide.evidenceGrade && (
           <View style={styles.evidenceRow}>
             <View style={[styles.evidenceBadge, { backgroundColor: getEvidenceColor(peptide.evidenceGrade) }]}>
-              <Ionicons name={getEvidenceIcon(peptide.evidenceGrade) as any} size={14} color="#0f1720" />
+              <Ionicons name={getEvidenceIcon(peptide.evidenceGrade) as any} size={14} color="#2D2D2D" />
               <Text style={styles.evidenceBadgeText}>{peptide.evidenceGrade.charAt(0).toUpperCase() + peptide.evidenceGrade.slice(1)} Evidence</Text>
             </View>
           </View>
@@ -286,7 +286,7 @@ export default function PeptideDetailScreen() {
                       >
                         <Ionicons name="link-outline" size={14} color="#e3a7a1" />
                         <Text style={styles.usesPairChipText}>{pairPeptide.name}</Text>
-                        <Ionicons name="chevron-forward" size={12} color="#9ca3af" />
+                        <Ionicons name="chevron-forward" size={12} color="#6B7280" />
                       </TouchableOpacity>
                     );
                   })}
@@ -521,7 +521,7 @@ export default function PeptideDetailScreen() {
                 <Text style={styles.safetySubtitle}>Serious Adverse Effects</Text>
                 {safetyProfile.seriousAdverseEffects.map((e, i) => (
                   <View key={i} style={styles.bulletRow}>
-                    <Text style={[styles.bulletDot, { color: '#f59e0b' }]}>•</Text>
+                    <Text style={[styles.bulletDot, { color: '#FFBF82' }]}>•</Text>
                     <Text style={styles.bulletText}>{e}</Text>
                   </View>
                 ))}
@@ -681,7 +681,7 @@ export default function PeptideDetailScreen() {
                   <Text style={styles.guideTitle}>{guide.title}</Text>
                   <Text style={styles.guideSummary} numberOfLines={1}>{guide.summary}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color="#9ca3af" />
+                <Ionicons name="chevron-forward" size={16} color="#6B7280" />
               </TouchableOpacity>
             ))}
           </GlassCard>
@@ -701,7 +701,7 @@ export default function PeptideDetailScreen() {
           <Ionicons
             name={isInStack ? 'checkmark-circle' : 'add-circle-outline'}
             size={20}
-            color={isInStack ? '#b9cbb6' : '#0f1720'}
+            color={isInStack ? '#b9cbb6' : '#2D2D2D'}
           />
           <Text
             style={[
@@ -720,7 +720,7 @@ export default function PeptideDetailScreen() {
             onPress={() => router.push('/(tabs)/calendar')}
             activeOpacity={0.8}
           >
-            <Ionicons name="add-circle-outline" size={18} color="#14b8a6" />
+            <Ionicons name="add-circle-outline" size={18} color="#F8A97A" />
             <Text style={styles.quickActionText}>Log Dose</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -733,7 +733,7 @@ export default function PeptideDetailScreen() {
             }
             activeOpacity={0.8}
           >
-            <Ionicons name="chatbubble-outline" size={18} color="#8b5cf6" />
+            <Ionicons name="chatbubble-outline" size={18} color="#D4A853" />
             <Text style={styles.quickActionText}>Ask Aimee</Text>
           </TouchableOpacity>
         </View>
@@ -791,7 +791,7 @@ export default function PeptideDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1720',
+    backgroundColor: '#2D2D2D',
   },
   scrollView: {
     flex: 1,
@@ -814,12 +814,12 @@ const styles = StyleSheet.create({
   notFoundTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     marginTop: 16,
   },
   notFoundSubtitle: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     textAlign: 'center',
     marginTop: 6,
   },
@@ -833,7 +833,7 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0f1720',
+    color: '#2D2D2D',
   },
 
   // ── Title ───────────────────────────────────────────────────
@@ -844,9 +844,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   peptideName: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#f7f2ec',
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#2D2D2D',
     letterSpacing: -0.5,
     flex: 1,
   },
@@ -894,11 +894,11 @@ const styles = StyleSheet.create({
   approvalBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0f1720',
+    color: '#2D2D2D',
   },
   approvalDetails: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
     flex: 1,
   },
 
@@ -939,7 +939,7 @@ const styles = StyleSheet.create({
   evidenceBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0f1720',
+    color: '#2D2D2D',
   },
 
   // ── Sections ────────────────────────────────────────────────
@@ -955,11 +955,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
   sectionText: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 20,
   },
 
@@ -1007,12 +1007,12 @@ const styles = StyleSheet.create({
   dataLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   dataValue: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     textAlign: 'right',
     flex: 1,
     marginLeft: 16,
@@ -1035,7 +1035,7 @@ const styles = StyleSheet.create({
   sequenceText: {
     fontSize: 11,
     fontFamily: 'monospace',
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 18,
     marginTop: 4,
   },
@@ -1049,12 +1049,12 @@ const styles = StyleSheet.create({
   },
   bulletDot: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 20,
   },
   bulletText: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 20,
     flex: 1,
   },
@@ -1102,7 +1102,7 @@ const styles = StyleSheet.create({
   trialName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     flex: 1,
     marginRight: 8,
   },
@@ -1119,12 +1119,12 @@ const styles = StyleSheet.create({
   },
   trialStatus: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginBottom: 4,
   },
   trialDetail: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginBottom: 2,
   },
   trialFindings: {
@@ -1151,7 +1151,7 @@ const styles = StyleSheet.create({
   protocolName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     marginBottom: 6,
   },
   protocolDetails: {
@@ -1159,7 +1159,7 @@ const styles = StyleSheet.create({
   },
   protocolDetail: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   protocolTiming: {
     fontSize: 12,
@@ -1184,15 +1184,15 @@ const styles = StyleSheet.create({
   relatedStackName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
   relatedStackCount: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   relatedStackDesc: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 18,
   },
 
@@ -1209,11 +1209,11 @@ const styles = StyleSheet.create({
   videoTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
   videoDuration: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginTop: 2,
   },
 
@@ -1230,11 +1230,11 @@ const styles = StyleSheet.create({
   guideTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
   guideSummary: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginTop: 2,
   },
 
@@ -1260,7 +1260,7 @@ const styles = StyleSheet.create({
   addToStackText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0f1720',
+    color: '#2D2D2D',
   },
   addToStackTextActive: {
     color: '#b9cbb6',
@@ -1280,9 +1280,9 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(0,0,0,0.06)',
   },
   quickActionText: {
     fontSize: 14,
@@ -1324,7 +1324,7 @@ const styles = StyleSheet.create({
   usesSectionTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     letterSpacing: -0.3,
   },
   usesPillsRow: {

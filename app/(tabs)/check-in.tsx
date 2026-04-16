@@ -543,7 +543,7 @@ export default function CheckInScreen() {
                 <TrendCard label="Sleep" data={trendData.sleep} color="#6366f1" unit="/5" />
                 <TrendCard label="Stress" data={trendData.stress} color="#ef4444" unit="/5" />
                 <TrendCard label="Recovery" data={trendData.recovery} color="#10b981" unit="/5" />
-                <TrendCard label="Appetite" data={trendData.appetite} color="#f59e0b" unit="/5" />
+                <TrendCard label="Appetite" data={trendData.appetite} color="#FFBF82" unit="/5" />
               </View>
             </GlassCard>
 
@@ -567,7 +567,7 @@ export default function CheckInScreen() {
             )}
 
             {weightData.length >= 3 && (
-              <TrendCard label="Weight" data={weightData} color="#3b82f6" unit=" lbs" />
+              <TrendCard label="Weight" data={weightData} color="#F8A97A" unit=" lbs" />
             )}
           </>
         )}
@@ -1030,7 +1030,7 @@ export default function CheckInScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1720',
+    backgroundColor: '#2D2D2D',
   },
   content: {
     paddingHorizontal: 20,
@@ -1043,14 +1043,14 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#f7f2ec',
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#2D2D2D',
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 13,
-    color: '#9ca3af',
+    fontSize: 14,
+    color: '#6B7280',
     marginTop: 6,
     lineHeight: 18,
   },
@@ -1076,12 +1076,12 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   summaryValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     marginTop: 4,
   },
   summaryDivider: {
@@ -1106,7 +1106,7 @@ const styles = StyleSheet.create({
   emotionBarLabel: {
     width: 80,
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   emotionBar: {
     flex: 1,
@@ -1123,7 +1123,7 @@ const styles = StyleSheet.create({
     width: 24,
     fontSize: 12,
     fontWeight: '600',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     textAlign: 'right',
   },
 
@@ -1140,7 +1140,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     marginBottom: 4,
   },
   sectionHint: {
@@ -1178,7 +1178,7 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   ratingTextActive: {
     color: '#e3a7a1',
@@ -1208,7 +1208,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
   },
 
   // ── Side Effect chip active state ───────────────────────────────────────
@@ -1230,7 +1230,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 12,
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     textAlignVertical: 'top',
     marginTop: 4,
   },
@@ -1265,7 +1265,7 @@ const styles = StyleSheet.create({
   },
   sentimentChipText: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   pepEffectInput: {
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
@@ -1274,7 +1274,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     fontSize: 13,
     marginBottom: 10,
   },
@@ -1287,7 +1287,7 @@ const styles = StyleSheet.create({
   },
   severityLabel: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   severityPills: {
     flexDirection: 'row',
@@ -1308,7 +1308,7 @@ const styles = StyleSheet.create({
   },
   severityText: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   severityTextActive: {
     color: '#e3a7a1',
@@ -1340,7 +1340,7 @@ const styles = StyleSheet.create({
   healthSyncText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#06B6D4',
+    color: '#F8A97A',
   },
   healthSyncTextDone: {
     color: '#22c55e',
@@ -1355,7 +1355,7 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginBottom: 6,
   },
   metricField: {
@@ -1365,7 +1365,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
 
   // ── Notes ───────────────────────────────────────────────────────────────
@@ -1377,7 +1377,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 12,
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     textAlignVertical: 'top',
   },
 
@@ -1396,7 +1396,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0f1720',
+    color: '#2D2D2D',
   },
 
   // ── Recent Check-Ins ───────────────────────────────────────────────────
@@ -1411,7 +1411,7 @@ const styles = StyleSheet.create({
   recentDate: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
   },
   recentMood: {
     fontSize: 12,
@@ -1419,7 +1419,7 @@ const styles = StyleSheet.create({
   },
   recentMeta: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginTop: 6,
   },
   recentEmotions: {
@@ -1434,6 +1434,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
   },
 });

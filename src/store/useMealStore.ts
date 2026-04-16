@@ -18,6 +18,17 @@ interface DailyTotals {
   carbsGrams: number;
   fatGrams: number;
   fiberGrams: number;
+  // Micronutrients
+  sodiumMg: number;
+  sugarGrams: number;
+  cholesterolMg: number;
+  saturatedFatGrams: number;
+  transFatGrams: number;
+  potassiumMg: number;
+  calciumMg: number;
+  ironMg: number;
+  vitaminAMcg: number;
+  vitaminCMg: number;
 }
 
 export interface RecentFood {
@@ -234,12 +245,8 @@ export const useMealStore = create<MealState & MealActions>()(
       addMeal: (meal) => {
         set({ meals: [meal, ...get().meals] });
         syncRecord('meal_entries', {
-          id: meal.id,
-          date: meal.date,
-          meal_type: meal.mealType,
-          foods: meal.foods,
-          quick_log: meal.quickLog ?? null,
-          notes: meal.notes ?? null,
+          id: meal.id, date: meal.date, meal_type: meal.mealType,
+          foods: meal.foods, quick_log: meal.quickLog ?? null, notes: meal.notes ?? null,
         });
       },
 
@@ -252,12 +259,8 @@ export const useMealStore = create<MealState & MealActions>()(
         const updated = get().meals.find((m) => m.id === mealId);
         if (updated) {
           syncRecord('meal_entries', {
-            id: updated.id,
-            date: updated.date,
-            meal_type: updated.mealType,
-            foods: updated.foods,
-            quick_log: updated.quickLog ?? null,
-            notes: updated.notes ?? null,
+            id: updated.id, date: updated.date, meal_type: updated.mealType,
+            foods: updated.foods, quick_log: updated.quickLog ?? null, notes: updated.notes ?? null,
           });
         }
       },
@@ -272,11 +275,9 @@ export const useMealStore = create<MealState & MealActions>()(
       getDailyTotals: (date) => {
         const dayMeals = get().meals.filter((m) => m.date === date);
         const totals: DailyTotals = {
-          calories: 0,
-          proteinGrams: 0,
-          carbsGrams: 0,
-          fatGrams: 0,
-          fiberGrams: 0,
+          calories: 0, proteinGrams: 0, carbsGrams: 0, fatGrams: 0, fiberGrams: 0,
+          sodiumMg: 0, sugarGrams: 0, cholesterolMg: 0, saturatedFatGrams: 0, transFatGrams: 0,
+          potassiumMg: 0, calciumMg: 0, ironMg: 0, vitaminAMcg: 0, vitaminCMg: 0,
         };
 
         for (const meal of dayMeals) {
@@ -291,6 +292,17 @@ export const useMealStore = create<MealState & MealActions>()(
               totals.proteinGrams += food.proteinGrams;
               totals.carbsGrams += food.carbsGrams;
               totals.fatGrams += food.fatGrams;
+              totals.fiberGrams += food.fiberGrams ?? 0;
+              totals.sodiumMg += food.sodiumMg ?? 0;
+              totals.sugarGrams += food.sugarGrams ?? 0;
+              totals.cholesterolMg += food.cholesterolMg ?? 0;
+              totals.saturatedFatGrams += food.saturatedFatGrams ?? 0;
+              totals.transFatGrams += food.transFatGrams ?? 0;
+              totals.potassiumMg += food.potassiumMg ?? 0;
+              totals.calciumMg += food.calciumMg ?? 0;
+              totals.ironMg += food.ironMg ?? 0;
+              totals.vitaminAMcg += food.vitaminAMcg ?? 0;
+              totals.vitaminCMg += food.vitaminCMg ?? 0;
             }
           }
         }

@@ -18,11 +18,11 @@ export const DASHBOARD_SEGMENTS: DashboardSegment[] = [
     heroTitle: 'Send It',
     heroSubtitle: 'Get shredded. Look good. Your era starts now.',
     palette: {
-      primary: '#59d6ff',
-      secondary: '#1c2430',
-      accent: '#7bf08a',
-      background: '#0b131b',
-      card: '#121c26',
+      primary: '#6B2D3E',       // Deep Burgundy
+      secondary: '#3D5A3E',     // Forest Green
+      accent: '#4A4A4F',        // Charcoal
+      background: '#F0EAE0',   // Cloud Dancer
+      card: '#F7F3ED',
     },
     imagery: ['neon signs', 'gym mirrors', 'night city', 'beach sunset', 'energy'],
     stackHighlights: ['The Shred', 'Night Mode', 'Beast Protocol'],
@@ -82,11 +82,11 @@ export const DASHBOARD_SEGMENTS: DashboardSegment[] = [
     heroTitle: 'The Operator',
     heroSubtitle: 'Smarter, not just harder. Run the numbers on your body.',
     palette: {
-      primary: '#7fb3ff',
-      secondary: '#141d2a',
-      accent: '#c8e46a',
-      background: '#0c121b',
-      card: '#151f2b',
+      primary: '#6B2D3E',       // Deep Burgundy
+      secondary: '#3D5A3E',     // Dark Olive
+      accent: '#4A3728',        // Espresso
+      background: '#F0EAE0',   // Cloud Dancer
+      card: '#F7F3ED',
     },
     imagery: ['cold plunge', 'black coffee', 'minimalist gym', 'smartwatch data', 'dawn light'],
     stackHighlights: ['Operator Protocol', 'The Edge Stack', 'Executive Compound'],
@@ -146,11 +146,11 @@ export const DASHBOARD_SEGMENTS: DashboardSegment[] = [
     heroTitle: 'Black Label',
     heroSubtitle: 'The name is yours. Own it.',
     palette: {
-      primary: '#f0c36a',
-      secondary: '#1a1510',
-      accent: '#9cd1ff',
-      background: '#0c0a08',
-      card: '#161210',
+      primary: '#4A3728',       // Deep Espresso
+      secondary: '#3D5A3E',     // Forest Green
+      accent: '#6B2D3E',        // Burgundy accent
+      background: '#F0EAE0',   // Cloud Dancer
+      card: '#F7F3ED',
     },
     imagery: ['tuxedo lapel', 'casino felt', 'gold cufflinks', 'amber whiskey', 'dark wood'],
     stackHighlights: ['Prime Protocol', 'Elegant Vitality', 'Longevity Noir'],
@@ -210,11 +210,11 @@ export const DASHBOARD_SEGMENTS: DashboardSegment[] = [
     heroTitle: 'Legacy Code',
     heroSubtitle: 'The mind stays sharp. The legacy endures.',
     palette: {
-      primary: '#d4a854',
-      secondary: '#1a1612',
-      accent: '#8ec5d6',
-      background: '#0d0b09',
-      card: '#171311',
+      primary: '#4A4A4F',       // Charcoal / Graphite
+      secondary: '#3D5A3E',     // Dark Olive
+      accent: '#4A3728',        // Espresso
+      background: '#F0EAE0',   // Cloud Dancer
+      card: '#F7F3ED',
     },
     imagery: ['leather study', 'chess board', 'warm gold light', 'oak desk', 'reading glasses'],
     stackHighlights: ['The Legacy Stack', 'Cognitive Shield', 'Enduring Strength'],
@@ -258,9 +258,6 @@ export const DASHBOARD_SEGMENTS: DashboardSegment[] = [
   },
 ];
 
-/**
- * Get the full segment (with age-specific messaging) for notifications/Aimee.
- */
 export const getSegmentByProfile = (
   gender: Gender | null,
   ageRange: AgeRange | null
@@ -300,11 +297,11 @@ export const DASHBOARD_LAYOUTS: Record<string, DashboardLayout> = {
     heroTitle: 'Your Health Dashboard',
     heroSubtitle: 'Train hard. Recover smart. Track everything.',
     palette: {
-      primary: '#3B82F6',
-      secondary: '#1a2535',
-      accent: '#06B6D4',
-      background: '#0f1720',
-      card: '#1a2535',
+      primary: '#6B2D3E',       // Deep Burgundy
+      secondary: '#3D5A3E',     // Forest Green
+      accent: '#4A4A4F',        // Charcoal
+      background: '#F0EAE0',   // Cloud Dancer
+      card: '#F7F3ED',
     },
     focusAreas: [
       'Strength & performance',

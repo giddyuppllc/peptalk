@@ -49,7 +49,7 @@ export function Skeleton({
           width: width as any,
           height,
           borderRadius,
-          backgroundColor: 'rgba(255,255,255,0.08)',
+          backgroundColor: 'rgba(0,0,0,0.06)',
         },
         animStyle,
         style,
@@ -102,10 +102,10 @@ export function SkeletonStats() {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: 'rgba(0,0,0,0.03)',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
+    borderColor: 'rgba(0,0,0,0.03)',
     padding: 16,
   },
   cardHeader: {

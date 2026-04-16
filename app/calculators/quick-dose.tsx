@@ -160,9 +160,9 @@ export default function QuickDoseScreen() {
         {protocol && reconInfo && (
           <>
             {/* Dosing */}
-            <GlassCard variant="glow" glowColor="#3B82F6" style={styles.section}>
+            <GlassCard variant="glow" glowColor="#F8A97A" style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="flask" size={20} color="#3B82F6" />
+                <Ionicons name="flask" size={20} color="#F8A97A" />
                 <Text style={styles.sectionTitle}>Your Dose</Text>
               </View>
               <View style={styles.doseGrid}>
@@ -195,9 +195,9 @@ export default function QuickDoseScreen() {
             </GlassCard>
 
             {/* Reconstitution */}
-            <GlassCard variant="glow" glowColor="#8B5CF6" style={styles.section}>
+            <GlassCard variant="glow" glowColor="#D4A853" style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="water" size={20} color="#8B5CF6" />
+                <Ionicons name="water" size={20} color="#D4A853" />
                 <Text style={styles.sectionTitle}>How to Reconstitute</Text>
               </View>
               <View style={styles.stepList}>
@@ -292,7 +292,7 @@ export default function QuickDoseScreen() {
             {protocol.storageNotes && (
               <GlassCard style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <Ionicons name="snow" size={20} color="#06B6D4" />
+                  <Ionicons name="snow" size={20} color="#F8A97A" />
                   <Text style={styles.sectionTitle}>Storage</Text>
                 </View>
                 <Text style={styles.sectionText}>{protocol.storageNotes}</Text>
@@ -303,12 +303,12 @@ export default function QuickDoseScreen() {
             {protocol.contraindications && protocol.contraindications.length > 0 && (
               <GlassCard variant="accent" style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <Ionicons name="warning" size={20} color="#f59e0b" />
+                  <Ionicons name="warning" size={20} color="#FFBF82" />
                   <Text style={styles.sectionTitle}>Watch For</Text>
                 </View>
                 {protocol.contraindications.map((c: string, i: number) => (
                   <View key={i} style={styles.warningRow}>
-                    <Ionicons name="alert-circle-outline" size={14} color="#f59e0b" />
+                    <Ionicons name="alert-circle-outline" size={14} color="#FFBF82" />
                     <Text style={styles.warningText}>{c}</Text>
                   </View>
                 ))}
@@ -327,7 +327,7 @@ export default function QuickDoseScreen() {
               onPress={() => router.push('/(tabs)/peptalk' as any)}
               style={styles.askAimeeBtn}
             >
-              <LinearGradient colors={['#8b5cf6', '#7c3aed']} style={styles.askAimeeBtnGradient}>
+              <LinearGradient colors={['#D4A853', '#B8913D']} style={styles.askAimeeBtnGradient}>
                 <Ionicons name="chatbubble" size={16} color="#fff" />
                 <Text style={styles.askAimeeBtnText}>Ask Aimee</Text>
               </LinearGradient>
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.06)',
     alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.darkText, flex: 1 },
@@ -386,9 +386,9 @@ const styles = StyleSheet.create({
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     marginHorizontal: Spacing.lg, marginBottom: Spacing.sm,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: BorderRadius.md, borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 14, height: 44,
+    borderColor: 'rgba(0,0,0,0.08)', paddingHorizontal: 14, height: 44,
   },
   searchInput: { flex: 1, fontSize: FontSizes.md, color: Colors.darkText },
   weightNote: {
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
   peptideRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     paddingVertical: Spacing.sm,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   peptideDot: {
     width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.pepTeal,
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
   step: { flexDirection: 'row', gap: Spacing.sm },
   stepNum: {
     width: 24, height: 24, borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.08)',
     textAlign: 'center', lineHeight: 24,
     fontSize: FontSizes.sm, fontWeight: '700', color: Colors.pepTeal,
   },
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
 
   // Disclaimer
   disclaimer: {
-    fontSize: FontSizes.xs, color: 'rgba(255,255,255,0.3)',
+    fontSize: FontSizes.xs, color: 'rgba(0,0,0,0.15)',
     textAlign: 'center', lineHeight: 16,
     marginVertical: Spacing.md,
   },

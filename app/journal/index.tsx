@@ -26,12 +26,12 @@ import {
 // ---------------------------------------------------------------------------
 
 const CATEGORY_COLORS: Record<JournalCategory, string> = {
-  protocol_notes: '#3b82f6',
+  protocol_notes: '#F8A97A',
   side_effects: '#ef4444',
   mood: '#10b981',
-  progress: '#8b5cf6',
+  progress: '#D4A853',
   research: '#06b6d4',
-  questions: '#f59e0b',
+  questions: '#FFBF82',
   goals: '#ec4899',
   general: '#6b7280',
 };
@@ -434,9 +434,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: FontSizes.xl,
-    fontWeight: '700',
-    color: Colors.darkText,
+    fontSize: 32,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    color: '#2D2D2D',
   },
   searchBtn: {
     width: 32,
@@ -481,9 +482,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: BorderRadius.sm,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(0,0,0,0.06)',
   },
   dateChipActive: {
     backgroundColor: Colors.pepTeal + '22',
@@ -511,9 +512,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(0,0,0,0.08)',
     gap: 6,
   },
   filterChipText: {
@@ -525,7 +526,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.06)',
   },
   countBadgeText: {
     fontSize: 10,
@@ -604,7 +605,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: 6,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   tagChipText: {
     fontSize: FontSizes.xs,

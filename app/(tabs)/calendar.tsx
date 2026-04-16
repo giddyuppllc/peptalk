@@ -130,12 +130,12 @@ const ROUTES: AdministrationRoute[] = [
 const UNITS: DoseUnit[] = ['mcg', 'mg', 'IU', 'ml'];
 
 const JOURNAL_CATEGORY_COLORS: Record<JournalCategory, string> = {
-  protocol_notes: '#3b82f6',
+  protocol_notes: '#F8A97A',
   side_effects: '#ef4444',
   mood: '#10b981',
-  progress: '#8b5cf6',
+  progress: '#D4A853',
   research: '#06b6d4',
-  questions: '#f59e0b',
+  questions: '#FFBF82',
   goals: '#ec4899',
   general: '#6b7280',
 };
@@ -510,7 +510,7 @@ export default function CalendarScreen() {
           <View style={styles.calendarNav}>
             <TouchableOpacity onPress={prevMonth} style={styles.navBtn} activeOpacity={0.7}>
               <LinearGradient
-                colors={t.isDark ? ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)'] : ['rgba(0,0,0,0.06)', 'rgba(0,0,0,0.03)']}
+                colors={t.isDark ? ['rgba(0,0,0,0.08)', 'rgba(0,0,0,0.04)'] : ['rgba(0,0,0,0.06)', 'rgba(0,0,0,0.03)']}
                 style={[styles.navBtnGradient, { borderColor: t.glassBorder }]}
               >
                 <Ionicons name="chevron-back" size={18} color={t.text} />
@@ -522,7 +522,7 @@ export default function CalendarScreen() {
             </View>
             <TouchableOpacity onPress={nextMonth} style={styles.navBtn} activeOpacity={0.7}>
               <LinearGradient
-                colors={t.isDark ? ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)'] : ['rgba(0,0,0,0.06)', 'rgba(0,0,0,0.03)']}
+                colors={t.isDark ? ['rgba(0,0,0,0.08)', 'rgba(0,0,0,0.04)'] : ['rgba(0,0,0,0.06)', 'rgba(0,0,0,0.03)']}
                 style={[styles.navBtnGradient, { borderColor: t.glassBorder }]}
               >
                 <Ionicons name="chevron-forward" size={18} color={t.text} />
@@ -725,7 +725,7 @@ export default function CalendarScreen() {
                     {selectedDayCheckin.weightLbs ? (
                       <LinearGradient colors={['rgba(245,158,11,0.15)', 'rgba(245,158,11,0.05)']} style={styles.checkinBadge}>
                         <Text style={[styles.checkinBadgeLabel, { color: t.textSecondary }]}>Weight</Text>
-                        <Text style={[styles.checkinBadgeValue, { color: '#f59e0b' }]}>{selectedDayCheckin.weightLbs} lbs</Text>
+                        <Text style={[styles.checkinBadgeValue, { color: '#FFBF82' }]}>{selectedDayCheckin.weightLbs} lbs</Text>
                       </LinearGradient>
                     ) : null}
                     {selectedDayCheckin.restingHeartRate ? (
@@ -743,7 +743,7 @@ export default function CalendarScreen() {
                     {selectedDayCheckin.hrvMs ? (
                       <LinearGradient colors={['rgba(139,92,246,0.15)', 'rgba(139,92,246,0.05)']} style={styles.checkinBadge}>
                         <Text style={[styles.checkinBadgeLabel, { color: t.textSecondary }]}>HRV</Text>
-                        <Text style={[styles.checkinBadgeValue, { color: '#8b5cf6' }]}>{Math.round(selectedDayCheckin.hrvMs)} ms</Text>
+                        <Text style={[styles.checkinBadgeValue, { color: '#D4A853' }]}>{Math.round(selectedDayCheckin.hrvMs)} ms</Text>
                       </LinearGradient>
                     ) : null}
                   </View>
@@ -761,7 +761,7 @@ export default function CalendarScreen() {
                     </LinearGradient>
                     <LinearGradient colors={['rgba(124,58,237,0.15)', 'rgba(124,58,237,0.05)']} style={styles.checkinBadge}>
                       <Text style={[styles.checkinBadgeLabel, { color: t.textSecondary }]}>REM</Text>
-                      <Text style={[styles.checkinBadgeValue, { color: '#7c3aed' }]}>{selectedDayCheckin.sleepStages.rem}h</Text>
+                      <Text style={[styles.checkinBadgeValue, { color: '#B8913D' }]}>{selectedDayCheckin.sleepStages.rem}h</Text>
                     </LinearGradient>
                     {selectedDayCheckin.sleepStages.qualityScore != null && (
                       <LinearGradient colors={['rgba(6,182,212,0.15)', 'rgba(6,182,212,0.05)']} style={styles.checkinBadge}>
@@ -816,7 +816,7 @@ export default function CalendarScreen() {
                           </View>
                           {wlog.rating && (
                             <View style={styles.workoutMetaItem}>
-                              <Ionicons name="star" size={14} color="#f59e0b" />
+                              <Ionicons name="star" size={14} color="#FFBF82" />
                               <Text style={[styles.workoutMetaText, { color: t.textSecondary }]}>{wlog.rating}/5</Text>
                             </View>
                           )}
@@ -841,10 +841,10 @@ export default function CalendarScreen() {
                       activeOpacity={0.8}
                       onPress={() => router.push('/nutrition')}
                     >
-                      <GlassCard variant="glow" glowColor="#f59e0b" style={styles.eventCard}>
+                      <GlassCard variant="glow" glowColor="#FFBF82" style={styles.eventCard}>
                         <View style={styles.eventCardHeader}>
                           <View style={[styles.eventIconWrap, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-                            <Ionicons name="nutrition" size={20} color="#f59e0b" />
+                            <Ionicons name="nutrition" size={20} color="#FFBF82" />
                           </View>
                           <View style={styles.eventCardHeaderText}>
                             <Text style={[styles.eventCardTitle, { color: t.text }]}>
@@ -913,10 +913,10 @@ export default function CalendarScreen() {
             {selectedDayJournal.length > 0 && (
               <View style={styles.timelineSection}>
                 {selectedDayJournal.map((entry) => (
-                  <GlassCard key={entry.id} variant="glow" glowColor="#8b5cf6" style={styles.eventCard}>
+                  <GlassCard key={entry.id} variant="glow" glowColor="#D4A853" style={styles.eventCard}>
                     <View style={styles.eventCardHeader}>
                       <View style={[styles.eventIconWrap, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
-                        <Ionicons name="journal" size={20} color="#8b5cf6" />
+                        <Ionicons name="journal" size={20} color="#D4A853" />
                       </View>
                       <View style={styles.eventCardHeaderText}>
                         <Text style={[styles.eventCardTitle, { color: t.text }]}>{entry.title}</Text>
@@ -986,120 +986,11 @@ export default function CalendarScreen() {
               </GlassCard>
             )}
 
-            {/* -- Quick Add Buttons (Gradient Pills) */}
-            <View style={styles.quickAddRow}>
-              <TouchableOpacity
-                style={styles.quickAddBtn}
-                onPress={() => setShowLogModal(true)}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={[Colors.rose, Colors.roseDark]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.quickAddGradient}
-                >
-                  <Ionicons name="flask-outline" size={16} color="#fff" />
-                  <Text style={styles.quickAddBtnText}>Add Entry</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.quickAddBtn}
-                onPress={() =>
-                  router.push({
-                    pathname: '/(tabs)/check-in',
-                    params: { date: selectedDate },
-                  } as any)
-                }
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#22c55e', '#16a34a']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.quickAddGradient}
-                >
-                  <Ionicons name="heart-circle-outline" size={16} color="#fff" />
-                  <Text style={styles.quickAddBtnText}>Check In</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.quickAddRow}>
-              <TouchableOpacity
-                style={styles.quickAddBtn}
-                onPress={() =>
-                  router.push({
-                    pathname: '/journal/new',
-                    params: { date: selectedDate },
-                  } as any)
-                }
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#8b5cf6', '#7c3aed']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.quickAddGradient}
-                >
-                  <Ionicons name="journal-outline" size={16} color="#fff" />
-                  <Text style={styles.quickAddBtnText}>Journal</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.quickAddBtn}
-                onPress={() => router.push('/workouts')}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={[Colors.pepTeal, '#0891b2']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.quickAddGradient}
-                >
-                  <Ionicons name="barbell-outline" size={16} color="#fff" />
-                  <Text style={styles.quickAddBtnText}>Workout</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
+            {/* Quick-add buttons moved to Home page FAB */}
           </View>
         </DayDetailPanel>
 
-        {/* Personal Schedules */}
-        <View style={styles.protocolSection}>
-          <Text style={[styles.sectionTitle, { color: t.text }]}>My Schedules</Text>
-          {activeProtocols.length === 0 ? (
-            <GlassCard style={styles.emptyProtocolCard}>
-              <Ionicons name="clipboard-outline" size={24} color={t.textSecondary} />
-              <Text style={[styles.noDoses, { color: t.textSecondary }]}>
-                No active schedules. Create one to track your personal routine.
-              </Text>
-            </GlassCard>
-          ) : (
-            activeProtocols.map((proto) => {
-              return (
-                <GlassCard key={proto.id} style={styles.protocolCard}>
-                  <View style={styles.protocolHeader}>
-                    <View style={[styles.eventIconWrap, { backgroundColor: 'rgba(185, 203, 182, 0.15)' }]}>
-                      <Ionicons name="repeat" size={18} color={Colors.sage} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.protocolName, { color: t.text }]}>
-                        {proto.peptideId}
-                      </Text>
-                      <Text style={[styles.protocolInfo, { color: t.textSecondary }]}>
-                        {proto.dose} {proto.unit} · {proto.route} · {proto.frequency}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.protocolDates, { color: t.textSecondary }]}>
-                    Started {proto.startDate}
-                    {proto.endDate ? ` · Ends ${proto.endDate}` : ''}
-                  </Text>
-                </GlassCard>
-              );
-            })
-          )}
-        </View>
+        {/* Schedules moved to Peptides tab */}
 
         {/* Journal disclaimer */}
         <View style={styles.disclaimerBox}>
@@ -1268,15 +1159,15 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.darkBg },
 
   // Header
-  header: { paddingHorizontal: Spacing.md, paddingTop: Spacing.md },
+  header: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md },
   headerRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  headerTitle: { fontSize: FontSizes.xxl, fontWeight: '800', color: Colors.darkText, letterSpacing: -0.5 },
-  headerSub: { fontSize: FontSizes.sm, color: Colors.darkTextSecondary, marginTop: 2 },
+  headerTitle: { fontSize: 32, fontWeight: '900', color: Colors.darkText, letterSpacing: -0.5 },
+  headerSub: { fontSize: 14, color: Colors.darkTextSecondary, marginTop: 4 },
   headerIconWrap: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: 'rgba(227, 167, 161, 0.12)',
+    backgroundColor: 'rgba(248, 169, 122, 0.12)',
     alignItems: 'center', justifyContent: 'center',
   },
 
@@ -1305,7 +1196,7 @@ const styles = StyleSheet.create({
   navBtnGradient: {
     width: 36, height: 36, borderRadius: 18,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)',
   },
   monthYearWrap: { alignItems: 'center' },
   calendarMonth: {
@@ -1358,15 +1249,15 @@ const styles = StyleSheet.create({
   dot: { width: 5, height: 5, borderRadius: 2.5 },
   dotDose: { backgroundColor: Colors.rose },
   dotCheckin: { backgroundColor: '#22c55e' },
-  dotJournal: { backgroundColor: '#8b5cf6' },
+  dotJournal: { backgroundColor: '#D4A853' },
   dotWorkout: { backgroundColor: Colors.pepTeal },
-  dotMeal: { backgroundColor: '#f59e0b' },
+  dotMeal: { backgroundColor: '#FFBF82' },
 
   // Legend
   legend: {
     flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md,
     justifyContent: 'center', paddingTop: Spacing.sm,
-    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)',
   },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 7, height: 7, borderRadius: 3.5 },
@@ -1393,7 +1284,7 @@ const styles = StyleSheet.create({
   emptyStateInner: { alignItems: 'center', gap: Spacing.sm },
   emptyIconWrap: {
     width: 64, height: 64, borderRadius: 32,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.04)',
     alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.xs,
   },
   emptyStateTitle: {
@@ -1488,7 +1379,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3, paddingHorizontal: 8,
     borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.2)',
   },
-  journalTagText: { fontSize: FontSizes.xs, color: '#f59e0b', fontWeight: '600' },
+  journalTagText: { fontSize: FontSizes.xs, color: '#FFBF82', fontWeight: '600' },
   journalTagMore: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary, alignSelf: 'center' },
 
   // Side effects
@@ -1556,7 +1447,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: FontSizes.xl, fontWeight: '800', color: Colors.darkText },
   modalCloseBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.06)',
     alignItems: 'center', justifyContent: 'center',
   },
   modalDate: {

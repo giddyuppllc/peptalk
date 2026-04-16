@@ -48,3 +48,25 @@ credentials.json
 
 # Elevate business docs (local reference only)
 _elevate_audit/
+
+# Design system (internal reference only)
+design-system/
+
+# Backups & old versions
+profile-backup.tsx
+*.old.tsx
+
+# Emulator screenshots
+emulator-*.png
+
+# Logo concepts
+logo-concepts/
+.aidesigner/*
+!.aidesigner/.gitkeep
+
+# Local agent / tooling configs (not shared)
+.agents/
+.mcp.json
+.claude/agents/
+.claude/commands/
+.claude/skills/

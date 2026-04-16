@@ -319,7 +319,7 @@ function ExerciseRow({
                   <TextInput
                     style={[styles.setInput, done && styles.setInputDone]}
                     placeholder="lbs"
-                    placeholderTextColor="rgba(255,255,255,0.25)"
+                    placeholderTextColor="rgba(0,0,0,0.15)"
                     keyboardType="numeric"
                     value={inputData.weight}
                     onChangeText={(v) => onSetInput(key, 'weight', v)}
@@ -330,7 +330,7 @@ function ExerciseRow({
                     <TextInput
                       style={[styles.setInput, done && styles.setInputDone]}
                       placeholder={`${rep}`}
-                      placeholderTextColor="rgba(255,255,255,0.25)"
+                      placeholderTextColor="rgba(0,0,0,0.15)"
                       keyboardType="numeric"
                       value={inputData.reps}
                       onChangeText={(v) => onSetInput(key, 'reps', v)}
@@ -825,7 +825,7 @@ const styles = StyleSheet.create({
   // Progress
   progressBar: {
     height: 4,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.06)',
     marginHorizontal: Spacing.lg,
     borderRadius: 2,
     overflow: 'hidden',
@@ -923,12 +923,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(0,0,0,0.03)',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(0,0,0,0.05)',
     flex: 1,
   },
 
@@ -941,10 +941,10 @@ const styles = StyleSheet.create({
     width: 54,
   },
   setInput: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(0,0,0,0.06)',
     color: Colors.darkText,
     fontSize: FontSizes.xs,
     paddingHorizontal: 8,
@@ -1181,7 +1181,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   freeExInput: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.glassBlueBorder,

@@ -20,9 +20,10 @@ interface AuthStore {
   hasHydrated: boolean;
 
   login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
+  signup: (firstName: string, lastName: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   toggleFavoritePeptide: (peptideId: string) => void;
+  setAvatar: (uri: string) => void;
   /** Restore session from Supabase on app start */
   restoreSession: () => Promise<void>;
 }
@@ -38,51 +39,51 @@ export const useAuthStore = create<AuthStore>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true });
 
-        // ── Dev fallback: test accounts work without Supabase ──
-        const DEV_ACCOUNTS: Record<string, { name: string; tier: 'free' | 'plus' | 'pro' }> = {
-          'free@test.com':     { name: 'Free Tester',  tier: 'free' },
-          'plus@test.com':     { name: 'Plus Tester',  tier: 'plus' },
-          'pro@test.com':      { name: 'Pro Tester',   tier: 'pro' },
-          'jamie@test.com':    { name: 'Jamie',        tier: 'pro' },
-          'jake@test.com':     { name: 'Jake',         tier: 'pro' },
-          'sophia@test.com':   { name: 'Sophia',       tier: 'plus' },
-          'marcus@test.com':   { name: 'Marcus',       tier: 'pro' },
-          'sarah@test.com':    { name: 'Sarah',        tier: 'plus' },
-          'richard@test.com':  { name: 'Richard',      tier: 'pro' },
-          'diana@test.com':    { name: 'Diana',        tier: 'pro' },
-          'walter@test.com':   { name: 'Walter',       tier: 'free' },
-          'margaret@test.com': { name: 'Margaret',     tier: 'free' },
+        // Dev account bypass — skip Supabase for test/dev emails
+        const DEV_EMAILS: Record<string, { firstName: string; lastName: string; tier: string }> = {
+          'burnsnoho@gmail.com': { firstName: 'Burns', lastName: '', tier: 'pro' },
+          'free@test.com': { firstName: 'Free', lastName: 'Tester', tier: 'free' },
+          'plus@test.com': { firstName: 'Plus', lastName: 'Tester', tier: 'plus' },
+          'pro@test.com': { firstName: 'Pro', lastName: 'Tester', tier: 'pro' },
+          'jamie@test.com': { firstName: 'Jamie', lastName: '', tier: 'pro' },
+          'jake@test.com': { firstName: 'Jake', lastName: '', tier: 'pro' },
+          'sophia@test.com': { firstName: 'Sophia', lastName: '', tier: 'plus' },
+          'marcus@test.com': { firstName: 'Marcus', lastName: '', tier: 'pro' },
+          'sarah@test.com': { firstName: 'Sarah', lastName: '', tier: 'plus' },
+          'richard@test.com': { firstName: 'Richard', lastName: '', tier: 'pro' },
+          'diana@test.com': { firstName: 'Diana', lastName: '', tier: 'pro' },
+          'walter@test.com': { firstName: 'Walter', lastName: '', tier: 'free' },
+          'margaret@test.com': { firstName: 'Margaret', lastName: '', tier: 'pro' },
         };
 
-        const devMatch = DEV_ACCOUNTS[email.toLowerCase()];
+        const _email = email.toLowerCase().trim();
+        const devAccount = DEV_EMAILS[_email];
 
+        if (devAccount) {
+          const { useSubscriptionStore } = require('./useSubscriptionStore');
+          useSubscriptionStore.getState().setTier(devAccount.tier as any);
+
+          const appUser: User = {
+            id: `dev-${Date.now()}`,
+            email: _email,
+            firstName: devAccount.firstName,
+            lastName: devAccount.lastName,
+            savedStacks: [],
+            favoritePeptides: [],
+            isPro: devAccount.tier === 'pro',
+            createdAt: new Date().toISOString(),
+          };
+
+          set({ user: appUser, isAuthenticated: true, isLoading: false });
+          return;
+        }
+
+        // Real Supabase auth for non-dev emails
         try {
-          // Try real Supabase auth first
           const { data, error } = await db.auth.signInWithPassword({
             email,
             password,
           });
-
-          if (error && devMatch) {
-            // Supabase failed but it's a dev account — use fallback
-            await new Promise((r) => setTimeout(r, 500));
-            const { useSubscriptionStore } = require('./useSubscriptionStore');
-            useSubscriptionStore.getState().setTier(devMatch.tier);
-            set({
-              user: {
-                id: `dev-${Date.now()}`,
-                email,
-                name: devMatch.name,
-                savedStacks: [],
-                favoritePeptides: [],
-                isPro: devMatch.tier === 'pro',
-                createdAt: new Date().toISOString(),
-              },
-              isAuthenticated: true,
-              isLoading: false,
-            });
-            return;
-          }
 
           if (error) {
             set({ isLoading: false });
@@ -107,10 +108,14 @@ export const useAuthStore = create<AuthStore>()(
           const { useSubscriptionStore } = require('./useSubscriptionStore');
           useSubscriptionStore.getState().setTier(tier);
 
+          const profileName = profile?.name ?? email.split('@')[0];
+          const nameParts = profileName.split(' ');
+
           const appUser: User = {
             id: data.user.id,
             email: data.user.email ?? email,
-            name: profile?.name ?? email.split('@')[0],
+            firstName: profile?.first_name ?? nameParts[0] ?? '',
+            lastName: profile?.last_name ?? nameParts.slice(1).join(' ') ?? '',
             savedStacks: [],
             favoritePeptides: profile?.favorite_peptides ?? [],
             isPro: tier === 'pro',
@@ -125,15 +130,16 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      signup: async (name: string, email: string, password: string) => {
+      signup: async (firstName: string, lastName: string, email: string, password: string) => {
         set({ isLoading: true });
 
         try {
+          const fullName = `${firstName} ${lastName}`.trim();
           const { data, error } = await db.auth.signUp({
             email,
             password,
             options: {
-              data: { name },
+              data: { name: fullName, first_name: firstName, last_name: lastName },
             },
           });
 
@@ -148,16 +154,17 @@ export const useAuthStore = create<AuthStore>()(
           }
 
           // Profile is auto-created by DB trigger (handle_new_user)
-          // Update the name if the trigger used email fallback
+          // Update with first/last name
           await db
             .from('profiles')
-            .update({ name })
+            .update({ name: fullName, first_name: firstName, last_name: lastName })
             .eq('id', data.user.id);
 
           const appUser: User = {
             id: data.user.id,
             email: data.user.email ?? email,
-            name,
+            firstName,
+            lastName,
             savedStacks: [],
             favoritePeptides: [],
             isPro: false,
@@ -191,10 +198,14 @@ export const useAuthStore = create<AuthStore>()(
           const { useSubscriptionStore } = require('./useSubscriptionStore');
           useSubscriptionStore.getState().setTier(tier);
 
+          const profileName = profile?.name ?? '';
+          const nameParts = profileName.split(' ');
+
           const appUser: User = {
             id: session.user.id,
             email: session.user.email ?? '',
-            name: profile?.name ?? '',
+            firstName: profile?.first_name ?? nameParts[0] ?? '',
+            lastName: profile?.last_name ?? nameParts.slice(1).join(' ') ?? '',
             savedStacks: [],
             favoritePeptides: profile?.favorite_peptides ?? [],
             isPro: tier === 'pro',
@@ -221,6 +232,12 @@ export const useAuthStore = create<AuthStore>()(
           user: null,
           isAuthenticated: false,
         });
+      },
+
+      setAvatar: (uri: string) => {
+        const { user } = get();
+        if (!user) return;
+        set({ user: { ...user, avatarUri: uri } });
       },
 
       toggleFavoritePeptide: (peptideId: string) => {

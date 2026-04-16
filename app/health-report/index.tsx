@@ -277,7 +277,7 @@ export default function HealthReportScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#f7f2ec" />
+          <Ionicons name="arrow-back" size={24} color="#2D2D2D" />
         </Pressable>
         <Text style={styles.headerTitle}>Health Report</Text>
         <View style={{ width: 32 }} />
@@ -299,7 +299,7 @@ export default function HealthReportScreen() {
 
         {/* Date Range */}
         <View style={styles.dateRangeRow}>
-          <Ionicons name="calendar-outline" size={16} color="#9ca3af" />
+          <Ionicons name="calendar-outline" size={16} color="#6B7280" />
           <Text style={styles.dateRangeText}>
             Report Period: {rangeStart} - {rangeEnd}
           </Text>
@@ -492,7 +492,7 @@ export default function HealthReportScreen() {
 
         {/* Share button */}
         <Pressable style={styles.shareBtn} onPress={handleShare}>
-          <Ionicons name="share-outline" size={20} color="#0f1720" />
+          <Ionicons name="share-outline" size={20} color="#2D2D2D" />
           <Text style={styles.shareBtnText}>Share Report</Text>
         </Pressable>
 
@@ -513,7 +513,7 @@ function AverageItem({ label, value }: { label: string; value: string }) {
     numVal >= 4
       ? '#22c55e'
       : numVal >= 3
-        ? '#f59e0b'
+        ? '#FFBF82'
         : '#ef4444';
 
   return (
@@ -532,7 +532,7 @@ function AverageItem({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#0f1720',
+    backgroundColor: '#2D2D2D',
   },
 
   // Header
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   backBtn: {
     width: 32,
@@ -554,7 +554,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
   },
 
   // Content
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
   explainText: {
     flex: 1,
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 20,
   },
 
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
   },
   dateRangeText: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     fontWeight: '600',
   },
 
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
   },
 
   // Data rows
@@ -616,19 +616,19 @@ const styles = StyleSheet.create({
   },
   dataLabel: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   dataValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
   },
 
   // Sub labels
   subLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: '#6B7280',
     marginTop: 10,
     marginBottom: 6,
   },
@@ -674,17 +674,17 @@ const styles = StyleSheet.create({
   protocolRow: {
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   protocolName: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     marginBottom: 2,
   },
   protocolDetail: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   protocolDate: {
     fontSize: 12,
@@ -695,7 +695,7 @@ const styles = StyleSheet.create({
   // Check-in averages
   checkinCount: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginBottom: 10,
   },
   averagesGrid: {
@@ -705,14 +705,14 @@ const styles = StyleSheet.create({
   },
   avgItem: {
     width: '30%',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(0,0,0,0.03)',
     borderRadius: 12,
     padding: 10,
     alignItems: 'center',
   },
   avgLabel: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginBottom: 4,
   },
   avgValue: {
@@ -753,6 +753,6 @@ const styles = StyleSheet.create({
   shareBtnText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0f1720',
+    color: '#2D2D2D',
   },
 });

@@ -31,7 +31,7 @@ const CYCLE_GUIDES: CycleGuide[] = [
   {
     peptideClass: 'GH Secretagogues',
     icon: 'trending-up-outline',
-    color: '#3B82F6',
+    color: '#F8A97A',
     onPeriod: '5 days on / 2 days off',
     offPeriod: '8-12 weeks on, then 4-6 weeks off',
     reason: 'GHRH receptors desensitize with continuous stimulation. Cycling preserves pituitary sensitivity and natural GH pulsatility.',
@@ -58,7 +58,7 @@ const CYCLE_GUIDES: CycleGuide[] = [
   {
     peptideClass: 'Nootropics',
     icon: 'bulb-outline',
-    color: '#8B5CF6',
+    color: '#D4A853',
     onPeriod: '10-20 days on',
     offPeriod: '10-20 days off',
     reason: 'BDNF and neurotransmitter receptor systems adapt to exogenous stimulation. Cycling prevents tolerance and preserves cognitive benefit.',
@@ -67,7 +67,7 @@ const CYCLE_GUIDES: CycleGuide[] = [
   {
     peptideClass: 'Longevity / Telomere',
     icon: 'infinite-outline',
-    color: '#06B6D4',
+    color: '#F8A97A',
     onPeriod: '10-20 days, twice yearly',
     offPeriod: '5-6 months between cycles',
     reason: 'Epithalon follows the original Khavinson protocol — short intense cycles stimulate telomerase, then the body maintains elevated activity for months.',
@@ -76,7 +76,7 @@ const CYCLE_GUIDES: CycleGuide[] = [
   {
     peptideClass: 'Metabolic / Fat Loss',
     icon: 'flame-outline',
-    color: '#f59e0b',
+    color: '#FFBF82',
     onPeriod: '8-12 weeks',
     offPeriod: '4-8 weeks off',
     reason: 'Metabolic peptides can shift baseline metabolic rate. Cycling prevents metabolic adaptation and allows hormonal systems to re-equilibrate.',
@@ -85,7 +85,7 @@ const CYCLE_GUIDES: CycleGuide[] = [
   {
     peptideClass: 'Immune Support',
     icon: 'shield-outline',
-    color: '#14b8a6',
+    color: '#F8A97A',
     onPeriod: '2-4 weeks during illness or seasonally',
     offPeriod: 'Use as needed, not continuously',
     reason: 'Thymic peptides modulate T-cell function. Chronic use may lead to immune system over-stimulation. Short targeted cycles are preferred.',
@@ -137,7 +137,7 @@ export default function CyclingEducationScreen() {
             </View>
           </View>
           <View style={styles.scienceRow}>
-            <View style={[styles.scienceDot, { backgroundColor: '#f59e0b' }]} />
+            <View style={[styles.scienceDot, { backgroundColor: '#FFBF82' }]} />
             <View style={styles.scienceContent}>
               <Text style={styles.scienceLabel}>Tachyphylaxis</Text>
               <Text style={styles.scienceText}>
@@ -157,7 +157,7 @@ export default function CyclingEducationScreen() {
             </View>
           </View>
           <View style={styles.scienceRow}>
-            <View style={[styles.scienceDot, { backgroundColor: '#3B82F6' }]} />
+            <View style={[styles.scienceDot, { backgroundColor: '#F8A97A' }]} />
             <View style={styles.scienceContent}>
               <Text style={styles.scienceLabel}>Gene Expression Concerns</Text>
               <Text style={styles.scienceText}>
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.06)',
     alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.darkText },
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2,
   },
   scheduleValue: { fontSize: FontSizes.sm, color: Colors.darkText, fontWeight: '500' },
-  scheduleDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: Spacing.md },
+  scheduleDivider: { width: 1, backgroundColor: 'rgba(0,0,0,0.08)', marginHorizontal: Spacing.md },
   guideReason: { fontSize: FontSizes.sm, color: Colors.darkTextSecondary, lineHeight: 18, marginBottom: Spacing.sm },
   exampleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   examplePill: {

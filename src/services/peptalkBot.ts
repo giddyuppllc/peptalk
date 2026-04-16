@@ -493,7 +493,7 @@ function respondGreeting(context: BotContext): string {
     : `Hey there`;
 
   const parts = [
-    `${name}! I'm Pepe, your friendly health companion! Here's what I can do for you:`,
+    `${name}! I'm Aimee, your friendly health companion! Here's what I can do for you:`,
     '',
     `• **Learn about peptides** — I know all about mechanisms, interactions, and protocols`,
     `• **Track your journey** — ask me about your dose history anytime`,
@@ -1535,7 +1535,7 @@ function respondMealSuggest(message: string, context: BotContext): string {
   const isMacro = /\b(macro|calorie|protein|carb|fat|track|count)\b/i.test(lower);
 
   if (isRecipe) {
-    parts.push(`Head to **Nutrition → Meals by Pepe** to get personalized meal ideas tailored to your macro targets and dietary preferences.`);
+    parts.push(`Head to **Nutrition → Meals by Aimee** to get personalized meal ideas tailored to your macro targets and dietary preferences.`);
     parts.push('');
     parts.push(`The generator creates recipes optimized for your daily targets and can filter by diet type.`);
   } else if (isMacro) {
@@ -1567,8 +1567,8 @@ function respondMealSuggest(message: string, context: BotContext): string {
     parts.push(`I can help with nutrition planning! Check out these features:`);
     parts.push('');
     parts.push(`• **Nutrition Tab** — Track meals, macros, and water intake`);
-    parts.push(`• **Meals by Pepe** — Personalized meal ideas matching your targets`);
-    parts.push(`• **Meal Planning** — Plan meals ahead and build grocery lists`);
+    parts.push(`• **Meals by Aimee** — Personalized meal ideas matching your targets`);
+    parts.push(`• **Meal Planning** — Plan meals ahead with personalized recipes`);
     parts.push(`• **Macro Targets** — Set calories, protein, carbs, fat, and fiber goals`);
     parts.push('');
     parts.push(`**Peptide + Nutrition Tips:**`);
@@ -1747,7 +1747,7 @@ function respondJournalLog(
 }
 
 function respondGeneral(): string {
-  return `I'm Pepe, your health companion. Here's what I can help with:\n\n• **Peptide Information** — "Tell me about BPC-157"\n• **Mechanisms** — "How does semaglutide work?"\n• **Interactions** — "Can I stack CJC-1295 with Ipamorelin?"\n• **Category Browsing** — "What peptides help with sleep?"\n• **Comparisons** — "BPC-157 vs TB-500"\n• **Stack Building** — "Suggest a recovery stack"\n• **Storage Info** — "How do I store BPC-157?"\n• **Quality & Buying** — "What should I look for when buying peptides?"\n• **Safety** — "Are peptides safe?"\n• **Regulations** — "Are peptides legal?"\n• **Health Insights** — "Based on my check-ins, what should I explore?"\n\nI have data on ${PEPTIDES.length} research peptides. What would you like to know?`;
+  return `I'm Aimee, your health companion. Here's what I can help with:\n\n• **Peptide Information** — "Tell me about BPC-157"\n• **Mechanisms** — "How does semaglutide work?"\n• **Interactions** — "Can I stack CJC-1295 with Ipamorelin?"\n• **Category Browsing** — "What peptides help with sleep?"\n• **Comparisons** — "BPC-157 vs TB-500"\n• **Stack Building** — "Suggest a recovery stack"\n• **Storage Info** — "How do I store BPC-157?"\n• **Quality & Buying** — "What should I look for when buying peptides?"\n• **Safety** — "Are peptides safe?"\n• **Regulations** — "Are peptides legal?"\n• **Health Insights** — "Based on my check-ins, what should I explore?"\n\nI have data on ${PEPTIDES.length} research peptides. What would you like to know?`;
 }
 
 // ---------------------------------------------------------------------------
@@ -1941,7 +1941,7 @@ function getActions(intent: BotIntent, peptides: Peptide[], context: BotContext)
       ];
     case 'meal_suggest':
       return [
-        { label: 'Meals by Pepe', route: '/nutrition/recipe-generator', icon: 'restaurant-outline' },
+        { label: 'Meals by Aimee', route: '/nutrition/recipe-generator', icon: 'restaurant-outline' },
         { label: 'Log Meal', route: '/nutrition', icon: 'nutrition-outline' },
       ];
     case 'create_plan':

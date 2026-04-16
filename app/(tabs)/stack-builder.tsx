@@ -51,7 +51,7 @@ function getInteractionColor(type: string): string {
     case 'contraindicated':
       return '#ef4444';
     default:
-      return '#f59e0b';
+      return '#FFBF82';
   }
 }
 
@@ -368,10 +368,10 @@ export default function StackBuilderScreen() {
           activeOpacity={0.8}
         >
           {isAnalyzing ? (
-            <ActivityIndicator size="small" color="#0f1720" />
+            <ActivityIndicator size="small" color="#2D2D2D" />
           ) : (
             <>
-              <Ionicons name="analytics-outline" size={20} color="#0f1720" />
+              <Ionicons name="analytics-outline" size={20} color="#2D2D2D" />
               <Text style={styles.analyzeButtonText}>
                 {currentAnalysis ? 'Re-Analyze Stack' : 'Analyze Stack'}
               </Text>
@@ -448,7 +448,7 @@ export default function StackBuilderScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1720',
+    backgroundColor: '#2D2D2D',
   },
   scrollView: {
     flex: 1,
@@ -462,14 +462,14 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#f7f2ec',
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#2D2D2D',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginTop: 4,
     lineHeight: 18,
   },
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
   workspaceTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
   clearButton: {
     fontSize: 13,
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
   previewTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     marginBottom: 10,
   },
   previewCard: {
@@ -571,11 +571,11 @@ const styles = StyleSheet.create({
   previewPairText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     flex: 1,
   },
   previewArrow: {
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   previewScoreBadge: {
     borderRadius: 8,
@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
   filterChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   filterChipTextActive: {
     color: '#e3a7a1',
@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     marginBottom: 12,
   },
   pickerList: {
@@ -659,11 +659,11 @@ const styles = StyleSheet.create({
   pickerItemName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
   pickerItemCategories: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginTop: 2,
   },
   noResultsText: {
@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
   },
   moreResultsText: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
     textAlign: 'center',
     marginTop: 4,
     marginBottom: 8,
@@ -697,11 +697,11 @@ const styles = StyleSheet.create({
   analyzeButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0f1720',
+    color: '#2D2D2D',
   },
   minWarning: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
     textAlign: 'center',
     marginTop: 4,
     marginBottom: 12,
@@ -732,7 +732,7 @@ const styles = StyleSheet.create({
   },
   saveInput: {
     fontSize: 15,
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.15)',
     paddingBottom: 10,
@@ -750,7 +750,7 @@ const styles = StyleSheet.create({
   saveCancelText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   saveConfirmBtn: {
     backgroundColor: '#b9cbb6',
@@ -761,7 +761,7 @@ const styles = StyleSheet.create({
   saveConfirmText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0f1720',
+    color: '#2D2D2D',
   },
 
   // ── Analysis ──────────────────────────────────────────────

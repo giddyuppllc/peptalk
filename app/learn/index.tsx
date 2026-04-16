@@ -78,11 +78,11 @@ function getArticleCategoryColor(category: ArticleCategory): string {
     case 'testing':
       return '#f0d68a';
     case 'regulation':
-      return '#f59e0b';
+      return '#FFBF82';
     case 'delivery':
       return '#06b6d4';
     default:
-      return '#9ca3af';
+      return '#6B7280';
   }
 }
 
@@ -97,11 +97,11 @@ function getGuideCategoryColor(category: GuideCategory): string {
     case 'dosing':
       return '#f0d68a';
     case 'testing':
-      return '#f59e0b';
+      return '#FFBF82';
     case 'general':
-      return '#9ca3af';
+      return '#6B7280';
     default:
-      return '#9ca3af';
+      return '#6B7280';
   }
 }
 
@@ -116,7 +116,7 @@ function getVideoCategoryColor(category: VideoCategory): string {
     case 'education':
       return '#f0d68a';
     default:
-      return '#9ca3af';
+      return '#6B7280';
   }
 }
 
@@ -635,7 +635,7 @@ export default function LearnHubScreen() {
                       <Ionicons
                         name="play-circle"
                         size={40}
-                        color="rgba(255,255,255,0.8)"
+                        color="rgba(0,0,0,0.60)"
                       />
                       {item.duration && (
                         <View style={styles.durationBadge}>
@@ -709,9 +709,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontSize: FontSizes.xxl,
-    fontWeight: '800',
-    color: Colors.bone,
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#2D2D2D',
     letterSpacing: -0.5,
     marginBottom: Spacing.xs,
   },

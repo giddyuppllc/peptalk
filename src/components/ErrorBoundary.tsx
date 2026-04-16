@@ -57,7 +57,7 @@ export class ErrorBoundary extends Component<Props, State> {
               onPress={this.handleReset}
               activeOpacity={0.8}
             >
-              <Ionicons name="refresh-outline" size={18} color="#0f1720" />
+              <Ionicons name="refresh-outline" size={18} color="#2D2D2D" />
               <Text style={styles.buttonText}>Try Again</Text>
             </TouchableOpacity>
           </View>
@@ -72,7 +72,7 @@ export class ErrorBoundary extends Component<Props, State> {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1720',
+    backgroundColor: '#2D2D2D',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
@@ -93,13 +93,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     textAlign: 'center',
     marginBottom: 12,
   },
   subtitle: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
@@ -129,6 +129,6 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0f1720',
+    color: '#2D2D2D',
   },
 });

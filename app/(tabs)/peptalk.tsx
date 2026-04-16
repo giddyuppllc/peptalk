@@ -25,6 +25,7 @@ import Animated, {
 import { ChatBubble, TypingIndicator } from '../../src/components/ChatBubble';
 import { PepTalkCharacter } from '../../src/components/PepTalkCharacter';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
+import { ChatHistoryDrawer } from '../../src/components/ChatHistoryDrawer';
 import { tapMedium } from '../../src/utils/haptics';
 import { useChatStore } from '../../src/store/useChatStore';
 import { useCheckinStore } from '../../src/store/useCheckinStore';
@@ -67,16 +68,17 @@ const JournalToast: React.FC = () => {
     opacity: opacity.value,
   }));
 
+  const t = useTheme();
   return (
     <Animated.View style={[styles.journalToast, animStyle]}>
       <LinearGradient
-        colors={['rgba(34,197,94,0.12)', 'rgba(6,182,212,0.08)']}
+        colors={[`${t.primary}20`, `${t.secondary}12`]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.journalToastBg}
       >
-        <Ionicons name="journal-outline" size={14} color={Colors.success} />
-        <Text style={styles.journalToastText}>Saved to journal</Text>
+        <Ionicons name="journal-outline" size={14} color={t.primary} />
+        <Text style={[styles.journalToastText, { color: t.primary }]}>Saved to journal</Text>
       </LinearGradient>
     </Animated.View>
   );
@@ -91,8 +93,7 @@ export default function PepTalkScreen() {
     prefill?: string;
     message?: string;
   }>();
-  const { messages, isTyping, addMessage, setTyping, clearChat } =
-    useChatStore();
+  const { messages, isTyping, addMessage, setTyping } = useChatStore();
   const { profile } = useOnboardingStore();
   const { entries: checkIns } = useCheckinStore();
   const { currentStack, savedStacks } = useStackStore();
@@ -101,9 +102,13 @@ export default function PepTalkScreen() {
   const addJournalEntry = useJournalStore((s) => s.addEntry);
 
   const [inputText, setInputText] = React.useState('');
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
   const prefillHandled = useRef(false);
   const messageHandled = useRef(false);
   const flatListRef = useRef<FlatList>(null);
+
+  // Pills only show on empty state — once any message exists, hide forever
+  const showPills = messages.length === 0;
 
   // Handle prefill from topic screens ("Ask PepTalk" button)
   useEffect(() => {
@@ -321,16 +326,23 @@ export default function PepTalkScreen() {
   const renderEmpty = useCallback(
     () => (
       <View style={styles.emptyContainer}>
-        <View style={styles.emptyIconWrap}>
-          <PepTalkCharacter size={100} variant="full" animated />
+        <View style={[styles.emptyAvatarRing, { borderColor: `${t.primary}30` }]}>
+          <LinearGradient
+            colors={[`${t.primary}18`, `${t.secondary}10`]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.emptyAvatarInner}
+          >
+            <PepTalkCharacter size={88} variant="full" animated />
+          </LinearGradient>
         </View>
-        <Text style={[styles.emptyTitle, { color: t.text }]}>Pepe</Text>
+        <Text style={[styles.emptyTitle, { color: t.text }]}>Hi, I'm Aimee</Text>
+        <View style={[styles.emptyAccentBar, { backgroundColor: t.primary }]} />
         <Text style={[styles.emptySubtitle, { color: t.textSecondary }]}>
           Your personal health companion
         </Text>
         <Text style={[styles.emptyDesc, { color: t.textSecondary }]}>
-          I can help you learn about peptides, check interactions, track your
-          health journey, and give you personalized insights.
+          Ask me about peptides, check interactions, or get personalized insights from your tracking data.
         </Text>
         <View style={styles.emptyChips}>
           {(() => {
@@ -349,40 +361,34 @@ export default function PepTalkScreen() {
                   `Peptides for ${getGoalLabel(g).toLowerCase()}`,
               );
             return [...goalChips, 'Based on my health data'];
-          })().map((prompt, index) => (
+          })().map((prompt) => (
             <AnimatedPress
               key={prompt}
               style={styles.starterChip}
               onPress={() => handleQuickReply(prompt)}
               scaleTo={0.97}
             >
-              <LinearGradient
-                colors={[
-                  'rgba(59,130,246,0.08)',
-                  'rgba(6,182,212,0.04)',
-                ]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.starterChipGradient}
-              >
-                <Ionicons
-                  name="chatbubble-ellipses-outline"
-                  size={16}
-                  color={Colors.pepBlueLight}
-                  style={{ marginRight: 8 }}
-                />
+              <View style={[styles.starterChipCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
+                <View style={[styles.starterChipIconWrap, { backgroundColor: `${t.primary}15` }]}>
+                  <Ionicons
+                    name="sparkles-outline"
+                    size={14}
+                    color={t.primary}
+                  />
+                </View>
                 <Text style={[styles.starterChipText, { color: t.text }]}>{prompt}</Text>
-              </LinearGradient>
+                <Ionicons name="arrow-forward" size={14} color={t.textSecondary} />
+              </View>
             </AnimatedPress>
           ))}
         </View>
       </View>
     ),
-    [handleQuickReply],
+    [handleQuickReply, t],
   );
 
   return (
-    <PaywallGate feature="pepe_ai_unlimited">
+    <PaywallGate feature="aimee_ai_limited">
     <SafeAreaView style={[styles.safe, { backgroundColor: t.bg }]}>
       <KeyboardAvoidingView
         style={styles.container}
@@ -390,34 +396,49 @@ export default function PepTalkScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         {/* ── Header ─────────────────────────────────────────── */}
-        <View style={[styles.header, { backgroundColor: t.isDark ? 'rgba(15,23,32,0.85)' : 'rgba(247,242,236,0.92)', borderBottomColor: t.cardBorder }]}>
+        <View style={[styles.header, { backgroundColor: t.bg, borderBottomColor: t.cardBorder }]}>
+          <TouchableOpacity
+            onPress={() => setDrawerOpen(true)}
+            style={[styles.iconBtn, { backgroundColor: t.surface }]}
+            activeOpacity={0.7}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Ionicons name="menu" size={20} color={t.text} />
+          </TouchableOpacity>
+
           <View style={styles.headerLeft}>
-            <PepTalkCharacter size={28} variant="mini" />
-            <View>
-              <Text style={[styles.headerTitle, { color: t.text }]}>PepTalk</Text>
+            <View style={[styles.headerAvatar, { borderColor: `${t.primary}40` }]}>
+              <LinearGradient
+                colors={[`${t.primary}20`, `${t.secondary}12`]}
+                style={styles.headerAvatarInner}
+              >
+                <PepTalkCharacter size={28} variant="mini" />
+              </LinearGradient>
             </View>
-            {/* AI status indicator */}
-            <View style={[styles.statusBadge, { backgroundColor: t.glass, borderColor: t.glassBorder }]}>
-              <View
-                style={[
-                  styles.statusDot,
-                  { backgroundColor: useAI ? Colors.success : Colors.pepBlueLight },
-                ]}
-              />
-              <Text style={[styles.statusLabel, { color: t.textSecondary }]}>
-                {useAI ? 'AI' : 'Local'}
-              </Text>
+            <View>
+              <Text style={[styles.headerTitle, { color: t.text }]}>Aimee</Text>
+              <View style={styles.headerSubRow}>
+                <View
+                  style={[
+                    styles.statusDot,
+                    { backgroundColor: useAI ? '#10b981' : t.textSecondary },
+                  ]}
+                />
+                <Text style={[styles.headerSub, { color: t.textSecondary }]}>
+                  {useAI ? 'Online' : 'Offline'}
+                </Text>
+              </View>
             </View>
           </View>
-          {messages.length > 0 && (
-            <TouchableOpacity onPress={clearChat} style={[styles.clearBtn, { backgroundColor: t.glass }]}>
-              <Ionicons
-                name="trash-outline"
-                size={18}
-                color={t.textSecondary}
-              />
-            </TouchableOpacity>
-          )}
+
+          <TouchableOpacity
+            onPress={() => useChatStore.getState().newChat()}
+            style={[styles.iconBtn, { backgroundColor: t.surface }]}
+            activeOpacity={0.7}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Ionicons name="create-outline" size={20} color={t.text} />
+          </TouchableOpacity>
         </View>
 
         {/* ── Messages ───────────────────────────────────────── */}
@@ -445,22 +466,22 @@ export default function PepTalkScreen() {
         )}
 
         {/* ── Quick Replies ──────────────────────────────────── */}
-        {quickReplies.length > 0 && !isTyping && (
+        {quickReplies.length > 0 && !isTyping && showPills && (
           <View style={styles.quickReplies}>
             {quickReplies.map((reply) => (
               <AnimatedPress
                 key={reply}
-                style={styles.quickReplyChip}
+                style={[styles.quickReplyChip, { borderColor: `${t.primary}30` }]}
                 onPress={() => handleQuickReply(reply)}
                 scaleTo={0.95}
               >
                 <LinearGradient
-                  colors={['rgba(59,130,246,0.12)', 'rgba(6,182,212,0.06)']}
+                  colors={[`${t.primary}18`, `${t.secondary}0A`]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.quickReplyGradient}
                 >
-                  <Text style={[styles.quickReplyText, { color: t.isDark ? Colors.pepBlueLight : '#2563eb' }]}>{reply}</Text>
+                  <Text style={[styles.quickReplyText, { color: t.primary }]}>{reply}</Text>
                 </LinearGradient>
               </AnimatedPress>
             ))}
@@ -468,12 +489,12 @@ export default function PepTalkScreen() {
         )}
 
         {/* ── Action Buttons ────────────────────────────────── */}
-        {botActions.length > 0 && !isTyping && (
+        {botActions.length > 0 && !isTyping && showPills && (
           <View style={styles.actionBtns}>
             {botActions.map((action, idx) => (
               <AnimatedPress
                 key={`${action.route}-${idx}`}
-                style={styles.actionBtn}
+                style={[styles.actionBtn, { borderColor: `${t.primary}30` }]}
                 onPress={() => {
                   tapMedium();
                   router.push(action.route as any);
@@ -481,7 +502,7 @@ export default function PepTalkScreen() {
                 scaleTo={0.95}
               >
                 <LinearGradient
-                  colors={['rgba(139,92,246,0.18)', 'rgba(59,130,246,0.10)']}
+                  colors={[`${t.primary}22`, `${t.secondary}10`]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.actionBtnGradient}
@@ -490,12 +511,12 @@ export default function PepTalkScreen() {
                     <Ionicons
                       name={action.icon as any}
                       size={16}
-                      color="#a78bfa"
+                      color={t.primary}
                       style={{ marginRight: 6 }}
                     />
                   )}
-                  <Text style={[styles.actionBtnText, { color: t.isDark ? '#c4b5fd' : '#7c3aed' }]}>{action.label}</Text>
-                  <Ionicons name="chevron-forward" size={14} color="rgba(167,139,250,0.6)" />
+                  <Text style={[styles.actionBtnText, { color: t.primary }]}>{action.label}</Text>
+                  <Ionicons name="chevron-forward" size={14} color={`${t.primary}99`} />
                 </LinearGradient>
               </AnimatedPress>
             ))}
@@ -503,14 +524,14 @@ export default function PepTalkScreen() {
         )}
 
         {/* ── Input Bar ──────────────────────────────────────── */}
-        <View style={[styles.inputBarWrap, { backgroundColor: t.isDark ? 'rgba(15,23,32,0.90)' : 'rgba(247,242,236,0.95)', borderTopColor: t.cardBorder }]}>
+        <View style={[styles.inputBarWrap, { backgroundColor: t.bg, borderTopColor: t.cardBorder }]}>
           <View style={styles.inputRow}>
-            <View style={[styles.inputWrap, { backgroundColor: t.card, borderColor: t.inputBorder }]}>
+            <View style={[styles.inputWrap, { backgroundColor: t.surface, borderColor: `${t.primary}25` }]}>
               <TextInput
                 style={[styles.input, { color: t.text }]}
                 value={inputText}
                 onChangeText={setInputText}
-                placeholder="Ask about peptides..."
+                placeholder="Ask Aimee anything..."
                 placeholderTextColor={t.textSecondary}
                 multiline
                 maxLength={500}
@@ -531,7 +552,7 @@ export default function PepTalkScreen() {
               <LinearGradient
                 colors={
                   inputText.trim()
-                    ? ['#3B82F6', '#06B6D4']
+                    ? [t.primary, t.primaryDark]
                     : [t.card, t.card]
                 }
                 start={{ x: 0, y: 0 }}
@@ -554,10 +575,11 @@ export default function PepTalkScreen() {
 
         {/* ── Disclaimer ─────────────────────────────────────── */}
         <Text style={[styles.disclaimer, { color: t.textSecondary }]}>
-          I'm here to educate — always chat with your doctor for medical
-          decisions.
+          Aimee educates — always consult your doctor for medical decisions.
         </Text>
       </KeyboardAvoidingView>
+
+      <ChatHistoryDrawer visible={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </SafeAreaView>
     </PaywallGate>
   );
@@ -579,49 +601,53 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm + 4,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.darkCardBorder,
-    backgroundColor: 'rgba(15,23,32,0.85)',
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: 12,
+  },
+  headerAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    overflow: 'hidden',
+  },
+  headerAvatarInner: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: FontSizes.xl,
-    fontWeight: '700',
-    color: Colors.darkText,
-    letterSpacing: 0.3,
+    fontSize: 26,
+    fontFamily: 'Playfair-Black',
+    letterSpacing: -0.5,
   },
-  statusBadge: {
+  headerSubRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.full,
-    gap: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    gap: 6,
+    marginTop: 2,
+  },
+  headerSub: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Medium',
   },
   statusDot: {
     width: 7,
     height: 7,
     borderRadius: 3.5,
   },
-  statusLabel: {
-    fontSize: FontSizes.xs,
-    color: Colors.darkTextSecondary,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  clearBtn: {
-    padding: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+  iconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   /* ── Message list ── */
@@ -636,56 +662,76 @@ const styles = StyleSheet.create({
   /* ── Empty state ── */
   emptyContainer: {
     alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
+    paddingHorizontal: 28,
   },
-  emptyIconWrap: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+  emptyAvatarRing: {
+    width: 128,
+    height: 128,
+    borderRadius: 64,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.md + 4,
+    marginBottom: 20,
+    padding: 6,
+  },
+  emptyAvatarInner: {
+    flex: 1,
+    width: '100%',
+    borderRadius: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyTitle: {
-    fontSize: FontSizes.xxl + 4,
-    fontWeight: '800',
-    color: Colors.darkText,
-    marginBottom: 4,
-    letterSpacing: 0.5,
+    fontSize: 36,
+    fontFamily: 'Playfair-Black',
+    letterSpacing: -0.5,
+    marginBottom: 8,
+  },
+  emptyAccentBar: {
+    width: 40,
+    height: 3,
+    borderRadius: 2,
+    marginBottom: 14,
   },
   emptySubtitle: {
-    fontSize: FontSizes.md,
-    color: Colors.pepBlueLight,
-    marginBottom: Spacing.md,
-    fontWeight: '500',
+    fontSize: 15,
+    fontFamily: 'DMSans-Medium',
+    marginBottom: 10,
   },
   emptyDesc: {
-    fontSize: FontSizes.sm,
-    color: Colors.darkTextSecondary,
+    fontSize: 14,
+    fontFamily: 'DMSans-Regular',
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: Spacing.lg,
+    lineHeight: 21,
+    marginBottom: 28,
+    paddingHorizontal: 8,
   },
   emptyChips: {
-    gap: Spacing.sm + 2,
+    gap: 10,
     width: '100%',
   },
   starterChip: {
-    borderRadius: BorderRadius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(59,130,246,0.15)',
+    width: '100%',
   },
-  starterChipGradient: {
+  starterChipCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.sm + 6,
-    paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.lg,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 12,
+  },
+  starterChipIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   starterChipText: {
-    color: Colors.darkText,
-    fontSize: FontSizes.md,
+    fontSize: 14,
+    fontFamily: 'DMSans-SemiBold',
     flex: 1,
   },
 
@@ -701,7 +747,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(59,130,246,0.20)',
   },
   quickReplyGradient: {
     paddingVertical: 7,
@@ -709,9 +754,8 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
   },
   quickReplyText: {
-    color: Colors.pepBlueLight,
     fontSize: FontSizes.sm,
-    fontWeight: '500',
+    fontFamily: 'DMSans-SemiBold',
   },
 
   /* ── Action buttons ── */
@@ -726,7 +770,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(139,92,246,0.25)',
   },
   actionBtnGradient: {
     flexDirection: 'row',
@@ -737,9 +780,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   actionBtnText: {
-    color: '#c4b5fd',
     fontSize: FontSizes.sm,
-    fontWeight: '600',
+    fontFamily: 'DMSans-SemiBold',
     marginRight: 4,
   },
 
@@ -755,21 +797,16 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 14,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: 'rgba(34,197,94,0.18)',
   },
   journalToastText: {
     fontSize: FontSizes.xs,
-    color: Colors.success,
-    fontWeight: '600',
+    fontFamily: 'DMSans-Bold',
     letterSpacing: 0.3,
   },
 
   /* ── Input bar ── */
   inputBarWrap: {
     borderTopWidth: 1,
-    borderTopColor: Colors.darkCardBorder,
-    backgroundColor: 'rgba(15,23,32,0.90)',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm + 2,
   },
@@ -782,8 +819,6 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: BorderRadius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(59,130,246,0.15)',
-    backgroundColor: Colors.darkCard,
     overflow: 'hidden',
   },
   input: {

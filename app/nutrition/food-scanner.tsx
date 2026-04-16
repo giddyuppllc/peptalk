@@ -78,7 +78,7 @@ export default function FoodScannerScreen() {
             AI food scanning with automatic macro calculation is available with PepTalk Pro.
           </Text>
           <AnimatedPress onPress={() => router.push('/subscription')}>
-            <LinearGradient colors={['#f59e0b', '#ef4444']} style={styles.upgradeBtn}>
+            <LinearGradient colors={['#FFBF82', '#ef4444']} style={styles.upgradeBtn}>
               <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
             </LinearGradient>
           </AnimatedPress>
@@ -104,7 +104,7 @@ export default function FoodScannerScreen() {
             Allow camera access to scan your meals and automatically calculate nutrition.
           </Text>
           <AnimatedPress onPress={requestPermission}>
-            <LinearGradient colors={['#3B82F6', '#06B6D4']} style={styles.upgradeBtn}>
+            <LinearGradient colors={['#F8A97A', '#F8A97A']} style={styles.upgradeBtn}>
               <Text style={styles.upgradeBtnText}>Enable Camera</Text>
             </LinearGradient>
           </AnimatedPress>
@@ -271,11 +271,11 @@ export default function FoodScannerScreen() {
                 <Text style={styles.totalLabel}>Cal</Text>
               </GlassCard>
               <GlassCard style={styles.totalCard}>
-                <Text style={[styles.totalValue, { color: '#3B82F6' }]}>{result.totals.protein}g</Text>
+                <Text style={[styles.totalValue, { color: '#F8A97A' }]}>{result.totals.protein}g</Text>
                 <Text style={styles.totalLabel}>Protein</Text>
               </GlassCard>
               <GlassCard style={styles.totalCard}>
-                <Text style={[styles.totalValue, { color: '#f59e0b' }]}>{result.totals.carbs}g</Text>
+                <Text style={[styles.totalValue, { color: '#FFBF82' }]}>{result.totals.carbs}g</Text>
                 <Text style={styles.totalLabel}>Carbs</Text>
               </GlassCard>
               <GlassCard style={styles.totalCard}>
@@ -294,8 +294,8 @@ export default function FoodScannerScreen() {
                 </View>
                 <View style={styles.itemMacros}>
                   <Text style={styles.itemMacro}>{item.calories} cal</Text>
-                  <Text style={[styles.itemMacro, { color: '#3B82F6' }]}>P {item.protein}g</Text>
-                  <Text style={[styles.itemMacro, { color: '#f59e0b' }]}>C {item.carbs}g</Text>
+                  <Text style={[styles.itemMacro, { color: '#F8A97A' }]}>P {item.protein}g</Text>
+                  <Text style={[styles.itemMacro, { color: '#FFBF82' }]}>C {item.carbs}g</Text>
                   <Text style={[styles.itemMacro, { color: '#ef4444' }]}>F {item.fat}g</Text>
                 </View>
               </GlassCard>
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.06)',
     alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.darkText },
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', paddingBottom: 50,
   },
   cameraHint: {
-    fontSize: FontSizes.sm, color: 'rgba(255,255,255,0.7)',
+    fontSize: FontSizes.sm, color: 'rgba(0,0,0,0.50)',
     marginBottom: Spacing.lg, textAlign: 'center',
   },
   shutterBtn: {
@@ -439,8 +439,8 @@ const styles = StyleSheet.create({
   mealTypeBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
     paddingVertical: Spacing.sm, borderRadius: BorderRadius.md,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   mealTypeBtnActive: { borderColor: Colors.pepTeal, backgroundColor: 'rgba(6,182,212,0.1)' },
   mealTypeText: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary, fontWeight: '500' },
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   retakeBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
     height: 44, borderRadius: BorderRadius.md,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   retakeBtnText: { color: Colors.darkTextSecondary, fontSize: FontSizes.sm, fontWeight: '500' },
 

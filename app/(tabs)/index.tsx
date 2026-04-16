@@ -14,11 +14,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
+import { Divider } from '@gluestack-ui/themed';
 import { PepTalkCharacter } from '../../src/components/PepTalkCharacter';
 import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { ProgressRing } from '../../src/components/ProgressRing';
+import { DailyProgressChart, type ChartSegment, type ChartPage } from '../../src/components/DailyProgressChart';
+import { useProgressGoalsStore, type GoalCategory } from '../../src/store/useProgressGoalsStore';
 import { TrendCard } from '../../src/components/TrendCard';
 import { Sparkline } from '../../src/components/Sparkline';
 import { SearchBar } from '../../src/components/SearchBar';
@@ -69,10 +72,10 @@ const HEALTH_TIPS = [
 
 const QUICK_ACTIONS = [
   { id: 'checkin', icon: 'heart-outline' as const, label: 'Check In', route: '/(tabs)/check-in', colors: ['#e3a7a1', '#c98a84'] as [string, string] },
-  { id: 'dose', icon: 'flask-outline' as const, label: 'Log Dose', route: '/(tabs)/calendar', colors: ['#14b8a6', '#0d9488'] as [string, string] },
-  { id: 'workout', icon: 'barbell-outline' as const, label: 'Workout', route: '/workouts', colors: ['#3b82f6', '#2563eb'] as [string, string] },
-  { id: 'nutrition', icon: 'nutrition-outline' as const, label: 'Nutrition', route: '/nutrition', colors: ['#f59e0b', '#d97706'] as [string, string] },
-  { id: 'peptalk', icon: 'chatbubble-outline' as const, label: 'Ask Aimee', route: '/(tabs)/peptalk', colors: ['#8b5cf6', '#7c3aed'] as [string, string] },
+  { id: 'dose', icon: 'flask-outline' as const, label: 'Log Dose', route: '/(tabs)/calendar', colors: ['#F8A97A', '#E8885A'] as [string, string] },
+  { id: 'workout', icon: 'barbell-outline' as const, label: 'Workout', route: '/workouts', colors: ['#F8A97A', '#E8885A'] as [string, string] },
+  { id: 'nutrition', icon: 'nutrition-outline' as const, label: 'Nutrition', route: '/nutrition', colors: ['#FFBF82', '#E8A05A'] as [string, string] },
+  { id: 'peptalk', icon: 'chatbubble-outline' as const, label: 'Ask Aimee', route: '/(tabs)/peptalk', colors: ['#D4A853', '#B8913D'] as [string, string] },
   { id: 'journal', icon: 'book-outline' as const, label: 'Journal', route: '/journal', colors: ['#06b6d4', '#0891b2'] as [string, string] },
   { id: 'bodymap', icon: 'body-outline' as const, label: 'Body Map', route: '/body-map', colors: ['#22c55e', '#16a34a'] as [string, string] },
 ];
@@ -119,6 +122,25 @@ function formatTime(timeStr: string): string {
   const ampm = h >= 12 ? 'PM' : 'AM';
   const hr = h % 12 || 12;
   return `${hr}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+function dateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function getWeekDays(referenceDate: Date): Date[] {
+  const day = referenceDate.getDay(); // 0=Sun
+  const start = new Date(referenceDate);
+  start.setDate(start.getDate() - day); // Go to Sunday
+  const days: Date[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    days.push(d);
+  }
+  return days;
 }
 
 // ─── Timeline Event Type ─────────────────────────────────────────────────────
@@ -183,10 +205,16 @@ export default function DashboardScreen() {
   const [showLibrary, setShowLibrary] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [chatText, setChatText] = useState('');
+  const [selectedDay, setSelectedDay] = useState(todayKey());
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = this week, -1 = last week
+  const [fabOpen, setFabOpen] = useState(false);
+  const fabAnim = useRef(new RNAnimated.Value(0)).current;
+
 
   // ── Stores ────────────────────────────────────────────────────────────────
   const profile = useOnboardingStore((s) => s.profile);
-  const userEmail = useAuthStore((s) => s.user?.email);
+  const user = useAuthStore((s) => s.user);
+  const userEmail = user?.email;
   const healthProfile = useHealthProfileStore((s) => s.profile);
   const entries = useCheckinStore((s) => s.entries);
   const protocols = useDoseLogStore((s) => s.protocols);
@@ -276,6 +304,69 @@ export default function DashboardScreen() {
     Math.round((todayWater / (mealTargets.waterOz ?? 100)) * 100),
   );
 
+  // ── Swipeable progress dashboard data ─────────────────────────────────────
+
+  const progressGoals = useProgressGoalsStore((s) => s.goals);
+
+  const todayWorkoutCount = useMemo(() => workoutLogs.filter((w) => w.date === todayDate).length, [workoutLogs, todayDate]);
+  const todayWorkoutDuration = useMemo(() => workoutLogs.filter((w) => w.date === todayDate).reduce((s2, w) => s2 + w.durationMinutes, 0), [workoutLogs, todayDate]);
+  const todayDoseCount = useMemo(() => doses.filter((d) => d.date === todayDate).length, [doses, todayDate]);
+
+  const currentValues: Record<string, number> = useMemo(() => {
+    const tt = dailyMacros.totals;
+    return {
+      cal: tt.calories, pro: tt.proteinGrams, carb: tt.carbsGrams, fat: tt.fatGrams,
+      fiber: tt.fiberGrams, water: todayWater,
+      // Limit nutrients
+      sodium: (tt as any).sodiumMg ?? 0, sugar: (tt as any).sugarGrams ?? 0,
+      chol: (tt as any).cholesterolMg ?? 0, satfat: (tt as any).saturatedFatGrams ?? 0,
+      // Minerals
+      potassium: (tt as any).potassiumMg ?? 0, calcium: (tt as any).calciumMg ?? 0,
+      iron: (tt as any).ironMg ?? 0, magnesium: (tt as any).magnesiumMg ?? 0,
+      zinc: (tt as any).zincMg ?? 0, phosphorus: (tt as any).phosphorusMg ?? 0,
+      selenium: (tt as any).seleniumMcg ?? 0, copper: (tt as any).copperMg ?? 0,
+      manganese: (tt as any).manganeseMg ?? 0,
+      // Vitamins
+      vita: (tt as any).vitaminAMcg ?? 0, vitc: (tt as any).vitaminCMg ?? 0,
+      vitd: (tt as any).vitaminDMcg ?? 0, vite: (tt as any).vitaminEMg ?? 0,
+      vitk: (tt as any).vitaminKMcg ?? 0,
+      vitb1: (tt as any).vitaminB1Mg ?? 0, vitb2: (tt as any).vitaminB2Mg ?? 0,
+      vitb3: (tt as any).vitaminB3Mg ?? 0, vitb5: (tt as any).vitaminB5Mg ?? 0,
+      vitb6: (tt as any).vitaminB6Mg ?? 0, vitb12: (tt as any).vitaminB12Mcg ?? 0,
+      folate: (tt as any).folateMcg ?? 0, choline: (tt as any).cholineMg ?? 0,
+      // Omega fatty acids
+      omega3: (tt as any).omega3Grams ?? 0, omega6: (tt as any).omega6Grams ?? 0,
+      workout: Math.min(todayWorkoutCount, 1), steps: todayCheckin?.steps ?? 0,
+      active: todayCheckin?.activeCalories ?? 0, sleep: todayCheckin?.sleepStages?.total ?? 0,
+      sleepq: todayCheckin?.sleepQuality ?? 0, recovery: todayCheckin?.recovery ?? 0,
+      duration: todayWorkoutDuration,
+      checkin: todayCheckin ? 1 : 0, doses: todayDoseCount,
+      mood: todayCheckin?.mood ?? 0, energy: todayCheckin?.energy ?? 0,
+      stress: todayCheckin?.stress ?? 0, weight: todayCheckin?.weightLbs ?? 0,
+      rhr: todayCheckin?.restingHeartRate ?? 0, hrv: todayCheckin?.hrvMs ?? 0,
+      vo2: todayCheckin?.vo2Max ?? 0, spo2: todayCheckin?.spo2 ?? 0,
+    };
+  }, [dailyMacros, todayWater, todayWorkoutCount, todayWorkoutDuration, todayCheckin, todayDoseCount]);
+
+  const chartPages: ChartPage[] = useMemo(() => {
+    const categories: { category: GoalCategory; title: string; icon: string; requiredFeature?: string; requiredTier?: string }[] = [
+      { category: 'macros', title: 'Macros & Calories', icon: 'nutrition-outline' },
+      { category: 'vitamins', title: 'Vitamins & Minerals', icon: 'flask-outline', requiredFeature: 'vitamins_donut_chart', requiredTier: 'PLUS' },
+      { category: 'fitness', title: 'Fitness & Activity', icon: 'fitness-outline' },
+      { category: 'health', title: 'Health & Wellness', icon: 'heart-outline' },
+    ];
+    return categories.map(({ category, title, icon, requiredFeature, requiredTier }) => ({
+      title, icon, category, requiredFeature, requiredTier,
+      segments: progressGoals
+        .filter((g) => g.category === category && g.enabled)
+        .map((g) => ({
+          key: g.key, label: g.label, color: g.color,
+          current: Math.round((currentValues[g.key] ?? 0) * 10) / 10,
+          goal: g.goal, unit: g.unit, inverse: g.inverse,
+        })),
+    }));
+  }, [progressGoals, currentValues]);
+
   // ── Daily health tip (rotates by day) ─────────────────────────────────────
 
   const dailyTip = useMemo(() => {
@@ -314,15 +405,68 @@ export default function DashboardScreen() {
     };
   }, [entries]);
 
-  // ── Today's Timeline ──────────────────────────────────────────────────────
+  // ── Weekly Calendar Strip ──────────────────────────────────────────────────
+
+  const weekDays = useMemo(() => {
+    const ref = new Date();
+    ref.setDate(ref.getDate() + weekOffset * 7);
+    return getWeekDays(ref);
+  }, [weekOffset]);
+
+  const weekActivityMap = useMemo(() => {
+    const map: Record<string, { meals: boolean; workouts: boolean; checkins: boolean; doses: boolean }> = {};
+    weekDays.forEach((d) => {
+      const key = dateKey(d);
+      map[key] = {
+        meals: meals.some((m) => m.date === key),
+        workouts: workoutLogs.some((w) => w.date === key),
+        checkins: entries.some((e) => e.date === key),
+        doses: doses.some((dose) => dose.date === key),
+      };
+    });
+    return map;
+  }, [weekDays, meals, workoutLogs, entries, doses]);
+
+  const weekLabel = useMemo(() => {
+    const first = weekDays[0];
+    const last = weekDays[6];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (first.getMonth() === last.getMonth()) {
+      return `${months[first.getMonth()]} ${first.getDate()}–${last.getDate()}`;
+    }
+    return `${months[first.getMonth()]} ${first.getDate()} – ${months[last.getMonth()]} ${last.getDate()}`;
+  }, [weekDays]);
+
+  // ── Selected Day Timeline ─────────────────────────────────────────────────
+
+  const selectedDayCheckin = useMemo(
+    () => entries.find((e) => e.date === selectedDay) ?? null,
+    [entries, selectedDay],
+  );
+
+  const selectedDayMeals = useMemo(
+    () => meals.filter((m) => m.date === selectedDay),
+    [meals, selectedDay],
+  );
+  const selectedDayMealCals = useMemo(
+    () => selectedDayMeals.reduce((sum, m) => sum + m.foods.reduce((s2, f) => s2 + f.calories, 0) + (m.quickLog?.calories ?? 0), 0),
+    [selectedDayMeals],
+  );
+  const selectedDayWorkoutList = useMemo(
+    () => workoutLogs.filter((w) => w.date === selectedDay),
+    [workoutLogs, selectedDay],
+  );
+  const selectedDayDoseList = useMemo(
+    () => doses.filter((d) => d.date === selectedDay),
+    [doses, selectedDay],
+  );
 
   const timelineEvents = useMemo(() => {
     const events: TimelineEvent[] = [];
-    const today = todayKey();
+    const day = selectedDay;
 
-    // Doses logged today
-    const todayDoses = doses.filter((d) => d.date === today);
-    todayDoses.forEach((dose) => {
+    // Doses
+    doses.filter((d) => d.date === day).forEach((dose) => {
       const peptide = getPeptideById(dose.peptideId);
       events.push({
         id: dose.id,
@@ -331,81 +475,70 @@ export default function DashboardScreen() {
         title: peptide?.name ?? dose.peptideId,
         subtitle: `${dose.amount} ${dose.unit} - ${dose.route}`,
         icon: 'flask-outline',
-        color: '#14b8a6',
+        color: '#F8A97A',
         type: 'dose',
       });
     });
 
-    // Today's check-in
-    if (todayCheckin) {
+    // Check-in
+    const dayCheckin = selectedDayCheckin;
+    if (dayCheckin) {
       events.push({
-        id: 'checkin-today',
-        time: todayCheckin.createdAt
-          ? formatTime(
-              `${new Date(todayCheckin.createdAt).getHours()}:${new Date(todayCheckin.createdAt).getMinutes()}`,
-            )
-          : 'Today',
-        sortKey: todayCheckin.createdAt
-          ? `${String(new Date(todayCheckin.createdAt).getHours()).padStart(2, '0')}:${String(new Date(todayCheckin.createdAt).getMinutes()).padStart(2, '0')}`
+        id: `checkin-${day}`,
+        time: dayCheckin.createdAt
+          ? formatTime(`${new Date(dayCheckin.createdAt).getHours()}:${new Date(dayCheckin.createdAt).getMinutes()}`)
+          : 'Logged',
+        sortKey: dayCheckin.createdAt
+          ? `${String(new Date(dayCheckin.createdAt).getHours()).padStart(2, '0')}:${String(new Date(dayCheckin.createdAt).getMinutes()).padStart(2, '0')}`
           : '08:00',
         title: 'Daily Check-in',
-        subtitle: `Mood ${todayCheckin.mood}/5 | Energy ${todayCheckin.energy}/5`,
+        subtitle: `Mood ${dayCheckin.mood}/5 | Energy ${dayCheckin.energy}/5`,
         icon: 'heart-outline',
         color: '#e3a7a1',
         type: 'checkin',
       });
     }
 
-    // Today's workouts
-    workoutLogs
-      .filter((w) => w.date === today)
-      .forEach((workout) => {
-        const startDate = workout.startedAt ? new Date(workout.startedAt) : null;
-        events.push({
-          id: workout.id,
-          time: startDate
-            ? formatTime(`${startDate.getHours()}:${startDate.getMinutes()}`)
-            : 'Today',
-          sortKey: startDate
-            ? `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`
-            : '06:00',
-          title: 'Workout Complete',
-          subtitle: `${workout.sets?.length ?? 0} sets | ${workout.durationMinutes ?? 0} min`,
-          icon: 'barbell-outline',
-          color: '#3b82f6',
-          type: 'workout',
-        });
+    // Workouts
+    workoutLogs.filter((w) => w.date === day).forEach((workout) => {
+      const startDate = workout.startedAt ? new Date(workout.startedAt) : null;
+      events.push({
+        id: workout.id,
+        time: startDate ? formatTime(`${startDate.getHours()}:${startDate.getMinutes()}`) : 'Logged',
+        sortKey: startDate
+          ? `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`
+          : '06:00',
+        title: 'Workout Complete',
+        subtitle: `${workout.sets?.length ?? 0} sets | ${workout.durationMinutes ?? 0} min`,
+        icon: 'barbell-outline',
+        color: '#F8A97A',
+        type: 'workout',
       });
+    });
 
-    // Today's meals
-    meals
-      .filter((m) => m.date === today)
-      .forEach((meal) => {
-        const mealDate = meal.timestamp ? new Date(meal.timestamp) : null;
-        const mealTime = mealDate
-          ? `${mealDate.getHours()}:${mealDate.getMinutes()}`
-          : null;
-        const totalCal =
-          meal.foods.reduce((sum, f) => sum + f.calories, 0) +
-          (meal.quickLog?.calories ?? 0);
-        events.push({
-          id: meal.id,
-          time: mealTime ? formatTime(mealTime) : 'Today',
-          sortKey: mealTime
-            ? `${String(mealDate!.getHours()).padStart(2, '0')}:${String(mealDate!.getMinutes()).padStart(2, '0')}`
-            : '12:00',
-          title: meal.mealType.charAt(0).toUpperCase() + meal.mealType.slice(1),
-          subtitle: `${totalCal} cal`,
-          icon: 'nutrition-outline',
-          color: '#f59e0b',
-          type: 'meal',
-        });
+    // Meals
+    meals.filter((m) => m.date === day).forEach((meal) => {
+      const mealDate = meal.timestamp ? new Date(meal.timestamp) : null;
+      const mealTime = mealDate ? `${mealDate.getHours()}:${mealDate.getMinutes()}` : null;
+      const totalCal = meal.foods.reduce((sum, f) => sum + f.calories, 0) + (meal.quickLog?.calories ?? 0);
+      events.push({
+        id: meal.id,
+        time: mealTime ? formatTime(mealTime) : 'Logged',
+        sortKey: mealTime
+          ? `${String(mealDate!.getHours()).padStart(2, '0')}:${String(mealDate!.getMinutes()).padStart(2, '0')}`
+          : '12:00',
+        title: meal.mealType.charAt(0).toUpperCase() + meal.mealType.slice(1),
+        subtitle: `${totalCal} cal`,
+        icon: 'nutrition-outline',
+        color: '#FFBF82',
+        type: 'meal',
       });
+    });
 
     return events.sort((a, b) => (a.sortKey < b.sortKey ? -1 : 1));
-  }, [doses, todayCheckin, workoutLogs, meals]);
+  }, [selectedDay, selectedDayCheckin, doses, workoutLogs, meals]);
 
-  // ── Pepe Says (contextual suggestion) ─────────────────────────────────────
+  // ── Aimee Says (contextual suggestion) ─────────────────────────────────────
 
   const pepeSuggestion = useMemo(() => {
     const today = todayKey();
@@ -578,1108 +711,581 @@ export default function DashboardScreen() {
     });
   };
 
+  // ── Subscription tier ──────────────────────────────────────────────────────
+  const { useSubscriptionStore } = require('../../src/store/useSubscriptionStore');
+  const tier = useSubscriptionStore((s: any) => s.tier) as string;
+  const isPro = tier === 'pro';
+  const isPlus = tier === 'plus' || isPro;
+
+  // ── Nutrition summary ────────────────────────────────────────────────────
+  const calPercent = mealTargets.calories > 0
+    ? Math.min(100, Math.round((dailyMacros.totals.calories / mealTargets.calories) * 100))
+    : 0;
+  const todayMealCount = meals.filter((m) => m.date === todayDate).length;
+
+  // ── Workout summary ──────────────────────────────────────────────────────
+  const todayWorkouts = workoutLogs.filter((w) => w.date === todayDate);
+
+  // ── FAB Menu ─────────────────────────────────────────────────────────────
+  const toggleFab = () => {
+    const opening = !fabOpen;
+    setFabOpen(opening);
+    RNAnimated.spring(fabAnim, {
+      toValue: opening ? 1 : 0,
+      tension: 65,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeFab = () => {
+    setFabOpen(false);
+    RNAnimated.spring(fabAnim, {
+      toValue: 0,
+      tension: 65,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const FAB_ITEMS: { label: string; icon: keyof typeof Ionicons.glyphMap; color: string; route: string }[] = [
+    { label: 'Log Meal', icon: 'nutrition-outline', color: '#FFBF82', route: '/nutrition/food-search' },
+    { label: 'Log Dose', icon: 'flask-outline', color: '#F8A97A', route: '/(tabs)/calendar' },
+    { label: 'Check In', icon: 'heart-outline', color: '#e3a7a1', route: '/(tabs)/check-in' },
+    { label: 'Journal', icon: 'book-outline', color: '#D4A853', route: '/journal/new' },
+    { label: 'Workout', icon: 'barbell-outline', color: '#8faa8b', route: '/workouts' },
+  ];
+
   // ── Main Render ───────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        overScrollMode="never"
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}
       >
-        {/* ══════════════════════════════════════════════════════════════════
-            1. HERO SECTION - Gradient card with greeting, streak, tip
-        ══════════════════════════════════════════════════════════════════ */}
+        {/* ═══════════════════════════════════════════════════════════════
+            HERO — Full-width warm gradient banner
+        ═══════════════════════════════════════════════════════════════ */}
         <RNAnimated.View
-          style={[
-            styles.heroSection,
-            {
-              opacity: heroOpacity,
-              transform: [{ translateY: heroTranslateY }],
-            },
-          ]}
+          style={{
+            opacity: heroOpacity,
+            transform: [{ translateY: heroTranslateY }],
+          }}
         >
           <LinearGradient
-            colors={[
-              segment.palette.primary + 'CC',
-              segment.palette.accent + '88',
-              Colors.darkBg,
-            ]}
+            colors={[t.surface, `${t.primary}12`, t.bg]}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.heroGradient}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.heroBanner}
           >
-            {/* Hero background image overlay */}
-            <Image
-              source={{ uri: getHeroBackgroundUri(segment.label) }}
-              style={styles.heroBgImage}
-              resizeMode="cover"
-            />
-            {/* Top row: greeting + character */}
+            {/* Top row: Greeting + Profile avatar */}
             <View style={styles.heroTopRow}>
-              <View style={styles.heroTextBlock}>
-                <Text style={styles.heroGreeting}>
-                  {getGreeting()}
-                </Text>
-                <Text style={styles.heroTagline}>
-                  {hasDemographics
-                    ? segment.heroSubtitle
-                    : 'Your peptide research journey starts here.'}
-                </Text>
-              </View>
-              <View style={styles.heroCharacterWrap}>
-                <PepTalkCharacter
-                  size={64}
-                  variant="full"
-                  animated
-                  glowColor={segment.palette.primary}
-                />
-              </View>
-            </View>
-
-            {/* Streak badge + milestone */}
-            <View style={styles.heroStreakRow}>
-              <RNAnimated.View
-                style={[
-                  styles.streakBadge,
-                  { transform: [{ scale: pulseAnim }] },
-                ]}
-              >
-                <Ionicons name="flame" size={20} color="#f59e0b" />
-              </RNAnimated.View>
-              <View style={styles.streakInfo}>
-                <Text style={styles.streakNumber}>
-                  {streak}
-                  <Text style={styles.streakUnit}> day streak</Text>
-                </Text>
-                {nextMilestone && (
-                  <Text style={styles.streakMilestone}>
-                    {nextMilestone.daysLeft} days to {nextMilestone.target}-day milestone
-                  </Text>
-                )}
-              </View>
-              {/* XP Level mini badge */}
-              <View style={styles.heroLevelBadge}>
-                <LinearGradient
-                  colors={[segment.palette.primary, segment.palette.accent]}
-                  style={styles.heroLevelCircle}
+              <Text style={[styles.heroGreeting, { color: t.text }]}>
+                {getGreeting()}{user?.firstName ? `,\n${user.firstName}` : ''}
+              </Text>
+              <View style={styles.profileAvatarWrap}>
+                <TouchableOpacity
+                  style={[styles.profileAvatar, { borderColor: t.primary }]}
+                  onPress={() => router.push('/(tabs)/profile')}
+                  activeOpacity={0.7}
                 >
-                  <Text style={styles.heroLevelText}>{level.level}</Text>
-                </LinearGradient>
-                <Text style={styles.heroLevelLabel}>{level.title}</Text>
+                  {user?.avatarUri ? (
+                    <Image source={{ uri: user.avatarUri }} style={styles.profileAvatarImg} />
+                  ) : (
+                    <View style={[styles.profileAvatarFallback, { backgroundColor: t.surface }]}>
+                      <Text style={[styles.profileAvatarInitial, { color: t.primary }]}>
+                        {(user?.firstName ?? 'U')[0].toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => router.push('/(tabs)/profile')}
+                  activeOpacity={0.6}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <Text style={[styles.viewProfileLink, { color: t.primary }]}>View Profile</Text>
+                </TouchableOpacity>
               </View>
             </View>
 
-            {/* Daily health tip */}
-            <View style={styles.heroTipContainer}>
-              <Ionicons
-                name="bulb-outline"
-                size={14}
-                color="rgba(255,255,255,0.6)"
-                style={{ marginTop: 1 }}
-              />
-              <Text style={styles.heroTipText}>{dailyTip}</Text>
+            {/* Stats row — inline on the banner */}
+            <View style={styles.heroStatsRow}>
+              <View style={styles.heroStat}>
+                <RNAnimated.View style={{ transform: [{ scale: pulseAnim }] }}>
+                  <Ionicons name="flame" size={20} color={t.primary} />
+                </RNAnimated.View>
+                <View>
+                  <Text style={[styles.heroStatValue, { color: t.text }]}>{streak} day streak</Text>
+                  {nextMilestone && (
+                    <Text style={[styles.heroStatSub, { color: t.textSecondary }]}>
+                      {nextMilestone.daysLeft} to {nextMilestone.target}-day
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              <View style={styles.heroStat}>
+                <Ionicons name="trophy" size={20} color={t.secondary} />
+                <View>
+                  <Text style={[styles.heroStatValue, { color: t.text }]}>{workoutLogs.length} workouts</Text>
+                  <Text style={[styles.heroStatSub, { color: t.textSecondary }]}>logged</Text>
+                </View>
+              </View>
             </View>
+
+            <View style={styles.heroStatsRow}>
+              <View style={styles.heroStat}>
+                <Ionicons name="star" size={20} color={t.accent} />
+                <View>
+                  <Text style={[styles.heroStatValue, { color: t.text }]}>Level {level.level}</Text>
+                  <Text style={[styles.heroStatSub, { color: t.textSecondary }]}>{level.title}</Text>
+                </View>
+              </View>
+
+              <View style={styles.heroStat}>
+                <Ionicons
+                  name={todayCheckin ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={20}
+                  color={todayCheckin ? '#16A34A' : t.textSecondary}
+                />
+                <View>
+                  <Text style={[styles.heroStatValue, { color: t.text }]}>
+                    {todayCheckin ? 'Checked in' : 'Check-in due'}
+                  </Text>
+                  <Text style={[styles.heroStatSub, { color: t.textSecondary }]}>
+                    {todayCheckin ? `Mood ${todayCheckin.mood}/5` : 'Start your day'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {activeProtocolCount > 0 && (
+              <View style={[styles.heroStat, { marginTop: 4 }]}>
+                <Ionicons name="flask" size={20} color={t.primary} />
+                <View>
+                  <Text style={[styles.heroStatValue, { color: t.text }]}>
+                    {activeProtocolCount} active protocol{activeProtocolCount > 1 ? 's' : ''}
+                  </Text>
+                  <Text style={[styles.heroStatSub, { color: t.textSecondary }]}>tracking</Text>
+                </View>
+              </View>
+            )}
           </LinearGradient>
         </RNAnimated.View>
 
-        {/* ══════════════════════════════════════════════════════════════════
-            1.5. PEPE SAYS - Contextual suggestion card
-        ══════════════════════════════════════════════════════════════════ */}
-        <Animated.View
-          entering={FadeInDown.delay(80).duration(500)}
-          style={styles.section}
-        >
-          <AnimatedPress
-            onPress={() => router.push(pepeSuggestion.route as any)}
-            scaleTo={0.97}
-          >
-            <GlassCard
-              variant="glow"
-              glowColor={accentColor}
-              style={styles.pepeSaysCard}
-            >
-              <View style={styles.pepeSaysRow}>
-                <View style={styles.pepeSaysCharacter}>
-                  <PepTalkCharacter size={40} animated />
-                </View>
-                <View style={styles.pepeSaysContent}>
-                  <Text style={[styles.pepeSaysMessage, { color: t.text }]}>
-                    {pepeSuggestion.message}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.pepeSaysAction,
-                    { backgroundColor: accentColor + '25' },
-                  ]}
-                >
-                  <Ionicons
-                    name={pepeSuggestion.icon}
-                    size={16}
-                    color={accentColor}
-                  />
-                  <Text
-                    style={[styles.pepeSaysActionText, { color: accentColor }]}
-                  >
-                    {pepeSuggestion.actionLabel}
-                  </Text>
-                </View>
-              </View>
-            </GlassCard>
-          </AnimatedPress>
-        </Animated.View>
-
-        {/* ══════════════════════════════════════════════════════════════════
-            1.6. TODAY'S PLAN - Scheduled items from active health plan
-        ══════════════════════════════════════════════════════════════════ */}
-        {activePlan && todayPlanItems.length > 0 && (
-          <Animated.View
-            entering={FadeInDown.delay(90).duration(500)}
-            style={styles.section}
-          >
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: t.text }]}>Today's Plan</Text>
-              <Text style={[styles.sectionBadge, { color: t.textSecondary, backgroundColor: t.glass }]}>
-                {weeklyProgress}% this week
-              </Text>
-            </View>
-
-            <GlassCard>
-              {todayPlanItems.map((item) => {
-                const typeRoute: Record<string, string> = {
-                  workout: '/workouts',
-                  meal: '/nutrition',
-                  checkin: '/(tabs)/check-in',
-                  protocol: '/(tabs)/calendar',
-                  custom: '/(tabs)/peptalk',
-                };
-                const typeIcon: Record<
-                  string,
-                  keyof typeof Ionicons.glyphMap
-                > = {
-                  workout: 'barbell-outline',
-                  meal: 'nutrition-outline',
-                  checkin: 'heart-outline',
-                  protocol: 'flask-outline',
-                  custom: 'star-outline',
-                };
-                const typeColor: Record<string, string> = {
-                  workout: '#3b82f6',
-                  meal: '#f59e0b',
-                  checkin: '#e3a7a1',
-                  protocol: '#14b8a6',
-                  custom: '#8b5cf6',
-                };
-
-                return (
-                  <View key={item.id} style={styles.planItemRow}>
-                    <TouchableOpacity
-                      style={styles.planCheckbox}
-                      onPress={() =>
-                        item.completed
-                          ? uncompleteItem(item.id)
-                          : completeItem(item.id)
-                      }
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons
-                        name={
-                          item.completed
-                            ? 'checkmark-circle'
-                            : 'ellipse-outline'
-                        }
-                        size={22}
-                        color={
-                          item.completed
-                            ? Colors.success
-                            : Colors.darkTextSecondary
-                        }
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.planItemContent}
-                      onPress={() =>
-                        router.push(
-                          (typeRoute[item.type] ?? '/(tabs)/peptalk') as any,
-                        )
-                      }
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons
-                        name={typeIcon[item.type] ?? 'star-outline'}
-                        size={16}
-                        color={typeColor[item.type] ?? '#8b5cf6'}
-                      />
-                      <View style={styles.planItemText}>
-                        <Text
-                          style={[
-                            styles.planItemTitle,
-                            { color: t.text },
-                            item.completed && styles.planItemTitleDone,
-                          ]}
-                        >
-                          {item.title}
-                        </Text>
-                        <Text style={[styles.planItemTime, { color: t.textSecondary }]}>{item.time}</Text>
-                      </View>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={14}
-                        color={Colors.darkTextSecondary}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-
-              {/* Weekly progress bar */}
-              <View style={styles.planProgressWrap}>
-                <View style={[styles.planProgressTrack, { backgroundColor: t.glass }]}>
-                  <LinearGradient
-                    colors={[accentColor, segment.palette.accent]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={[
-                      styles.planProgressFill,
-                      {
-                        width: `${Math.min(weeklyProgress, 100)}%` as any,
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
-            </GlassCard>
-          </Animated.View>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════════
-            2. QUICK STATS ROW - 4 key metrics at a glance
-        ══════════════════════════════════════════════════════════════════ */}
-        <Animated.View
-          entering={FadeInDown.delay(100).duration(500)}
-          style={styles.section}
-        >
-          <View style={styles.statsRow}>
-            {/* Streak */}
-            <View style={styles.statCard}>
-              <LinearGradient
-                colors={['rgba(245,158,11,0.15)', 'rgba(245,158,11,0.05)']}
-                style={styles.statCardInner}
-              >
-                <Ionicons name="flame" size={20} color="#f59e0b" />
-                <Text style={[styles.statValue, { color: t.text }]}>{streak}</Text>
-                <Text style={[styles.statLabel, { color: t.textSecondary }]}>Streak</Text>
-              </LinearGradient>
-            </View>
-
-            {/* Active Protocols */}
-            <View style={styles.statCard}>
-              <LinearGradient
-                colors={['rgba(20,184,166,0.15)', 'rgba(20,184,166,0.05)']}
-                style={styles.statCardInner}
-              >
-                <Ionicons name="flask" size={20} color="#14b8a6" />
-                <Text style={[styles.statValue, { color: t.text }]}>{activeProtocolCount}</Text>
-                <Text style={[styles.statLabel, { color: t.textSecondary }]}>Protocols</Text>
-              </LinearGradient>
-            </View>
-
-            {/* Today's Mood */}
-            <View style={styles.statCard}>
-              <LinearGradient
-                colors={['rgba(227,167,161,0.15)', 'rgba(227,167,161,0.05)']}
-                style={styles.statCardInner}
-              >
-                <Ionicons
-                  name={todayCheckin ? 'happy' : 'happy-outline'}
-                  size={20}
-                  color="#e3a7a1"
-                />
-                <Text style={[styles.statValue, { color: t.text }]}>
-                  {todayCheckin ? `${todayCheckin.mood}/5` : '--'}
-                </Text>
-                <Text style={[styles.statLabel, { color: t.textSecondary }]}>Mood</Text>
-              </LinearGradient>
-            </View>
-
-            {/* Next Milestone */}
-            <View style={styles.statCard}>
-              <LinearGradient
-                colors={['rgba(59,130,246,0.15)', 'rgba(59,130,246,0.05)']}
-                style={styles.statCardInner}
-              >
-                <Ionicons name="trophy" size={20} color="#3b82f6" />
-                <Text style={[styles.statValue, { color: t.text }]}>
-                  {nextMilestone ? `${nextMilestone.daysLeft}d` : '--'}
-                </Text>
-                <Text style={[styles.statLabel, { color: t.textSecondary }]}>Milestone</Text>
-              </LinearGradient>
-            </View>
-          </View>
-        </Animated.View>
-
-        {/* ══════════════════════════════════════════════════════════════════
-            3. QUICK ACTIONS - Horizontal scroll of gradient action buttons
-        ══════════════════════════════════════════════════════════════════ */}
-        <Animated.View entering={FadeInDown.delay(150).duration(500)}>
-          <Text style={[styles.sectionTitle, { paddingHorizontal: Spacing.lg, color: t.text }]}>
-            Quick Actions
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.quickActionsContainer}
-          >
-            {QUICK_ACTIONS.map((action, index) => (
-              <Animated.View
-                key={action.id}
-                entering={FadeInRight.delay(150 + index * 60).duration(400)}
-              >
-                <AnimatedPress
-                  onPress={() => router.push(action.route as any)}
-                  scaleTo={0.93}
-                  style={styles.quickActionButton}
-                >
-                  <LinearGradient
-                    colors={action.colors}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.quickActionGradient}
-                  >
-                    <View style={styles.quickActionIconWrap}>
-                      <Ionicons name={action.icon} size={22} color="#fff" />
-                    </View>
-                    <Text style={styles.quickActionLabel}>{action.label}</Text>
-                  </LinearGradient>
-                </AnimatedPress>
-              </Animated.View>
-            ))}
-          </ScrollView>
-        </Animated.View>
-
-        {/* ══════════════════════════════════════════════════════════════════
-            3.5. DOSING CALCULATORS - Prominent shortcut card
-        ══════════════════════════════════════════════════════════════════ */}
-        <Animated.View
-          entering={FadeInDown.delay(175).duration(500)}
-          style={styles.section}
-        >
-          <Text style={[styles.sectionTitle, { color: t.text }]}>Dosing Calculators</Text>
-          <View style={styles.calcRow}>
-            <AnimatedPress
-              style={styles.calcCard}
-              onPress={() => router.push('/calculators/dosing' as any)}
-            >
-              <LinearGradient
-                colors={['#14b8a6', '#0891b2']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.calcCardGrad}
-              >
-                <Ionicons name="flask" size={28} color="#fff" />
-                <Text style={styles.calcCardTitle}>Dosing</Text>
-                <Text style={styles.calcCardSub}>mcg · mg · IU</Text>
-              </LinearGradient>
-            </AnimatedPress>
-            <AnimatedPress
-              style={styles.calcCard}
-              onPress={() => router.push('/calculators/reconstitution' as any)}
-            >
-              <LinearGradient
-                colors={['#3b82f6', '#6366f1']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.calcCardGrad}
-              >
-                <Ionicons name="beaker-outline" size={28} color="#fff" />
-                <Text style={styles.calcCardTitle}>Reconstitution</Text>
-                <Text style={styles.calcCardSub}>Bac water · vials</Text>
-              </LinearGradient>
-            </AnimatedPress>
-            <AnimatedPress
-              style={styles.calcCard}
-              onPress={() => router.push('/calculators' as any)}
-            >
-              <LinearGradient
-                colors={['#8b5cf6', '#a855f7']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.calcCardGrad}
-              >
-                <Ionicons name="calculator-outline" size={28} color="#fff" />
-                <Text style={styles.calcCardTitle}>All Tools</Text>
-                <Text style={styles.calcCardSub}>BMI · TDEE · more</Text>
-              </LinearGradient>
-            </AnimatedPress>
-          </View>
-        </Animated.View>
-
-        {/* ══════════════════════════════════════════════════════════════════
-            4. TODAY'S PROGRESS RINGS
-        ══════════════════════════════════════════════════════════════════ */}
-        <Animated.View
-          entering={FadeInDown.delay(200).duration(500)}
-          style={styles.section}
-        >
-          <Text style={[styles.sectionTitle, { color: t.text }]}>Today's Progress</Text>
-          <View style={styles.ringsRow}>
-            <AnimatedPress
-              onPress={() => router.push('/nutrition')}
-              style={[styles.ringCard, { backgroundColor: t.glass }]}
-            >
-              <ProgressRing
-                progress={dailyMacros.caloriePercent}
-                size={80}
-                strokeWidth={7}
-                color={Colors.pepTeal}
-                label={`${dailyMacros.totals.calories}`}
-                subLabel="cal"
-                labelSize={16}
-              />
-              <Text style={[styles.ringLabel, { color: t.text }]}>Calories</Text>
-              <Text style={[styles.ringTarget, { color: t.textSecondary }]}>
-                / {dailyMacros.targets.calories}
-              </Text>
-            </AnimatedPress>
-
-            <AnimatedPress
-              onPress={() => router.push('/nutrition')}
-              style={[styles.ringCard, { backgroundColor: t.glass }]}
-            >
-              <ProgressRing
-                progress={dailyMacros.proteinPercent}
-                size={80}
-                strokeWidth={7}
-                color={Colors.pepBlue}
-                label={`${dailyMacros.totals.proteinGrams}g`}
-                subLabel="protein"
-                labelSize={16}
-              />
-              <Text style={[styles.ringLabel, { color: t.text }]}>Protein</Text>
-              <Text style={[styles.ringTarget, { color: t.textSecondary }]}>
-                / {dailyMacros.targets.proteinGrams}g
-              </Text>
-            </AnimatedPress>
-
-            <AnimatedPress
-              onPress={() => router.push('/nutrition')}
-              style={[styles.ringCard, { backgroundColor: t.glass }]}
-            >
-              <ProgressRing
-                progress={waterPercent}
-                size={80}
-                strokeWidth={7}
-                color="#38bdf8"
-                label={`${todayWater}`}
-                subLabel="oz"
-                labelSize={16}
-              />
-              <Text style={[styles.ringLabel, { color: t.text }]}>Water</Text>
-              <Text style={[styles.ringTarget, { color: t.textSecondary }]}>
-                / {mealTargets.waterOz ?? 100} oz
-              </Text>
-            </AnimatedPress>
-          </View>
-        </Animated.View>
-
-        {/* ══════════════════════════════════════════════════════════════════
-            5. TODAY'S TIMELINE - Vertical timeline of today's events
-        ══════════════════════════════════════════════════════════════════ */}
-        <Animated.View
-          entering={FadeInDown.delay(250).duration(500)}
-          style={styles.section}
-        >
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>Today's Timeline</Text>
-            <Text style={[styles.sectionBadge, { color: t.textSecondary, backgroundColor: t.glass }]}>
-              {timelineEvents.length} event{timelineEvents.length !== 1 ? 's' : ''}
-            </Text>
-          </View>
-
-          {timelineEvents.length === 0 ? (
-            <GlassCard style={styles.timelineEmpty}>
-              <Ionicons
-                name="time-outline"
-                size={32}
-                color="rgba(255,255,255,0.2)"
-              />
-              <Text style={[styles.timelineEmptyTitle, { color: t.text }]}>
-                No events logged yet today
-              </Text>
-              <Text style={[styles.timelineEmptySubtitle, { color: t.textSecondary }]}>
-                Start your day with a check-in or log a dose
-              </Text>
-            </GlassCard>
-          ) : (
-            <View style={styles.timelineContainer}>
-              {timelineEvents.map((event, index) => (
-                <Animated.View
-                  key={event.id}
-                  entering={FadeInDown.delay(280 + index * 50).duration(400)}
-                >
-                  <View style={styles.timelineItem}>
-                    {/* Timeline line + dot */}
-                    <View style={styles.timelineDotColumn}>
-                      {index > 0 && (
-                        <View
-                          style={[
-                            styles.timelineLineTop,
-                            { backgroundColor: event.color + '30' },
-                          ]}
-                        />
-                      )}
-                      <View
-                        style={[
-                          styles.timelineDot,
-                          {
-                            backgroundColor: event.color + '25',
-                            borderColor: event.color,
-                          },
-                        ]}
-                      >
-                        <Ionicons
-                          name={event.icon}
-                          size={14}
-                          color={event.color}
-                        />
-                      </View>
-                      {index < timelineEvents.length - 1 && (
-                        <View
-                          style={[
-                            styles.timelineLineBottom,
-                            { backgroundColor: event.color + '30' },
-                          ]}
-                        />
-                      )}
-                    </View>
-
-                    {/* Event card */}
-                    <View style={styles.timelineCardWrap}>
-                      <GlassCard style={styles.timelineCard}>
-                        <View style={styles.timelineCardHeader}>
-                          <Text style={[styles.timelineCardTitle, { color: t.text }]}>
-                            {event.title}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.timelineCardTime,
-                              { color: event.color },
-                            ]}
-                          >
-                            {event.time}
-                          </Text>
-                        </View>
-                        {event.subtitle && (
-                          <Text style={[styles.timelineCardSubtitle, { color: t.textSecondary }]}>
-                            {event.subtitle}
-                          </Text>
-                        )}
-                      </GlassCard>
-                    </View>
-                  </View>
-                </Animated.View>
-              ))}
-            </View>
-          )}
-        </Animated.View>
-
-        {/* ══════════════════════════════════════════════════════════════════
-            6. 7-DAY TRENDS - Mood / Energy / Sleep sparklines
-        ══════════════════════════════════════════════════════════════════ */}
-        <Animated.View
-          entering={FadeInDown.delay(300).duration(500)}
-          style={styles.section}
-        >
-          <Text style={[styles.sectionTitle, { color: t.text }]}>7-Day Trends</Text>
-          <View style={styles.trendsRow}>
-            <TrendCard
-              label="Mood"
-              data={trendData.mood}
-              color="#e3a7a1"
-              unit="/5"
-            />
-            <TrendCard
-              label="Energy"
-              data={trendData.energy}
-              color="#14b8a6"
-              unit="/5"
-            />
-          </View>
-          <View style={[styles.trendsRow, { marginTop: Spacing.sm }]}>
-            <TrendCard
-              label="Sleep"
-              data={trendData.sleep}
-              color="#3b82f6"
-              unit="/5"
-            />
-            <View style={styles.trendSummaryCard}>
-              <GlassCard
-                style={styles.trendSummaryInner}
-                variant="glow"
-                glowColor={segment.palette.primary}
-              >
-                <Text style={[styles.trendSummaryLabel, { color: t.text }]}>Check-ins</Text>
-                <Text style={[styles.trendSummaryValue, { color: t.text }]}>{entries.length}</Text>
-                <Text style={[styles.trendSummarySubtext, { color: t.textSecondary }]}>total logged</Text>
-                {entries.length >= 7 && (
-                  <View style={styles.trendSummaryBadge}>
-                    <Ionicons name="trending-up" size={14} color="#22c55e" />
-                    <Text style={styles.trendSummaryBadgeText}>
-                      On track
-                    </Text>
-                  </View>
-                )}
-              </GlassCard>
-            </View>
-          </View>
-        </Animated.View>
-
-        {/* ══════════════════════════════════════════════════════════════════
-            7. HEALTH DEVICE DATA CARD
-        ══════════════════════════════════════════════════════════════════ */}
-        {healthAvailable && healthMetrics && (
-          <Animated.View
-            entering={FadeInDown.delay(350).duration(500)}
-            style={styles.section}
-          >
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: t.text }]}>Health Snapshot</Text>
-              <View style={styles.healthSourceBadge}>
-                <Ionicons
-                  name="heart-circle"
-                  size={14}
-                  color={Colors.pepTeal}
-                />
-                <Text style={styles.healthSourceText}>
-                  {getHealthSourceLabel()}
-                </Text>
-              </View>
-            </View>
-            <GlassCard variant="glow" glowColor={Colors.pepTeal}>
-              <View style={styles.healthMetricsGrid}>
-                {healthMetrics.steps != null && (
-                  <View style={[styles.healthMetricItem, { backgroundColor: t.glass }]}>
-                    <View
-                      style={[
-                        styles.healthMetricIconWrap,
-                        { backgroundColor: 'rgba(20,184,166,0.12)' },
-                      ]}
-                    >
-                      <Ionicons
-                        name="footsteps-outline"
-                        size={18}
-                        color={Colors.pepTeal}
-                      />
-                    </View>
-                    <Text style={[styles.healthMetricValue, { color: t.text }]}>
-                      {healthMetrics.steps.toLocaleString()}
-                    </Text>
-                    <Text style={[styles.healthMetricLabel, { color: t.textSecondary }]}>Steps</Text>
-                  </View>
-                )}
-
-                {healthMetrics.restingHeartRate != null && (
-                  <View style={[styles.healthMetricItem, { backgroundColor: t.glass }]}>
-                    <View
-                      style={[
-                        styles.healthMetricIconWrap,
-                        { backgroundColor: 'rgba(239,68,68,0.12)' },
-                      ]}
-                    >
-                      <Ionicons
-                        name="pulse-outline"
-                        size={18}
-                        color="#ef4444"
-                      />
-                    </View>
-                    <Text style={[styles.healthMetricValue, { color: t.text }]}>
-                      {healthMetrics.restingHeartRate}
-                    </Text>
-                    <Text style={[styles.healthMetricLabel, { color: t.textSecondary }]}>BPM</Text>
-                  </View>
-                )}
-
-                {healthMetrics.sleepHours != null && (
-                  <View style={[styles.healthMetricItem, { backgroundColor: t.glass }]}>
-                    <View
-                      style={[
-                        styles.healthMetricIconWrap,
-                        { backgroundColor: 'rgba(59,130,246,0.12)' },
-                      ]}
-                    >
-                      <Ionicons
-                        name="moon-outline"
-                        size={18}
-                        color="#3b82f6"
-                      />
-                    </View>
-                    <Text style={[styles.healthMetricValue, { color: t.text }]}>
-                      {healthMetrics.sleepHours}
-                    </Text>
-                    <Text style={[styles.healthMetricLabel, { color: t.textSecondary }]}>Hrs Sleep</Text>
-                  </View>
-                )}
-
-                {healthMetrics.weightLbs != null && (
-                  <View style={[styles.healthMetricItem, { backgroundColor: t.glass }]}>
-                    <View
-                      style={[
-                        styles.healthMetricIconWrap,
-                        { backgroundColor: 'rgba(139,92,246,0.12)' },
-                      ]}
-                    >
-                      <Ionicons
-                        name="scale-outline"
-                        size={18}
-                        color="#8b5cf6"
-                      />
-                    </View>
-                    <Text style={[styles.healthMetricValue, { color: t.text }]}>
-                      {healthMetrics.weightLbs}
-                    </Text>
-                    <Text style={[styles.healthMetricLabel, { color: t.textSecondary }]}>lbs</Text>
-                  </View>
-                )}
-              </View>
-
-              {healthMetrics.steps == null &&
-                healthMetrics.restingHeartRate == null &&
-                healthMetrics.sleepHours == null &&
-                healthMetrics.weightLbs == null && (
-                  <Text style={styles.healthMetricsEmpty}>
-                    No health data available yet. Wear your device and check
-                    back later.
-                  </Text>
-                )}
-            </GlassCard>
-          </Animated.View>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════════
-            8. XP PROGRESS BAR
-        ══════════════════════════════════════════════════════════════════ */}
-        <Animated.View
-          entering={FadeInDown.delay(375).duration(500)}
-          style={styles.section}
-        >
-          <GlassCard>
-            <View style={styles.xpHeader}>
-              <LinearGradient
-                colors={[segment.palette.primary, segment.palette.accent]}
-                style={styles.xpLevelCircle}
-              >
-                <Text style={styles.xpLevelNumber}>{level.level}</Text>
-              </LinearGradient>
-              <View style={styles.xpInfo}>
-                <Text style={[styles.xpTitle, { color: t.text }]}>{level.title}</Text>
-                <Text style={[styles.xpSubtitle, { color: t.textSecondary }]}>
-                  {level.currentXP} XP
-                  {level.next
-                    ? ` · ${level.next.xpRequired - level.currentXP} to next`
-                    : ' · Max level'}
-                </Text>
-              </View>
-              <View style={styles.xpBadgeCount}>
-                <Ionicons
-                  name="medal"
-                  size={16}
-                  color={segment.palette.primary}
-                />
-                <Text
-                  style={[
-                    styles.xpBadgeText,
-                    { color: segment.palette.primary },
-                  ]}
-                >
-                  {earnedBadgeIds.length}
-                </Text>
-              </View>
-            </View>
-            <View style={[styles.xpBarTrack, { backgroundColor: t.glass }]}>
-              <LinearGradient
-                colors={[segment.palette.primary, segment.palette.accent]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[
-                  styles.xpBarFill,
-                  { width: `${level.progressToNext}%` as any },
-                ]}
-              />
-            </View>
-          </GlassCard>
-        </Animated.View>
-
-        {/* ══════════════════════════════════════════════════════════════════
-            9. CHAT INPUT + PROMPT CHIPS
-        ══════════════════════════════════════════════════════════════════ */}
-        <Animated.View
-          entering={FadeInDown.delay(400).duration(500)}
-          style={styles.section}
-        >
-          <Text style={[styles.sectionTitle, { color: t.text }]}>Ask Aimee</Text>
-
-          {/* Prompt chips */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.promptChipsContainer}
-          >
-            {promptChips.map((prompt) => (
-              <TouchableOpacity
-                key={prompt}
-                style={[
-                  styles.promptChip,
-                  { borderColor: segment.palette.primary + '40', backgroundColor: t.glass },
-                ]}
-                onPress={() => handlePromptChip(prompt)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.promptChipText,
-                    { color: segment.palette.primary },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {prompt}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Chat input */}
-          <View style={styles.chatContainer}>
-            <TextInput
-              style={[styles.chatInput, { color: t.text, backgroundColor: t.inputBg, borderColor: t.inputBorder }]}
-              placeholder="Ask about peptides, protocols, health..."
-              placeholderTextColor={t.placeholder}
-              value={chatText}
-              onChangeText={setChatText}
-              onSubmitEditing={handleSendChat}
-              returnKeyType="send"
-            />
-            <TouchableOpacity
-              onPress={handleSendChat}
-              activeOpacity={0.7}
-              style={[
-                styles.chatSendButton,
-                { backgroundColor: segment.palette.primary },
-              ]}
-            >
-              <Ionicons name="send" size={18} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-
-        {/* ══════════════════════════════════════════════════════════════════
-            10. SETUP CHECKLIST (if not complete)
-        ══════════════════════════════════════════════════════════════════ */}
+        {/* ═══════════════════════════════════════════════════════════════
+            GET STARTED (new users only)
+        ═══════════════════════════════════════════════════════════════ */}
         {!allSetupComplete && (
-          <Animated.View
-            entering={FadeInDown.delay(425).duration(500)}
-            style={styles.section}
-          >
-            <Text style={[styles.sectionTitle, { color: t.text }]}>Get Started</Text>
-            <GlassCard variant="gradient">
-              {setupItems.map((item) => (
+          <Animated.View entering={FadeInDown.delay(50).duration(400)} style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: t.text }]}>Get Started</Text>
+              <View style={[styles.sectionAccent, { backgroundColor: t.primary }]} />
+            </View>
+            <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
+              {setupItems.map((item, i) => (
                 <TouchableOpacity
                   key={item.id}
-                  style={styles.checklistRow}
+                  style={[styles.setupRow, i < setupItems.length - 1 && styles.setupRowBorder]}
                   onPress={() => router.push(item.route as any)}
                   activeOpacity={0.7}
                 >
                   <Ionicons
-                    name={
-                      item.complete
-                        ? 'checkmark-circle'
-                        : 'ellipse-outline'
-                    }
+                    name={item.complete ? 'checkmark-circle' : 'ellipse-outline'}
                     size={20}
-                    color={
-                      item.complete ? segment.palette.primary : '#6b7280'
-                    }
+                    color={item.complete ? t.primary : '#C7C7CC'}
                   />
-                  <Text
-                    style={[
-                      styles.checklistLabel,
-                      { color: t.text },
-                      item.complete && styles.checklistLabelDone,
-                    ]}
-                  >
+                  <Text style={[styles.setupLabel, { color: t.text }, item.complete && styles.setupLabelDone]}>
                     {item.label}
                   </Text>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={16}
-                    color="#6b7280"
-                  />
+                  <Ionicons name="chevron-forward" size={16} color="#6b7280" />
                 </TouchableOpacity>
               ))}
-            </GlassCard>
+            </View>
           </Animated.View>
         )}
 
-        {/* ══════════════════════════════════════════════════════════════════
-            11. HEALTH TOOLS QUICK ACCESS
-        ══════════════════════════════════════════════════════════════════ */}
-        <Animated.View
-          entering={FadeInDown.delay(450).duration(500)}
-          style={styles.section}
-        >
-          <Text style={[styles.sectionTitle, { color: t.text }]}>Health Tools</Text>
-          <View style={styles.toolsRow}>
-            <AnimatedPress
-              style={[styles.healthToolCard, { backgroundColor: t.glass }]}
-              onPress={() => router.push('/workouts')}
-            >
-              <LinearGradient
-                colors={[Colors.pepTeal, Colors.pepBlue]}
-                style={styles.healthToolIcon}
+        {/* ═══════════════════════════════════════════════════════════════
+            WEEKLY CALENDAR STRIP — Inline week view with activity dots
+        ═══════════════════════════════════════════════════════════════ */}
+        <Animated.View entering={FadeInDown.delay(130).duration(400)} style={styles.section}>
+          {/* Header: week label + nav arrows + full calendar link */}
+          <View style={styles.weekHeader}>
+            <View style={styles.weekNav}>
+              <TouchableOpacity onPress={() => setWeekOffset(weekOffset - 1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="chevron-back" size={18} color={t.textSecondary} />
+              </TouchableOpacity>
+              <Text style={[styles.weekLabel, { color: t.text }]}>{weekLabel}</Text>
+              <TouchableOpacity
+                onPress={() => weekOffset < 0 && setWeekOffset(weekOffset + 1)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                disabled={weekOffset >= 0}
               >
-                <Ionicons name="barbell-outline" size={22} color="#fff" />
-              </LinearGradient>
-              <Text style={[styles.healthToolLabel, { color: t.text }]}>Workouts</Text>
-            </AnimatedPress>
-            <AnimatedPress
-              style={[styles.healthToolCard, { backgroundColor: t.glass }]}
-              onPress={() => router.push('/nutrition')}
-            >
-              <LinearGradient
-                colors={[Colors.pepBlue, Colors.pepCyan]}
-                style={styles.healthToolIcon}
-              >
-                <Ionicons name="nutrition-outline" size={22} color="#fff" />
-              </LinearGradient>
-              <Text style={[styles.healthToolLabel, { color: t.text }]}>Nutrition</Text>
-            </AnimatedPress>
-            <AnimatedPress
-              style={[styles.healthToolCard, { backgroundColor: t.glass }]}
-              onPress={() => router.push('/subscription')}
-            >
-              <LinearGradient
-                colors={['#f59e0b', '#ef4444']}
-                style={styles.healthToolIcon}
-              >
-                <Ionicons name="diamond-outline" size={22} color="#fff" />
-              </LinearGradient>
-              <Text style={[styles.healthToolLabel, { color: t.text }]}>Plans</Text>
-            </AnimatedPress>
-          </View>
-        </Animated.View>
-
-        {/* ══════════════════════════════════════════════════════════════════
-            12. EXPLORE PEPTIDES BUTTON + LIBRARY
-        ══════════════════════════════════════════════════════════════════ */}
-        <View style={styles.section}>
-          <GradientButton
-            label={showLibrary ? 'Hide Peptide Library' : 'Explore Peptides'}
-            onPress={() => setShowLibrary(!showLibrary)}
-            colors={[segment.palette.primary, segment.palette.accent]}
-          />
-        </View>
-
-        {showLibrary && (
-          <View style={styles.librarySection}>
-            <View style={styles.searchContainer}>
-              <SearchBar
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder="Search peptides, categories..."
-              />
+                <Ionicons name="chevron-forward" size={18} color={weekOffset >= 0 ? 'transparent' : t.textSecondary} />
+              </TouchableOpacity>
             </View>
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/calendar')}
+              activeOpacity={0.7}
+              style={styles.calendarLink}
+            >
+              <Ionicons name="calendar-outline" size={15} color={t.primary} />
+              <Text style={[styles.calendarLinkText, { color: t.primary }]}>Full Calendar</Text>
+            </TouchableOpacity>
+          </View>
 
-            {profile.interestCategories.length > 0 && (
-              <View style={styles.focusSection}>
-                <Text style={[styles.sectionTitle, { color: t.text }]}>Your Focus</Text>
-                <View style={styles.focusChips}>
-                  {profile.interestCategories.map((interest) => (
-                    <TouchableOpacity
-                      key={interest}
-                      style={[
-                        styles.focusChip,
-                        {
-                          borderColor: segment.palette.primary + '40',
-                          backgroundColor: segment.palette.primary + '18',
-                        },
-                      ]}
-                      onPress={() =>
-                        router.push(
-                          `/?category=${encodeURIComponent(interest)}`,
-                        )
-                      }
-                    >
-                      <Text
-                        style={[
-                          styles.focusChipText,
-                          { color: segment.palette.primary },
-                        ]}
-                      >
-                        {interest}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {activeCategory && (
-              <View style={[styles.filterRow, { backgroundColor: t.glass }]}>
-                <Text style={[styles.filterText, { color: t.text }]}>
-                  Filter: {activeCategory}
-                </Text>
+          {/* Day cells */}
+          <View style={[styles.weekStrip, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
+            {weekDays.map((d) => {
+              const key = dateKey(d);
+              const isToday = key === todayKey();
+              const isSelected = key === selectedDay;
+              const isFuture = d > new Date();
+              const activity = weekActivityMap[key];
+              return (
                 <TouchableOpacity
-                  style={styles.clearFilterButton}
-                  onPress={() => router.replace('/')}
+                  key={key}
+                  style={[
+                    styles.weekDayCell,
+                    isSelected && [styles.weekDayCellSelected, { backgroundColor: t.primary }],
+                  ]}
+                  onPress={() => !isFuture && setSelectedDay(key)}
+                  activeOpacity={isFuture ? 1 : 0.7}
                 >
-                  <Text
-                    style={[
-                      styles.clearFilterText,
-                      { color: segment.palette.primary },
-                    ]}
-                  >
-                    Clear
+                  <Text style={[
+                    styles.weekDayLabel,
+                    { color: isSelected ? '#fff' : t.textSecondary },
+                    isToday && !isSelected && { color: t.primary, fontFamily: 'DMSans-Bold' },
+                  ]}>
+                    {DAY_LABELS[d.getDay()]}
                   </Text>
+                  <Text style={[
+                    styles.weekDayNumber,
+                    { color: isSelected ? '#fff' : isFuture ? '#D1D5DB' : t.text },
+                    isToday && !isSelected && { color: t.primary },
+                  ]}>
+                    {d.getDate()}
+                  </Text>
+                  {/* Activity dots */}
+                  <View style={styles.weekDots}>
+                    {activity?.meals && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#FFBF82' }]} />}
+                    {activity?.workouts && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#F8A97A' }]} />}
+                    {activity?.checkins && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#e3a7a1' }]} />}
+                    {activity?.doses && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#D4A853' }]} />}
+                  </View>
                 </TouchableOpacity>
-              </View>
-            )}
+              );
+            })}
+          </View>
 
-            {!searchQuery.trim() && (
-              <View style={styles.categoriesSection}>
-                <Text style={[styles.sectionTitle, { color: t.text }]}>Categories</Text>
-                <CategoryGrid />
-              </View>
-            )}
-
-            <View style={styles.allPeptidesHeader}>
-              <Text style={[styles.sectionTitle, { color: t.text }]}>
-                {searchQuery.trim()
-                  ? `Results (${filteredPeptides.length})`
-                  : activeCategory
-                    ? `${activeCategory} Peptides (${filteredPeptides.length})`
-                    : 'All Peptides'}
+          {/* Selected day detail */}
+          <View style={[styles.activityCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
+            <View style={styles.activityDayLabel}>
+              <Text style={[styles.activityDayText, { color: t.text }]}>
+                {selectedDay === todayKey() ? 'Today' : new Date(selectedDay + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+              </Text>
+              <Text style={[styles.activityDayCount, { color: t.textSecondary }]}>
+                {timelineEvents.length} event{timelineEvents.length !== 1 ? 's' : ''}
               </Text>
             </View>
 
-            {filteredPeptides.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={[styles.emptyTitle, { color: t.text }]}>No peptides found</Text>
-                <Text style={[styles.emptySubtitle, { color: t.textSecondary }]}>
-                  Try adjusting your search query
+            {timelineEvents.length === 0 ? (
+              <View style={styles.activityEmpty}>
+                <Ionicons name="time-outline" size={22} color={t.textSecondary} />
+                <Text style={[styles.activityEmptyText, { color: t.textSecondary }]}>
+                  {selectedDay === todayKey() ? 'Nothing logged yet — tap + to start!' : 'No activity this day'}
                 </Text>
               </View>
             ) : (
-              filteredPeptides.map((peptide) => (
-                <PeptideCard key={peptide.id} peptide={peptide} />
-              ))
-            )}
+              <>
+                {/* Summary badges row */}
+                <View style={styles.daySummaryRow}>
+                  {selectedDayMeals.length > 0 && (
+                    <View style={[styles.daySummaryBadge, { backgroundColor: '#FFBF8215' }]}>
+                      <Ionicons name="nutrition" size={14} color="#FFBF82" />
+                      <Text style={[styles.daySummaryValue, { color: t.text }]}>{Math.round(selectedDayMealCals)}</Text>
+                      <Text style={[styles.daySummaryUnit, { color: t.textSecondary }]}>cal</Text>
+                    </View>
+                  )}
+                  {selectedDayWorkoutList.length > 0 && (
+                    <View style={[styles.daySummaryBadge, { backgroundColor: '#8faa8b15' }]}>
+                      <Ionicons name="barbell" size={14} color="#8faa8b" />
+                      <Text style={[styles.daySummaryValue, { color: t.text }]}>{selectedDayWorkoutList.reduce((s, w) => s + w.durationMinutes, 0)}</Text>
+                      <Text style={[styles.daySummaryUnit, { color: t.textSecondary }]}>min</Text>
+                    </View>
+                  )}
+                  {selectedDayDoseList.length > 0 && (
+                    <View style={[styles.daySummaryBadge, { backgroundColor: '#F8A97A15' }]}>
+                      <Ionicons name="flask" size={14} color="#F8A97A" />
+                      <Text style={[styles.daySummaryValue, { color: t.text }]}>{selectedDayDoseList.length}</Text>
+                      <Text style={[styles.daySummaryUnit, { color: t.textSecondary }]}>dose{selectedDayDoseList.length !== 1 ? 's' : ''}</Text>
+                    </View>
+                  )}
+                  {selectedDayCheckin && (
+                    <View style={[styles.daySummaryBadge, { backgroundColor: '#e3a7a115' }]}>
+                      <Ionicons name="heart" size={14} color="#e3a7a1" />
+                      <Text style={[styles.daySummaryValue, { color: t.text }]}>{selectedDayCheckin.mood}/5</Text>
+                      <Text style={[styles.daySummaryUnit, { color: t.textSecondary }]}>mood</Text>
+                    </View>
+                  )}
+                </View>
 
-            <View style={styles.footer}>
-              <Disclaimer />
+                {/* Check-in detail badges */}
+                {selectedDayCheckin && (
+                  <View style={styles.checkinStripRow}>
+                    <View style={[styles.checkinStripBadge, { backgroundColor: `${t.primary}10` }]}>
+                      <Text style={[styles.checkinStripLabel, { color: t.textSecondary }]}>Energy</Text>
+                      <Text style={[styles.checkinStripVal, { color: t.text }]}>{selectedDayCheckin.energy}/5</Text>
+                    </View>
+                    <View style={[styles.checkinStripBadge, { backgroundColor: `${t.primary}10` }]}>
+                      <Text style={[styles.checkinStripLabel, { color: t.textSecondary }]}>Sleep</Text>
+                      <Text style={[styles.checkinStripVal, { color: t.text }]}>{selectedDayCheckin.sleepQuality}/5</Text>
+                    </View>
+                    {selectedDayCheckin.weightLbs ? (
+                      <View style={[styles.checkinStripBadge, { backgroundColor: `${t.primary}10` }]}>
+                        <Text style={[styles.checkinStripLabel, { color: t.textSecondary }]}>Weight</Text>
+                        <Text style={[styles.checkinStripVal, { color: t.text }]}>{selectedDayCheckin.weightLbs}</Text>
+                      </View>
+                    ) : null}
+                    {selectedDayCheckin.steps ? (
+                      <View style={[styles.checkinStripBadge, { backgroundColor: `${t.primary}10` }]}>
+                        <Text style={[styles.checkinStripLabel, { color: t.textSecondary }]}>Steps</Text>
+                        <Text style={[styles.checkinStripVal, { color: t.text }]}>{selectedDayCheckin.steps.toLocaleString()}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                )}
+
+                {/* Timeline events */}
+                {timelineEvents.slice(0, 6).map((event, i) => (
+                  <View key={event.id} style={[styles.activityRow, i < Math.min(timelineEvents.length, 6) - 1 && { borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' }]}>
+                    <View style={[styles.activityDot, { backgroundColor: event.color }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.activityTitle, { color: t.text }]}>{event.title}</Text>
+                      {event.subtitle && <Text style={[styles.activitySub, { color: t.textSecondary }]}>{event.subtitle}</Text>}
+                    </View>
+                    <Text style={[styles.activityTime, { color: t.textSecondary }]}>{event.time}</Text>
+                  </View>
+                ))}
+                {timelineEvents.length > 6 && (
+                  <TouchableOpacity
+                    style={styles.seeMoreRow}
+                    onPress={() => router.push('/(tabs)/calendar')}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.seeMoreText, { color: t.primary }]}>See all {timelineEvents.length} events</Text>
+                    <Ionicons name="chevron-forward" size={14} color={t.primary} />
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </View>
+        </Animated.View>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            TODAY'S PROGRESS — Swipeable donut chart (tinted bg band)
+        ═══════════════════════════════════════════════════════════════ */}
+        <Animated.View entering={FadeInDown.delay(150).duration(400)}
+          style={[styles.surfaceBand, { backgroundColor: t.surface }]}
+        >
+          <View style={styles.section}>
+            <DailyProgressChart pages={chartPages} />
+          </View>
+        </Animated.View>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            DISCOVER — 2x2 Grid of feature tiles (MFP style)
+        ═══════════════════════════════════════════════════════════════ */}
+        <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: t.text }]}>Discover</Text>
+            <View style={[styles.sectionAccent, { backgroundColor: t.primary }]} />
+          </View>
+          <View style={styles.discoverGrid}>
+            {/* Row 1: Nutrition + Workouts */}
+            <View style={styles.discoverRow}>
+              <AnimatedPress onPress={() => router.push('/nutrition')} scaleTo={0.96} style={{ flex: 1 }}>
+                <LinearGradient
+                  colors={[`${t.primary}18`, `${t.primary}08`]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[styles.discoverTile, { borderColor: `${t.primary}25` }]}
+                >
+                  <Ionicons name="nutrition" size={28} color={t.primary} />
+                  <Text style={[styles.discoverTileTitle, { color: t.text }]}>Nutrition</Text>
+                  <Text style={[styles.discoverTileSub, { color: t.textSecondary }]}>Fuel your goals</Text>
+                </LinearGradient>
+              </AnimatedPress>
+
+              <AnimatedPress onPress={() => router.push('/workouts')} scaleTo={0.96} style={{ flex: 1 }}>
+                <LinearGradient
+                  colors={[`${t.secondary}18`, `${t.secondary}08`]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[styles.discoverTile, { borderColor: `${t.secondary}25` }]}
+                >
+                  <Ionicons name="barbell" size={28} color={t.secondary} />
+                  <Text style={[styles.discoverTileTitle, { color: t.text }]}>Workouts</Text>
+                  <Text style={[styles.discoverTileSub, { color: t.textSecondary }]}>Move your body</Text>
+                </LinearGradient>
+              </AnimatedPress>
+            </View>
+
+            {/* Row 2: Peptides + Recovery */}
+            <View style={styles.discoverRow}>
+              <AnimatedPress onPress={() => router.push('/(tabs)/my-stacks')} scaleTo={0.96} style={{ flex: 1 }}>
+                <LinearGradient
+                  colors={[`${t.accent}20`, `${t.accent}08`]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[styles.discoverTile, { borderColor: `${t.accent}30` }]}
+                >
+                  <Ionicons name="flask" size={28} color={t.accent} />
+                  <Text style={[styles.discoverTileTitle, { color: t.text }]}>Peptides</Text>
+                  <Text style={[styles.discoverTileSub, { color: t.textSecondary }]}>Optimize & recover</Text>
+                </LinearGradient>
+              </AnimatedPress>
+
+              <AnimatedPress onPress={() => router.push('/(tabs)/check-in')} scaleTo={0.96} style={{ flex: 1 }}>
+                <LinearGradient
+                  colors={['rgba(169,196,166,0.20)', 'rgba(169,196,166,0.06)']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[styles.discoverTile, { borderColor: 'rgba(169,196,166,0.30)' }]}
+                >
+                  <Ionicons name="moon" size={28} color="#8faa8b" />
+                  <Text style={[styles.discoverTileTitle, { color: t.text }]}>Recovery</Text>
+                  <Text style={[styles.discoverTileSub, { color: t.textSecondary }]}>Rest & recharge</Text>
+                </LinearGradient>
+              </AnimatedPress>
             </View>
           </View>
+        </Animated.View>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            MAX YOUR STACK — Premium CTA (non-pro users)
+        ═══════════════════════════════════════════════════════════════ */}
+        {!isPro && (
+          <Animated.View entering={FadeInDown.delay(250).duration(400)} style={styles.section}>
+            <TouchableOpacity
+              onPress={() => router.push('/subscription')}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[t.primary, t.secondary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.maxStackCTA}
+              >
+                <Text style={styles.maxStackCTALabel}>UNLOCK EVERYTHING</Text>
+                <Text style={styles.maxStackCTATitle}>Max Your Stack</Text>
+                <Text style={styles.maxStackCTASub}>
+                  Custom workouts, meal plans, and peptide coaching — built for your goals.
+                </Text>
+                <View style={styles.maxStackCTABtn}>
+                  <Text style={styles.maxStackCTABtnText}>Explore Plans</Text>
+                  <Ionicons name="arrow-forward" size={16} color={t.primary} />
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
         )}
+
+        <View style={{ height: 80 }} />
       </ScrollView>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          FAB — Floating Action Button with fan menu
+      ═══════════════════════════════════════════════════════════════ */}
+      {fabOpen && (
+        <TouchableOpacity
+          style={styles.fabOverlay}
+          activeOpacity={1}
+          onPress={closeFab}
+        >
+          <View style={styles.fabOverlayBg} />
+        </TouchableOpacity>
+      )}
+
+      {/* Vertical stack menu — stacked above the FAB */}
+      {FAB_ITEMS.map((item, i) => {
+        // Reverse order so first item ends up closest to FAB
+        const index = FAB_ITEMS.length - 1 - i;
+        const spacing = 56;
+        const targetY = -(index + 1) * spacing;
+
+        return (
+          <RNAnimated.View
+            key={item.label}
+            style={[
+              styles.fabMenuItem,
+              {
+                opacity: fabAnim,
+                transform: [
+                  {
+                    translateY: fabAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, targetY],
+                    }),
+                  },
+                  {
+                    scale: fabAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.7, 1],
+                    }),
+                  },
+                ],
+              },
+            ]}
+            pointerEvents={fabOpen ? 'auto' : 'none'}
+          >
+            <TouchableOpacity
+              style={styles.fabMenuRow}
+              activeOpacity={0.7}
+              onPress={() => {
+                closeFab();
+                router.push(item.route as any);
+              }}
+            >
+              <View style={[styles.fabMenuLabel, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
+                <Text style={[styles.fabMenuLabelText, { color: t.text }]}>{item.label}</Text>
+              </View>
+              <View style={[styles.fabMenuIcon, { backgroundColor: item.color }]}>
+                <Ionicons name={item.icon} size={20} color="#fff" />
+              </View>
+            </TouchableOpacity>
+          </RNAnimated.View>
+        );
+      })}
+
+      {/* FAB button — pill with "Log" label */}
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: t.primary }]}
+        activeOpacity={0.85}
+        onPress={toggleFab}
+      >
+        <RNAnimated.View
+          style={{
+            transform: [{
+              rotate: fabAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0deg', '135deg'],
+              }),
+            }],
+          }}
+        >
+          <Ionicons name="add" size={24} color="#fff" />
+        </RNAnimated.View>
+        {!fabOpen && (
+          <Text style={styles.fabLabel} numberOfLines={1}>
+            Log
+          </Text>
+        )}
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -1689,770 +1295,493 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.darkBg,
   },
   scrollContent: {
     paddingBottom: 40,
   },
 
-  // ── Hero Section ──────────────────────────────────────────────────────────
-  heroSection: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  heroGradient: {
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 12,
-    overflow: 'hidden',
-  },
-  heroBgImage: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.15,
-    borderRadius: BorderRadius.xl,
+  // ── Hero Banner ───────────────────────────────────────────────────────────
+  heroBanner: {
+    paddingTop: Spacing.md,
+    paddingBottom: 24,
+    paddingHorizontal: Spacing.lg,
   },
   heroTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Spacing.md,
-  },
-  heroTextBlock: {
-    flex: 1,
-    marginRight: Spacing.md,
+    marginBottom: 20,
   },
   heroGreeting: {
-    fontSize: FontSizes.xxl,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: -0.5,
-    marginBottom: 4,
+    fontSize: 32,
+    fontFamily: 'Playfair-Black',
+    letterSpacing: -0.3,
+    flex: 1,
   },
-  heroTagline: {
-    fontSize: FontSizes.sm,
-    color: 'rgba(255,255,255,0.7)',
-    lineHeight: 20,
+  profileAvatarWrap: {
+    alignItems: 'center',
+    marginLeft: 12,
+    marginTop: 4,
   },
-  heroCharacterWrap: {
+  profileAvatar: {
     width: 64,
     height: 64,
     borderRadius: 32,
     overflow: 'hidden',
+    borderWidth: 2,
   },
-  heroStreakRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-    gap: 10,
-  },
-  streakBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(245,158,11,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(245,158,11,0.3)',
-  },
-  streakInfo: {
-    flex: 1,
-  },
-  streakNumber: {
-    fontSize: FontSizes.lg,
-    fontWeight: '800',
-    color: '#fff',
-  },
-  streakUnit: {
-    fontSize: FontSizes.sm,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.65)',
-  },
-  streakMilestone: {
-    fontSize: FontSizes.xs,
-    color: 'rgba(255,255,255,0.5)',
-    marginTop: 1,
-  },
-  heroLevelBadge: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  heroLevelCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroLevelText: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#fff',
-  },
-  heroLevelLabel: {
-    fontSize: 9,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '600',
-  },
-  heroTipContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  heroTipText: {
-    flex: 1,
-    fontSize: FontSizes.xs,
-    color: 'rgba(255,255,255,0.6)',
-    lineHeight: 16,
-    fontStyle: 'italic',
-  },
-
-  // ── Quick Stats Row ───────────────────────────────────────────────────────
-  statsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  statCard: {
-    flex: 1,
-    borderRadius: BorderRadius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  statCardInner: {
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-    gap: 4,
-  },
-  statValue: {
-    fontSize: FontSizes.xl,
-    fontWeight: '800',
-    color: '#f7f2ec',
-  },
-  statLabel: {
-    fontSize: 10,
-    color: '#9ca3af',
-    fontWeight: '500',
-  },
-
-  // ── Quick Actions ─────────────────────────────────────────────────────────
-  quickActionsContainer: {
-    paddingHorizontal: Spacing.lg,
-    gap: 10,
-    paddingBottom: Spacing.lg,
-    paddingTop: Spacing.xs,
-  },
-  quickActionButton: {
-    width: 88,
-  },
-  quickActionGradient: {
-    borderRadius: BorderRadius.lg,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  quickActionIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickActionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#fff',
-    textAlign: 'center',
-  },
-
-  // ── Progress Rings ────────────────────────────────────────────────────────
-  ringsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  ringCard: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-  },
-  ringLabel: {
+  viewProfileLink: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#e8e6e3',
-    marginTop: 8,
+    fontFamily: 'DMSans-SemiBold',
+    textDecorationLine: 'underline',
+    marginTop: 6,
   },
-  ringTarget: {
-    fontSize: 10,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-
-  // ── Timeline ──────────────────────────────────────────────────────────────
-  timelineContainer: {
-    marginLeft: 4,
-  },
-  timelineItem: {
-    flexDirection: 'row',
-    minHeight: 64,
-  },
-  timelineDotColumn: {
-    width: 36,
-    alignItems: 'center',
-  },
-  timelineLineTop: {
-    width: 2,
-    height: 12,
-    borderRadius: 1,
-  },
-  timelineDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-  },
-  timelineLineBottom: {
-    width: 2,
-    flex: 1,
-    borderRadius: 1,
-    minHeight: 12,
-  },
-  timelineCardWrap: {
-    flex: 1,
-    paddingLeft: 8,
-    paddingBottom: 8,
-  },
-  timelineCard: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-  },
-  timelineCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  timelineCardTitle: {
-    fontSize: FontSizes.sm,
-    fontWeight: '700',
-    color: '#f7f2ec',
-    flex: 1,
-    marginRight: 8,
-  },
-  timelineCardTime: {
-    fontSize: FontSizes.xs,
-    fontWeight: '600',
-  },
-  timelineCardSubtitle: {
-    fontSize: FontSizes.xs,
-    color: '#9ca3af',
-    marginTop: 3,
-  },
-  timelineEmpty: {
-    alignItems: 'center',
-    paddingVertical: 28,
-    gap: 8,
-  },
-  timelineEmptyTitle: {
-    fontSize: FontSizes.md,
-    fontWeight: '600',
-    color: '#e8e6e3',
-  },
-  timelineEmptySubtitle: {
-    fontSize: FontSizes.xs,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
-
-  // ── Trends ────────────────────────────────────────────────────────────────
-  trendsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  trendSummaryCard: {
-    flex: 1,
-  },
-  trendSummaryInner: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-  },
-  trendSummaryLabel: {
-    fontSize: FontSizes.sm,
-    fontWeight: '600',
-    color: '#f7f2ec',
-    marginBottom: 4,
-  },
-  trendSummaryValue: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#f7f2ec',
-  },
-  trendSummarySubtext: {
-    fontSize: FontSizes.xs,
-    color: '#9ca3af',
-    marginTop: 2,
-  },
-  trendSummaryBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 8,
-    backgroundColor: 'rgba(34,197,94,0.12)',
-    borderRadius: BorderRadius.sm,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  trendSummaryBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#22c55e',
-  },
-
-  // ── Health Metrics ────────────────────────────────────────────────────────
-  healthMetricsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  healthMetricItem: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: BorderRadius.md,
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-    gap: 6,
-  },
-  healthMetricIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  healthMetricValue: {
-    fontSize: FontSizes.lg,
-    fontWeight: '800',
-    color: '#f7f2ec',
-  },
-  healthMetricLabel: {
-    fontSize: 10,
-    color: '#9ca3af',
-    fontWeight: '500',
-  },
-  healthMetricsEmpty: {
-    fontSize: 12,
-    color: '#6b7280',
-    textAlign: 'center',
-    paddingVertical: 12,
-  },
-  healthSourceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(6,182,212,0.1)',
-    borderRadius: BorderRadius.sm,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  healthSourceText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.pepTeal,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-
-  // ── XP Bar ────────────────────────────────────────────────────────────────
-  xpHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-  },
-  xpLevelCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  xpLevelNumber: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#fff',
-  },
-  xpInfo: {
-    flex: 1,
-  },
-  xpTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#f7f2ec',
-  },
-  xpSubtitle: {
-    fontSize: FontSizes.xs,
-    color: '#9ca3af',
-    marginTop: 1,
-  },
-  xpBadgeCount: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  xpBadgeText: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  xpBarTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    overflow: 'hidden',
-  },
-  xpBarFill: {
+  profileAvatarImg: {
+    width: '100%',
     height: '100%',
-    borderRadius: 3,
+    borderRadius: 32,
+  },
+  profileAvatarFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 32,
+  },
+  profileAvatarInitial: {
+    fontSize: 26,
+    fontFamily: 'DMSans-Bold',
+  },
+  heroStatsRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 12,
+  },
+  heroStat: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  heroStatValue: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Bold',
+  },
+  heroStatSub: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Medium',
+    marginTop: 1,
   },
 
-  // ── Sections ──────────────────────────────────────────────────────────────
+  // ── Sections ─────────────────────────────────────────────────────────────
+  surfaceBand: {
+    paddingVertical: 4,
+    marginBottom: 20,
+  },
   section: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
+    marginBottom: 20,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: FontSizes.lg,
-    fontWeight: '700',
-    color: '#e8e6e3',
-    marginBottom: 14,
+    fontSize: 24,
+    fontFamily: 'Playfair-ExtraBold',
+    letterSpacing: -0.2,
+    marginBottom: 8,
   },
-  sectionBadge: {
-    fontSize: FontSizes.xs,
-    fontWeight: '600',
-    color: '#6b7280',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: BorderRadius.sm,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginBottom: 14,
+  sectionAccent: {
+    width: 28,
+    height: 3,
+    borderRadius: 2,
   },
 
-  // ── Prompt Chips & Chat ───────────────────────────────────────────────────
-  promptChipsContainer: {
-    gap: 8,
-    paddingBottom: 12,
-  },
-  promptChip: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+  // ── Generic card ─────────────────────────────────────────────────────────
+  card: {
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    overflow: 'hidden',
   },
-  promptChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  chatContainer: {
+
+  // ── Setup checklist ──────────────────────────────────────────────────────
+  setupRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  chatInput: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 24,
+    gap: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    color: '#e8e6e3',
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    minHeight: 48,
   },
-  chatSendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // ── Setup Checklist ───────────────────────────────────────────────────────
-  checklistRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
+  setupRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
-  checklistLabel: {
+  setupLabel: {
     flex: 1,
-    fontSize: 14,
-    color: '#e8e6e3',
+    fontSize: 16,
     fontWeight: '500',
   },
-  checklistLabelDone: {
-    color: '#6b7280',
+  setupLabelDone: {
+    color: '#C7C7CC',
     textDecorationLine: 'line-through',
   },
 
-  // ── Health Tools ──────────────────────────────────────────────────────────
-  toolsRow: {
+  // ── Nudge Card (MFP logging progress style) ──────────────────────────────
+  nudgeCard: {
+    borderRadius: BorderRadius.lg,
+    padding: 20,
+    borderWidth: 1,
+  },
+  nudgeLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  nudgeTitle: {
+    fontSize: 24,
+    fontFamily: 'Playfair-ExtraBold',
+    marginBottom: 8,
+    letterSpacing: -0.2,
+  },
+  nudgeBody: {
+    fontSize: 16,
+    fontFamily: 'DMSans-Regular',
+    color: '#6B7280',
+    lineHeight: 24,
+    paddingRight: 32,
+  },
+  nudgeHighlight: {
+    fontWeight: '700',
+  },
+  nudgeChevron: {
+    position: 'absolute',
+    right: 20,
+    top: '50%',
+  },
+
+  // ── Discover Grid (2x2 MFP style) ───────────────────────────────────────
+  discoverGrid: {
+    gap: 10,
+  },
+  discoverRow: {
     flexDirection: 'row',
     gap: 10,
   },
-  healthToolCard: {
+  discoverTile: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    paddingVertical: 32,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    paddingVertical: 16,
     gap: 8,
   },
-  healthToolIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+  discoverTileTitle: {
+    fontSize: 20,
+    fontFamily: 'Playfair-Bold',
+    textAlign: 'center',
+    marginTop: 4,
   },
-  healthToolLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#e8e6e3',
+  discoverTileSub: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontFamily: 'DMSans-Medium',
   },
 
-  // ── Library Section ───────────────────────────────────────────────────────
-  librarySection: {
-    paddingHorizontal: Spacing.lg,
-  },
-  searchContainer: {
-    marginBottom: 20,
-  },
-  focusSection: {
-    marginBottom: 20,
-  },
-  focusChips: {
+  // ── Weekly Calendar Strip ─────────────────────────────────────────────────
+  weekHeader: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  focusChip: {
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-  },
-  focusChipText: {
-    fontSize: FontSizes.xs,
-    fontWeight: '600',
-  },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  filterText: {
-    fontSize: 12,
-    color: '#e8e6e3',
-    fontWeight: '600',
-  },
-  clearFilterButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  clearFilterText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  categoriesSection: {
-    marginBottom: 24,
-  },
-  allPeptidesHeader: {
+    alignItems: 'center',
     marginBottom: 12,
   },
-
-  // ── Empty & Footer ────────────────────────────────────────────────────────
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 48,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#e8e6e3',
-    marginBottom: 6,
-  },
-  emptySubtitle: {
-    fontSize: FontSizes.sm,
-    color: '#9ca3af',
-  },
-  footer: {
-    paddingTop: 8,
-  },
-
-  // ── Pepe Says Card ───────────────────────────────────────────────────────
-  pepeSaysCard: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-  },
-  pepeSaysRow: {
+  weekNav: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  pepeSaysCharacter: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    overflow: 'hidden',
+  weekLabel: {
+    fontSize: 15,
+    fontFamily: 'DMSans-SemiBold',
   },
-  pepeSaysContent: {
-    flex: 1,
-  },
-  pepeSaysMessage: {
-    fontSize: FontSizes.sm,
-    fontWeight: '600',
-    color: Colors.darkText,
-    lineHeight: 20,
-  },
-  pepeSaysAction: {
+  calendarLink: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.sm,
   },
-  pepeSaysActionText: {
-    fontSize: FontSizes.xs,
-    fontWeight: '700',
+  calendarLinkText: {
+    fontSize: 13,
+    fontFamily: 'DMSans-SemiBold',
   },
-
-  // ── Today's Plan ─────────────────────────────────────────────────────────
-  planItemRow: {
+  weekStrip: {
     flexDirection: 'row',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 6,
+    marginBottom: 12,
+  },
+  weekDayCell: {
+    flex: 1,
     alignItems: 'center',
     paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 12,
+    gap: 2,
   },
-  planCheckbox: {
-    width: 32,
+  weekDayCellSelected: {
+    borderRadius: 12,
+  },
+  weekDayLabel: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Medium',
+    textTransform: 'uppercase',
+  },
+  weekDayNumber: {
+    fontSize: 17,
+    fontFamily: 'DMSans-Bold',
+  },
+  weekDots: {
+    flexDirection: 'row',
+    gap: 3,
+    height: 6,
+    marginTop: 2,
+  },
+  weekDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  activityCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  activityDayLabel: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  activityDayText: {
+    fontSize: 14,
+    fontFamily: 'DMSans-SemiBold',
+  },
+  activityDayCount: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Medium',
+  },
+  activityEmpty: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    gap: 6,
+  },
+  activityEmptyText: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Regular',
+  },
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  activityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  activityTitle: {
+    fontSize: 15,
+    fontFamily: 'DMSans-SemiBold',
+  },
+  activitySub: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Regular',
+    marginTop: 2,
+  },
+  activityTime: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Medium',
+  },
+  daySummaryRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    paddingBottom: 8,
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  daySummaryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  daySummaryValue: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Bold',
+  },
+  daySummaryUnit: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Regular',
+  },
+  checkinStripRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  checkinStripBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  checkinStripLabel: {
+    fontSize: 10,
+    fontFamily: 'DMSans-Medium',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  checkinStripVal: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Bold',
+  },
+  seeMoreRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 10,
+    gap: 4,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
   },
-  planItemContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingLeft: 4,
-  },
-  planItemText: {
-    flex: 1,
-  },
-  planItemTitle: {
-    fontSize: FontSizes.sm,
-    fontWeight: '600',
-    color: Colors.darkText,
-  },
-  planItemTitleDone: {
-    textDecorationLine: 'line-through',
-    color: Colors.darkTextSecondary,
-  },
-  planItemTime: {
-    fontSize: FontSizes.xs,
-    color: Colors.darkTextSecondary,
-    marginTop: 1,
-  },
-  planProgressWrap: {
-    marginTop: 12,
-    paddingTop: 8,
-  },
-  planProgressTrack: {
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  planProgressFill: {
-    height: '100%',
-    borderRadius: 2,
+  seeMoreText: {
+    fontSize: 13,
+    fontFamily: 'DMSans-SemiBold',
   },
 
-  // Dosing Calculators
-  calcRow: {
+  // ── Max Your Stack CTA (bottom banner) ───────────────────────────────────
+  maxStackCTA: {
+    borderRadius: BorderRadius.lg,
+    padding: 24,
+    alignItems: 'center',
+  },
+  maxStackCTALabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: 'rgba(0,0,0,0.40)',
+    letterSpacing: 1.5,
+    marginBottom: 6,
+  },
+  maxStackCTATitle: {
+    fontSize: 26,
+    fontFamily: 'Playfair-Black',
+    color: '#fff',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  maxStackCTASub: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.75)',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  maxStackCTABtn: {
     flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: Spacing.lg,
-  },
-  calcCard: {
-    flex: 1,
-    borderRadius: BorderRadius.md,
-    overflow: 'hidden',
-  },
-  calcCardGrad: {
-    paddingVertical: 18,
-    paddingHorizontal: 10,
     alignItems: 'center',
     gap: 6,
-    borderRadius: BorderRadius.md,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
   },
-  calcCardTitle: {
-    fontSize: FontSizes.sm,
+  maxStackCTABtnText: {
+    fontSize: 15,
     fontWeight: '700',
-    color: '#fff',
-    textAlign: 'center',
+    color: '#2D2D2D',
   },
-  calcCardSub: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.7)',
-    textAlign: 'center',
+
+  // ── FAB ─────────────────────────────────────────────────────────────────
+  fabOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 50,
+  },
+  fabOverlayBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    height: 52,
+    borderRadius: 26,
+    paddingLeft: 16,
+    paddingRight: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 60,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  fabLabel: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'DMSans-Bold',
+    marginLeft: 6,
+    overflow: 'hidden',
+  },
+  fabMenuItem: {
+    position: 'absolute',
+    right: 20,
+    bottom: 46, // just above the FAB (20 + 52/2 = 46)
+    zIndex: 55,
+    alignItems: 'flex-end',
+  },
+  fabMenuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  fabMenuLabel: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginRight: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  fabMenuLabelText: {
+    fontSize: 14,
+    fontFamily: 'DMSans-SemiBold',
+  },
+  fabMenuIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4,
   },
 });

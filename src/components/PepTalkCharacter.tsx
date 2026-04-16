@@ -81,7 +81,7 @@ export function PepTalkCharacter({
   const isAvatar = variant === 'avatar';
   const s = isMini ? Math.min(size, 28) : isAvatar ? Math.min(size, 36) : size;
   const half = s / 2;
-  const glowC = glowColor ?? '#3B82F6';
+  const glowC = glowColor ?? '#F8A97A';
 
   // Molecule node sizes relative to container
   const big = s * 0.28;
@@ -129,7 +129,7 @@ export function PepTalkCharacter({
 
       {/* Main gradient circle */}
       <LinearGradient
-        colors={['#3B82F6', '#06B6D4']}
+        colors={['#F8A97A', '#F8A97A']}
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.8, y: 1 }}
         style={[styles.circle, { width: s, height: s, borderRadius: half }]}
@@ -139,11 +139,11 @@ export function PepTalkCharacter({
           {/* Center node */}
           <Circle cx="50" cy="45" r={(big / s) * 100} fill="rgba(255,255,255,0.9)" />
           {/* Top-right node */}
-          <Circle cx="72" cy="28" r={(med / s) * 100} fill="rgba(255,255,255,0.7)" />
+          <Circle cx="72" cy="28" r={(med / s) * 100} fill="rgba(0,0,0,0.50)" />
           {/* Bottom-left node */}
-          <Circle cx="32" cy="68" r={(med / s) * 100} fill="rgba(255,255,255,0.65)" />
+          <Circle cx="32" cy="68" r={(med / s) * 100} fill="rgba(0,0,0,0.45)" />
           {/* Small accent bubble */}
-          <Circle cx="68" cy="65" r={(sm / s) * 100} fill="rgba(255,255,255,0.5)" />
+          <Circle cx="68" cy="65" r={(sm / s) * 100} fill="rgba(0,0,0,0.35)" />
           {/* Tiny sparkle */}
           <Circle cx="25" cy="35" r={(sm / s) * 80} fill="rgba(103,232,249,0.6)" />
         </Svg>
@@ -174,7 +174,7 @@ export function PepTalkCharacter({
                 borderRadius: 2.5,
                 bottom: 8,
                 left: s * 0.1,
-                backgroundColor: '#06B6D450',
+                backgroundColor: '#F8A97A50',
               },
             ]}
           />
@@ -187,7 +187,7 @@ export function PepTalkCharacter({
                 borderRadius: 3,
                 top: s * 0.6,
                 right: 0,
-                backgroundColor: '#67E8F940',
+                backgroundColor: '#FFBF8240',
               },
             ]}
           />
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   circle: {
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3B82F6',
+    shadowColor: '#F8A97A',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 12,

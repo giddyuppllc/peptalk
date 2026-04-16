@@ -21,10 +21,10 @@ const TAB_CONFIG: TabConfig[] = [
     activeIcon: 'home',
   },
   {
-    name: 'calendar',
-    title: 'Calendar',
-    icon: 'calendar-outline',
-    activeIcon: 'calendar',
+    name: 'nutrition',
+    title: 'Nutrition',
+    icon: 'nutrition-outline',
+    activeIcon: 'nutrition',
   },
   {
     name: 'peptalk',
@@ -33,16 +33,16 @@ const TAB_CONFIG: TabConfig[] = [
     activeIcon: 'chatbubbles',
   },
   {
-    name: 'my-stacks',
-    title: 'Stacks',
-    icon: 'layers-outline',
-    activeIcon: 'layers',
+    name: 'workouts',
+    title: 'Workouts',
+    icon: 'barbell-outline',
+    activeIcon: 'barbell',
   },
   {
-    name: 'profile',
-    title: 'Profile',
-    icon: 'person-outline',
-    activeIcon: 'person',
+    name: 'my-stacks',
+    title: 'Peptides',
+    icon: 'flask-outline',
+    activeIcon: 'flask',
   },
 ];
 
@@ -52,7 +52,7 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#14b8a6',
+        tabBarActiveTintColor: t.primary,
         tabBarInactiveTintColor: t.textSecondary,
         tabBarStyle: [styles.tabBar, {
           backgroundColor: t.tabBar,
@@ -84,23 +84,21 @@ export default function TabsLayout() {
       <Tabs.Screen name="stack-builder" options={{ href: null }} />
       <Tabs.Screen name="check-in" options={{ href: null }} />
       <Tabs.Screen name="feed" options={{ href: null }} />
+      <Tabs.Screen name="calendar" options={{ href: null }} />
+      <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: '#0a1018',
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    borderTopColor: 'rgba(0,0,0,0.06)',
     paddingBottom: 6,
     paddingTop: 8,
     height: 65,
     elevation: 0,
-    shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: -4 },
   },
   tabBarLabel: {
     fontSize: 10,

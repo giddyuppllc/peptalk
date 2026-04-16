@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import {
   View,
   Text,
@@ -79,7 +80,7 @@ function ProgressRing({
           height: size,
           borderRadius: size / 2,
           borderWidth: strokeWidth,
-          borderColor: 'rgba(255,255,255,0.06)',
+          borderColor: 'rgba(0,0,0,0.05)',
         }}
       />
       {/* Filled portion - simplified arc using border trick */}
@@ -108,10 +109,10 @@ function ProgressRing({
 // Tier Badge
 // ---------------------------------------------------------------------------
 const TIER_CONFIG: Record<string, { label: string; colors: { dark: [string, string]; light: [string, string] }; icon: string }> = {
-  free: { label: 'Free', colors: { dark: ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)'], light: ['#d1d5db', '#9ca3af'] }, icon: 'person-outline' },
-  starter: { label: 'Starter', colors: { dark: ['#3B82F6', '#06B6D4'], light: ['#3B82F6', '#06B6D4'] }, icon: 'rocket-outline' },
+  free: { label: 'Free', colors: { dark: ['rgba(0,0,0,0.08)', 'rgba(0,0,0,0.04)'], light: ['#d1d5db', '#6B7280'] }, icon: 'person-outline' },
+  starter: { label: 'Starter', colors: { dark: ['#F8A97A', '#F8A97A'], light: ['#F8A97A', '#F8A97A'] }, icon: 'rocket-outline' },
   pro: { label: 'Pro', colors: { dark: [Colors.rose, Colors.roseDark], light: [Colors.rose, Colors.roseDark] }, icon: 'star' },
-  elite: { label: 'Elite', colors: { dark: ['#8B5CF6', '#EC4899'], light: ['#8B5CF6', '#EC4899'] }, icon: 'diamond' },
+  elite: { label: 'Elite', colors: { dark: ['#D4A853', '#EC4899'], light: ['#D4A853', '#EC4899'] }, icon: 'diamond' },
 };
 
 function TierBadge({ tier }: { tier: string }) {
@@ -248,12 +249,48 @@ function LoginForm() {
 // User Profile
 // ---------------------------------------------------------------------------
 function UserProfile() {
-  const { user, logout } = useAuthStore();
+  const { user, logout, setAvatar } = useAuthStore();
   const { tier } = useSubscriptionStore();
   const t = useTheme();
   const themeMode = useThemeStore((s) => s.mode);
   const setThemeMode = useThemeStore((s) => s.setMode);
   const darkMode = t.isDark;
+
+  const pickAvatar = useCallback(async () => {
+    Alert.alert('Profile Photo', 'Choose a photo', [
+      {
+        text: 'Take Photo',
+        onPress: async () => {
+          const perm = await ImagePicker.requestCameraPermissionsAsync();
+          if (!perm.granted) { Alert.alert('Camera permission required'); return; }
+          const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+          if (!result.canceled && result.assets[0]) {
+            setAvatar(result.assets[0].uri);
+          }
+        },
+      },
+      {
+        text: 'Choose from Library',
+        onPress: async () => {
+          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!perm.granted) { Alert.alert('Photo library permission required'); return; }
+          const result = await ImagePicker.launchImageLibraryAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+          if (!result.canceled && result.assets[0]) {
+            setAvatar(result.assets[0].uri);
+          }
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }, [setAvatar]);
 
   if (!user) return null;
 
@@ -261,33 +298,28 @@ function UserProfile() {
     <View>
       {/* User Info Card */}
       <GlassCard variant="elevated" style={styles.profileCard}>
-        {/* Avatar with gradient border */}
-        <View style={styles.avatarContainer}>
+        {/* Avatar with gradient border — tappable to change photo */}
+        <TouchableOpacity style={styles.avatarContainer} onPress={pickAvatar} activeOpacity={0.8}>
           <LinearGradient
-            colors={[Colors.rose, '#c98a84', Colors.pepTeal]}
+            colors={[t.primary, t.secondary, t.accent]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.avatarGradientRing}
           >
-            <Image
-              source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&q=80' }}
-              style={[styles.avatar, { backgroundColor: t.bg }]}
-              defaultSource={undefined}
-            />
+            {user.avatarUri ? (
+              <Image source={{ uri: user.avatarUri }} style={[styles.avatar, { backgroundColor: t.bg }]} />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' }]}>
+                <Ionicons name="person" size={36} color={t.primary} />
+              </View>
+            )}
           </LinearGradient>
-          {user.isPro && (
-            <View style={styles.proBadgeWrap}>
-              <LinearGradient
-                colors={[Colors.rose, Colors.roseDark]}
-                style={styles.proBadge}
-              >
-                <Text style={styles.proText}>PRO</Text>
-              </LinearGradient>
-            </View>
-          )}
-        </View>
+          <View style={styles.avatarEditBadge}>
+            <Ionicons name="camera" size={12} color="#fff" />
+          </View>
+        </TouchableOpacity>
 
-        <Text style={[styles.userName, { color: t.text }]}>{user.name ?? 'Researcher'}</Text>
+        <Text style={[styles.userName, { color: t.text }]}>{[user.firstName, user.lastName].filter(Boolean).join(' ') || 'Researcher'}</Text>
         <Text style={[styles.userEmail, { color: t.textSecondary }]}>{user.email}</Text>
 
         {/* Subscription Badge */}
@@ -342,39 +374,15 @@ function UserProfile() {
               value={user.isPro}
               onValueChange={() => {}}
               trackColor={{
-                false: 'rgba(255,255,255,0.12)',
+                false: 'rgba(0,0,0,0.08)',
                 true: 'rgba(227, 167, 161, 0.4)',
               }}
-              thumbColor={user.isPro ? '#e3a7a1' : '#9ca3af'}
+              thumbColor={user.isPro ? '#e3a7a1' : '#6B7280'}
             />
           </View>
         </GlassCard>
 
-        {/* Dark Mode Toggle */}
-        <GlassCard style={styles.settingCard}>
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(199, 215, 230, 0.12)' }]}>
-                <Ionicons name="moon-outline" size={18} color="#c7d7e6" />
-              </View>
-              <View style={styles.settingTextContainer}>
-                <Text style={[styles.settingTitle, { color: t.text }]}>Dark Mode</Text>
-                <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
-                  Toggle dark/light appearance
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={darkMode}
-              onValueChange={(val) => setThemeMode(val ? 'dark' : 'light')}
-              trackColor={{
-                false: 'rgba(0,0,0,0.12)',
-                true: 'rgba(199, 215, 230, 0.4)',
-              }}
-              thumbColor={darkMode ? '#c7d7e6' : '#9ca3af'}
-            />
-          </View>
-        </GlassCard>
+        {/* Dark Mode removed — app uses gender-based light themes only */}
       </View>
 
       {/* Logout Button */}
@@ -499,10 +507,10 @@ function ResearchProfileCard() {
             value={profile.acceptedSafety}
             onValueChange={handleSafetyToggle}
             trackColor={{
-              false: 'rgba(255,255,255,0.12)',
+              false: 'rgba(0,0,0,0.08)',
               true: 'rgba(240, 214, 138, 0.4)',
             }}
-            thumbColor={profile.acceptedSafety ? '#f0d68a' : '#9ca3af'}
+            thumbColor={profile.acceptedSafety ? '#f0d68a' : '#6B7280'}
           />
         </View>
 
@@ -522,10 +530,10 @@ function ResearchProfileCard() {
             value={profile.dataShareConsent}
             onValueChange={handleShareToggle}
             trackColor={{
-              false: 'rgba(255,255,255,0.12)',
+              false: 'rgba(0,0,0,0.08)',
               true: 'rgba(199, 215, 230, 0.4)',
             }}
-            thumbColor={profile.dataShareConsent ? '#c7d7e6' : '#9ca3af'}
+            thumbColor={profile.dataShareConsent ? '#c7d7e6' : '#6B7280'}
           />
         </View>
       </GlassCard>
@@ -679,9 +687,9 @@ function QuickLinksSection() {
   const t = useTheme();
 
   const links = [
-    { icon: 'document-text-outline' as const, label: 'Share Health Report', route: '/health-report' as const, color: '#3b82f6', desc: 'Generate and share with your provider' },
+    { icon: 'document-text-outline' as const, label: 'Share Health Report', route: '/health-report' as const, color: '#F8A97A', desc: 'Generate and share with your provider' },
     { icon: 'download-outline' as const, label: 'Export My Data', route: '/health-report' as const, color: Colors.pepTeal, desc: 'Download your wellness journal' },
-    { icon: 'book-outline' as const, label: 'My Journal', route: '/journal' as const, color: '#f59e0b', desc: 'View and manage journal entries' },
+    { icon: 'book-outline' as const, label: 'My Journal', route: '/journal' as const, color: '#FFBF82', desc: 'View and manage journal entries' },
     { icon: 'nutrition-outline' as const, label: 'Nutritionist Consultation', route: '/nutritionist' as const, color: '#10b981', desc: 'Connect with a nutrition expert' },
   ];
 
@@ -697,7 +705,7 @@ function QuickLinksSection() {
           onPress={() => router.push(links[0].route)}
         >
           <LinearGradient
-            colors={['#3b82f6', '#2563eb']}
+            colors={['#F8A97A', '#E8885A']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={actionStyles.gradient}
@@ -881,8 +889,8 @@ function NotificationSettings() {
           <Switch
             value={notifEnabled}
             onValueChange={handleToggleEnabled}
-            trackColor={{ false: 'rgba(255,255,255,0.12)', true: 'rgba(199, 215, 230, 0.4)' }}
-            thumbColor={notifEnabled ? '#c7d7e6' : '#9ca3af'}
+            trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(199, 215, 230, 0.4)' }}
+            thumbColor={notifEnabled ? '#c7d7e6' : '#6B7280'}
           />
         </View>
 
@@ -903,9 +911,9 @@ function NotificationSettings() {
             value={preferences.dailyCheckInReminder && notifEnabled}
             onValueChange={handleToggleCheckIn}
             disabled={!notifEnabled}
-            trackColor={{ false: 'rgba(255,255,255,0.12)', true: 'rgba(185, 203, 182, 0.4)' }}
+            trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(185, 203, 182, 0.4)' }}
             thumbColor={
-              preferences.dailyCheckInReminder && notifEnabled ? '#b9cbb6' : '#9ca3af'
+              preferences.dailyCheckInReminder && notifEnabled ? '#b9cbb6' : '#6B7280'
             }
           />
         </View>
@@ -927,9 +935,9 @@ function NotificationSettings() {
             value={preferences.doseReminders && notifEnabled}
             onValueChange={setDoseReminders}
             disabled={!notifEnabled}
-            trackColor={{ false: 'rgba(255,255,255,0.12)', true: 'rgba(227, 167, 161, 0.4)' }}
+            trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(227, 167, 161, 0.4)' }}
             thumbColor={
-              preferences.doseReminders && notifEnabled ? '#e3a7a1' : '#9ca3af'
+              preferences.doseReminders && notifEnabled ? '#e3a7a1' : '#6B7280'
             }
           />
         </View>
@@ -940,7 +948,7 @@ function NotificationSettings() {
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
             <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(245, 158, 11, 0.12)' }]}>
-              <Ionicons name="barbell-outline" size={18} color="#f59e0b" />
+              <Ionicons name="barbell-outline" size={18} color="#FFBF82" />
             </View>
             <View style={styles.settingTextContainer}>
               <Text style={[styles.settingTitle, { color: t.text }]}>Workout Reminders</Text>
@@ -953,9 +961,9 @@ function NotificationSettings() {
             value={preferences.workoutReminderEnabled && notifEnabled}
             onValueChange={handleToggleWorkout}
             disabled={!notifEnabled}
-            trackColor={{ false: 'rgba(255,255,255,0.12)', true: 'rgba(245, 158, 11, 0.4)' }}
+            trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(245, 158, 11, 0.4)' }}
             thumbColor={
-              preferences.workoutReminderEnabled && notifEnabled ? '#f59e0b' : '#9ca3af'
+              preferences.workoutReminderEnabled && notifEnabled ? '#FFBF82' : '#6B7280'
             }
           />
         </View>
@@ -1002,9 +1010,9 @@ function NotificationSettings() {
             value={preferences.mealRemindersEnabled && notifEnabled}
             onValueChange={handleToggleMeals}
             disabled={!notifEnabled}
-            trackColor={{ false: 'rgba(255,255,255,0.12)', true: 'rgba(16, 185, 129, 0.4)' }}
+            trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(16, 185, 129, 0.4)' }}
             thumbColor={
-              preferences.mealRemindersEnabled && notifEnabled ? '#10b981' : '#9ca3af'
+              preferences.mealRemindersEnabled && notifEnabled ? '#10b981' : '#6B7280'
             }
           />
         </View>
@@ -1042,7 +1050,7 @@ function NotificationSettings() {
         <View style={[styles.settingRow, { marginBottom: 0 }]}>
           <View style={styles.settingInfo}>
             <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(59, 130, 246, 0.12)' }]}>
-              <Ionicons name="stats-chart-outline" size={18} color="#3b82f6" />
+              <Ionicons name="stats-chart-outline" size={18} color="#F8A97A" />
             </View>
             <View style={styles.settingTextContainer}>
               <Text style={[styles.settingTitle, { color: t.text }]}>Weekly Health Report</Text>
@@ -1055,9 +1063,9 @@ function NotificationSettings() {
             value={preferences.weeklyReportEnabled && notifEnabled}
             onValueChange={handleToggleWeeklyReport}
             disabled={!notifEnabled}
-            trackColor={{ false: 'rgba(255,255,255,0.12)', true: 'rgba(59, 130, 246, 0.4)' }}
+            trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(59, 130, 246, 0.4)' }}
             thumbColor={
-              preferences.weeklyReportEnabled && notifEnabled ? '#3b82f6' : '#9ca3af'
+              preferences.weeklyReportEnabled && notifEnabled ? '#F8A97A' : '#6B7280'
             }
           />
         </View>
@@ -1143,18 +1151,18 @@ const linkStyles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
   desc: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: '#6B7280',
     marginTop: 1,
   },
   legalSection: {
     marginTop: Spacing.lg,
     paddingTop: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: 'rgba(0,0,0,0.05)',
     alignItems: 'center',
   },
   legalRow: {
@@ -1171,15 +1179,15 @@ const linkStyles = StyleSheet.create({
   },
   legalDivider: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.15)',
+    color: 'rgba(0,0,0,0.10)',
   },
   privacyText: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   versionText: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.2)',
+    color: 'rgba(0,0,0,0.12)',
     marginTop: 10,
     letterSpacing: 0.5,
   },
@@ -1256,61 +1264,127 @@ const deleteStyles = StyleSheet.create({
 // ---------------------------------------------------------------------------
 // Main Screen
 // ---------------------------------------------------------------------------
+
+const profileStyles = StyleSheet.create({
+  container: { flex: 1 },
+  scroll: { paddingHorizontal: Spacing.lg, paddingBottom: 40 },
+  pageTitle: { fontSize: 32, fontWeight: '900', letterSpacing: -0.5, color: '#2D2D2D', marginTop: 12, marginBottom: 20 },
+  section: { marginBottom: 20 },
+  sectionTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 8, marginLeft: 4 },
+  card: { borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, gap: 12 },
+  rowLabel: { flex: 1, fontSize: 15, fontWeight: '500' },
+  divider: { height: 1, marginLeft: 48 },
+  settingRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, gap: 12 },
+  settingLabel: { flex: 1, fontSize: 15, fontWeight: '500' },
+  signOutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, marginTop: 8 },
+  signOutText: { fontSize: 15, fontWeight: '600', color: '#ef4444' },
+  version: { fontSize: 12, textAlign: 'center', marginTop: 16 },
+});
+
+// Simple row component for profile menu items
+function ProfileRow({ icon, label, onPress, color }: { icon: string; label: string; onPress: () => void; color: string }) {
+  return (
+    <TouchableOpacity style={profileStyles.row} onPress={onPress} activeOpacity={0.6}>
+      <Ionicons name={icon as any} size={20} color={color} />
+      <Text style={[profileStyles.rowLabel, { color }]}>{label}</Text>
+      <Ionicons name="chevron-forward" size={16} color="#6b7280" />
+    </TouchableOpacity>
+  );
+}
+
 export default function ProfileScreen() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, logout } = useAuthStore();
   const t = useTheme();
+  const router = useRouter();
+  const themeMode = useThemeStore((s) => s.mode);
+  const setThemeMode = useThemeStore((s) => s.setMode);
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete My Data',
+      'This will permanently remove all health data, dose logs, check-ins, and chat history from this device. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Everything',
+          style: 'destructive',
+          onPress: () => {
+            // Clear all stores
+            useOnboardingStore.getState().reset();
+            useHealthProfileStore.getState().resetProfile();
+            Alert.alert('Done', 'All data has been deleted.');
+          },
+        },
+      ],
+    );
+  };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
+    <SafeAreaView style={[profileStyles.container, { backgroundColor: t.bg }]} edges={['top']}>
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        contentContainerStyle={profileStyles.scroll}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerRow}>
-            <Text style={[styles.title, { color: t.text }]}>Profile</Text>
-            <View style={styles.headerIconWrap}>
-              <Ionicons name="person" size={20} color={Colors.rose} />
+        {/* ── Header ── */}
+        <Text style={[profileStyles.pageTitle, { color: t.text }]}>Profile</Text>
+
+        {/* ── Auth: Login or User Card ── */}
+        {isAuthenticated ? <UserProfile /> : <LoginForm />}
+
+        {/* ── Account Section ── */}
+        {isAuthenticated && (
+          <View style={profileStyles.section}>
+            <Text style={[profileStyles.sectionTitle, { color: t.textSecondary }]}>ACCOUNT</Text>
+            <View style={[profileStyles.card, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
+              <ProfileRow icon="person-outline" label="Edit Profile" onPress={() => router.push('/onboarding?edit=true' as any)} color={t.text} />
+              <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+              <ProfileRow icon="body-outline" label="Health Profile" onPress={() => router.push('/health-profile')} color={t.text} />
+              <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+              <ProfileRow icon="diamond-outline" label="Subscription" onPress={() => router.push('/subscription')} color={t.text} />
+              <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+              <ProfileRow icon="document-text-outline" label="Health Report" onPress={() => router.push('/health-report' as any)} color={t.text} />
             </View>
+          </View>
+        )}
+
+        {/* ── Settings Section ── */}
+        <View style={profileStyles.section}>
+          <Text style={[profileStyles.sectionTitle, { color: t.textSecondary }]}>SETTINGS</Text>
+          <View style={[profileStyles.card, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
+            <ProfileRow icon="notifications-outline" label="Notifications" onPress={() => router.push('/notification-settings' as any)} color={t.text} />
           </View>
         </View>
 
-        {/* Content */}
-        {isAuthenticated ? <UserProfile /> : <LoginForm />}
-
-        <ResearchProfileCard />
-
-        <HealthProfileCard />
-
-        <QuickLinksSection />
-
-        <NotificationSettings />
-
-        {/* Delete My Data */}
-        <DeleteDataSection />
-
-        <LegalLinks />
-
-        {/* Disclaimer and Branding */}
-        <View style={styles.footerBranding}>
-          <GlassCard style={styles.brandFooterCard}>
-            <LinearGradient
-              colors={[Colors.rose, Colors.roseDark]}
-              style={styles.brandFooterIcon}
-            >
-              <Ionicons name="flask" size={18} color="#fff" />
-            </LinearGradient>
-            <Text style={[styles.brandFooterName, { color: t.text }]}>PepTalk</Text>
-            <Text style={[styles.brandFooterTagline, { color: t.textSecondary }]}>
-              Evidence-driven peptide research tools
-            </Text>
-          </GlassCard>
+        {/* ── Data Section ── */}
+        <View style={profileStyles.section}>
+          <Text style={[profileStyles.sectionTitle, { color: t.textSecondary }]}>DATA</Text>
+          <View style={[profileStyles.card, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
+            <ProfileRow icon="download-outline" label="Export My Data" onPress={() => router.push('/health-report' as any)} color={t.text} />
+            <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+            <ProfileRow icon="trash-outline" label="Delete My Data" onPress={handleDelete} color="#ef4444" />
+          </View>
         </View>
 
-        <Disclaimer />
+        {/* ── Legal ── */}
+        <View style={profileStyles.section}>
+          <View style={[profileStyles.card, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
+            <ProfileRow icon="shield-outline" label="Privacy Policy" onPress={() => router.push('/privacy')} color={t.text} />
+            <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+            <ProfileRow icon="document-outline" label="Terms of Service" onPress={() => router.push('/terms')} color={t.text} />
+          </View>
+        </View>
+
+        {/* ── Sign Out ── */}
+        {isAuthenticated && (
+          <TouchableOpacity style={profileStyles.signOutBtn} onPress={logout} activeOpacity={0.7}>
+            <Ionicons name="log-out-outline" size={18} color="#ef4444" />
+            <Text style={profileStyles.signOutText}>Sign Out</Text>
+          </TouchableOpacity>
+        )}
+
+        <Text style={[profileStyles.version, { color: t.textSecondary }]}>PepTalk v1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -1465,6 +1539,19 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.rose,
   },
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#2D2D2D',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
   proBadgeWrap: {
     position: 'absolute',
     bottom: 0,
@@ -1565,7 +1652,7 @@ const styles = StyleSheet.create({
   },
   consentDivider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     marginVertical: Spacing.sm,
   },
   profileRow: {
@@ -1603,7 +1690,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(199, 215, 230, 0.2)',
     paddingVertical: 10,
     gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: 'rgba(0,0,0,0.03)',
   },
   profileActionText: {
     fontSize: FontSizes.xs,
@@ -1707,7 +1794,7 @@ const healthStyles = StyleSheet.create({
     marginBottom: Spacing.md,
     paddingBottom: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   progressInfo: {
     flex: 1,
@@ -1721,7 +1808,7 @@ const healthStyles = StyleSheet.create({
   progressTrack: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.06)',
     overflow: 'hidden',
   },
   progressFill: {
@@ -1771,9 +1858,9 @@ const notifStyles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(0,0,0,0.08)',
   },
   dayChipActive: {
     backgroundColor: 'rgba(245, 158, 11, 0.2)',
@@ -1782,10 +1869,10 @@ const notifStyles = StyleSheet.create({
   dayChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: '#6B7280',
   },
   dayChipTextActive: {
-    color: '#f59e0b',
+    color: '#FFBF82',
   },
   mealList: {
     paddingHorizontal: 4,
@@ -1799,7 +1886,7 @@ const notifStyles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(0,0,0,0.03)',
   },
   mealLabel: {
     flex: 1,
@@ -1815,3 +1902,5 @@ const notifStyles = StyleSheet.create({
     textAlign: 'right',
   },
 });
+
+

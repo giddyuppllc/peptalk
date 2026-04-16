@@ -25,9 +25,9 @@ function getCategoryColor(category: ArticleCategory): string {
     case 'safety':       return '#e3a7a1';
     case 'production':   return '#c7d7e6';
     case 'testing':      return '#f0d68a';
-    case 'regulation':   return '#f59e0b';
+    case 'regulation':   return '#FFBF82';
     case 'delivery':     return '#06b6d4';
-    default:             return '#9ca3af';
+    default:             return '#6B7280';
   }
 }
 
@@ -61,7 +61,7 @@ export default function ArticleDetailScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.notFound}>
-          <Ionicons name="alert-circle-outline" size={48} color="#9ca3af" />
+          <Ionicons name="alert-circle-outline" size={48} color="#6B7280" />
           <Text style={styles.notFoundTitle}>Article Not Found</Text>
           <Text style={styles.notFoundSubtitle}>
             The requested article could not be found.
@@ -98,7 +98,7 @@ export default function ArticleDetailScreen() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={20} color="#e8e6e3" />
+          <Ionicons name="arrow-back" size={20} color="#2D2D2D" />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
 
@@ -188,7 +188,7 @@ export default function ArticleDetailScreen() {
 
         {/* Last Updated */}
         <View style={styles.updatedRow}>
-          <Ionicons name="time-outline" size={14} color="#9ca3af" />
+          <Ionicons name="time-outline" size={14} color="#6B7280" />
           <Text style={styles.updatedText}>
             Last updated {formatDate(article.lastUpdated)}
           </Text>
@@ -203,7 +203,7 @@ export default function ArticleDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1720',
+    backgroundColor: '#2D2D2D',
   },
   scrollView: {
     flex: 1,
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
 
   // ── Hero Image ───────────────────────────────────────────────
@@ -254,14 +254,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '800',
-    color: '#f7f2ec',
+    color: '#2D2D2D',
     letterSpacing: -0.5,
     marginBottom: 10,
     lineHeight: 32,
   },
   summary: {
     fontSize: 15,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 22,
     marginBottom: 24,
   },
@@ -273,12 +273,12 @@ const styles = StyleSheet.create({
   sectionHeading: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     marginBottom: 8,
   },
   sectionContent: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 22,
   },
 
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   relatedTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
   },
   pillsRow: {
     flexDirection: 'row',
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
   citationNumber: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#9ca3af',
+    color: '#6B7280',
     minWidth: 20,
   },
   citationContent: {
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   },
   citationText: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
     lineHeight: 18,
   },
   citationLink: {
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   },
   updatedText: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6B7280',
   },
 
   // ── Not Found ──────────────────────────────────────────────
@@ -374,12 +374,12 @@ const styles = StyleSheet.create({
   notFoundTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#e8e6e3',
+    color: '#2D2D2D',
     marginTop: 16,
   },
   notFoundSubtitle: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6B7280',
     textAlign: 'center',
     marginTop: 6,
   },
@@ -393,6 +393,6 @@ const styles = StyleSheet.create({
   backButtonPrimaryText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0f1720',
+    color: '#2D2D2D',
   },
 });

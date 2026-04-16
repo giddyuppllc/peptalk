@@ -96,7 +96,7 @@ export function BodyModel({ selectedRegion, onSelectRegion, regionColors }: Body
           <View
             style={[
               styles.selectedGlow,
-              { backgroundColor: regionColors[selectedRegion] || '#3B82F6' },
+              { backgroundColor: regionColors[selectedRegion] || '#F8A97A' },
             ]}
           />
         )}
@@ -105,8 +105,8 @@ export function BodyModel({ selectedRegion, onSelectRegion, regionColors }: Body
       <Svg width={SVG_W} height={SVG_H} viewBox="0 0 300 570" style={styles.svg}>
         <Defs>
           <RadialGradient id="bodyGlow" cx="50%" cy="50%" r="50%">
-            <Stop offset="0%" stopColor="#3B82F6" stopOpacity="0.15" />
-            <Stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
+            <Stop offset="0%" stopColor="#F8A97A" stopOpacity="0.15" />
+            <Stop offset="100%" stopColor="#F8A97A" stopOpacity="0" />
           </RadialGradient>
         </Defs>
 
@@ -117,8 +117,8 @@ export function BodyModel({ selectedRegion, onSelectRegion, regionColors }: Body
         <G opacity={0.15}>
           <Path
             d="M150,10 C170,10 180,30 180,55 C180,75 170,95 163,105 L165,130 L225,140 C240,145 255,160 260,180 L270,240 C272,260 265,275 258,285 L250,295 C245,298 240,295 238,290 L225,250 L215,200 L205,180 L200,200 L190,285 L190,320 C190,340 185,345 180,350 L195,420 C200,460 200,500 195,530 C192,545 185,560 175,565 L125,565 C115,560 108,545 105,530 C100,500 100,460 105,420 L120,350 C115,345 110,340 110,320 L110,285 L100,200 L95,180 L85,200 L75,250 L62,290 C60,295 55,298 50,295 L42,285 C35,275 28,260 30,240 L40,180 C45,160 60,145 75,140 L137,130 L135,105 C128,95 120,75 120,55 C120,30 130,10 150,10 Z"
-            fill="rgba(255,255,255,0.06)"
-            stroke="rgba(255,255,255,0.12)"
+            fill="rgba(0,0,0,0.05)"
+            stroke="rgba(0,0,0,0.08)"
             strokeWidth="1"
           />
         </G>
@@ -126,7 +126,7 @@ export function BodyModel({ selectedRegion, onSelectRegion, regionColors }: Body
         {/* Tappable regions */}
         {Object.entries(REGION_PATHS).map(([id, { d }]) => {
           const isSelected = selectedRegion === id;
-          const color = regionColors[id] || '#3B82F6';
+          const color = regionColors[id] || '#F8A97A';
 
           return (
             <G key={id}>
@@ -145,8 +145,8 @@ export function BodyModel({ selectedRegion, onSelectRegion, regionColors }: Body
               {/* Visible region */}
               <Path
                 d={d}
-                fill={isSelected ? `${color}40` : 'rgba(255,255,255,0.04)'}
-                stroke={isSelected ? color : 'rgba(255,255,255,0.15)'}
+                fill={isSelected ? `${color}40` : 'rgba(0,0,0,0.03)'}
+                stroke={isSelected ? color : 'rgba(0,0,0,0.10)'}
                 strokeWidth={isSelected ? 2 : 1}
                 onPress={() => {
                   tapLight();

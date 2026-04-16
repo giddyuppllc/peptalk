@@ -432,9 +432,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: FontSizes.xl,
-    fontWeight: '800',
-    color: Colors.darkText,
+    fontSize: 32,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    color: '#2D2D2D',
   },
   scroll: { paddingBottom: 40 },
   section: {
@@ -472,7 +473,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: BorderRadius.sm,
     paddingHorizontal: 14,
     height: 44,
@@ -489,7 +490,7 @@ const styles = StyleSheet.create({
   // Toggle
   toggleGroup: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: BorderRadius.sm,
     overflow: 'hidden',
   },
@@ -518,7 +519,7 @@ const styles = StyleSheet.create({
   freqBtn: {
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: BorderRadius.sm,
     borderWidth: 1,
     borderColor: 'transparent',
@@ -543,7 +544,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   resultLabel: {
     fontSize: FontSizes.md,
@@ -619,7 +620,7 @@ const styles = StyleSheet.create({
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: BorderRadius.sm,
     marginHorizontal: Spacing.lg,
     marginBottom: Spacing.md,
@@ -651,7 +652,7 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     marginHorizontal: Spacing.lg,
   },
 

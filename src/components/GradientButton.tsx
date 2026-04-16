@@ -19,7 +19,7 @@ export function GradientButton({
   colors,
   style,
 }: GradientButtonProps) {
-  const c = colors ?? ['#3B82F6', '#06B6D4'] as [string, string];
+  const c = colors ?? ['#F8A97A', '#F8A97A'] as [string, string];
   return (
     <AnimatedPress
       onPress={onPress}
