@@ -19,7 +19,6 @@
       "infoPlist": {
         "NSHealthShareUsageDescription": "PepTalk uses HealthKit to auto-fill your daily check-ins with steps, weight, heart rate, and sleep data.",
         "UIBackgroundModes": [
-          "remote-notification",
           "remote-notification"
         ],
         "ITSAppUsesNonExemptEncryption": false
