@@ -1353,7 +1353,7 @@ export default function ProfileScreen() {
         <View style={profileStyles.section}>
           <Text style={[profileStyles.sectionTitle, { color: t.textSecondary }]}>SETTINGS</Text>
           <View style={[profileStyles.card, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-            <ProfileRow icon="notifications-outline" label="Notifications" onPress={() => router.push('/notification-settings' as any)} color={t.text} />
+            <ProfileRow icon="notifications-outline" label="Notifications" onPress={() => {}} color={t.text} />
           </View>
         </View>
 

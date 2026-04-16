@@ -10,6 +10,8 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { User } from '../types';
 import { secureStorage } from '../services/secureStorage';
 import { supabase } from '../services/supabase';
+import { useSubscriptionStore } from './useSubscriptionStore';
+import { useOnboardingStore } from './useOnboardingStore';
 
 const db = supabase as any;
 
@@ -60,7 +62,6 @@ export const useAuthStore = create<AuthStore>()(
         const devAccount = DEV_EMAILS[_email];
 
         if (devAccount) {
-          const { useSubscriptionStore } = require('./useSubscriptionStore');
           useSubscriptionStore.getState().setTier(devAccount.tier as any);
 
           const appUser: User = {
@@ -105,7 +106,6 @@ export const useAuthStore = create<AuthStore>()(
           const tier = profile?.subscription_tier ?? 'free';
 
           // Sync subscription tier
-          const { useSubscriptionStore } = require('./useSubscriptionStore');
           useSubscriptionStore.getState().setTier(tier);
 
           const profileName = profile?.name ?? email.split('@')[0];
@@ -195,7 +195,6 @@ export const useAuthStore = create<AuthStore>()(
             .single();
 
           const tier = profile?.subscription_tier ?? 'free';
-          const { useSubscriptionStore } = require('./useSubscriptionStore');
           useSubscriptionStore.getState().setTier(tier);
 
           const profileName = profile?.name ?? '';
@@ -221,8 +220,6 @@ export const useAuthStore = create<AuthStore>()(
       logout: () => {
         db.auth.signOut().catch(() => {});
 
-        const { useOnboardingStore } = require('./useOnboardingStore');
-        const { useSubscriptionStore } = require('./useSubscriptionStore');
         try {
           useSubscriptionStore.getState().setTier('free');
           useOnboardingStore.getState().reset();

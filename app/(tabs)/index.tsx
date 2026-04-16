@@ -47,6 +47,7 @@ import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useMealStore } from '../../src/store/useMealStore';
 import { useStackStore } from '../../src/store/useStackStore';
 import { usePlanStore } from '../../src/store/usePlanStore';
+import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { getSegmentByProfile, getLayoutByGender } from '../../src/constants/segments';
 import { getEthnicityProfile } from '../../src/constants/ethnicityProfiles';
 import { getTestProfile } from '../../src/constants/testProfiles';
@@ -712,8 +713,7 @@ export default function DashboardScreen() {
   };
 
   // ── Subscription tier ──────────────────────────────────────────────────────
-  const { useSubscriptionStore } = require('../../src/store/useSubscriptionStore');
-  const tier = useSubscriptionStore((s: any) => s.tier) as string;
+  const tier = useSubscriptionStore((s) => s.tier) as string;
   const isPro = tier === 'pro';
   const isPlus = tier === 'plus' || isPro;
 

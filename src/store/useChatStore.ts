@@ -5,7 +5,7 @@ import { secureStorage } from '../services/secureStorage';
 import { useSubscriptionStore } from './useSubscriptionStore';
 
 const MAX_HISTORY = 200; // keep last 200 messages per chat
-const FREE_DAILY_MESSAGE_LIMIT = 0;
+const FREE_DAILY_MESSAGE_LIMIT = 10;
 
 const todayKey = (): string => {
   const d = new Date();
@@ -242,15 +242,13 @@ export const useChatStore = create<ChatStore>()(
         if (!state) return;
         if (!state.chats || state.chats.length === 0) {
           const fresh = makeEmptyChat();
-          state.chats = [fresh];
-          state.activeChatId = fresh.id;
-          state.messages = fresh.messages;
+          useChatStore.setState({ chats: [fresh], activeChatId: fresh.id, messages: fresh.messages });
           return;
         }
-        if (!state.activeChatId || !state.chats.find((c: Chat) => c.id === state.activeChatId)) {
-          state.activeChatId = state.chats[0].id;
-        }
-        state.messages = activeMessages(state.chats, state.activeChatId);
+        const activeChatId = (!state.activeChatId || !state.chats.find((c: Chat) => c.id === state.activeChatId))
+          ? state.chats[0].id
+          : state.activeChatId;
+        useChatStore.setState({ activeChatId, messages: activeMessages(state.chats, activeChatId) });
       },
     },
   ),
