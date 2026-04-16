@@ -17,13 +17,15 @@ import { Platform } from 'react-native';
 let Notifications: any = null;
 let Device: any = null;
 
-try {
-  Notifications = require('expo-notifications');
-} catch {}
-
-try {
-  Device = require('expo-device');
-} catch {}
+// expo-notifications plugin removed temporarily (provisioning profile needs Push capability).
+// Uncomment when APNs is configured in Apple Developer portal.
+// try {
+//   Notifications = require('expo-notifications');
+// } catch {}
+//
+// try {
+//   Device = require('expo-device');
+// } catch {}
 
 // ---------------------------------------------------------------------------
 // Availability check

@@ -47,7 +47,7 @@ import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useMealStore } from '../../src/store/useMealStore';
 import { useStackStore } from '../../src/store/useStackStore';
 import { usePlanStore } from '../../src/store/usePlanStore';
-import { getSegmentByProfile } from '../../src/constants/segments';
+import { getSegmentByProfile, getLayoutByGender } from '../../src/constants/segments';
 import { getEthnicityProfile } from '../../src/constants/ethnicityProfiles';
 import { getTestProfile } from '../../src/constants/testProfiles';
 import { PEPTIDES } from '../../src/data/peptides';
@@ -244,6 +244,12 @@ export default function DashboardScreen() {
   const segment = useMemo(
     () => getSegmentByProfile(effectiveGender, effectiveAgeRange),
     [effectiveGender, effectiveAgeRange],
+  );
+
+  // 2 UI layouts: male or female (age-specific content still via segment)
+  const layout = useMemo(
+    () => getLayoutByGender(effectiveGender),
+    [effectiveGender],
   );
 
   const ethnicityProfile = useMemo(
