@@ -6,6 +6,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
 import type { WorkoutLog, WorkoutLogSet } from '../types/fitness';
+import type { GeneratedWorkout } from '../services/workoutGenerator';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,6 +20,18 @@ interface ActiveProgram {
   completedDays: string[]; // day IDs
 }
 
+/** A user-generated workout saved for later — wraps a GeneratedWorkout with metadata */
+export interface SavedGeneratedWorkout {
+  id: string;
+  name: string;
+  goal: string;
+  daysPerWeek: number;
+  location: string;
+  level: string;
+  createdAt: string;
+  workout: GeneratedWorkout;
+}
+
 interface WorkoutState {
   /** Currently enrolled program */
   activeProgram: ActiveProgram | null;
@@ -26,6 +39,8 @@ interface WorkoutState {
   logs: WorkoutLog[];
   /** Is the user in a live workout? */
   inProgress: WorkoutLog | null;
+  /** User-generated custom workouts (from the generator sheet) */
+  savedGeneratedWorkouts: SavedGeneratedWorkout[];
 }
 
 interface ExerciseHistory {
@@ -56,6 +71,11 @@ interface WorkoutActions {
   finishWorkout: (rating?: 1 | 2 | 3 | 4 | 5, notes?: string, youtubeUrl?: string, workoutName?: string) => void;
   cancelWorkout: () => void;
 
+  // Generated workouts (custom from the generator sheet)
+  saveGeneratedWorkout: (meta: Omit<SavedGeneratedWorkout, 'id' | 'createdAt'>) => string;
+  deleteGeneratedWorkout: (id: string) => void;
+  getGeneratedWorkoutById: (id: string) => SavedGeneratedWorkout | null;
+
   // History & analytics
   getLogsByDate: (date: string) => WorkoutLog[];
   getLogsByProgram: (programId: string) => WorkoutLog[];
@@ -77,6 +97,34 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
       activeProgram: null,
       logs: [],
       inProgress: null,
+      savedGeneratedWorkouts: [],
+
+      // -----------------------------------------------------------------------
+      // Generated workouts
+      // -----------------------------------------------------------------------
+
+      saveGeneratedWorkout: (meta) => {
+        const id = `gwk-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const saved: SavedGeneratedWorkout = {
+          ...meta,
+          id,
+          createdAt: new Date().toISOString(),
+        };
+        set({
+          savedGeneratedWorkouts: [saved, ...get().savedGeneratedWorkouts],
+        });
+        return id;
+      },
+
+      deleteGeneratedWorkout: (id) => {
+        set({
+          savedGeneratedWorkouts: get().savedGeneratedWorkouts.filter((w) => w.id !== id),
+        });
+      },
+
+      getGeneratedWorkoutById: (id) => {
+        return get().savedGeneratedWorkouts.find((w) => w.id === id) ?? null;
+      },
 
       // -----------------------------------------------------------------------
       // Program enrollment
@@ -288,7 +336,7 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
       },
 
       clearAll: () =>
-        set({ activeProgram: null, logs: [], inProgress: null }),
+        set({ activeProgram: null, logs: [], inProgress: null, savedGeneratedWorkouts: [] }),
     }),
     {
       name: 'peptalk-workouts',
@@ -296,6 +344,7 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
       partialize: (state) => ({
         activeProgram: state.activeProgram,
         logs: state.logs,
+        savedGeneratedWorkouts: state.savedGeneratedWorkouts,
       }),
     },
   ),

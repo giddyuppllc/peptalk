@@ -124,6 +124,24 @@ export interface CustomMeal {
   updatedAt: string;
 }
 
+/** A saved meal "template" — a quick combo the user eats often */
+export interface MealTemplate {
+  id: string;
+  name: string;
+  /** Default meal type this template gets logged as */
+  defaultMealType: MealEntry['mealType'];
+  /** Pre-computed food entries (same shape as MealEntry.foods) */
+  foods: MealEntry['foods'];
+  /** Totals cached for fast list rendering */
+  totalCalories: number;
+  totalProteinGrams: number;
+  totalCarbsGrams: number;
+  totalFatGrams: number;
+  emoji?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PlannedMeal {
   id: string;
   date: string; // YYYY-MM-DD
@@ -151,6 +169,8 @@ interface MealState {
   foodCache: CachedFood[];
   /** User-created custom meals / recipes */
   customMeals: CustomMeal[];
+  /** Saved meal templates — quick "My Meals" combos */
+  mealTemplates: MealTemplate[];
 }
 
 interface MealActions {
@@ -200,6 +220,15 @@ interface MealActions {
   updateCustomMeal: (mealId: string, updates: Partial<CustomMeal>) => void;
   removeCustomMeal: (mealId: string) => void;
 
+  // Meal templates
+  addMealTemplate: (template: MealTemplate) => void;
+  updateMealTemplate: (id: string, updates: Partial<MealTemplate>) => void;
+  removeMealTemplate: (id: string) => void;
+  logMealTemplate: (id: string, date: string, mealType: MealEntry['mealType']) => void;
+
+  // Copy previous meal — copies a single logged meal from one date to another
+  copyMealToDate: (mealId: string, targetDate: string, targetMealType?: MealEntry['mealType']) => void;
+
   clearAll: () => void;
 }
 
@@ -231,6 +260,7 @@ export const useMealStore = create<MealState & MealActions>()(
       recentFoods: [],
       foodCache: [],
       customMeals: [],
+      mealTemplates: [],
 
       // -----------------------------------------------------------------------
       // Targets
@@ -428,6 +458,55 @@ export const useMealStore = create<MealState & MealActions>()(
         set({ customMeals: get().customMeals.filter((m) => m.id !== mealId) }),
 
       // -----------------------------------------------------------------------
+      // Meal templates (My Meals)
+      // -----------------------------------------------------------------------
+
+      addMealTemplate: (template) =>
+        set({ mealTemplates: [template, ...get().mealTemplates] }),
+
+      updateMealTemplate: (id, updates) =>
+        set({
+          mealTemplates: get().mealTemplates.map((t) =>
+            t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t,
+          ),
+        }),
+
+      removeMealTemplate: (id) =>
+        set({ mealTemplates: get().mealTemplates.filter((t) => t.id !== id) }),
+
+      logMealTemplate: (id, date, mealType) => {
+        const template = get().mealTemplates.find((t) => t.id === id);
+        if (!template) return;
+        const newMeal: MealEntry = {
+          id: `meal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          date,
+          mealType,
+          foods: template.foods.map((f) => ({ ...f })),
+          timestamp: new Date().toISOString(),
+        };
+        get().addMeal(newMeal);
+      },
+
+      // -----------------------------------------------------------------------
+      // Copy previous meal
+      // -----------------------------------------------------------------------
+
+      copyMealToDate: (mealId, targetDate, targetMealType) => {
+        const source = get().meals.find((m) => m.id === mealId);
+        if (!source) return;
+        const copy: MealEntry = {
+          id: `meal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          date: targetDate,
+          mealType: targetMealType ?? source.mealType,
+          foods: source.foods.map((f) => ({ ...f })),
+          quickLog: source.quickLog,
+          notes: source.notes,
+          timestamp: new Date().toISOString(),
+        };
+        get().addMeal(copy);
+      },
+
+      // -----------------------------------------------------------------------
       // Clear
       // -----------------------------------------------------------------------
 
@@ -441,6 +520,7 @@ export const useMealStore = create<MealState & MealActions>()(
           recentFoods: [],
           foodCache: [],
           customMeals: [],
+          mealTemplates: [],
         }),
     }),
     {
@@ -455,6 +535,7 @@ export const useMealStore = create<MealState & MealActions>()(
         recentFoods: state.recentFoods,
         foodCache: state.foodCache,
         customMeals: state.customMeals,
+        mealTemplates: state.mealTemplates,
       }),
     },
   ),

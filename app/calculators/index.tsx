@@ -39,7 +39,7 @@ export default function CalculatorsHubScreen() {
           onPress={() => router.push('/calculators/quick-dose')}
         >
           <LinearGradient
-            colors={['#F8A97A', '#F8A97A']}
+            colors={['#7ABED0', '#7ABED0']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={[styles.card, styles.primaryCard]}
@@ -70,7 +70,7 @@ export default function CalculatorsHubScreen() {
             style={[styles.card, { borderColor: t.glassBorder }]}
           >
             <View style={[styles.cardIcon, { backgroundColor: t.glass }]}>
-              <Ionicons name="calculator-outline" size={32} color={Colors.pepBlue} />
+              <Ionicons name="calculator-outline" size={32} color={Colors.iceMeltDeep} />
             </View>
             <View style={styles.cardContent}>
               <Text style={[styles.cardTitle, { color: t.text }]}>Dosing Calculator</Text>
@@ -95,7 +95,7 @@ export default function CalculatorsHubScreen() {
             style={[styles.card, { borderColor: t.glassBorder }]}
           >
             <View style={[styles.cardIcon, { backgroundColor: t.glass }]}>
-              <Ionicons name="flask-outline" size={32} color={Colors.pepTeal} />
+              <Ionicons name="flask-outline" size={32} color={Colors.iceMeltDeep} />
             </View>
             <View style={styles.cardContent}>
               <Text style={[styles.cardTitle, { color: t.text }]}>Reconstitution Calculator</Text>
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   primaryCard: {
     borderWidth: 0,
     marginBottom: Spacing.lg,
-    shadowColor: '#F8A97A',
+    shadowColor: '#7ABED0',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,

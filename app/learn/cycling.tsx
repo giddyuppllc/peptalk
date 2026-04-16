@@ -31,7 +31,7 @@ const CYCLE_GUIDES: CycleGuide[] = [
   {
     peptideClass: 'GH Secretagogues',
     icon: 'trending-up-outline',
-    color: '#F8A97A',
+    color: '#E89672',
     onPeriod: '5 days on / 2 days off',
     offPeriod: '8-12 weeks on, then 4-6 weeks off',
     reason: 'GHRH receptors desensitize with continuous stimulation. Cycling preserves pituitary sensitivity and natural GH pulsatility.',
@@ -58,7 +58,7 @@ const CYCLE_GUIDES: CycleGuide[] = [
   {
     peptideClass: 'Nootropics',
     icon: 'bulb-outline',
-    color: '#D4A853',
+    color: '#BADDCB',
     onPeriod: '10-20 days on',
     offPeriod: '10-20 days off',
     reason: 'BDNF and neurotransmitter receptor systems adapt to exogenous stimulation. Cycling prevents tolerance and preserves cognitive benefit.',
@@ -67,7 +67,7 @@ const CYCLE_GUIDES: CycleGuide[] = [
   {
     peptideClass: 'Longevity / Telomere',
     icon: 'infinite-outline',
-    color: '#F8A97A',
+    color: '#E89672',
     onPeriod: '10-20 days, twice yearly',
     offPeriod: '5-6 months between cycles',
     reason: 'Epithalon follows the original Khavinson protocol — short intense cycles stimulate telomerase, then the body maintains elevated activity for months.',
@@ -76,7 +76,7 @@ const CYCLE_GUIDES: CycleGuide[] = [
   {
     peptideClass: 'Metabolic / Fat Loss',
     icon: 'flame-outline',
-    color: '#FFBF82',
+    color: '#F4E9A7',
     onPeriod: '8-12 weeks',
     offPeriod: '4-8 weeks off',
     reason: 'Metabolic peptides can shift baseline metabolic rate. Cycling prevents metabolic adaptation and allows hormonal systems to re-equilibrate.',
@@ -85,7 +85,7 @@ const CYCLE_GUIDES: CycleGuide[] = [
   {
     peptideClass: 'Immune Support',
     icon: 'shield-outline',
-    color: '#F8A97A',
+    color: '#E89672',
     onPeriod: '2-4 weeks during illness or seasonally',
     offPeriod: 'Use as needed, not continuously',
     reason: 'Thymic peptides modulate T-cell function. Chronic use may lead to immune system over-stimulation. Short targeted cycles are preferred.',
@@ -137,7 +137,7 @@ export default function CyclingEducationScreen() {
             </View>
           </View>
           <View style={styles.scienceRow}>
-            <View style={[styles.scienceDot, { backgroundColor: '#FFBF82' }]} />
+            <View style={[styles.scienceDot, { backgroundColor: '#F4E9A7' }]} />
             <View style={styles.scienceContent}>
               <Text style={styles.scienceLabel}>Tachyphylaxis</Text>
               <Text style={styles.scienceText}>
@@ -157,7 +157,7 @@ export default function CyclingEducationScreen() {
             </View>
           </View>
           <View style={styles.scienceRow}>
-            <View style={[styles.scienceDot, { backgroundColor: '#F8A97A' }]} />
+            <View style={[styles.scienceDot, { backgroundColor: '#E89672' }]} />
             <View style={styles.scienceContent}>
               <Text style={styles.scienceLabel}>Gene Expression Concerns</Text>
               <Text style={styles.scienceText}>

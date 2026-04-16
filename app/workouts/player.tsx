@@ -255,7 +255,7 @@ function ExerciseRow({
             <Ionicons
               name={videoExpanded ? 'videocam' : 'videocam-outline'}
               size={16}
-              color={videoExpanded ? Colors.pepTeal : Colors.darkTextSecondary}
+              color={videoExpanded ? Colors.raindropsDeep : Colors.darkTextSecondary}
               style={{ marginLeft: 6 }}
             />
           </TouchableOpacity>
@@ -346,7 +346,7 @@ function ExerciseRow({
       {/* Rest timer countdown */}
       {restTimer.active && (
         <TouchableOpacity style={styles.restTimerRow} onPress={restTimer.cancel} activeOpacity={0.7}>
-          <Ionicons name="timer" size={16} color={Colors.pepTeal} />
+          <Ionicons name="timer" size={16} color={Colors.raindropsDeep} />
           <Text style={styles.restTimerText}>
             Rest: {restTimer.formatted}
           </Text>
@@ -473,7 +473,7 @@ function FreeWorkoutScreen() {
           onPress={() => (timer.running ? timer.pause() : timer.start())}
           style={styles.backBtn}
         >
-          <Ionicons name={timer.running ? 'pause' : 'play'} size={22} color={Colors.pepTeal} />
+          <Ionicons name={timer.running ? 'pause' : 'play'} size={22} color={Colors.raindropsDeep} />
         </TouchableOpacity>
       </View>
 
@@ -500,7 +500,7 @@ function FreeWorkoutScreen() {
           <View style={styles.freeSectionRow}>
             <Text style={styles.freeSectionLabel}>Exercises</Text>
             <TouchableOpacity onPress={addExercise} style={styles.addExBtn}>
-              <Ionicons name="add" size={18} color={Colors.pepTeal} />
+              <Ionicons name="add" size={18} color={Colors.raindropsDeep} />
               <Text style={styles.addExText}>Add</Text>
             </TouchableOpacity>
           </View>
@@ -575,7 +575,7 @@ function FreeWorkoutScreen() {
           <GradientButton
             label="Finish Workout"
             onPress={handleFinish}
-            colors={[Colors.pepTeal, Colors.pepBlue]}
+            colors={[Colors.raindropsDeep, Colors.raindropsDeep]}
           />
         </View>
       </ScrollView>
@@ -715,7 +715,7 @@ export default function WorkoutPlayerScreen() {
           <Ionicons
             name={timer.running ? 'pause' : 'play'}
             size={22}
-            color={Colors.pepTeal}
+            color={Colors.raindropsDeep}
           />
         </TouchableOpacity>
       </View>
@@ -763,7 +763,7 @@ export default function WorkoutPlayerScreen() {
           <GradientButton
             label="Finish Workout"
             onPress={handleFinish}
-            colors={[Colors.pepTeal, Colors.pepBlue]}
+            colors={[Colors.raindropsDeep, Colors.raindropsDeep]}
           />
         </View>
       </ScrollView>
@@ -818,7 +818,7 @@ const styles = StyleSheet.create({
   headerTimer: {
     fontSize: FontSizes.xl,
     fontWeight: '800',
-    color: Colors.pepTeal,
+    color: Colors.raindropsDeep,
     fontVariant: ['tabular-nums'],
   },
 
@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: Colors.pepTeal,
+    backgroundColor: Colors.raindropsDeep,
     borderRadius: 2,
   },
   progressText: {
@@ -874,7 +874,7 @@ const styles = StyleSheet.create({
   exNum: {
     fontSize: 13,
     fontWeight: '800',
-    color: Colors.pepTeal,
+    color: Colors.raindropsDeep,
   },
   exInfo: {
     flex: 1,
@@ -902,7 +902,7 @@ const styles = StyleSheet.create({
   setTypeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: Colors.pepBlue,
+    color: Colors.raindropsDeep,
   },
 
   // Video section
@@ -999,7 +999,7 @@ const styles = StyleSheet.create({
   restTimerText: {
     fontSize: FontSizes.md,
     fontWeight: '700',
-    color: Colors.pepTeal,
+    color: Colors.raindropsDeep,
     fontVariant: ['tabular-nums'],
     flex: 1,
   },
@@ -1138,7 +1138,7 @@ const styles = StyleSheet.create({
   },
   addExText: {
     fontSize: FontSizes.sm,
-    color: Colors.pepTeal,
+    color: Colors.raindropsDeep,
     fontWeight: '600',
   },
   freeExHeader: {
@@ -1151,7 +1151,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: Colors.pepTeal,
+    backgroundColor: Colors.raindropsDeep,
     textAlign: 'center',
     lineHeight: 24,
     fontSize: 12,

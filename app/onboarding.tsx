@@ -72,7 +72,7 @@ const PLANS: { tier: 'free' | 'plus' | 'pro'; name: string; price: string; badge
 const ACCENT = '#2D2D2D';       // Clean black (Jamie's "black glass" buttons)
 const ACCENT_LIGHT = '#4A4A4A';
 const SURFACE = '#F7F7F7';      // Neutral warm gray
-const HIGHLIGHT = '#F8A97A';    // Subtle warm pop for selected states
+const HIGHLIGHT = '#E89672';    // Subtle warm pop for selected states
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
@@ -258,9 +258,9 @@ export default function OnboardingScreen() {
           {/* Features — stagger in one by one */}
           <View style={s.welcomeFeatures}>
             {[
-              { icon: 'nutrition-outline', title: 'Eat', desc: 'Track meals & macros', color: '#F8A97A', bg: '#F8A97A18' },
-              { icon: 'barbell-outline', title: 'Train', desc: 'Log workouts & progress', color: '#D4A853', bg: '#F4E28520' },
-              { icon: 'flask-outline', title: 'Learn', desc: 'Peptide education & dosing', color: '#E8948E', bg: '#F2B6B118' },
+              { icon: 'nutrition-outline', title: 'Eat', desc: 'Track meals & macros', color: '#E89672', bg: '#E8967218' },
+              { icon: 'barbell-outline', title: 'Train', desc: 'Log workouts & progress', color: '#BADDCB', bg: '#F4E9A720' },
+              { icon: 'flask-outline', title: 'Learn', desc: 'Peptide education & dosing', color: '#E8948E', bg: '#F5DAD618' },
               { icon: 'heart-outline', title: 'Track', desc: 'Health, sleep & recovery', color: '#8FAA8B', bg: '#A9C4A618' },
             ].map((f, i) => (
               <Animated.View
@@ -719,7 +719,7 @@ const s = StyleSheet.create({
   blackBtn: {
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: '#EDE6D6',
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,

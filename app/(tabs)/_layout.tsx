@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet } from 'react-native';
 import { selectionTick } from '../../src/utils/haptics';
 import { useTheme } from '../../src/hooks/useTheme';
+import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 
 type TabIconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -48,11 +49,12 @@ const TAB_CONFIG: TabConfig[] = [
 
 export default function TabsLayout() {
   const t = useTheme();
+  const accent = useSectionAccent();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: t.primary,
+        tabBarActiveTintColor: accent.deep,
         tabBarInactiveTintColor: t.textSecondary,
         tabBarStyle: [styles.tabBar, {
           backgroundColor: t.tabBar,
@@ -92,7 +94,7 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#EDE6D6',
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.06)',
     paddingBottom: 6,

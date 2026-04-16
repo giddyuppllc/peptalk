@@ -51,6 +51,8 @@ import {
   Gradients,
 } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
+import { useSectionAccent } from '../../src/hooks/useSectionAccent';
+import { useTourTarget } from '../../src/hooks/useTourTarget';
 
 /* ─── Journal Toast Component ────────────────────────────────────── */
 
@@ -69,16 +71,17 @@ const JournalToast: React.FC = () => {
   }));
 
   const t = useTheme();
+  const accent = useSectionAccent();
   return (
     <Animated.View style={[styles.journalToast, animStyle]}>
       <LinearGradient
-        colors={[`${t.primary}20`, `${t.secondary}12`]}
+        colors={[`${accent.deep}20`, `${accent.pastel}12`]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.journalToastBg}
       >
-        <Ionicons name="journal-outline" size={14} color={t.primary} />
-        <Text style={[styles.journalToastText, { color: t.primary }]}>Saved to journal</Text>
+        <Ionicons name="journal-outline" size={14} color={accent.deep} />
+        <Text style={[styles.journalToastText, { color: accent.deep }]}>Saved to journal</Text>
       </LinearGradient>
     </Animated.View>
   );
@@ -88,7 +91,9 @@ const JournalToast: React.FC = () => {
 
 export default function PepTalkScreen() {
   const t = useTheme();
+  const accent = useSectionAccent();
   const router = useRouter();
+  const aimeeInputRef = useTourTarget('aimee_chat_input');
   const { prefill, message: prefillMessage } = useLocalSearchParams<{
     prefill?: string;
     message?: string;
@@ -326,9 +331,9 @@ export default function PepTalkScreen() {
   const renderEmpty = useCallback(
     () => (
       <View style={styles.emptyContainer}>
-        <View style={[styles.emptyAvatarRing, { borderColor: `${t.primary}30` }]}>
+        <View style={[styles.emptyAvatarRing, { borderColor: `${accent.deep}30` }]}>
           <LinearGradient
-            colors={[`${t.primary}18`, `${t.secondary}10`]}
+            colors={[`${accent.deep}18`, `${accent.pastel}10`]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.emptyAvatarInner}
@@ -337,7 +342,7 @@ export default function PepTalkScreen() {
           </LinearGradient>
         </View>
         <Text style={[styles.emptyTitle, { color: t.text }]}>Hi, I'm Aimee</Text>
-        <View style={[styles.emptyAccentBar, { backgroundColor: t.primary }]} />
+        <View style={[styles.emptyAccentBar, { backgroundColor: accent.deep }]} />
         <Text style={[styles.emptySubtitle, { color: t.textSecondary }]}>
           Your personal health companion
         </Text>
@@ -369,11 +374,11 @@ export default function PepTalkScreen() {
               scaleTo={0.97}
             >
               <View style={[styles.starterChipCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
-                <View style={[styles.starterChipIconWrap, { backgroundColor: `${t.primary}15` }]}>
+                <View style={[styles.starterChipIconWrap, { backgroundColor: `${accent.deep}15` }]}>
                   <Ionicons
                     name="sparkles-outline"
                     size={14}
-                    color={t.primary}
+                    color={accent.deep}
                   />
                 </View>
                 <Text style={[styles.starterChipText, { color: t.text }]}>{prompt}</Text>
@@ -407,9 +412,9 @@ export default function PepTalkScreen() {
           </TouchableOpacity>
 
           <View style={styles.headerLeft}>
-            <View style={[styles.headerAvatar, { borderColor: `${t.primary}40` }]}>
+            <View style={[styles.headerAvatar, { borderColor: `${accent.deep}40` }]}>
               <LinearGradient
-                colors={[`${t.primary}20`, `${t.secondary}12`]}
+                colors={[`${accent.deep}20`, `${accent.pastel}12`]}
                 style={styles.headerAvatarInner}
               >
                 <PepTalkCharacter size={28} variant="mini" />
@@ -471,17 +476,17 @@ export default function PepTalkScreen() {
             {quickReplies.map((reply) => (
               <AnimatedPress
                 key={reply}
-                style={[styles.quickReplyChip, { borderColor: `${t.primary}30` }]}
+                style={[styles.quickReplyChip, { borderColor: `${accent.deep}30` }]}
                 onPress={() => handleQuickReply(reply)}
                 scaleTo={0.95}
               >
                 <LinearGradient
-                  colors={[`${t.primary}18`, `${t.secondary}0A`]}
+                  colors={[`${accent.deep}18`, `${accent.pastel}0A`]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.quickReplyGradient}
                 >
-                  <Text style={[styles.quickReplyText, { color: t.primary }]}>{reply}</Text>
+                  <Text style={[styles.quickReplyText, { color: accent.deep }]}>{reply}</Text>
                 </LinearGradient>
               </AnimatedPress>
             ))}
@@ -494,7 +499,7 @@ export default function PepTalkScreen() {
             {botActions.map((action, idx) => (
               <AnimatedPress
                 key={`${action.route}-${idx}`}
-                style={[styles.actionBtn, { borderColor: `${t.primary}30` }]}
+                style={[styles.actionBtn, { borderColor: `${accent.deep}30` }]}
                 onPress={() => {
                   tapMedium();
                   router.push(action.route as any);
@@ -502,7 +507,7 @@ export default function PepTalkScreen() {
                 scaleTo={0.95}
               >
                 <LinearGradient
-                  colors={[`${t.primary}22`, `${t.secondary}10`]}
+                  colors={[`${accent.deep}22`, `${accent.pastel}10`]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.actionBtnGradient}
@@ -511,12 +516,12 @@ export default function PepTalkScreen() {
                     <Ionicons
                       name={action.icon as any}
                       size={16}
-                      color={t.primary}
+                      color={accent.deep}
                       style={{ marginRight: 6 }}
                     />
                   )}
-                  <Text style={[styles.actionBtnText, { color: t.primary }]}>{action.label}</Text>
-                  <Ionicons name="chevron-forward" size={14} color={`${t.primary}99`} />
+                  <Text style={[styles.actionBtnText, { color: accent.deep }]}>{action.label}</Text>
+                  <Ionicons name="chevron-forward" size={14} color={`${accent.deep}99`} />
                 </LinearGradient>
               </AnimatedPress>
             ))}
@@ -524,9 +529,9 @@ export default function PepTalkScreen() {
         )}
 
         {/* ── Input Bar ──────────────────────────────────────── */}
-        <View style={[styles.inputBarWrap, { backgroundColor: t.bg, borderTopColor: t.cardBorder }]}>
+        <View ref={aimeeInputRef} style={[styles.inputBarWrap, { backgroundColor: t.bg, borderTopColor: t.cardBorder }]}>
           <View style={styles.inputRow}>
-            <View style={[styles.inputWrap, { backgroundColor: t.surface, borderColor: `${t.primary}25` }]}>
+            <View style={[styles.inputWrap, { backgroundColor: t.surface, borderColor: `${accent.deep}25` }]}>
               <TextInput
                 style={[styles.input, { color: t.text }]}
                 value={inputText}
@@ -552,7 +557,7 @@ export default function PepTalkScreen() {
               <LinearGradient
                 colors={
                   inputText.trim()
-                    ? [t.primary, t.primaryDark]
+                    ? [accent.deep, accent.darker]
                     : [t.card, t.card]
                 }
                 start={{ x: 0, y: 0 }}

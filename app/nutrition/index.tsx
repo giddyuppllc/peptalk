@@ -24,9 +24,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
 import { useTheme } from '../../src/hooks/useTheme';
+import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { Colors, Gradients, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 import { useMealStore } from '../../src/store/useMealStore';
 import type { MealEntry, MealType } from '../../src/types/fitness';
+import { tapLight } from '../../src/utils/haptics';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -106,6 +108,7 @@ function MacroBar({
   unit: string;
 }) {
   const t = useTheme();
+  const accent = useSectionAccent();
   const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
 
   return (
@@ -398,7 +401,7 @@ function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealMod
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             {/* Meal type badge (read-only) */}
             <View style={styles.editMealTypeBadge}>
-              <Ionicons name={MEAL_ICONS[meal.mealType] as any} size={16} color="#F8A97A" />
+              <Ionicons name={MEAL_ICONS[meal.mealType] as any} size={16} color="#E89672" />
               <Text style={styles.editMealTypeLabel}>{MEAL_LABELS[meal.mealType]}</Text>
             </View>
 
@@ -508,133 +511,170 @@ function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealMod
 }
 
 // ---------------------------------------------------------------------------
-// Water Ring (SVG-free circular progress)
+// Water Tracker — big glass that fills vertically
 // ---------------------------------------------------------------------------
 
-function WaterRing({ pct, size = 100 }: { pct: number; size?: number }) {
-  const t = useTheme();
-  const clampedPct = Math.min(100, Math.max(0, pct));
-  const ringSize   = size;
-  const thickness  = 8;
-  const innerSize  = ringSize - thickness * 2;
-  const trackColor = `${t.primary}1A`;
-  const fillColor  = t.primary;
-
-  return (
-    <View
-      style={{
-        width: ringSize,
-        height: ringSize,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {/* Track */}
-      <View
-        style={{
-          width: ringSize,
-          height: ringSize,
-          borderRadius: ringSize / 2,
-          borderWidth: thickness,
-          borderColor: trackColor,
-          position: 'absolute',
-        }}
-      />
-      {/* Fill */}
-      <View
-        style={{
-          width: ringSize,
-          height: ringSize,
-          borderRadius: ringSize / 2,
-          borderWidth: thickness,
-          borderColor: fillColor,
-          position: 'absolute',
-          borderTopColor:    clampedPct >= 25 ? fillColor : trackColor,
-          borderRightColor:  clampedPct >= 50 ? fillColor : trackColor,
-          borderBottomColor: clampedPct >= 75 ? fillColor : trackColor,
-          borderLeftColor:   clampedPct >  0  ? fillColor : trackColor,
-          transform: [{ rotate: '-90deg' }],
-        }}
-      />
-      {/* Inner circle */}
-      <View
-        style={{
-          width: innerSize,
-          height: innerSize,
-          borderRadius: innerSize / 2,
-          backgroundColor: t.bg,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Ionicons name="water" size={20} color={fillColor} />
-        <Text style={{ fontSize: FontSizes.lg, fontWeight: '800', color: t.text, marginTop: 2 }}>
-          {clampedPct}%
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Water Tracker
-// ---------------------------------------------------------------------------
-
-const WATER_QUICK_ADD: { oz: number; label: string; icon: string }[] = [
-  { oz: 4,  label: '4 oz',  icon: 'cafe-outline'  },
-  { oz: 8,  label: '8 oz',  icon: 'water-outline' },
-  { oz: 12, label: '12 oz', icon: 'pint-outline'  },
-  { oz: 16, label: '16 oz', icon: 'beer-outline'  },
-];
+const GLASS_OZ = 8;
+const CUSTOM_PRESETS = [4, 12, 16, 20];
 
 function WaterTracker() {
   const t = useTheme();
+  const accent = useSectionAccent();
   const { logWater, getWater, targets } = useMealStore();
-  const dateKey   = today();
-  const current   = getWater(dateKey);
-  const target    = targets.waterOz ?? 100;
-  const pct       = Math.min(100, Math.round((current / target) * 100));
-  const remaining = Math.max(0, target - current);
+  const dateKey  = today();
+  const current  = getWater(dateKey);
+  const target   = targets.waterOz ?? 100;
+  const pct      = target > 0 ? Math.round((current / target) * 100) : 0;
+  const fillPct  = Math.min(100, pct);
+  const overOz   = Math.max(0, current - target);
+  const reached  = current >= target;
+  const [showCustom, setShowCustom] = useState(false);
+
+  const adjust = (oz: number) => {
+    const delta = oz > 0 ? oz : Math.max(oz, -current); // don't go below 0
+    if (delta === 0) return;
+    logWater(dateKey, delta);
+    tapLight();
+  };
+
+  const addCustom = (oz: number) => {
+    logWater(dateKey, oz);
+    tapLight();
+    setShowCustom(false);
+  };
 
   return (
     <GlassCard>
-      <View style={styles.waterTop}>
-        <WaterRing pct={pct} size={100} />
-        <View style={styles.waterStats}>
-          <Text style={[styles.waterTitle, { color: t.text }]}>Hydration</Text>
-          <Text style={[styles.waterValue, { color: t.text }]}>
-            {current} oz{' '}
-            <Text style={[styles.waterTarget, { color: t.textSecondary }]}>/ {target} oz</Text>
-          </Text>
-          <View style={styles.macroBarTrack}>
-            <View style={[styles.macroBarFill, { width: `${pct}%`, backgroundColor: t.primary }]} />
+      {/* Header */}
+      <View style={styles.hydHeader}>
+        <View style={styles.hydHeaderLeft}>
+          <View style={[styles.hydIcon, { backgroundColor: `${accent.deep}18` }]}>
+            <Ionicons name="water" size={16} color={accent.deep} />
           </View>
-          <Text style={styles.waterRemaining}>
-            {remaining > 0 ? `${remaining} oz remaining` : 'Daily target reached!'}
-          </Text>
+          <Text style={[styles.hydTitle, { color: t.text }]}>Hydration</Text>
+        </View>
+        <Text style={[styles.hydAmount, { color: t.text }]}>
+          {current}
+          <Text style={[styles.hydTarget, { color: t.textSecondary }]}> oz of {target}</Text>
+        </Text>
+      </View>
+
+      {/* Big glass visual */}
+      <View style={styles.glassWrap}>
+        {/* Overflow droplet badge when over 100% */}
+        {overOz > 0 && (
+          <View style={[styles.glassOverflowBadge, { backgroundColor: accent.deep }]}>
+            <Ionicons name="arrow-up" size={11} color="#FFFFFF" />
+            <Text style={styles.glassOverflowText}>+{overOz} oz</Text>
+          </View>
+        )}
+        <View
+          style={[
+            styles.glassBody,
+            {
+              borderColor: accent.deep,
+              borderWidth: overOz > 0 ? 4 : 3,
+            },
+          ]}
+        >
+          {/* Fill from bottom (capped at 100% — the glass is physically full) */}
+          <View
+            style={[
+              styles.glassFill,
+              {
+                height: `${fillPct}%`,
+                backgroundColor: accent.deep,
+              },
+            ]}
+          />
+          {/* Subtle tick marks overlay (quarters) */}
+          <View style={[styles.glassTick, { top: '25%', backgroundColor: `${accent.deep}30` }]} />
+          <View style={[styles.glassTick, { top: '50%', backgroundColor: `${accent.deep}30` }]} />
+          <View style={[styles.glassTick, { top: '75%', backgroundColor: `${accent.deep}30` }]} />
+          {/* Center percent label */}
+          <View style={styles.glassLabel}>
+            <Text
+              style={[
+                styles.glassPct,
+                { color: fillPct >= 50 ? '#FFFFFF' : accent.deep },
+              ]}
+            >
+              {pct}%
+            </Text>
+          </View>
         </View>
       </View>
 
-      <View style={styles.waterQuickRow}>
-        {WATER_QUICK_ADD.map((btn) => (
-          <TouchableOpacity
-            key={btn.oz}
-            style={styles.waterQuickBtn}
-            onPress={() => logWater(dateKey, btn.oz)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name={btn.icon as any} size={18} color={t.primary} />
-            <Text style={[styles.waterQuickLabel, { color: t.primary }]}>+{btn.label}</Text>
-          </TouchableOpacity>
-        ))}
+      {/* − / + controls */}
+      <View style={styles.hydControls}>
+        <TouchableOpacity
+          style={[
+            styles.hydCtrlBtn,
+            { borderColor: `${accent.deep}55`, opacity: current > 0 ? 1 : 0.4 },
+          ]}
+          onPress={() => adjust(-GLASS_OZ)}
+          disabled={current <= 0}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="remove" size={16} color={accent.deep} />
+          <Text style={[styles.hydCtrlText, { color: accent.deep }]}>{GLASS_OZ} oz</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.hydCtrlBtnPrimary, { backgroundColor: accent.deep }]}
+          onPress={() => adjust(GLASS_OZ)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add" size={16} color="#FFFFFF" />
+          <Text style={styles.hydCtrlTextPrimary}>{GLASS_OZ} oz</Text>
+        </TouchableOpacity>
       </View>
 
-      <View style={[styles.waterFooter, { borderTopColor: t.glassBorder }]}>
-        <Ionicons name="flag-outline" size={14} color={t.textSecondary} />
-        <Text style={[styles.waterFooterText, { color: t.textSecondary }]}>
-          Daily target: {target} oz ({Math.round(target / 8)} glasses)
+      {/* Status / hint */}
+      {reached && (
+        <Text style={[styles.hydHint, { color: accent.deep, textAlign: 'center' }]}>
+          {overOz > 0
+            ? `${current} oz logged — ${overOz} oz over target`
+            : `Daily target reached — ${current} oz logged`}
         </Text>
-      </View>
+      )}
+
+      {/* Custom amount */}
+      {!showCustom ? (
+        <TouchableOpacity
+          style={[styles.hydCustomBtn, { borderColor: `${accent.deep}55` }]}
+          onPress={() => setShowCustom(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="options-outline" size={15} color={accent.deep} />
+          <Text style={[styles.hydCustomBtnText, { color: accent.deep }]}>
+            Custom amount
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.hydCustomRow}>
+          {CUSTOM_PRESETS.map((oz) => (
+            <TouchableOpacity
+              key={oz}
+              style={[styles.hydCustomChip, { borderColor: `${accent.deep}55` }]}
+              onPress={() => addCustom(oz)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.hydCustomChipText, { color: accent.deep }]}>
+                +{oz} oz
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            style={styles.hydCustomClose}
+            onPress={() => setShowCustom(false)}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close" size={16} color={t.textSecondary} />
+          </TouchableOpacity>
+        </View>
+      )}
     </GlassCard>
   );
 }
@@ -652,12 +692,13 @@ interface AddFoodSheetProps {
 
 function AddFoodSheet({ visible, mealType, onClose, onPickOption }: AddFoodSheetProps) {
   const t = useTheme();
+  const accent = useSectionAccent();
   if (!mealType) return null;
 
   const options = [
-    { key: 'search' as const,     icon: 'search-outline' as const,    color: '#F8A97A', label: 'Search Foods',     sub: 'USDA & common items' },
-    { key: 'my_meals' as const,   icon: 'bookmark-outline' as const,  color: '#D4A853', label: 'My Meals',         sub: 'Recently logged' },
-    { key: 'barcode' as const,    icon: 'barcode-outline' as const,   color: '#FFBF82', label: 'Scan Barcode',     sub: 'Packaged foods' },
+    { key: 'search' as const,     icon: 'search-outline' as const,    color: '#E89672', label: 'Search Foods',     sub: 'USDA & common items' },
+    { key: 'my_meals' as const,   icon: 'bookmark-outline' as const,  color: '#BADDCB', label: 'My Meals',         sub: 'Recently logged' },
+    { key: 'barcode' as const,    icon: 'barcode-outline' as const,   color: '#F4E9A7', label: 'Scan Barcode',     sub: 'Packaged foods' },
     { key: 'ai_scanner' as const, icon: 'camera-outline' as const,    color: '#e3a7a1', label: 'AI Food Scanner',  sub: 'Photo → macros (Pro)' },
     { key: 'quick' as const,      icon: 'create-outline' as const,    color: '#8faa8b', label: 'Quick Log',        sub: 'Enter macros manually' },
   ];
@@ -708,6 +749,7 @@ function AddFoodSheet({ visible, mealType, onClose, onPickOption }: AddFoodSheet
 export default function NutritionScreen() {
   const router = useRouter();
   const t = useTheme();
+  const accent = useSectionAccent();
   const { meals, addMeal, removeMeal, updateMeal, getDailyProgress, targets } = useMealStore();
 
   const [showLog,        setShowLog]        = useState(false);
@@ -797,7 +839,7 @@ export default function NutritionScreen() {
             onPress={() => router.push('/nutrition/recipe-generator' as any)}
             style={styles.backBtn}
           >
-            <Ionicons name="sparkles-outline" size={20} color={t.primary} />
+            <Ionicons name="sparkles-outline" size={20} color={accent.deep} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push('/nutrition/targets' as any)}
@@ -835,7 +877,7 @@ export default function NutritionScreen() {
                   key={key}
                   style={[
                     styles.weekDayCell,
-                    isSelected && { backgroundColor: t.primary },
+                    isSelected && { backgroundColor: accent.deep },
                   ]}
                   onPress={() => !isFuture && setSelectedDay(key)}
                   activeOpacity={isFuture ? 1 : 0.7}
@@ -843,14 +885,14 @@ export default function NutritionScreen() {
                   <Text style={[
                     styles.weekDayLabel,
                     { color: isSelected ? '#fff' : t.textSecondary },
-                    isToday && !isSelected && { color: t.primary, fontFamily: 'DMSans-Bold' },
+                    isToday && !isSelected && { color: accent.deep, fontFamily: 'DMSans-Bold' },
                   ]}>
                     {DAY_LABELS[d.getDay()]}
                   </Text>
                   <Text style={[
                     styles.weekDayNumber,
                     { color: isSelected ? '#fff' : isFuture ? '#D1D5DB' : t.text },
-                    isToday && !isSelected && { color: t.primary },
+                    isToday && !isSelected && { color: accent.deep },
                   ]}>
                     {d.getDate()}
                   </Text>
@@ -874,16 +916,16 @@ export default function NutritionScreen() {
                 </Text>
               </View>
               <View style={styles.summaryRingWrap}>
-                <View style={[styles.summaryRing, { borderColor: `${t.primary}20` }]}>
+                <View style={[styles.summaryRing, { borderColor: `${accent.deep}20` }]}>
                   <View
                     style={[
                       styles.summaryRingFill,
                       {
-                        borderColor: t.primary,
-                        borderTopColor:    selectedProgress.caloriePercent >= 25 ? t.primary : `${t.primary}20`,
-                        borderRightColor:  selectedProgress.caloriePercent >= 50 ? t.primary : `${t.primary}20`,
-                        borderBottomColor: selectedProgress.caloriePercent >= 75 ? t.primary : `${t.primary}20`,
-                        borderLeftColor:   selectedProgress.caloriePercent >  0  ? t.primary : `${t.primary}20`,
+                        borderColor: accent.deep,
+                        borderTopColor:    selectedProgress.caloriePercent >= 25 ? accent.deep : `${accent.deep}20`,
+                        borderRightColor:  selectedProgress.caloriePercent >= 50 ? accent.deep : `${accent.deep}20`,
+                        borderBottomColor: selectedProgress.caloriePercent >= 75 ? accent.deep : `${accent.deep}20`,
+                        borderLeftColor:   selectedProgress.caloriePercent >  0  ? accent.deep : `${accent.deep}20`,
                       },
                     ]}
                   />
@@ -894,8 +936,8 @@ export default function NutritionScreen() {
 
             <View style={[styles.summaryDivider, { backgroundColor: t.cardBorder }]} />
 
-            <MacroBar label="Protein" current={selectedProgress.totals.proteinGrams} target={targets.proteinGrams} color="#F8A97A" unit="g" />
-            <MacroBar label="Carbs"   current={selectedProgress.totals.carbsGrams}   target={targets.carbsGrams}   color="#D4A853" unit="g" />
+            <MacroBar label="Protein" current={selectedProgress.totals.proteinGrams} target={targets.proteinGrams} color="#E89672" unit="g" />
+            <MacroBar label="Carbs"   current={selectedProgress.totals.carbsGrams}   target={targets.carbsGrams}   color="#BADDCB" unit="g" />
             <MacroBar label="Fat"     current={selectedProgress.totals.fatGrams}     target={targets.fatGrams}     color="#e3a7a1" unit="g" />
             <MacroBar label="Fiber"   current={selectedProgress.totals.fiberGrams}   target={targets.fiberGrams ?? 25} color="#8faa8b" unit="g" />
           </View>
@@ -915,8 +957,8 @@ export default function NutritionScreen() {
               <View style={[styles.mealSectionCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
                 {/* Meal header */}
                 <View style={styles.mealSectionHeader}>
-                  <View style={[styles.mealSectionIcon, { backgroundColor: `${t.primary}18` }]}>
-                    <Ionicons name={MEAL_ICONS[mealType] as any} size={18} color={t.primary} />
+                  <View style={[styles.mealSectionIcon, { backgroundColor: `${accent.deep}18` }]}>
+                    <Ionicons name={MEAL_ICONS[mealType] as any} size={18} color={accent.deep} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.mealSectionTitle, { color: t.text }]}>{MEAL_LABELS[mealType]}</Text>
@@ -927,7 +969,7 @@ export default function NutritionScreen() {
                     )}
                   </View>
                   <TouchableOpacity
-                    style={[styles.mealAddBtn, { backgroundColor: t.primary }]}
+                    style={[styles.mealAddBtn, { backgroundColor: accent.deep }]}
                     onPress={() => setAddSheetMeal(mealType)}
                     activeOpacity={0.85}
                   >
@@ -1369,68 +1411,172 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
 
-  // Water
-  waterTop: {
+  // Hydration (glass grid)
+  hydHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    justifyContent: 'space-between',
     marginBottom: 14,
   },
-  waterStats:      { flex: 1 },
-  waterTitle: {
-    fontSize: FontSizes.md,
-    fontWeight: '700',
-    color: Colors.darkText,
-    marginBottom: 4,
-  },
-  waterValue: {
-    fontSize: FontSizes.md,
-    fontWeight: '700',
-    color: Colors.darkText,
-    marginBottom: 8,
-  },
-  waterTarget: {
-    fontWeight: '400',
-    color: Colors.darkTextSecondary,
-  },
-  waterRemaining: {
-    fontSize: FontSizes.xs,
-    color: Colors.pepCyan,
-    fontWeight: '600',
-    marginTop: 6,
-  },
-  waterQuickRow: {
+  hydHeaderLeft: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
-    marginBottom: 10,
   },
-  waterQuickBtn: {
-    flex: 1,
+  hydIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(6, 182, 212, 0.10)',
-    borderRadius: 12,
-    paddingVertical: 10,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(6, 182, 212, 0.20)',
   },
-  waterQuickLabel: {
-    fontSize: FontSizes.xs,
-    color: Colors.pepCyan,
+  hydTitle: {
+    fontSize: FontSizes.md,
     fontWeight: '700',
   },
-  waterFooter: {
+  hydAmount: {
+    fontSize: FontSizes.md,
+    fontWeight: '800',
+  },
+  hydTarget: {
+    fontSize: FontSizes.sm,
+    fontWeight: '500',
+  },
+  // Big glass visual
+  glassWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 8,
+    position: 'relative',
+  },
+  glassOverflowBadge: {
+    position: 'absolute',
+    top: -4,
+    right: '30%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    zIndex: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  glassOverflowText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  glassBody: {
+    width: 110,
+    height: 150,
+    borderWidth: 3,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+  },
+  glassFill: {
+    width: '100%',
+  },
+  glassTick: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
+  },
+  glassLabel: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glassPct: {
+    fontSize: 24,
+    fontWeight: '900',
+    fontFamily: 'Playfair-Black',
+    letterSpacing: -0.5,
+  },
+  // Controls
+  hydControls: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+    marginBottom: 10,
+  },
+  hydCtrlBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderRadius: 12,
+  },
+  hydCtrlBtnPrimary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  hydCtrlText: {
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
+  },
+  hydCtrlTextPrimary: {
+    fontSize: FontSizes.sm,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  hydHint: {
+    fontSize: FontSizes.xs,
+    marginBottom: 10,
+    fontStyle: 'italic',
+  },
+  hydCustomBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderRadius: 10,
+    borderStyle: 'dashed',
+  },
+  hydCustomBtnText: {
+    fontSize: FontSizes.xs,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  hydCustomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
   },
-  waterFooterText: {
+  hydCustomChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  hydCustomChipText: {
     fontSize: FontSizes.xs,
-    color: Colors.darkTextSecondary,
+    fontWeight: '700',
+  },
+  hydCustomClose: {
+    padding: 6,
   },
 
   // Meals section header actions

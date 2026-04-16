@@ -39,7 +39,12 @@ import {
   FontSizes,
   BorderRadius,
 } from '../../src/constants/theme';
-import { useMealStore, type RecentFood, type CustomMeal } from '../../src/store/useMealStore';
+import { useMealStore, type RecentFood, type CustomMeal, type MealTemplate } from '../../src/store/useMealStore';
+import type { FoodItem } from '../../src/types/fitness';
+import { useFeatureGate } from '../../src/hooks/useFeatureGate';
+import { PaywallModal } from '../../src/components/PaywallModal';
+import { LockBadge } from '../../src/components/LockBadge';
+import { useTourTarget } from '../../src/hooks/useTourTarget';
 import { MealBuilder } from '../../src/components/MealBuilder';
 import {
   searchAllFoods,
@@ -50,6 +55,69 @@ import {
 import type { MealType } from '../../src/types/fitness';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// ---------------------------------------------------------------------------
+// Food category → icon + color mapping
+// Uses Ionicons. Barcode-scanned images are preserved; everything else gets an icon.
+// ---------------------------------------------------------------------------
+
+interface FoodIcon {
+  name: string; // Ionicons name
+  color: string;
+  bg: string;   // low-alpha background
+}
+
+function getFoodIcon(foodName: string, source?: string): FoodIcon {
+  const n = (foodName || '').toLowerCase();
+
+  // Meat — chicken/turkey/poultry get drumstick
+  if (/chicken|turkey|poultry|wing|thigh|breast|drumstick/.test(n))
+    return { name: 'restaurant-outline', color: '#D98C86', bg: '#D98C8618' };
+  // Meat — beef/pork/lamb get cutlery
+  if (/beef|steak|pork|lamb|bacon|sausage|ham|bison|veal|jerky|burger|meatball|ribs/.test(n))
+    return { name: 'restaurant-outline', color: '#B06A66', bg: '#B06A6618' };
+  // Fish & seafood
+  if (/fish|salmon|tuna|cod|tilapia|shrimp|prawn|crab|lobster|sardine|trout|sushi|sashimi/.test(n))
+    return { name: 'fish-outline', color: '#7FB3C2', bg: '#7FB3C218' };
+  // Eggs
+  if (/egg/.test(n))
+    return { name: 'ellipse-outline', color: '#C9A84A', bg: '#C9A84A18' };
+  // Dairy
+  if (/milk|cheese|yogurt|cream|butter|whey|cottage|mozzarella|cheddar/.test(n))
+    return { name: 'water-outline', color: '#7FB3C2', bg: '#7FB3C218' };
+  // Grains / bread / pasta
+  if (/rice|bread|pasta|oat|cereal|wheat|tortilla|bagel|noodle|granola|cracker|pancake|waffle/.test(n))
+    return { name: 'grid-outline', color: '#C9A84A', bg: '#C9A84A18' };
+  // Fruits
+  if (/apple|banana|berry|grape|orange|mango|peach|pear|melon|fruit|strawberry|blueberry|raspberry|pineapple|watermelon|cherry|kiwi|plum|lemon|lime/.test(n))
+    return { name: 'nutrition-outline', color: '#6FA891', bg: '#6FA89118' };
+  // Vegetables
+  if (/broccoli|spinach|kale|lettuce|carrot|tomato|pepper|onion|vegetable|salad|asparagus|cucumber|celery|zucchini|squash|corn|potato|sweet potato|mushroom|cauliflower|cabbage|peas|green bean/.test(n))
+    return { name: 'leaf-outline', color: '#6FA891', bg: '#6FA89118' };
+  // Nuts / seeds / fats
+  if (/nut|almond|peanut|walnut|cashew|pistachio|seed|avocado|oil|olive/.test(n))
+    return { name: 'ellipse-outline', color: '#A08335', bg: '#A0833518' };
+  // Beverages
+  if (/coffee|tea|latte|espresso|cappuccino|matcha/.test(n))
+    return { name: 'cafe-outline', color: '#9B86A4', bg: '#9B86A418' };
+  if (/water|sparkling|seltzer/.test(n))
+    return { name: 'water-outline', color: '#7FB3C2', bg: '#7FB3C218' };
+  if (/juice|smoothie|soda|cola|drink|beverage|shake/.test(n))
+    return { name: 'beer-outline', color: '#C9A84A', bg: '#C9A84A18' };
+  // Snacks / sweets
+  if (/cookie|cake|chocolate|candy|donut|pastry|brownie|ice cream|dessert|pie|muffin/.test(n))
+    return { name: 'ice-cream-outline', color: '#D98C86', bg: '#D98C8618' };
+  if (/chip|pretzel|popcorn|cracker|bar|snack/.test(n))
+    return { name: 'cube-outline', color: '#C9A84A', bg: '#C9A84A18' };
+  // Fast food / restaurant
+  if (/pizza|taco|burrito|sandwich|sub|wrap|fries|burger|nugget|hot dog/.test(n))
+    return { name: 'fast-food-outline', color: '#D98C86', bg: '#D98C8618' };
+  // Supplements
+  if (/protein|whey|creatine|supplement|vitamin|collagen|bcaa|pre-workout/.test(n))
+    return { name: 'fitness-outline', color: '#9B86A4', bg: '#9B86A418' };
+  // Default
+  return { name: 'ellipse-outline', color: '#6B7280', bg: '#6B728018' };
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -151,11 +219,14 @@ function PortionPickerModal({
           {/* Header */}
           <View style={styles.modalHeader}>
             <View style={styles.modalFoodTitle}>
-              {food.imageUrl ? (
-                <Image source={{ uri: food.imageUrl }} style={styles.modalFoodImage} />
-              ) : (
-                <Text style={styles.modalEmoji}>{food.emoji || '🍽️'}</Text>
-              )}
+              {(() => {
+                const icon = getFoodIcon(food.name, food.source);
+                return (
+                  <View style={[styles.foodIconBg, { backgroundColor: icon.bg, width: 44, height: 44, borderRadius: 12 }]}>
+                    <Ionicons name={icon.name as any} size={22} color={icon.color} />
+                  </View>
+                );
+              })()}
               <View style={{ flex: 1 }}>
                 <Text style={styles.modalFoodName} numberOfLines={2}>{food.name}</Text>
                 {food.brand && <Text style={styles.brandText}>{food.brand}</Text>}
@@ -209,7 +280,7 @@ function PortionPickerModal({
                     >
                       <Text style={[styles.servingListText, active && styles.servingListTextActive]}>{s.label}</Text>
                       <Text style={[styles.servingListGrams, active && styles.servingListTextActive]}>{Math.round(s.grams)}g</Text>
-                      {active && <Ionicons name="checkmark" size={18} color={Colors.pepTeal} />}
+                      {active && <Ionicons name="checkmark" size={18} color={Colors.almostAquaDeep} />}
                     </TouchableOpacity>
                   );
                 })}
@@ -230,7 +301,7 @@ function PortionPickerModal({
                     >
                       <Text style={[styles.servingListText, active && styles.servingListTextActive]}>{s.label}</Text>
                       <Text style={[styles.servingListGrams, active && styles.servingListTextActive]}>{s.grams < 1 ? s.grams : Math.round(s.grams)}g</Text>
-                      {active && <Ionicons name="checkmark" size={18} color={Colors.pepTeal} />}
+                      {active && <Ionicons name="checkmark" size={18} color={Colors.almostAquaDeep} />}
                     </TouchableOpacity>
                   );
                 })}
@@ -243,8 +314,8 @@ function PortionPickerModal({
                 <Text style={styles.macroSummaryCalNum}>{macros.calories}</Text>
                 <Text style={styles.macroSummaryCalLabel}>calories</Text>
                 <View style={styles.macroPills}>
-                  <View style={[styles.macroPill, { borderColor: Colors.pepTeal + '55' }]}>
-                    <Text style={[styles.macroPillValue, { color: Colors.pepTeal }]}>{macros.proteinGrams}g</Text>
+                  <View style={[styles.macroPill, { borderColor: Colors.almostAquaDeep + '55' }]}>
+                    <Text style={[styles.macroPillValue, { color: Colors.almostAquaDeep }]}>{macros.proteinGrams}g</Text>
                     <Text style={styles.macroPillLabel}>Protein</Text>
                   </View>
                   <View style={[styles.macroPill, { borderColor: Colors.pepBlue + '55' }]}>
@@ -288,16 +359,22 @@ function PortionPickerModal({
               style={styles.nutritionInfoBtn}
               onPress={() => setShowNutritionInfo(!showNutritionInfo)}
             >
-              <Ionicons name={showNutritionInfo ? 'list' : 'list-outline'} size={16} color={Colors.pepTeal} />
+              <Ionicons name={showNutritionInfo ? 'list' : 'list-outline'} size={16} color={Colors.almostAquaDeep} />
               <Text style={styles.nutritionInfoBtnText}>
                 {showNutritionInfo ? 'Hide Nutrition Info' : 'Nutrition Info'}
               </Text>
-              <Ionicons name={showNutritionInfo ? 'chevron-up' : 'chevron-down'} size={14} color={Colors.pepTeal} />
+              <Ionicons name={showNutritionInfo ? 'chevron-up' : 'chevron-down'} size={14} color={Colors.almostAquaDeep} />
             </TouchableOpacity>
 
             {showNutritionInfo && (
               <View style={styles.nutritionLabel}>
                 <Text style={styles.nutritionTitle}>Nutrition Facts</Text>
+                <View style={styles.nutritionServingRow}>
+                  <Text style={styles.nutritionServingLabel}>Serving size</Text>
+                  <Text style={styles.nutritionServingValue}>
+                    {parseFloat(servingQty) || 1} × {currentServing?.label ?? '1 serving'} ({Math.round(effectiveGrams)}g)
+                  </Text>
+                </View>
                 <View style={styles.nutritionSeparatorThick} />
                 <View style={styles.nutritionRow}>
                   <Text style={styles.nutritionRowLabel}>Calories</Text>
@@ -698,7 +775,7 @@ function BarcodeScannerModal({ visible, onClose, onScanned }: BarcodeScannerProp
                 {lookingUp ? 'Looking up product...' : 'Point camera at barcode'}
               </Text>
               {lookingUp && (
-                <ActivityIndicator size="large" color={Colors.pepTeal} style={{ marginTop: 16 }} />
+                <ActivityIndicator size="large" color={Colors.almostAquaDeep} style={{ marginTop: 16 }} />
               )}
             </View>
           </>
@@ -719,13 +796,18 @@ function FoodRow({ food, onPress }: { food: UnifiedFood; onPress: (food: Unified
       onPress={() => onPress(food)}
       activeOpacity={0.75}
     >
-      {food.imageUrl ? (
-        <Image source={{ uri: food.imageUrl }} style={styles.foodImage} />
-      ) : (
-        <View style={[styles.foodEmojiBg, { backgroundColor: Colors.pepTeal + '1A' }]}>
-          <Text style={styles.foodEmoji}>{food.emoji || '🍽️'}</Text>
-        </View>
-      )}
+      {(() => {
+        // Barcode-scanned foods keep their verified product image
+        if (food.imageUrl && food.barcode) {
+          return <Image source={{ uri: food.imageUrl }} style={styles.foodImage} />;
+        }
+        const icon = getFoodIcon(food.name);
+        return (
+          <View style={[styles.foodIconBg, { backgroundColor: icon.bg }]}>
+            <Ionicons name={icon.name as any} size={20} color={icon.color} />
+          </View>
+        );
+      })()}
       <View style={styles.foodInfo}>
         <Text style={styles.foodName} numberOfLines={1}>{food.name}</Text>
         {food.brand ? (
@@ -751,7 +833,21 @@ function FoodRow({ food, onPress }: { food: UnifiedFood; onPress: (food: Unified
 export default function FoodSearchScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ mealId?: string; mealType?: MealType }>();
-  const { addMeal, updateMeal, meals, recentFoods, addRecentFood, clearRecentFoods, customMeals, removeCustomMeal } = useMealStore();
+  const {
+    addMeal,
+    updateMeal,
+    meals,
+    recentFoods,
+    addRecentFood,
+    clearRecentFoods,
+    customMeals,
+    removeCustomMeal,
+    customFoods,
+    removeCustomFood,
+    mealTemplates,
+    removeMealTemplate,
+    logMealTemplate,
+  } = useMealStore();
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UnifiedFood[]>([]);
@@ -763,7 +859,12 @@ export default function FoodSearchScreen() {
   const [customFoodVisible, setCustomFoodVisible] = useState(false);
   const [mealBuilderVisible, setMealBuilderVisible] = useState(false);
   const [editingMeal, setEditingMeal] = useState<CustomMeal | null>(null);
-  const [activeTab, setActiveTab] = useState<'recent' | 'mymeals'>('recent');
+  const [activeTab, setActiveTab] = useState<'all' | 'mymeals' | 'myrecipes' | 'myfoods'>('all');
+  const [paywallFeature, setPaywallFeature] = useState<string | null>(null);
+  const hasVoiceLog = useFeatureGate('voice_log');
+  const hasMealScan = useFeatureGate('meal_scan');
+  const quickActionsRef = useTourTarget('food_search_quick_actions');
+  const foodTabBarRef = useTourTarget('food_search_tab_bar');
   const [successVisible, setSuccessVisible] = useState(false);
   const [lastLogged, setLastLogged] = useState('');
 
@@ -859,6 +960,34 @@ export default function FoodSearchScreen() {
     setPickerVisible(true);
   }, []);
 
+  // Convert a user-created FoodItem (from My Foods tab) to a UnifiedFood for the portion picker
+  const handleCustomFoodItemPress = useCallback((item: FoodItem) => {
+    const grams = item.servingGrams || 100;
+    const scale = grams > 0 ? 100 / grams : 1;
+    const food: UnifiedFood = {
+      id: `myfood-${item.id}`,
+      name: item.name,
+      source: 'local',
+      per100g: {
+        calories: Math.round(item.calories * scale),
+        proteinGrams: Math.round(item.proteinGrams * scale * 10) / 10,
+        carbsGrams: Math.round(item.carbsGrams * scale * 10) / 10,
+        fatGrams: Math.round(item.fatGrams * scale * 10) / 10,
+        fiberGrams: Math.round((item.fiberGrams || 0) * scale * 10) / 10,
+      },
+      servings: [
+        { label: item.servingSize || `${grams}g`, grams },
+        { label: '1 gram', grams: 1, isUniversal: true },
+        { label: '1 ounce', grams: 28.35, isUniversal: true },
+        { label: '1 pound', grams: 453.6, isUniversal: true },
+      ],
+      defaultServingGrams: grams,
+      emoji: '🥗',
+    };
+    setSelectedFood(food);
+    setPickerVisible(true);
+  }, []);
+
   const handleLog = useCallback(
     (food: UnifiedFood, grams: number, mealType: MealType) => {
       const macros = calcUnifiedMacros(food, grams);
@@ -947,7 +1076,7 @@ export default function FoodSearchScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Search bar + scan button */}
+      {/* Search bar — placeholder swaps per active tab */}
       <View style={styles.searchContainer}>
         <View style={styles.searchRow}>
           <View style={[styles.searchBar, { flex: 1 }]}>
@@ -956,7 +1085,12 @@ export default function FoodSearchScreen() {
               style={styles.searchInput}
               value={query}
               onChangeText={setQuery}
-              placeholder="Search any food, brand, or restaurant..."
+              placeholder={
+                activeTab === 'mymeals' ? 'Search my meals...' :
+                activeTab === 'myrecipes' ? 'Search my recipes...' :
+                activeTab === 'myfoods' ? 'Search my foods...' :
+                'Search foods, brands, flavors...'
+              }
               placeholderTextColor={Colors.darkTextSecondary}
               returnKeyType="search"
               clearButtonMode="while-editing"
@@ -968,65 +1102,29 @@ export default function FoodSearchScreen() {
               </TouchableOpacity>
             )}
           </View>
-          <TouchableOpacity
-            style={styles.scanBtn}
-            onPress={() => setScannerVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="barcode-outline" size={22} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.addCustomBtn}
-            onPress={() => setCustomFoodVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="add" size={22} color="#fff" />
-          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Search info or tabs */}
-      {loading ? (
-        <View style={styles.resultsHeader}>
-          <View style={styles.loadingRow}>
-            <ActivityIndicator size="small" color={Colors.pepTeal} />
-            <Text style={styles.resultsCount}>Searching...</Text>
-          </View>
-        </View>
-      ) : hasSearched ? (
-        <View style={styles.resultsHeader}>
-          <Text style={styles.resultsCount}>
-            {results.length} result{results.length !== 1 ? 's' : ''} for "{query}"
-          </Text>
-        </View>
-      ) : (
-        /* Tabs: Recent | My Meals */
-        <View style={styles.tabBar}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'recent' && styles.tabActive]}
-            onPress={() => setActiveTab('recent')}
-          >
-            <Text style={[styles.tabText, activeTab === 'recent' && styles.tabTextActive]}>Recent</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'mymeals' && styles.tabActive]}
-            onPress={() => setActiveTab('mymeals')}
-          >
-            <Text style={[styles.tabText, activeTab === 'mymeals' && styles.tabTextActive]}>My Meals</Text>
-          </TouchableOpacity>
-          {activeTab === 'recent' && recentFoods.length > 0 && (
-            <TouchableOpacity onPress={clearRecentFoods} style={styles.clearBtn}>
-              <Ionicons name="trash-outline" size={14} color={Colors.darkTextSecondary} />
+      {/* 4-Tab bar — All / My Meals / My Recipes / My Foods */}
+      <View ref={foodTabBarRef} style={styles.mfpTabBar}>
+        {(['all', 'mymeals', 'myrecipes', 'myfoods'] as const).map((tab) => {
+          const labels = { all: 'All', mymeals: 'My Meals', myrecipes: 'My Recipes', myfoods: 'My Foods' };
+          const active = activeTab === tab;
+          return (
+            <TouchableOpacity
+              key={tab}
+              style={styles.mfpTab}
+              onPress={() => setActiveTab(tab)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.mfpTabText, active && styles.mfpTabTextActive]}>
+                {labels[tab]}
+              </Text>
+              {active && <View style={styles.mfpTabUnderline} />}
             </TouchableOpacity>
-          )}
-          {activeTab === 'mymeals' && (
-            <TouchableOpacity onPress={() => { setEditingMeal(null); setMealBuilderVisible(true); }} style={styles.newMealBtn}>
-              <Ionicons name="add" size={16} color={Colors.pepTeal} />
-              <Text style={styles.newMealBtnText}>New</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
+          );
+        })}
+      </View>
 
       {/* Success toast */}
       {successVisible && (
@@ -1036,134 +1134,417 @@ export default function FoodSearchScreen() {
         </View>
       )}
 
-      {/* Search results OR recent foods */}
-      {hasSearched ? (
-        <FlatList
-          data={results}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <FoodRow food={item} onPress={handleFoodPress} />
-          )}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          ListEmptyComponent={
-            !loading ? (
-              <View style={styles.emptyState}>
-                <Ionicons name="search-outline" size={40} color={Colors.darkTextSecondary} />
-                <Text style={styles.emptyTitle}>No foods found</Text>
-                <Text style={styles.emptyDesc}>Try a different search term, brand name, or restaurant</Text>
-              </View>
-            ) : null
-          }
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        />
-      ) : activeTab === 'recent' ? (
-        /* ── Recent Foods Tab ── */
-        <FlatList
-          data={recentFoods}
-          keyExtractor={(item) => item.key}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.recentRow} onPress={() => handleRecentPress(item)} activeOpacity={0.7}>
-              {item.imageUrl ? (
-                <Image source={{ uri: item.imageUrl }} style={styles.recentImage} />
-              ) : (
-                <View style={[styles.foodEmojiBg, { backgroundColor: Colors.pepTeal + '1A' }]}>
-                  <Text style={styles.foodEmoji}>{item.emoji || '🍽️'}</Text>
-                </View>
-              )}
-              <View style={styles.recentInfo}>
-                <Text style={styles.recentName} numberOfLines={1}>{item.foodName}</Text>
-                {item.brand ? <Text style={styles.recentBrand} numberOfLines={1}>{item.brand}</Text> : null}
-                <Text style={styles.recentMeta}>
-                  {item.servingLabel} · {item.grams}g · {item.calories} cal
-                </Text>
-                <Text style={styles.recentMacros}>
-                  {item.proteinGrams}p · {item.carbsGrams}c · {item.fatGrams}f
-                </Text>
-              </View>
+      {/* ═══════════════════════════════════════════════════════════════════════
+          TAB CONTENT
+          ═══════════════════════════════════════════════════════════════════════ */}
+
+      {/* ── ALL tab ── */}
+      {activeTab === 'all' && (
+        <>
+          {/* Quick Action Row — shown only when not searching */}
+          {!hasSearched && (
+            <View ref={quickActionsRef} style={styles.quickActionRow}>
               <TouchableOpacity
-                style={styles.recentAddBtn}
-                onPress={() => handleRecentPress(item)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={styles.quickAction}
+                onPress={() => setScannerVisible(true)}
+                activeOpacity={0.7}
               >
-                <Ionicons name="add-circle" size={28} color={Colors.pepTeal} />
-              </TouchableOpacity>
-            </TouchableOpacity>
-          )}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Ionicons name="time-outline" size={40} color={Colors.darkTextSecondary} />
-              <Text style={styles.emptyTitle}>No recent foods</Text>
-              <Text style={styles.emptyDesc}>Foods you log will appear here for quick access</Text>
-            </View>
-          }
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        />
-      ) : (
-        /* ── My Meals Tab ── */
-        <FlatList
-          data={customMeals}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.mealCard}>
-              <TouchableOpacity style={styles.mealCardMain} onPress={() => handleLogCustomMeal(item)} activeOpacity={0.7}>
-                <Text style={styles.mealCardEmoji}>🍱</Text>
-                <View style={styles.mealCardInfo}>
-                  <Text style={styles.mealCardName} numberOfLines={1}>{item.name}</Text>
-                  <Text style={styles.mealCardIngredients}>
-                    {item.ingredients.length} ingredient{item.ingredients.length !== 1 ? 's' : ''} · {item.totalGrams}g total
-                  </Text>
-                  <Text style={styles.mealCardMacros}>
-                    {item.totalCalories} cal · {item.totalProteinGrams}p · {item.totalCarbsGrams}c · {item.totalFatGrams}f
-                  </Text>
+                <View style={[styles.quickActionIcon, { backgroundColor: Colors.almostAquaDeep + '18' }]}>
+                  <Ionicons name="barcode-outline" size={22} color={Colors.almostAquaDeep} />
                 </View>
-                <TouchableOpacity
-                  style={styles.recentAddBtn}
-                  onPress={() => handleLogCustomMeal(item)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons name="add-circle" size={28} color={Colors.pepTeal} />
-                </TouchableOpacity>
+                <Text style={styles.quickActionLabel}>Barcode</Text>
               </TouchableOpacity>
-              <View style={styles.mealCardActions}>
-                <TouchableOpacity
-                  style={styles.mealActionBtn}
-                  onPress={() => { setEditingMeal(item); setMealBuilderVisible(true); }}
-                >
-                  <Ionicons name="create-outline" size={14} color={Colors.darkTextSecondary} />
-                  <Text style={styles.mealActionText}>Edit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.mealActionBtn}
-                  onPress={() => Alert.alert('Delete Meal', `Remove "${item.name}"?`, [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Delete', style: 'destructive', onPress: () => removeCustomMeal(item.id) },
-                  ])}
-                >
-                  <Ionicons name="trash-outline" size={14} color={Colors.error + '88'} />
-                  <Text style={[styles.mealActionText, { color: Colors.error + '88' }]}>Delete</Text>
-                </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.quickAction}
+                onPress={() => {
+                  if (hasVoiceLog) {
+                    router.push('/nutrition/voice-log' as any);
+                  } else {
+                    setPaywallFeature('voice_log');
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.quickActionIcon, { backgroundColor: Colors.almostAquaDeep + '18' }]}>
+                  <Ionicons name="mic-outline" size={22} color={Colors.almostAquaDeep} />
+                  {!hasVoiceLog && (
+                    <View style={styles.quickActionLock}>
+                      <LockBadge tier="plus" size="sm" />
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.quickActionLabel}>Voice log</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.quickAction}
+                onPress={() => {
+                  if (hasMealScan) {
+                    router.push('/nutrition/meal-scan' as any);
+                  } else {
+                    setPaywallFeature('meal_scan');
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.quickActionIcon, { backgroundColor: Colors.almostAquaDeep + '18' }]}>
+                  <Ionicons name="scan-outline" size={22} color={Colors.almostAquaDeep} />
+                  {!hasMealScan && (
+                    <View style={styles.quickActionLock}>
+                      <LockBadge tier="pro" size="sm" />
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.quickActionLabel}>Meal scan</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.quickAction}
+                onPress={() => setCustomFoodVisible(true)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.quickActionIcon, { backgroundColor: Colors.almostAquaDeep + '18' }]}>
+                  <Ionicons name="add-circle-outline" size={22} color={Colors.almostAquaDeep} />
+                </View>
+                <Text style={styles.quickActionLabel}>Quick add</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Results / suggestions */}
+          {loading ? (
+            <View style={styles.resultsHeader}>
+              <View style={styles.loadingRow}>
+                <ActivityIndicator size="small" color={Colors.almostAquaDeep} />
+                <Text style={styles.resultsCount}>Searching...</Text>
               </View>
             </View>
-          )}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Ionicons name="restaurant-outline" size={40} color={Colors.darkTextSecondary} />
-              <Text style={styles.emptyTitle}>No custom meals yet</Text>
-              <Text style={styles.emptyDesc}>Tap "New" to build a meal from ingredients</Text>
+          ) : hasSearched ? (
+            <View style={styles.resultsHeader}>
+              <Text style={styles.resultsCount}>
+                {results.length} result{results.length !== 1 ? 's' : ''} for "{query}"
+              </Text>
             </View>
-          }
-          keyboardShouldPersistTaps="handled"
-        />
+          ) : (
+            <View style={styles.suggestionsHeader}>
+              <Text style={styles.sectionLabel}>
+                {recentFoods.length > 0 ? 'Suggestions' : 'Get started'}
+              </Text>
+              {recentFoods.length > 0 && (
+                <TouchableOpacity onPress={clearRecentFoods}>
+                  <Text style={styles.clearLinkText}>Clear</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {hasSearched ? (
+            <FlatList
+              data={results}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => <FoodRow food={item} onPress={handleFoodPress} />}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+              ListEmptyComponent={
+                !loading ? (
+                  <View style={styles.emptyState}>
+                    <Ionicons name="search-outline" size={40} color={Colors.darkTextSecondary} />
+                    <Text style={styles.emptyTitle}>No foods found</Text>
+                    <Text style={styles.emptyDesc}>Try a different search term, brand name, or restaurant</Text>
+                  </View>
+                ) : null
+              }
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            />
+          ) : (
+            <FlatList
+              data={recentFoods}
+              keyExtractor={(item) => item.key}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.recentRow} onPress={() => handleRecentPress(item)} activeOpacity={0.7}>
+                  {(() => {
+                    const icon = getFoodIcon(item.foodName);
+                    return (
+                      <View style={[styles.foodIconBg, { backgroundColor: icon.bg }]}>
+                        <Ionicons name={icon.name as any} size={20} color={icon.color} />
+                      </View>
+                    );
+                  })()}
+                  <View style={styles.recentInfo}>
+                    <Text style={styles.recentName} numberOfLines={1}>{item.foodName}</Text>
+                    {item.brand ? <Text style={styles.recentBrand} numberOfLines={1}>{item.brand}</Text> : null}
+                    <Text style={styles.recentMeta}>
+                      {item.calories} cal, {item.servingLabel}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.recentAddBtn}
+                    onPress={() => handleRecentPress(item)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="add-circle" size={28} color={Colors.almostAquaDeep} />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              )}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+              ListEmptyComponent={
+                <View style={styles.emptyStateSoft}>
+                  <View style={styles.emptyIconCircle}>
+                    <Ionicons name="leaf-outline" size={28} color={Colors.almostAquaDeep} />
+                  </View>
+                  <Text style={styles.emptyTitleBig}>Start logging,{'\n'}we'll remember.</Text>
+                  <Text style={styles.emptyDesc}>
+                    Search a food, scan a barcode, or dictate a meal. Anything you log will show up here for one-tap re-logging.
+                  </Text>
+                </View>
+              }
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            />
+          )}
+        </>
+      )}
+
+      {/* ── MY MEALS tab ── */}
+      {activeTab === 'mymeals' && (
+        <>
+          <View style={styles.mfpActionRow}>
+            <TouchableOpacity
+              style={styles.mfpActionCard}
+              onPress={() => router.push({ pathname: '/nutrition/create-recipe' as any, params: { asTemplate: '1' } })}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add" size={20} color={Colors.almostAquaDeep} />
+              <Text style={styles.mfpActionLabel}>Create meal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.mfpActionCard}
+              onPress={() => router.push({ pathname: '/nutrition/copy-previous-meal' as any, params: { mealType: initialMealType } })}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="copy-outline" size={18} color={Colors.almostAquaDeep} />
+              <Text style={styles.mfpActionLabel}>Copy previous meal</Text>
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={mealTemplates.filter((t) => !query.trim() || t.name.toLowerCase().includes(query.toLowerCase()))}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View style={styles.mealCard}>
+                <TouchableOpacity
+                  style={styles.mealCardMain}
+                  onPress={() => {
+                    logMealTemplate(item.id, today(), initialMealType);
+                    setLastLogged(`${item.name} — ${item.totalCalories} cal`);
+                    setSuccessVisible(true);
+                    setTimeout(() => setSuccessVisible(false), 3000);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.mealCardEmoji}>{item.emoji || '🍽️'}</Text>
+                  <View style={styles.mealCardInfo}>
+                    <Text style={styles.mealCardName} numberOfLines={1}>{item.name}</Text>
+                    <Text style={styles.mealCardIngredients}>
+                      {item.foods.length} item{item.foods.length !== 1 ? 's' : ''}
+                    </Text>
+                    <Text style={styles.mealCardMacros}>
+                      {item.totalCalories} cal · {item.totalProteinGrams}p · {item.totalCarbsGrams}c · {item.totalFatGrams}f
+                    </Text>
+                  </View>
+                  <Ionicons name="add-circle" size={28} color={Colors.almostAquaDeep} style={styles.recentAddBtn} />
+                </TouchableOpacity>
+                <View style={styles.mealCardActions}>
+                  <TouchableOpacity
+                    style={styles.mealActionBtn}
+                    onPress={() => Alert.alert('Delete meal', `Remove "${item.name}"?`, [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Delete', style: 'destructive', onPress: () => removeMealTemplate(item.id) },
+                    ])}
+                  >
+                    <Ionicons name="trash-outline" size={14} color={Colors.error + '88'} />
+                    <Text style={[styles.mealActionText, { color: Colors.error + '88' }]}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+            ListEmptyComponent={
+              <View style={styles.emptyStateSoft}>
+                <View style={styles.emptyIconCircle}>
+                  <Ionicons name="bookmark-outline" size={26} color={Colors.almostAquaDeep} />
+                </View>
+                <Text style={styles.emptyTitleBig}>Your routine,{'\n'}saved & ready.</Text>
+                <Text style={styles.emptyDesc}>
+                  Bundle the foods you eat together — your morning shake, your prep-day lunch — and drop them into any day with one tap.
+                </Text>
+              </View>
+            }
+            keyboardShouldPersistTaps="handled"
+          />
+        </>
+      )}
+
+      {/* ── MY RECIPES tab ── */}
+      {activeTab === 'myrecipes' && (
+        <>
+          <View style={styles.mfpActionRow}>
+            <TouchableOpacity
+              style={styles.mfpActionCard}
+              onPress={() => { setEditingMeal(null); setMealBuilderVisible(true); }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add" size={20} color={Colors.almostAquaDeep} />
+              <Text style={styles.mfpActionLabel}>Create recipe</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.mfpActionCard}
+              onPress={() => router.push('/nutrition/recipe-generator')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="sparkles-outline" size={18} color={Colors.almostAquaDeep} />
+              <Text style={styles.mfpActionLabel}>Discover</Text>
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={customMeals.filter((m) => !query.trim() || m.name.toLowerCase().includes(query.toLowerCase()))}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <View style={styles.mealCard}>
+                <TouchableOpacity style={styles.mealCardMain} onPress={() => handleLogCustomMeal(item)} activeOpacity={0.7}>
+                  <Text style={styles.mealCardEmoji}>🍱</Text>
+                  <View style={styles.mealCardInfo}>
+                    <Text style={styles.mealCardName} numberOfLines={1}>{item.name}</Text>
+                    <Text style={styles.mealCardIngredients}>
+                      {item.ingredients.length} ingredient{item.ingredients.length !== 1 ? 's' : ''} · {item.totalGrams}g total
+                    </Text>
+                    <Text style={styles.mealCardMacros}>
+                      {item.totalCalories} cal · {item.totalProteinGrams}p · {item.totalCarbsGrams}c · {item.totalFatGrams}f
+                    </Text>
+                  </View>
+                  <Ionicons name="add-circle" size={28} color={Colors.almostAquaDeep} style={styles.recentAddBtn} />
+                </TouchableOpacity>
+                <View style={styles.mealCardActions}>
+                  <TouchableOpacity
+                    style={styles.mealActionBtn}
+                    onPress={() => { setEditingMeal(item); setMealBuilderVisible(true); }}
+                  >
+                    <Ionicons name="create-outline" size={14} color={Colors.darkTextSecondary} />
+                    <Text style={styles.mealActionText}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.mealActionBtn}
+                    onPress={() => Alert.alert('Delete recipe', `Remove "${item.name}"?`, [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Delete', style: 'destructive', onPress: () => removeCustomMeal(item.id) },
+                    ])}
+                  >
+                    <Ionicons name="trash-outline" size={14} color={Colors.error + '88'} />
+                    <Text style={[styles.mealActionText, { color: Colors.error + '88' }]}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+            ListEmptyComponent={
+              <View style={styles.emptyStateSoft}>
+                <View style={styles.emptyIconCircle}>
+                  <Ionicons name="reader-outline" size={26} color={Colors.almostAquaDeep} />
+                </View>
+                <Text style={styles.emptyTitleBig}>Build a recipe,{'\n'}skip the math.</Text>
+                <Text style={styles.emptyDesc}>
+                  Stack your ingredients once and PepTalk handles the macros every time you cook it.
+                </Text>
+              </View>
+            }
+            keyboardShouldPersistTaps="handled"
+          />
+        </>
+      )}
+
+      {/* ── MY FOODS tab ── */}
+      {activeTab === 'myfoods' && (
+        <>
+          <View style={styles.mfpActionRow}>
+            <TouchableOpacity
+              style={styles.mfpActionCard}
+              onPress={() => router.push('/nutrition/create-food' as any)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add" size={20} color={Colors.almostAquaDeep} />
+              <Text style={styles.mfpActionLabel}>Create a food</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.mfpActionCard}
+              onPress={() => setCustomFoodVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="flash-outline" size={18} color={Colors.almostAquaDeep} />
+              <Text style={styles.mfpActionLabel}>Quick add</Text>
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={customFoods.filter((f) => !query.trim() || f.name.toLowerCase().includes(query.toLowerCase()))}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.customFoodRow}
+                onPress={() => handleCustomFoodItemPress(item)}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.foodEmojiBg, { backgroundColor: Colors.almostAquaDeep + '1A' }]}>
+                  <Text style={styles.foodEmoji}>🥗</Text>
+                </View>
+                <View style={styles.foodInfo}>
+                  <Text style={styles.foodName} numberOfLines={1}>{item.name}</Text>
+                  <Text style={styles.foodMacros}>
+                    {item.servingSize} · {item.proteinGrams}p · {item.carbsGrams}c · {item.fatGrams}f
+                  </Text>
+                </View>
+                <View style={styles.foodCalBadge}>
+                  <Text style={styles.foodCalNum}>{item.calories}</Text>
+                  <Text style={styles.foodCalLabel}>cal</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => Alert.alert('Delete food', `Remove "${item.name}"?`, [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Delete', style: 'destructive', onPress: () => removeCustomFood(item.id) },
+                  ])}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={{ paddingLeft: 8 }}
+                >
+                  <Ionicons name="trash-outline" size={18} color={Colors.error + '88'} />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            )}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+            ListEmptyComponent={
+              <View style={styles.emptyStateSoft}>
+                <View style={styles.emptyIconCircle}>
+                  <Ionicons name="add-circle-outline" size={28} color={Colors.almostAquaDeep} />
+                </View>
+                <Text style={styles.emptyTitleBig}>Your kitchen,{'\n'}your database.</Text>
+                <Text style={styles.emptyDesc}>
+                  Homemade protein bars, that local smoothie spot, your gym's pre-workout — add it once and it's yours forever.
+                </Text>
+              </View>
+            }
+            keyboardShouldPersistTaps="handled"
+          />
+        </>
       )}
 
       {/* Portion Picker */}
@@ -1195,6 +1576,15 @@ export default function FoodSearchScreen() {
         onClose={() => { setMealBuilderVisible(false); setEditingMeal(null); }}
         editMeal={editingMeal}
       />
+
+      {/* Paywall modal for locked quick actions */}
+      {paywallFeature && (
+        <PaywallModal
+          visible
+          feature={paywallFeature}
+          onDismiss={() => setPaywallFeature(null)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -1225,7 +1615,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: FontSizes.md, color: Colors.darkText },
   scanBtn: {
     width: 46, height: 46, borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.pepTeal, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.almostAquaDeep, alignItems: 'center', justifyContent: 'center',
   },
   addCustomBtn: {
     width: 46, height: 46, borderRadius: BorderRadius.lg,
@@ -1266,12 +1656,159 @@ const styles = StyleSheet.create({
   recentImage: { width: 44, height: 44, borderRadius: 10 },
   recentInfo: { flex: 1 },
   recentName: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.darkText, marginBottom: 1 },
-  recentBrand: { fontSize: FontSizes.xs, color: Colors.pepTeal, marginBottom: 1 },
+  recentBrand: { fontSize: FontSizes.xs, color: Colors.almostAquaDeep, marginBottom: 1 },
   recentMeta: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary },
   recentMacros: { fontSize: 10, color: Colors.darkTextSecondary, marginTop: 1 },
   recentAddBtn: { padding: 4 },
 
-  // Tabs
+  // MFP-style 4-tab bar (underline indicator)
+  mfpTabBar: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
+    marginBottom: 4,
+  },
+  mfpTab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    position: 'relative',
+  },
+  mfpTabText: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Medium',
+    color: Colors.darkTextSecondary,
+  },
+  mfpTabTextActive: {
+    color: Colors.darkText,
+    fontFamily: 'DMSans-Bold',
+  },
+  mfpTabUnderline: {
+    position: 'absolute',
+    bottom: -1,
+    left: '20%',
+    right: '20%',
+    height: 2,
+    backgroundColor: Colors.almostAquaDeep,
+    borderRadius: 2,
+  },
+
+  // Quick action row (Barcode / Voice / Scan / Quick add)
+  quickActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  quickAction: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+  },
+  quickActionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickActionLabel: {
+    fontSize: 11,
+    fontFamily: 'DMSans-SemiBold',
+    color: Colors.almostAquaDeep,
+  },
+  quickActionLock: {
+    position: 'absolute',
+    top: -6,
+    right: -10,
+  },
+
+  // Section label above list
+  suggestionsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Bold',
+    color: Colors.darkText,
+    letterSpacing: 0.2,
+  },
+  clearLinkText: {
+    fontSize: 12,
+    fontFamily: 'DMSans-SemiBold',
+    color: Colors.darkTextSecondary,
+  },
+
+  // MFP-style action card row (Create meal / Copy previous meal, etc.)
+  mfpActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+  },
+  mfpActionCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.almostAquaDeep + '40',
+    backgroundColor: Colors.almostAquaDeep + '0A',
+  },
+  mfpActionLabel: {
+    fontSize: 13,
+    fontFamily: 'DMSans-SemiBold',
+    color: Colors.almostAquaDeep,
+  },
+
+  // Soft empty state (matches MFP screenshots)
+  emptyStateSoft: {
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingHorizontal: Spacing.xl,
+    gap: 10,
+  },
+  emptyStateEmoji: { fontSize: 52, marginBottom: 6 },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.almostAquaDeep + '14',
+    borderWidth: 1,
+    borderColor: Colors.almostAquaDeep + '33',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  emptyTitleBig: {
+    fontSize: 22,
+    fontFamily: 'Playfair-Black',
+    color: Colors.almostAquaDeep,
+    textAlign: 'center',
+    lineHeight: 28,
+    letterSpacing: -0.3,
+  },
+
+  // Custom food row (My Foods tab)
+  customFoodRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    gap: 10,
+  },
+
+  // Legacy tab bar (kept for compatibility with any other references)
   tabBar: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md,
     marginBottom: 4, gap: 4,
@@ -1280,14 +1817,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 8, borderRadius: BorderRadius.full,
     backgroundColor: Colors.glassWhite,
   },
-  tabActive: { backgroundColor: Colors.pepTeal },
+  tabActive: { backgroundColor: Colors.almostAquaDeep },
   tabText: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.darkTextSecondary },
   tabTextActive: { color: '#fff' },
   newMealBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto',
     paddingHorizontal: 10, paddingVertical: 6,
   },
-  newMealBtnText: { fontSize: FontSizes.xs, fontWeight: '700', color: Colors.pepTeal },
+  newMealBtnText: { fontSize: FontSizes.xs, fontWeight: '700', color: Colors.almostAquaDeep },
 
   // My Meals cards
   mealCard: {
@@ -1299,7 +1836,7 @@ const styles = StyleSheet.create({
   mealCardInfo: { flex: 1 },
   mealCardName: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.darkText, marginBottom: 2 },
   mealCardIngredients: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary },
-  mealCardMacros: { fontSize: FontSizes.xs, color: Colors.pepTeal, fontWeight: '600', marginTop: 2 },
+  mealCardMacros: { fontSize: FontSizes.xs, color: Colors.almostAquaDeep, fontWeight: '600', marginTop: 2 },
   mealCardActions: {
     flexDirection: 'row', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.04)',
   },
@@ -1316,14 +1853,15 @@ const styles = StyleSheet.create({
   // Food row
   foodRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 10 },
   foodImage: { width: 44, height: 44, borderRadius: 10 },
+  foodIconBg: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   foodEmojiBg: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   foodEmoji: { fontSize: 22 },
   foodInfo: { flex: 1 },
   foodName: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.darkText, marginBottom: 1 },
-  foodBrand: { fontSize: FontSizes.xs, color: Colors.pepTeal, marginBottom: 1 },
+  foodBrand: { fontSize: FontSizes.xs, color: Colors.almostAquaDeep, marginBottom: 1 },
   foodMacros: { fontSize: 10, color: Colors.darkTextSecondary },
   foodCalBadge: { alignItems: 'center', marginRight: 4 },
-  foodCalNum: { fontSize: FontSizes.md, fontWeight: '800', color: Colors.pepTeal },
+  foodCalNum: { fontSize: FontSizes.md, fontWeight: '800', color: Colors.almostAquaDeep },
   foodCalLabel: { fontSize: 9, color: Colors.darkTextSecondary, marginTop: 1 },
 
   // Empty state
@@ -1354,7 +1892,7 @@ const styles = StyleSheet.create({
   modalFoodImage: { width: 48, height: 48, borderRadius: 10, marginTop: 2 },
   modalEmoji: { fontSize: 36, marginTop: 2 },
   modalFoodName: { fontSize: FontSizes.xl, fontWeight: '800', color: Colors.darkText, marginBottom: 4 },
-  brandText: { fontSize: FontSizes.sm, color: Colors.pepTeal, fontWeight: '600', marginBottom: 4 },
+  brandText: { fontSize: FontSizes.sm, color: Colors.almostAquaDeep, fontWeight: '600', marginBottom: 4 },
   calPer100: { fontSize: 10, color: Colors.darkTextSecondary },
   closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.glassWhite, alignItems: 'center', justifyContent: 'center' },
 
@@ -1389,10 +1927,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13,
     borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)', gap: 8,
   },
-  servingListItemActive: { backgroundColor: Colors.pepTeal + '15' },
+  servingListItemActive: { backgroundColor: Colors.almostAquaDeep + '15' },
   servingListText: { flex: 1, fontSize: FontSizes.md, color: Colors.darkText, fontWeight: '500' },
   servingListGrams: { fontSize: FontSizes.sm, color: Colors.darkTextSecondary },
-  servingListTextActive: { color: Colors.pepTeal, fontWeight: '700' },
+  servingListTextActive: { color: Colors.almostAquaDeep, fontWeight: '700' },
   servingSectionHeader: {
     paddingHorizontal: 16, paddingVertical: 6,
     backgroundColor: 'rgba(0,0,0,0.03)', borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)',
@@ -1421,7 +1959,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     paddingVertical: 12, marginTop: 4, marginBottom: 4,
   },
-  nutritionInfoBtnText: { fontSize: FontSizes.sm, color: Colors.pepTeal, fontWeight: '600' },
+  nutritionInfoBtnText: { fontSize: FontSizes.sm, color: Colors.almostAquaDeep, fontWeight: '600' },
 
   // Nutrition label (FDA-style, collapsible)
   nutritionLabel: {
@@ -1430,6 +1968,27 @@ const styles = StyleSheet.create({
     padding: 16, marginBottom: 16,
   },
   nutritionTitle: { fontSize: FontSizes.lg, fontWeight: '900', color: Colors.darkText, marginBottom: 4 },
+  nutritionServingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    paddingVertical: 2,
+  },
+  nutritionServingLabel: {
+    fontSize: FontSizes.xs,
+    fontWeight: '700',
+    color: Colors.darkText,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  nutritionServingValue: {
+    fontSize: FontSizes.xs,
+    fontWeight: '600',
+    color: Colors.darkText,
+    flexShrink: 1,
+    textAlign: 'right',
+    marginLeft: 8,
+  },
   nutritionSeparatorThick: { height: 3, backgroundColor: Colors.darkText, marginVertical: 4 },
   nutritionSeparator: { height: 1, backgroundColor: 'rgba(0,0,0,0.10)', marginVertical: 2 },
   nutritionSeparatorThin: { height: 1, backgroundColor: 'rgba(0,0,0,0.06)', marginVertical: 2 },
@@ -1447,7 +2006,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.glassBlue, borderRadius: 20,
     paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: Colors.glassBlueBorder,
   },
-  mealTypeChipActive: { backgroundColor: Colors.pepTeal, borderColor: Colors.pepTeal },
+  mealTypeChipActive: { backgroundColor: Colors.almostAquaDeep, borderColor: Colors.almostAquaDeep },
   mealTypeText: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary, fontWeight: '500' },
   mealTypeTextActive: { color: '#fff', fontWeight: '700' },
 
@@ -1462,11 +2021,11 @@ const styles = StyleSheet.create({
   },
   scannerHeaderRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md, paddingTop: 12, paddingBottom: Spacing.sm,
   },
   scannerCloseBtn: {
     width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.12)', borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 22,
   },
   scannerTitle: { fontSize: FontSizes.xl, fontWeight: '800', color: '#fff' },
   scannerPermission: {
@@ -1481,12 +2040,12 @@ const styles = StyleSheet.create({
   },
   scanCutout: {
     width: SCREEN_WIDTH * 0.7, height: SCREEN_WIDTH * 0.45,
-    borderWidth: 2, borderColor: Colors.pepTeal, borderRadius: 16,
+    borderWidth: 2, borderColor: Colors.almostAquaDeep, borderRadius: 16,
     position: 'relative',
   },
   scanCorner: {
     position: 'absolute', width: 24, height: 24,
-    borderColor: Colors.pepTeal, borderWidth: 3,
+    borderColor: Colors.almostAquaDeep, borderWidth: 3,
   },
   scanCornerTL: { top: -2, left: -2, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 14 },
   scanCornerTR: { top: -2, right: -2, borderLeftWidth: 0, borderBottomWidth: 0, borderTopRightRadius: 14 },

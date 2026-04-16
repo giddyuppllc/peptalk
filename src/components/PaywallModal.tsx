@@ -161,6 +161,76 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
     name: 'Book a Consult',
     description: 'Schedule a 1-on-1 consultation with nutritionist Jamie Esposito ($500/session).',
   },
+
+  // ── New aggressive gating features ───────────────────────────────────────
+  voice_log: {
+    name: 'Voice Log',
+    description: 'Just say what you ate — our AI parses the phrase and logs every food for you.',
+  },
+  meal_scan: {
+    name: 'Meal Scan',
+    description: 'Snap a photo of your plate and let AI vision identify every food with macros.',
+  },
+  ai_food_scanner: {
+    name: 'AI Food Scanner',
+    description: 'Camera-powered food scanning with instant macro calculation.',
+  },
+  custom_foods_unlimited: {
+    name: 'Unlimited Custom Foods',
+    description: 'Build your personal food database — homemade meals, local spots, your favorite brands.',
+  },
+  custom_recipes_unlimited: {
+    name: 'Unlimited Recipes',
+    description: 'Save all your recipes with per-serving macros and one-tap logging.',
+  },
+  unlimited_meal_log: {
+    name: 'Unlimited Meal Logging',
+    description: 'Log every meal, snack, and drink without daily caps.',
+  },
+  unlimited_journal: {
+    name: 'Unlimited Journal',
+    description: 'Write as often as you want — no weekly limits on entries.',
+  },
+  unlimited_stacks: {
+    name: 'Unlimited Stacks',
+    description: 'Save as many peptide stacks as you need. Switch protocols, compare, experiment.',
+  },
+  micronutrients_full: {
+    name: 'Full Micronutrient Tracking',
+    description: 'Track every vitamin and mineral — A, C, D, E, K, all B-complex, potassium, calcium, iron, and more.',
+  },
+  biomarkers_full: {
+    name: 'Biomarkers',
+    description: 'HRV, VO2 Max, resting heart rate, and weight trends from your Apple Watch or Wear OS device.',
+  },
+  weight_trends: {
+    name: 'Weight Trends',
+    description: 'Long-term weight analytics with moving averages and goal tracking.',
+  },
+  workout_csv_export: {
+    name: 'Workout Export',
+    description: 'Export your entire workout history as CSV for your records or coach.',
+  },
+  custom_workout_generator: {
+    name: 'Custom Workout Generator',
+    description: 'AI builds personalized workouts from Jamie\u2019s 451-exercise library based on your goal, level, and equipment.',
+  },
+  generated_workout_tracker: {
+    name: 'Generated Workout Tracker',
+    description: 'Live-track generated workouts with sets, reps, RPE, rest timers, and analytics.',
+  },
+  research_feed_premium: {
+    name: 'Premium Research Feed',
+    description: 'Unlock curated peptide research and deep-dive insights beyond the free preview.',
+  },
+  early_access: {
+    name: 'Early Access',
+    description: 'Get new features before anyone else and help shape the roadmap.',
+  },
+  consult_discount: {
+    name: 'Consult Discount',
+    description: 'Save $100 on every 1-on-1 session with Jamie.',
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -278,14 +348,18 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
   },
   modal: {
-    backgroundColor: 'rgba(30, 30, 50, 0.95)',
+    backgroundColor: '#FFFFFF',
     borderRadius: BorderRadius.xl,
     borderWidth: 1,
-    borderColor: Colors.glassBorder,
+    borderColor: 'rgba(0,0,0,0.06)',
     padding: Spacing.lg,
     width: '100%',
     maxWidth: 360,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
   },
   iconWrap: {
     marginBottom: Spacing.md,

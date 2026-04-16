@@ -334,3 +334,53 @@ export const GOAL_LABELS: Record<string, { label: string; description: string; i
   aerobic: { label: 'Aerobic Performance', description: 'Circuits, WODs, timed PRs, metabolic conditioning', icon: 'pulse-outline' },
   body_recomp: { label: 'Body Recomp', description: 'Hypertrophy base with cardio intervals', icon: 'trending-up-outline' },
 };
+
+// ---------------------------------------------------------------------------
+// Recommended RPE
+// ---------------------------------------------------------------------------
+
+/**
+ * Baseline RPE for each goal — the effort level Jamie wants for the primary (P1) work.
+ * Strength sits highest (near failure), circuits/weight-loss lowest (keep moving).
+ */
+const GOAL_BASELINE_RPE: Record<string, number> = {
+  strength:       9,
+  hypertrophy:    8,
+  transformation: 8,
+  body_recomp:    8,
+  weight_loss:    7,
+  aerobic:        7,
+  circuit:        6,
+};
+
+/**
+ * Adjustment by exercise priority. P1 = primary compound/big lift, push hard.
+ * P2 = accessory, slightly lower. P3/P4 = finishers/rehab, keep form clean.
+ */
+const PRIORITY_RPE_ADJUST: Record<string, number> = {
+  P1:  0,
+  P2: -1,
+  P3: -1,
+  P4: -2,
+};
+
+/**
+ * Get the recommended RPE (1-10) for an exercise given the workout goal and the
+ * exercise's priority tier. Clamped to [5, 10].
+ */
+export function getRecommendedRpe(goal: string, priority: string): number {
+  const base = GOAL_BASELINE_RPE[goal] ?? 7;
+  const adjust = PRIORITY_RPE_ADJUST[priority] ?? 0;
+  const result = base + adjust;
+  return Math.max(5, Math.min(10, result));
+}
+
+/** Human-readable label for an RPE value */
+export function rpeLabel(rpe: number): string {
+  if (rpe >= 10) return 'Max effort';
+  if (rpe >= 9) return 'Very hard';
+  if (rpe >= 8) return 'Hard';
+  if (rpe >= 7) return 'Moderate-hard';
+  if (rpe >= 6) return 'Moderate';
+  return 'Light';
+}

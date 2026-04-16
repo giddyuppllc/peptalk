@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useCheckinStore } from '../../src/store/useCheckinStore';
 import { useJournalStore } from '../../src/store/useJournalStore';
@@ -130,12 +130,12 @@ const ROUTES: AdministrationRoute[] = [
 const UNITS: DoseUnit[] = ['mcg', 'mg', 'IU', 'ml'];
 
 const JOURNAL_CATEGORY_COLORS: Record<JournalCategory, string> = {
-  protocol_notes: '#F8A97A',
+  protocol_notes: '#E89672',
   side_effects: '#ef4444',
   mood: '#10b981',
-  progress: '#D4A853',
+  progress: '#BADDCB',
   research: '#06b6d4',
-  questions: '#FFBF82',
+  questions: '#F4E9A7',
   goals: '#ec4899',
   general: '#6b7280',
 };
@@ -241,11 +241,21 @@ function TodayGlow() {
 export default function CalendarScreen() {
   const t = useTheme();
   const router = useRouter();
+  const params = useLocalSearchParams<{ openLog?: string }>();
   const now = new Date();
   const [viewMonth, setViewMonth] = useState(now.getMonth());
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [selectedDate, setSelectedDate] = useState(toDateKey(now));
   const [showLogModal, setShowLogModal] = useState(false);
+
+  // Auto-open the dose log modal when arriving with ?openLog=1 (from Home FAB)
+  const openLogHandled = useRef(false);
+  useEffect(() => {
+    if (params.openLog === '1' && !openLogHandled.current) {
+      openLogHandled.current = true;
+      setShowLogModal(true);
+    }
+  }, [params.openLog]);
 
   // Log form state -- free-text substance name for plausible deniability
   const [logSubstanceName, setLogSubstanceName] = useState('');
@@ -725,7 +735,7 @@ export default function CalendarScreen() {
                     {selectedDayCheckin.weightLbs ? (
                       <LinearGradient colors={['rgba(245,158,11,0.15)', 'rgba(245,158,11,0.05)']} style={styles.checkinBadge}>
                         <Text style={[styles.checkinBadgeLabel, { color: t.textSecondary }]}>Weight</Text>
-                        <Text style={[styles.checkinBadgeValue, { color: '#FFBF82' }]}>{selectedDayCheckin.weightLbs} lbs</Text>
+                        <Text style={[styles.checkinBadgeValue, { color: '#F4E9A7' }]}>{selectedDayCheckin.weightLbs} lbs</Text>
                       </LinearGradient>
                     ) : null}
                     {selectedDayCheckin.restingHeartRate ? (
@@ -743,7 +753,7 @@ export default function CalendarScreen() {
                     {selectedDayCheckin.hrvMs ? (
                       <LinearGradient colors={['rgba(139,92,246,0.15)', 'rgba(139,92,246,0.05)']} style={styles.checkinBadge}>
                         <Text style={[styles.checkinBadgeLabel, { color: t.textSecondary }]}>HRV</Text>
-                        <Text style={[styles.checkinBadgeValue, { color: '#D4A853' }]}>{Math.round(selectedDayCheckin.hrvMs)} ms</Text>
+                        <Text style={[styles.checkinBadgeValue, { color: '#BADDCB' }]}>{Math.round(selectedDayCheckin.hrvMs)} ms</Text>
                       </LinearGradient>
                     ) : null}
                   </View>
@@ -816,7 +826,7 @@ export default function CalendarScreen() {
                           </View>
                           {wlog.rating && (
                             <View style={styles.workoutMetaItem}>
-                              <Ionicons name="star" size={14} color="#FFBF82" />
+                              <Ionicons name="star" size={14} color="#F4E9A7" />
                               <Text style={[styles.workoutMetaText, { color: t.textSecondary }]}>{wlog.rating}/5</Text>
                             </View>
                           )}
@@ -841,10 +851,10 @@ export default function CalendarScreen() {
                       activeOpacity={0.8}
                       onPress={() => router.push('/nutrition')}
                     >
-                      <GlassCard variant="glow" glowColor="#FFBF82" style={styles.eventCard}>
+                      <GlassCard variant="glow" glowColor="#F4E9A7" style={styles.eventCard}>
                         <View style={styles.eventCardHeader}>
                           <View style={[styles.eventIconWrap, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-                            <Ionicons name="nutrition" size={20} color="#FFBF82" />
+                            <Ionicons name="nutrition" size={20} color="#F4E9A7" />
                           </View>
                           <View style={styles.eventCardHeaderText}>
                             <Text style={[styles.eventCardTitle, { color: t.text }]}>
@@ -913,10 +923,10 @@ export default function CalendarScreen() {
             {selectedDayJournal.length > 0 && (
               <View style={styles.timelineSection}>
                 {selectedDayJournal.map((entry) => (
-                  <GlassCard key={entry.id} variant="glow" glowColor="#D4A853" style={styles.eventCard}>
+                  <GlassCard key={entry.id} variant="glow" glowColor="#BADDCB" style={styles.eventCard}>
                     <View style={styles.eventCardHeader}>
                       <View style={[styles.eventIconWrap, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
-                        <Ionicons name="journal" size={20} color="#D4A853" />
+                        <Ionicons name="journal" size={20} color="#BADDCB" />
                       </View>
                       <View style={styles.eventCardHeaderText}>
                         <Text style={[styles.eventCardTitle, { color: t.text }]}>{entry.title}</Text>
@@ -1167,7 +1177,7 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 14, color: Colors.darkTextSecondary, marginTop: 4 },
   headerIconWrap: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: 'rgba(248, 169, 122, 0.12)',
+    backgroundColor: 'rgba(232, 150, 114, 0.12)',
     alignItems: 'center', justifyContent: 'center',
   },
 
@@ -1249,9 +1259,9 @@ const styles = StyleSheet.create({
   dot: { width: 5, height: 5, borderRadius: 2.5 },
   dotDose: { backgroundColor: Colors.rose },
   dotCheckin: { backgroundColor: '#22c55e' },
-  dotJournal: { backgroundColor: '#D4A853' },
+  dotJournal: { backgroundColor: '#BADDCB' },
   dotWorkout: { backgroundColor: Colors.pepTeal },
-  dotMeal: { backgroundColor: '#FFBF82' },
+  dotMeal: { backgroundColor: '#F4E9A7' },
 
   // Legend
   legend: {
@@ -1379,7 +1389,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3, paddingHorizontal: 8,
     borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.2)',
   },
-  journalTagText: { fontSize: FontSizes.xs, color: '#FFBF82', fontWeight: '600' },
+  journalTagText: { fontSize: FontSizes.xs, color: '#F4E9A7', fontWeight: '600' },
   journalTagMore: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary, alignSelf: 'center' },
 
   // Side effects

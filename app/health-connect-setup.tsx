@@ -24,6 +24,7 @@ import {
   FontSizes,
 } from '../src/constants/theme';
 import { useTheme } from '../src/hooks/useTheme';
+import { PaywallGate } from '../src/hooks/useFeatureGate';
 import {
   isHealthKitAvailable,
   requestHealthKitPermissions,
@@ -103,7 +104,15 @@ const HEALTH_METRICS: HealthMetric[] = [
 // Component
 // ---------------------------------------------------------------------------
 
-export default function HealthConnectSetupScreen() {
+export default function HealthConnectSetupScreenWrapper() {
+  return (
+    <PaywallGate feature="health_integrations">
+      <HealthConnectSetupScreen />
+    </PaywallGate>
+  );
+}
+
+function HealthConnectSetupScreen() {
   const t = useTheme();
   const router = useRouter();
   const [connecting, setConnecting] = useState(false);

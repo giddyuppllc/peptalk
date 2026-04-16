@@ -21,6 +21,8 @@ import { Peptide, PeptideCategory, PeptideInteraction } from '../../src/types';
 import { getInteraction } from '../../src/data/interactions';
 import { analyzeStack } from '../../src/services/analysisEngine';
 import { useTheme } from '../../src/hooks/useTheme';
+import { useSectionAccent } from '../../src/hooks/useSectionAccent';
+import { Colors } from '../../src/constants/theme';
 
 const MAX_STACK_SIZE = 5;
 
@@ -51,12 +53,13 @@ function getInteractionColor(type: string): string {
     case 'contraindicated':
       return '#ef4444';
     default:
-      return '#FFBF82';
+      return '#CADEE5';
   }
 }
 
 export default function StackBuilderScreen() {
   const t = useTheme();
+  const accent = useSectionAccent();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<PeptideCategory | null>(null);
   const [showSaveInput, setShowSaveInput] = useState(false);
@@ -205,7 +208,7 @@ export default function StackBuilderScreen() {
                         {peptide.abbreviation || peptide.name.split(' ')[0]}
                       </Text>
                       <View style={styles.slotRemove}>
-                        <Ionicons name="close" size={12} color="#e3a7a1" />
+                        <Ionicons name="close" size={12} color={accent.deep} />
                       </View>
                     </TouchableOpacity>
                   ) : (
@@ -396,7 +399,7 @@ export default function StackBuilderScreen() {
                   onChangeText={setStackName}
                   placeholder="Enter stack name..."
                   placeholderTextColor={t.textSecondary}
-                  selectionColor="#e3a7a1"
+                  selectionColor={accent.deep}
                   autoFocus
                 />
                 <View style={styles.saveActions}>
@@ -423,8 +426,8 @@ export default function StackBuilderScreen() {
                 onPress={() => setShowSaveInput(true)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="bookmark-outline" size={18} color={t.tint} />
-                <Text style={[styles.saveButtonText, { color: t.tint }]}>Save Stack</Text>
+                <Ionicons name="bookmark-outline" size={18} color={accent.deep} />
+                <Text style={[styles.saveButtonText, { color: accent.deep }]}>Save Stack</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -448,7 +451,7 @@ export default function StackBuilderScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: '#EDE6D6',
   },
   scrollView: {
     flex: 1,
@@ -493,7 +496,7 @@ const styles = StyleSheet.create({
   clearButton: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#e3a7a1',
+    color: Colors.iceMeltDeep,
   },
 
   // ── Visual Slots ──────────────────────────────────────────
@@ -519,7 +522,7 @@ const styles = StyleSheet.create({
   slotText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#e3a7a1',
+    color: Colors.iceMeltDeep,
     textAlign: 'center',
   },
   slotRemove: {
@@ -626,7 +629,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   filterChipTextActive: {
-    color: '#e3a7a1',
+    color: Colors.iceMeltDeep,
   },
 
   // ── Peptide Picker ────────────────────────────────────────
@@ -685,7 +688,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#e3a7a1',
+    backgroundColor: Colors.iceMeltDeep,
     borderRadius: 14,
     paddingVertical: 16,
     gap: 8,

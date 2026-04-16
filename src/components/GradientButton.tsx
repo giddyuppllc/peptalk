@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AnimatedPress } from './AnimatedPress';
+import { useSectionAccent } from '../hooks/useSectionAccent';
 
 interface GradientButtonProps {
   label: string;
@@ -19,7 +20,8 @@ export function GradientButton({
   colors,
   style,
 }: GradientButtonProps) {
-  const c = colors ?? ['#F8A97A', '#F8A97A'] as [string, string];
+  const accent = useSectionAccent();
+  const c = colors ?? ([accent.deep, accent.deep] as [string, string]);
   return (
     <AnimatedPress
       onPress={onPress}

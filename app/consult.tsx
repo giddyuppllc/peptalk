@@ -60,7 +60,7 @@ export default function ConsultScreen() {
           </Text>
           <AnimatedPress onPress={() => router.push('/subscription')}>
             <LinearGradient
-              colors={['#F8A97A', '#F8A97A']}
+              colors={['#E89672', '#E89672']}
               style={styles.upgradeBtn}
             >
               <Text style={styles.upgradeBtnText}>View Plans</Text>
@@ -186,7 +186,7 @@ export default function ConsultScreen() {
         {/* Submit */}
         <AnimatedPress onPress={handleSubmit}>
           <LinearGradient
-            colors={['#FFBF82', '#ef4444']}
+            colors={['#F4E9A7', '#ef4444']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.submitBtn}

@@ -490,535 +490,300 @@ export default function CheckInScreen() {
       .slice(0, 5);
   }, [entries]);
 
+  // ── Step-by-step flow ─────────────────────────────────────────────────────
+  const ACCENT = '#E89672'; // Home peach — matches FAB "Daily Log" color
+  const ACCENT_LIGHT = '#F2C7A9';
+
+  const STEPS = [
+    { key: 'mood', title: 'How are you feeling?', subtitle: 'Rate your overall mood right now' },
+    { key: 'body', title: 'Body & Energy', subtitle: 'How does your body feel today?' },
+    { key: 'sleep', title: 'Sleep & Stress', subtitle: 'How did you rest and recover?' },
+    { key: 'vitals', title: 'Vitals', subtitle: 'Track your key metrics' },
+    ...(activeProtocols.length > 0 ? [{ key: 'peptides', title: 'Peptide Effects', subtitle: 'How are your protocols affecting you?' }] : []),
+    { key: 'journal', title: 'Journal', subtitle: 'Any thoughts or observations?' },
+  ];
+
+  const [currentStep, setCurrentStep] = useState(0);
+  const isLastStep = currentStep === STEPS.length - 1;
+  const isFirstStep = currentStep === 0;
+  const step = STEPS[currentStep];
+
+  const goNext = () => {
+    if (isLastStep) {
+      handleSave();
+    } else {
+      selectionTick();
+      setCurrentStep((s) => Math.min(s + 1, STEPS.length - 1));
+    }
+  };
+
+  const goBack = () => {
+    selectionTick();
+    setCurrentStep((s) => Math.max(s - 1, 0));
+  };
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
+      {/* ── Top bar: X + progress ── */}
+      <View style={styles.stepTopBar}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.stepCloseBtn}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="close" size={24} color={t.text} />
+        </TouchableOpacity>
+        <View style={styles.stepProgressRow}>
+          {STEPS.map((_, i) => (
+            <View
+              key={i}
+              style={[
+                styles.stepDot,
+                { backgroundColor: i <= currentStep ? ACCENT : `${ACCENT}30` },
+              ]}
+            />
+          ))}
+        </View>
+        <View style={{ width: 36 }} />
+      </View>
+
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={styles.stepContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        {/* ── Header ───────────────────────────────────────────────────────── */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: t.text }]}>Daily Check-In</Text>
-          <Text style={[styles.subtitle, { color: t.textSecondary }]}>
-            {isToday
-              ? 'Log how you feel, track your metrics, and build a research profile.'
-              : `Checking in for ${dateKey}`}
-          </Text>
+        {/* ── Step header ── */}
+        <View style={styles.stepHeader}>
+          <Text style={[styles.stepTitle, { color: t.text }]}>{step.title}</Text>
+          <Text style={[styles.stepSubtitle, { color: t.textSecondary }]}>{step.subtitle}</Text>
         </View>
 
-        {/* ── Motivational header image ────────────────────────────────────── */}
-        <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800&q=80' }}
-          style={styles.headerBanner}
-        />
 
-        {/* ── Summary ──────────────────────────────────────────────────────── */}
-        <GlassCard style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <View>
-              <Text style={[styles.summaryLabel, { color: t.textSecondary }]}>Streak</Text>
-              <Text style={[styles.summaryValue, { color: t.text }]}>{streak} day(s)</Text>
-            </View>
-            <View style={[styles.summaryDivider, { backgroundColor: t.glassBorder }]} />
-            <View>
-              <Text style={[styles.summaryLabel, { color: t.textSecondary }]}>
-                {isToday ? 'Today' : dateKey}
-              </Text>
-              <Text style={[styles.summaryValue, { color: t.text }]}>
-                {existingEntry ? 'Completed' : 'Pending'}
-              </Text>
-            </View>
-          </View>
-        </GlassCard>
+        {/* ══════ STEP CONTENT ══════ */}
 
-        {/* ── Trends ────────────────────────────────────────────────────────── */}
-        {entries.length >= 3 && (
+        {/* Step 1: Mood */}
+        {step.key === 'mood' && (
           <>
-            <GlassCard style={styles.formCard}>
-              <Text style={[styles.sectionTitle, { color: t.text }]}>14-Day Trends</Text>
-              <View style={styles.trendGrid}>
-                <TrendCard label="Mood" data={trendData.mood} color="#e3a7a1" unit="/5" />
-                <TrendCard label="Energy" data={trendData.energy} color="#eab308" unit="/5" />
-                <TrendCard label="Sleep" data={trendData.sleep} color="#6366f1" unit="/5" />
-                <TrendCard label="Stress" data={trendData.stress} color="#ef4444" unit="/5" />
-                <TrendCard label="Recovery" data={trendData.recovery} color="#10b981" unit="/5" />
-                <TrendCard label="Appetite" data={trendData.appetite} color="#FFBF82" unit="/5" />
-              </View>
-            </GlassCard>
-
-            {emotionFreq.length > 0 && (
-              <GlassCard style={styles.formCard}>
-                <Text style={[styles.sectionTitle, { color: t.text }]}>Top Emotions (14 days)</Text>
-                {emotionFreq.map(([tag, count]) => {
-                  const opt = EMOTION_OPTIONS.find(o => o.value === tag);
-                  return (
-                    <View key={tag} style={styles.emotionBarRow}>
-                      <Text style={[styles.emotionBarLabel, { color: t.textSecondary }]}>{opt?.label ?? tag}</Text>
-                      <View style={[styles.emotionBar, { backgroundColor: t.glass }]}>
-                        <View style={[styles.emotionBarFill, { flex: count, backgroundColor: getSentimentColor(opt?.sentiment ?? 'neutral') }]} />
-                        <View style={{ flex: Math.max(0, 14 - count) }} />
-                      </View>
-                      <Text style={[styles.emotionBarCount, { color: t.text }]}>{count}</Text>
-                    </View>
-                  );
-                })}
-              </GlassCard>
-            )}
-
-            {weightData.length >= 3 && (
-              <TrendCard label="Weight" data={weightData} color="#F8A97A" unit=" lbs" />
-            )}
-          </>
-        )}
-
-        {/* ── Ratings ──────────────────────────────────────────────────────── */}
-        <GlassCard style={styles.formCard}>
-          <Text style={[styles.sectionTitle, { color: t.text }]}>How are you today?</Text>
-
-          <RatingRow label="Mood" value={mood} onChange={setMood} />
-          <RatingRow label="Energy" value={energy} onChange={setEnergy} />
-          <RatingRow label="Stress" value={stress} onChange={setStress} />
-          <RatingRow
-            label="Sleep Quality"
-            value={sleepQuality}
-            onChange={setSleepQuality}
-          />
-          <RatingRow label="Recovery" value={recovery} onChange={setRecovery} />
-          <RatingRow label="Appetite" value={appetite} onChange={setAppetite} />
-        </GlassCard>
-
-        {/* ── Emotion Tags ─────────────────────────────────────────────────── */}
-        <GlassCard style={styles.formCard}>
-          <Text style={[styles.sectionTitle, { color: t.text }]}>Emotion Tags</Text>
-          <Text style={[styles.sectionHint, { color: t.textMuted }]}>
-            Tap to toggle -- select all that apply
-          </Text>
-
-          <View style={styles.chipWrap}>
-            {EMOTION_OPTIONS.map((opt) => {
-              const selected = emotionTags.includes(opt.value);
-              return (
-                <TouchableOpacity
-                  key={opt.value}
-                  onPress={() => toggleEmotion(opt.value)}
-                  activeOpacity={0.7}
-                  style={[
-                    styles.chip,
-                    { borderColor: t.glassBorder, backgroundColor: t.glass },
-                    selected && {
-                      backgroundColor: getSentimentColor(opt.sentiment),
-                      borderColor: getSentimentBorder(opt.sentiment),
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name={opt.icon as any}
-                    size={14}
-                    color={selected ? getSentimentBorder(opt.sentiment) : t.textSecondary}
-                    style={{ marginRight: 4 }}
-                  />
-                  <Text
+            <RatingRow label="Mood" value={mood} onChange={setMood} />
+            <View style={styles.chipWrap}>
+              {EMOTION_OPTIONS.map((opt) => {
+                const selected = emotionTags.includes(opt.value);
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    onPress={() => toggleEmotion(opt.value)}
+                    activeOpacity={0.7}
                     style={[
-                      styles.chipText,
-                      { color: t.textSecondary },
+                      styles.chip,
+                      { borderColor: t.glassBorder, backgroundColor: t.glass },
                       selected && {
-                        color: getSentimentBorder(opt.sentiment),
-                        fontWeight: '700',
+                        backgroundColor: getSentimentColor(opt.sentiment),
+                        borderColor: getSentimentBorder(opt.sentiment),
                       },
                     ]}
                   >
-                    {opt.label}
+                    <Ionicons
+                      name={opt.icon as any}
+                      size={14}
+                      color={selected ? getSentimentBorder(opt.sentiment) : t.textSecondary}
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text
+                      style={[
+                        styles.chipText,
+                        { color: t.textSecondary },
+                        selected && { color: getSentimentBorder(opt.sentiment), fontWeight: '700' },
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <TextInput
+              style={[styles.feelingInput, { backgroundColor: t.inputBg, color: t.text, borderColor: t.inputBorder, marginTop: 16 }]}
+              value={overallFeeling}
+              onChangeText={setOverallFeeling}
+              placeholder="Describe how you're feeling in your own words..."
+              placeholderTextColor={t.placeholder}
+              multiline
+            />
+          </>
+        )}
+
+        {/* Step 2: Body & Energy */}
+        {step.key === 'body' && (
+          <>
+            <RatingRow label="Energy" value={energy} onChange={setEnergy} />
+            <RatingRow label="Recovery" value={recovery} onChange={setRecovery} />
+            <RatingRow label="Appetite" value={appetite} onChange={setAppetite} />
+          </>
+        )}
+
+        {/* Step 3: Sleep & Stress */}
+        {step.key === 'sleep' && (
+          <>
+            <RatingRow label="Sleep Quality" value={sleepQuality} onChange={setSleepQuality} />
+            <RatingRow label="Stress" value={stress} onChange={setStress} />
+          </>
+        )}
+
+        {/* Step 4: Vitals */}
+        {step.key === 'vitals' && (
+          <>
+            <TouchableOpacity
+              style={[styles.stepSyncBtn, { borderColor: `${ACCENT}55`, backgroundColor: healthSynced ? `${ACCENT}12` : 'transparent' }]}
+              onPress={handleHealthSync}
+              disabled={healthSyncing || healthSynced}
+              activeOpacity={0.7}
+            >
+              {healthSyncing ? (
+                <ActivityIndicator size="small" color={ACCENT} />
+              ) : (
+                <>
+                  <Ionicons
+                    name={healthSynced ? 'checkmark-circle' : 'sync-outline'}
+                    size={16}
+                    color={healthSynced ? Colors.success : ACCENT}
+                  />
+                  <Text style={[styles.stepSyncText, { color: healthSynced ? Colors.success : ACCENT }]}>
+                    {healthSynced ? 'Synced' : Platform.OS === 'ios' ? 'Sync from Apple Health' : 'Sync from Health Connect'}
                   </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </GlassCard>
+                </>
+              )}
+            </TouchableOpacity>
+            <View style={styles.metricGrid}>
+              {[
+                { label: 'Weight (lbs)', value: weight, setter: setWeight },
+                { label: 'Resting HR', value: restingHeartRate, setter: setRestingHeartRate },
+                { label: 'Steps', value: steps, setter: setSteps },
+              ].map((m) => (
+                <View key={m.label} style={styles.metricInput}>
+                  <Text style={[styles.metricLabel, { color: t.textSecondary }]}>{m.label}</Text>
+                  <TextInput
+                    style={[styles.metricField, { backgroundColor: t.inputBg, color: t.text, borderColor: t.inputBorder }]}
+                    value={m.value}
+                    onChangeText={m.setter}
+                    keyboardType="numeric"
+                    placeholder="--"
+                    placeholderTextColor={t.placeholder}
+                  />
+                </View>
+              ))}
+            </View>
+          </>
+        )}
 
-        {/* ── Overall Feeling ──────────────────────────────────────────────── */}
-        <GlassCard style={styles.formCard}>
-          <Text style={[styles.sectionTitle, { color: t.text }]}>How are you feeling overall?</Text>
-          <TextInput
-            style={[styles.feelingInput, { backgroundColor: t.inputBg, color: t.text, borderColor: t.inputBorder }]}
-            value={overallFeeling}
-            onChangeText={setOverallFeeling}
-            placeholder="Describe how you're feeling in your own words..."
-            placeholderTextColor={t.placeholder}
-            multiline
-          />
-        </GlassCard>
-
-        {/* ── Peptide Effects (only if active protocols) ───────────────────── */}
-        {activeProtocols.length > 0 && (
-          <GlassCard style={styles.formCard}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>Peptide Effects</Text>
-            <Text style={[styles.sectionHint, { color: t.textMuted }]}>
-              Track how each peptide in your active protocols is affecting you
-            </Text>
-
+        {/* Step 5: Peptide Effects (conditional) */}
+        {step.key === 'peptides' && activeProtocols.length > 0 && (
+          <>
             {activeProtocols.map((protocol) => {
               const peptide = getPeptideById(protocol.peptideId);
               const pepName = peptide?.name ?? protocol.peptideId;
-              const pe = peptideEffects.find(
-                (e) => e.peptideId === protocol.peptideId
-              ) ?? {
-                peptideId: protocol.peptideId,
-                effect: '',
-                sentiment: 'neutral' as EffectSentiment,
-                severity: 3 as CheckInRating,
+              const pe = peptideEffects.find((e) => e.peptideId === protocol.peptideId) ?? {
+                peptideId: protocol.peptideId, effect: '', sentiment: 'neutral' as EffectSentiment, severity: 3 as CheckInRating,
               };
-
               return (
                 <View key={protocol.peptideId} style={[styles.pepEffectBlock, { borderBottomColor: t.glassBorder }]}>
-                  <Text style={[styles.pepEffectName, { color: t.isDark ? '#e3a7a1' : '#b5736b' }]}>{pepName}</Text>
-
-                  {/* Sentiment selector */}
+                  <Text style={[styles.pepEffectName, { color: ACCENT }]}>{pepName}</Text>
                   <View style={styles.sentimentRow}>
                     {sentimentOptions.map((so) => {
                       const active = pe.sentiment === so.value;
                       return (
                         <TouchableOpacity
                           key={so.value}
-                          onPress={() =>
-                            updatePeptideEffect(
-                              protocol.peptideId,
-                              'sentiment',
-                              so.value
-                            )
-                          }
+                          onPress={() => updatePeptideEffect(protocol.peptideId, 'sentiment', so.value)}
                           activeOpacity={0.7}
                           style={[
                             styles.sentimentChip,
                             { borderColor: t.glassBorder, backgroundColor: t.glass },
-                            active && {
-                              backgroundColor: `${so.color}33`,
-                              borderColor: so.color,
-                            },
+                            active && { backgroundColor: `${so.color}33`, borderColor: so.color },
                           ]}
                         >
-                          <Ionicons
-                            name={so.icon as any}
-                            size={14}
-                            color={active ? so.color : t.textSecondary}
-                            style={{ marginRight: 4 }}
-                          />
-                          <Text
-                            style={[
-                              styles.sentimentChipText,
-                              { color: t.textSecondary },
-                              active && { color: so.color, fontWeight: '700' },
-                            ]}
-                          >
+                          <Ionicons name={so.icon as any} size={14} color={active ? so.color : t.textSecondary} style={{ marginRight: 4 }} />
+                          <Text style={[styles.sentimentChipText, { color: t.textSecondary }, active && { color: so.color, fontWeight: '700' }]}>
                             {so.label}
                           </Text>
                         </TouchableOpacity>
                       );
                     })}
                   </View>
-
-                  {/* Effect text input */}
                   <TextInput
                     style={[styles.pepEffectInput, { backgroundColor: t.inputBg, color: t.text, borderColor: t.inputBorder }]}
                     value={pe.effect}
-                    onChangeText={(text) =>
-                      updatePeptideEffect(protocol.peptideId, 'effect', text)
-                    }
+                    onChangeText={(text) => updatePeptideEffect(protocol.peptideId, 'effect', text)}
                     placeholder={`Effects noticed from ${pepName}...`}
                     placeholderTextColor={t.placeholder}
                   />
-
-                  {/* Severity 1-5 */}
-                  <SeverityPicker
-                    value={pe.severity ?? (3 as CheckInRating)}
-                    onChange={(v) =>
-                      updatePeptideEffect(protocol.peptideId, 'severity', v)
-                    }
-                  />
+                  <SeverityPicker value={pe.severity ?? (3 as CheckInRating)} onChange={(v) => updatePeptideEffect(protocol.peptideId, 'severity', v)} />
                 </View>
               );
             })}
-          </GlassCard>
+
+            <Text style={[styles.sectionTitle, { color: t.text, marginTop: 20 }]}>Side Effects</Text>
+            <View style={styles.chipWrap}>
+              {SIDE_EFFECT_TAGS.map((tag) => {
+                const selected = sideEffectTags.includes(tag);
+                return (
+                  <TouchableOpacity
+                    key={tag}
+                    onPress={() => toggleSideEffect(tag)}
+                    activeOpacity={0.7}
+                    style={[
+                      styles.chip,
+                      { borderColor: t.glassBorder, backgroundColor: t.glass },
+                      selected && styles.sideEffectChipActive,
+                    ]}
+                  >
+                    <Text style={[styles.chipText, { color: t.textSecondary }, selected && styles.sideEffectChipTextActive]}>
+                      {tag}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
         )}
 
-        {/* ── Side Effects Quick-Tags ──────────────────────────────────────── */}
-        <GlassCard style={styles.formCard}>
-          <Text style={[styles.sectionTitle, { color: t.text }]}>Side Effects</Text>
-          <Text style={[styles.sectionHint, { color: t.textMuted }]}>
-            Tap any side effects you experienced
-          </Text>
-
-          <View style={styles.chipWrap}>
-            {SIDE_EFFECT_TAGS.map((tag) => {
-              const selected = sideEffectTags.includes(tag);
-              return (
-                <TouchableOpacity
-                  key={tag}
-                  onPress={() => toggleSideEffect(tag)}
-                  activeOpacity={0.7}
-                  style={[
-                    styles.chip,
-                    { borderColor: t.glassBorder, backgroundColor: t.glass },
-                    selected && styles.sideEffectChipActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      { color: t.textSecondary },
-                      selected && styles.sideEffectChipTextActive,
-                    ]}
-                  >
-                    {tag}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </GlassCard>
-
-        {/* ── Metrics ──────────────────────────────────────────────────────── */}
-        <GlassCard style={styles.formCard}>
-          <View style={styles.metricHeaderRow}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>Metrics</Text>
-            <TouchableOpacity
-              style={[
-                styles.healthSyncButton,
-                healthSynced && styles.healthSyncButtonDone,
-              ]}
-              onPress={handleHealthSync}
-              disabled={healthSyncing || healthSynced}
-              activeOpacity={0.7}
-            >
-              {healthSyncing ? (
-                <ActivityIndicator size="small" color={Colors.pepTeal} />
-              ) : (
-                <>
-                  <Ionicons
-                    name={healthSynced ? 'checkmark-circle' : 'sync-outline'}
-                    size={14}
-                    color={healthSynced ? Colors.success : Colors.pepTeal}
-                  />
-                  <Text
-                    style={[
-                      styles.healthSyncText,
-                      healthSynced && styles.healthSyncTextDone,
-                    ]}
-                  >
-                    {healthSynced
-                      ? 'Synced'
-                      : Platform.OS === 'ios'
-                        ? 'Sync from Apple Health'
-                        : 'Sync from Health Connect'}
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.metricGrid}>
-            <View style={styles.metricInput}>
-              <Text style={[styles.metricLabel, { color: t.textSecondary }]}>Weight (lbs)</Text>
-              <TextInput
-                style={[styles.metricField, { backgroundColor: t.inputBg, color: t.text, borderColor: t.inputBorder }]}
-                value={weight}
-                onChangeText={setWeight}
-                keyboardType="numeric"
-                placeholder="--"
-                placeholderTextColor={t.placeholder}
-              />
-            </View>
-            <View style={styles.metricInput}>
-              <Text style={[styles.metricLabel, { color: t.textSecondary }]}>Resting HR</Text>
-              <TextInput
-                style={[styles.metricField, { backgroundColor: t.inputBg, color: t.text, borderColor: t.inputBorder }]}
-                value={restingHeartRate}
-                onChangeText={setRestingHeartRate}
-                keyboardType="numeric"
-                placeholder="--"
-                placeholderTextColor={t.placeholder}
-              />
-            </View>
-            <View style={styles.metricInput}>
-              <Text style={[styles.metricLabel, { color: t.textSecondary }]}>Steps</Text>
-              <TextInput
-                style={[styles.metricField, { backgroundColor: t.inputBg, color: t.text, borderColor: t.inputBorder }]}
-                value={steps}
-                onChangeText={setSteps}
-                keyboardType="numeric"
-                placeholder="--"
-                placeholderTextColor={t.placeholder}
-              />
-            </View>
-          </View>
-
-          {/* ── Apple Watch Metrics ─────────────────────────────────────── */}
-          {(hrvMs || vo2Max || spo2 || respiratoryRate || activeCalories || sleepStagesData) && (
-            <>
-              <Text style={[styles.sectionTitle, { marginTop: 16, marginBottom: 8, fontSize: 14, color: Colors.pepTeal }]}>
-                ⌚ Apple Watch Data
-              </Text>
-              <View style={styles.metricGrid}>
-                {hrvMs !== '' && (
-                  <View style={styles.metricInput}>
-                    <Text style={[styles.metricLabel, { color: t.textSecondary }]}>HRV (ms)</Text>
-                    <TextInput
-                      style={[styles.metricField, { backgroundColor: t.inputBg, color: t.text, borderColor: t.inputBorder }]}
-                      value={hrvMs}
-                      onChangeText={setHrvMs}
-                      keyboardType="numeric"
-                      placeholder="--"
-                      placeholderTextColor={t.placeholder}
-                    />
-                  </View>
-                )}
-                {vo2Max !== '' && (
-                  <View style={styles.metricInput}>
-                    <Text style={[styles.metricLabel, { color: t.textSecondary }]}>VO2 Max</Text>
-                    <TextInput
-                      style={[styles.metricField, { backgroundColor: t.inputBg, color: t.text, borderColor: t.inputBorder }]}
-                      value={vo2Max}
-                      onChangeText={setVo2Max}
-                      keyboardType="numeric"
-                      placeholder="--"
-                      placeholderTextColor={t.placeholder}
-                    />
-                  </View>
-                )}
-                {spo2 !== '' && (
-                  <View style={styles.metricInput}>
-                    <Text style={[styles.metricLabel, { color: t.textSecondary }]}>SpO2 (%)</Text>
-                    <TextInput
-                      style={[styles.metricField, { backgroundColor: t.inputBg, color: t.text, borderColor: t.inputBorder }]}
-                      value={spo2}
-                      onChangeText={setSpo2}
-                      keyboardType="numeric"
-                      placeholder="--"
-                      placeholderTextColor={t.placeholder}
-                    />
-                  </View>
-                )}
-                {respiratoryRate !== '' && (
-                  <View style={styles.metricInput}>
-                    <Text style={[styles.metricLabel, { color: t.textSecondary }]}>Resp Rate</Text>
-                    <TextInput
-                      style={[styles.metricField, { backgroundColor: t.inputBg, color: t.text, borderColor: t.inputBorder }]}
-                      value={respiratoryRate}
-                      onChangeText={setRespiratoryRate}
-                      keyboardType="numeric"
-                      placeholder="--"
-                      placeholderTextColor={t.placeholder}
-                    />
-                  </View>
-                )}
-                {activeCalories !== '' && (
-                  <View style={styles.metricInput}>
-                    <Text style={[styles.metricLabel, { color: t.textSecondary }]}>Active Cal</Text>
-                    <TextInput
-                      style={[styles.metricField, { backgroundColor: t.inputBg, color: t.text, borderColor: t.inputBorder }]}
-                      value={activeCalories}
-                      onChangeText={setActiveCalories}
-                      keyboardType="numeric"
-                      placeholder="--"
-                      placeholderTextColor={t.placeholder}
-                    />
-                  </View>
-                )}
-              </View>
-              {sleepStagesData && (
-                <View style={{ marginTop: 8, padding: 12, backgroundColor: t.glass, borderRadius: 12 }}>
-                  <Text style={[styles.metricLabel, { marginBottom: 8, color: t.textSecondary }]}>Sleep Stages</Text>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <View style={{ alignItems: 'center' }}>
-                      <Text style={{ color: '#818cf8', fontSize: 16, fontWeight: '700' }}>{sleepStagesData.deep}h</Text>
-                      <Text style={{ color: t.textSecondary, fontSize: 11 }}>Deep</Text>
-                    </View>
-                    <View style={{ alignItems: 'center' }}>
-                      <Text style={{ color: '#60a5fa', fontSize: 16, fontWeight: '700' }}>{sleepStagesData.core}h</Text>
-                      <Text style={{ color: t.textSecondary, fontSize: 11 }}>Core</Text>
-                    </View>
-                    <View style={{ alignItems: 'center' }}>
-                      <Text style={{ color: '#a78bfa', fontSize: 16, fontWeight: '700' }}>{sleepStagesData.rem}h</Text>
-                      <Text style={{ color: t.textSecondary, fontSize: 11 }}>REM</Text>
-                    </View>
-                    <View style={{ alignItems: 'center' }}>
-                      <Text style={{ color: '#f87171', fontSize: 16, fontWeight: '700' }}>{sleepStagesData.awake}h</Text>
-                      <Text style={{ color: t.textSecondary, fontSize: 11 }}>Awake</Text>
-                    </View>
-                    <View style={{ alignItems: 'center' }}>
-                      <Text style={{ color: Colors.pepTeal, fontSize: 16, fontWeight: '700' }}>{sleepStagesData.total}h</Text>
-                      <Text style={{ color: t.textSecondary, fontSize: 11 }}>Total</Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-            </>
-          )}
-        </GlassCard>
-
-        {/* ── Notes ────────────────────────────────────────────────────────── */}
-        <GlassCard style={styles.formCard}>
-          <Text style={[styles.sectionTitle, { color: t.text }]}>Notes</Text>
-          <TextInput
-            style={[styles.notesInput, { backgroundColor: t.inputBg, color: t.text, borderColor: t.inputBorder }]}
-            value={notes}
-            onChangeText={setNotes}
-            placeholder="How are you feeling? Anything notable?"
-            placeholderTextColor={t.placeholder}
-            multiline
-          />
-        </GlassCard>
-
-        {/* ── Save Button ──────────────────────────────────────────────────── */}
-        <View style={{ marginTop: 4, marginBottom: 20 }}>
-          <GradientButton
-            label={existingEntry ? 'Update Check-In' : 'Save Check-In'}
-            onPress={handleSave}
-          />
-        </View>
-
-        {/* ── Recent Check-Ins ─────────────────────────────────────────────── */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: t.text }]}>Recent Check-Ins</Text>
-        </View>
-        {recentEntries.length > 0 ? (
-          recentEntries.map((entry) => (
-            <GlassCard key={entry.id} style={styles.recentCard}>
-              <View style={styles.recentRow}>
-                <Text style={[styles.recentDate, { color: t.text }]}>{entry.date}</Text>
-                <Text style={[styles.recentMood, { color: t.isDark ? '#e3a7a1' : '#b5736b' }]}>Mood {entry.mood}/5</Text>
-              </View>
-              <Text style={[styles.recentMeta, { color: t.textSecondary }]}>
-                Energy {entry.energy}/5 · Sleep {entry.sleepQuality}/5 · Stress{' '}
-                {entry.stress}/5
-              </Text>
-              {entry.emotionTags && entry.emotionTags.length > 0 && (
-                <Text style={[styles.recentEmotions, { color: t.isDark ? '#10b981' : '#047857' }]}>
-                  {entry.emotionTags
-                    .map((t) => {
-                      const opt = EMOTION_OPTIONS.find((o) => o.value === t);
-                      return opt?.label ?? t;
-                    })
-                    .join(', ')}
-                </Text>
-              )}
-              {entry.sideEffectTags && entry.sideEffectTags.length > 0 && (
-                <Text style={[styles.recentSideEffects, { color: t.isDark ? '#f87171' : '#dc2626' }]}>
-                  Side effects: {entry.sideEffectTags.join(', ')}
-                </Text>
-              )}
-            </GlassCard>
-          ))
-        ) : (
-          <GlassCard style={styles.recentCard}>
-            <Text style={[styles.emptyText, { color: t.textSecondary }]}>
-              No check-ins yet. Start with today.
+        {/* Step 6: Journal */}
+        {step.key === 'journal' && (
+          <>
+            <Text style={[styles.journalTimestamp, { color: t.textMuted, marginBottom: 12 }]}>
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </Text>
-          </GlassCard>
+            <TextInput
+              style={[styles.journalInput, { backgroundColor: t.inputBg, color: t.text, borderColor: t.inputBorder }]}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Any thoughts, observations, or notes about your day..."
+              placeholderTextColor={t.placeholder}
+              multiline
+              textAlignVertical="top"
+            />
+          </>
         )}
 
-        <Disclaimer />
+        <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Bottom nav: Back / Next */}
+      <View style={[styles.stepBottomBar, { backgroundColor: t.bg, borderTopColor: t.cardBorder }]}>
+        {!isFirstStep ? (
+          <TouchableOpacity onPress={goBack} style={[styles.stepBackBtn, { borderColor: `${ACCENT}55` }]} activeOpacity={0.7}>
+            <Ionicons name="chevron-back" size={18} color={ACCENT} />
+            <Text style={[styles.stepBackText, { color: ACCENT }]}>Back</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ flex: 1 }} />
+        )}
+        <TouchableOpacity onPress={goNext} style={[styles.stepNextBtn, { backgroundColor: ACCENT }]} activeOpacity={0.85}>
+          <Text style={styles.stepNextText}>{isLastStep ? (existingEntry ? 'Update' : 'Save') : 'Next'}</Text>
+          {!isLastStep && <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />}
+          {isLastStep && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -1030,7 +795,7 @@ export default function CheckInScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: '#EDE6D6',
   },
   content: {
     paddingHorizontal: 20,
@@ -1130,6 +895,98 @@ const styles = StyleSheet.create({
   // ── Form Cards ──────────────────────────────────────────────────────────
   formCard: {
     marginBottom: 16,
+  },
+
+  // ── Step flow ───────────────────────────────────────────────────────────
+  stepTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  stepCloseBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepProgressRow: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  stepDot: {
+    width: 24,
+    height: 4,
+    borderRadius: 2,
+  },
+  stepContent: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+  },
+  stepHeader: {
+    marginBottom: 24,
+  },
+  stepTitle: {
+    fontSize: 28,
+    fontFamily: 'Playfair-Black',
+    letterSpacing: -0.3,
+  },
+  stepSubtitle: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Medium',
+    marginTop: 6,
+  },
+  stepBottomBar: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+  },
+  stepBackBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    borderWidth: 1.5,
+    borderRadius: 14,
+  },
+  stepBackText: {
+    fontSize: 15,
+    fontFamily: 'DMSans-Bold',
+  },
+  stepNextBtn: {
+    flex: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  stepNextText: {
+    fontSize: 15,
+    fontFamily: 'DMSans-Bold',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  stepSyncBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  stepSyncText: {
+    fontSize: 13,
+    fontFamily: 'DMSans-SemiBold',
   },
 
   // ── Section helpers ─────────────────────────────────────────────────────
@@ -1340,7 +1197,7 @@ const styles = StyleSheet.create({
   healthSyncText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#F8A97A',
+    color: '#E89672',
   },
   healthSyncTextDone: {
     color: '#22c55e',
@@ -1368,17 +1225,30 @@ const styles = StyleSheet.create({
     color: '#2D2D2D',
   },
 
-  // ── Notes ───────────────────────────────────────────────────────────────
-  notesInput: {
-    minHeight: 80,
+  // ── Journal ──────────────────────────────────────────────────────────────
+  journalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  journalTimestamp: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Medium',
+  },
+  journalInput: {
+    minHeight: 120,
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
     color: '#2D2D2D',
     textAlignVertical: 'top',
+    fontSize: 14,
+    fontFamily: 'DMSans-Regular',
+    lineHeight: 22,
   },
 
   // ── Save Button ─────────────────────────────────────────────────────────
@@ -1399,7 +1269,7 @@ const styles = StyleSheet.create({
     color: '#2D2D2D',
   },
 
-  // ── Recent Check-Ins ───────────────────────────────────────────────────
+  // ── Recent Daily Logs ───────────────────────────────────────────────────
   recentCard: {
     marginBottom: 10,
   },

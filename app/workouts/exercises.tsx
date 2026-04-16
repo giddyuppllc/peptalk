@@ -117,7 +117,7 @@ function ExerciseItem({
               'barbell-outline') as any
           }
           size={18}
-          color={Colors.pepTeal}
+          color={Colors.raindropsDeep}
         />
       </View>
       <View style={styles.exInfo}>
@@ -127,7 +127,7 @@ function ExerciseItem({
           </Text>
           {hasVideo(exercise) && (
             <View style={styles.videoBadge}>
-              <Ionicons name="videocam" size={11} color={Colors.pepTeal} />
+              <Ionicons name="videocam" size={11} color={Colors.raindropsDeep} />
             </View>
           )}
         </View>
@@ -144,7 +144,7 @@ function ExerciseItem({
           ) : null}
           {exercise.isTimeBased && (
             <View style={[styles.exPill, styles.exPillTime]}>
-              <Ionicons name="timer-outline" size={10} color={Colors.pepBlue} />
+              <Ionicons name="timer-outline" size={10} color={Colors.raindropsDeep} />
               <Text style={styles.exPillTimeText}>Timed</Text>
             </View>
           )}
@@ -205,7 +205,7 @@ function ExerciseDetailModal({
             <View style={styles.modalBadges}>
               {/* Muscle group */}
               <View style={styles.modalBadge}>
-                <Ionicons name="body-outline" size={14} color={Colors.pepTeal} />
+                <Ionicons name="body-outline" size={14} color={Colors.raindropsDeep} />
                 <Text style={styles.modalBadgeText}>
                   {exercise.primaryMuscle.replace(/_/g, ' ')}
                 </Text>
@@ -220,13 +220,13 @@ function ExerciseDetailModal({
                         'barbell-outline') as any
                     }
                     size={14}
-                    color={Colors.pepBlue}
+                    color={Colors.raindropsDeep}
                   />
                   <Text style={styles.modalBadgeEquipText}>{equipStr}</Text>
                 </View>
               ) : (
                 <View style={[styles.modalBadge, styles.modalBadgeEquip]}>
-                  <Ionicons name="body-outline" size={14} color={Colors.pepBlue} />
+                  <Ionicons name="body-outline" size={14} color={Colors.raindropsDeep} />
                   <Text style={styles.modalBadgeEquipText}>Bodyweight</Text>
                 </View>
               )}
@@ -500,8 +500,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.glassBlueBorder,
   },
   filterChipActive: {
-    backgroundColor: Colors.pepTeal,
-    borderColor: Colors.pepTeal,
+    backgroundColor: Colors.raindropsDeep,
+    borderColor: Colors.raindropsDeep,
   },
   filterChipEquipment: {
     flexDirection: 'row',
@@ -510,8 +510,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.glassBlueBorder,
   },
   filterChipEquipmentActive: {
-    backgroundColor: Colors.pepBlue,
-    borderColor: Colors.pepBlue,
+    backgroundColor: Colors.raindropsDeep,
+    borderColor: Colors.raindropsDeep,
   },
   filterChipText: {
     fontSize: FontSizes.xs,
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
   },
   exPillText: {
     fontSize: 10,
-    color: Colors.pepTeal,
+    color: Colors.raindropsDeep,
     fontWeight: '600',
     textTransform: 'capitalize',
   },
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
   },
   exPillEquipText: {
     fontSize: 10,
-    color: Colors.pepBlue,
+    color: Colors.raindropsDeep,
     fontWeight: '500',
     textTransform: 'capitalize',
   },
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
   },
   exPillTimeText: {
     fontSize: 10,
-    color: Colors.pepBlue,
+    color: Colors.raindropsDeep,
     fontWeight: '500',
   },
 
@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
   },
   modalBadgeText: {
     fontSize: FontSizes.sm,
-    color: Colors.pepTeal,
+    color: Colors.raindropsDeep,
     fontWeight: '600',
     textTransform: 'capitalize',
   },
@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
   },
   modalBadgeEquipText: {
     fontSize: FontSizes.sm,
-    color: Colors.pepBlue,
+    color: Colors.raindropsDeep,
     fontWeight: '600',
     textTransform: 'capitalize',
   },
@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
   instructionNum: {
     fontSize: FontSizes.sm,
     fontWeight: '700',
-    color: Colors.pepTeal,
+    color: Colors.raindropsDeep,
     width: 20,
     textAlign: 'center',
   },

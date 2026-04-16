@@ -25,7 +25,7 @@ function getCategoryColor(category: ArticleCategory): string {
     case 'safety':       return '#e3a7a1';
     case 'production':   return '#c7d7e6';
     case 'testing':      return '#f0d68a';
-    case 'regulation':   return '#FFBF82';
+    case 'regulation':   return '#F4E9A7';
     case 'delivery':     return '#06b6d4';
     default:             return '#6B7280';
   }
@@ -203,7 +203,7 @@ export default function ArticleDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: '#EDE6D6',
   },
   scrollView: {
     flex: 1,

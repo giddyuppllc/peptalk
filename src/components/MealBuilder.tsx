@@ -245,12 +245,12 @@ export function MealBuilder({ visible, onClose, editMeal }: MealBuilderProps) {
                 <Text style={s.totalsTitle}>Recipe Totals — {Math.round(totalGrams)}g</Text>
                 <View style={s.totalsRow}>
                   <View style={s.totalItem}>
-                    <Text style={[s.totalValue, { color: Colors.pepCyan }]}>{Math.round(totalCalories)}</Text>
+                    <Text style={[s.totalValue, { color: Colors.almostAquaDeep }]}>{Math.round(totalCalories)}</Text>
                     <Text style={s.totalLabel}>Cal</Text>
                   </View>
                   <View style={s.totalDivider} />
                   <View style={s.totalItem}>
-                    <Text style={[s.totalValue, { color: Colors.pepTeal }]}>{Math.round(totalProtein * 10) / 10}g</Text>
+                    <Text style={[s.totalValue, { color: Colors.almostAquaDeep }]}>{Math.round(totalProtein * 10) / 10}g</Text>
                     <Text style={s.totalLabel}>Protein</Text>
                   </View>
                   <View style={s.totalDivider} />
@@ -348,7 +348,7 @@ export function MealBuilder({ visible, onClose, editMeal }: MealBuilderProps) {
                   </View>
                   {searching && (
                     <View style={{ padding: 20, alignItems: 'center' }}>
-                      <ActivityIndicator size="small" color={Colors.pepTeal} />
+                      <ActivityIndicator size="small" color={Colors.almostAquaDeep} />
                     </View>
                   )}
                   <FlatList
@@ -369,7 +369,7 @@ export function MealBuilder({ visible, onClose, editMeal }: MealBuilderProps) {
                           {item.brand && <Text style={s.searchResultBrand}>{item.brand}</Text>}
                           <Text style={s.searchResultMacro}>{item.per100g.calories} cal per 100g</Text>
                         </View>
-                        <Ionicons name="add-circle" size={24} color={Colors.pepTeal} />
+                        <Ionicons name="add-circle" size={24} color={Colors.almostAquaDeep} />
                       </TouchableOpacity>
                     )}
                     keyboardShouldPersistTaps="handled"
@@ -416,7 +416,7 @@ const s = StyleSheet.create({
   ingredientsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
   addIngredientBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: Colors.pepTeal, borderRadius: BorderRadius.md,
+    backgroundColor: Colors.almostAquaDeep, borderRadius: BorderRadius.md,
     paddingHorizontal: 12, paddingVertical: 8,
   },
   addIngredientText: { fontSize: FontSizes.xs, fontWeight: '700', color: '#fff' },
@@ -433,7 +433,7 @@ const s = StyleSheet.create({
   ingredientEmoji: { fontSize: 20, width: 36, textAlign: 'center' },
   ingredientInfo: { flex: 1 },
   ingredientName: { fontSize: FontSizes.sm, fontWeight: '600', color: Colors.darkText },
-  ingredientBrand: { fontSize: 10, color: Colors.pepTeal },
+  ingredientBrand: { fontSize: 10, color: Colors.almostAquaDeep },
   ingredientMacro: { fontSize: 10, color: Colors.darkTextSecondary },
   ingredientWeight: {
     width: 60, height: 36, backgroundColor: Colors.glassBlue, borderRadius: BorderRadius.sm,
@@ -473,14 +473,14 @@ const s = StyleSheet.create({
   searchResultRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
   searchResultImage: { width: 36, height: 36, borderRadius: 8 },
   searchResultName: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.darkText },
-  searchResultBrand: { fontSize: FontSizes.xs, color: Colors.pepTeal },
+  searchResultBrand: { fontSize: FontSizes.xs, color: Colors.almostAquaDeep },
   searchResultMacro: { fontSize: 10, color: Colors.darkTextSecondary },
 
   // Adding food weight step
   addingFoodCard: { alignItems: 'center', paddingVertical: 16, gap: 8 },
   addingFoodImage: { width: 64, height: 64, borderRadius: 12 },
   addingFoodName: { fontSize: FontSizes.lg, fontWeight: '700', color: Colors.darkText, textAlign: 'center' },
-  addingFoodBrand: { fontSize: FontSizes.sm, color: Colors.pepTeal },
+  addingFoodBrand: { fontSize: FontSizes.sm, color: Colors.almostAquaDeep },
   addingPreview: {
     backgroundColor: Colors.glassBlue, borderRadius: BorderRadius.md, padding: 12,
     marginVertical: 12, alignItems: 'center',

@@ -22,6 +22,8 @@ import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { CelebrationModal } from '../src/components/CelebrationModal';
 import { PepTalkCharacter } from '../src/components/PepTalkCharacter';
+import { SpotlightTour } from '../src/components/tutorial/SpotlightTour';
+import { UpgradeDeltaWatcher } from '../src/components/tutorial/UpgradeDeltaWatcher';
 import { useOnboardingStore } from '../src/store/useOnboardingStore';
 import { configureNotificationHandler } from '../src/services/notificationService';
 import { useTheme } from '../src/hooks/useTheme';
@@ -100,6 +102,9 @@ export default function RootLayout() {
       <View style={[styles.container, { backgroundColor: t.bg }]}>
         <StatusBar style={t.statusBar} />
         <CelebrationModal />
+        {/* First-run walkthrough + upgrade delta tours (mounted at root so they survive navigation) */}
+        <SpotlightTour />
+        <UpgradeDeltaWatcher />
         {/* Splash Screen */}
         {splashVisible && (
           <Animated.View
@@ -116,7 +121,7 @@ export default function RootLayout() {
               <Animated.View
                 style={{ transform: [{ scale: logoScale }], opacity: logoOpacity, alignItems: 'center' }}
               >
-                <PepTalkCharacter size={90} variant="full" animated glowColor="#F8A97A" />
+                <PepTalkCharacter size={90} variant="full" animated glowColor={t.primary} />
                 <Text style={[styles.splashTitle, { color: t.text }]}>PepTalk</Text>
                 <Text style={[styles.splashSub, { color: t.textMuted }]}>Your peptide journey starts here</Text>
               </Animated.View>
@@ -141,6 +146,13 @@ export default function RootLayout() {
               headerTitle: '',
               headerBackTitle: 'Back',
               headerStyle: { backgroundColor: 'transparent' },
+            }}
+          />
+          <Stack.Screen
+            name="peptide/category/[slug]"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
             }}
           />
           <Stack.Screen
@@ -298,6 +310,20 @@ export default function RootLayout() {
               animation: 'slide_from_right',
             }}
           />
+          <Stack.Screen
+            name="workouts/my-workouts"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="workouts/generated-tracker"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
           {/* Nutrition screens */}
           <Stack.Screen
             name="nutrition/index"
@@ -325,6 +351,37 @@ export default function RootLayout() {
             options={{
               headerShown: false,
               animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="nutrition/create-food"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="nutrition/copy-previous-meal"
+            options={{
+              headerShown: false,
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="nutrition/voice-log"
+            options={{
+              headerShown: false,
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="nutrition/meal-scan"
+            options={{
+              headerShown: false,
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
             }}
           />
           {/* Calculators */}
@@ -369,7 +426,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: '#EDE6D6',
   },
   splash: {
     ...StyleSheet.absoluteFillObject,

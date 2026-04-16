@@ -16,6 +16,9 @@ interface OnboardingStore {
   profile: OnboardingProfile;
   isComplete: boolean;
   hasHydrated: boolean;
+  /** Whether the user has accepted the peptide research/education disclaimer */
+  acceptedPeptideDisclaimer: boolean;
+  setAcceptedPeptideDisclaimer: (accepted: boolean) => void;
   setGender: (gender: Gender) => void;
   setAgeRange: (ageRange: AgeRange) => void;
   setEthnicity: (ethnicity: Ethnicity) => void;
@@ -49,6 +52,9 @@ export const useOnboardingStore = create<OnboardingStore>()(
       profile: emptyProfile,
       isComplete: false,
       hasHydrated: false,
+      acceptedPeptideDisclaimer: false,
+      setAcceptedPeptideDisclaimer: (acceptedPeptideDisclaimer) =>
+        set({ acceptedPeptideDisclaimer }),
 
       setGender: (gender) =>
         set((state) => ({ profile: { ...state.profile, gender } })),
@@ -98,6 +104,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
       partialize: (state) => ({
         profile: state.profile,
         isComplete: state.isComplete,
+        acceptedPeptideDisclaimer: state.acceptedPeptideDisclaimer,
       }),
       onRehydrateStorage: () => (state) => {
         const safeProfile = {
@@ -109,6 +116,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
         useOnboardingStore.setState({
           profile: safeProfile,
           isComplete: state?.isComplete ?? false,
+          acceptedPeptideDisclaimer: state?.acceptedPeptideDisclaimer ?? false,
           hasHydrated: true,
         });
       },

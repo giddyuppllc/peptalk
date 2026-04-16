@@ -22,7 +22,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useOnboardingStore } from '../src/store/useOnboardingStore';
 
-const ACCENT = '#F8A97A';
+const ACCENT = '#E89672';
 
 export default function AuthScreen() {
   const router = useRouter();
@@ -409,7 +409,7 @@ const s = StyleSheet.create({
   primaryBtn: {
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: '#EDE6D6',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -435,7 +435,7 @@ const s = StyleSheet.create({
 
   // Disclaimer
   disclaimerCard: {
-    backgroundColor: '#FDF8F5',
+    backgroundColor: '#FAF5EF',
     borderRadius: 16,
     padding: 16,
     marginTop: 20,

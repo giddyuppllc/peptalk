@@ -83,7 +83,7 @@ function RecipeCard({ recipe, onLog, mealType }: { recipe: GeneratedRecipe; onLo
       >
         <View style={styles.recipeHeader}>
           <View style={styles.recipeIcon}>
-            <Ionicons name="restaurant" size={20} color={Colors.pepTeal} />
+            <Ionicons name="restaurant" size={20} color={Colors.almostAquaDeep} />
           </View>
           <View style={styles.recipeInfo}>
             <Text style={styles.recipeName}>{recipe.name}</Text>
@@ -99,12 +99,12 @@ function RecipeCard({ recipe, onLog, mealType }: { recipe: GeneratedRecipe; onLo
         {/* Macro pills */}
         <View style={styles.macroPills}>
           <View style={[styles.macroPill, { backgroundColor: 'rgba(6, 182, 212, 0.12)' }]}>
-            <Text style={[styles.macroPillText, { color: Colors.pepTeal }]}>
+            <Text style={[styles.macroPillText, { color: Colors.almostAquaDeep }]}>
               {recipe.macros.calories} cal
             </Text>
           </View>
           <View style={[styles.macroPill, { backgroundColor: 'rgba(59, 130, 246, 0.12)' }]}>
-            <Text style={[styles.macroPillText, { color: Colors.pepBlue }]}>
+            <Text style={[styles.macroPillText, { color: Colors.almostAquaDeep }]}>
               {recipe.macros.protein}g protein
             </Text>
           </View>
@@ -114,7 +114,7 @@ function RecipeCard({ recipe, onLog, mealType }: { recipe: GeneratedRecipe; onLo
             </Text>
           </View>
           <View style={[styles.macroPill, { backgroundColor: 'rgba(245, 158, 11, 0.12)' }]}>
-            <Text style={[styles.macroPillText, { color: '#FFBF82' }]}>
+            <Text style={[styles.macroPillText, { color: '#F4E9A7' }]}>
               {recipe.macros.fat}g fat
             </Text>
           </View>
@@ -304,7 +304,7 @@ export default function RecipeGeneratorScreen() {
         {/* Intro */}
         <View style={styles.intro}>
           <LinearGradient
-            colors={[Colors.pepBlue, Colors.pepCyan]}
+            colors={[Colors.almostAquaDeep, Colors.pepCyan]}
             style={styles.introIcon}
           >
             <Ionicons name="sparkles" size={28} color="#fff" />
@@ -413,7 +413,7 @@ export default function RecipeGeneratorScreen() {
         <View style={styles.section}>
           {loading ? (
             <View style={styles.loadingRow}>
-              <ActivityIndicator color={Colors.pepBlue} />
+              <ActivityIndicator color={Colors.almostAquaDeep} />
               <Text style={styles.loadingText}>
                 Generating personalized recipes...
               </Text>
@@ -422,7 +422,7 @@ export default function RecipeGeneratorScreen() {
             <GradientButton
               label="Generate Recipes"
               onPress={handleGenerate}
-              colors={[Colors.pepBlue, Colors.pepCyan]}
+              colors={[Colors.almostAquaDeep, Colors.pepCyan]}
             />
           )}
         </View>
@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
   targetVal: {
     fontSize: FontSizes.sm,
     fontWeight: '700',
-    color: Colors.pepTeal,
+    color: Colors.almostAquaDeep,
   },
   targetSep: {
     fontSize: FontSizes.sm,
@@ -551,8 +551,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.glassBlueBorder,
   },
   chipActive: {
-    backgroundColor: Colors.pepBlue,
-    borderColor: Colors.pepBlue,
+    backgroundColor: Colors.almostAquaDeep,
+    borderColor: Colors.almostAquaDeep,
   },
   chipText: {
     fontSize: FontSizes.xs,
@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 3,
-    backgroundColor: Colors.pepTeal,
+    backgroundColor: Colors.almostAquaDeep,
     marginTop: 6,
   },
   ingredientText: {
@@ -693,7 +693,7 @@ const styles = StyleSheet.create({
   stepNumText: {
     fontSize: 11,
     fontWeight: '800',
-    color: Colors.pepBlue,
+    color: Colors.almostAquaDeep,
   },
   stepText: {
     flex: 1,
@@ -711,7 +711,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 12,
     borderRadius: BorderRadius.md,
-    backgroundColor: Colors.pepBlue,
+    backgroundColor: Colors.almostAquaDeep,
   },
   logMealBtnDone: {
     backgroundColor: 'rgba(16, 185, 129, 0.12)',

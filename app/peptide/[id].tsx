@@ -31,12 +31,12 @@ import { getInteractionsByPeptideId } from '../../src/data/interactions';
 function getApprovalColor(status: string): string {
   switch (status) {
     case 'fda_approved': return '#22c55e';
-    case 'ema_approved': return '#F8A97A';
+    case 'ema_approved': return '#7ABED0';
     case 'approved_other': return '#06b6d4';
-    case 'phase_3': return '#FFBF82';
+    case 'phase_3': return '#CADEE5';
     case 'phase_2': return '#f97316';
     case 'phase_1': return '#ef4444';
-    case 'preclinical': return '#D4A853';
+    case 'preclinical': return '#BADDCB';
     default: return '#6b7280';
   }
 }
@@ -57,7 +57,7 @@ function getApprovalLabel(status: string): string {
 function getEvidenceColor(grade: string): string {
   switch (grade) {
     case 'established': return '#22c55e';
-    case 'moderate': return '#FFBF82';
+    case 'moderate': return '#CADEE5';
     case 'preliminary': return '#f97316';
     default: return '#6b7280';
   }
@@ -214,15 +214,29 @@ export default function PeptideDetailScreen() {
           </View>
         )}
 
-        {/* What People Use This For */}
+        {/* Educational disclaimer banner */}
+        <View style={styles.eduDisclaimerBanner}>
+          <View style={styles.eduDisclaimerIcon}>
+            <Ionicons name="shield-checkmark" size={16} color="#7ABED0" />
+          </View>
+          <Text style={styles.eduDisclaimerText}>
+            Educational research information only.{'\n'}
+            <Text style={styles.eduDisclaimerSub}>
+              Not medical advice. Consult a licensed healthcare provider before any decisions.
+            </Text>
+          </Text>
+        </View>
+
+        {/* Research Context */}
         {peptide.uses && (
           <View style={styles.usesSection}>
             <View style={styles.usesSectionHeader}>
-              <Ionicons name="people-outline" size={20} color="#e3a7a1" />
-              <Text style={styles.usesSectionTitle}>What People Use This For</Text>
+              <Ionicons name="library-outline" size={20} color="#7ABED0" />
+              <Text style={styles.usesSectionTitle}>Research Context</Text>
             </View>
 
-            {/* Primary Uses - colored pill badges */}
+            {/* Research Focus Areas — colored pill badges */}
+            <Text style={styles.usesSubtitle}>Research Focus Areas</Text>
             <View style={styles.usesPillsRow}>
               {peptide.uses.primaryUses.map((use, i) => (
                 <View key={i} style={styles.usesPrimaryPill}>
@@ -231,10 +245,10 @@ export default function PeptideDetailScreen() {
               ))}
             </View>
 
-            {/* Common Goals */}
+            {/* Studied For */}
             {peptide.uses.commonGoals.length > 0 && (
               <View style={styles.usesGoalsSection}>
-                <Text style={styles.usesSubtitle}>Common Goals</Text>
+                <Text style={styles.usesSubtitle}>Studied For</Text>
                 <View style={styles.usesGoalsRow}>
                   {peptide.uses.commonGoals.map((goal, i) => (
                     <View key={i} style={styles.usesGoalTag}>
@@ -245,23 +259,26 @@ export default function PeptideDetailScreen() {
               </View>
             )}
 
-            {/* What People Report */}
+            {/* Community Observations */}
             <GlassCard style={styles.usesReportCard}>
               <View style={styles.usesReportHeader}>
-                <Ionicons name="chatbubbles-outline" size={16} color="#b9cbb6" />
-                <Text style={styles.usesReportTitle}>What People Report</Text>
+                <Ionicons name="chatbubbles-outline" size={16} color="#7ABED0" />
+                <Text style={styles.usesReportTitle}>Community Observations</Text>
               </View>
               <Text style={styles.usesReportText}>{peptide.uses.whatPeopleReport}</Text>
+              <Text style={styles.usesReportDisclaimer}>
+                Anecdotal reports from community discussion — not clinical outcomes.
+              </Text>
             </GlassCard>
 
-            {/* Popular With */}
+            {/* Research Populations */}
             {peptide.uses.popularWith.length > 0 && (
               <View style={styles.usesPopularSection}>
-                <Text style={styles.usesSubtitle}>Popular With</Text>
+                <Text style={styles.usesSubtitle}>Research Populations</Text>
                 <View style={styles.usesPopularRow}>
                   {peptide.uses.popularWith.map((group, i) => (
                     <View key={i} style={styles.usesPopularBadge}>
-                      <Ionicons name="person-outline" size={12} color="#c7d7e6" />
+                      <Ionicons name="person-outline" size={12} color="#7ABED0" />
                       <Text style={styles.usesPopularBadgeText}>{group}</Text>
                     </View>
                   ))}
@@ -269,10 +286,10 @@ export default function PeptideDetailScreen() {
               </View>
             )}
 
-            {/* Pairs Well With */}
+            {/* Frequently Co-Researched With */}
             {peptide.uses.pairsWith.length > 0 && (
               <View style={styles.usesPairsSection}>
-                <Text style={styles.usesSubtitle}>Pairs Well With</Text>
+                <Text style={styles.usesSubtitle}>Frequently Co-Researched With</Text>
                 <View style={styles.usesPairsRow}>
                   {peptide.uses.pairsWith.map((pairId) => {
                     const pairPeptide = getPeptideById(pairId);
@@ -284,7 +301,7 @@ export default function PeptideDetailScreen() {
                         onPress={() => router.push(`/peptide/${pairId}` as any)}
                         activeOpacity={0.7}
                       >
-                        <Ionicons name="link-outline" size={14} color="#e3a7a1" />
+                        <Ionicons name="link-outline" size={14} color="#7ABED0" />
                         <Text style={styles.usesPairChipText}>{pairPeptide.name}</Text>
                         <Ionicons name="chevron-forward" size={12} color="#6B7280" />
                       </TouchableOpacity>
@@ -299,7 +316,7 @@ export default function PeptideDetailScreen() {
         {/* Research Summary */}
         <GlassCard style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="document-text-outline" size={18} color="#c7d7e6" />
+            <Ionicons name="document-text-outline" size={18} color="#7ABED0" />
             <Text style={styles.sectionTitle}>Research Summary</Text>
           </View>
           <Text style={styles.sectionText}>{peptide.researchSummary}</Text>
@@ -308,7 +325,7 @@ export default function PeptideDetailScreen() {
         {/* Mechanism of Action */}
         <GlassCard style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="git-branch-outline" size={18} color="#b9cbb6" />
+            <Ionicons name="git-branch-outline" size={18} color="#7ABED0" />
             <Text style={styles.sectionTitle}>Mechanism of Action</Text>
           </View>
           <Text style={styles.sectionText}>{peptide.mechanismOfAction}</Text>
@@ -318,7 +335,7 @@ export default function PeptideDetailScreen() {
         {peptide.receptorTargets && peptide.receptorTargets.length > 0 && (
           <GlassCard style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="radio-outline" size={18} color="#e3a7a1" />
+              <Ionicons name="radio-outline" size={18} color="#7ABED0" />
               <Text style={styles.sectionTitle}>Receptor Targets</Text>
             </View>
             <View style={styles.pillsRow}>
@@ -338,7 +355,7 @@ export default function PeptideDetailScreen() {
               <Ionicons
                 name="git-network-outline"
                 size={18}
-                color="#c7d7e6"
+                color="#7ABED0"
               />
               <Text style={styles.sectionTitle}>Signaling Pathways</Text>
             </View>
@@ -355,7 +372,7 @@ export default function PeptideDetailScreen() {
         {/* Stability Notes */}
         <GlassCard style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="shield-outline" size={18} color="#f0d68a" />
+            <Ionicons name="shield-outline" size={18} color="#7ABED0" />
             <Text style={styles.sectionTitle}>Stability Notes</Text>
           </View>
           <Text style={styles.sectionText}>{peptide.stabilityNotes}</Text>
@@ -364,7 +381,7 @@ export default function PeptideDetailScreen() {
         {/* Molecular Data */}
         <GlassCard style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="analytics-outline" size={18} color="#c7d7e6" />
+            <Ionicons name="analytics-outline" size={18} color="#7ABED0" />
             <Text style={styles.sectionTitle}>Molecular Data</Text>
           </View>
           <View style={styles.dataGrid}>
@@ -407,7 +424,7 @@ export default function PeptideDetailScreen() {
         {peptide.structureImageUrl && (
           <GlassCard style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="flask-outline" size={18} color="#c7d7e6" />
+              <Ionicons name="flask-outline" size={18} color="#7ABED0" />
               <Text style={styles.sectionTitle}>Chemical Structure</Text>
             </View>
             <Image source={{ uri: peptide.structureImageUrl }} style={styles.structureImage} resizeMode="contain" />
@@ -418,7 +435,7 @@ export default function PeptideDetailScreen() {
         {(peptide.bioavailability || peptide.routeOfAdministration?.length || peptide.naturalSources || peptide.yearDiscovered || peptide.aminoAcidSequence) && (
           <GlassCard style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="information-circle-outline" size={18} color="#c7d7e6" />
+              <Ionicons name="information-circle-outline" size={18} color="#7ABED0" />
               <Text style={styles.sectionTitle}>Additional Information</Text>
             </View>
             <View style={styles.dataGrid}>
@@ -460,7 +477,7 @@ export default function PeptideDetailScreen() {
         {peptide.adverseEffects && peptide.adverseEffects.length > 0 && (
           <GlassCard style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="warning-outline" size={18} color="#f0d68a" />
+              <Ionicons name="warning-outline" size={18} color="#7ABED0" />
               <Text style={styles.sectionTitle}>Known Adverse Effects</Text>
             </View>
             {peptide.adverseEffects.map((effect, i) => (
@@ -476,7 +493,7 @@ export default function PeptideDetailScreen() {
         {peptide.drugInteractions && peptide.drugInteractions.length > 0 && (
           <GlassCard style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="swap-horizontal-outline" size={18} color="#e3a7a1" />
+              <Ionicons name="swap-horizontal-outline" size={18} color="#7ABED0" />
               <Text style={styles.sectionTitle}>Drug Interactions</Text>
             </View>
             {peptide.drugInteractions.map((interaction, i) => (
@@ -492,7 +509,7 @@ export default function PeptideDetailScreen() {
         {safetyProfile && (
           <GlassCard style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="medkit-outline" size={18} color="#e3a7a1" />
+              <Ionicons name="medkit-outline" size={18} color="#7ABED0" />
               <Text style={styles.sectionTitle}>Safety Profile</Text>
             </View>
             {safetyProfile.blackBoxWarnings && safetyProfile.blackBoxWarnings.length > 0 && (
@@ -521,7 +538,7 @@ export default function PeptideDetailScreen() {
                 <Text style={styles.safetySubtitle}>Serious Adverse Effects</Text>
                 {safetyProfile.seriousAdverseEffects.map((e, i) => (
                   <View key={i} style={styles.bulletRow}>
-                    <Text style={[styles.bulletDot, { color: '#FFBF82' }]}>•</Text>
+                    <Text style={[styles.bulletDot, { color: '#CADEE5' }]}>•</Text>
                     <Text style={styles.bulletText}>{e}</Text>
                   </View>
                 ))}
@@ -565,7 +582,7 @@ export default function PeptideDetailScreen() {
         {clinicalTrials.length > 0 && (
           <GlassCard style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="flask-outline" size={18} color="#b9cbb6" />
+              <Ionicons name="flask-outline" size={18} color="#7ABED0" />
               <Text style={styles.sectionTitle}>Clinical Trials</Text>
             </View>
             {clinicalTrials.map((trial, i) => (
@@ -600,7 +617,7 @@ export default function PeptideDetailScreen() {
         {protocols.length > 0 && (
           <GlassCard style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="clipboard-outline" size={18} color="#b9cbb6" />
+              <Ionicons name="clipboard-outline" size={18} color="#7ABED0" />
               <Text style={styles.sectionTitle}>Protocol Templates</Text>
             </View>
             <Disclaimer variant="dosing" />
@@ -627,7 +644,7 @@ export default function PeptideDetailScreen() {
         {relatedStacks.length > 0 && (
           <GlassCard style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="layers-outline" size={18} color="#c7d7e6" />
+              <Ionicons name="layers-outline" size={18} color="#7ABED0" />
               <Text style={styles.sectionTitle}>Featured In Stacks</Text>
             </View>
             {relatedStacks.map((stack) => (
@@ -652,12 +669,12 @@ export default function PeptideDetailScreen() {
         {relatedVideos.length > 0 && (
           <GlassCard style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="videocam-outline" size={18} color="#c7d7e6" />
+              <Ionicons name="videocam-outline" size={18} color="#7ABED0" />
               <Text style={styles.sectionTitle}>Related Videos</Text>
             </View>
             {relatedVideos.map((video) => (
               <TouchableOpacity key={video.id} style={styles.videoCard} onPress={() => router.push(`/learn/videos/${video.slug}`)} activeOpacity={0.7}>
-                <Ionicons name="play-circle-outline" size={32} color="#c7d7e6" />
+                <Ionicons name="play-circle-outline" size={32} color="#7ABED0" />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.videoTitle}>{video.title}</Text>
                   {video.duration && <Text style={styles.videoDuration}>{video.duration}</Text>}
@@ -671,12 +688,12 @@ export default function PeptideDetailScreen() {
         {relatedGuides.length > 0 && (
           <GlassCard style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="book-outline" size={18} color="#b9cbb6" />
+              <Ionicons name="book-outline" size={18} color="#7ABED0" />
               <Text style={styles.sectionTitle}>How-To Guides</Text>
             </View>
             {relatedGuides.map((guide) => (
               <TouchableOpacity key={guide.id} style={styles.guideCard} onPress={() => router.push(`/learn/guides/${guide.slug}`)} activeOpacity={0.7}>
-                <Ionicons name="list-outline" size={20} color="#b9cbb6" />
+                <Ionicons name="list-outline" size={20} color="#7ABED0" />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.guideTitle}>{guide.title}</Text>
                   <Text style={styles.guideSummary} numberOfLines={1}>{guide.summary}</Text>
@@ -701,7 +718,7 @@ export default function PeptideDetailScreen() {
           <Ionicons
             name={isInStack ? 'checkmark-circle' : 'add-circle-outline'}
             size={20}
-            color={isInStack ? '#b9cbb6' : '#2D2D2D'}
+            color={isInStack ? '#7ABED0' : '#fff'}
           />
           <Text
             style={[
@@ -720,7 +737,7 @@ export default function PeptideDetailScreen() {
             onPress={() => router.push('/(tabs)/calendar')}
             activeOpacity={0.8}
           >
-            <Ionicons name="add-circle-outline" size={18} color="#F8A97A" />
+            <Ionicons name="add-circle-outline" size={18} color="#7ABED0" />
             <Text style={styles.quickActionText}>Log Dose</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -733,7 +750,7 @@ export default function PeptideDetailScreen() {
             }
             activeOpacity={0.8}
           >
-            <Ionicons name="chatbubble-outline" size={18} color="#D4A853" />
+            <Ionicons name="chatbubble-outline" size={18} color="#BADDCB" />
             <Text style={styles.quickActionText}>Ask Aimee</Text>
           </TouchableOpacity>
         </View>
@@ -742,7 +759,7 @@ export default function PeptideDetailScreen() {
         {peptide.pubmedLinks && peptide.pubmedLinks.length > 0 && (
           <GlassCard style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="link-outline" size={18} color="#c7d7e6" />
+              <Ionicons name="link-outline" size={18} color="#7ABED0" />
               <Text style={styles.sectionTitle}>PubMed References</Text>
             </View>
             {peptide.pubmedLinks.map((link, index) => (
@@ -755,7 +772,7 @@ export default function PeptideDetailScreen() {
                 <Ionicons
                   name="open-outline"
                   size={14}
-                  color="#c7d7e6"
+                  color="#7ABED0"
                 />
                 <Text style={styles.pubmedLinkText} numberOfLines={1}>
                   {link}
@@ -769,12 +786,12 @@ export default function PeptideDetailScreen() {
         {peptide.doiLinks && peptide.doiLinks.length > 0 && (
           <GlassCard style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="document-outline" size={18} color="#c7d7e6" />
+              <Ionicons name="document-outline" size={18} color="#7ABED0" />
               <Text style={styles.sectionTitle}>DOI Citations</Text>
             </View>
             {peptide.doiLinks.map((doi, index) => (
               <TouchableOpacity key={index} style={styles.pubmedLink} onPress={() => handlePubMedLink(doi.startsWith('http') ? doi : `https://doi.org/${doi}`)} activeOpacity={0.7}>
-                <Ionicons name="open-outline" size={14} color="#c7d7e6" />
+                <Ionicons name="open-outline" size={14} color="#7ABED0" />
                 <Text style={styles.pubmedLinkText} numberOfLines={1}>{doi}</Text>
               </TouchableOpacity>
             ))}
@@ -788,10 +805,25 @@ export default function PeptideDetailScreen() {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Light-theme restyle — matches the rest of the app (white bg, peach accents,
+// Playfair titles, DM Sans body). Replaces the legacy dark palette.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const PEACH = '#7ABED0';
+const PEACH_SOFT = '#F5DAD6';
+const TEXT = '#2D2D2D';
+const TEXT_SECONDARY = '#6B7280';
+const TEXT_MUTED = '#9CA3AF';
+const BG = '#EDE6D6'; // Cloud Dancer
+const SURFACE = '#FAF5EF';
+const CARD_BORDER = 'rgba(0,0,0,0.06)';
+const DIVIDER = 'rgba(0,0,0,0.06)';
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: BG,
   },
   scrollView: {
     flex: 1,
@@ -812,54 +844,61 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   notFoundTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#2D2D2D',
+    fontSize: 20,
+    fontFamily: 'Playfair-Black',
+    color: TEXT,
     marginTop: 16,
+    letterSpacing: -0.3,
   },
   notFoundSubtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    fontFamily: 'DMSans-Regular',
+    color: TEXT_SECONDARY,
     textAlign: 'center',
     marginTop: 6,
   },
   backButton: {
-    backgroundColor: '#e3a7a1',
-    borderRadius: 10,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
+    backgroundColor: PEACH,
+    borderRadius: 999,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
     marginTop: 20,
   },
   backButtonText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#2D2D2D',
+    fontFamily: 'DMSans-Bold',
+    color: '#fff',
+    letterSpacing: 0.3,
   },
 
   // ── Title ───────────────────────────────────────────────────
   titleSection: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: 12,
     marginBottom: 12,
+    marginTop: 4,
   },
   peptideName: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#2D2D2D',
-    letterSpacing: -0.5,
+    fontSize: 36,
+    fontFamily: 'Playfair-Black',
+    color: TEXT,
+    letterSpacing: -0.8,
     flex: 1,
+    lineHeight: 40,
   },
   abbreviationBadge: {
-    backgroundColor: 'rgba(227, 167, 161, 0.15)',
+    backgroundColor: `${PEACH}1A`,
     borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
+    marginBottom: 4,
   },
   abbreviationText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#e3a7a1',
+    fontSize: 12,
+    fontFamily: 'DMSans-Bold',
+    color: PEACH,
+    letterSpacing: 0.4,
   },
 
   // ── Categories ──────────────────────────────────────────────
@@ -867,16 +906,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 20,
+    marginBottom: 18,
   },
   categoryPill: {
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 999,
   },
   categoryPillText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    letterSpacing: 0.3,
   },
 
   // ── Approval Badge ──────────────────────────────────────────
@@ -892,13 +932,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   approvalBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#2D2D2D',
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    color: '#fff',
+    letterSpacing: 0.3,
   },
   approvalDetails: {
     fontSize: 12,
-    color: '#6B7280',
+    fontFamily: 'DMSans-Regular',
+    color: TEXT_SECONDARY,
     flex: 1,
   },
 
@@ -910,17 +952,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   brandPill: {
-    backgroundColor: 'rgba(199, 215, 230, 0.12)',
-    borderRadius: 16,
+    backgroundColor: SURFACE,
+    borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: 'rgba(199, 215, 230, 0.2)',
+    borderColor: CARD_BORDER,
   },
   brandPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#c7d7e6',
+    fontSize: 11,
+    fontFamily: 'DMSans-SemiBold',
+    color: TEXT_SECONDARY,
   },
 
   // ── Evidence Grade ──────────────────────────────────────────
@@ -933,18 +975,24 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
   evidenceBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#2D2D2D',
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    color: '#fff',
+    letterSpacing: 0.3,
   },
 
   // ── Sections ────────────────────────────────────────────────
   section: {
     marginBottom: 14,
+    backgroundColor: SURFACE,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
+    padding: 16,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -953,14 +1001,16 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#2D2D2D',
+    fontSize: 17,
+    fontFamily: 'Playfair-Black',
+    color: TEXT,
+    letterSpacing: -0.3,
   },
   sectionText: {
-    fontSize: 13,
-    color: '#6B7280',
-    lineHeight: 20,
+    fontSize: 14,
+    fontFamily: 'DMSans-Regular',
+    color: TEXT_SECONDARY,
+    lineHeight: 21,
   },
 
   // ── Pills ───────────────────────────────────────────────────
@@ -970,49 +1020,53 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   targetPill: {
-    backgroundColor: 'rgba(227, 167, 161, 0.12)',
-    borderRadius: 12,
+    backgroundColor: `${PEACH}15`,
+    borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: `${PEACH}30`,
   },
   targetPillText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#e3a7a1',
+    fontFamily: 'DMSans-SemiBold',
+    color: PEACH,
   },
   pathwayPill: {
-    backgroundColor: 'rgba(199, 215, 230, 0.12)',
-    borderRadius: 12,
+    backgroundColor: `${PEACH_SOFT}15`,
+    borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: `${PEACH_SOFT}30`,
   },
   pathwayPillText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#c7d7e6',
+    fontFamily: 'DMSans-SemiBold',
+    color: '#D88A8A',
   },
 
   // ── Molecular Data Grid ─────────────────────────────────────
   dataGrid: {
-    gap: 12,
+    gap: 0,
   },
   dataItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomColor: DIVIDER,
   },
   dataLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontFamily: 'DMSans-Medium',
+    color: TEXT_SECONDARY,
   },
   dataValue: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#2D2D2D',
+    fontFamily: 'DMSans-SemiBold',
+    color: TEXT,
     textAlign: 'right',
     flex: 1,
     marginLeft: 16,
@@ -1022,20 +1076,23 @@ const styles = StyleSheet.create({
   structureImage: {
     width: '100%' as any,
     height: 200,
-    borderRadius: 8,
+    borderRadius: 12,
+    backgroundColor: SURFACE,
   },
 
   // ── Sequence ────────────────────────────────────────────────
   sequenceContainer: {
     marginTop: 12,
-    padding: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderRadius: 8,
+    padding: 12,
+    backgroundColor: BG,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
   },
   sequenceText: {
     fontSize: 11,
     fontFamily: 'monospace',
-    color: '#6B7280',
+    color: TEXT_SECONDARY,
     lineHeight: 18,
     marginTop: 4,
   },
@@ -1044,18 +1101,19 @@ const styles = StyleSheet.create({
   bulletRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: 10,
     paddingVertical: 4,
   },
   bulletDot: {
-    fontSize: 13,
-    color: '#6B7280',
-    lineHeight: 20,
+    fontSize: 14,
+    color: PEACH,
+    lineHeight: 21,
   },
   bulletText: {
     fontSize: 13,
-    color: '#6B7280',
-    lineHeight: 20,
+    fontFamily: 'DMSans-Regular',
+    color: TEXT_SECONDARY,
+    lineHeight: 21,
     flex: 1,
   },
 
@@ -1063,34 +1121,38 @@ const styles = StyleSheet.create({
   warningBox: {
     flexDirection: 'row',
     gap: 10,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,
+    padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.2)',
+    borderColor: '#FECACA',
   },
   warningText: {
     fontSize: 13,
-    color: '#ef4444',
-    lineHeight: 20,
-    fontWeight: '600',
+    fontFamily: 'DMSans-SemiBold',
+    color: '#B91C1C',
+    lineHeight: 19,
   },
   safetySubsection: {
-    marginBottom: 12,
+    marginBottom: 14,
   },
   safetySubtitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#c7d7e6',
+    fontSize: 12,
+    fontFamily: 'DMSans-Bold',
+    color: TEXT,
+    letterSpacing: 0.3,
     marginBottom: 6,
+    textTransform: 'uppercase',
   },
 
   // ── Clinical Trials ─────────────────────────────────────────
   trialCard: {
-    padding: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
-    borderRadius: 10,
+    padding: 14,
+    backgroundColor: BG,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
     marginBottom: 10,
   },
   trialHeader: {
@@ -1101,57 +1163,63 @@ const styles = StyleSheet.create({
   },
   trialName: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#2D2D2D',
+    fontFamily: 'DMSans-Bold',
+    color: TEXT,
     flex: 1,
     marginRight: 8,
   },
   trialPhaseBadge: {
-    backgroundColor: 'rgba(185, 203, 182, 0.15)',
+    backgroundColor: `${PEACH}18`,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
   trialPhaseText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#b9cbb6',
+    fontSize: 10,
+    fontFamily: 'DMSans-Bold',
+    color: PEACH,
+    letterSpacing: 0.3,
   },
   trialStatus: {
     fontSize: 12,
-    color: '#6B7280',
+    fontFamily: 'DMSans-Regular',
+    color: TEXT_SECONDARY,
     marginBottom: 4,
   },
   trialDetail: {
     fontSize: 12,
-    color: '#6B7280',
+    fontFamily: 'DMSans-Regular',
+    color: TEXT_SECONDARY,
     marginBottom: 2,
   },
   trialFindings: {
     fontSize: 12,
-    color: '#b9cbb6',
+    fontFamily: 'DMSans-Regular',
+    color: TEXT,
     lineHeight: 18,
     marginTop: 6,
     fontStyle: 'italic',
   },
   trialLink: {
     fontSize: 12,
-    color: '#c7d7e6',
-    textDecorationLine: 'underline',
+    fontFamily: 'DMSans-SemiBold',
+    color: PEACH,
     marginTop: 6,
   },
 
   // ── Protocol Templates ──────────────────────────────────────
   protocolCard: {
-    padding: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
-    borderRadius: 10,
+    padding: 14,
+    backgroundColor: BG,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
     marginBottom: 10,
   },
   protocolName: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#2D2D2D',
+    fontFamily: 'DMSans-Bold',
+    color: TEXT,
     marginBottom: 6,
   },
   protocolDetails: {
@@ -1159,20 +1227,24 @@ const styles = StyleSheet.create({
   },
   protocolDetail: {
     fontSize: 12,
-    color: '#6B7280',
+    fontFamily: 'DMSans-Regular',
+    color: TEXT_SECONDARY,
   },
   protocolTiming: {
     fontSize: 12,
-    color: '#b9cbb6',
+    fontFamily: 'DMSans-Regular',
+    color: PEACH,
     fontStyle: 'italic',
     marginTop: 2,
   },
 
   // ── Related Stacks ──────────────────────────────────────────
   relatedStackCard: {
-    padding: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
-    borderRadius: 10,
+    padding: 14,
+    backgroundColor: BG,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
     marginBottom: 10,
   },
   relatedStackHeader: {
@@ -1183,16 +1255,18 @@ const styles = StyleSheet.create({
   },
   relatedStackName: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#2D2D2D',
+    fontFamily: 'DMSans-Bold',
+    color: TEXT,
   },
   relatedStackCount: {
     fontSize: 11,
-    color: '#6B7280',
+    fontFamily: 'DMSans-Medium',
+    color: TEXT_SECONDARY,
   },
   relatedStackDesc: {
     fontSize: 12,
-    color: '#6B7280',
+    fontFamily: 'DMSans-Regular',
+    color: TEXT_SECONDARY,
     lineHeight: 18,
   },
 
@@ -1201,19 +1275,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
-    borderRadius: 10,
+    padding: 14,
+    backgroundColor: BG,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
     marginBottom: 10,
   },
   videoTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#2D2D2D',
+    fontFamily: 'DMSans-SemiBold',
+    color: TEXT,
   },
   videoDuration: {
     fontSize: 11,
-    color: '#6B7280',
+    fontFamily: 'DMSans-Regular',
+    color: TEXT_SECONDARY,
     marginTop: 2,
   },
 
@@ -1222,19 +1299,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
-    borderRadius: 10,
+    padding: 14,
+    backgroundColor: BG,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
     marginBottom: 10,
   },
   guideTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#2D2D2D',
+    fontFamily: 'DMSans-SemiBold',
+    color: TEXT,
   },
   guideSummary: {
     fontSize: 11,
-    color: '#6B7280',
+    fontFamily: 'DMSans-Regular',
+    color: TEXT_SECONDARY,
     marginTop: 2,
   },
 
@@ -1243,33 +1323,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#e3a7a1',
-    borderRadius: 14,
+    backgroundColor: PEACH,
+    borderRadius: 999,
     paddingVertical: 16,
     marginVertical: 16,
     gap: 8,
+    shadowColor: PEACH,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
   },
   addToStackButtonActive: {
-    backgroundColor: 'rgba(185, 203, 182, 0.15)',
+    backgroundColor: SURFACE,
     borderWidth: 1,
-    borderColor: 'rgba(185, 203, 182, 0.3)',
+    borderColor: `${PEACH}40`,
+    shadowOpacity: 0,
   },
   addToStackButtonDisabled: {
-    backgroundColor: 'rgba(227, 167, 161, 0.3)',
+    backgroundColor: `${PEACH}60`,
+    shadowOpacity: 0,
   },
   addToStackText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#2D2D2D',
+    fontSize: 15,
+    fontFamily: 'DMSans-Bold',
+    color: '#fff',
+    letterSpacing: 0.3,
   },
   addToStackTextActive: {
-    color: '#b9cbb6',
+    color: PEACH,
   },
 
   // ── Quick Actions ──────────────────────────────────────────
   quickActionRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     marginBottom: 16,
   },
   quickActionBtn: {
@@ -1280,14 +1367,14 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    backgroundColor: SURFACE,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
+    borderColor: CARD_BORDER,
   },
   quickActionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#e2e8f0',
+    fontSize: 13,
+    fontFamily: 'DMSans-SemiBold',
+    color: TEXT,
   },
 
   // ── PubMed Links ────────────────────────────────────────────
@@ -1295,37 +1382,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomColor: DIVIDER,
   },
   pubmedLinkText: {
     fontSize: 12,
-    color: '#c7d7e6',
+    fontFamily: 'DMSans-Medium',
+    color: PEACH,
     flex: 1,
-    textDecorationLine: 'underline',
   },
 
-  // ── What People Use This For ──────────────────────────────────
+  // ── Research Context (uses section) ─────────────────────────
   usesSection: {
     marginBottom: 14,
-    padding: 16,
-    backgroundColor: 'rgba(227, 167, 161, 0.06)',
-    borderRadius: 16,
+    padding: 18,
+    backgroundColor: `${PEACH}08`,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(227, 167, 161, 0.12)',
+    borderColor: `${PEACH}25`,
   },
   usesSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   usesSectionTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#2D2D2D',
-    letterSpacing: -0.3,
+    fontSize: 19,
+    fontFamily: 'Playfair-Black',
+    color: TEXT,
+    letterSpacing: -0.4,
   },
   usesPillsRow: {
     flexDirection: 'row',
@@ -1334,26 +1421,32 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   usesPrimaryPill: {
-    backgroundColor: 'rgba(227, 167, 161, 0.18)',
-    borderRadius: 20,
+    backgroundColor: PEACH,
+    borderRadius: 999,
     paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: 'rgba(227, 167, 161, 0.25)',
+    paddingVertical: 8,
+    shadowColor: PEACH,
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
   usesPrimaryPillText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#e3a7a1',
+    fontSize: 12,
+    fontFamily: 'DMSans-Bold',
+    color: '#fff',
+    letterSpacing: 0.2,
   },
   usesSubtitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#c7d7e6',
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    color: TEXT,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
     marginBottom: 8,
+    marginTop: 4,
   },
   usesGoalsSection: {
-    marginBottom: 14,
+    marginBottom: 16,
   },
   usesGoalsRow: {
     flexDirection: 'row',
@@ -1361,21 +1454,25 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   usesGoalTag: {
-    backgroundColor: 'rgba(185, 203, 182, 0.12)',
-    borderRadius: 14,
+    backgroundColor: BG,
+    borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderWidth: 1,
-    borderColor: 'rgba(185, 203, 182, 0.18)',
+    borderColor: `${PEACH}30`,
   },
   usesGoalTagText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#b9cbb6',
+    fontSize: 11,
+    fontFamily: 'DMSans-SemiBold',
+    color: TEXT,
   },
   usesReportCard: {
     marginBottom: 14,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+    backgroundColor: BG,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
+    padding: 14,
   },
   usesReportHeader: {
     flexDirection: 'row',
@@ -1385,16 +1482,56 @@ const styles = StyleSheet.create({
   },
   usesReportTitle: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#b9cbb6',
+    fontFamily: 'DMSans-Bold',
+    color: TEXT,
   },
   usesReportText: {
     fontSize: 13,
-    color: '#d1cdc7',
-    lineHeight: 21,
+    fontFamily: 'DMSans-Regular',
+    color: TEXT_SECONDARY,
+    lineHeight: 20,
+  },
+  usesReportDisclaimer: {
+    fontSize: 10,
+    fontFamily: 'DMSans-Regular',
+    color: TEXT_MUTED,
+    fontStyle: 'italic',
+    marginTop: 10,
+    lineHeight: 14,
+  },
+  eduDisclaimerBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 14,
+    marginBottom: 18,
+    borderRadius: 14,
+    backgroundColor: `${PEACH}0F`,
+    borderWidth: 1,
+    borderColor: `${PEACH}30`,
+  },
+  eduDisclaimerIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: `${PEACH}22`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eduDisclaimerText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: 'DMSans-Bold',
+    color: TEXT,
+    lineHeight: 17,
+  },
+  eduDisclaimerSub: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Regular',
+    color: TEXT_SECONDARY,
   },
   usesPopularSection: {
-    marginBottom: 14,
+    marginBottom: 16,
   },
   usesPopularRow: {
     flexDirection: 'row',
@@ -1405,17 +1542,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(199, 215, 230, 0.1)',
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    backgroundColor: BG,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderWidth: 1,
-    borderColor: 'rgba(199, 215, 230, 0.15)',
+    borderColor: CARD_BORDER,
   },
   usesPopularBadgeText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#c7d7e6',
+    fontFamily: 'DMSans-SemiBold',
+    color: TEXT,
   },
   usesPairsSection: {
     marginBottom: 0,
@@ -1429,16 +1566,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(227, 167, 161, 0.1)',
-    borderRadius: 12,
+    backgroundColor: BG,
+    borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: 'rgba(227, 167, 161, 0.18)',
+    borderColor: `${PEACH}40`,
   },
   usesPairChipText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#e3a7a1',
+    fontFamily: 'DMSans-SemiBold',
+    color: PEACH,
   },
 });

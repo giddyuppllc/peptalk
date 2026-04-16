@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     height: 44,
     fontSize: FontSizes.md,
     fontWeight: '600',
-    color: Colors.pepTeal,
+    color: Colors.iceMeltDeep,
   },
   unitLabel: {
     fontSize: FontSizes.md,
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
   previewValue: {
     fontSize: FontSizes.lg,
     fontWeight: '700',
-    color: Colors.pepTeal,
+    color: Colors.iceMeltDeep,
   },
   previewSub: {
     fontSize: FontSizes.sm,
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
     color: Colors.darkText,
   },
   resultHighlight: {
-    color: Colors.pepTeal,
+    color: Colors.iceMeltDeep,
     fontSize: FontSizes.lg,
   },
 
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: -100,
     height: 2,
-    backgroundColor: Colors.pepTeal,
+    backgroundColor: Colors.iceMeltDeep,
   },
   drawLineLabel: {
     position: 'absolute',
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
     top: -8,
     fontSize: 11,
     fontWeight: '600',
-    color: Colors.pepTeal,
+    color: Colors.iceMeltDeep,
     width: 160,
   },
   needleTip: {

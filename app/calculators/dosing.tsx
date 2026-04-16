@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     height: 44,
     fontSize: FontSizes.md,
     fontWeight: '600',
-    color: Colors.pepTeal,
+    color: Colors.iceMeltDeep,
   },
   conversionHint: {
     fontSize: FontSizes.xs,
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   toggleActive: {
-    backgroundColor: Colors.pepBlue,
+    backgroundColor: Colors.iceMeltDeep,
   },
   toggleText: {
     fontSize: FontSizes.sm,
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
     color: Colors.darkTextSecondary,
   },
   freqBtnTextActive: {
-    color: Colors.pepBlueLight,
+    color: Colors.iceMeltDeepLight,
   },
 
   // Results
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
     color: Colors.darkText,
   },
   resultHighlight: {
-    color: Colors.pepTeal,
+    color: Colors.iceMeltDeep,
     fontSize: FontSizes.lg,
   },
 
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
   protoName: {
     fontSize: FontSizes.md,
     fontWeight: '700',
-    color: Colors.pepBlueLight,
+    color: Colors.iceMeltDeepLight,
     marginBottom: 8,
   },
   protoRow: {

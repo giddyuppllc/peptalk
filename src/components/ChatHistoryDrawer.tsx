@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
+import { useSectionAccent } from '../hooks/useSectionAccent';
 import { useChatStore, Chat } from '../store/useChatStore';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -41,6 +42,7 @@ function formatRelative(iso: string): string {
 
 export const ChatHistoryDrawer: React.FC<Props> = ({ visible, onClose }) => {
   const t = useTheme();
+  const accent = useSectionAccent();
   const translateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
@@ -150,7 +152,7 @@ export const ChatHistoryDrawer: React.FC<Props> = ({ visible, onClose }) => {
 
           {/* New Chat button */}
           <TouchableOpacity
-            style={[styles.newChatBtn, { backgroundColor: t.primary }]}
+            style={[styles.newChatBtn, { backgroundColor: accent.deep }]}
             onPress={handleNewChat}
             activeOpacity={0.85}
           >
@@ -180,8 +182,8 @@ export const ChatHistoryDrawer: React.FC<Props> = ({ visible, onClose }) => {
                     style={[
                       styles.chatRow,
                       {
-                        backgroundColor: isActive ? `${t.primary}18` : 'transparent',
-                        borderColor: isActive ? `${t.primary}40` : 'transparent',
+                        backgroundColor: isActive ? `${accent.deep}18` : 'transparent',
+                        borderColor: isActive ? `${accent.deep}40` : 'transparent',
                       },
                     ]}
                     onPress={() => handlePickChat(chat.id)}
@@ -194,7 +196,7 @@ export const ChatHistoryDrawer: React.FC<Props> = ({ visible, onClose }) => {
                         style={[
                           styles.chatTitle,
                           { color: t.text },
-                          isActive && { color: t.primary },
+                          isActive && { color: accent.deep },
                         ]}
                         numberOfLines={1}
                       >
@@ -205,7 +207,7 @@ export const ChatHistoryDrawer: React.FC<Props> = ({ visible, onClose }) => {
                       </Text>
                     </View>
                     {isActive && (
-                      <View style={[styles.activeDot, { backgroundColor: t.primary }]} />
+                      <View style={[styles.activeDot, { backgroundColor: accent.deep }]} />
                     )}
                   </TouchableOpacity>
                 );
