@@ -29,6 +29,8 @@ import { LockedFeatureCard } from '../../src/components/LockedFeatureCard';
 import { LockBadge } from '../../src/components/LockBadge';
 import { PaywallModal } from '../../src/components/PaywallModal';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
+import { useWorkoutTemplateStore } from '../../src/store/useWorkoutTemplateStore';
+import { getExerciseById } from '../../src/data/exercises';
 import {
   getTemplates,
   getTemplatesForUser,
@@ -421,6 +423,7 @@ export default function WorkoutsScreen() {
   const [workoutPaywallFeature, setWorkoutPaywallFeature] = useState<string | null>(null);
   const hasCustomGenerator = useFeatureGate('custom_workout_generator');
   const programsSectionRef = useTourTarget('workouts_programs_section');
+  const workoutTemplates = useWorkoutTemplateStore((s) => s.templates);
 
   const gender: 'male' | 'female' = profile.gender === 'Male' ? 'male' : 'female';
 
@@ -585,13 +588,23 @@ export default function WorkoutsScreen() {
           <View style={s.quickRow}>
             <TouchableOpacity
               style={[s.quickBtn, { backgroundColor: t.surface, borderColor: t.cardBorder }]}
+              onPress={() => router.push('/workouts/build-workout')}
+              activeOpacity={0.8}
+            >
+              <View style={[s.quickIcon, { backgroundColor: `${accent.deep}18` }]}>
+                <Ionicons name="hammer-outline" size={18} color={accent.deep} />
+              </View>
+              <Text style={[s.quickLabel, { color: t.text }]}>Build</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.quickBtn, { backgroundColor: t.surface, borderColor: t.cardBorder }]}
               onPress={() => router.push('/workouts/player')}
               activeOpacity={0.8}
             >
               <View style={[s.quickIcon, { backgroundColor: `${accent.deep}18` }]}>
-                <Ionicons name="add" size={18} color={accent.deep} />
+                <Ionicons name="play-outline" size={18} color={accent.deep} />
               </View>
-              <Text style={[s.quickLabel, { color: t.text }]}>Log Workout</Text>
+              <Text style={[s.quickLabel, { color: t.text }]}>Start</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.quickBtn, { backgroundColor: t.surface, borderColor: t.cardBorder }]}
@@ -615,6 +628,38 @@ export default function WorkoutsScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* My Workout Templates */}
+        {workoutTemplates.length > 0 && (
+          <View style={s.section}>
+            <Text style={[s.sectionTitle, { color: t.text }]}>My Workouts</Text>
+            {workoutTemplates.map((tmpl) => {
+              const exerciseNames = tmpl.exercises
+                .map((e) => getExerciseById(e.exerciseId)?.name ?? e.exerciseId)
+                .slice(0, 3)
+                .join(', ');
+              return (
+                <TouchableOpacity
+                  key={tmpl.id}
+                  style={[s.templateCard, { backgroundColor: t.card, borderColor: t.cardBorder }]}
+                  onPress={() => router.push(`/workouts/player?templateId=${tmpl.id}` as any)}
+                  activeOpacity={0.7}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.templateName, { color: t.text }]}>{tmpl.name}</Text>
+                    <Text style={[s.templateMeta, { color: t.textMuted }]}>
+                      {tmpl.exercises.length} exercises · {tmpl.exercises.reduce((sum, e) => sum + e.targetSets, 0)} sets
+                    </Text>
+                    <Text style={[s.templateExercises, { color: t.textSecondary }]} numberOfLines={1}>
+                      {exerciseNames}
+                    </Text>
+                  </View>
+                  <Ionicons name="play-circle" size={28} color={accent.deep} />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
         {/* Workout Videos */}
         <View style={s.sectionHeaderRow}>
@@ -836,8 +881,33 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   quickLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'DMSans-SemiBold',
+  },
+
+  // Template cards
+  templateCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 8,
+    gap: 12,
+  },
+  templateName: {
+    fontSize: 15,
+    fontFamily: 'DMSans-SemiBold',
+  },
+  templateMeta: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Medium',
+    marginTop: 2,
+  },
+  templateExercises: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Regular',
+    marginTop: 3,
   },
 
   // Program card

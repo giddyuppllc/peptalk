@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
     color: Colors.darkTextSecondary,
   },
   freqBtnTextActive: {
-    color: Colors.iceMeltDeepLight,
+    color: Colors.iceMelt,
   },
 
   // Results
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
   protoName: {
     fontSize: FontSizes.md,
     fontWeight: '700',
-    color: Colors.iceMeltDeepLight,
+    color: Colors.iceMelt,
     marginBottom: 8,
   },
   protoRow: {

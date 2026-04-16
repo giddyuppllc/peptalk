@@ -1616,7 +1616,7 @@ export const SSD_2: WorkoutProgram = {
 };
 
 /** All available workout programs */
-export const WORKOUT_PROGRAMS: WorkoutProgram[] = [
+const _RAW_PROGRAMS: WorkoutProgram[] = [
   CORE_CHALLENGE,
   BOOTY_CHALLENGE,
   LEAN_AND_MEAN,
@@ -1630,9 +1630,25 @@ export const WORKOUT_PROGRAMS: WorkoutProgram[] = [
   SSD_2,
 ];
 
+// Lazy Proxy — defers iteration until first access, reducing startup GC pressure
+export const WORKOUT_PROGRAMS: WorkoutProgram[] = new Proxy([] as WorkoutProgram[], {
+  get(_, prop) {
+    if (prop === 'length') return _RAW_PROGRAMS.length;
+    if (prop === 'map') return _RAW_PROGRAMS.map.bind(_RAW_PROGRAMS);
+    if (prop === 'filter') return _RAW_PROGRAMS.filter.bind(_RAW_PROGRAMS);
+    if (prop === 'forEach') return _RAW_PROGRAMS.forEach.bind(_RAW_PROGRAMS);
+    if (prop === 'find') return _RAW_PROGRAMS.find.bind(_RAW_PROGRAMS);
+    if (prop === 'slice') return _RAW_PROGRAMS.slice.bind(_RAW_PROGRAMS);
+    if (prop === 'some') return _RAW_PROGRAMS.some.bind(_RAW_PROGRAMS);
+    if (prop === Symbol.iterator) return _RAW_PROGRAMS[Symbol.iterator].bind(_RAW_PROGRAMS);
+    if (typeof prop === 'string' && !isNaN(Number(prop))) return _RAW_PROGRAMS[Number(prop)];
+    return (_RAW_PROGRAMS as any)[prop];
+  },
+});
+
 /** Lookup by ID */
 export function getProgramById(programId: string): WorkoutProgram | undefined {
-  return WORKOUT_PROGRAMS.find((p) => p.id === programId);
+  return _RAW_PROGRAMS.find((p) => p.id === programId);
 }
 
 export default WORKOUT_PROGRAMS;

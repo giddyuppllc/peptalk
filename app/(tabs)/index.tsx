@@ -8,6 +8,7 @@ import {
   ScrollView,
   Animated as RNAnimated,
   Image,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -47,6 +48,8 @@ import { useAchievementStore } from '../../src/store/useAchievementStore';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useMealStore } from '../../src/store/useMealStore';
 import { useStackStore } from '../../src/store/useStackStore';
+import { useWorkoutTemplateStore } from '../../src/store/useWorkoutTemplateStore';
+import { getExerciseById } from '../../src/data/exercises';
 import { usePlanStore } from '../../src/store/usePlanStore';
 import { getSegmentByProfile } from '../../src/constants/segments';
 import { getEthnicityProfile } from '../../src/constants/ethnicityProfiles';
@@ -762,16 +765,41 @@ export default function DashboardScreen() {
     }).start();
   };
 
-  const FAB_ITEMS: { label: string; icon: keyof typeof Ionicons.glyphMap; color: string; route: string }[] = [
+  const [showWorkoutSheet, setShowWorkoutSheet] = useState(false);
+
+  const FAB_ITEMS: { label: string; icon: keyof typeof Ionicons.glyphMap; color: string; route: string; onPress?: () => void }[] = [
     // Log Meal → Nutrition mint
     { label: 'Log Meal', icon: 'nutrition-outline', color: '#6FA891', route: '/nutrition/food-search' },
-    // Log Dose → Peptides gold
-    { label: 'Log Dose', icon: 'flask-outline', color: '#C9A84A', route: '/(tabs)/calendar?openLog=1' },
-    // Log Workout → Workouts rose
-    { label: 'Log Workout', icon: 'barbell-outline', color: '#D98C86', route: '/workouts/player' },
+    // Log Dose → Peptides blue
+    { label: 'Log Dose', icon: 'flask-outline', color: '#7ABED0', route: '/(tabs)/calendar?openLog=1' },
+    // Log Workout → open selection sheet
+    { label: 'Log Workout', icon: 'barbell-outline', color: '#D98C86', route: '', onPress: () => { setFabOpen(false); setShowWorkoutSheet(true); } },
     // Daily Log → Home peach (merged check-in + journal)
     { label: 'Daily Log', icon: 'clipboard-outline', color: '#E89672', route: '/(tabs)/check-in' },
   ];
+
+  // Recent completed workouts (for the selection sheet)
+  const recentCompletedWorkouts = useMemo(() => {
+    return workoutLogs
+      .filter((w) => w.completedAt)
+      .slice(0, 5);
+  }, [workoutLogs]);
+
+  // Next program workout
+  const nextProgramDay = useMemo(() => {
+    if (!activeProgram) return null;
+    const program = activeProgram;
+    const weeks = (program as any)?.program?.weeks;
+    if (!weeks) return null;
+    for (const week of weeks) {
+      for (const day of week.days) {
+        if (!program.completedDays.includes(day.id)) {
+          return { weekNumber: week.weekNumber, dayName: day.name, dayId: day.id };
+        }
+      }
+    }
+    return null;
+  }, [activeProgram]);
 
   // ── Main Render ───────────────────────────────────────────────────────────
 
@@ -1210,7 +1238,8 @@ export default function DashboardScreen() {
               activeOpacity={0.7}
               onPress={() => {
                 closeFab();
-                router.push(item.route as any);
+                if (item.onPress) { item.onPress(); }
+                else { router.push(item.route as any); }
               }}
             >
               <View style={[styles.fabMenuLabel, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
@@ -1249,6 +1278,141 @@ export default function DashboardScreen() {
           </Text>
         )}
       </TouchableOpacity>
+
+      {/* ── Workout Selection Sheet ── */}
+      <Modal visible={showWorkoutSheet} animationType="slide" transparent onRequestClose={() => setShowWorkoutSheet(false)}>
+        <View style={styles.wsOverlay}>
+          <View style={[styles.wsSheet, { backgroundColor: t.bg }]}>
+            <View style={styles.wsHandle}><View style={[styles.wsHandleBar, { backgroundColor: t.textMuted }]} /></View>
+            <View style={styles.wsHeader}>
+              <Text style={[styles.wsTitle, { color: t.text }]}>Log Workout</Text>
+              <TouchableOpacity onPress={() => setShowWorkoutSheet(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                <Ionicons name="close" size={22} color={t.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.wsScroll} showsVerticalScrollIndicator={false}>
+              {/* Continue Program */}
+              {nextProgramDay && (
+                <TouchableOpacity
+                  style={[styles.wsOption, { backgroundColor: t.card, borderColor: t.cardBorder }]}
+                  activeOpacity={0.7}
+                  onPress={() => { setShowWorkoutSheet(false); router.push('/workouts/player' as any); }}
+                >
+                  <View style={[styles.wsOptionIcon, { backgroundColor: '#D98C8620' }]}>
+                    <Ionicons name="play" size={20} color="#D98C86" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.wsOptionTitle, { color: t.text }]}>Continue Program</Text>
+                    <Text style={[styles.wsOptionSub, { color: t.textSecondary }]}>
+                      Week {nextProgramDay.weekNumber} — {nextProgramDay.dayName}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={t.textMuted} />
+                </TouchableOpacity>
+              )}
+
+              {/* Start Empty Workout */}
+              <TouchableOpacity
+                style={[styles.wsOption, { backgroundColor: t.card, borderColor: t.cardBorder }]}
+                activeOpacity={0.7}
+                onPress={() => { setShowWorkoutSheet(false); router.push('/workouts/player' as any); }}
+              >
+                <View style={[styles.wsOptionIcon, { backgroundColor: '#D98C8620' }]}>
+                  <Ionicons name="add" size={20} color="#D98C86" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.wsOptionTitle, { color: t.text }]}>Start Empty Workout</Text>
+                  <Text style={[styles.wsOptionSub, { color: t.textSecondary }]}>Build as you go</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={t.textMuted} />
+              </TouchableOpacity>
+
+              {/* Quick Log (manual) */}
+              <TouchableOpacity
+                style={[styles.wsOption, { backgroundColor: t.card, borderColor: t.cardBorder }]}
+                activeOpacity={0.7}
+                onPress={() => { setShowWorkoutSheet(false); router.push('/workouts/my-workouts' as any); }}
+              >
+                <View style={[styles.wsOptionIcon, { backgroundColor: '#D98C8620' }]}>
+                  <Ionicons name="create-outline" size={20} color="#D98C86" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.wsOptionTitle, { color: t.text }]}>Quick Log</Text>
+                  <Text style={[styles.wsOptionSub, { color: t.textSecondary }]}>Manually enter what you did</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={t.textMuted} />
+              </TouchableOpacity>
+
+              {/* Build New */}
+              <TouchableOpacity
+                style={[styles.wsOption, { backgroundColor: t.card, borderColor: t.cardBorder }]}
+                activeOpacity={0.7}
+                onPress={() => { setShowWorkoutSheet(false); router.push('/workouts/build-workout' as any); }}
+              >
+                <View style={[styles.wsOptionIcon, { backgroundColor: '#D98C8620' }]}>
+                  <Ionicons name="hammer-outline" size={20} color="#D98C86" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.wsOptionTitle, { color: t.text }]}>Build Custom Workout</Text>
+                  <Text style={[styles.wsOptionSub, { color: t.textSecondary }]}>Create a reusable template</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={t.textMuted} />
+              </TouchableOpacity>
+
+              {/* Saved Templates */}
+              {useWorkoutTemplateStore.getState().templates.length > 0 && (
+                <>
+                  <Text style={[styles.wsRecentLabel, { color: t.textSecondary }]}>MY WORKOUTS</Text>
+                  {useWorkoutTemplateStore.getState().templates.map((tmpl) => (
+                    <TouchableOpacity
+                      key={tmpl.id}
+                      style={[styles.wsRecentRow, { borderBottomColor: t.cardBorder }]}
+                      activeOpacity={0.7}
+                      onPress={() => { setShowWorkoutSheet(false); router.push(`/workouts/player?templateId=${tmpl.id}` as any); }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.wsRecentName, { color: t.text }]}>{tmpl.name}</Text>
+                        <Text style={[styles.wsRecentMeta, { color: t.textMuted }]}>
+                          {tmpl.exercises.length} exercises · {tmpl.exercises.reduce((s, e) => s + e.targetSets, 0)} sets
+                        </Text>
+                      </View>
+                      <Ionicons name="play-circle-outline" size={20} color="#D98C86" />
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
+
+              {/* Recent completed workouts */}
+              {recentCompletedWorkouts.length > 0 && (
+                <>
+                  <Text style={[styles.wsRecentLabel, { color: t.textSecondary }]}>RECENTLY COMPLETED</Text>
+                  {recentCompletedWorkouts.map((workout) => (
+                    <TouchableOpacity
+                      key={workout.id}
+                      style={[styles.wsRecentRow, { borderBottomColor: t.cardBorder }]}
+                      activeOpacity={0.7}
+                      onPress={() => { setShowWorkoutSheet(false); router.push('/workouts/player' as any); }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.wsRecentName, { color: t.text }]}>
+                          {workout.workoutName || 'Workout'}
+                        </Text>
+                        <Text style={[styles.wsRecentMeta, { color: t.textMuted }]}>
+                          {workout.sets.length} exercises · {workout.durationMinutes} min · {workout.date}
+                        </Text>
+                      </View>
+                      <Ionicons name="repeat-outline" size={16} color="#D98C86" />
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
+
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1693,16 +1857,15 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    right: 20,
-    bottom: 20,
-    minWidth: 104,
-    height: 52,
-    borderRadius: 26,
-    paddingLeft: 18,
-    paddingRight: 22,
+    right: 16,
+    bottom: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 28,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
     zIndex: 60,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -1714,7 +1877,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontFamily: 'DMSans-Bold',
-    marginLeft: 8,
   },
   fabMenuItem: {
     position: 'absolute',
@@ -1755,4 +1917,21 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 4,
   },
+
+  // ── Workout Selection Sheet ──────────────────────────────────────────────
+  wsOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
+  wsSheet: { maxHeight: '75%', borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: 'hidden' },
+  wsHandle: { alignItems: 'center', paddingTop: 10, paddingBottom: 4 },
+  wsHandleBar: { width: 36, height: 4, borderRadius: 2, opacity: 0.3 },
+  wsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 },
+  wsTitle: { fontSize: 20, fontFamily: 'Playfair-Bold' },
+  wsScroll: { paddingHorizontal: 20 },
+  wsOption: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14, borderWidth: 1, marginBottom: 8 },
+  wsOptionIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  wsOptionTitle: { fontSize: 15, fontFamily: 'DMSans-SemiBold' },
+  wsOptionSub: { fontSize: 12, fontFamily: 'DMSans-Regular', marginTop: 2 },
+  wsRecentLabel: { fontSize: 11, fontFamily: 'DMSans-Bold', letterSpacing: 0.8, marginTop: 16, marginBottom: 10 },
+  wsRecentRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1 },
+  wsRecentName: { fontSize: 14, fontFamily: 'DMSans-SemiBold' },
+  wsRecentMeta: { fontSize: 11, fontFamily: 'DMSans-Regular', marginTop: 2 },
 });

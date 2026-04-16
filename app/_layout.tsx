@@ -324,6 +324,14 @@ export default function RootLayout() {
               animation: 'slide_from_right',
             }}
           />
+          <Stack.Screen
+            name="workouts/build-workout"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_bottom',
+              presentation: 'modal',
+            }}
+          />
           {/* Nutrition screens */}
           <Stack.Screen
             name="nutrition/index"

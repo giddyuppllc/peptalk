@@ -162,286 +162,210 @@ export default function StackBuilderScreen() {
 
   const showSearch = !searchQuery.trim() && !selectedCategory;
 
+  const BLUE = '#7ABED0';
+  const BLUE_DARK = '#5A9BB0';
+  const BLUE_LIGHT = '#CADEE5';
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: t.cardBorder }]}>
+        <View>
+          <Text style={[styles.title, { color: t.text }]}>Stack Builder</Text>
+          <Text style={[styles.subtitle, { color: t.textSecondary }]}>
+            Combine up to {MAX_STACK_SIZE} peptides
+          </Text>
+        </View>
+        {currentStack.length > 0 && (
+          <TouchableOpacity onPress={clearStack} activeOpacity={0.7}>
+            <Text style={[styles.clearBtn, { color: BLUE }]}>Clear</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: t.text }]}>Stack Builder</Text>
-          <Text style={[styles.subtitle, { color: t.textSecondary }]}>
-            Combine up to {MAX_STACK_SIZE} peptides and analyze their
-            interactions
-          </Text>
+        {/* ── Slot strip ── */}
+        <View style={styles.slotsRow}>
+          {Array.from({ length: MAX_STACK_SIZE }).map((_, index) => {
+            const peptide = stackPeptides[index];
+            return (
+              <View key={index} style={styles.slotContainer}>
+                {peptide ? (
+                  <TouchableOpacity
+                    style={[styles.slotFilled, { backgroundColor: `${BLUE}20`, borderColor: `${BLUE}50` }]}
+                    onPress={() => removeFromStack(peptide.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.slotText, { color: BLUE_DARK }]} numberOfLines={2}>
+                      {peptide.abbreviation || peptide.name.split(' ')[0]}
+                    </Text>
+                    <View style={[styles.slotRemove, { backgroundColor: BLUE }]}>
+                      <Ionicons name="close" size={10} color="#FFFFFF" />
+                    </View>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={[styles.slotEmpty, { borderColor: t.cardBorder }]}>
+                    <Ionicons name="add" size={18} color={t.textMuted} />
+                  </View>
+                )}
+              </View>
+            );
+          })}
         </View>
 
-        {/* ── Visual Slot Workspace ── */}
-        <GlassCard style={styles.workspace}>
-          <View style={styles.workspaceHeader}>
-            <Text style={[styles.workspaceTitle, { color: t.text }]}>
-              Your Stack ({currentStack.length}/{MAX_STACK_SIZE})
-            </Text>
-            {currentStack.length > 0 && (
-              <TouchableOpacity onPress={clearStack} activeOpacity={0.7}>
-                <Text style={styles.clearButton}>Clear All</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* 5 Visual Slots */}
-          <View style={styles.slotsRow}>
-            {Array.from({ length: MAX_STACK_SIZE }).map((_, index) => {
-              const peptide = stackPeptides[index];
-              return (
-                <View key={index} style={styles.slotContainer}>
-                  {peptide ? (
-                    <TouchableOpacity
-                      style={styles.slotFilled}
-                      onPress={() => removeFromStack(peptide.id)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.slotText} numberOfLines={2}>
-                        {peptide.abbreviation || peptide.name.split(' ')[0]}
-                      </Text>
-                      <View style={styles.slotRemove}>
-                        <Ionicons name="close" size={12} color={accent.deep} />
-                      </View>
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={[styles.slotEmpty, { backgroundColor: t.glass, borderColor: t.glassBorder }]}>
-                      <Ionicons name="add" size={20} color={t.textSecondary} />
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-          </View>
-        </GlassCard>
-
-        {/* ── Real-time Interaction Preview ── */}
+        {/* ── Interaction Preview ── */}
         {pairwiseInteractions.length > 0 && (
           <View style={styles.previewSection}>
-            <Text style={[styles.previewTitle, { color: t.text }]}>Interaction Preview</Text>
+            <Text style={[styles.sectionLabel, { color: t.textSecondary }]}>INTERACTIONS</Text>
             {pairwiseInteractions.map((pair, index) => {
               const color = getInteractionColor(pair.interaction.interactionType);
               return (
-                <View
-                  key={index}
-                  style={[styles.previewCard, { borderLeftColor: color, backgroundColor: t.glass }]}
-                >
-                  <View style={styles.previewHeader}>
-                    <Text style={[styles.previewPairText, { color: t.text }]}>
-                      {pair.peptideA.abbreviation || pair.peptideA.name}
-                      {' '}
-                      <Text style={[styles.previewArrow, { color: t.textSecondary }]}>{'\u2194'}</Text>
-                      {' '}
-                      {pair.peptideB.abbreviation || pair.peptideB.name}
+                <View key={index} style={[styles.previewCard, { borderLeftColor: color, backgroundColor: t.card, borderColor: t.cardBorder }]}>
+                  <View style={styles.previewRow}>
+                    <Text style={[styles.previewPair, { color: t.text }]} numberOfLines={1}>
+                      {pair.peptideA.abbreviation || pair.peptideA.name} ↔ {pair.peptideB.abbreviation || pair.peptideB.name}
                     </Text>
-                    <View style={[styles.previewScoreBadge, { backgroundColor: `${color}20` }]}>
-                      <Text style={[styles.previewScoreText, { color }]}>
-                        {pair.interaction.synergyScore}/10
-                      </Text>
-                    </View>
+                    <Text style={[styles.previewScore, { color }]}>{pair.interaction.synergyScore}/10</Text>
                   </View>
-                  <View style={[styles.previewTypePill, { backgroundColor: `${color}15` }]}>
-                    <Text style={[styles.previewTypeText, { color }]}>
-                      {pair.interaction.interactionType}
-                    </Text>
-                  </View>
+                  <Text style={[styles.previewType, { color }]}>{pair.interaction.interactionType}</Text>
                 </View>
               );
             })}
           </View>
         )}
 
-        {/* ── Category Filter Chips ── */}
+        {/* ── Add Peptides ── */}
         {currentStack.length < MAX_STACK_SIZE && (
-          <View style={styles.pickerSection}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>Add Peptides</Text>
+          <View style={styles.addSection}>
+            <Text style={[styles.sectionLabel, { color: t.textSecondary }]}>ADD PEPTIDES</Text>
 
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              style={styles.filterChipsScroll}
-              contentContainerStyle={styles.filterChipsContent}
+              contentContainerStyle={styles.filterRow}
             >
               <TouchableOpacity
-                style={[
-                  styles.filterChip,
-                  { backgroundColor: t.glass, borderColor: t.glassBorder },
-                  !selectedCategory && styles.filterChipActive,
-                ]}
+                style={[styles.filterChip, { backgroundColor: !selectedCategory ? `${BLUE}20` : 'transparent' }]}
                 onPress={() => setSelectedCategory(null)}
                 activeOpacity={0.7}
               >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    { color: t.textSecondary },
-                    !selectedCategory && styles.filterChipTextActive,
-                  ]}
-                >
-                  All
-                </Text>
+                <Text style={[styles.filterChipText, { color: !selectedCategory ? BLUE : t.textSecondary }]}>All</Text>
               </TouchableOpacity>
-              {CATEGORY_FILTERS.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.filterChip,
-                    { backgroundColor: t.glass, borderColor: t.glassBorder },
-                    selectedCategory === cat && styles.filterChipActive,
-                  ]}
-                  onPress={() =>
-                    setSelectedCategory(selectedCategory === cat ? null : cat)
-                  }
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      { color: t.textSecondary },
-                      selectedCategory === cat && styles.filterChipTextActive,
-                    ]}
+              {CATEGORY_FILTERS.map((cat) => {
+                const active = selectedCategory === cat;
+                return (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[styles.filterChip, { backgroundColor: active ? `${BLUE}20` : 'transparent' }]}
+                    onPress={() => setSelectedCategory(active ? null : cat)}
+                    activeOpacity={0.7}
                   >
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text style={[styles.filterChipText, { color: active ? BLUE : t.textSecondary }]}>{cat}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
 
             <SearchBar
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Search peptides to add..."
+              placeholder="Search peptides..."
             />
 
-            {/* Results list */}
             {(searchQuery.trim() || selectedCategory) && filteredPeptides.length > 0 && (
-              <View style={styles.pickerList}>
+              <View style={styles.resultsList}>
                 {filteredPeptides.slice(0, 12).map((peptide) => (
                   <TouchableOpacity
                     key={peptide.id}
-                    style={[styles.pickerItem, { backgroundColor: t.glass, borderColor: t.glassBorder }]}
+                    style={[styles.resultRow, { borderBottomColor: t.cardBorder }]}
                     onPress={() => handleAddPeptide(peptide.id)}
                     activeOpacity={0.7}
                   >
-                    <View style={styles.pickerItemContent}>
-                      <Text style={[styles.pickerItemName, { color: t.text }]}>
-                        {peptide.name}
-                      </Text>
-                      <Text style={[styles.pickerItemCategories, { color: t.textSecondary }]}>
-                        {peptide.categories.join(', ')}
-                      </Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.resultName, { color: t.text }]}>{peptide.name}</Text>
+                      <Text style={[styles.resultCat, { color: t.textMuted }]}>{peptide.categories[0]}</Text>
                     </View>
-                    <Ionicons
-                      name="add-circle-outline"
-                      size={22}
-                      color="#b9cbb6"
-                    />
+                    <Ionicons name="add-circle" size={22} color={BLUE} />
                   </TouchableOpacity>
                 ))}
-                {filteredPeptides.length > 12 && (
-                  <Text style={[styles.moreResultsText, { color: t.textSecondary }]}>
-                    +{filteredPeptides.length - 12} more results
-                  </Text>
-                )}
               </View>
             )}
             {(searchQuery.trim() || selectedCategory) && filteredPeptides.length === 0 && (
-              <Text style={[styles.noResultsText, { color: t.textSecondary }]}>
-                No matching peptides found
-              </Text>
+              <Text style={[styles.noResults, { color: t.textMuted }]}>No matching peptides</Text>
             )}
           </View>
         )}
 
-        {/* Analyze Button */}
-        <TouchableOpacity
-          style={[
-            styles.analyzeButton,
-            currentStack.length < 2 && styles.analyzeButtonDisabled,
-          ]}
-          onPress={handleAnalyze}
-          disabled={currentStack.length < 2 || isAnalyzing}
-          activeOpacity={0.8}
-        >
-          {isAnalyzing ? (
-            <ActivityIndicator size="small" color="#2D2D2D" />
-          ) : (
-            <>
-              <Ionicons name="analytics-outline" size={20} color="#2D2D2D" />
-              <Text style={styles.analyzeButtonText}>
-                {currentAnalysis ? 'Re-Analyze Stack' : 'Analyze Stack'}
-              </Text>
-            </>
+        {/* ── Actions ── */}
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={[styles.analyzeBtn, { backgroundColor: BLUE, opacity: currentStack.length < 2 ? 0.4 : 1 }]}
+            onPress={handleAnalyze}
+            disabled={currentStack.length < 2 || isAnalyzing}
+            activeOpacity={0.85}
+          >
+            {isAnalyzing ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <Ionicons name="analytics-outline" size={18} color="#FFFFFF" />
+                <Text style={styles.analyzeBtnText}>Analyze</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {currentStack.length >= 2 && (
+            <TouchableOpacity
+              style={[styles.saveBtn, { borderColor: `${BLUE}55` }]}
+              onPress={() => setShowSaveInput(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="bookmark-outline" size={18} color={BLUE} />
+              <Text style={[styles.saveBtnText, { color: BLUE }]}>Save</Text>
+            </TouchableOpacity>
           )}
-        </TouchableOpacity>
+        </View>
 
         {currentStack.length < 2 && currentStack.length > 0 && (
-          <Text style={[styles.minWarning, { color: t.textSecondary }]}>
-            Add at least 2 peptides to analyze interactions
-          </Text>
+          <Text style={[styles.hint, { color: t.textMuted }]}>Add at least 2 peptides to analyze</Text>
         )}
 
-        {/* Save Stack */}
-        {currentStack.length >= 2 && (
-          <View style={styles.saveSection}>
-            {showSaveInput ? (
-              <GlassCard style={styles.saveInputCard}>
-                <TextInput
-                  style={[styles.saveInput, { color: t.text }]}
-                  value={stackName}
-                  onChangeText={setStackName}
-                  placeholder="Enter stack name..."
-                  placeholderTextColor={t.textSecondary}
-                  selectionColor={accent.deep}
-                  autoFocus
-                />
-                <View style={styles.saveActions}>
-                  <TouchableOpacity
-                    style={styles.saveCancelBtn}
-                    onPress={() => {
-                      setShowSaveInput(false);
-                      setStackName('');
-                    }}
-                  >
-                    <Text style={[styles.saveCancelText, { color: t.textSecondary }]}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.saveConfirmBtn}
-                    onPress={handleSave}
-                  >
-                    <Text style={styles.saveConfirmText}>Save</Text>
-                  </TouchableOpacity>
-                </View>
-              </GlassCard>
-            ) : (
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={() => setShowSaveInput(true)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="bookmark-outline" size={18} color={accent.deep} />
-                <Text style={[styles.saveButtonText, { color: accent.deep }]}>Save Stack</Text>
+        {/* ── Save input ── */}
+        {showSaveInput && (
+          <View style={[styles.saveCard, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
+            <TextInput
+              style={[styles.saveInput, { color: t.text, borderBottomColor: t.cardBorder }]}
+              value={stackName}
+              onChangeText={setStackName}
+              placeholder="Stack name..."
+              placeholderTextColor={t.textMuted}
+              selectionColor={BLUE}
+              autoFocus
+            />
+            <View style={styles.saveActions}>
+              <TouchableOpacity onPress={() => { setShowSaveInput(false); setStackName(''); }}>
+                <Text style={[styles.saveCancelText, { color: t.textSecondary }]}>Cancel</Text>
               </TouchableOpacity>
-            )}
+              <TouchableOpacity style={[styles.saveConfirmBtn, { backgroundColor: BLUE }]} onPress={handleSave}>
+                <Text style={styles.saveConfirmText}>Save Stack</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
-        {/* Analysis Results */}
+        {/* ── Analysis Results ── */}
         {currentAnalysis && (
           <View style={styles.analysisSection}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>Full Analysis</Text>
+            <Text style={[styles.sectionLabel, { color: t.textSecondary }]}>ANALYSIS</Text>
             <AnalysisCard analysis={currentAnalysis} />
           </View>
         )}
 
-        {/* Disclaimer */}
         <Disclaimer />
       </ScrollView>
     </SafeAreaView>
@@ -449,327 +373,83 @@ export default function StackBuilderScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#EDE6D6',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
+  container: { flex: 1 },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
+
+  // Header
   header: {
-    paddingTop: 16,
-    paddingBottom: 8,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end',
+    paddingTop: 16, paddingBottom: 12, paddingHorizontal: 20,
+    borderBottomWidth: 1,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#2D2D2D',
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 4,
-    lineHeight: 18,
-  },
+  title: { fontSize: 24, fontFamily: 'Playfair-Black', letterSpacing: -0.3 },
+  subtitle: { fontSize: 12, fontFamily: 'DMSans-Medium', marginTop: 2 },
+  clearBtn: { fontSize: 13, fontFamily: 'DMSans-SemiBold' },
 
-  // ── Workspace ─────────────────────────────────────────────
-  workspace: {
-    marginTop: 20,
-    marginBottom: 16,
-  },
-  workspaceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  workspaceTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#2D2D2D',
-  },
-  clearButton: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.iceMeltDeep,
-  },
-
-  // ── Visual Slots ──────────────────────────────────────────
-  slotsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    justifyContent: 'center',
-  },
-  slotContainer: {
-    flex: 1,
-  },
+  // Slots
+  slotsRow: { flexDirection: 'row', gap: 8, marginTop: 16, marginBottom: 16 },
+  slotContainer: { flex: 1 },
   slotFilled: {
-    backgroundColor: 'rgba(227, 167, 161, 0.12)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(227, 167, 161, 0.3)',
-    paddingVertical: 16,
-    paddingHorizontal: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 72,
+    borderRadius: 12, borderWidth: 1.5, paddingVertical: 14, paddingHorizontal: 4,
+    alignItems: 'center', justifyContent: 'center', minHeight: 64,
   },
-  slotText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.iceMeltDeep,
-    textAlign: 'center',
-  },
+  slotText: { fontSize: 10, fontFamily: 'DMSans-Bold', textAlign: 'center' },
   slotRemove: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    borderRadius: 10,
-    width: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    position: 'absolute', top: 3, right: 3, borderRadius: 8,
+    width: 16, height: 16, alignItems: 'center', justifyContent: 'center',
   },
   slotEmpty: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderStyle: 'dashed',
-    paddingVertical: 16,
-    paddingHorizontal: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 72,
+    borderRadius: 12, borderWidth: 1.5, borderStyle: 'dashed',
+    paddingVertical: 14, alignItems: 'center', justifyContent: 'center', minHeight: 64,
   },
 
-  // ── Interaction Preview ───────────────────────────────────
-  previewSection: {
-    marginBottom: 20,
-  },
-  previewTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#2D2D2D',
-    marginBottom: 10,
-  },
+  // Interactions
+  previewSection: { marginBottom: 16 },
+  sectionLabel: { fontSize: 11, fontFamily: 'DMSans-Bold', letterSpacing: 0.8, marginBottom: 10 },
   previewCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderRadius: 10,
-    borderLeftWidth: 3,
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: 10, borderLeftWidth: 3, borderWidth: 1, padding: 12, marginBottom: 6,
   },
-  previewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  previewPairText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2D2D2D',
-    flex: 1,
-  },
-  previewArrow: {
-    color: '#6B7280',
-  },
-  previewScoreBadge: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginLeft: 8,
-  },
-  previewScoreText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  previewTypePill: {
-    alignSelf: 'flex-start',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginTop: 6,
-  },
-  previewTypeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
+  previewRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  previewPair: { fontSize: 13, fontFamily: 'DMSans-SemiBold', flex: 1 },
+  previewScore: { fontSize: 13, fontFamily: 'DMSans-Bold', marginLeft: 8 },
+  previewType: { fontSize: 11, fontFamily: 'DMSans-Medium', textTransform: 'capitalize', marginTop: 4 },
 
-  // ── Category Filter Chips ─────────────────────────────────
-  filterChipsScroll: {
-    marginBottom: 12,
+  // Add peptides
+  addSection: { marginBottom: 16 },
+  filterRow: { gap: 4, marginBottom: 12, paddingRight: 8 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
+  filterChipText: { fontSize: 12, fontFamily: 'DMSans-SemiBold' },
+  resultsList: { marginTop: 8 },
+  resultRow: {
+    flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1,
   },
-  filterChipsContent: {
-    gap: 8,
-    paddingRight: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  filterChipActive: {
-    backgroundColor: 'rgba(227, 167, 161, 0.15)',
-    borderColor: 'rgba(227, 167, 161, 0.4)',
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  filterChipTextActive: {
-    color: Colors.iceMeltDeep,
-  },
+  resultName: { fontSize: 14, fontFamily: 'DMSans-SemiBold' },
+  resultCat: { fontSize: 11, fontFamily: 'DMSans-Regular', marginTop: 1 },
+  noResults: { fontSize: 13, fontFamily: 'DMSans-Medium', textAlign: 'center', marginTop: 16 },
 
-  // ── Peptide Picker ────────────────────────────────────────
-  pickerSection: {
-    marginBottom: 20,
+  // Actions
+  actionsRow: { flexDirection: 'row', gap: 10, marginBottom: 8 },
+  analyzeBtn: {
+    flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 14, borderRadius: 12,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#2D2D2D',
-    marginBottom: 12,
+  analyzeBtnText: { fontSize: 15, fontFamily: 'DMSans-Bold', color: '#FFFFFF', letterSpacing: 0.3 },
+  saveBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 14, borderRadius: 12, borderWidth: 1.5,
   },
-  pickerList: {
-    marginTop: 12,
-  },
-  pickerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  pickerItemContent: {
-    flex: 1,
-    marginRight: 12,
-  },
-  pickerItemName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2D2D2D',
-  },
-  pickerItemCategories: {
-    fontSize: 11,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  noResultsText: {
-    fontSize: 13,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginTop: 16,
-  },
-  moreResultsText: {
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginTop: 4,
-    marginBottom: 8,
-  },
+  saveBtnText: { fontSize: 14, fontFamily: 'DMSans-SemiBold' },
+  hint: { fontSize: 12, fontFamily: 'DMSans-Regular', textAlign: 'center', marginBottom: 12, fontStyle: 'italic' },
 
-  // ── Analyze Button ────────────────────────────────────────
-  analyzeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.iceMeltDeep,
-    borderRadius: 14,
-    paddingVertical: 16,
-    gap: 8,
-    marginBottom: 8,
-  },
-  analyzeButtonDisabled: {
-    backgroundColor: 'rgba(227, 167, 161, 0.3)',
-  },
-  analyzeButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#2D2D2D',
-  },
-  minWarning: {
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginTop: 4,
-    marginBottom: 12,
-  },
+  // Save input
+  saveCard: { borderRadius: 14, borderWidth: 1, padding: 16, marginBottom: 16 },
+  saveInput: { fontSize: 15, fontFamily: 'DMSans-Regular', borderBottomWidth: 1, paddingBottom: 10, marginBottom: 14 },
+  saveActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, alignItems: 'center' },
+  saveCancelText: { fontSize: 14, fontFamily: 'DMSans-Medium' },
+  saveConfirmBtn: { borderRadius: 10, paddingHorizontal: 20, paddingVertical: 8 },
+  saveConfirmText: { fontSize: 14, fontFamily: 'DMSans-Bold', color: '#FFFFFF' },
 
-  // ── Save ──────────────────────────────────────────────────
-  saveSection: {
-    marginTop: 12,
-    marginBottom: 20,
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(199, 215, 230, 0.3)',
-    paddingVertical: 12,
-    gap: 8,
-  },
-  saveButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#c7d7e6',
-  },
-  saveInputCard: {
-    padding: 16,
-  },
-  saveInput: {
-    fontSize: 15,
-    color: '#2D2D2D',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.15)',
-    paddingBottom: 10,
-    marginBottom: 14,
-  },
-  saveActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-  },
-  saveCancelBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  saveCancelText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  saveConfirmBtn: {
-    backgroundColor: '#b9cbb6',
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-  },
-  saveConfirmText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#2D2D2D',
-  },
-
-  // ── Analysis ──────────────────────────────────────────────
-  analysisSection: {
-    marginTop: 8,
-    marginBottom: 16,
-  },
+  // Analysis
+  analysisSection: { marginTop: 8, marginBottom: 16 },
 });

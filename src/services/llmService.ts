@@ -15,10 +15,6 @@
 
 import OpenAI from 'openai';
 import { ChatMessage, EnhancedBotContext } from '../types';
-import { PEPTIDES } from '../data/peptides';
-import { PROTOCOL_TEMPLATES } from '../data/protocols';
-import { KNOWLEDGE_TOPICS } from '../data/knowledgeTopics';
-import { SAFETY_PROFILES } from '../data/safetyProfiles';
 import { sanitizeForLLM } from './privacyGuard';
 import { supabase } from './supabase';
 
@@ -33,22 +29,35 @@ const XAI_API_KEY = process.env.EXPO_PUBLIC_XAI_API_KEY ?? '';
 const MODEL = 'grok-4-1-fast-reasoning';
 const TIMEOUT_MS = 30_000;
 
-const client = new OpenAI({
-  apiKey: XAI_API_KEY || 'dummy',
-  baseURL: 'https://api.x.ai/v1',
-  timeout: TIMEOUT_MS,
-  dangerouslyAllowBrowser: true,
-});
+// Lazy-init the OpenAI client (avoid creating at import time)
+let _client: OpenAI | null = null;
+function getClient(): OpenAI {
+  if (!_client) {
+    _client = new OpenAI({
+      apiKey: XAI_API_KEY || 'dummy',
+      baseURL: 'https://api.x.ai/v1',
+      timeout: TIMEOUT_MS,
+      dangerouslyAllowBrowser: true,
+    });
+  }
+  return _client;
+}
 
 // ---------------------------------------------------------------------------
 // Compressed peptide database for system prompt
 // ---------------------------------------------------------------------------
 
 function buildPeptideKnowledgeBase(): string {
+  // Lazy-require data files — only loaded when Aimee is first used, not at app startup
+  const { PEPTIDES } = require('../data/peptides');
+  const { PROTOCOL_TEMPLATES } = require('../data/protocols');
+  const { KNOWLEDGE_TOPICS } = require('../data/knowledgeTopics');
+  const { SAFETY_PROFILES } = require('../data/safetyProfiles');
+
   const lines: string[] = [];
 
   // Compact peptide list: name | categories | mechanism snippet | half-life
-  PEPTIDES.forEach((p) => {
+  PEPTIDES.forEach((p: any) => {
     const cats = p.categories.join(', ');
     const mech = p.mechanismOfAction.substring(0, 120);
     const hl = p.halfLife || '?';
@@ -57,7 +66,7 @@ function buildPeptideKnowledgeBase(): string {
 
   // Compact protocol list: peptide | dose range | route | frequency | timing
   const protoLines: string[] = [];
-  PROTOCOL_TEMPLATES.forEach((t) => {
+  PROTOCOL_TEMPLATES.forEach((t: any) => {
     const dose = `${t.typicalDose.min}-${t.typicalDose.max} ${t.typicalDose.unit}`;
     const contra = t.contraindications?.length
       ? ` | CONTRA: ${t.contraindications.join(', ')}`
@@ -69,21 +78,21 @@ function buildPeptideKnowledgeBase(): string {
 
   // Compact knowledge topics: question → answer snippet for care, safety, storage, etc.
   const topicLines: string[] = [];
-  KNOWLEDGE_TOPICS.forEach((topic) => {
+  KNOWLEDGE_TOPICS.forEach((topic: any) => {
     topicLines.push(`\n[${topic.title.toUpperCase()}]`);
-    topic.sections.forEach((s) => {
+    topic.sections.forEach((s: any) => {
       topicLines.push(`Q: ${s.question}\nA: ${s.answer.substring(0, 200)}...`);
     });
   });
 
   // Compact safety profiles: contraindications, black box warnings, key interactions
   const safetyLines: string[] = [];
-  SAFETY_PROFILES.forEach((sp) => {
+  SAFETY_PROFILES.forEach((sp: any) => {
     const bbw = sp.blackBoxWarnings?.length ? ` | BBW: ${sp.blackBoxWarnings[0].substring(0, 80)}` : '';
     const contra = sp.contraindications.slice(0, 3).join('; ');
     const interactions = sp.drugInteractions
-      .filter((d) => d.severity === 'severe')
-      .map((d) => d.drug)
+      .filter((d: any) => d.severity === 'severe')
+      .map((d: any) => d.drug)
       .join(', ');
     safetyLines.push(
       `- ${sp.peptideId}: CONTRA: ${contra}${interactions ? ` | SEVERE IX: ${interactions}` : ''}${bbw}`
@@ -376,7 +385,7 @@ export async function generateAIResponse(
   // ── Fallback: Direct API call (dev/testing) ──
   if (!rawResponse && XAI_API_KEY) {
     try {
-      const completion = await client.chat.completions.create({
+      const completion = await getClient().chat.completions.create({
         model: MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
@@ -446,7 +455,7 @@ Return ONLY valid JSON, no markdown. Format:
 }]`;
 
   try {
-    const completion = await client.chat.completions.create({
+    const completion = await getClient().chat.completions.create({
       model: MODEL,
       messages: [
         {
@@ -483,7 +492,7 @@ export async function generateHealthPlan(params: {
   if (!XAI_API_KEY) return null;
 
   try {
-    const completion = await client.chat.completions.create({
+    const completion = await getClient().chat.completions.create({
       model: MODEL,
       messages: [
         {
