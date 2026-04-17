@@ -16,6 +16,7 @@
     },
     "preview": {
       "distribution": "store",
+      "node": "22.21.0",
       "ios": {
         "simulator": false
       },
