@@ -100,7 +100,7 @@ export default function ProgramDetailScreen() {
         {/* Hero */}
         <View style={styles.hero}>
           <LinearGradient
-            colors={[Colors.pepTeal, Colors.pepBlue]}
+            colors={[Colors.raindropsDeep, Colors.raindropsDeep]}
             style={styles.heroIcon}
           >
             <Ionicons name="barbell-outline" size={36} color="#fff" />
@@ -109,19 +109,19 @@ export default function ProgramDetailScreen() {
           <Text style={styles.heroCreator}>by {program.createdBy}</Text>
           <View style={styles.heroMeta}>
             <View style={styles.heroPill}>
-              <Ionicons name="calendar-outline" size={14} color={Colors.pepTeal} />
+              <Ionicons name="calendar-outline" size={14} color={Colors.raindropsDeep} />
               <Text style={styles.heroPillText}>
                 {program.durationWeeks} weeks
               </Text>
             </View>
             <View style={styles.heroPill}>
-              <Ionicons name="fitness-outline" size={14} color={Colors.pepTeal} />
+              <Ionicons name="fitness-outline" size={14} color={Colors.raindropsDeep} />
               <Text style={styles.heroPillText}>
                 {program.weeks[0]?.days.length} days/wk
               </Text>
             </View>
             <View style={styles.heroPill}>
-              <Ionicons name="trophy-outline" size={14} color={Colors.pepTeal} />
+              <Ionicons name="trophy-outline" size={14} color={Colors.raindropsDeep} />
               <Text style={styles.heroPillText}>{program.difficulty}</Text>
             </View>
           </View>
@@ -158,13 +158,13 @@ export default function ProgramDetailScreen() {
               onPress={() =>
                 router.push(`/workouts/player?programId=${program.id}`)
               }
-              colors={[Colors.pepTeal, Colors.pepBlue]}
+              colors={[Colors.raindropsDeep, Colors.raindropsDeep]}
             />
           ) : (
             <GradientButton
               label="Start Program"
               onPress={handleStart}
-              colors={[Colors.pepTeal, Colors.pepBlue]}
+              colors={[Colors.raindropsDeep, Colors.raindropsDeep]}
             />
           )}
         </View>
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   dayBadgeText: {
     fontSize: 12,
     fontWeight: '800',
-    color: Colors.pepTeal,
+    color: Colors.raindropsDeep,
   },
   dayInfo: { flex: 1 },
   dayTitle: {
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   },
   daySets: {
     fontSize: FontSizes.xs,
-    color: Colors.pepTeal,
+    color: Colors.raindropsDeep,
     marginTop: 4,
     fontWeight: '500',
   },

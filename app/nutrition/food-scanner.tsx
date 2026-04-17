@@ -22,6 +22,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { GlassCard } from '../../src/components/GlassCard';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
+import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { useMealStore } from '../../src/store/useMealStore';
 import { supabase } from '../../src/services/supabase';
@@ -52,6 +53,7 @@ interface ScanResult {
 
 export default function FoodScannerScreen() {
   const router = useRouter();
+  const accent = useSectionAccent();
   const tier = useSubscriptionStore((s) => s.tier);
   const addMeal = useMealStore((s) => s.addMeal);
   const cameraRef = useRef<CameraView>(null);
@@ -78,7 +80,7 @@ export default function FoodScannerScreen() {
             AI food scanning with automatic macro calculation is available with PepTalk Pro.
           </Text>
           <AnimatedPress onPress={() => router.push('/subscription')}>
-            <LinearGradient colors={['#FFBF82', '#ef4444']} style={styles.upgradeBtn}>
+            <LinearGradient colors={[accent.deep, accent.darker]} style={styles.upgradeBtn}>
               <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
             </LinearGradient>
           </AnimatedPress>
@@ -98,13 +100,13 @@ export default function FoodScannerScreen() {
           <Text style={styles.headerTitle}>Food Scanner</Text>
         </View>
         <View style={styles.locked}>
-          <Ionicons name="camera-outline" size={48} color={Colors.pepTeal} />
+          <Ionicons name="camera-outline" size={48} color={accent.deep} />
           <Text style={styles.lockedTitle}>Camera Access Needed</Text>
           <Text style={styles.lockedText}>
             Allow camera access to scan your meals and automatically calculate nutrition.
           </Text>
           <AnimatedPress onPress={requestPermission}>
-            <LinearGradient colors={['#F8A97A', '#F8A97A']} style={styles.upgradeBtn}>
+            <LinearGradient colors={[accent.deep, accent.deep]} style={styles.upgradeBtn}>
               <Text style={styles.upgradeBtnText}>Enable Camera</Text>
             </LinearGradient>
           </AnimatedPress>
@@ -252,7 +254,7 @@ export default function FoodScannerScreen() {
 
         {scanning && (
           <GlassCard style={styles.scanningCard}>
-            <ActivityIndicator size="large" color={Colors.pepTeal} />
+            <ActivityIndicator size="large" color={accent.deep} />
             <Text style={styles.scanningText}>Aimee is analyzing your meal...</Text>
           </GlassCard>
         )}
@@ -271,11 +273,11 @@ export default function FoodScannerScreen() {
                 <Text style={styles.totalLabel}>Cal</Text>
               </GlassCard>
               <GlassCard style={styles.totalCard}>
-                <Text style={[styles.totalValue, { color: '#F8A97A' }]}>{result.totals.protein}g</Text>
+                <Text style={[styles.totalValue, { color: accent.deep }]}>{result.totals.protein}g</Text>
                 <Text style={styles.totalLabel}>Protein</Text>
               </GlassCard>
               <GlassCard style={styles.totalCard}>
-                <Text style={[styles.totalValue, { color: '#FFBF82' }]}>{result.totals.carbs}g</Text>
+                <Text style={[styles.totalValue, { color: accent.pastel }]}>{result.totals.carbs}g</Text>
                 <Text style={styles.totalLabel}>Carbs</Text>
               </GlassCard>
               <GlassCard style={styles.totalCard}>
@@ -294,8 +296,8 @@ export default function FoodScannerScreen() {
                 </View>
                 <View style={styles.itemMacros}>
                   <Text style={styles.itemMacro}>{item.calories} cal</Text>
-                  <Text style={[styles.itemMacro, { color: '#F8A97A' }]}>P {item.protein}g</Text>
-                  <Text style={[styles.itemMacro, { color: '#FFBF82' }]}>C {item.carbs}g</Text>
+                  <Text style={[styles.itemMacro, { color: accent.deep }]}>P {item.protein}g</Text>
+                  <Text style={[styles.itemMacro, { color: accent.pastel }]}>C {item.carbs}g</Text>
                   <Text style={[styles.itemMacro, { color: '#ef4444' }]}>F {item.fat}g</Text>
                 </View>
               </GlassCard>
@@ -316,7 +318,7 @@ export default function FoodScannerScreen() {
                   <Ionicons
                     name={mt.icon as any}
                     size={16}
-                    color={selectedMealType === mt.key ? Colors.pepTeal : Colors.darkTextSecondary}
+                    color={selectedMealType === mt.key ? accent.deep : Colors.darkTextSecondary}
                   />
                   <Text style={[
                     styles.mealTypeText,
@@ -442,9 +444,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)',
     backgroundColor: 'rgba(0,0,0,0.05)',
   },
-  mealTypeBtnActive: { borderColor: Colors.pepTeal, backgroundColor: 'rgba(6,182,212,0.1)' },
+  mealTypeBtnActive: { borderColor: Colors.almostAquaDeep, backgroundColor: Colors.almostAquaDeep + '18' },
   mealTypeText: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary, fontWeight: '500' },
-  mealTypeTextActive: { color: Colors.pepTeal },
+  mealTypeTextActive: { color: Colors.almostAquaDeep },
 
   // Actions
   actions: { gap: Spacing.sm },

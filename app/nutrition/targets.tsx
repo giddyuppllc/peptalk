@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     width: 80,
     fontSize: FontSizes.md,
     fontWeight: '700',
-    color: Colors.pepTeal,
+    color: Colors.almostAquaDeep,
     textAlign: 'center',
   },
   fieldUnit: {

@@ -149,7 +149,7 @@ export default function QuickDoseScreen() {
         {/* What it does */}
         <GlassCard variant="elevated" style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="information-circle" size={20} color={Colors.pepTeal} />
+            <Ionicons name="information-circle" size={20} color={Colors.iceMeltDeep} />
             <Text style={styles.sectionTitle}>What it does</Text>
           </View>
           <Text style={styles.sectionText}>
@@ -160,9 +160,9 @@ export default function QuickDoseScreen() {
         {protocol && reconInfo && (
           <>
             {/* Dosing */}
-            <GlassCard variant="glow" glowColor="#F8A97A" style={styles.section}>
+            <GlassCard variant="glow" glowColor="#E89672" style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="flask" size={20} color="#F8A97A" />
+                <Ionicons name="flask" size={20} color="#E89672" />
                 <Text style={styles.sectionTitle}>Your Dose</Text>
               </View>
               <View style={styles.doseGrid}>
@@ -195,9 +195,9 @@ export default function QuickDoseScreen() {
             </GlassCard>
 
             {/* Reconstitution */}
-            <GlassCard variant="glow" glowColor="#D4A853" style={styles.section}>
+            <GlassCard variant="glow" glowColor="#BADDCB" style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="water" size={20} color="#D4A853" />
+                <Ionicons name="water" size={20} color="#BADDCB" />
                 <Text style={styles.sectionTitle}>How to Reconstitute</Text>
               </View>
               <View style={styles.stepList}>
@@ -292,7 +292,7 @@ export default function QuickDoseScreen() {
             {protocol.storageNotes && (
               <GlassCard style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <Ionicons name="snow" size={20} color="#F8A97A" />
+                  <Ionicons name="snow" size={20} color="#E89672" />
                   <Text style={styles.sectionTitle}>Storage</Text>
                 </View>
                 <Text style={styles.sectionText}>{protocol.storageNotes}</Text>
@@ -303,12 +303,12 @@ export default function QuickDoseScreen() {
             {protocol.contraindications && protocol.contraindications.length > 0 && (
               <GlassCard variant="accent" style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <Ionicons name="warning" size={20} color="#FFBF82" />
+                  <Ionicons name="warning" size={20} color="#F4E9A7" />
                   <Text style={styles.sectionTitle}>Watch For</Text>
                 </View>
                 {protocol.contraindications.map((c: string, i: number) => (
                   <View key={i} style={styles.warningRow}>
-                    <Ionicons name="alert-circle-outline" size={14} color="#FFBF82" />
+                    <Ionicons name="alert-circle-outline" size={14} color="#F4E9A7" />
                     <Text style={styles.warningText}>{c}</Text>
                   </View>
                 ))}
@@ -327,7 +327,7 @@ export default function QuickDoseScreen() {
               onPress={() => router.push('/(tabs)/peptalk' as any)}
               style={styles.askAimeeBtn}
             >
-              <LinearGradient colors={['#D4A853', '#B8913D']} style={styles.askAimeeBtnGradient}>
+              <LinearGradient colors={['#BADDCB', '#B8913D']} style={styles.askAimeeBtnGradient}>
                 <Ionicons name="chatbubble" size={16} color="#fff" />
                 <Text style={styles.askAimeeBtnText}>Ask Aimee</Text>
               </LinearGradient>
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: FontSizes.md, color: Colors.darkText },
   weightNote: {
-    fontSize: FontSizes.xs, color: Colors.pepTeal,
+    fontSize: FontSizes.xs, color: Colors.iceMeltDeep,
     paddingHorizontal: Spacing.lg, marginBottom: Spacing.sm,
   },
 
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   peptideDot: {
-    width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.pepTeal,
+    width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.iceMeltDeep,
   },
   peptideInfo: { flex: 1 },
   peptideName: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.darkText },
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
   doseLabel: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary, marginBottom: 2 },
   doseValue: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.darkText },
   weightCalc: {
-    fontSize: FontSizes.xs, color: Colors.pepTeal,
+    fontSize: FontSizes.xs, color: Colors.iceMeltDeep,
     marginTop: Spacing.sm, fontStyle: 'italic',
   },
 
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     width: 24, height: 24, borderRadius: 12,
     backgroundColor: 'rgba(0,0,0,0.08)',
     textAlign: 'center', lineHeight: 24,
-    fontSize: FontSizes.sm, fontWeight: '700', color: Colors.pepTeal,
+    fontSize: FontSizes.sm, fontWeight: '700', color: Colors.iceMeltDeep,
   },
   stepText: { flex: 1, fontSize: FontSizes.sm, color: Colors.darkTextSecondary, lineHeight: 20 },
 
@@ -445,10 +445,10 @@ const styles = StyleSheet.create({
   injectionCard: { marginTop: Spacing.md, alignItems: 'center' },
   injectionTitle: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary },
   injectionValue: { fontSize: FontSizes.xxl, fontWeight: '800', color: Colors.darkText, marginVertical: 4 },
-  injectionUnits: { fontSize: FontSizes.sm, color: Colors.pepTeal, fontWeight: '600' },
+  injectionUnits: { fontSize: FontSizes.sm, color: Colors.iceMeltDeep, fontWeight: '600' },
 
   // Duration
-  durationText: { fontSize: FontSizes.sm, color: Colors.pepTeal, marginTop: Spacing.sm, fontWeight: '500' },
+  durationText: { fontSize: FontSizes.sm, color: Colors.iceMeltDeep, marginTop: Spacing.sm, fontWeight: '500' },
 
   // Warnings
   warningRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'flex-start', marginBottom: 4 },

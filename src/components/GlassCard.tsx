@@ -39,7 +39,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({
           borderColor: glowColor
             ? `${glowColor}40`
             : 'rgba(59, 130, 246, 0.25)',
-          shadowColor: glowColor ?? '#F8A97A',
+          shadowColor: glowColor ?? '#E89672',
           shadowOffset: { width: 0, height: 0 },
           shadowOpacity: 0.3,
           shadowRadius: 16,

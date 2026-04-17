@@ -18,12 +18,19 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../src/hooks/useTheme';
+import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { Spacing } from '../../src/constants/theme';
 import { WORKOUT_PROGRAMS } from '../../src/data/workoutPrograms';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useOnboardingStore } from '../../src/store/useOnboardingStore';
 import type { WorkoutProgram } from '../../src/types/fitness';
-import { PaywallGate } from '../../src/hooks/useFeatureGate';
+import { PaywallGate, useFeatureGate } from '../../src/hooks/useFeatureGate';
+import { LockedFeatureCard } from '../../src/components/LockedFeatureCard';
+import { LockBadge } from '../../src/components/LockBadge';
+import { PaywallModal } from '../../src/components/PaywallModal';
+import { useTourTarget } from '../../src/hooks/useTourTarget';
+import { useWorkoutTemplateStore } from '../../src/store/useWorkoutTemplateStore';
+import { getExerciseById } from '../../src/data/exercises';
 import {
   getTemplates,
   getTemplatesForUser,
@@ -31,6 +38,7 @@ import {
   GOAL_LABELS,
   type ProgramTemplate,
 } from '../../src/services/workoutGenerator';
+import type { ExerciseLocation, ExerciseGender } from '../../src/types/fitness';
 
 // ---------------------------------------------------------------------------
 // Custom Workout Generator Sheet
@@ -44,12 +52,13 @@ type Lvl = 'beginner' | 'intermediate' | 'advanced';
 interface GeneratorSheetProps {
   visible: boolean;
   onClose: () => void;
-  onGenerate: (template: ProgramTemplate) => void;
+  onGenerate: (template: ProgramTemplate, filters: { location: Loc; level: Lvl }) => void;
   gender: 'male' | 'female';
 }
 
 function GeneratorSheet({ visible, onClose, onGenerate, gender }: GeneratorSheetProps) {
   const t = useTheme();
+  const accent = useSectionAccent();
   const [goal, setGoal] = useState<Goal>(gender === 'female' ? 'transformation' : 'hypertrophy');
   const [days, setDays] = useState<Days>(4);
   const [location, setLocation] = useState<Loc>('any');
@@ -73,7 +82,7 @@ function GeneratorSheet({ visible, onClose, onGenerate, gender }: GeneratorSheet
       );
       return;
     }
-    onGenerate(matches[0]);
+    onGenerate(matches[0], { location, level });
     onClose();
   };
 
@@ -102,7 +111,7 @@ function GeneratorSheet({ visible, onClose, onGenerate, gender }: GeneratorSheet
                     key={g}
                     style={[
                       s.chip,
-                      { backgroundColor: active ? t.primary : t.surface, borderColor: active ? t.primary : t.cardBorder },
+                      { backgroundColor: active ? accent.deep : t.surface, borderColor: active ? accent.deep : t.cardBorder },
                     ]}
                     onPress={() => setGoal(g)}
                     activeOpacity={0.7}
@@ -125,7 +134,7 @@ function GeneratorSheet({ visible, onClose, onGenerate, gender }: GeneratorSheet
                     key={d}
                     style={[
                       s.chip,
-                      { backgroundColor: active ? t.primary : t.surface, borderColor: active ? t.primary : t.cardBorder },
+                      { backgroundColor: active ? accent.deep : t.surface, borderColor: active ? accent.deep : t.cardBorder },
                     ]}
                     onPress={() => setDays(d)}
                     activeOpacity={0.7}
@@ -150,7 +159,7 @@ function GeneratorSheet({ visible, onClose, onGenerate, gender }: GeneratorSheet
                     key={l.key}
                     style={[
                       s.chip,
-                      { backgroundColor: active ? t.primary : t.surface, borderColor: active ? t.primary : t.cardBorder },
+                      { backgroundColor: active ? accent.deep : t.surface, borderColor: active ? accent.deep : t.cardBorder },
                     ]}
                     onPress={() => setLocation(l.key as Loc)}
                     activeOpacity={0.7}
@@ -174,7 +183,7 @@ function GeneratorSheet({ visible, onClose, onGenerate, gender }: GeneratorSheet
                     key={lv}
                     style={[
                       s.chip,
-                      { backgroundColor: active ? t.primary : t.surface, borderColor: active ? t.primary : t.cardBorder },
+                      { backgroundColor: active ? accent.deep : t.surface, borderColor: active ? accent.deep : t.cardBorder },
                     ]}
                     onPress={() => setLevel(lv)}
                     activeOpacity={0.7}
@@ -190,7 +199,7 @@ function GeneratorSheet({ visible, onClose, onGenerate, gender }: GeneratorSheet
 
           {/* Generate button */}
           <TouchableOpacity
-            style={[s.generateBtn, { backgroundColor: t.primary }]}
+            style={[s.generateBtn, { backgroundColor: accent.deep }]}
             onPress={handleGenerate}
             activeOpacity={0.85}
           >
@@ -213,6 +222,7 @@ function GeneratorSheet({ visible, onClose, onGenerate, gender }: GeneratorSheet
 
 function ProgramCard({ program }: { program: WorkoutProgram }) {
   const t = useTheme();
+  const accent = useSectionAccent();
   const router = useRouter();
   const { activeProgram } = useWorkoutStore();
   const isActive = activeProgram?.programId === program.id;
@@ -227,7 +237,7 @@ function ProgramCard({ program }: { program: WorkoutProgram }) {
 
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={handlePress}>
-      <View style={[s.programCard, { backgroundColor: t.surface, borderColor: isActive ? t.primary : t.cardBorder }]}>
+      <View style={[s.programCard, { backgroundColor: t.surface, borderColor: isActive ? accent.deep : t.cardBorder }]}>
         {program.imageUrl && (
           <View style={s.programImageWrap}>
             <Image source={{ uri: program.imageUrl }} style={s.programImage} resizeMode="cover" />
@@ -236,7 +246,7 @@ function ProgramCard({ program }: { program: WorkoutProgram }) {
               style={s.programImageOverlay}
             />
             {program.isPremium && (
-              <View style={[s.proBadge, { backgroundColor: t.primary }]}>
+              <View style={[s.proBadge, { backgroundColor: accent.deep }]}>
                 <Text style={s.proBadgeText}>PRO</Text>
               </View>
             )}
@@ -253,19 +263,19 @@ function ProgramCard({ program }: { program: WorkoutProgram }) {
 
           <View style={s.programMeta}>
             <View style={s.programMetaItem}>
-              <Ionicons name="calendar-outline" size={13} color={t.primary} />
+              <Ionicons name="calendar-outline" size={13} color={accent.deep} />
               <Text style={[s.programMetaText, { color: t.textSecondary }]}>
                 {program.durationWeeks} weeks
               </Text>
             </View>
             <View style={s.programMetaItem}>
-              <Ionicons name="fitness-outline" size={13} color={t.primary} />
+              <Ionicons name="fitness-outline" size={13} color={accent.deep} />
               <Text style={[s.programMetaText, { color: t.textSecondary }]}>
                 {program.weeks[0]?.days.length ?? 0} days/wk
               </Text>
             </View>
             <View style={s.programMetaItem}>
-              <Ionicons name="trophy-outline" size={13} color={t.primary} />
+              <Ionicons name="trophy-outline" size={13} color={accent.deep} />
               <Text style={[s.programMetaText, { color: t.textSecondary }]}>
                 {program.difficulty}
               </Text>
@@ -273,9 +283,9 @@ function ProgramCard({ program }: { program: WorkoutProgram }) {
           </View>
 
           {isActive && activeProgram && (
-            <View style={[s.activeBanner, { backgroundColor: `${t.primary}18`, borderColor: `${t.primary}40` }]}>
-              <Ionicons name="play-circle" size={16} color={t.primary} />
-              <Text style={[s.activeBannerText, { color: t.primary }]}>
+            <View style={[s.activeBanner, { backgroundColor: `${accent.deep}18`, borderColor: `${accent.deep}40` }]}>
+              <Ionicons name="play-circle" size={16} color={accent.deep} />
+              <Text style={[s.activeBannerText, { color: accent.deep }]}>
                 Week {activeProgram.currentWeek}, Day {activeProgram.currentDay + 1} — Continue
               </Text>
             </View>
@@ -292,6 +302,7 @@ function ProgramCard({ program }: { program: WorkoutProgram }) {
 
 function StatsBar() {
   const t = useTheme();
+  const accent = useSectionAccent();
   const { logs, getStreak } = useWorkoutStore();
   const streak = getStreak();
   const thisWeek = logs.filter((l) => {
@@ -312,7 +323,7 @@ function StatsBar() {
         <Text style={[s.statLabel, { color: t.textSecondary }]}>This Week</Text>
       </View>
       <View style={[s.statCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
-        <Text style={[s.statNumber, { color: t.primary }]}>{streak}</Text>
+        <Text style={[s.statNumber, { color: accent.deep }]}>{streak}</Text>
         <Text style={[s.statLabel, { color: t.textSecondary }]}>Streak</Text>
       </View>
     </View>
@@ -356,6 +367,7 @@ const VIDEO_PLACEHOLDERS = [
 
 function WorkoutVideos() {
   const t = useTheme();
+  const accent = useSectionAccent();
 
   return (
     <View>
@@ -385,7 +397,7 @@ function WorkoutVideos() {
               </View>
             </View>
             <View style={s.videoInfo}>
-              <Text style={[s.videoCategory, { color: t.primary }]}>{v.category.toUpperCase()}</Text>
+              <Text style={[s.videoCategory, { color: accent.deep }]}>{v.category.toUpperCase()}</Text>
               <Text style={[s.videoTitle, { color: t.text }]} numberOfLines={2}>{v.title}</Text>
             </View>
           </TouchableOpacity>
@@ -401,10 +413,17 @@ function WorkoutVideos() {
 
 export default function WorkoutsScreen() {
   const t = useTheme();
+  const accent = useSectionAccent();
   const router = useRouter();
-  const { activeProgram, startProgram } = useWorkoutStore();
+  const { activeProgram } = useWorkoutStore();
+  const saveGeneratedWorkout = useWorkoutStore((st) => st.saveGeneratedWorkout);
+  const savedGeneratedWorkouts = useWorkoutStore((st) => st.savedGeneratedWorkouts);
   const { profile } = useOnboardingStore();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [workoutPaywallFeature, setWorkoutPaywallFeature] = useState<string | null>(null);
+  const hasCustomGenerator = useFeatureGate('custom_workout_generator');
+  const programsSectionRef = useTourTarget('workouts_programs_section');
+  const workoutTemplates = useWorkoutTemplateStore((s) => s.templates);
 
   const gender: 'male' | 'female' = profile.gender === 'Male' ? 'male' : 'female';
 
@@ -412,18 +431,49 @@ export default function WorkoutsScreen() {
     ? WORKOUT_PROGRAMS.find((p) => p.id === activeProgram.programId)
     : null;
 
-  const handleGenerated = (template: ProgramTemplate) => {
-    // Find the matching pre-built program in WORKOUT_PROGRAMS (if any)
-    // or use the template id directly. Route to the program view.
-    const matchingProgram = WORKOUT_PROGRAMS.find((p) => p.id.includes(template.goal));
-    if (matchingProgram) {
-      router.push(`/workouts/program?programId=${matchingProgram.id}`);
-    } else {
+  const handleGenerated = (
+    template: ProgramTemplate,
+    filters: { location: Loc; level: Lvl },
+  ) => {
+    // Map UI gender ('male' | 'female') to ExerciseGender ('men' | 'women' | 'anyone')
+    const exerciseGender: ExerciseGender = gender === 'male' ? 'men' : 'women';
+    const exerciseLocation: ExerciseLocation =
+      filters.location === 'any' ? 'any' : (filters.location as ExerciseLocation);
+
+    // Actually fill the template with real exercises from jamieExercises.json
+    const generated = generateWorkout(template.id, {
+      location: exerciseLocation,
+      gender: exerciseGender,
+    });
+
+    if (!generated) {
       Alert.alert(
-        'Workout Generated',
-        `${template.label} — ${template.daysPerWeek} days/week. Full program view coming next — for now you can log individual workouts from the player.`,
+        'Generation failed',
+        'Could not generate a workout from this template. Try a different combination.',
       );
+      return;
     }
+
+    // Derive a friendly name: "{Goal} · {Days}-Day" + short timestamp so they're distinguishable
+    const goalLabel = GOAL_LABELS[template.goal]?.label ?? template.goal;
+    const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const name = `${goalLabel} · ${template.daysPerWeek}-Day (${dateStr})`;
+
+    // Save to store
+    const newId = saveGeneratedWorkout({
+      name,
+      goal: template.goal,
+      daysPerWeek: template.daysPerWeek,
+      location: filters.location,
+      level: filters.level,
+      workout: generated,
+    });
+
+    // Navigate to My Workouts with the new one highlighted and expanded
+    router.push({
+      pathname: '/workouts/my-workouts' as any,
+      params: { highlight: newId },
+    });
   };
 
   return (
@@ -455,14 +505,14 @@ export default function WorkoutsScreen() {
         {/* Today's Workout / Active Program hero */}
         {activeProgram ? (
           <View style={s.section}>
-            <View style={[s.heroCard, { backgroundColor: t.surface, borderColor: `${t.primary}30` }]}>
+            <View style={[s.heroCard, { backgroundColor: t.surface, borderColor: `${accent.deep}30` }]}>
               <LinearGradient
-                colors={[`${t.primary}18`, `${t.secondary}08`]}
+                colors={[`${accent.deep}18`, `${accent.pastel}08`]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={s.heroCardGradient}
               >
-                <Text style={[s.heroCardLabel, { color: t.primary }]}>ACTIVE PROGRAM</Text>
+                <Text style={[s.heroCardLabel, { color: accent.deep }]}>ACTIVE PROGRAM</Text>
                 <Text style={[s.heroCardTitle, { color: t.text }]}>
                   {activeProgramDetails?.name ?? 'Your Program'}
                 </Text>
@@ -470,7 +520,7 @@ export default function WorkoutsScreen() {
                   Week {activeProgram.currentWeek} · Day {activeProgram.currentDay + 1}
                 </Text>
                 <TouchableOpacity
-                  style={[s.heroCardBtn, { backgroundColor: t.primary }]}
+                  style={[s.heroCardBtn, { backgroundColor: accent.deep }]}
                   onPress={() => router.push(`/workouts/player?programId=${activeProgram.programId}`)}
                   activeOpacity={0.85}
                 >
@@ -485,15 +535,24 @@ export default function WorkoutsScreen() {
         {/* Generate Custom Workout */}
         <View style={s.section}>
           <TouchableOpacity
-            style={[s.generateCard, { backgroundColor: t.surface, borderColor: `${t.primary}30` }]}
-            onPress={() => setSheetOpen(true)}
+            style={[s.generateCard, { backgroundColor: t.surface, borderColor: `${accent.deep}30` }]}
+            onPress={() => {
+              if (hasCustomGenerator) {
+                setSheetOpen(true);
+              } else {
+                setWorkoutPaywallFeature('custom_workout_generator');
+              }
+            }}
             activeOpacity={0.85}
           >
-            <View style={[s.generateIcon, { backgroundColor: `${t.primary}18` }]}>
-              <Ionicons name="sparkles" size={22} color={t.primary} />
+            <View style={[s.generateIcon, { backgroundColor: `${accent.deep}18` }]}>
+              <Ionicons name="sparkles" size={22} color={accent.deep} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[s.generateTitle, { color: t.text }]}>Generate Custom Workout</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={[s.generateTitle, { color: t.text }]}>Generate Custom Workout</Text>
+                {!hasCustomGenerator && <LockBadge tier="pro" size="sm" />}
+              </View>
               <Text style={[s.generateSub, { color: t.textSecondary }]}>
                 Pick your goal, days, and location
               </Text>
@@ -502,26 +561,58 @@ export default function WorkoutsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* My Workouts entry point */}
+        {savedGeneratedWorkouts.length > 0 && (
+          <View style={s.section}>
+            <TouchableOpacity
+              style={[s.generateCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}
+              onPress={() => router.push('/workouts/my-workouts' as any)}
+              activeOpacity={0.85}
+            >
+              <View style={[s.generateIcon, { backgroundColor: `${accent.deep}10` }]}>
+                <Ionicons name="bookmark" size={20} color={accent.deep} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.generateTitle, { color: t.text }]}>My Workouts</Text>
+                <Text style={[s.generateSub, { color: t.textSecondary }]}>
+                  {savedGeneratedWorkouts.length} saved workout{savedGeneratedWorkouts.length !== 1 ? 's' : ''}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={t.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Quick Actions */}
         <View style={s.section}>
           <View style={s.quickRow}>
             <TouchableOpacity
               style={[s.quickBtn, { backgroundColor: t.surface, borderColor: t.cardBorder }]}
+              onPress={() => router.push('/workouts/build-workout')}
+              activeOpacity={0.8}
+            >
+              <View style={[s.quickIcon, { backgroundColor: `${accent.deep}18` }]}>
+                <Ionicons name="hammer-outline" size={18} color={accent.deep} />
+              </View>
+              <Text style={[s.quickLabel, { color: t.text }]}>Build</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.quickBtn, { backgroundColor: t.surface, borderColor: t.cardBorder }]}
               onPress={() => router.push('/workouts/player')}
               activeOpacity={0.8}
             >
-              <View style={[s.quickIcon, { backgroundColor: `${t.primary}18` }]}>
-                <Ionicons name="add" size={18} color={t.primary} />
+              <View style={[s.quickIcon, { backgroundColor: `${accent.deep}18` }]}>
+                <Ionicons name="play-outline" size={18} color={accent.deep} />
               </View>
-              <Text style={[s.quickLabel, { color: t.text }]}>Log Workout</Text>
+              <Text style={[s.quickLabel, { color: t.text }]}>Start</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.quickBtn, { backgroundColor: t.surface, borderColor: t.cardBorder }]}
               onPress={() => router.push('/workouts/exercises')}
               activeOpacity={0.8}
             >
-              <View style={[s.quickIcon, { backgroundColor: `${t.primary}18` }]}>
-                <Ionicons name="list-outline" size={18} color={t.primary} />
+              <View style={[s.quickIcon, { backgroundColor: `${accent.deep}18` }]}>
+                <Ionicons name="list-outline" size={18} color={accent.deep} />
               </View>
               <Text style={[s.quickLabel, { color: t.text }]}>Exercises</Text>
             </TouchableOpacity>
@@ -530,19 +621,51 @@ export default function WorkoutsScreen() {
               onPress={() => router.push('/workouts/history')}
               activeOpacity={0.8}
             >
-              <View style={[s.quickIcon, { backgroundColor: `${t.primary}18` }]}>
-                <Ionicons name="time-outline" size={18} color={t.primary} />
+              <View style={[s.quickIcon, { backgroundColor: `${accent.deep}18` }]}>
+                <Ionicons name="time-outline" size={18} color={accent.deep} />
               </View>
               <Text style={[s.quickLabel, { color: t.text }]}>History</Text>
             </TouchableOpacity>
           </View>
         </View>
 
+        {/* My Workout Templates */}
+        {workoutTemplates.length > 0 && (
+          <View style={s.section}>
+            <Text style={[s.sectionTitle, { color: t.text }]}>My Workouts</Text>
+            {workoutTemplates.map((tmpl) => {
+              const exerciseNames = tmpl.exercises
+                .map((e) => getExerciseById(e.exerciseId)?.name ?? e.exerciseId)
+                .slice(0, 3)
+                .join(', ');
+              return (
+                <TouchableOpacity
+                  key={tmpl.id}
+                  style={[s.templateCard, { backgroundColor: t.card, borderColor: t.cardBorder }]}
+                  onPress={() => router.push(`/workouts/player?templateId=${tmpl.id}` as any)}
+                  activeOpacity={0.7}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.templateName, { color: t.text }]}>{tmpl.name}</Text>
+                    <Text style={[s.templateMeta, { color: t.textMuted }]}>
+                      {tmpl.exercises.length} exercises · {tmpl.exercises.reduce((sum, e) => sum + e.targetSets, 0)} sets
+                    </Text>
+                    <Text style={[s.templateExercises, { color: t.textSecondary }]} numberOfLines={1}>
+                      {exerciseNames}
+                    </Text>
+                  </View>
+                  <Ionicons name="play-circle" size={28} color={accent.deep} />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
         {/* Workout Videos */}
         <View style={s.sectionHeaderRow}>
           <Text style={[s.sectionTitle, { color: t.text }]}>Workout Videos</Text>
           <TouchableOpacity onPress={() => Alert.alert('Coming soon', 'Full video library coming soon.')}>
-            <Text style={[s.seeAllText, { color: t.primary }]}>See all</Text>
+            <Text style={[s.seeAllText, { color: accent.deep }]}>See all</Text>
           </TouchableOpacity>
         </View>
         <WorkoutVideos />
@@ -551,28 +674,26 @@ export default function WorkoutsScreen() {
         <View style={[s.sectionHeaderRow, { marginTop: 24 }]}>
           <Text style={[s.sectionTitle, { color: t.text }]}>Programs by Jamie</Text>
         </View>
-        <View style={s.section}>
-          <PaywallGate feature="workout_programs">
-            <>
-              {WORKOUT_PROGRAMS.map((program) => (
-                <View key={program.id} style={{ marginBottom: 14 }}>
-                  <ProgramCard program={program} />
-                </View>
-              ))}
-              <View
-                style={[
-                  s.comingSoonCard,
-                  { backgroundColor: t.surface, borderColor: t.cardBorder },
-                ]}
-              >
-                <Ionicons name="add-circle-outline" size={28} color={t.textSecondary} />
-                <Text style={[s.comingSoonTitle, { color: t.text }]}>More Programs Coming</Text>
-                <Text style={[s.comingSoonDesc, { color: t.textSecondary }]}>
-                  Jamie is building strength, HIIT, and postpartum recovery programs.
-                </Text>
-              </View>
-            </>
-          </PaywallGate>
+        <View ref={programsSectionRef} style={s.section}>
+          {WORKOUT_PROGRAMS.map((program) => (
+            <View key={program.id} style={{ marginBottom: 14 }}>
+              <LockedFeatureCard feature="workout_programs" tier="pro">
+                <ProgramCard program={program} />
+              </LockedFeatureCard>
+            </View>
+          ))}
+          <View
+            style={[
+              s.comingSoonCard,
+              { backgroundColor: t.surface, borderColor: t.cardBorder },
+            ]}
+          >
+            <Ionicons name="add-circle-outline" size={28} color={t.textSecondary} />
+            <Text style={[s.comingSoonTitle, { color: t.text }]}>More Programs Coming</Text>
+            <Text style={[s.comingSoonDesc, { color: t.textSecondary }]}>
+              Jamie is building strength, HIIT, and postpartum recovery programs.
+            </Text>
+          </View>
         </View>
 
         <View style={{ height: 60 }} />
@@ -585,6 +706,15 @@ export default function WorkoutsScreen() {
         onGenerate={handleGenerated}
         gender={gender}
       />
+
+      {/* Paywall for locked workout features */}
+      {workoutPaywallFeature && (
+        <PaywallModal
+          visible
+          feature={workoutPaywallFeature}
+          onDismiss={() => setWorkoutPaywallFeature(null)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -751,8 +881,33 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   quickLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'DMSans-SemiBold',
+  },
+
+  // Template cards
+  templateCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 8,
+    gap: 12,
+  },
+  templateName: {
+    fontSize: 15,
+    fontFamily: 'DMSans-SemiBold',
+  },
+  templateMeta: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Medium',
+    marginTop: 2,
+  },
+  templateExercises: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Regular',
+    marginTop: 3,
   },
 
   // Program card

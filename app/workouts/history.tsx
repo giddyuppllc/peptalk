@@ -40,20 +40,20 @@ function LogItem({ log }: { log: WorkoutLog }) {
         </Text>
         <View style={styles.logMeta}>
           <View style={styles.logMetaItem}>
-            <Ionicons name="time-outline" size={12} color={Colors.pepTeal} />
+            <Ionicons name="time-outline" size={12} color={Colors.raindropsDeep} />
             <Text style={styles.logMetaText}>{log.durationMinutes} min</Text>
           </View>
           <View style={styles.logMetaItem}>
             <Ionicons
               name="checkmark-circle-outline"
               size={12}
-              color={Colors.pepTeal}
+              color={Colors.raindropsDeep}
             />
             <Text style={styles.logMetaText}>{log.sets.length} sets</Text>
           </View>
           {log.rating && (
             <View style={styles.logMetaItem}>
-              <Ionicons name="star" size={12} color="#FFBF82" />
+              <Ionicons name="star" size={12} color="#F4E9A7" />
               <Text style={styles.logMetaText}>{log.rating}/5</Text>
             </View>
           )}
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   logDay: {
     fontSize: FontSizes.xs,
     fontWeight: '600',
-    color: Colors.pepTeal,
+    color: Colors.raindropsDeep,
     textTransform: 'uppercase',
   },
   logDateStr: {

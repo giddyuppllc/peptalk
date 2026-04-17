@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "scheme": "peptalk",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -18,6 +18,9 @@
       "bundleIdentifier": "com.peptalkapp.peptalk",
       "infoPlist": {
         "NSHealthShareUsageDescription": "PepTalk uses HealthKit to auto-fill your daily check-ins with steps, weight, heart rate, and sleep data.",
+        "NSSpeechRecognitionUsageDescription": "PepTalk uses speech recognition to let you log meals and notes by voice.",
+        "NSMicrophoneUsageDescription": "PepTalk needs microphone access for voice logging and meal dictation.",
+        "NSCameraUsageDescription": "PepTalk needs camera access to scan barcodes and meals for automatic nutrition tracking.",
         "UIBackgroundModes": [
           "remote-notification"
         ],
@@ -30,7 +33,11 @@
         "backgroundColor": "#1f2a36"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.peptalkapp.peptalk"
+      "package": "com.peptalkapp.peptalk",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",

@@ -26,12 +26,12 @@ import {
 // ---------------------------------------------------------------------------
 
 const CATEGORY_COLORS: Record<JournalCategory, string> = {
-  protocol_notes: '#F8A97A',
+  protocol_notes: '#E89672',
   side_effects: '#ef4444',
   mood: '#10b981',
-  progress: '#D4A853',
+  progress: '#BADDCB',
   research: '#06b6d4',
-  questions: '#FFBF82',
+  questions: '#F4E9A7',
   goals: '#ec4899',
   general: '#6b7280',
 };

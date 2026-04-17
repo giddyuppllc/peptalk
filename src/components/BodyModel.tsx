@@ -96,7 +96,7 @@ export function BodyModel({ selectedRegion, onSelectRegion, regionColors }: Body
           <View
             style={[
               styles.selectedGlow,
-              { backgroundColor: regionColors[selectedRegion] || '#F8A97A' },
+              { backgroundColor: regionColors[selectedRegion] || '#E89672' },
             ]}
           />
         )}
@@ -105,8 +105,8 @@ export function BodyModel({ selectedRegion, onSelectRegion, regionColors }: Body
       <Svg width={SVG_W} height={SVG_H} viewBox="0 0 300 570" style={styles.svg}>
         <Defs>
           <RadialGradient id="bodyGlow" cx="50%" cy="50%" r="50%">
-            <Stop offset="0%" stopColor="#F8A97A" stopOpacity="0.15" />
-            <Stop offset="100%" stopColor="#F8A97A" stopOpacity="0" />
+            <Stop offset="0%" stopColor="#E89672" stopOpacity="0.15" />
+            <Stop offset="100%" stopColor="#E89672" stopOpacity="0" />
           </RadialGradient>
         </Defs>
 
@@ -126,7 +126,7 @@ export function BodyModel({ selectedRegion, onSelectRegion, regionColors }: Body
         {/* Tappable regions */}
         {Object.entries(REGION_PATHS).map(([id, { d }]) => {
           const isSelected = selectedRegion === id;
-          const color = regionColors[id] || '#F8A97A';
+          const color = regionColors[id] || '#E89672';
 
           return (
             <G key={id}>

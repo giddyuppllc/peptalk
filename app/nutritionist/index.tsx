@@ -121,7 +121,7 @@ export default function NutritionistScreen() {
   const statusColor = (status: string) => {
     switch (status) {
       case 'submitted':
-        return '#FFBF82';
+        return '#F4E9A7';
       case 'reviewed':
         return '#22c55e';
       default:
@@ -413,7 +413,7 @@ export default function NutritionistScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: '#EDE6D6',
   },
 
   // Header

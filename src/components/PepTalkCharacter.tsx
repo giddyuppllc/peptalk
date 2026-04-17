@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
+import { useSectionAccent } from '../hooks/useSectionAccent';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -19,6 +20,10 @@ interface PepTalkCharacterProps {
   typing?: boolean;
   /** Segment palette primary color for outer glow */
   glowColor?: string;
+  /** Override the mascot body color (defaults to current section accent) */
+  bodyColor?: string;
+  /** Override the secondary accent bubble color (defaults to section pastel) */
+  accentColor?: string;
   style?: ViewStyle;
 }
 
@@ -28,8 +33,13 @@ export function PepTalkCharacter({
   animated = false,
   typing = false,
   glowColor,
+  bodyColor,
+  accentColor,
   style,
 }: PepTalkCharacterProps) {
+  const accent = useSectionAccent();
+  const body = bodyColor ?? accent.deep;
+  const accentHex = accentColor ?? accent.pastel;
   const scale = useSharedValue(1);
   const pulseOpacity = useSharedValue(0);
   const pulseScale = useSharedValue(1);
@@ -81,7 +91,7 @@ export function PepTalkCharacter({
   const isAvatar = variant === 'avatar';
   const s = isMini ? Math.min(size, 28) : isAvatar ? Math.min(size, 36) : size;
   const half = s / 2;
-  const glowC = glowColor ?? '#F8A97A';
+  const glowC = glowColor ?? body;
 
   // Molecule node sizes relative to container
   const big = s * 0.28;
@@ -129,10 +139,10 @@ export function PepTalkCharacter({
 
       {/* Main gradient circle */}
       <LinearGradient
-        colors={['#F8A97A', '#F8A97A']}
+        colors={[body, body]}
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.8, y: 1 }}
-        style={[styles.circle, { width: s, height: s, borderRadius: half }]}
+        style={[styles.circle, { width: s, height: s, borderRadius: half, shadowColor: body }]}
       >
         {/* Molecule SVG */}
         <Svg width={s * 0.7} height={s * 0.7} viewBox="0 0 100 100">
@@ -174,7 +184,7 @@ export function PepTalkCharacter({
                 borderRadius: 2.5,
                 bottom: 8,
                 left: s * 0.1,
-                backgroundColor: '#F8A97A50',
+                backgroundColor: `${body}50`,
               },
             ]}
           />
@@ -187,7 +197,7 @@ export function PepTalkCharacter({
                 borderRadius: 3,
                 top: s * 0.6,
                 right: 0,
-                backgroundColor: '#FFBF8240',
+                backgroundColor: `${accentHex}80`,
               },
             ]}
           />
@@ -217,7 +227,7 @@ const styles = StyleSheet.create({
   circle: {
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#F8A97A',
+    shadowColor: '#E89672',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 12,

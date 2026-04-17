@@ -4,7 +4,7 @@ import { EducationalArticle, ArticleCategory } from '../types';
  * Educational articles for the Learn section.
  * Start with 2 real articles, add more via Grok EDU prompts over time.
  */
-export const EDUCATIONAL_ARTICLES: EducationalArticle[] = [
+const _RAW_ARTICLES: EducationalArticle[] = [
   {
     id: 'what-is-a-peptide',
     title: 'What Is a Peptide?',
@@ -272,11 +272,26 @@ export const EDUCATIONAL_ARTICLES: EducationalArticle[] = [
   },
 ];
 
+// Lazy Proxy
+export const EDUCATIONAL_ARTICLES: EducationalArticle[] = new Proxy([] as EducationalArticle[], {
+  get(_, prop) {
+    if (prop === 'length') return _RAW_ARTICLES.length;
+    if (prop === 'map') return _RAW_ARTICLES.map.bind(_RAW_ARTICLES);
+    if (prop === 'filter') return _RAW_ARTICLES.filter.bind(_RAW_ARTICLES);
+    if (prop === 'forEach') return _RAW_ARTICLES.forEach.bind(_RAW_ARTICLES);
+    if (prop === 'find') return _RAW_ARTICLES.find.bind(_RAW_ARTICLES);
+    if (prop === 'slice') return _RAW_ARTICLES.slice.bind(_RAW_ARTICLES);
+    if (prop === Symbol.iterator) return _RAW_ARTICLES[Symbol.iterator].bind(_RAW_ARTICLES);
+    if (typeof prop === 'string' && !isNaN(Number(prop))) return _RAW_ARTICLES[Number(prop)];
+    return (_RAW_ARTICLES as any)[prop];
+  },
+});
+
 export const getArticleById = (id: string): EducationalArticle | undefined =>
-  EDUCATIONAL_ARTICLES.find((a) => a.id === id);
+  _RAW_ARTICLES.find((a) => a.id === id);
 
 export const getArticleBySlug = (slug: string): EducationalArticle | undefined =>
-  EDUCATIONAL_ARTICLES.find((a) => a.slug === slug);
+  _RAW_ARTICLES.find((a) => a.slug === slug);
 
 export const getArticlesByCategory = (category: ArticleCategory): EducationalArticle[] =>
-  EDUCATIONAL_ARTICLES.filter((a) => a.category === category);
+  _RAW_ARTICLES.filter((a) => a.category === category);

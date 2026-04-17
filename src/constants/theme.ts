@@ -1,4 +1,49 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// Pantone pastel palette (Cloud Dancer family)
+// ═══════════════════════════════════════════════════════════════════════════
+
 export const Colors = {
+  // ── Pantone pastel palette (new) ────────────────────────────────────
+  /** 11-4201 Cloud Dancer — shared cream background */
+  cloudDancer: '#EDE6D6',
+  /** 11-0515 Lemon Icing — shared warm highlight */
+  lemonIcing: '#F4E9A7',
+  /** 12-1107 Peach Dust — female pastel primary */
+  peachDust: '#F2C7A9',
+  /** Derived deeper peach for CTAs on white/cream bgs */
+  peachDustDeep: '#E89672',
+  /** Derived darker peach for strong contrast text */
+  peachDustDarker: '#C76B45',
+  /** 11-1400 Raindrops on Roses — female blush secondary */
+  raindropsOnRoses: '#F5DAD6',
+  /** 13-3802 Orchid Tint — female soft lavender accent */
+  orchidTint: '#D4CBD2',
+  /** 13-4306 Ice Melt — male pastel primary */
+  iceMelt: '#CADEE5',
+  /** Derived deeper Ice Melt for male CTAs */
+  iceMeltDeep: '#7FB3C2',
+  /** Derived darker Ice Melt for strong contrast text */
+  iceMeltDarker: '#5C92A3',
+  /** 13-6006 Almost Aqua — male mint secondary */
+  almostAqua: '#BADDCB',
+  /** 13-4108 Nimbus Cloud — male soft gray accent */
+  nimbusCloud: '#D0D3D4',
+
+  // ── Section accent derived shades (for useSectionAccent) ────────────
+  /** Raindrops on Roses deep — Nutrition CTAs */
+  raindropsDeep: '#D98C86',
+  raindropsDarker: '#B06A66',
+  /** Lemon Icing deep — Aimee CTAs */
+  lemonDeep: '#C9A84A',
+  lemonDarker: '#A08335',
+  /** Almost Aqua deep — Workouts CTAs */
+  almostAquaDeep: '#6FA891',
+  almostAquaDarker: '#4E836D',
+  /** Orchid Tint deep — Peptides CTAs */
+  orchidDeep: '#9B86A4',
+  orchidDarker: '#75627D',
+
+  // ── Legacy named constants (repointed to new palette) ───────────────
   rose: '#e3a7a1',
   sage: '#b9cbb6',
   powder: '#c7d7e6',
@@ -13,15 +58,15 @@ export const Colors = {
   powderDark: '#a3bad2',
   powderLight: '#e0eaf3',
 
-  // Base colors (white-first design — Jamie's vision)
-  darkBg: '#FFFFFF',
+  // Base colors (Cloud Dancer cream now)
+  darkBg: '#EDE6D6',
   darkCard: '#FFFFFF',
   darkCardBorder: 'rgba(0,0,0,0.08)',
   darkText: '#2D2D2D',
   darkTextSecondary: '#6B7280',
 
   // Light mode (same as base — no dark mode)
-  lightBg: '#FFFFFF',
+  lightBg: '#EDE6D6',
   lightCard: '#FFFFFF',
   lightCardBorder: 'rgba(0,0,0,0.06)',
   lightText: '#2D2D2D',
@@ -38,30 +83,34 @@ export const Colors = {
   glassWhite: 'rgba(0,0,0,0.04)',
   glassBorder: 'rgba(0,0,0,0.08)',
 
-  // PepTalk Brand Palette
-  pepBlue: '#5B8DB8',
-  pepBlueDark: '#3D7099',
-  pepBlueLight: '#8BB5D5',
-  pepTeal: '#F8A97A',
-  pepTealLight: '#FCCBA8',
-  pepCyan: '#FFBF82',
+  // ── PepTalk Brand Palette (legacy names, repointed to Pantone values) ─
+  // NOTE: These names are preserved for back-compat with the 40+ files
+  // that import them. Values now point at the new Pantone palette.
+  pepBlue: '#7FB3C2',         // Ice Melt Deep (male primary)
+  pepBlueDark: '#5C92A3',     // Ice Melt Darker
+  pepBlueLight: '#CADEE5',    // Ice Melt
+  pepTeal: '#E89672',         // Peach Dust Deep (female primary)
+  pepTealLight: '#F2C7A9',    // Peach Dust
+  pepCyan: '#F4E9A7',         // Lemon Icing (shared highlight)
 
   // Glow
-  glowBlue: 'rgba(91, 141, 184, 0.25)',
-  glowTeal: 'rgba(248, 169, 122, 0.25)',
-  glowRose: 'rgba(242, 182, 177, 0.30)',
+  glowBlue: 'rgba(127, 179, 194, 0.25)',   // Ice Melt Deep
+  glowTeal: 'rgba(232, 150, 114, 0.25)',    // Peach Dust Deep
+  glowRose: 'rgba(243, 217, 216, 0.30)',    // Raindrops on Roses
 
   // Glass accent
-  glassBlue: 'rgba(248, 169, 122, 0.10)',
-  glassBlueBorder: 'rgba(248, 169, 122, 0.20)',
+  glassBlue: 'rgba(232, 150, 114, 0.10)',
+  glassBlueBorder: 'rgba(232, 150, 114, 0.20)',
 } as const;
 
 export const Gradients = {
-  primary: ['#F8A97A', '#F2B6B1'] as const,
-  character: ['#F8A97A', '#FFBF82'] as const,
-  card: ['rgba(248,169,122,0.12)', 'rgba(242,182,177,0.06)'] as const,
-  accent: ['#F8A97A', '#F4E285'] as const,
-  warm: ['#F8A97A', '#F2B6B1'] as const,
+  primary: ['#E89672', '#F2C7A9'] as const,              // Peach Dust Deep → Peach Dust
+  character: ['#E89672', '#F4E9A7'] as const,            // Peach Dust Deep → Lemon Icing
+  card: ['rgba(232,150,114,0.12)', 'rgba(243,217,216,0.06)'] as const,
+  accent: ['#E89672', '#F4E9A7'] as const,               // Peach Dust Deep → Lemon Icing
+  warm: ['#E89672', '#F5DAD6'] as const,                 // Peach Dust Deep → Raindrops on Roses
+  male: ['#7FB3C2', '#CADEE5'] as const,                 // Ice Melt Deep → Ice Melt
+  maleAccent: ['#7FB3C2', '#BADDCB'] as const,           // Ice Melt Deep → Almost Aqua
 };
 
 export const CategoryColors: Record<string, string> = {

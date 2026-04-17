@@ -2,7 +2,7 @@
  * Subscription / Paywall screen — 4-tier plan comparison with upgrade CTAs.
  */
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard } from '../src/components/GlassCard';
@@ -44,34 +44,38 @@ const TIERS: TierInfo[] = [
     name: 'Free',
     price: '$0',
     period: '',
-    description: 'Essential peptide tools',
+    description: 'Try PepTalk at your own pace',
     features: [
-      'Peptide dosing calculator',
-      'Reconstitution & weight-based calculator',
-      'Macro & calorie counter',
-      'Food nutritional info',
-      'Learn hub (articles & guides)',
+      'Full peptide research library',
+      'Dosing & reconstitution calculators',
+      'Learn Hub (articles, guides, videos)',
+      '3 meals / day logging',
+      'Basic manual workout log',
+      '1 saved peptide stack',
+      'Daily check-in & basic journal',
     ],
-    colors: ['#6b7280', '#6B7280'],
-    icon: 'flask-outline',
+    colors: ['#9CA3AF', '#6B7280'],
+    icon: 'leaf-outline',
   },
   {
     tier: 'plus',
     name: 'PepTalk+',
     price: '$9.99',
     period: '/mo',
-    description: 'AI assistant, tracking & health integrations',
+    description: 'For the serious tracker',
     features: [
       'Everything in Free',
-      'Aimee AI assistant (limited)',
-      'Peptide stack builder',
-      'Health calendar & manual tracking',
-      'Daily check-ins & journal',
-      'Dose logging & timeline',
-      'Apple Watch & health device sync',
-      'Biomarker auto-tracking',
+      'Aimee AI chat (20 msgs/day)',
+      'Voice Log — AI meal parser',
+      'Unlimited meal logging',
+      'Unlimited custom foods & recipes',
+      'Full micronutrient tracking',
+      'Apple Watch & Google Fit sync',
+      'HRV, VO2, weight trends',
+      'Unlimited peptide stacks',
+      'Ad-free experience',
     ],
-    colors: [Colors.pepBlue, Colors.pepCyan],
+    colors: ['#E89672', '#F5DAD6'],
     icon: 'pulse-outline',
     badge: 'Most Popular',
   },
@@ -80,22 +84,41 @@ const TIERS: TierInfo[] = [
     name: 'PepTalk Pro',
     price: '$49.99',
     period: '/mo',
-    description: 'Full trainer experience with Aimee',
+    description: 'Full AI coaching + programs',
     features: [
       'Everything in Plus',
       'Unlimited Aimee AI',
-      'Aimee workout & meal planning',
-      'Aimee health scheduling',
-      'Workout programs & videos',
-      'AI recipe generator',
-      'Grocery lists from meal plans',
-      'Health reports & PDF export',
-      'Ad-free experience',
-      'Book consults with Jamie ($500/session)',
+      'Meal Scan — AI plate recognition',
+      'AI Recipe Generator',
+      "Jamie's 15 workout programs + videos",
+      'Custom Workout Generator + tracker',
+      'Weekly Health Reports + PDF export',
+      'Premium research feed',
+      'Aimee Health Scheduler',
+      'Early access to new features',
+      '$100 off Jamie 1-on-1 consults',
     ],
-    colors: ['#FFBF82', '#ef4444'],
-    icon: 'star-outline',
-    badge: 'All Access',
+    colors: ['#E9B45C', '#C98E3E'],
+    icon: 'star',
+    badge: 'Best Value',
+  },
+];
+
+const SOCIAL_PROOF = [
+  {
+    icon: 'people' as const,
+    title: '10,000+',
+    body: 'peptide researchers tracking with PepTalk',
+  },
+  {
+    icon: 'timer-outline' as const,
+    title: '15 min/day',
+    body: 'saved on tracking with AI features',
+  },
+  {
+    icon: 'shield-checkmark-outline' as const,
+    title: '7-day trial',
+    body: 'try anything risk-free, cancel anytime',
   },
 ];
 
@@ -103,7 +126,7 @@ const TIERS: TierInfo[] = [
 // Tier Card
 // ---------------------------------------------------------------------------
 
-function TierCard({ info, isActive }: { info: TierInfo; isActive: boolean }) {
+function TierCard({ info, isActive, highlighted }: { info: TierInfo; isActive: boolean; highlighted?: boolean }) {
   const handleUpgrade = () => {
     if (info.tier === 'free') return;
     Alert.alert(
@@ -114,7 +137,7 @@ function TierCard({ info, isActive }: { info: TierInfo; isActive: boolean }) {
 
   return (
     <GlassCard
-      variant={isActive ? 'glow' : info.badge ? 'elevated' : 'default'}
+      variant={isActive || highlighted ? 'glow' : info.badge ? 'elevated' : 'default'}
       glowColor={info.colors[0]}
     >
       {/* Badge */}
@@ -173,6 +196,7 @@ function TierCard({ info, isActive }: { info: TierInfo; isActive: boolean }) {
       {/* CTA */}
       {!isActive && info.tier !== 'free' && (
         <View style={styles.tierCta}>
+          <Text style={styles.trialText}>✨ Start with a 7-day free trial</Text>
           <GradientButton
             label={`Upgrade to ${info.name}`}
             onPress={handleUpgrade}
@@ -188,9 +212,30 @@ function TierCard({ info, isActive }: { info: TierInfo; isActive: boolean }) {
 // Main Screen
 // ---------------------------------------------------------------------------
 
+/** Map a feature key to the minimum tier that unlocks it. */
+function tierForFeature(feature: string | undefined): SubscriptionTier | null {
+  if (!feature) return null;
+  const proOnly = [
+    'meal_scan',
+    'recipe_generator',
+    'workout_programs',
+    'workout_videos',
+    'custom_workout_generator',
+    'generated_workout_tracker',
+    'health_reports',
+    'aimee_ai_unlimited',
+    'aimee_health_scheduler',
+    'research_feed_premium',
+  ];
+  if (proOnly.includes(feature)) return 'pro';
+  return 'plus';
+}
+
 export default function SubscriptionScreen() {
   const router = useRouter();
   const { tier } = useSubscriptionStore();
+  const { highlight } = useLocalSearchParams<{ highlight?: string }>();
+  const highlightedTier = tierForFeature(highlight);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -220,10 +265,29 @@ export default function SubscriptionScreen() {
           </Text>
         </View>
 
+        {/* Why upgrade — social proof */}
+        <View style={styles.socialProofRow}>
+          {SOCIAL_PROOF.map((item, i) => (
+            <View key={i} style={styles.socialProofItem}>
+              <View style={styles.socialProofIcon}>
+                <Ionicons name={item.icon} size={18} color={Colors.pepTeal} />
+              </View>
+              <Text style={styles.socialProofTitle}>{item.title}</Text>
+              <Text style={styles.socialProofBody} numberOfLines={2}>
+                {item.body}
+              </Text>
+            </View>
+          ))}
+        </View>
+
         {/* Tiers */}
         {TIERS.map((info) => (
           <View key={info.tier} style={styles.tierWrap}>
-            <TierCard info={info} isActive={tier === info.tier} />
+            <TierCard
+              info={info}
+              isActive={tier === info.tier}
+              highlighted={highlightedTier === info.tier && tier !== info.tier}
+            />
           </View>
         ))}
 
@@ -386,7 +450,53 @@ const styles = StyleSheet.create({
     color: Colors.darkTextSecondary,
     flex: 1,
   },
-  tierCta: { marginTop: 14 },
+  tierCta: { marginTop: 14, gap: 8 },
+  trialText: {
+    fontSize: 12,
+    fontFamily: 'DMSans-SemiBold',
+    color: Colors.pepTeal,
+    textAlign: 'center',
+  },
+
+  // Social proof
+  socialProofRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.lg,
+  },
+  socialProofItem: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: 'rgba(232, 150, 114, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(232, 150, 114, 0.25)',
+    gap: 4,
+  },
+  socialProofIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(232, 150, 114, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  socialProofTitle: {
+    fontSize: 14,
+    fontFamily: 'Playfair-Black',
+    color: Colors.darkText,
+    letterSpacing: -0.2,
+  },
+  socialProofBody: {
+    fontSize: 10,
+    fontFamily: 'DMSans-Regular',
+    color: Colors.darkTextSecondary,
+    textAlign: 'center',
+    lineHeight: 14,
+  },
 
   // Footer
   footer: {

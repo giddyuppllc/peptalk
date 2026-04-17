@@ -17,6 +17,7 @@ import {
   Gradients,
 } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useSectionAccent } from '../hooks/useSectionAccent';
 import { PepTalkCharacter } from './PepTalkCharacter';
 
 /* ─── Markdown-to-RN bold rendering ─────────────────────────────── */
@@ -47,6 +48,7 @@ interface ChatBubbleProps {
 
 export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
   const t = useTheme();
+  const accent = useSectionAccent();
   const isBot = message.role === 'bot';
   const hasJournal = isBot && !!message.journalEntry;
 
@@ -85,7 +87,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
       <Animated.View style={[styles.row, styles.rowUser, animStyle]}>
         <View style={styles.userBubbleOuter}>
           <LinearGradient
-            colors={[t.primary, t.primaryDark]}
+            colors={[accent.deep, accent.darker]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.userBubble}
@@ -109,7 +111,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
       <View style={styles.botBubbleContainer}>
         {/* Gradient border via a wrapping LinearGradient */}
         <LinearGradient
-          colors={[`${t.primary}40`, `${t.secondary}20`, 'rgba(0,0,0,0.05)']}
+          colors={[`${accent.deep}40`, `${accent.pastel}20`, 'rgba(0,0,0,0.05)']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.botBorderGradient}
@@ -124,12 +126,12 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
               <View style={styles.journalBadge}>
                 <Text style={styles.journalBadgeIcon}>{'  '}</Text>
                 <LinearGradient
-                  colors={[`${t.primary}25`, `${t.secondary}15`]}
+                  colors={[`${accent.deep}25`, `${accent.pastel}15`]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.journalBadgeBg}
                 >
-                  <Text style={[styles.journalBadgeText, { color: t.primary }]}>Logged to Journal</Text>
+                  <Text style={[styles.journalBadgeText, { color: accent.deep }]}>Logged to Journal</Text>
                 </LinearGradient>
               </View>
             )}
@@ -146,6 +148,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
 
 export const TypingIndicator: React.FC = () => {
   const t = useTheme();
+  const accent = useSectionAccent();
   const dot1 = useSharedValue(0.3);
   const dot2 = useSharedValue(0.3);
   const dot3 = useSharedValue(0.3);
@@ -184,16 +187,16 @@ export const TypingIndicator: React.FC = () => {
         <PepTalkCharacter size={32} variant="avatar" typing />
       </View>
       <LinearGradient
-        colors={[`${t.primary}40`, `${t.secondary}20`, 'rgba(0,0,0,0.05)']}
+        colors={[`${accent.deep}40`, `${accent.pastel}20`, 'rgba(0,0,0,0.05)']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.typingBorderGradient}
       >
         <View style={[styles.typingInner, { backgroundColor: t.surface }]}>
           <View style={styles.typingRow}>
-            <Animated.View style={[styles.typingDot, { backgroundColor: t.primary }, d1Style]} />
-            <Animated.View style={[styles.typingDot, { backgroundColor: t.primary }, d2Style]} />
-            <Animated.View style={[styles.typingDot, { backgroundColor: t.primary }, d3Style]} />
+            <Animated.View style={[styles.typingDot, { backgroundColor: accent.deep }, d1Style]} />
+            <Animated.View style={[styles.typingDot, { backgroundColor: accent.deep }, d2Style]} />
+            <Animated.View style={[styles.typingDot, { backgroundColor: accent.deep }, d3Style]} />
           </View>
         </View>
       </LinearGradient>
@@ -230,7 +233,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: BorderRadius.sm,
     overflow: 'hidden',
     // Outer shadow / glow
-    shadowColor: '#E8885A',
+    shadowColor: Colors.orchidDeep,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 10,
@@ -259,7 +262,7 @@ const styles = StyleSheet.create({
   botBubbleContainer: {
     maxWidth: '78%',
     // Soft glow
-    shadowColor: '#F8A97A',
+    shadowColor: Colors.orchidDeep,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 12,

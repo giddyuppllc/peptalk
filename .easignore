@@ -1,0 +1,52 @@
+# ══════════════════════════════════════════════════════════════
+# .easignore — files EXCLUDED from EAS Build upload
+# Only app/, src/, assets/, and config files get uploaded.
+# ══════════════════════════════════════════════════════════════
+
+# Private keys
+keys/
+*.p8
+*.p12
+*.key
+*.jks
+*.mobileprovision
+
+# Reference docs / plans / design docs (not app code)
+plans/
+_elevate_audit/
+design-system/
+scripts/
+app-audit/
+logo-concepts/
+supabase/
+
+# Markdown / text reference files
+*.md
+!node_modules/**/*.md
+
+# Screenshots / design mockups at root
+emulator-*.png
+
+# Dist / build artifacts (rebuilt on server)
+dist/
+web-build/
+
+# Dev tooling
+.expo/
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Tester feedback / misc text
+tester-feedback.md
+JAMIES-DESIGN-IDEAS.md
+PAGE-REFERENCE.md
+
+# Misc files not needed for build
+.env.example
+.mcp.json
+tsc.log
+.npmrc
+global.css
+nativewind-env.d.ts

@@ -33,7 +33,7 @@ function getCategoryColor(category: GuideCategory): string {
     case 'injection':      return '#e3a7a1';
     case 'storage':        return '#c7d7e6';
     case 'dosing':         return '#f0d68a';
-    case 'testing':        return '#FFBF82';
+    case 'testing':        return '#F4E9A7';
     case 'general':        return '#6B7280';
     default:               return '#6B7280';
   }
@@ -169,7 +169,7 @@ export default function AllGuidesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: '#EDE6D6',
   },
   scrollView: {
     flex: 1,

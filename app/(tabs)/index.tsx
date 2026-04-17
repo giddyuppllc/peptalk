@@ -8,6 +8,7 @@ import {
   ScrollView,
   Animated as RNAnimated,
   Image,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,6 +29,7 @@ import { SearchBar } from '../../src/components/SearchBar';
 import { CategoryGrid } from '../../src/components/CategoryGrid';
 import { PeptideCard } from '../../src/components/PeptideCard';
 import { Disclaimer } from '../../src/components/Disclaimer';
+import { LeaderboardStrip } from '../../src/components/LeaderboardStrip';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import {
@@ -46,6 +48,8 @@ import { useAchievementStore } from '../../src/store/useAchievementStore';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useMealStore } from '../../src/store/useMealStore';
 import { useStackStore } from '../../src/store/useStackStore';
+import { useWorkoutTemplateStore } from '../../src/store/useWorkoutTemplateStore';
+import { getExerciseById } from '../../src/data/exercises';
 import { usePlanStore } from '../../src/store/usePlanStore';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { getSegmentByProfile, getLayoutByGender } from '../../src/constants/segments';
@@ -55,6 +59,9 @@ import { PEPTIDES } from '../../src/data/peptides';
 import { PeptideCategory } from '../../src/types';
 import { trackPeptideSearch } from '../../src/services/analyticsEvents';
 import { getPeptideById } from '../../src/data/peptides';
+import { useTutorialStore } from '../../src/store/useTutorialStore';
+import { useTourTarget } from '../../src/hooks/useTourTarget';
+import { UpgradeNudgeCard } from '../../src/components/UpgradeNudgeCard';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -73,10 +80,10 @@ const HEALTH_TIPS = [
 
 const QUICK_ACTIONS = [
   { id: 'checkin', icon: 'heart-outline' as const, label: 'Check In', route: '/(tabs)/check-in', colors: ['#e3a7a1', '#c98a84'] as [string, string] },
-  { id: 'dose', icon: 'flask-outline' as const, label: 'Log Dose', route: '/(tabs)/calendar', colors: ['#F8A97A', '#E8885A'] as [string, string] },
-  { id: 'workout', icon: 'barbell-outline' as const, label: 'Workout', route: '/workouts', colors: ['#F8A97A', '#E8885A'] as [string, string] },
-  { id: 'nutrition', icon: 'nutrition-outline' as const, label: 'Nutrition', route: '/nutrition', colors: ['#FFBF82', '#E8A05A'] as [string, string] },
-  { id: 'peptalk', icon: 'chatbubble-outline' as const, label: 'Ask Aimee', route: '/(tabs)/peptalk', colors: ['#D4A853', '#B8913D'] as [string, string] },
+  { id: 'dose', icon: 'flask-outline' as const, label: 'Log Dose', route: '/(tabs)/calendar', colors: ['#E89672', '#C76B45'] as [string, string] },
+  { id: 'workout', icon: 'barbell-outline' as const, label: 'Workout', route: '/workouts', colors: ['#E89672', '#C76B45'] as [string, string] },
+  { id: 'nutrition', icon: 'nutrition-outline' as const, label: 'Nutrition', route: '/nutrition', colors: ['#F4E9A7', '#E8A05A'] as [string, string] },
+  { id: 'peptalk', icon: 'chatbubble-outline' as const, label: 'Ask Aimee', route: '/(tabs)/peptalk', colors: ['#BADDCB', '#B8913D'] as [string, string] },
   { id: 'journal', icon: 'book-outline' as const, label: 'Journal', route: '/journal', colors: ['#06b6d4', '#0891b2'] as [string, string] },
   { id: 'bodymap', icon: 'body-outline' as const, label: 'Body Map', route: '/body-map', colors: ['#22c55e', '#16a34a'] as [string, string] },
 ];
@@ -165,6 +172,22 @@ export default function DashboardScreen() {
   const { category } = useLocalSearchParams<{ category?: string }>();
   const activeCategory =
     typeof category === 'string' ? category : category?.[0];
+
+  // ── Tutorial: auto-start on first visit ───────────────────────────────────
+  const hasSeenTour = useTutorialStore((s) => s.hasSeenTour);
+  const tourActive = useTutorialStore((s) => s.tourActive);
+  const startTour = useTutorialStore((s) => s.startTour);
+  useEffect(() => {
+    if (!hasSeenTour && !tourActive) {
+      // Delay briefly so the page is rendered before the modal pops
+      const timer = setTimeout(() => startTour('intro'), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [hasSeenTour, tourActive, startTour]);
+
+  // ── Tour targets for SpotlightTour highlighting ───────────────────────────
+  const fabRef = useTourTarget('home_fab');
+  const progressRingsRef = useTourTarget('home_progress_rings');
 
   // ── Animated values (RN Animated API) ─────────────────────────────────────
   const heroOpacity = useRef(new RNAnimated.Value(0)).current;
@@ -476,7 +499,7 @@ export default function DashboardScreen() {
         title: peptide?.name ?? dose.peptideId,
         subtitle: `${dose.amount} ${dose.unit} - ${dose.route}`,
         icon: 'flask-outline',
-        color: '#F8A97A',
+        color: '#E89672',
         type: 'dose',
       });
     });
@@ -512,7 +535,7 @@ export default function DashboardScreen() {
         title: 'Workout Complete',
         subtitle: `${workout.sets?.length ?? 0} sets | ${workout.durationMinutes ?? 0} min`,
         icon: 'barbell-outline',
-        color: '#F8A97A',
+        color: '#E89672',
         type: 'workout',
       });
     });
@@ -531,7 +554,7 @@ export default function DashboardScreen() {
         title: (meal.mealType ?? 'Meal').charAt(0).toUpperCase() + (meal.mealType ?? 'meal').slice(1),
         subtitle: `${totalCal} cal`,
         icon: 'nutrition-outline',
-        color: '#FFBF82',
+        color: '#F4E9A7',
         type: 'meal',
       });
     });
@@ -748,18 +771,49 @@ export default function DashboardScreen() {
     }).start();
   };
 
-  const FAB_ITEMS: { label: string; icon: keyof typeof Ionicons.glyphMap; color: string; route: string }[] = [
-    { label: 'Log Meal', icon: 'nutrition-outline', color: '#FFBF82', route: '/nutrition/food-search' },
-    { label: 'Log Dose', icon: 'flask-outline', color: '#F8A97A', route: '/(tabs)/calendar' },
-    { label: 'Check In', icon: 'heart-outline', color: '#e3a7a1', route: '/(tabs)/check-in' },
-    { label: 'Journal', icon: 'book-outline', color: '#D4A853', route: '/journal/new' },
-    { label: 'Workout', icon: 'barbell-outline', color: '#8faa8b', route: '/workouts' },
+  const [showWorkoutSheet, setShowWorkoutSheet] = useState(false);
+
+  const FAB_ITEMS: { label: string; icon: keyof typeof Ionicons.glyphMap; color: string; route: string; onPress?: () => void }[] = [
+    // Log Meal → Nutrition mint
+    { label: 'Log Meal', icon: 'nutrition-outline', color: '#6FA891', route: '/nutrition/food-search' },
+    // Log Dose → Peptides blue
+    { label: 'Log Dose', icon: 'flask-outline', color: '#7ABED0', route: '/(tabs)/calendar?openLog=1' },
+    // Log Workout → open selection sheet
+    { label: 'Log Workout', icon: 'barbell-outline', color: '#D98C86', route: '', onPress: () => { setFabOpen(false); setShowWorkoutSheet(true); } },
+    // Daily Log → Home peach (merged check-in + journal)
+    { label: 'Daily Log', icon: 'clipboard-outline', color: '#E89672', route: '/(tabs)/check-in' },
   ];
+
+  // Recent completed workouts (for the selection sheet)
+  const recentCompletedWorkouts = useMemo(() => {
+    return workoutLogs
+      .filter((w) => w.completedAt)
+      .slice(0, 5);
+  }, [workoutLogs]);
+
+  // Next program workout
+  const nextProgramDay = useMemo(() => {
+    if (!activeProgram) return null;
+    const program = activeProgram;
+    const weeks = (program as any)?.program?.weeks;
+    if (!weeks) return null;
+    for (const week of weeks) {
+      for (const day of week.days) {
+        if (!program.completedDays.includes(day.id)) {
+          return { weekNumber: week.weekNumber, dayName: day.name, dayId: day.id };
+        }
+      }
+    }
+    return null;
+  }, [activeProgram]);
 
   // ── Main Render ───────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
+      {/* Leaderboard — fixed above scroll */}
+      <LeaderboardStrip />
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         overScrollMode="never"
@@ -775,28 +829,35 @@ export default function DashboardScreen() {
             transform: [{ translateY: heroTranslateY }],
           }}
         >
+          <View style={[styles.heroCard, { borderColor: 'transparent' }]}>
           <LinearGradient
-            colors={[t.surface, `${t.primary}12`, t.bg]}
+            colors={[t.primaryLight, t.primaryLight, t.surface]}
             start={{ x: 0, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={styles.heroBanner}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroGradient}
           >
+            {/* Decorative circles */}
+            <View style={[styles.heroDecorCircle, styles.heroDecorCircle1, { backgroundColor: 'rgba(255,255,255,0.12)' }]} />
+            <View style={[styles.heroDecorCircle, styles.heroDecorCircle2, { backgroundColor: 'rgba(255,255,255,0.08)' }]} />
+            <View style={[styles.heroDecorCircle, styles.heroDecorCircle3, { backgroundColor: 'rgba(255,255,255,0.06)' }]} />
+          </LinearGradient>
+          <View style={styles.heroBanner}>
             {/* Top row: Greeting + Profile avatar */}
             <View style={styles.heroTopRow}>
-              <Text style={[styles.heroGreeting, { color: t.text }]}>
+              <Text style={[styles.heroGreeting, { color: '#2D2D2D' }]}>
                 {getGreeting()}{user?.firstName ? `,\n${user.firstName}` : ''}
               </Text>
               <View style={styles.profileAvatarWrap}>
                 <TouchableOpacity
-                  style={[styles.profileAvatar, { borderColor: t.primary }]}
+                  style={[styles.profileAvatar, { borderColor: '#2D2D2D' }]}
                   onPress={() => router.push('/(tabs)/profile')}
                   activeOpacity={0.7}
                 >
                   {user?.avatarUri ? (
                     <Image source={{ uri: user.avatarUri }} style={styles.profileAvatarImg} />
                   ) : (
-                    <View style={[styles.profileAvatarFallback, { backgroundColor: t.surface }]}>
-                      <Text style={[styles.profileAvatarInitial, { color: t.primary }]}>
+                    <View style={[styles.profileAvatarFallback, { backgroundColor: 'rgba(255,255,255,0.6)' }]}>
+                      <Text style={[styles.profileAvatarInitial, { color: '#2D2D2D' }]}>
                         {(user?.firstName ?? 'U')[0].toUpperCase()}
                       </Text>
                     </View>
@@ -807,7 +868,7 @@ export default function DashboardScreen() {
                   activeOpacity={0.6}
                   hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 >
-                  <Text style={[styles.viewProfileLink, { color: t.primary }]}>View Profile</Text>
+                  <Text style={[styles.viewProfileLink, { color: '#2D2D2D' }]}>View Profile</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -819,9 +880,9 @@ export default function DashboardScreen() {
                   <Ionicons name="flame" size={20} color={t.primary} />
                 </RNAnimated.View>
                 <View>
-                  <Text style={[styles.heroStatValue, { color: t.text }]}>{streak} day streak</Text>
+                  <Text style={[styles.heroStatValue, { color: '#2D2D2D' }]}>{streak} day streak</Text>
                   {nextMilestone && (
-                    <Text style={[styles.heroStatSub, { color: t.textSecondary }]}>
+                    <Text style={[styles.heroStatSub, { color: '#4B5563' }]}>
                       {nextMilestone.daysLeft} to {nextMilestone.target}-day
                     </Text>
                   )}
@@ -831,8 +892,8 @@ export default function DashboardScreen() {
               <View style={styles.heroStat}>
                 <Ionicons name="trophy" size={20} color={t.secondary} />
                 <View>
-                  <Text style={[styles.heroStatValue, { color: t.text }]}>{workoutLogs.length} workouts</Text>
-                  <Text style={[styles.heroStatSub, { color: t.textSecondary }]}>logged</Text>
+                  <Text style={[styles.heroStatValue, { color: '#2D2D2D' }]}>{workoutLogs.length} workouts</Text>
+                  <Text style={[styles.heroStatSub, { color: '#4B5563' }]}>logged</Text>
                 </View>
               </View>
             </View>
@@ -841,8 +902,8 @@ export default function DashboardScreen() {
               <View style={styles.heroStat}>
                 <Ionicons name="star" size={20} color={t.accent} />
                 <View>
-                  <Text style={[styles.heroStatValue, { color: t.text }]}>Level {level.level}</Text>
-                  <Text style={[styles.heroStatSub, { color: t.textSecondary }]}>{level.title}</Text>
+                  <Text style={[styles.heroStatValue, { color: '#2D2D2D' }]}>Level {level.level}</Text>
+                  <Text style={[styles.heroStatSub, { color: '#4B5563' }]}>{level.title}</Text>
                 </View>
               </View>
 
@@ -850,13 +911,13 @@ export default function DashboardScreen() {
                 <Ionicons
                   name={todayCheckin ? 'checkmark-circle' : 'ellipse-outline'}
                   size={20}
-                  color={todayCheckin ? '#16A34A' : t.textSecondary}
+                  color={todayCheckin ? '#16A34A' : '#9CA3AF'}
                 />
                 <View>
-                  <Text style={[styles.heroStatValue, { color: t.text }]}>
-                    {todayCheckin ? 'Checked in' : 'Check-in due'}
+                  <Text style={[styles.heroStatValue, { color: '#2D2D2D' }]}>
+                    {todayCheckin ? 'Logged today' : 'Daily log due'}
                   </Text>
-                  <Text style={[styles.heroStatSub, { color: t.textSecondary }]}>
+                  <Text style={[styles.heroStatSub, { color: '#4B5563' }]}>
                     {todayCheckin ? `Mood ${todayCheckin.mood}/5` : 'Start your day'}
                   </Text>
                 </View>
@@ -867,14 +928,15 @@ export default function DashboardScreen() {
               <View style={[styles.heroStat, { marginTop: 4 }]}>
                 <Ionicons name="flask" size={20} color={t.primary} />
                 <View>
-                  <Text style={[styles.heroStatValue, { color: t.text }]}>
+                  <Text style={[styles.heroStatValue, { color: '#2D2D2D' }]}>
                     {activeProtocolCount} active protocol{activeProtocolCount > 1 ? 's' : ''}
                   </Text>
-                  <Text style={[styles.heroStatSub, { color: t.textSecondary }]}>tracking</Text>
+                  <Text style={[styles.heroStatSub, { color: '#4B5563' }]}>tracking</Text>
                 </View>
               </View>
             )}
-          </LinearGradient>
+          </View>
+          </View>
         </RNAnimated.View>
 
         {/* ═══════════════════════════════════════════════════════════════
@@ -972,10 +1034,10 @@ export default function DashboardScreen() {
                   </Text>
                   {/* Activity dots */}
                   <View style={styles.weekDots}>
-                    {activity?.meals && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#FFBF82' }]} />}
-                    {activity?.workouts && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#F8A97A' }]} />}
+                    {activity?.meals && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#F4E9A7' }]} />}
+                    {activity?.workouts && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#E89672' }]} />}
                     {activity?.checkins && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#e3a7a1' }]} />}
-                    {activity?.doses && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#D4A853' }]} />}
+                    {activity?.doses && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#BADDCB' }]} />}
                   </View>
                 </TouchableOpacity>
               );
@@ -1005,8 +1067,8 @@ export default function DashboardScreen() {
                 {/* Summary badges row */}
                 <View style={styles.daySummaryRow}>
                   {selectedDayMeals.length > 0 && (
-                    <View style={[styles.daySummaryBadge, { backgroundColor: '#FFBF8215' }]}>
-                      <Ionicons name="nutrition" size={14} color="#FFBF82" />
+                    <View style={[styles.daySummaryBadge, { backgroundColor: '#F4E9A715' }]}>
+                      <Ionicons name="nutrition" size={14} color="#F4E9A7" />
                       <Text style={[styles.daySummaryValue, { color: t.text }]}>{Math.round(selectedDayMealCals)}</Text>
                       <Text style={[styles.daySummaryUnit, { color: t.textSecondary }]}>cal</Text>
                     </View>
@@ -1019,8 +1081,8 @@ export default function DashboardScreen() {
                     </View>
                   )}
                   {selectedDayDoseList.length > 0 && (
-                    <View style={[styles.daySummaryBadge, { backgroundColor: '#F8A97A15' }]}>
-                      <Ionicons name="flask" size={14} color="#F8A97A" />
+                    <View style={[styles.daySummaryBadge, { backgroundColor: '#E8967215' }]}>
+                      <Ionicons name="flask" size={14} color="#E89672" />
                       <Text style={[styles.daySummaryValue, { color: t.text }]}>{selectedDayDoseList.length}</Text>
                       <Text style={[styles.daySummaryUnit, { color: t.textSecondary }]}>dose{selectedDayDoseList.length !== 1 ? 's' : ''}</Text>
                     </View>
@@ -1086,83 +1148,17 @@ export default function DashboardScreen() {
           </View>
         </Animated.View>
 
+        {/* Upgrade nudge — rotating daily prompt for free users */}
+        <UpgradeNudgeCard />
+
         {/* ═══════════════════════════════════════════════════════════════
             TODAY'S PROGRESS — Swipeable donut chart (tinted bg band)
         ═══════════════════════════════════════════════════════════════ */}
         <Animated.View entering={FadeInDown.delay(150).duration(400)}
           style={[styles.surfaceBand, { backgroundColor: t.surface }]}
         >
-          <View style={styles.section}>
+          <View ref={progressRingsRef} style={styles.section}>
             <DailyProgressChart pages={chartPages} />
-          </View>
-        </Animated.View>
-
-        {/* ═══════════════════════════════════════════════════════════════
-            DISCOVER — 2x2 Grid of feature tiles (MFP style)
-        ═══════════════════════════════════════════════════════════════ */}
-        <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>Discover</Text>
-            <View style={[styles.sectionAccent, { backgroundColor: t.primary }]} />
-          </View>
-          <View style={styles.discoverGrid}>
-            {/* Row 1: Nutrition + Workouts */}
-            <View style={styles.discoverRow}>
-              <AnimatedPress onPress={() => router.push('/nutrition')} scaleTo={0.96} style={{ flex: 1 }}>
-                <LinearGradient
-                  colors={[`${t.primary}18`, `${t.primary}08`]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={[styles.discoverTile, { borderColor: `${t.primary}25` }]}
-                >
-                  <Ionicons name="nutrition" size={28} color={t.primary} />
-                  <Text style={[styles.discoverTileTitle, { color: t.text }]}>Nutrition</Text>
-                  <Text style={[styles.discoverTileSub, { color: t.textSecondary }]}>Fuel your goals</Text>
-                </LinearGradient>
-              </AnimatedPress>
-
-              <AnimatedPress onPress={() => router.push('/workouts')} scaleTo={0.96} style={{ flex: 1 }}>
-                <LinearGradient
-                  colors={[`${t.secondary}18`, `${t.secondary}08`]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={[styles.discoverTile, { borderColor: `${t.secondary}25` }]}
-                >
-                  <Ionicons name="barbell" size={28} color={t.secondary} />
-                  <Text style={[styles.discoverTileTitle, { color: t.text }]}>Workouts</Text>
-                  <Text style={[styles.discoverTileSub, { color: t.textSecondary }]}>Move your body</Text>
-                </LinearGradient>
-              </AnimatedPress>
-            </View>
-
-            {/* Row 2: Peptides + Recovery */}
-            <View style={styles.discoverRow}>
-              <AnimatedPress onPress={() => router.push('/(tabs)/my-stacks')} scaleTo={0.96} style={{ flex: 1 }}>
-                <LinearGradient
-                  colors={[`${t.accent}20`, `${t.accent}08`]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={[styles.discoverTile, { borderColor: `${t.accent}30` }]}
-                >
-                  <Ionicons name="flask" size={28} color={t.accent} />
-                  <Text style={[styles.discoverTileTitle, { color: t.text }]}>Peptides</Text>
-                  <Text style={[styles.discoverTileSub, { color: t.textSecondary }]}>Optimize & recover</Text>
-                </LinearGradient>
-              </AnimatedPress>
-
-              <AnimatedPress onPress={() => router.push('/(tabs)/check-in')} scaleTo={0.96} style={{ flex: 1 }}>
-                <LinearGradient
-                  colors={['rgba(169,196,166,0.20)', 'rgba(169,196,166,0.06)']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={[styles.discoverTile, { borderColor: 'rgba(169,196,166,0.30)' }]}
-                >
-                  <Ionicons name="moon" size={28} color="#8faa8b" />
-                  <Text style={[styles.discoverTileTitle, { color: t.text }]}>Recovery</Text>
-                  <Text style={[styles.discoverTileSub, { color: t.textSecondary }]}>Rest & recharge</Text>
-                </LinearGradient>
-              </AnimatedPress>
-            </View>
           </View>
         </Animated.View>
 
@@ -1248,7 +1244,8 @@ export default function DashboardScreen() {
               activeOpacity={0.7}
               onPress={() => {
                 closeFab();
-                router.push(item.route as any);
+                if (item.onPress) { item.onPress(); }
+                else { router.push(item.route as any); }
               }}
             >
               <View style={[styles.fabMenuLabel, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
@@ -1264,6 +1261,7 @@ export default function DashboardScreen() {
 
       {/* FAB button — pill with "Log" label */}
       <TouchableOpacity
+        ref={fabRef as any}
         style={[styles.fab, { backgroundColor: t.primary }]}
         activeOpacity={0.85}
         onPress={toggleFab}
@@ -1286,6 +1284,141 @@ export default function DashboardScreen() {
           </Text>
         )}
       </TouchableOpacity>
+
+      {/* ── Workout Selection Sheet ── */}
+      <Modal visible={showWorkoutSheet} animationType="slide" transparent onRequestClose={() => setShowWorkoutSheet(false)}>
+        <View style={styles.wsOverlay}>
+          <View style={[styles.wsSheet, { backgroundColor: t.bg }]}>
+            <View style={styles.wsHandle}><View style={[styles.wsHandleBar, { backgroundColor: t.textMuted }]} /></View>
+            <View style={styles.wsHeader}>
+              <Text style={[styles.wsTitle, { color: t.text }]}>Log Workout</Text>
+              <TouchableOpacity onPress={() => setShowWorkoutSheet(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                <Ionicons name="close" size={22} color={t.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.wsScroll} showsVerticalScrollIndicator={false}>
+              {/* Continue Program */}
+              {nextProgramDay && (
+                <TouchableOpacity
+                  style={[styles.wsOption, { backgroundColor: t.card, borderColor: t.cardBorder }]}
+                  activeOpacity={0.7}
+                  onPress={() => { setShowWorkoutSheet(false); router.push('/workouts/player' as any); }}
+                >
+                  <View style={[styles.wsOptionIcon, { backgroundColor: '#D98C8620' }]}>
+                    <Ionicons name="play" size={20} color="#D98C86" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.wsOptionTitle, { color: t.text }]}>Continue Program</Text>
+                    <Text style={[styles.wsOptionSub, { color: t.textSecondary }]}>
+                      Week {nextProgramDay.weekNumber} — {nextProgramDay.dayName}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={t.textMuted} />
+                </TouchableOpacity>
+              )}
+
+              {/* Start Empty Workout */}
+              <TouchableOpacity
+                style={[styles.wsOption, { backgroundColor: t.card, borderColor: t.cardBorder }]}
+                activeOpacity={0.7}
+                onPress={() => { setShowWorkoutSheet(false); router.push('/workouts/player' as any); }}
+              >
+                <View style={[styles.wsOptionIcon, { backgroundColor: '#D98C8620' }]}>
+                  <Ionicons name="add" size={20} color="#D98C86" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.wsOptionTitle, { color: t.text }]}>Start Empty Workout</Text>
+                  <Text style={[styles.wsOptionSub, { color: t.textSecondary }]}>Build as you go</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={t.textMuted} />
+              </TouchableOpacity>
+
+              {/* Quick Log (manual) */}
+              <TouchableOpacity
+                style={[styles.wsOption, { backgroundColor: t.card, borderColor: t.cardBorder }]}
+                activeOpacity={0.7}
+                onPress={() => { setShowWorkoutSheet(false); router.push('/workouts/my-workouts' as any); }}
+              >
+                <View style={[styles.wsOptionIcon, { backgroundColor: '#D98C8620' }]}>
+                  <Ionicons name="create-outline" size={20} color="#D98C86" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.wsOptionTitle, { color: t.text }]}>Quick Log</Text>
+                  <Text style={[styles.wsOptionSub, { color: t.textSecondary }]}>Manually enter what you did</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={t.textMuted} />
+              </TouchableOpacity>
+
+              {/* Build New */}
+              <TouchableOpacity
+                style={[styles.wsOption, { backgroundColor: t.card, borderColor: t.cardBorder }]}
+                activeOpacity={0.7}
+                onPress={() => { setShowWorkoutSheet(false); router.push('/workouts/build-workout' as any); }}
+              >
+                <View style={[styles.wsOptionIcon, { backgroundColor: '#D98C8620' }]}>
+                  <Ionicons name="hammer-outline" size={20} color="#D98C86" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.wsOptionTitle, { color: t.text }]}>Build Custom Workout</Text>
+                  <Text style={[styles.wsOptionSub, { color: t.textSecondary }]}>Create a reusable template</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={t.textMuted} />
+              </TouchableOpacity>
+
+              {/* Saved Templates */}
+              {useWorkoutTemplateStore.getState().templates.length > 0 && (
+                <>
+                  <Text style={[styles.wsRecentLabel, { color: t.textSecondary }]}>MY WORKOUTS</Text>
+                  {useWorkoutTemplateStore.getState().templates.map((tmpl) => (
+                    <TouchableOpacity
+                      key={tmpl.id}
+                      style={[styles.wsRecentRow, { borderBottomColor: t.cardBorder }]}
+                      activeOpacity={0.7}
+                      onPress={() => { setShowWorkoutSheet(false); router.push(`/workouts/player?templateId=${tmpl.id}` as any); }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.wsRecentName, { color: t.text }]}>{tmpl.name}</Text>
+                        <Text style={[styles.wsRecentMeta, { color: t.textMuted }]}>
+                          {tmpl.exercises.length} exercises · {tmpl.exercises.reduce((s, e) => s + e.targetSets, 0)} sets
+                        </Text>
+                      </View>
+                      <Ionicons name="play-circle-outline" size={20} color="#D98C86" />
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
+
+              {/* Recent completed workouts */}
+              {recentCompletedWorkouts.length > 0 && (
+                <>
+                  <Text style={[styles.wsRecentLabel, { color: t.textSecondary }]}>RECENTLY COMPLETED</Text>
+                  {recentCompletedWorkouts.map((workout) => (
+                    <TouchableOpacity
+                      key={workout.id}
+                      style={[styles.wsRecentRow, { borderBottomColor: t.cardBorder }]}
+                      activeOpacity={0.7}
+                      onPress={() => { setShowWorkoutSheet(false); router.push('/workouts/player' as any); }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.wsRecentName, { color: t.text }]}>
+                          {workout.workoutName || 'Workout'}
+                        </Text>
+                        <Text style={[styles.wsRecentMeta, { color: t.textMuted }]}>
+                          {workout.sets.length} exercises · {workout.durationMinutes} min · {workout.date}
+                        </Text>
+                      </View>
+                      <Ionicons name="repeat-outline" size={16} color="#D98C86" />
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
+
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1301,8 +1434,45 @@ const styles = StyleSheet.create({
   },
 
   // ── Hero Banner ───────────────────────────────────────────────────────────
+  heroCard: {
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+    borderRadius: 20,
+    borderWidth: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+    overflow: 'hidden',
+  },
+  heroGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  heroDecorCircle: {
+    position: 'absolute',
+    borderRadius: 999,
+  },
+  heroDecorCircle1: {
+    width: 180,
+    height: 180,
+    top: -60,
+    right: -40,
+  },
+  heroDecorCircle2: {
+    width: 120,
+    height: 120,
+    bottom: -30,
+    left: -20,
+  },
+  heroDecorCircle3: {
+    width: 80,
+    height: 80,
+    top: 40,
+    right: 60,
+  },
   heroBanner: {
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.lg,
     paddingBottom: 24,
     paddingHorizontal: Spacing.lg,
   },
@@ -1460,35 +1630,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     top: '50%',
-  },
-
-  // ── Discover Grid (2x2 MFP style) ───────────────────────────────────────
-  discoverGrid: {
-    gap: 10,
-  },
-  discoverRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  discoverTile: {
-    flex: 1,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    paddingVertical: 32,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    gap: 8,
-  },
-  discoverTileTitle: {
-    fontSize: 20,
-    fontFamily: 'Playfair-Bold',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  discoverTileSub: {
-    fontSize: 14,
-    textAlign: 'center',
-    fontFamily: 'DMSans-Medium',
   },
 
   // ── Weekly Calendar Strip ─────────────────────────────────────────────────
@@ -1722,15 +1863,15 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    right: 20,
-    bottom: 20,
-    height: 52,
-    borderRadius: 26,
-    paddingLeft: 16,
-    paddingRight: 18,
+    right: 16,
+    bottom: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 28,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
     zIndex: 60,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -1742,8 +1883,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontFamily: 'DMSans-Bold',
-    marginLeft: 6,
-    overflow: 'hidden',
   },
   fabMenuItem: {
     position: 'absolute',
@@ -1784,4 +1923,21 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 4,
   },
+
+  // ── Workout Selection Sheet ──────────────────────────────────────────────
+  wsOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' },
+  wsSheet: { maxHeight: '75%', borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: 'hidden' },
+  wsHandle: { alignItems: 'center', paddingTop: 10, paddingBottom: 4 },
+  wsHandleBar: { width: 36, height: 4, borderRadius: 2, opacity: 0.3 },
+  wsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 },
+  wsTitle: { fontSize: 20, fontFamily: 'Playfair-Bold' },
+  wsScroll: { paddingHorizontal: 20 },
+  wsOption: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14, borderWidth: 1, marginBottom: 8 },
+  wsOptionIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  wsOptionTitle: { fontSize: 15, fontFamily: 'DMSans-SemiBold' },
+  wsOptionSub: { fontSize: 12, fontFamily: 'DMSans-Regular', marginTop: 2 },
+  wsRecentLabel: { fontSize: 11, fontFamily: 'DMSans-Bold', letterSpacing: 0.8, marginTop: 16, marginBottom: 10 },
+  wsRecentRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1 },
+  wsRecentName: { fontSize: 14, fontFamily: 'DMSans-SemiBold' },
+  wsRecentMeta: { fontSize: 11, fontFamily: 'DMSans-Regular', marginTop: 2 },
 });

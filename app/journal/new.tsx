@@ -33,12 +33,12 @@ const CATEGORY_OPTIONS: {
   color: string;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { value: 'protocol_notes', label: 'Protocol Notes', color: '#F8A97A', icon: 'document-text-outline' },
+  { value: 'protocol_notes', label: 'Protocol Notes', color: '#E89672', icon: 'document-text-outline' },
   { value: 'side_effects', label: 'Side Effects', color: '#ef4444', icon: 'warning-outline' },
   { value: 'mood', label: 'Mood', color: '#10b981', icon: 'happy-outline' },
-  { value: 'progress', label: 'Progress', color: '#D4A853', icon: 'trending-up-outline' },
+  { value: 'progress', label: 'Progress', color: '#BADDCB', icon: 'trending-up-outline' },
   { value: 'research', label: 'Research', color: '#06b6d4', icon: 'flask-outline' },
-  { value: 'questions', label: 'Questions', color: '#FFBF82', icon: 'help-circle-outline' },
+  { value: 'questions', label: 'Questions', color: '#F4E9A7', icon: 'help-circle-outline' },
   { value: 'goals', label: 'Goals', color: '#ec4899', icon: 'flag-outline' },
   { value: 'general', label: 'General', color: '#6b7280', icon: 'create-outline' },
 ];

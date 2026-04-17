@@ -21,6 +21,7 @@ import { useAuthStore } from '../../src/store/useAuthStore';
 import { useOnboardingStore } from '../../src/store/useOnboardingStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
+import { useTutorialStore } from '../../src/store/useTutorialStore';
 import { GlassCard } from '../../src/components/GlassCard';
 import { Disclaimer } from '../../src/components/Disclaimer';
 import { trackConsentUpdated } from '../../src/services/analyticsEvents';
@@ -110,9 +111,9 @@ function ProgressRing({
 // ---------------------------------------------------------------------------
 const TIER_CONFIG: Record<string, { label: string; colors: { dark: [string, string]; light: [string, string] }; icon: string }> = {
   free: { label: 'Free', colors: { dark: ['rgba(0,0,0,0.08)', 'rgba(0,0,0,0.04)'], light: ['#d1d5db', '#6B7280'] }, icon: 'person-outline' },
-  starter: { label: 'Starter', colors: { dark: ['#F8A97A', '#F8A97A'], light: ['#F8A97A', '#F8A97A'] }, icon: 'rocket-outline' },
+  starter: { label: 'Starter', colors: { dark: ['#E89672', '#E89672'], light: ['#E89672', '#E89672'] }, icon: 'rocket-outline' },
   pro: { label: 'Pro', colors: { dark: [Colors.rose, Colors.roseDark], light: [Colors.rose, Colors.roseDark] }, icon: 'star' },
-  elite: { label: 'Elite', colors: { dark: ['#D4A853', '#EC4899'], light: ['#D4A853', '#EC4899'] }, icon: 'diamond' },
+  elite: { label: 'Elite', colors: { dark: ['#BADDCB', '#EC4899'], light: ['#BADDCB', '#EC4899'] }, icon: 'diamond' },
 };
 
 function TierBadge({ tier }: { tier: string }) {
@@ -252,6 +253,7 @@ function UserProfile() {
   const { user, logout, setAvatar } = useAuthStore();
   const { tier } = useSubscriptionStore();
   const t = useTheme();
+  const router = useRouter();
   const themeMode = useThemeStore((s) => s.mode);
   const setThemeMode = useThemeStore((s) => s.setMode);
   const darkMode = t.isDark;
@@ -352,6 +354,62 @@ function UserProfile() {
         </View>
       </GlassCard>
 
+      {/* Upgrade hero row — only for non-pro tiers */}
+      {tier !== 'pro' && (
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => router.push('/subscription')}
+          style={styles.upgradeRowWrap}
+        >
+          <LinearGradient
+            colors={tier === 'free' ? ['#E89672', '#F5DAD6'] : ['#E9B45C', '#C98E3E']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.upgradeRowGradient}
+          >
+            <View style={styles.upgradeRowIcon}>
+              <Ionicons
+                name={tier === 'free' ? 'sparkles' : 'star'}
+                size={22}
+                color="#fff"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.upgradeRowTitle}>
+                {tier === 'free' ? 'Upgrade to PepTalk+' : 'Upgrade to PepTalk Pro'}
+              </Text>
+              <Text style={styles.upgradeRowBody}>
+                {tier === 'free'
+                  ? 'Unlimited tracking, Aimee AI, Voice Log & more'
+                  : 'Workout programs, AI meal scan, health reports & more'}
+              </Text>
+            </View>
+            <Ionicons name="arrow-forward" size={20} color="#fff" />
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
+
+      {tier === 'pro' && (
+        <View style={styles.upgradeRowWrap}>
+          <LinearGradient
+            colors={['#E9B45C', '#C98E3E']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.upgradeRowGradient}
+          >
+            <View style={styles.upgradeRowIcon}>
+              <Ionicons name="checkmark-circle" size={22} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.upgradeRowTitle}>PepTalk Pro Active</Text>
+              <Text style={styles.upgradeRowBody}>
+                You have access to every feature. Thanks for supporting PepTalk.
+              </Text>
+            </View>
+          </LinearGradient>
+        </View>
+      )}
+
       {/* Settings Section */}
       <View style={styles.settingsSection}>
         <Text style={[styles.settingsSectionTitle, { color: t.text }]}>Settings</Text>
@@ -385,15 +443,6 @@ function UserProfile() {
         {/* Dark Mode removed — app uses gender-based light themes only */}
       </View>
 
-      {/* Logout Button */}
-      <TouchableOpacity
-        style={styles.logoutButton}
-        onPress={logout}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="log-out-outline" size={18} color="#e3a7a1" />
-        <Text style={styles.logoutText}>Sign Out</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -687,9 +736,9 @@ function QuickLinksSection() {
   const t = useTheme();
 
   const links = [
-    { icon: 'document-text-outline' as const, label: 'Share Health Report', route: '/health-report' as const, color: '#F8A97A', desc: 'Generate and share with your provider' },
+    { icon: 'document-text-outline' as const, label: 'Share Health Report', route: '/health-report' as const, color: '#E89672', desc: 'Generate and share with your provider' },
     { icon: 'download-outline' as const, label: 'Export My Data', route: '/health-report' as const, color: Colors.pepTeal, desc: 'Download your wellness journal' },
-    { icon: 'book-outline' as const, label: 'My Journal', route: '/journal' as const, color: '#FFBF82', desc: 'View and manage journal entries' },
+    { icon: 'book-outline' as const, label: 'My Journal', route: '/journal' as const, color: '#F4E9A7', desc: 'View and manage journal entries' },
     { icon: 'nutrition-outline' as const, label: 'Nutritionist Consultation', route: '/nutritionist' as const, color: '#10b981', desc: 'Connect with a nutrition expert' },
   ];
 
@@ -705,7 +754,7 @@ function QuickLinksSection() {
           onPress={() => router.push(links[0].route)}
         >
           <LinearGradient
-            colors={['#F8A97A', '#E8885A']}
+            colors={['#E89672', '#C76B45']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={actionStyles.gradient}
@@ -948,7 +997,7 @@ function NotificationSettings() {
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
             <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(245, 158, 11, 0.12)' }]}>
-              <Ionicons name="barbell-outline" size={18} color="#FFBF82" />
+              <Ionicons name="barbell-outline" size={18} color="#F4E9A7" />
             </View>
             <View style={styles.settingTextContainer}>
               <Text style={[styles.settingTitle, { color: t.text }]}>Workout Reminders</Text>
@@ -963,7 +1012,7 @@ function NotificationSettings() {
             disabled={!notifEnabled}
             trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(245, 158, 11, 0.4)' }}
             thumbColor={
-              preferences.workoutReminderEnabled && notifEnabled ? '#FFBF82' : '#6B7280'
+              preferences.workoutReminderEnabled && notifEnabled ? '#F4E9A7' : '#6B7280'
             }
           />
         </View>
@@ -1050,7 +1099,7 @@ function NotificationSettings() {
         <View style={[styles.settingRow, { marginBottom: 0 }]}>
           <View style={styles.settingInfo}>
             <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(59, 130, 246, 0.12)' }]}>
-              <Ionicons name="stats-chart-outline" size={18} color="#F8A97A" />
+              <Ionicons name="stats-chart-outline" size={18} color="#E89672" />
             </View>
             <View style={styles.settingTextContainer}>
               <Text style={[styles.settingTitle, { color: t.text }]}>Weekly Health Report</Text>
@@ -1065,7 +1114,7 @@ function NotificationSettings() {
             disabled={!notifEnabled}
             trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(59, 130, 246, 0.4)' }}
             thumbColor={
-              preferences.weeklyReportEnabled && notifEnabled ? '#F8A97A' : '#6B7280'
+              preferences.weeklyReportEnabled && notifEnabled ? '#E89672' : '#6B7280'
             }
           />
         </View>
@@ -1354,6 +1403,17 @@ export default function ProfileScreen() {
           <Text style={[profileStyles.sectionTitle, { color: t.textSecondary }]}>SETTINGS</Text>
           <View style={[profileStyles.card, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
             <ProfileRow icon="notifications-outline" label="Notifications" onPress={() => {}} color={t.text} />
+            <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+            <ProfileRow
+              icon="help-circle-outline"
+              label="Replay intro tour"
+              onPress={() => {
+                useTutorialStore.getState().resetTour();
+                useTutorialStore.getState().startTour();
+                router.push('/(tabs)/' as any);
+              }}
+              color={t.text}
+            />
           </View>
         </View>
 
@@ -1546,7 +1606,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: '#EDE6D6',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -1609,6 +1669,44 @@ const styles = StyleSheet.create({
     width: 1,
     height: 28,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+
+  // -- Upgrade row (hero)
+  upgradeRowWrap: {
+    marginTop: Spacing.lg,
+    marginHorizontal: Spacing.md,
+    borderRadius: 18,
+    overflow: 'hidden',
+    shadowColor: '#E89672',
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  upgradeRowGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 16,
+  },
+  upgradeRowIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  upgradeRowTitle: {
+    fontSize: 16,
+    fontFamily: 'Playfair-Black',
+    color: '#fff',
+    letterSpacing: -0.2,
+    marginBottom: 3,
+  },
+  upgradeRowBody: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Medium',
+    color: 'rgba(255,255,255,0.92)',
   },
 
   // -- Settings
@@ -1872,7 +1970,7 @@ const notifStyles = StyleSheet.create({
     color: '#6B7280',
   },
   dayChipTextActive: {
-    color: '#FFBF82',
+    color: '#F4E9A7',
   },
   mealList: {
     paddingHorizontal: 4,
