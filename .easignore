@@ -48,5 +48,3 @@ PAGE-REFERENCE.md
 .mcp.json
 tsc.log
 .npmrc
-global.css
-nativewind-env.d.ts
