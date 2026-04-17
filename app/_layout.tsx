@@ -1,4 +1,19 @@
 import '../global.css';
+import * as Sentry from '@sentry/react-native';
+
+// ── Sentry init — runs as soon as this file is imported (before app renders) ──
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN ?? '',
+  enabled: !__DEV__ && !!process.env.EXPO_PUBLIC_SENTRY_DSN,
+  // Capture 100% of errors in production
+  tracesSampleRate: 1.0,
+  // Send the actual error message + stack trace
+  debug: false,
+  // Identify which TestFlight build the crash came from
+  release: 'peptalk@1.3.0',
+  environment: process.env.EXPO_PUBLIC_ENV ?? 'production',
+});
+
 import {
   Stack,
   useGlobalSearchParams,
@@ -28,7 +43,7 @@ import { useOnboardingStore } from '../src/store/useOnboardingStore';
 import { configureNotificationHandler } from '../src/services/notificationService';
 import { useTheme } from '../src/hooks/useTheme';
 
-export default function RootLayout() {
+function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
   const { edit } = useGlobalSearchParams<{ edit?: string }>();
@@ -459,3 +474,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
+
+// Wrap with Sentry to capture unhandled errors + native crashes
+export default Sentry.wrap(RootLayout);
+

@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Sentry from '@sentry/react-native';
 
 interface Props {
   children: ReactNode;
@@ -9,25 +10,30 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  errorInfo: ErrorInfo | null;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorInfo: null };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { hasError: true, error, errorInfo: null };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log to console in dev, could send to Sentry/Crashlytics in production
     console.error('[ErrorBoundary] Caught error:', error, errorInfo);
+    this.setState({ errorInfo });
+    // Report to Sentry — works in production builds with DSN configured
+    Sentry.captureException(error, {
+      contexts: { react: { componentStack: errorInfo.componentStack } },
+    });
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState({ hasError: false, error: null, errorInfo: null });
   };
 
   render() {
@@ -44,11 +50,28 @@ export class ErrorBoundary extends Component<Props, State> {
               restart the app.
             </Text>
 
-            {__DEV__ && this.state.error && (
+            {this.state.error && (
               <ScrollView style={styles.errorBox}>
-                <Text style={styles.errorText}>
+                <Text style={styles.errorTitle}>Error message:</Text>
+                <Text selectable style={styles.errorText}>
                   {this.state.error.toString()}
                 </Text>
+                {this.state.error.stack && (
+                  <>
+                    <Text style={[styles.errorTitle, { marginTop: 12 }]}>Stack trace:</Text>
+                    <Text selectable style={styles.errorText}>
+                      {this.state.error.stack}
+                    </Text>
+                  </>
+                )}
+                {this.state.errorInfo?.componentStack && (
+                  <>
+                    <Text style={[styles.errorTitle, { marginTop: 12 }]}>Component stack:</Text>
+                    <Text selectable style={styles.errorText}>
+                      {this.state.errorInfo.componentStack}
+                    </Text>
+                  </>
+                )}
               </ScrollView>
             )}
 
@@ -105,17 +128,28 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   errorBox: {
-    maxHeight: 120,
+    maxHeight: 320,
     width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(0,0,0,0.04)',
     borderRadius: 10,
     padding: 12,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+  errorTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
   errorText: {
     fontSize: 11,
     fontFamily: 'monospace',
-    color: '#e3a7a1',
+    color: '#dc2626',
+    lineHeight: 15,
   },
   button: {
     flexDirection: 'row',
