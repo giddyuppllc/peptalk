@@ -2,7 +2,7 @@
   "expo": {
     "name": "PepTalk",
     "slug": "peptalk",
-    "version": "1.5.2",
+    "version": "1.5.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -58,13 +58,6 @@
         "expo-camera",
         {
           "cameraPermission": "PepTalk needs camera access to scan your meals for automatic nutrition tracking."
-        }
-      ],
-      [
-        "@sentry/react-native/expo",
-        {
-          "organization": "giddyupp-llc",
-          "project": "peptalk"
         }
       ],
       "react-native-iap",
