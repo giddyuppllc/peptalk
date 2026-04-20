@@ -2,7 +2,7 @@
   "expo": {
     "name": "PepTalk",
     "slug": "peptalk",
-    "version": "1.5.3",
+    "version": "1.5.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -65,7 +65,7 @@
         "expo-build-properties",
         {
           "ios": { "deploymentTarget": "15.1" },
-          "android": { "compileSdkVersion": 34, "targetSdkVersion": 34, "minSdkVersion": 24 }
+          "android": { "compileSdkVersion": 35, "targetSdkVersion": 35, "minSdkVersion": 24 }
         }
       ]
     ],
