@@ -29,6 +29,10 @@ interface SubscriptionActions {
   isExpired: () => boolean;
   getFeatures: () => string[];
   setTier: (tier: SubscriptionTier) => void;
+  /** Validate a fresh IAP receipt with the backend and update the tier. */
+  validatePurchase: (platform: 'ios' | 'android', productId: string, receipt: string) => Promise<boolean>;
+  /** Pull the authoritative tier from the subscriptions table on app boot. */
+  syncFromServer: () => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -67,6 +71,64 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
       getFeatures: () => {
         const { tier } = get();
         return TIER_FEATURES[tier] ?? [];
+      },
+
+      validatePurchase: async (platform, productId, receipt) => {
+        try {
+          const { supabase } = await import('../services/supabase');
+          const { data: { session } } = await (supabase as any).auth.getSession();
+          if (!session?.access_token) return false;
+
+          const { data, error } = await (supabase as any).functions.invoke('validate-purchase', {
+            body: { platform, productId, receipt },
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          if (error || !data?.success) {
+            if (__DEV__) console.warn('[useSubscriptionStore] validation failed:', error);
+            return false;
+          }
+          set({
+            tier: data.tier,
+            productId,
+            expiresAt: data.expiresAt ?? null,
+            isActive: true,
+          });
+          return true;
+        } catch (err) {
+          if (__DEV__) console.warn('[useSubscriptionStore] validatePurchase threw:', err);
+          return false;
+        }
+      },
+
+      syncFromServer: async () => {
+        try {
+          const { supabase } = await import('../services/supabase');
+          const { data: { user } } = await (supabase as any).auth.getUser();
+          if (!user) return;
+          // Grab the most recent active subscription row for this user
+          const { data, error } = await (supabase as any)
+            .from('subscriptions')
+            .select('tier, product_id, expires_at, is_active')
+            .eq('user_id', user.id)
+            .eq('is_active', true)
+            .order('last_validated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (error || !data) {
+            // No active subscription → free tier
+            set({ tier: 'free', productId: null, expiresAt: null, isActive: false });
+            return;
+          }
+          const stillValid = !data.expires_at || new Date(data.expires_at) > new Date();
+          set({
+            tier: stillValid ? data.tier : 'free',
+            productId: data.product_id,
+            expiresAt: data.expires_at,
+            isActive: stillValid,
+          });
+        } catch (err) {
+          if (__DEV__) console.warn('[useSubscriptionStore] syncFromServer failed:', err);
+        }
       },
     }),
     {

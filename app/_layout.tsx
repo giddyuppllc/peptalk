@@ -41,7 +41,10 @@ import { SpotlightTour } from '../src/components/tutorial/SpotlightTour';
 import { UpgradeDeltaWatcher } from '../src/components/tutorial/UpgradeDeltaWatcher';
 import { useOnboardingStore } from '../src/store/useOnboardingStore';
 import { useAuthStore } from '../src/store/useAuthStore';
+import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
 import { configureNotificationHandler } from '../src/services/notificationService';
+import { initIAP, endIAP } from '../src/services/iapService';
+import { Platform } from 'react-native';
 import { useTheme } from '../src/hooks/useTheme';
 
 function RootLayout() {
@@ -94,8 +97,22 @@ function RootLayout() {
   useEffect(() => {
     configureNotificationHandler();
     useAuthStore.getState().restoreSession();
+
+    // Hook IAP into the app so purchase events flow into subscription validation
+    initIAP(async ({ productId, transactionReceipt }) => {
+      const platform: 'ios' | 'android' = Platform.OS === 'ios' ? 'ios' : 'android';
+      await useSubscriptionStore.getState().validatePurchase(platform, productId, transactionReceipt);
+    });
+
+    // Pull the authoritative tier from the server once session is ready
+    useSubscriptionStore.getState().syncFromServer();
+
     // Mark navigator as mounted on next frame so <Stack> is in the tree
     requestAnimationFrame(() => setNavReady(true));
+
+    return () => {
+      endIAP();
+    };
   }, []);
 
   useEffect(() => {

@@ -21,6 +21,12 @@ import { GradientButton } from '../src/components/GradientButton';
 import { Colors, Gradients, Spacing, FontSizes, BorderRadius } from '../src/constants/theme';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
 import type { SubscriptionTier } from '../src/types/fitness';
+import {
+  PRODUCT_IDS,
+  purchaseProduct,
+  restorePurchases,
+  type ProductId,
+} from '../src/services/iapService';
 
 // ---------------------------------------------------------------------------
 // Tier data
@@ -36,6 +42,7 @@ interface TierInfo {
   colors: [string, string];
   icon: string;
   badge?: string;
+  productId?: ProductId;
 }
 
 const TIERS: TierInfo[] = [
@@ -78,6 +85,7 @@ const TIERS: TierInfo[] = [
     colors: ['#E89672', '#F5DAD6'],
     icon: 'pulse-outline',
     badge: 'Most Popular',
+    productId: PRODUCT_IDS.plusMonthly,
   },
   {
     tier: 'pro',
@@ -100,6 +108,7 @@ const TIERS: TierInfo[] = [
     colors: ['#E9B45C', '#C98E3E'],
     icon: 'star',
     badge: 'Best Value',
+    productId: PRODUCT_IDS.proMonthly,
   },
 ];
 
@@ -126,12 +135,24 @@ const SOCIAL_PROOF = [
 // ---------------------------------------------------------------------------
 
 function TierCard({ info, isActive, highlighted }: { info: TierInfo; isActive: boolean; highlighted?: boolean }) {
-  const handleUpgrade = () => {
-    if (info.tier === 'free') return;
-    Alert.alert(
-      'Coming Soon',
-      `${info.name} plan will be available when the app launches on the App Store. Your interest has been noted!`,
-    );
+  const [purchasing, setPurchasing] = React.useState(false);
+
+  const handleUpgrade = async () => {
+    if (info.tier === 'free' || !info.productId) return;
+    try {
+      setPurchasing(true);
+      // Triggers native purchase sheet. Validation happens in the
+      // purchaseUpdatedListener registered in _layout.tsx.
+      await purchaseProduct(info.productId);
+    } catch (err: any) {
+      const msg = err?.message ?? 'Purchase could not be completed.';
+      // User cancellation is not an error we need to surface
+      if (!msg.toLowerCase().includes('cancelled') && !msg.toLowerCase().includes('canceled')) {
+        Alert.alert('Purchase Failed', msg);
+      }
+    } finally {
+      setPurchasing(false);
+    }
   };
 
   return (
@@ -197,7 +218,7 @@ function TierCard({ info, isActive, highlighted }: { info: TierInfo; isActive: b
         <View style={styles.tierCta}>
           <Text style={styles.trialText}>✨ Start with a 7-day free trial</Text>
           <GradientButton
-            label={`Upgrade to ${info.name}`}
+            label={purchasing ? 'Processing…' : `Upgrade to ${info.name}`}
             onPress={handleUpgrade}
             colors={info.colors}
           />
@@ -289,6 +310,30 @@ export default function SubscriptionScreen() {
             />
           </View>
         ))}
+
+        {/* Restore purchases */}
+        <TouchableOpacity
+          style={styles.restoreBtn}
+          onPress={async () => {
+            try {
+              const count = await restorePurchases();
+              // syncFromServer is called in the purchase listener for each restored item
+              await useSubscriptionStore.getState().syncFromServer();
+              Alert.alert(
+                'Restore Complete',
+                count > 0
+                  ? `Found ${count} previous purchase${count === 1 ? '' : 's'}. Your subscription has been restored.`
+                  : 'No previous purchases found on this Apple ID.',
+              );
+            } catch (err: any) {
+              Alert.alert('Restore Failed', err?.message ?? 'Could not restore purchases. Please try again.');
+            }
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Restore previous purchases"
+        >
+          <Text style={styles.restoreBtnText}>Restore Purchases</Text>
+        </TouchableOpacity>
 
         {/* Footer */}
         <View style={styles.footer}>
@@ -508,5 +553,17 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     lineHeight: 18,
+  },
+  restoreBtn: {
+    alignSelf: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
+  },
+  restoreBtnText: {
+    fontSize: FontSizes.sm,
+    fontWeight: '600',
+    color: '#6b7280',
+    textDecorationLine: 'underline',
   },
 });
