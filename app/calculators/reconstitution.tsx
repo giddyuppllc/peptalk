@@ -23,26 +23,37 @@ import { Colors, Spacing, FontSizes, BorderRadius, Gradients } from '../../src/c
 const VIAL_PRESETS = [2, 5, 10, 15, 30];
 const WATER_PRESETS = [1, 2, 3, 5];
 
+type VialUnit = 'mg' | 'mcg';
+type DoseUnit = 'mg' | 'mcg';
+
 export default function ReconstitutionCalculatorScreen() {
   const router = useRouter();
   const t = useTheme();
 
   const [vialSize, setVialSize] = useState('');
+  const [vialUnit, setVialUnit] = useState<VialUnit>('mg');
   const [waterVolume, setWaterVolume] = useState('');
   const [desiredDose, setDesiredDose] = useState('');
+  const [doseUnit, setDoseUnit] = useState<DoseUnit>('mcg');
   const [showResults, setShowResults] = useState(false);
 
-  const vialMg = parseFloat(vialSize) || 0;
+  const vialRaw = parseFloat(vialSize) || 0;
   const waterMl = parseFloat(waterVolume) || 0;
-  const doseMcg = parseFloat(desiredDose) || 0;
+  const doseRaw = parseFloat(desiredDose) || 0;
 
-  const vialMcg = vialMg * 1000;
-  const concentrationPerTick = waterMl > 0 ? vialMcg / (waterMl * 10) : 0; // mcg per 0.1mL
-  const volumeToInject = concentrationPerTick > 0 ? (doseMcg / concentrationPerTick) * 0.1 : 0; // mL
-  const dosesPerVial = doseMcg > 0 ? Math.floor(vialMcg / doseMcg) : 0;
-  const ticksToDrawTo = waterMl > 0 ? doseMcg / (vialMcg / (waterMl * 10)) : 0; // number of ticks (0.1mL units)
+  // Normalize everything to mcg (matching peptidedosages.com logic)
+  const vialMcg = vialUnit === 'mg' ? vialRaw * 1000 : vialRaw;
+  const doseMcg = doseUnit === 'mg' ? doseRaw * 1000 : doseRaw;
 
-  const canCalculate = vialMg > 0 && waterMl > 0 && doseMcg > 0;
+  // Core calculations (per peptidedosages.com formula)
+  const concentrationPerMl = waterMl > 0 ? vialMcg / waterMl : 0; // mcg per 1mL
+  const concentrationPerTick = concentrationPerMl / 10; // mcg per 0.1mL tick
+  const volumeToInject = concentrationPerMl > 0 ? doseMcg / concentrationPerMl : 0; // mL
+  const syringeUnits = volumeToInject * 100; // U-100 insulin syringe
+  const ticksToDrawTo = volumeToInject * 10; // 0.1mL ticks
+  const dosesPerVial = doseMcg > 0 && volumeToInject > 0 ? waterMl / volumeToInject : 0;
+
+  const canCalculate = vialRaw > 0 && waterMl > 0 && doseRaw > 0;
 
   const handleCalculate = useCallback(() => {
     setShowResults(true);
@@ -87,7 +98,20 @@ export default function ReconstitutionCalculatorScreen() {
                   setShowResults(false);
                 }}
               />
-              <Text style={[styles.unitLabel, { color: t.textSecondary }]}>mg</Text>
+              <View style={styles.unitToggle}>
+                <TouchableOpacity
+                  style={[styles.unitToggleBtn, vialUnit === 'mg' && { backgroundColor: t.primary }]}
+                  onPress={() => { setVialUnit('mg'); setShowResults(false); }}
+                >
+                  <Text style={[styles.unitToggleText, { color: vialUnit === 'mg' ? '#fff' : t.textSecondary }]}>mg</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.unitToggleBtn, vialUnit === 'mcg' && { backgroundColor: t.primary }]}
+                  onPress={() => { setVialUnit('mcg'); setShowResults(false); }}
+                >
+                  <Text style={[styles.unitToggleText, { color: vialUnit === 'mcg' ? '#fff' : t.textSecondary }]}>mcg</Text>
+                </TouchableOpacity>
+              </View>
             </View>
             <View style={styles.presetRow}>
               {VIAL_PRESETS.map((v) => (
@@ -96,10 +120,11 @@ export default function ReconstitutionCalculatorScreen() {
                   style={[
                     styles.presetBtn,
                     { backgroundColor: t.glass },
-                    vialSize === String(v) && styles.presetBtnActive,
+                    vialSize === String(v) && vialUnit === 'mg' && styles.presetBtnActive,
                   ]}
                   onPress={() => {
                     setVialSize(String(v));
+                    setVialUnit('mg');
                     setShowResults(false);
                   }}
                 >
@@ -107,7 +132,7 @@ export default function ReconstitutionCalculatorScreen() {
                     style={[
                       styles.presetBtnText,
                       { color: t.textSecondary },
-                      vialSize === String(v) && styles.presetBtnTextActive,
+                      vialSize === String(v) && vialUnit === 'mg' && styles.presetBtnTextActive,
                     ]}
                   >
                     {v}mg
@@ -181,13 +206,26 @@ export default function ReconstitutionCalculatorScreen() {
                   setShowResults(false);
                 }}
               />
-              <Text style={[styles.unitLabel, { color: t.textSecondary }]}>mcg</Text>
+              <View style={styles.unitToggle}>
+                <TouchableOpacity
+                  style={[styles.unitToggleBtn, doseUnit === 'mcg' && { backgroundColor: t.primary }]}
+                  onPress={() => { setDoseUnit('mcg'); setShowResults(false); }}
+                >
+                  <Text style={[styles.unitToggleText, { color: doseUnit === 'mcg' ? '#fff' : t.textSecondary }]}>mcg</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.unitToggleBtn, doseUnit === 'mg' && { backgroundColor: t.primary }]}
+                  onPress={() => { setDoseUnit('mg'); setShowResults(false); }}
+                >
+                  <Text style={[styles.unitToggleText, { color: doseUnit === 'mg' ? '#fff' : t.textSecondary }]}>mg</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </GlassCard>
         </View>
 
         {/* Quick Concentration Preview */}
-        {vialMg > 0 && waterMl > 0 && (
+        {vialRaw > 0 && waterMl > 0 && (
           <View style={styles.section}>
             <GlassCard variant="gradient">
               <Text style={[styles.previewLabel, { color: t.textSecondary }]}>Concentration</Text>
@@ -234,7 +272,7 @@ export default function ReconstitutionCalculatorScreen() {
                 />
                 <ResultRow
                   label="Doses per vial"
-                  value={String(dosesPerVial)}
+                  value={dosesPerVial.toFixed(1)}
                   highlight
                 />
               </GlassCard>
@@ -395,6 +433,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.darkTextSecondary,
     width: 36,
+  },
+  unitToggle: {
+    flexDirection: 'row',
+    gap: 4,
+    padding: 3,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  unitToggleBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: BorderRadius.sm,
+    minWidth: 38,
+    alignItems: 'center',
+  },
+  unitToggleText: {
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
   },
 
   // Presets

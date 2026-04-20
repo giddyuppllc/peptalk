@@ -1316,7 +1316,7 @@ export default function FoodSearchScreen() {
           <View style={styles.mfpActionRow}>
             <TouchableOpacity
               style={styles.mfpActionCard}
-              onPress={() => router.push({ pathname: '/nutrition/create-recipe' as any, params: { asTemplate: '1' } })}
+              onPress={() => router.push({ pathname: '/nutrition/recipe-generator' as any, params: { asTemplate: '1' } })}
               activeOpacity={0.8}
             >
               <Ionicons name="add" size={20} color={Colors.almostAquaDeep} />

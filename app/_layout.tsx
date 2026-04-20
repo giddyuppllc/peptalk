@@ -239,6 +239,13 @@ function RootLayout() {
             }}
           />
           <Stack.Screen
+            name="learn/cycling"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
             name="journal/index"
             options={{
               headerShown: false,
