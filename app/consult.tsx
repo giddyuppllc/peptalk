@@ -71,13 +71,29 @@ export default function ConsultScreen() {
     );
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedTopic) {
       Alert.alert('Select a Topic', 'Please choose what you want to discuss.');
       return;
     }
-    // TODO: Send to Supabase / email / booking system
-    setSubmitted(true);
+    try {
+      const { supabase } = await import('../src/services/supabase');
+      const { error } = await (supabase as any).from('consultation_requests').insert({
+        user_email: user?.email ?? null,
+        user_id: user?.id ?? null,
+        topic: selectedTopic,
+        notes: notes?.trim() || null,
+        created_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+      setSubmitted(true);
+    } catch (err) {
+      console.error('[consult] submit failed:', err);
+      Alert.alert(
+        'Submission Failed',
+        'We couldn\'t submit your request right now. Please try again in a moment.',
+      );
+    }
   };
 
   if (submitted) {

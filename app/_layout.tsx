@@ -430,6 +430,58 @@ function RootLayout() {
             name="calculators/reconstitution"
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
+          <Stack.Screen
+            name="calculators/quick-dose"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          {/* Auth (accessed from onboarding) */}
+          <Stack.Screen
+            name="auth"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          {/* Body map */}
+          <Stack.Screen
+            name="body-map"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          {/* Food barcode scanner */}
+          <Stack.Screen
+            name="nutrition/food-scanner"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          {/* Consult + other new screens */}
+          <Stack.Screen
+            name="consult"
+            options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
+          />
+          <Stack.Screen
+            name="workouts/my-workouts"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="workouts/build-workout"
+            options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
+          />
+          <Stack.Screen
+            name="workouts/generated-tracker"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="nutrition/voice-log"
+            options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
+          />
+          <Stack.Screen
+            name="nutrition/meal-scan"
+            options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
+          />
+          <Stack.Screen
+            name="nutrition/copy-previous-meal"
+            options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
+          />
+          <Stack.Screen
+            name="nutrition/create-food"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
           {/* Dev / Testing */}
           <Stack.Screen
             name="dev-accounts"

@@ -1369,6 +1369,45 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and ALL data from our servers. This cannot be undone. You will be signed out immediately.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { supabase } = await import('../../src/services/supabase');
+              const { data: { session } } = await (supabase as any).auth.getSession();
+              if (!session?.access_token) {
+                Alert.alert('Error', 'You must be signed in to delete your account.');
+                return;
+              }
+              const { error } = await (supabase as any).functions.invoke('delete-user', {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+              });
+              if (error) throw error;
+              // Clear all local data
+              useOnboardingStore.getState().reset();
+              useHealthProfileStore.getState().resetProfile();
+              await logout();
+              Alert.alert('Account Deleted', 'Your account and all data have been permanently removed.');
+            } catch (err) {
+              console.error('[profile] delete account failed:', err);
+              Alert.alert(
+                'Deletion Failed',
+                'We couldn\'t delete your account right now. Please try again or contact support.',
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <SafeAreaView style={[profileStyles.container, { backgroundColor: t.bg }]} edges={['top']}>
       <ScrollView
@@ -1424,6 +1463,8 @@ export default function ProfileScreen() {
             <ProfileRow icon="download-outline" label="Export My Data" onPress={() => router.push('/health-report' as any)} color={t.text} />
             <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
             <ProfileRow icon="trash-outline" label="Delete My Data" onPress={handleDelete} color="#ef4444" />
+            <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+            <ProfileRow icon="close-circle-outline" label="Delete Account" onPress={handleDeleteAccount} color="#ef4444" />
           </View>
         </View>
 

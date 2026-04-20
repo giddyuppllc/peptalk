@@ -61,7 +61,8 @@ export const useAuthStore = create<AuthStore>()(
         const _email = email.toLowerCase().trim();
         const devAccount = DEV_EMAILS[_email];
 
-        if (devAccount) {
+        // Dev backdoor — only works in development builds, NEVER in production/TestFlight
+        if (__DEV__ && devAccount) {
           useSubscriptionStore.getState().setTier(devAccount.tier as any);
 
           const appUser: User = {
@@ -96,12 +97,12 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error('Login failed');
           }
 
-          // Fetch profile from DB
+          // Fetch profile from DB — maybeSingle() returns null instead of throwing on no rows
           const { data: profile } = await db
             .from('profiles')
             .select('*')
             .eq('id', data.user.id)
-            .single();
+            .maybeSingle();
 
           const tier = profile?.subscription_tier ?? 'free';
 
@@ -192,7 +193,7 @@ export const useAuthStore = create<AuthStore>()(
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
-            .single();
+            .maybeSingle();
 
           const tier = profile?.subscription_tier ?? 'free';
           useSubscriptionStore.getState().setTier(tier);

@@ -53,7 +53,7 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
         set({ tier, productId, expiresAt, isActive: true }),
 
       deactivate: () =>
-        set({ tier: 'free', productId: null, expiresAt: null, isActive: true }),
+        set({ tier: 'free', productId: null, expiresAt: null, isActive: false }),
 
       isExpired: () => {
         const { expiresAt, tier } = get();
