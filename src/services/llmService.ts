@@ -438,9 +438,61 @@ export async function generateRecipe(params: {
   instructions: string[];
   macros: { calories: number; protein: number; carbs: number; fat: number };
 }> | null> {
-  if (!XAI_API_KEY) return null;
-
   const { diet, mealType, preferences, targets } = params;
+
+  // ── Try server edge function first (production path — key stays server-side) ──
+  if (SUPABASE_URL) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        const constraints: string[] = [];
+        if (diet && diet !== 'any') constraints.push(diet);
+        if (preferences) constraints.push(preferences);
+
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/aimee-recipe`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+            apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+          },
+          body: JSON.stringify({
+            mealType,
+            macroTargets: targets,
+            constraints,
+            count: 3,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.recipes)) {
+            // Normalize shape to match legacy (ingredients/instructions/macros)
+            return data.recipes.map((r: any) => ({
+              name: r.name,
+              description: r.description ?? '',
+              prepMinutes: r.prepMinutes ?? 10,
+              cookMinutes: r.cookMinutes ?? 15,
+              servings: r.servings ?? 1,
+              ingredients: r.ingredients ?? [],
+              instructions: r.instructions ?? r.steps ?? [],
+              macros: {
+                calories: r.calories ?? r.macros?.calories ?? 0,
+                protein: r.proteinGrams ?? r.macros?.protein ?? 0,
+                carbs: r.carbsGrams ?? r.macros?.carbs ?? 0,
+                fat: r.fatGrams ?? r.macros?.fat ?? 0,
+              },
+            }));
+          }
+        }
+      }
+    } catch (err) {
+      if (__DEV__) console.warn('[llmService] aimee-recipe edge fn failed, trying direct:', err);
+    }
+  }
+
+  // ── Dev-only direct API fallback ──
+  if (!__DEV__ || !XAI_API_KEY) return null;
+
   const prompt = `Generate 3 ${mealType} recipes for a ${diet === 'any' ? 'balanced' : diet} diet.
 
 Daily macro targets: ${targets.calories} cal, ${targets.proteinGrams}g protein, ${targets.carbsGrams}g carbs, ${targets.fatGrams}g fat.

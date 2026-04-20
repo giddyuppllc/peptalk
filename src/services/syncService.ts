@@ -23,7 +23,8 @@ type TableName =
   | 'chat_messages'
   | 'journal_entries'
   | 'saved_stacks'
-  | 'health_profiles';
+  | 'health_profiles'
+  | 'injection_sites';
 
 // ---------------------------------------------------------------------------
 // Generic helpers
@@ -143,10 +144,12 @@ export async function fetchUserRecords<T = Record<string, unknown>>(
 }
 
 /**
- * Sync the user's health profile (single record per user).
+ * Sync the user's health profile. The DB stores the full profile JSON in a
+ * single `profile` column so we never have to migrate shape changes.
  */
 export async function syncHealthProfile(
-  profile: Record<string, unknown>
+  profile: unknown,
+  extras?: { setup_complete?: boolean; current_step?: number }
 ): Promise<void> {
   const userId = await getUserId();
   if (!userId) return;
@@ -154,7 +157,16 @@ export async function syncHealthProfile(
   try {
     const { error } = await db
       .from('health_profiles')
-      .upsert({ ...profile, user_id: userId }, { onConflict: 'user_id' });
+      .upsert(
+        {
+          user_id: userId,
+          profile,
+          setup_complete: extras?.setup_complete ?? undefined,
+          current_step: extras?.current_step ?? undefined,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' },
+      );
 
     if (error) console.warn('[sync] health_profiles upsert failed:', error.message);
   } catch (e) {

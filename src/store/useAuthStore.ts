@@ -154,12 +154,21 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error('Signup failed');
           }
 
-          // Profile is auto-created by DB trigger (handle_new_user)
-          // Update with first/last name
+          // Profile is auto-created by DB trigger (handle_new_user) but as a
+          // safety net we upsert here in case the trigger failed for any reason.
+          // onConflict: 'id' means if the row exists we update; otherwise insert.
           await db
             .from('profiles')
-            .update({ name: fullName, first_name: firstName, last_name: lastName })
-            .eq('id', data.user.id);
+            .upsert(
+              {
+                id: data.user.id,
+                email: data.user.email ?? email,
+                name: fullName,
+                first_name: firstName,
+                last_name: lastName,
+              },
+              { onConflict: 'id' },
+            );
 
           const appUser: User = {
             id: data.user.id,

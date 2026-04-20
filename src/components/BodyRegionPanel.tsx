@@ -10,6 +10,7 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -26,6 +27,7 @@ import { Colors, FontSizes, Spacing, BorderRadius } from '../constants/theme';
 import type { BodyRegion } from '../data/bodyMapData';
 import { getExercisesByMuscle } from '../data/exercises';
 import { useCheckinStore } from '../store/useCheckinStore';
+import { useBodyMapStore } from '../store/useBodyMapStore';
 
 const { height: SCREEN_H } = Dimensions.get('window');
 const PANEL_H = SCREEN_H * 0.52;
@@ -67,6 +69,33 @@ export function BodyRegionPanel({ region }: BodyRegionPanelProps) {
     if (s.entries.length === 0) return null;
     return s.entries[s.entries.length - 1];
   });
+
+  // Injection tracking for this region
+  const regionInjections = useBodyMapStore((s) =>
+    region ? s.injections.filter((i) => i.region === region.id) : [],
+  );
+  const lastInjection = regionInjections[0];
+  const logInjection = useBodyMapStore((s) => s.logInjection);
+
+  const handleLogInjection = () => {
+    if (!region) return;
+    const now = new Date();
+    const date = now.toISOString().slice(0, 10);
+    const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    logInjection({ region: region.id, date, time });
+    Alert.alert(
+      'Site logged',
+      `Injection at ${region.label} recorded. Rotate sites to avoid overuse.`,
+    );
+  };
+
+  const daysSince = (iso?: string): string => {
+    if (!iso) return '';
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+    if (diff === 0) return 'today';
+    if (diff === 1) return 'yesterday';
+    return `${diff} days ago`;
+  };
 
   const getKpiValue = (label: string): string => {
     if (!latestCheckIn) return '--';
@@ -175,6 +204,34 @@ export function BodyRegionPanel({ region }: BodyRegionPanelProps) {
                 <Text style={styles.tipText}>{tip}</Text>
               </View>
             ))}
+          </GlassCard>
+
+          {/* ── Injection Tracking ──────────────────────── */}
+          <Text style={styles.sectionTitle}>Injection Site</Text>
+          <GlassCard variant="elevated" style={styles.tipsCard}>
+            {lastInjection ? (
+              <View style={styles.tipRow}>
+                <Ionicons name="time-outline" size={14} color={region.color} />
+                <Text style={styles.tipText}>
+                  Last injected {daysSince(lastInjection.createdAt)}
+                  {regionInjections.length > 1 ? `  ·  ${regionInjections.length} total` : ''}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.tipRow}>
+                <Ionicons name="ellipse-outline" size={14} color={Colors.darkTextSecondary} />
+                <Text style={styles.tipText}>No injections logged here yet.</Text>
+              </View>
+            )}
+            <AnimatedPress
+              onPress={handleLogInjection}
+              style={[styles.logInjBtn, { backgroundColor: `${region.color}20`, borderColor: `${region.color}60` }]}
+              accessibilityRole="button"
+              accessibilityLabel={`Log injection at ${region.label}`}
+            >
+              <Ionicons name="add-circle-outline" size={16} color={region.color} />
+              <Text style={[styles.logInjText, { color: region.color }]}>Log Injection Here</Text>
+            </AnimatedPress>
           </GlassCard>
 
           {/* ── Related Peptides ─────────────────────────── */}
@@ -367,6 +424,23 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.sm,
     color: Colors.darkText,
     lineHeight: 18,
+  },
+
+  // Injection tracking
+  logInjBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginTop: Spacing.sm,
+  },
+  logInjText: {
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
   },
 
   // Peptides

@@ -121,6 +121,8 @@ interface DoseLogStore {
   doses: DoseLogEntry[];
   protocols: ActiveProtocol[];
   alerts: HealthAlert[];
+  /** Alert IDs the user has dismissed — survives reload so they don't keep reappearing. */
+  dismissedAlertIds: string[];
   hasAcceptedDoseDisclaimer: boolean;
 
   // Disclaimer gate
@@ -173,6 +175,7 @@ export const useDoseLogStore = create<DoseLogStore>()(
       doses: [],
       protocols: [],
       alerts: [],
+      dismissedAlertIds: [],
       hasAcceptedDoseDisclaimer: false,
 
       // ── Disclaimer Gate ────────────────────────────────────────────────────
@@ -265,11 +268,14 @@ export const useDoseLogStore = create<DoseLogStore>()(
           alerts: state.alerts.map((a) =>
             a.id === id ? { ...a, dismissed: true } : a
           ),
+          dismissedAlertIds: [...new Set([...state.dismissedAlertIds, id])],
         })),
 
       refreshAlerts: () => {
-        const { doses, protocols } = get();
-        const newAlerts = detectAlerts(doses, protocols);
+        const { doses, protocols, dismissedAlertIds } = get();
+        const newAlerts = detectAlerts(doses, protocols).map((a) =>
+          dismissedAlertIds.includes(a.id) ? { ...a, dismissed: true } : a
+        );
         set({ alerts: newAlerts });
       },
 
@@ -300,6 +306,7 @@ export const useDoseLogStore = create<DoseLogStore>()(
       partialize: (state) => ({
         doses: state.doses,
         protocols: state.protocols,
+        dismissedAlertIds: state.dismissedAlertIds,
       }),
     }
   )

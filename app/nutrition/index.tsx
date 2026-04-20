@@ -837,14 +837,26 @@ export default function NutritionScreen() {
         <Text style={[styles.headerTitle, { color: t.text }]}>Nutrition</Text>
         <View style={{ flexDirection: 'row', gap: 4 }}>
           <TouchableOpacity
+            onPress={() => router.push('/nutrition/meal-plan' as any)}
+            style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel="AI meal plan"
+          >
+            <Ionicons name="calendar-outline" size={20} color={accent.deep} />
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => router.push('/nutrition/recipe-generator' as any)}
             style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel="AI recipes"
           >
             <Ionicons name="sparkles-outline" size={20} color={accent.deep} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push('/nutrition/targets' as any)}
             style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Nutrition targets"
           >
             <Ionicons name="settings-outline" size={22} color={t.text} />
           </TouchableOpacity>

@@ -19,6 +19,7 @@ import {
   ConnectedDevice,
 } from '../types';
 import { secureStorage } from '../services/secureStorage';
+import { syncHealthProfile } from '../services/syncService';
 
 // ---------------------------------------------------------------------------
 // Defaults
@@ -446,3 +447,45 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
     }
   )
 );
+
+// ---------------------------------------------------------------------------
+// Cloud sync — fire whenever the profile changes.
+// Debounced so rapid edits don't spam the network. Fire-and-forget.
+// ---------------------------------------------------------------------------
+
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+useHealthProfileStore.subscribe((state, prev) => {
+  if (state.profile === prev.profile) return; // no change
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    syncHealthProfile(state.profile).catch(() => {});
+  }, 800);
+});
+
+/**
+ * Pull the authoritative health profile from Supabase on app boot.
+ * Call this from _layout.tsx after restoreSession.
+ */
+export async function syncHealthProfileFromServer(): Promise<void> {
+  try {
+    const { supabase } = await import('../services/supabase');
+    const { data: { user } } = await (supabase as any).auth.getUser();
+    if (!user) return;
+
+    const { data } = await (supabase as any)
+      .from('health_profiles')
+      .select('profile, setup_complete, current_step')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (data?.profile) {
+      // Server wins on boot — overwrite local if remote exists
+      useHealthProfileStore.setState({
+        profile: data.profile,
+        currentStep: data.current_step ?? 0,
+      });
+    }
+  } catch {
+    // offline or not yet synced — local state stands
+  }
+}

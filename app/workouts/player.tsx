@@ -25,7 +25,8 @@ import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/th
 import { getProgramById } from '../../src/data/workoutPrograms';
 import { getExerciseById } from '../../src/data/exercises';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
-import type { ExerciseSet } from '../../src/types/fitness';
+import { useWorkoutTemplateStore } from '../../src/store/useWorkoutTemplateStore';
+import type { ExerciseSet, WorkoutDay, SetType } from '../../src/types/fitness';
 import { PaywallGate } from '../../src/hooks/useFeatureGate';
 
 // ---------------------------------------------------------------------------
@@ -589,8 +590,11 @@ function FreeWorkoutScreen() {
 
 export default function WorkoutPlayerScreen() {
   const router = useRouter();
-  const { programId } = useLocalSearchParams<{ programId: string }>();
+  const { programId, templateId } = useLocalSearchParams<{ programId?: string; templateId?: string }>();
   const program = getProgramById(programId ?? '');
+  const template = templateId
+    ? useWorkoutTemplateStore.getState().getTemplateById(templateId)
+    : undefined;
   const {
     activeProgram,
     beginWorkout,
@@ -606,19 +610,50 @@ export default function WorkoutPlayerScreen() {
   const [setInputs, setSetInputs] = useState<SetInputData>({});
   const [youtubeUrl, setYoutubeUrl] = useState('');
 
-  // Determine current day
+  // Template mode: shape a custom template into a single-day virtual program
+  const templateDay: WorkoutDay | null = useMemo(() => {
+    if (!template) return null;
+    const exercises: ExerciseSet[] = template.exercises.map((te) => ({
+      exerciseId: te.exerciseId,
+      reps: Array(te.targetSets).fill(te.targetReps),
+      setType: 'normal' as SetType,
+      restSeconds: te.restSeconds,
+    }));
+    return {
+      id: `tmpl-${template.id}`,
+      name: template.name,
+      code: 'Custom',
+      exercises,
+    };
+  }, [template]);
+
+  // Determine current day (program vs template modes)
   const currentWeek = activeProgram?.currentWeek ?? 1;
   const currentDayIdx = activeProgram?.currentDay ?? 0;
   const week = program?.weeks[(currentWeek - 1)] ?? null;
-  const day = week?.days[currentDayIdx] ?? null;
+  const day: WorkoutDay | null = templateDay ?? week?.days[currentDayIdx] ?? null;
 
-  // Free workout mode (no programId)
-  if (!programId) {
+  // Free workout mode (no programId AND no templateId)
+  if (!programId && !templateId) {
     return <FreeWorkoutScreen />;
   }
 
-  // Program complete
-  if (!program || !day) {
+  // Template invalid (id passed but template missing)
+  if (templateId && !template) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.center}>
+          <Ionicons name="alert-circle" size={48} color={Colors.error} />
+          <Text style={styles.doneTitle}>Workout Not Found</Text>
+          <Text style={styles.doneDesc}>This saved workout could not be loaded.</Text>
+          <GradientButton label="Back to Workouts" onPress={() => router.back()} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Program complete (program mode only)
+  if (!templateId && (!program || !day)) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.center}>
@@ -626,6 +661,19 @@ export default function WorkoutPlayerScreen() {
           <Text style={styles.doneTitle}>Program Complete!</Text>
           <Text style={styles.doneDesc}>You've finished all available workouts.</Text>
           <GradientButton label="Back to Workouts" onPress={() => router.back()} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // At this point either day is from template OR from program
+  if (!day) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.center}>
+          <Ionicons name="alert-circle" size={48} color={Colors.error} />
+          <Text style={styles.doneTitle}>No workout to play</Text>
+          <GradientButton label="Back" onPress={() => router.back()} />
         </View>
       </SafeAreaView>
     );
@@ -667,21 +715,29 @@ export default function WorkoutPlayerScreen() {
 
   const handleFinish = () => {
     const ytId = extractYouTubeId(youtubeUrl);
+    // In template mode, don't advance program day and record the template's name
+    const tplName = template?.name;
+    const markUsed = () => { if (template) useWorkoutTemplateStore.getState().markUsed(template.id); };
+    const finish = () => {
+      finishWorkout(undefined, undefined, ytId ? youtubeUrl : undefined, tplName);
+      markUsed();
+      if (!templateId) advanceDay();
+    };
     Alert.alert(
       'Workout Complete!',
       `Great session! ${Math.floor(timer.seconds / 60)} minutes of effort logged.\n\nWhat's next?`,
       [
         {
           text: 'Log Meal',
-          onPress: () => { timer.pause(); finishWorkout(undefined, undefined, ytId ? youtubeUrl : undefined); advanceDay(); router.replace('/nutrition'); },
+          onPress: () => { timer.pause(); finish(); router.replace('/nutrition'); },
         },
         {
           text: 'Check In',
-          onPress: () => { timer.pause(); finishWorkout(undefined, undefined, ytId ? youtubeUrl : undefined); advanceDay(); router.replace('/(tabs)/check-in'); },
+          onPress: () => { timer.pause(); finish(); router.replace('/(tabs)/check-in'); },
         },
         {
           text: 'Ask Aimee',
-          onPress: () => { timer.pause(); finishWorkout(undefined, undefined, ytId ? youtubeUrl : undefined); advanceDay(); router.replace('/(tabs)/peptalk'); },
+          onPress: () => { timer.pause(); finish(); router.replace('/(tabs)/peptalk'); },
         },
       ],
     );

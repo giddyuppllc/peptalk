@@ -452,6 +452,7 @@ const PRO_FEATURES: string[] = [
   'nutrition_planning',
   'grocery_from_plans',
   'early_access',
+  'meal_plan',
 ];
 
 /** What each tier can access */

@@ -42,6 +42,7 @@ import { UpgradeDeltaWatcher } from '../src/components/tutorial/UpgradeDeltaWatc
 import { useOnboardingStore } from '../src/store/useOnboardingStore';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
+import { syncHealthProfileFromServer } from '../src/store/useHealthProfileStore';
 import { configureNotificationHandler } from '../src/services/notificationService';
 import { initIAP, endIAP } from '../src/services/iapService';
 import { Platform } from 'react-native';
@@ -106,6 +107,9 @@ function RootLayout() {
 
     // Pull the authoritative tier from the server once session is ready
     useSubscriptionStore.getState().syncFromServer();
+
+    // Pull health profile from server (overwrites local on login)
+    syncHealthProfileFromServer();
 
     // Mark navigator as mounted on next frame so <Stack> is in the tree
     requestAnimationFrame(() => setNavReady(true));
@@ -485,6 +489,10 @@ function RootLayout() {
           <Stack.Screen
             name="nutrition/create-food"
             options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="nutrition/meal-plan"
+            options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           {/* Dev / Testing */}
           <Stack.Screen

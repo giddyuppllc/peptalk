@@ -141,6 +141,10 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
     name: 'AI Recipes',
     description: 'Get personalized recipes based on your macros and preferences.',
   },
+  meal_plan: {
+    name: 'AI Meal Plan',
+    description: 'Generate a multi-day meal plan tailored to your macros, diet, and allergens.',
+  },
   health_reports: {
     name: 'Health Reports',
     description: 'Comprehensive health reports with actionable insights.',
