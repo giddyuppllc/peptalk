@@ -699,21 +699,38 @@ export async function searchAllFoods(
   const restaurantResults = searchRestaurantFoods(q).map(restaurantToUnified);
 
   // USDA = primary nutrition source (free, unlimited, gold standard)
-  const usdaResults = await searchUSDA(q, limit).catch(() => [] as UnifiedFood[]);
+  // Open Food Facts = free, unlimited, strong on generic/home-cooked foods
+  const [usdaResults, offResults] = await Promise.all([
+    searchUSDA(q, limit).catch(() => [] as UnifiedFood[]),
+    searchOpenFoodFacts(q, limit).catch(() => [] as UnifiedFood[]),
+  ]);
 
   // ── Smart deduplication ──
-  // Generic foods (no brand) are aggressively deduped — only keep 1 "chicken breast"
-  // Branded foods (Tyson, Kirkland, etc.) each get their own entry
+  // Generic foods (no brand) are deduped by full descriptive name — so
+  // "egg scrambled", "egg hard boiled", "egg raw" are all kept separately.
+  // Branded foods (Tyson, Kirkland, etc.) each get their own entry.
   const seen = new Map<string, number>();
   const merged: UnifiedFood[] = [];
 
-  const normalizeKey = (name: string) =>
-    name.toLowerCase()
-      .replace(/\(.*?\)/g, '')           // remove parenthetical like (cooked), (raw)
-      .replace(/,.*$/, '')               // remove everything after comma
-      .replace(/[^a-z0-9\s]/g, '')       // remove special chars
+  // Preserves cooking methods and preparation details so they don't collapse together.
+  const COOKING_MODIFIERS = [
+    'scrambled', 'boiled', 'fried', 'poached', 'baked', 'grilled', 'roasted',
+    'steamed', 'raw', 'cooked', 'hard boiled', 'soft boiled', 'sunny side',
+    'over easy', 'whipped', 'smoked', 'dried', 'fresh', 'frozen', 'canned',
+  ];
+
+  const normalizeKey = (name: string) => {
+    const lower = name.toLowerCase();
+    // Extract cooking modifier if present (preserves it in dedup key)
+    const modifier = COOKING_MODIFIERS.find((m) => lower.includes(m)) ?? '';
+    const base = lower
+      .replace(/\(.*?\)/g, ' ')          // remove parenthetical
+      .replace(/,.*$/, ' ')              // remove everything after comma
+      .replace(/[^a-z0-9\s]/g, ' ')      // normalize punctuation
       .replace(/\s+/g, ' ')
       .trim();
+    return modifier ? `${base}__${modifier}` : base;
+  };
 
   const addUnique = (food: UnifiedFood) => {
     const normalized = normalizeKey(food.name);
@@ -745,11 +762,14 @@ export async function searchAllFoods(
     }
   };
 
-  // Priority: USDA (nutrition) → Cache → Restaurant → Local
-  usdaResults.forEach(addUnique);
-  cachedResults.forEach(addUnique);
-  restaurantResults.forEach(addUnique);
+  // Priority: Local (offline, matches preserved) → Cache → USDA → Open Food Facts → Restaurants
+  // Local results first ensures curated generic foods (scrambled egg, boiled egg) appear
+  // before USDA's branded-heavy results.
   localResults.forEach(addUnique);
+  cachedResults.forEach(addUnique);
+  usdaResults.forEach(addUnique);
+  offResults.forEach(addUnique);
+  restaurantResults.forEach(addUnique);
 
   // ── Fill images for branded foods via Open Food Facts (free, unlimited) ──
   const foodsNeedingImages = merged.filter((f) => !f.imageUrl && f.brand);

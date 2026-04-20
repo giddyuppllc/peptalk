@@ -67,6 +67,8 @@ export interface GeneratedWorkout {
   goal: string;
   generatedAt: string;
   days: GeneratedDay[];
+  /** Slots that couldn't be filled (e.g. no exercises matched filters). Empty = clean generation. */
+  warnings?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -155,9 +157,13 @@ export function generateWorkout(
   } = {}
 ): GeneratedWorkout | null {
   const template = TEMPLATES.find(t => t.id === templateId);
-  if (!template) return null;
+  if (!template) {
+    if (__DEV__) console.warn('[workoutGenerator] Template not found:', templateId);
+    return null;
+  }
 
   const generatedDays: GeneratedDay[] = [];
+  const warnings: string[] = [];
 
   for (const day of template.days) {
     const usedExerciseIds = new Set<string>();
@@ -202,6 +208,9 @@ export function generateWorkout(
           rest: slot.rest,
           timeSeconds: slot.timeSeconds,
         });
+      } else {
+        // Track unfilled slots so the UI can surface the problem
+        warnings.push(`${day.name}: no ${muscle} exercise found (priority ${priority})`);
       }
     }
 
@@ -211,12 +220,17 @@ export function generateWorkout(
     });
   }
 
+  if (__DEV__ && warnings.length > 0) {
+    console.warn('[workoutGenerator] Generation warnings:', warnings);
+  }
+
   return {
     templateId: template.id,
     templateLabel: template.label,
     goal: template.goal,
     generatedAt: new Date().toISOString(),
     days: generatedDays,
+    warnings: warnings.length > 0 ? warnings : undefined,
   };
 }
 

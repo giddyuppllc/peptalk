@@ -454,6 +454,23 @@ export default function WorkoutsScreen() {
       return;
     }
 
+    // Detect empty or partially-empty days and warn the user
+    const emptyDays = generated.days.filter((d) => d.exercises.length === 0);
+    if (emptyDays.length === generated.days.length) {
+      Alert.alert(
+        'No exercises found',
+        `No exercises matched your filters (${filters.location === 'any' ? 'anywhere' : filters.location}, ${exerciseGender}). Try changing location or level.`,
+      );
+      return;
+    }
+    if (generated.warnings && generated.warnings.length > 0) {
+      Alert.alert(
+        'Partial workout generated',
+        `Some slots couldn't be filled:\n\n${generated.warnings.slice(0, 5).join('\n')}${generated.warnings.length > 5 ? `\n\n(+${generated.warnings.length - 5} more)` : ''}\n\nThis usually means your filter combination is too narrow.`,
+        [{ text: 'Use Anyway' }, { text: 'Cancel', style: 'cancel', onPress: () => { return; } }],
+      );
+    }
+
     // Derive a friendly name: "{Goal} · {Days}-Day" + short timestamp so they're distinguishable
     const goalLabel = GOAL_LABELS[template.goal]?.label ?? template.goal;
     const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
