@@ -59,7 +59,8 @@
         {
           "cameraPermission": "PepTalk needs camera access to scan your meals for automatic nutrition tracking."
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "extra": {
       "router": {},
