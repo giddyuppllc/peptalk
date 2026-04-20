@@ -812,7 +812,7 @@ export default function HealthProfileScreen() {
       >
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: t.glassBorder }]}>
-          <TouchableOpacity onPress={prevStep}>
+          <TouchableOpacity onPress={prevStep} accessibilityRole="button" accessibilityLabel="Go back">
             <Ionicons name="arrow-back" size={24} color={t.text} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>

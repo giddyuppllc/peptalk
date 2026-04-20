@@ -63,6 +63,8 @@ export default function AllGuidesScreen() {
             style={styles.backButton}
             onPress={() => router.back()}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
           >
             <Ionicons name="arrow-back" size={20} color="#2D2D2D" />
           </TouchableOpacity>

@@ -135,6 +135,8 @@ export default function ResearchFeedScreen() {
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
         >
           <Ionicons name="arrow-back" size={24} color={Colors.darkText} />
         </TouchableOpacity>

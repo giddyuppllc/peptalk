@@ -978,7 +978,7 @@ export default function DashboardScreen() {
           {/* Header: week label + nav arrows + full calendar link */}
           <View style={styles.weekHeader}>
             <View style={styles.weekNav}>
-              <TouchableOpacity onPress={() => setWeekOffset(weekOffset - 1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <TouchableOpacity onPress={() => setWeekOffset(weekOffset - 1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
                 <Ionicons name="chevron-back" size={18} color={t.textSecondary} />
               </TouchableOpacity>
               <Text style={[styles.weekLabel, { color: t.text }]}>{weekLabel}</Text>

@@ -771,7 +771,7 @@ export default function CheckInScreen() {
       {/* Bottom nav: Back / Next */}
       <View style={[styles.stepBottomBar, { backgroundColor: t.bg, borderTopColor: t.cardBorder }]}>
         {!isFirstStep ? (
-          <TouchableOpacity onPress={goBack} style={[styles.stepBackBtn, { borderColor: `${ACCENT}55` }]} activeOpacity={0.7}>
+          <TouchableOpacity onPress={goBack} style={[styles.stepBackBtn, { borderColor: `${ACCENT}55` }]} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
             <Ionicons name="chevron-back" size={18} color={ACCENT} />
             <Text style={[styles.stepBackText, { color: ACCENT }]}>Back</Text>
           </TouchableOpacity>

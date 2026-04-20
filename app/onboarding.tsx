@@ -391,7 +391,7 @@ export default function OnboardingScreen() {
           />
           {/* Fixed footer */}
           <View style={s.footer}>
-            <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7}>
+            <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
               <Ionicons name="arrow-back" size={20} color="#6B7280" />
               <Text style={s.footerBackText}>Back</Text>
             </TouchableOpacity>
@@ -469,7 +469,7 @@ export default function OnboardingScreen() {
             )}
           />
           <View style={s.footer}>
-            <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7}>
+            <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
               <Ionicons name="arrow-back" size={20} color="#6B7280" />
               <Text style={s.footerBackText}>Back</Text>
             </TouchableOpacity>
@@ -588,7 +588,7 @@ export default function OnboardingScreen() {
             )}
           />
           <View style={s.footer}>
-            <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7}>
+            <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
               <Ionicons name="arrow-back" size={20} color="#6B7280" />
               <Text style={s.footerBackText}>Back</Text>
             </TouchableOpacity>

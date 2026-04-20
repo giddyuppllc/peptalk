@@ -44,7 +44,7 @@ export default function BodyMapScreen() {
 
       {/* ── Header ──────────────────────────────────────── */}
       <View style={styles.header}>
-        <AnimatedPress onPress={() => router.back()} style={styles.backBtn}>
+        <AnimatedPress onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
         </AnimatedPress>
         <View>

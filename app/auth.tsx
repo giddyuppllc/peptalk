@@ -89,7 +89,7 @@ export default function AuthScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Back button */}
-          <TouchableOpacity style={s.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+          <TouchableOpacity style={s.backBtn} onPress={() => router.back()} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
             <Ionicons name="arrow-back" size={22} color="#2D2D2D" />
           </TouchableOpacity>
 

@@ -831,7 +831,7 @@ export default function NutritionScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={24} color={t.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: t.text }]}>Nutrition</Text>
@@ -855,7 +855,7 @@ export default function NutritionScreen() {
         {/* Week strip */}
         <View style={styles.section}>
           <View style={styles.weekHeader}>
-            <TouchableOpacity onPress={() => setWeekOffset(weekOffset - 1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity onPress={() => setWeekOffset(weekOffset - 1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
               <Ionicons name="chevron-back" size={18} color={t.textSecondary} />
             </TouchableOpacity>
             <Text style={[styles.weekLabel, { color: t.text }]}>{selectedDayLabel}</Text>

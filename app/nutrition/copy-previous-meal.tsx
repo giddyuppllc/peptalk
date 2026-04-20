@@ -90,7 +90,7 @@ export default function CopyPreviousMealScreen() {
     <SafeAreaView style={[s.container, { backgroundColor: t.bg }]} edges={['top']}>
       {/* Header */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.iconBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={s.iconBtn} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={24} color={t.text} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>

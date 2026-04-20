@@ -267,14 +267,6 @@ function RootLayout() {
             }}
           />
           <Stack.Screen
-            name="nutritionist/index"
-            options={{
-              headerShown: false,
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
-            }}
-          />
-          <Stack.Screen
             name="health-report/index"
             options={{
               headerShown: false,
@@ -448,11 +440,6 @@ function RootLayout() {
           <Stack.Screen
             name="nutrition/food-scanner"
             options={{ headerShown: false, animation: 'slide_from_right' }}
-          />
-          {/* Consult + other new screens */}
-          <Stack.Screen
-            name="consult"
-            options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
             name="workouts/my-workouts"

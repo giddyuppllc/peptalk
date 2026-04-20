@@ -139,7 +139,7 @@ export default function NewJournalEntryScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="arrow-back" size={24} color={Colors.darkText} />
         </Pressable>
         <Text style={styles.headerTitle}>New Entry</Text>

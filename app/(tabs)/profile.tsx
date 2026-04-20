@@ -739,7 +739,6 @@ function QuickLinksSection() {
     { icon: 'document-text-outline' as const, label: 'Share Health Report', route: '/health-report' as const, color: '#E89672', desc: 'Generate and share with your provider' },
     { icon: 'download-outline' as const, label: 'Export My Data', route: '/health-report' as const, color: Colors.pepTeal, desc: 'Download your wellness journal' },
     { icon: 'book-outline' as const, label: 'My Journal', route: '/journal' as const, color: '#F4E9A7', desc: 'View and manage journal entries' },
-    { icon: 'nutrition-outline' as const, label: 'Nutritionist Consultation', route: '/nutritionist' as const, color: '#10b981', desc: 'Connect with a nutrition expert' },
   ];
 
   return (

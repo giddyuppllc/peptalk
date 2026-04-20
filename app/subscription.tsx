@@ -96,7 +96,6 @@ const TIERS: TierInfo[] = [
       'Premium research feed',
       'Aimee Health Scheduler',
       'Early access to new features',
-      '$100 off Jamie 1-on-1 consults',
     ],
     colors: ['#E9B45C', '#C98E3E'],
     icon: 'star',
@@ -240,7 +239,7 @@ export default function SubscriptionScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Plans</Text>

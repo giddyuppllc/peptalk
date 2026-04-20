@@ -68,7 +68,7 @@ export default function FoodScannerScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
-          <AnimatedPress onPress={() => router.back()} style={styles.backBtn}>
+          <AnimatedPress onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
             <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
           </AnimatedPress>
           <Text style={styles.headerTitle}>Food Scanner</Text>
@@ -94,7 +94,7 @@ export default function FoodScannerScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
-          <AnimatedPress onPress={() => router.back()} style={styles.backBtn}>
+          <AnimatedPress onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
             <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
           </AnimatedPress>
           <Text style={styles.headerTitle}>Food Scanner</Text>

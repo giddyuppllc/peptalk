@@ -185,7 +185,7 @@ function ExerciseDetailModal({
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           {/* Close button */}
-          <TouchableOpacity style={styles.modalClose} onPress={onClose}>
+          <TouchableOpacity style={styles.modalClose} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="close" size={24} color={Colors.darkText} />
           </TouchableOpacity>
 
@@ -305,7 +305,7 @@ export default function ExerciseLibraryScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Exercise Library</Text>
@@ -326,7 +326,7 @@ export default function ExerciseLibraryScreen() {
             returnKeyType="search"
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')}>
+            <TouchableOpacity onPress={() => setQuery('')} accessibilityRole="button" accessibilityLabel="Close">
               <Ionicons
                 name="close-circle"
                 size={18}

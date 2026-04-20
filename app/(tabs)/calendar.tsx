@@ -518,7 +518,7 @@ export default function CalendarScreen() {
         <GlassCard variant="elevated" style={styles.calendarCard}>
           {/* Month Navigation */}
           <View style={styles.calendarNav}>
-            <TouchableOpacity onPress={prevMonth} style={styles.navBtn} activeOpacity={0.7}>
+            <TouchableOpacity onPress={prevMonth} style={styles.navBtn} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Previous month">
               <LinearGradient
                 colors={t.isDark ? ['rgba(0,0,0,0.08)', 'rgba(0,0,0,0.04)'] : ['rgba(0,0,0,0.06)', 'rgba(0,0,0,0.03)']}
                 style={[styles.navBtnGradient, { borderColor: t.glassBorder }]}
@@ -530,7 +530,7 @@ export default function CalendarScreen() {
               <Text style={[styles.calendarMonth, { color: t.text }]}>{MONTHS[viewMonth]}</Text>
               <Text style={[styles.calendarYear, { color: t.textSecondary }]}>{viewYear}</Text>
             </View>
-            <TouchableOpacity onPress={nextMonth} style={styles.navBtn} activeOpacity={0.7}>
+            <TouchableOpacity onPress={nextMonth} style={styles.navBtn} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Next month">
               <LinearGradient
                 colors={t.isDark ? ['rgba(0,0,0,0.08)', 'rgba(0,0,0,0.04)'] : ['rgba(0,0,0,0.06)', 'rgba(0,0,0,0.03)']}
                 style={[styles.navBtnGradient, { borderColor: t.glassBorder }]}

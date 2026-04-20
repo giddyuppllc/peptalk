@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Pressable, ViewStyle, StyleProp } from 'react-native';
+import { Pressable, ViewStyle, StyleProp, AccessibilityRole, AccessibilityState } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -25,6 +25,12 @@ interface AnimatedPressProps {
   /** Enable haptic feedback (default true) */
   haptic?: boolean;
   children: React.ReactNode;
+  /** Accessibility */
+  accessible?: boolean;
+  accessibilityRole?: AccessibilityRole;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
+  accessibilityState?: AccessibilityState;
 }
 
 export function AnimatedPress({
@@ -35,6 +41,11 @@ export function AnimatedPress({
   scaleTo = 0.96,
   haptic = true,
   children,
+  accessible,
+  accessibilityRole,
+  accessibilityLabel,
+  accessibilityHint,
+  accessibilityState,
 }: AnimatedPressProps) {
   const scale = useSharedValue(1);
 
@@ -69,6 +80,11 @@ export function AnimatedPress({
       onPressOut={handlePressOut}
       disabled={disabled}
       style={[animatedStyle, style, disabled && { opacity: 0.4 }]}
+      accessible={accessible}
+      accessibilityRole={accessibilityRole}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={accessibilityState}
     >
       {children}
     </AnimatedPressable>

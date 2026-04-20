@@ -108,7 +108,7 @@ function MealScanScreen() {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: t.bg }]} edges={['top']}>
         <View style={s.header}>
-          <TouchableOpacity onPress={() => router.back()} style={s.iconBtn}>
+          <TouchableOpacity onPress={() => router.back()} style={s.iconBtn} accessibilityRole="button" accessibilityLabel="Go back">
             <Ionicons name="chevron-back" size={24} color={t.text} />
           </TouchableOpacity>
           <Text style={[s.headerTitle, { color: t.text }]}>Meal Scan</Text>
@@ -263,7 +263,7 @@ function MealScanScreen() {
   return (
     <SafeAreaView style={[s.container, { backgroundColor: t.bg }]} edges={['top']}>
       <View style={s.header}>
-        <TouchableOpacity onPress={handleRetake} style={s.iconBtn}>
+        <TouchableOpacity onPress={handleRetake} style={s.iconBtn} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={24} color={t.text} />
         </TouchableOpacity>
         <Text style={[s.headerTitle, { color: t.text }]}>Review Scan</Text>

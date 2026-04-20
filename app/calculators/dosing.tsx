@@ -104,7 +104,7 @@ export default function DosingCalculatorScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={24} color={t.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: t.text }]}>Dosing Calculator</Text>

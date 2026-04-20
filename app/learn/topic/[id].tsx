@@ -158,6 +158,8 @@ export default function TopicDetailScreen() {
           onPress={() => router.back()}
           style={styles.headerBack}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
         >
           <Ionicons name="arrow-back" size={22} color={Colors.darkText} />
         </TouchableOpacity>
@@ -365,6 +367,8 @@ export default function TopicDetailScreen() {
           style={styles.backToLearn}
           activeOpacity={0.7}
           onPress={() => router.push('/learn')}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
         >
           <Ionicons
             name="arrow-back"

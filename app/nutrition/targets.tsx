@@ -56,7 +56,7 @@ export default function MacroTargetsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Macro Targets</Text>

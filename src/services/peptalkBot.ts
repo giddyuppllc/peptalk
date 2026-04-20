@@ -939,7 +939,7 @@ function respondDosingProtocol(peptides: Peptide[], context?: BotContext): strin
   }
 
   parts.push('');
-  parts.push(`🏥 *Always consult a qualified healthcare provider. PepTalk is building telemedicine integration so you can connect directly with providers.*`);
+  parts.push(`🏥 *Always consult a qualified healthcare provider. PepTalk is not a substitute for medical advice.*`);
 
   return parts.join('\n');
 }

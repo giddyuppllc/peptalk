@@ -176,7 +176,7 @@ export function MealBuilder({ visible, onClose, editMeal }: MealBuilderProps) {
           {/* Header */}
           <View style={s.header}>
             <Text style={s.title}>{editMeal ? 'Edit Meal' : 'Create Custom Meal'}</Text>
-            <TouchableOpacity onPress={onClose} style={s.closeBtn}>
+            <TouchableOpacity onPress={onClose} style={s.closeBtn} accessibilityRole="button" accessibilityLabel="Close">
               <Ionicons name="close" size={22} color={Colors.darkText} />
             </TouchableOpacity>
           </View>
@@ -231,7 +231,7 @@ export function MealBuilder({ visible, onClose, editMeal }: MealBuilderProps) {
                       selectTextOnFocus
                     />
                     <Text style={s.gramLabel}>g</Text>
-                    <TouchableOpacity onPress={() => handleRemoveIngredient(idx)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <TouchableOpacity onPress={() => handleRemoveIngredient(idx)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Close">
                       <Ionicons name="close-circle" size={22} color={Colors.error + '88'} />
                     </TouchableOpacity>
                   </View>
@@ -284,7 +284,7 @@ export function MealBuilder({ visible, onClose, editMeal }: MealBuilderProps) {
               {addingFood ? (
                 <View style={s.searchContent}>
                   <View style={s.searchHeader}>
-                    <TouchableOpacity onPress={() => setAddingFood(null)}>
+                    <TouchableOpacity onPress={() => setAddingFood(null)} accessibilityRole="button" accessibilityLabel="Go back">
                       <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
                     </TouchableOpacity>
                     <Text style={s.searchTitle}>Set Amount</Text>
@@ -323,7 +323,7 @@ export function MealBuilder({ visible, onClose, editMeal }: MealBuilderProps) {
                 /* Search step */
                 <View style={s.searchContent}>
                   <View style={s.searchHeader}>
-                    <TouchableOpacity onPress={() => { setShowSearch(false); setSearchQuery(''); }}>
+                    <TouchableOpacity onPress={() => { setShowSearch(false); setSearchQuery(''); }} accessibilityRole="button" accessibilityLabel="Go back">
                       <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
                     </TouchableOpacity>
                     <Text style={s.searchTitle}>Add Ingredient</Text>
@@ -341,7 +341,7 @@ export function MealBuilder({ visible, onClose, editMeal }: MealBuilderProps) {
                       returnKeyType="search"
                     />
                     {searchQuery.length > 0 && (
-                      <TouchableOpacity onPress={() => setSearchQuery('')}>
+                      <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityRole="button" accessibilityLabel="Close">
                         <Ionicons name="close-circle" size={18} color={Colors.darkTextSecondary} />
                       </TouchableOpacity>
                     )}

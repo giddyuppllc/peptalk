@@ -1069,7 +1069,7 @@ export default function FoodSearchScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Food Search</Text>

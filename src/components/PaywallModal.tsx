@@ -157,11 +157,6 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
     name: 'Ad-Free',
     description: 'Remove all banner ads from the app.',
   },
-  consult_booking: {
-    name: 'Book a Consult',
-    description: 'Schedule a 1-on-1 consultation with nutritionist Jamie Esposito ($500/session).',
-  },
-
   // ── New aggressive gating features ───────────────────────────────────────
   voice_log: {
     name: 'Voice Log',
@@ -226,10 +221,6 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
   early_access: {
     name: 'Early Access',
     description: 'Get new features before anyone else and help shape the roadmap.',
-  },
-  consult_discount: {
-    name: 'Consult Discount',
-    description: 'Save $100 on every 1-on-1 session with Jamie.',
   },
 };
 
