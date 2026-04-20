@@ -26,6 +26,7 @@ import { ChatBubble, TypingIndicator } from '../../src/components/ChatBubble';
 import { PepTalkCharacter } from '../../src/components/PepTalkCharacter';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { ChatHistoryDrawer } from '../../src/components/ChatHistoryDrawer';
+import { CoachMark } from '../../src/components/tutorial/CoachMark';
 import { tapMedium } from '../../src/utils/haptics';
 import { useChatStore } from '../../src/store/useChatStore';
 import { useCheckinStore } from '../../src/store/useCheckinStore';
@@ -445,6 +446,15 @@ export default function PepTalkScreen() {
             <Ionicons name="create-outline" size={20} color={t.text} />
           </TouchableOpacity>
         </View>
+
+        {messages.length === 0 && (
+          <CoachMark
+            id="first_aimee_visit"
+            title="Ask anything about peptides, nutrition, or training"
+            body="Aimee is not a doctor — she'll share research and redirect medical questions to your provider."
+            icon="chatbubbles-outline"
+          />
+        )}
 
         {/* ── Messages ───────────────────────────────────────── */}
         <FlatList

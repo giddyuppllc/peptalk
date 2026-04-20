@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
+import { CoachMark } from '../../src/components/tutorial/CoachMark';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { Colors, Gradients, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
@@ -864,6 +865,12 @@ export default function NutritionScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} overScrollMode="never" contentContainerStyle={styles.scroll}>
+        <CoachMark
+          id="first_nutrition_visit"
+          title="Track everything you eat"
+          body="Tap the 🔍 search, 📷 scan, or 🎤 voice buttons to quickly log any meal."
+          icon="nutrition-outline"
+        />
         {/* Week strip */}
         <View style={styles.section}>
           <View style={styles.weekHeader}>

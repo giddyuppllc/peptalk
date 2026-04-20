@@ -27,6 +27,7 @@ import type { WorkoutProgram } from '../../src/types/fitness';
 import { PaywallGate, useFeatureGate } from '../../src/hooks/useFeatureGate';
 import { LockedFeatureCard } from '../../src/components/LockedFeatureCard';
 import { LockBadge } from '../../src/components/LockBadge';
+import { CoachMark } from '../../src/components/tutorial/CoachMark';
 import { PaywallModal } from '../../src/components/PaywallModal';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
 import { useWorkoutTemplateStore } from '../../src/store/useWorkoutTemplateStore';
@@ -514,6 +515,12 @@ export default function WorkoutsScreen() {
         overScrollMode="never"
         contentContainerStyle={s.scroll}
       >
+        <CoachMark
+          id="first_workouts_visit"
+          title="Train your way"
+          body="Pick one of Jamie's programs, generate a custom workout, or build your own from 451 exercises."
+          icon="barbell-outline"
+        />
         {/* Stats */}
         <View style={s.section}>
           <StatsBar />

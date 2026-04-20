@@ -18,6 +18,7 @@ import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { getPeptideById } from '../../src/data/peptides';
 import { PEPTIDES } from '../../src/data/peptides';
 import { GlassCard } from '../../src/components/GlassCard';
+import { CoachMark } from '../../src/components/tutorial/CoachMark';
 import { getCategoryColor } from '../../src/constants/categories';
 import { Colors } from '../../src/constants/theme';
 import { PeptideStack, PeptideCategory, GoalType, Peptide } from '../../src/types';
@@ -913,6 +914,12 @@ export default function MyStacksScreen() {
         showsVerticalScrollIndicator={false}
         overScrollMode="never"
       >
+        <CoachMark
+          id="first_peptides_visit"
+          title="Explore before you stack"
+          body="Tap any peptide to learn mechanisms, dosing, and safety. Build stacks with the 🔬 calculator to check synergies."
+          icon="flask-outline"
+        />
         {/* ── Editorial Header ── */}
         <View style={styles.heroSection}>
           <Text style={[styles.heroTitle, { color: t.text }]}>Peptides</Text>

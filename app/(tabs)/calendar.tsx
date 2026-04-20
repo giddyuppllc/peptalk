@@ -22,6 +22,7 @@ import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useMealStore } from '../../src/store/useMealStore';
 import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
+import { DaySummarySheet } from '../../src/components/DaySummarySheet';
 import { DOSE_LOG_GATE_DISCLAIMER } from '../../src/constants/legal';
 import {
   DoseLogEntry,
@@ -246,6 +247,7 @@ export default function CalendarScreen() {
   const [viewMonth, setViewMonth] = useState(now.getMonth());
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [selectedDate, setSelectedDate] = useState(toDateKey(now));
+  const [daySummaryOpen, setDaySummaryOpen] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
 
   // Auto-open the dose log modal when arriving with ?openLog=1 (from Home FAB)
@@ -565,6 +567,7 @@ export default function CalendarScreen() {
                   key={idx}
                   style={styles.dayCell}
                   onPress={() => setSelectedDate(key)}
+                  onLongPress={() => { setSelectedDate(key); setDaySummaryOpen(true); }}
                   activeOpacity={0.7}
                 >
                   {/* Today pulsing glow */}
@@ -655,17 +658,27 @@ export default function CalendarScreen() {
                   day: 'numeric',
                 })}
               </Text>
-              {hasAnyEvents && (
-                <View style={styles.eventCountBadge}>
-                  <Text style={styles.eventCountText}>
-                    {selectedDayDoses.length +
-                      (selectedDayCheckin ? 1 : 0) +
-                      selectedDayJournal.length +
-                      selectedDayWorkouts.length +
-                      selectedDayMeals.length}
-                  </Text>
-                </View>
-              )}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {hasAnyEvents && (
+                  <View style={styles.eventCountBadge}>
+                    <Text style={styles.eventCountText}>
+                      {selectedDayDoses.length +
+                        (selectedDayCheckin ? 1 : 0) +
+                        selectedDayJournal.length +
+                        selectedDayWorkouts.length +
+                        selectedDayMeals.length}
+                    </Text>
+                  </View>
+                )}
+                <TouchableOpacity
+                  onPress={() => setDaySummaryOpen(true)}
+                  style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: t.primary }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Full day summary"
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: t.primary }}>Full view</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Empty state */}
@@ -1159,6 +1172,13 @@ export default function CalendarScreen() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+
+      {/* Full day summary sheet — opens from Full view button or long-press on a day */}
+      <DaySummarySheet
+        visible={daySummaryOpen}
+        dateKey={selectedDate}
+        onClose={() => setDaySummaryOpen(false)}
+      />
     </SafeAreaView>
   );
 }
