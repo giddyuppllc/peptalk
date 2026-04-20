@@ -21,7 +21,7 @@
         "simulator": false
       },
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle"
       },
       "env": {
         "EXPO_PUBLIC_ENV": "preview"
@@ -43,6 +43,11 @@
         "ascApiKeyPath": "./keys/AppStoreConnect_9GTUH8JTAM.p8",
         "ascApiKeyId": "9GTUH8JTAM",
         "ascApiKeyIssuerId": "be5215e8-dc3d-4200-a841-b0d2d4a7e0e2"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./keys/google-play-service-account.json",
+        "track": "internal",
+        "releaseStatus": "draft"
       }
     },
     "production": {
