@@ -78,7 +78,7 @@ function RootLayout() {
         ]).start(() => setSplashVisible(false));
       }, 900);
     });
-  }, []);
+  }, [fontsLoaded]);
 
   // Initialize notifications and restore session — no-ops gracefully in Expo Go
   useEffect(() => {
