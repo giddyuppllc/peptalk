@@ -236,6 +236,8 @@ export const useAuthStore = create<AuthStore>()(
         const { user } = get();
         if (!user) return;
         set({ user: { ...user, avatarUri: uri } });
+        // Sync to Supabase profiles table (fire and forget)
+        db.from('profiles').update({ avatar_url: uri }).eq('id', user.id).then(() => {}, () => {});
       },
 
       toggleFavoritePeptide: (peptideId: string) => {

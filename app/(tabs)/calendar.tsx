@@ -902,6 +902,8 @@ export default function CalendarScreen() {
                             ])
                           }
                           style={styles.deleteBtn}
+                          accessibilityRole="button"
+                          accessibilityLabel="Delete dose entry"
                         >
                           <Ionicons name="trash-outline" size={16} color={t.textSecondary} />
                         </TouchableOpacity>

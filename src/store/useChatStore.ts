@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { ChatMessage } from '../types';
 import { secureStorage } from '../services/secureStorage';
+import { syncRecord } from '../services/syncService';
 import { useSubscriptionStore } from './useSubscriptionStore';
 
 const MAX_HISTORY = 200; // keep last 200 messages per chat
@@ -170,6 +171,15 @@ export const useChatStore = create<ChatStore>()(
             messages: activeMessages(nextChats, activeChatId),
           };
         });
+
+        // Cloud sync message (fire and forget)
+        syncRecord('chat_messages', {
+          id: message.id,
+          chat_id: get().activeChatId,
+          role: message.role,
+          content: message.content,
+          created_at: message.timestamp ?? new Date().toISOString(),
+        }).catch(() => {});
       },
 
       setTyping: (isTyping) => set({ isTyping }),

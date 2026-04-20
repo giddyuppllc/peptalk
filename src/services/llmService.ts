@@ -382,8 +382,8 @@ export async function generateAIResponse(
     }
   }
 
-  // ── Fallback: Direct API call (dev/testing) ──
-  if (!rawResponse && XAI_API_KEY) {
+  // ── Fallback: Direct API call — DEV ONLY to avoid exposing key in production ──
+  if (!rawResponse && __DEV__ && XAI_API_KEY) {
     try {
       const completion = await getClient().chat.completions.create({
         model: MODEL,

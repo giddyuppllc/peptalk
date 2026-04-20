@@ -5,6 +5,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
+import { syncRecord, deleteRecord } from '../services/syncService';
 import type { WorkoutLog, WorkoutLogSet } from '../types/fitness';
 import type { GeneratedWorkout } from '../services/workoutGenerator';
 
@@ -220,6 +221,20 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
           inProgress: null,
           activeProgram: updatedProgram,
         });
+
+        // Cloud sync (fire and forget)
+        syncRecord('workout_logs', {
+          id: completed.id,
+          started_at: completed.startedAt,
+          completed_at: completed.completedAt,
+          duration_minutes: completed.durationMinutes,
+          program_id: completed.programId ?? null,
+          day_id: completed.dayId ?? null,
+          sets: completed.sets,
+          rating: completed.rating ?? null,
+          notes: completed.notes ?? null,
+          workout_name: completed.workoutName ?? null,
+        }).catch(() => {});
       },
 
       cancelWorkout: () => set({ inProgress: null }),

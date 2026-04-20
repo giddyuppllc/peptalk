@@ -45,12 +45,32 @@ const inferMealType = (): MealType => {
   return 'dinner';
 };
 
-// Stub detection — until OpenAI vision is wired in, this returns a sensible
-// "common plate" guess so the flow is testable end-to-end. Replace with a
-// real call to GPT-4V / Claude vision passing the photo's base64.
-async function detectFoodsFromPhoto(_photoUri: string): Promise<string[]> {
-  await new Promise((r) => setTimeout(r, 800));
-  return ['grilled chicken breast', 'brown rice', 'broccoli'];
+// Detects foods in a photo by calling the `food-scan` Supabase edge function,
+// which passes the image to Grok Vision and returns the identified items.
+// Falls back to a common-plate guess only if the request errors out entirely.
+async function detectFoodsFromPhoto(photoUri: string): Promise<string[]> {
+  try {
+    const { supabase } = await import('../../src/services/supabase');
+    // Convert file URI → base64 for the edge function
+    const FileSystem: any = await import('expo-file-system');
+    const base64 = await FileSystem.readAsStringAsync(photoUri, { encoding: 'base64' });
+
+    const { data, error } = await (supabase as any).functions.invoke('food-scan', {
+      body: { image: base64 },
+    });
+    if (error) throw error;
+
+    // Edge function returns { foods: [{ name, weightGrams, ... }] }
+    if (data?.foods && Array.isArray(data.foods) && data.foods.length > 0) {
+      return data.foods.map((f: any) => f.name).filter(Boolean);
+    }
+    // Empty array: vision ran but saw nothing recognizable
+    return [];
+  } catch (err) {
+    console.warn('[meal-scan] vision detection failed:', err);
+    // Return empty instead of fake foods so user knows detection failed
+    return [];
+  }
 }
 
 export default function MealScanScreenWrapper() {
@@ -120,8 +140,17 @@ function MealScanScreen() {
       setPhotoUri(photo.uri);
       setAnalyzing(true);
 
-      // 1. Detect food names (stub for now — wire to vision API later)
+      // 1. Detect food names via Grok Vision
       const detected = await detectFoodsFromPhoto(photo.uri);
+
+      if (detected.length === 0) {
+        Alert.alert(
+          'Nothing recognized',
+          'We couldn\'t identify any foods in that photo. Try a clearer angle or better lighting.',
+        );
+        setAnalyzing(false);
+        return;
+      }
 
       // 2. For each detected name, search for the best match
       const all: UnifiedFood[] = [];

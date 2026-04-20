@@ -192,6 +192,8 @@ const StackCard: React.FC<StackCardProps> = ({ stack, onLoad, onDelete }) => {
               onPress={handleDelete}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               style={styles.stackDeleteBtn}
+              accessibilityRole="button"
+              accessibilityLabel={`Delete stack ${stack.name}`}
             >
               <Ionicons name="trash-outline" size={16} color={t.textMuted} />
             </TouchableOpacity>
