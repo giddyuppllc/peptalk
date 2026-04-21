@@ -24,7 +24,8 @@ type TableName =
   | 'journal_entries'
   | 'saved_stacks'
   | 'health_profiles'
-  | 'injection_sites';
+  | 'injection_sites'
+  | 'pantry_items';
 
 // ---------------------------------------------------------------------------
 // Generic helpers

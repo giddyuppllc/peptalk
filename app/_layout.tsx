@@ -503,6 +503,19 @@ function RootLayout() {
             name="settings/food-safety"
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
+          {/* Pantry */}
+          <Stack.Screen
+            name="pantry/index"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="pantry/add"
+            options={{
+              headerShown: false,
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
         </Stack>
       </View>
     </SafeAreaProvider>

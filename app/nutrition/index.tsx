@@ -1103,6 +1103,14 @@ export default function NutritionScreen() {
         <Text style={[styles.headerTitle, { color: t.text }]}>Nutrition</Text>
         <View style={{ flexDirection: 'row', gap: 4 }}>
           <TouchableOpacity
+            onPress={() => router.push('/pantry' as any)}
+            style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel="My pantry"
+          >
+            <Ionicons name="basket-outline" size={20} color={accent.deep} />
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => router.push('/nutrition/meal-plan' as any)}
             style={styles.backBtn}
             accessibilityRole="button"

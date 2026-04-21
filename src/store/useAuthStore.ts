@@ -281,6 +281,10 @@ export const useAuthStore = create<AuthStore>()(
           const { useAchievementStore } = require('./useAchievementStore');
           useAchievementStore.getState().clearAll?.();
         } catch {}
+        try {
+          const { usePantryStore } = require('./usePantryStore');
+          usePantryStore.getState().clearAll?.();
+        } catch {}
 
         set({
           user: null,
