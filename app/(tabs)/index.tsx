@@ -257,6 +257,12 @@ export default function DashboardScreen() {
       healthProfile.cycle.typicalPeriodLength,
     );
   }, [healthProfile?.biologicalSex, healthProfile?.cycle]);
+
+  // Show a soft "set up cycle" nudge for female users who haven't opted in yet.
+  const showCycleSetupNudge =
+    healthProfile?.biologicalSex === 'female' &&
+    !healthProfile?.cycle?.trackingEnabled;
+
   const protocols = useDoseLogStore((s) => s.protocols);
   const doses = useDoseLogStore((s) => s.doses);
   const notifPrefs = useNotificationStore((s) => s.preferences);
@@ -1182,7 +1188,7 @@ export default function DashboardScreen() {
         {cycleInfo && (
           <Animated.View entering={FadeInDown.delay(180).duration(400)} style={styles.section}>
             <TouchableOpacity
-              onPress={() => router.push('/health-profile' as any)}
+              onPress={() => router.push('/cycle' as any)}
               activeOpacity={0.85}
               accessibilityRole="button"
               accessibilityLabel={`Cycle tracking — ${PHASE_LABELS[cycleInfo.phase]}, day ${cycleInfo.dayOfCycle} of ${cycleInfo.cycleLength}`}
@@ -1235,6 +1241,42 @@ export default function DashboardScreen() {
                   Next period in {cycleInfo.daysUntilNextPeriod} day
                   {cycleInfo.daysUntilNextPeriod !== 1 ? 's' : ''}
                 </Text>
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        {/* Cycle setup nudge — female users who haven't opted in yet */}
+        {showCycleSetupNudge && (
+          <Animated.View entering={FadeInDown.delay(180).duration(400)} style={styles.section}>
+            <TouchableOpacity
+              onPress={() => router.push('/cycle/setup' as any)}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Set up cycle tracking"
+            >
+              <View
+                style={[
+                  styles.cycleCard,
+                  { backgroundColor: t.surface, borderColor: t.cardBorder },
+                ]}
+              >
+                <View style={styles.cycleHeader}>
+                  <View style={styles.cycleHeaderLeft}>
+                    <Ionicons name="flower-outline" size={18} color={t.primary} />
+                    <Text style={[styles.cycleKicker, { color: t.textSecondary }]}>
+                      CYCLE TRACKING
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={t.textSecondary} />
+                </View>
+                <View style={styles.cycleBody}>
+                  <Text style={[styles.cyclePhase, { color: t.text }]}>Set it up</Text>
+                  <Text style={[styles.cycleBlurb, { color: t.textSecondary }]}>
+                    A few questions about your situation — predictions and insights stay
+                    accurate for your body, not generic.
+                  </Text>
+                </View>
               </View>
             </TouchableOpacity>
           </Animated.View>

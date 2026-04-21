@@ -526,6 +526,10 @@ function RootLayout() {
             name="settings/privacy"
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
+          <Stack.Screen
+            name="settings/integrations"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
           {/* Pantry */}
           <Stack.Screen
             name="pantry/index"
@@ -541,6 +545,23 @@ function RootLayout() {
           />
           <Stack.Screen
             name="nutrition/pantry-suggestions"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          {/* Cycle */}
+          <Stack.Screen
+            name="cycle/index"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="cycle/setup"
+            options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
+          />
+          <Stack.Screen
+            name="cycle/log"
+            options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
+          />
+          <Stack.Screen
+            name="cycle/history"
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
         </Stack>

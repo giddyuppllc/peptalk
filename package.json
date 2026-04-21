@@ -12,10 +12,14 @@
     "doctor": {
       "reactNativeDirectoryCheck": {
         "exclude": [
-          "react-native-iap"
+          "react-native-iap",
+          "react-native-health"
         ]
       }
     }
+  },
+  "overrides": {
+    "@expo/fingerprint": "0.15.4"
   },
   "dependencies": {
     "@expo-google-fonts/dm-sans": "^0.4.2",
@@ -53,6 +57,7 @@
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
+    "react-native-health": "~1.19.0",
     "react-native-iap": "~15.2.0",
     "react-native-nitro-modules": "~0.35.4",
     "react-native-reanimated": "~4.1.1",

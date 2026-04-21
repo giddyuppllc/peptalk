@@ -2,7 +2,7 @@
   "expo": {
     "name": "PepTalk",
     "slug": "peptalk",
-    "version": "1.8.0",
+    "version": "1.9.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -17,7 +17,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.peptalkapp.peptalk",
       "infoPlist": {
-        "NSHealthShareUsageDescription": "PepTalk uses HealthKit to auto-fill your daily check-ins with steps, weight, heart rate, and sleep data.",
+        "NSHealthShareUsageDescription": "PepTalk reads Apple Health data — steps, weight, heart rate, sleep, cycle tracking, and other biometrics — so you don't have to log anything twice.",
+        "NSHealthUpdateUsageDescription": "PepTalk writes check-ins, weight, and symptom logs back to Apple Health so everything stays in sync.",
         "NSSpeechRecognitionUsageDescription": "PepTalk uses speech recognition to let you log meals and notes by voice.",
         "NSMicrophoneUsageDescription": "PepTalk needs microphone access for voice logging and meal dictation.",
         "NSCameraUsageDescription": "PepTalk needs camera access to scan barcodes and meals for automatic nutrition tracking.",
@@ -61,6 +62,14 @@
         }
       ],
       "react-native-iap",
+      [
+        "react-native-health",
+        {
+          "isClinicalDataEnabled": false,
+          "healthSharePermission": "PepTalk reads Apple Health data — steps, weight, heart rate, sleep, cycle tracking, and other biometrics — so you don't have to log anything twice.",
+          "healthUpdatePermission": "PepTalk writes check-ins, weight, and symptom logs back to Apple Health so everything stays in sync."
+        }
+      ],
       [
         "expo-build-properties",
         {
