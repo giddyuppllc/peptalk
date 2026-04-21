@@ -65,19 +65,38 @@ function RootLayout() {
 
   useEffect(() => {
     if (!fontsLoaded) return;
-    // Logo entrance
-    Animated.parallel([
-      Animated.spring(logoScale, { toValue: 1, tension: 60, friction: 7, useNativeDriver: true }),
-      Animated.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-    ]).start(() => {
-      // Hold briefly then fade out
-      setTimeout(() => {
-        Animated.parallel([
-          Animated.timing(splashOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
-          Animated.timing(splashScale, { toValue: 1.08, duration: 500, useNativeDriver: true }),
-        ]).start(() => setSplashVisible(false));
-      }, 900);
-    });
+    let cancelled = false;
+    // Respect the OS reduced-motion setting — if the user asked for less
+    // motion, skip the spring + timing chain and just drop the splash.
+    (async () => {
+      const { AccessibilityInfo } = require('react-native');
+      const reduceMotion = await AccessibilityInfo.isReduceMotionEnabled?.();
+      if (cancelled) return;
+      if (reduceMotion) {
+        logoScale.setValue(1);
+        logoOpacity.setValue(1);
+        setTimeout(() => {
+          if (!cancelled) setSplashVisible(false);
+        }, 600);
+        return;
+      }
+      // Logo entrance
+      Animated.parallel([
+        Animated.spring(logoScale, { toValue: 1, tension: 60, friction: 7, useNativeDriver: true }),
+        Animated.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+      ]).start(() => {
+        // Hold briefly then fade out
+        setTimeout(() => {
+          Animated.parallel([
+            Animated.timing(splashOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+            Animated.timing(splashScale, { toValue: 1.08, duration: 500, useNativeDriver: true }),
+          ]).start(() => setSplashVisible(false));
+        }, 900);
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [fontsLoaded]);
 
   // Initialize notifications and restore session — no-ops gracefully in Expo Go
@@ -501,6 +520,10 @@ function RootLayout() {
           {/* Settings */}
           <Stack.Screen
             name="settings/food-safety"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="settings/privacy"
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
           {/* Pantry */}

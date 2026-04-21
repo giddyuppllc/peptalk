@@ -11,6 +11,10 @@ interface GradientButtonProps {
   /** Custom gradient colors for segment theming */
   colors?: [string, string];
   style?: ViewStyle;
+  /** Override the VoiceOver label — defaults to `label`. */
+  accessibilityLabel?: string;
+  /** Longer explanation read out after the label. */
+  accessibilityHint?: string;
 }
 
 export function GradientButton({
@@ -19,6 +23,8 @@ export function GradientButton({
   disabled = false,
   colors,
   style,
+  accessibilityLabel,
+  accessibilityHint,
 }: GradientButtonProps) {
   const accent = useSectionAccent();
   const c = colors ?? ([accent.deep, accent.deep] as [string, string]);
@@ -28,6 +34,10 @@ export function GradientButton({
       disabled={disabled}
       scaleTo={0.97}
       style={[disabled && styles.disabled, style]}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled }}
     >
       <LinearGradient
         colors={c}

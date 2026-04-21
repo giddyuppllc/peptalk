@@ -307,7 +307,13 @@ export function PaywallModal({ visible, feature, onDismiss }: PaywallModalProps)
           </View>
 
           {/* Upgrade button */}
-          <TouchableOpacity onPress={handleUpgrade} activeOpacity={0.85}>
+          <TouchableOpacity
+            onPress={handleUpgrade}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={`Upgrade to ${TIER_LABELS[requiredTier]}`}
+            accessibilityHint="Opens the subscription screen"
+          >
             <LinearGradient
               colors={Gradients.primary}
               start={{ x: 0, y: 0 }}
@@ -321,7 +327,12 @@ export function PaywallModal({ visible, feature, onDismiss }: PaywallModalProps)
           </TouchableOpacity>
 
           {/* Dismiss */}
-          <TouchableOpacity onPress={onDismiss} style={styles.dismissBtn}>
+          <TouchableOpacity
+            onPress={onDismiss}
+            style={styles.dismissBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss paywall"
+          >
             <Text style={styles.dismissText}>Maybe Later</Text>
           </TouchableOpacity>
         </View>

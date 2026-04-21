@@ -21,6 +21,8 @@ import { useTheme } from '../hooks/useTheme';
 import { useSectionAccent } from '../hooks/useSectionAccent';
 import { getPeptideById } from '../data/peptides';
 import { Colors, FontSizes } from '../constants/theme';
+import { useHealthProfileStore } from '../store/useHealthProfileStore';
+import { computeCyclePhase, PHASE_LABELS } from '../services/cycleService';
 
 interface DaySummarySheetProps {
   visible: boolean;
@@ -37,6 +39,23 @@ export function DaySummarySheet({ visible, dateKey, onClose }: DaySummarySheetPr
   const t = useTheme();
   const accent = useSectionAccent();
   const summary = useDaySummary(dateKey);
+  const healthProfile = useHealthProfileStore((s) => s.profile);
+
+  // Cycle phase — female users who opted in. Computed for THIS dateKey,
+  // not just today, so historical days show the correct phase.
+  const cycleForDate = React.useMemo(() => {
+    if (healthProfile?.biologicalSex !== 'female') return null;
+    if (!healthProfile?.cycle?.trackingEnabled) return null;
+    if (!healthProfile.cycle.lastPeriodStartDate) return null;
+    const dateObj = new Date(dateKey + 'T12:00:00');
+    if (isNaN(dateObj.getTime())) return null;
+    return computeCyclePhase(
+      healthProfile.cycle.lastPeriodStartDate,
+      healthProfile.cycle.typicalCycleLength,
+      healthProfile.cycle.typicalPeriodLength,
+      dateObj,
+    );
+  }, [dateKey, healthProfile?.biologicalSex, healthProfile?.cycle]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -64,6 +83,24 @@ export function DaySummarySheet({ visible, dateKey, onClose }: DaySummarySheetPr
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
             >
+              {/* ── Cycle phase (female users who opted in) ── */}
+              {cycleForDate && (
+                <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="flower-outline" size={16} color={t.primary} />
+                    <Text style={[styles.sectionLabel, { color: t.text }]}>Cycle</Text>
+                  </View>
+                  <View style={[styles.itemRow, { borderBottomColor: t.cardBorder }]}>
+                    <Text style={[styles.itemTitle, { color: t.text }]}>
+                      {PHASE_LABELS[cycleForDate.phase]} phase
+                    </Text>
+                    <Text style={[styles.itemSub, { color: t.textSecondary }]}>
+                      Day {cycleForDate.dayOfCycle} of {cycleForDate.cycleLength}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
               {/* ── Nutrition ── */}
               {(summary.hasMeals || summary.waterOz > 0) && (
                 <View style={styles.section}>

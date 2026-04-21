@@ -41,6 +41,12 @@ import {
 import { useOnboardingStore } from '../../src/store/useOnboardingStore';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import {
+  computeCyclePhase,
+  PHASE_LABELS,
+  PHASE_BLURBS,
+  type CyclePhaseInfo,
+} from '../../src/services/cycleService';
 import { useCheckinStore } from '../../src/store/useCheckinStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useNotificationStore } from '../../src/store/useNotificationStore';
@@ -241,6 +247,16 @@ export default function DashboardScreen() {
   const userEmail = user?.email;
   const healthProfile = useHealthProfileStore((s) => s.profile);
   const entries = useCheckinStore((s) => s.entries);
+  // Cycle phase — only for female users who've opted in + set a last-period date
+  const cycleInfo = useMemo<CyclePhaseInfo | null>(() => {
+    if (healthProfile?.biologicalSex !== 'female') return null;
+    if (!healthProfile?.cycle?.trackingEnabled) return null;
+    return computeCyclePhase(
+      healthProfile.cycle.lastPeriodStartDate,
+      healthProfile.cycle.typicalCycleLength,
+      healthProfile.cycle.typicalPeriodLength,
+    );
+  }, [healthProfile?.biologicalSex, healthProfile?.cycle]);
   const protocols = useDoseLogStore((s) => s.protocols);
   const doses = useDoseLogStore((s) => s.doses);
   const notifPrefs = useNotificationStore((s) => s.preferences);
@@ -1162,6 +1178,68 @@ export default function DashboardScreen() {
           </View>
         </Animated.View>
 
+        {/* Cycle phase card — female users who track */}
+        {cycleInfo && (
+          <Animated.View entering={FadeInDown.delay(180).duration(400)} style={styles.section}>
+            <TouchableOpacity
+              onPress={() => router.push('/health-profile' as any)}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={`Cycle tracking — ${PHASE_LABELS[cycleInfo.phase]}, day ${cycleInfo.dayOfCycle} of ${cycleInfo.cycleLength}`}
+            >
+              <View style={[styles.cycleCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
+                <View style={styles.cycleHeader}>
+                  <View style={styles.cycleHeaderLeft}>
+                    <Ionicons name="flower-outline" size={18} color={t.primary} />
+                    <Text style={[styles.cycleKicker, { color: t.textSecondary }]}>CYCLE</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={t.textSecondary} />
+                </View>
+
+                <View style={styles.cycleBody}>
+                  <Text style={[styles.cyclePhase, { color: t.text }]}>
+                    {PHASE_LABELS[cycleInfo.phase]} phase
+                  </Text>
+                  <Text style={[styles.cycleDay, { color: t.textSecondary }]}>
+                    Day {cycleInfo.dayOfCycle} of {cycleInfo.cycleLength}
+                  </Text>
+                </View>
+
+                <View style={styles.cycleTimeline}>
+                  {Array.from({ length: cycleInfo.cycleLength }, (_, i) => {
+                    const day = i + 1;
+                    const isToday = day === cycleInfo.dayOfCycle;
+                    const isPeriod = day <= cycleInfo.periodLength;
+                    const isOv = day === cycleInfo.ovulationDay;
+                    let color = 'rgba(0,0,0,0.08)';
+                    if (isPeriod) color = '#E89672';
+                    else if (isOv) color = t.primary;
+                    return (
+                      <View
+                        key={day}
+                        style={[
+                          styles.cycleTimelineDot,
+                          { backgroundColor: color },
+                          isToday && { width: 6, height: 14, borderRadius: 3 },
+                        ]}
+                      />
+                    );
+                  })}
+                </View>
+
+                <Text style={[styles.cycleBlurb, { color: t.textSecondary }]}>
+                  {PHASE_BLURBS[cycleInfo.phase]}
+                </Text>
+
+                <Text style={[styles.cycleNext, { color: t.textSecondary }]}>
+                  Next period in {cycleInfo.daysUntilNextPeriod} day
+                  {cycleInfo.daysUntilNextPeriod !== 1 ? 's' : ''}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
         {/* ═══════════════════════════════════════════════════════════════
             MAX YOUR STACK — Premium CTA (non-pro users)
         ═══════════════════════════════════════════════════════════════ */}
@@ -1940,4 +2018,61 @@ const styles = StyleSheet.create({
   wsRecentRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1 },
   wsRecentName: { fontSize: 14, fontFamily: 'DMSans-SemiBold' },
   wsRecentMeta: { fontSize: 11, fontFamily: 'DMSans-Regular', marginTop: 2 },
+
+  // Cycle card
+  cycleCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    gap: 10,
+  },
+  cycleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cycleHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  cycleKicker: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    letterSpacing: 0.8,
+  },
+  cycleBody: {
+    gap: 2,
+  },
+  cyclePhase: {
+    fontSize: 20,
+    fontFamily: 'Playfair-Black',
+    letterSpacing: -0.5,
+  },
+  cycleDay: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Regular',
+  },
+  cycleTimeline: {
+    flexDirection: 'row',
+    gap: 3,
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  cycleTimelineDot: {
+    width: 5,
+    height: 10,
+    borderRadius: 2.5,
+  },
+  cycleBlurb: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Regular',
+    lineHeight: 17,
+  },
+  cycleNext: {
+    fontSize: 11,
+    fontFamily: 'DMSans-SemiBold',
+    letterSpacing: 0.3,
+    opacity: 0.8,
+  },
 });

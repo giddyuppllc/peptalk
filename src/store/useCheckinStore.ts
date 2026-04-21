@@ -115,6 +115,7 @@ export const useCheckinStore = create<CheckinStore>()(
           notes: nextEntry.notes ?? null,
           emotion_tags: nextEntry.emotionTags ?? [],
           side_effect_tags: nextEntry.sideEffectTags ?? [],
+          source: 'user',
         });
 
         return nextEntry;

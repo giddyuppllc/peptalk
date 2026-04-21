@@ -333,6 +333,7 @@ export const useMealStore = create<MealState & MealActions>()(
         syncRecord('meal_entries', {
           id: meal.id, date: meal.date, meal_type: meal.mealType,
           foods: meal.foods, quick_log: meal.quickLog ?? null, notes: meal.notes ?? null,
+          source: 'user',
         });
       },
 

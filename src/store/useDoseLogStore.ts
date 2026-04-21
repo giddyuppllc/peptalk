@@ -252,6 +252,7 @@ export const useDoseLogStore = create<DoseLogStore>()(
           date: entry.date,
           time: entry.time,
           notes: entry.notes ?? null,
+          source: 'user',
         });
 
         // Refresh alerts after logging
