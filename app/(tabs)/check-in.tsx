@@ -418,11 +418,12 @@ export default function CheckInScreen() {
     const milestones = [3, 7, 14, 21, 30, 60, 90, 100, 180, 365];
     const hitMilestone = milestones.includes(newStreak);
 
-    // Build contextual next-action buttons
+    // Build contextual next-action buttons.
+    // Defensive: stores may not be hydrated yet on very first boot.
     const todayKey = toDateKey(new Date());
-    const todayDoses = useDoseLogStore.getState().doses.filter((d: { date: string }) => d.date === todayKey);
-    const todayWorkouts = useWorkoutStore.getState().logs.filter(w => w.date === todayKey);
-    const todayMeals = useMealStore.getState().meals.filter(m => m.date === todayKey);
+    const todayDoses = (useDoseLogStore.getState().doses ?? []).filter((d: { date: string }) => d.date === todayKey);
+    const todayWorkouts = (useWorkoutStore.getState().logs ?? []).filter((w) => w.date === todayKey);
+    const todayMeals = (useMealStore.getState().meals ?? []).filter((m) => m.date === todayKey);
 
     const actions: { text: string; onPress: () => void }[] = [];
 

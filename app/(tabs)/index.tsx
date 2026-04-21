@@ -345,10 +345,11 @@ export default function DashboardScreen() {
     () => getWater(todayDate),
     [getWater, todayDate],
   );
-  const waterPercent = Math.min(
-    100,
-    Math.round((todayWater / (mealTargets.waterOz ?? 100)) * 100),
-  );
+  const waterPercent = (() => {
+    const target = mealTargets.waterOz ?? 100;
+    if (!target || target <= 0) return 0;
+    return Math.min(100, Math.round((todayWater / target) * 100));
+  })();
 
   // ── Swipeable progress dashboard data ─────────────────────────────────────
 

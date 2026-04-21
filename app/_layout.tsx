@@ -69,8 +69,16 @@ function RootLayout() {
     // Respect the OS reduced-motion setting — if the user asked for less
     // motion, skip the spring + timing chain and just drop the splash.
     (async () => {
-      const { AccessibilityInfo } = require('react-native');
-      const reduceMotion = await AccessibilityInfo.isReduceMotionEnabled?.();
+      // AccessibilityInfo.isReduceMotionEnabled may not exist on older
+      // OS versions / custom ROMs. Guard with optional chaining AND a
+      // try/catch so a throw here never blocks the splash dismissal.
+      let reduceMotion = false;
+      try {
+        const { AccessibilityInfo } = require('react-native');
+        reduceMotion = (await AccessibilityInfo?.isReduceMotionEnabled?.()) ?? false;
+      } catch {
+        reduceMotion = false;
+      }
       if (cancelled) return;
       if (reduceMotion) {
         logoScale.setValue(1);
@@ -101,26 +109,60 @@ function RootLayout() {
 
   // Initialize notifications and restore session — no-ops gracefully in Expo Go
   useEffect(() => {
-    configureNotificationHandler();
-    useAuthStore.getState().restoreSession();
+    // Every call here is fire-and-forget. Wrapping each in try/catch so
+    // a throw in one (offline Supabase, bad session token, native
+    // module flake) can't tear down the boot sequence and leave the
+    // app in a half-initialized state.
+    try {
+      configureNotificationHandler();
+    } catch (err) {
+      if (__DEV__) console.warn('[boot] configureNotificationHandler threw:', err);
+    }
+    useAuthStore
+      .getState()
+      .restoreSession()
+      ?.catch?.((err: unknown) => {
+        if (__DEV__) console.warn('[boot] restoreSession failed:', err);
+      });
 
     // Hook IAP into the app so purchase events flow into subscription validation
-    initIAP(async ({ productId, transactionReceipt }) => {
-      const platform: 'ios' | 'android' = Platform.OS === 'ios' ? 'ios' : 'android';
-      await useSubscriptionStore.getState().validatePurchase(platform, productId, transactionReceipt);
-    });
+    try {
+      initIAP(async ({ productId, transactionReceipt }) => {
+        const platform: 'ios' | 'android' = Platform.OS === 'ios' ? 'ios' : 'android';
+        try {
+          await useSubscriptionStore
+            .getState()
+            .validatePurchase(platform, productId, transactionReceipt);
+        } catch (err) {
+          if (__DEV__) console.warn('[boot] validatePurchase failed:', err);
+        }
+      });
+    } catch (err) {
+      if (__DEV__) console.warn('[boot] initIAP threw:', err);
+    }
 
     // Pull the authoritative tier from the server once session is ready
-    useSubscriptionStore.getState().syncFromServer();
+    useSubscriptionStore
+      .getState()
+      .syncFromServer()
+      ?.catch?.((err: unknown) => {
+        if (__DEV__) console.warn('[boot] subscription syncFromServer failed:', err);
+      });
 
     // Pull health profile from server (overwrites local on login)
-    syncHealthProfileFromServer();
+    try {
+      syncHealthProfileFromServer()?.catch?.((err: unknown) => {
+        if (__DEV__) console.warn('[boot] syncHealthProfileFromServer failed:', err);
+      });
+    } catch (err) {
+      if (__DEV__) console.warn('[boot] syncHealthProfileFromServer threw:', err);
+    }
 
     // Mark navigator as mounted on next frame so <Stack> is in the tree
     requestAnimationFrame(() => setNavReady(true));
 
     return () => {
-      endIAP();
+      try { endIAP(); } catch {}
     };
   }, []);
 

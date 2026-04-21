@@ -53,11 +53,15 @@ export default function CycleSetupScreen() {
   const [lastPeriod, setLastPeriod] = useState('');
   const [cycleLength, setCycleLength] = useState('28');
   const [periodLength, setPeriodLength] = useState('5');
+  // Double-tap guard — setting tracking + navigating on two rapid taps
+  // could stack router.replace calls and flash the previous screen.
+  const [finishing, setFinishing] = useState(false);
 
   const mode = useMemo(() => (method ? predictionModeFor(method) : null), [method]);
   const needsPeriodStep = mode === 'cyclical' || mode === 'scheduled_cycle';
 
   const handleMethodNext = () => {
+    if (finishing) return;
     if (!method) {
       Alert.alert('Pick one', 'Select what best describes your situation.');
       return;
@@ -84,6 +88,8 @@ export default function CycleSetupScreen() {
   };
 
   const handleFinish = () => {
+    if (finishing) return;
+    setFinishing(true);
     const cLen = Math.max(21, Math.min(45, parseInt(cycleLength, 10) || 28));
     const pLen = Math.max(2, Math.min(10, parseInt(periodLength, 10) || 5));
     setCycleTracking({
@@ -96,6 +102,8 @@ export default function CycleSetupScreen() {
   };
 
   const handleContinuousFinish = () => {
+    if (finishing) return;
+    setFinishing(true);
     // Continuous / irregular / pregnancy / returning — no period date, no lengths.
     setCycleTracking({ trackingEnabled: true });
     router.replace('/cycle' as any);

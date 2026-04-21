@@ -121,24 +121,45 @@ function log(...args: unknown[]) {
  * Runtime check against HealthKit — catches the case where a user has
  * revoked permissions in iOS Settings while the app still thinks it's
  * connected. Fires a small read and checks for auth-denied errors.
+ *
+ * 5-second hard timeout so a hung HealthKit callback (rare but observed
+ * on flaky connections and rapid sequential calls) can't freeze the UI.
  */
 async function verifyLiveAuth(): Promise<boolean> {
   if (!AppleHealthKit) return false;
   return new Promise((resolve) => {
+    let settled = false;
+    const finish = (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      resolve(ok);
+    };
+
+    const timer = setTimeout(() => {
+      log('live-auth check timed out after 5s');
+      finish(false);
+    }, 5000);
+
     // Pull the last 24h of steps — cheap read, fails fast if unauthorized.
     const options = {
       startDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
       endDate: new Date().toISOString(),
     };
-    AppleHealthKit.getDailyStepCountSamples(options, (err: Error | null) => {
-      if (err) {
-        // Error commonly indicates revoked authorization.
-        log('live-auth check failed:', err.message);
-        authorized = false;
-        return resolve(false);
-      }
-      resolve(true);
-    });
+    try {
+      AppleHealthKit.getDailyStepCountSamples(options, (err: Error | null) => {
+        clearTimeout(timer);
+        if (err) {
+          log('live-auth check failed:', err.message);
+          authorized = false;
+          return finish(false);
+        }
+        finish(true);
+      });
+    } catch (err) {
+      clearTimeout(timer);
+      log('live-auth check threw:', err);
+      finish(false);
+    }
   });
 }
 
