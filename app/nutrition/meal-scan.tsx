@@ -56,13 +56,13 @@ async function detectFoodsFromPhoto(photoUri: string): Promise<string[]> {
     const base64 = await FileSystem.readAsStringAsync(photoUri, { encoding: 'base64' });
 
     const { data, error } = await (supabase as any).functions.invoke('food-scan', {
-      body: { image: base64 },
+      body: { imageBase64: base64 },
     });
     if (error) throw error;
 
-    // Edge function returns { foods: [{ name, weightGrams, ... }] }
-    if (data?.foods && Array.isArray(data.foods) && data.foods.length > 0) {
-      return data.foods.map((f: any) => f.name).filter(Boolean);
+    // Edge function returns { items: [{ name, estimatedGrams, ... }], totals, description }
+    if (data?.items && Array.isArray(data.items) && data.items.length > 0) {
+      return data.items.map((f: any) => f.name).filter(Boolean);
     }
     // Empty array: vision ran but saw nothing recognizable
     return [];

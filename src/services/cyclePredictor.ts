@@ -147,8 +147,12 @@ export function computeCyclePrediction(input: {
   const lastPeriod = sorted[0];
 
   const stats = computeCycleStats(input.periods);
-  const cycleLength = stats?.avgCycleLength ?? input.fallbackCycleLength ?? 28;
-  const periodLength = stats?.avgPeriodLength ?? input.fallbackPeriodLength ?? 5;
+  // Clamp fallbacks — defend against 0 / negative / absurd user input propagating
+  // through addDays() and division-by-zero in phase math.
+  const clampCycle = (n: number | undefined) =>
+    typeof n === 'number' && n >= 21 && n <= 60 ? Math.round(n) : undefined;
+  const cycleLength =
+    stats?.avgCycleLength ?? clampCycle(input.fallbackCycleLength) ?? 28;
 
   if (!lastPeriod) {
     // No period logged yet — predict based only on fallback inputs

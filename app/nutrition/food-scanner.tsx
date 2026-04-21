@@ -118,12 +118,23 @@ export default function FoodScannerScreen() {
   const takePhoto = async () => {
     if (!cameraRef.current) return;
     try {
+      // quality 0.4 keeps base64 payload under ~1-2MB on 12MP cameras —
+      // plenty for vision recognition and well under the 6MB edge-function limit.
       const pic = await cameraRef.current.takePictureAsync({
         base64: true,
-        quality: 0.7,
+        quality: 0.4,
         exif: false,
       });
       if (pic?.base64) {
+        // Rough size guard: base64 is ~4/3 the binary size; > ~5MB base64 will
+        // start hitting edge-function / fetch limits on slow connections.
+        if (pic.base64.length > 5_000_000) {
+          Alert.alert(
+            'Photo too large',
+            'Please retake the photo — your camera produced an image too large to analyze.',
+          );
+          return;
+        }
         setPhoto(`data:image/jpeg;base64,${pic.base64}`);
         analyzeFoodPhoto(pic.base64);
       }

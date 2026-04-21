@@ -87,10 +87,11 @@ export const useCycleStore = create<CycleState & CycleActions>()(
       // ── Periods ─────────────────────────────────────────────────────────
       startPeriod: (input) => {
         const now = new Date().toISOString();
+        const startDate = input.startDate ?? todayKey();
         const entry: PeriodEntry = {
           id: uid('period'),
-          startDate: input.startDate ?? todayKey(),
-          dailyFlow: input.flow ? { [input.startDate ?? todayKey()]: input.flow } : undefined,
+          startDate,
+          dailyFlow: input.flow ? { [startDate]: input.flow } : undefined,
           notes: input.notes,
           source: input.source ?? 'manual',
           createdAt: now,
