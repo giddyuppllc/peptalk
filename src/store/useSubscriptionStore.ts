@@ -11,6 +11,16 @@ import { secureStorage } from '../services/secureStorage';
 import type { SubscriptionTier } from '../types/fitness';
 import { TIER_FEATURES } from '../types/fitness';
 
+/**
+ * Hardcoded beta testers auto-granted Pro tier on sign-in.
+ * Add emails here (lowercase) so they get full access without going
+ * through the App Store purchase flow. Survives reinstalls.
+ */
+const BETA_TESTER_EMAILS = new Set<string>([
+  'sales@sbbpeptides.com',  // Jamie Esposito
+  'edward@giddyupp.com',    // Edward
+]);
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -105,6 +115,22 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
           const { supabase } = await import('../services/supabase');
           const { data: { user } } = await (supabase as any).auth.getUser();
           if (!user) return;
+
+          // Beta-tester bypass: if this email is on the allowlist, grant Pro
+          // locally without hitting the subscriptions table. This keeps the
+          // App Store flow honest for real users while letting testers use
+          // every feature.
+          const email = (user.email ?? '').toLowerCase();
+          if (email && BETA_TESTER_EMAILS.has(email)) {
+            set({
+              tier: 'pro',
+              productId: 'beta_tester_grant',
+              expiresAt: null,
+              isActive: true,
+            });
+            return;
+          }
+
           // Grab the most recent active subscription row for this user
           const { data, error } = await (supabase as any)
             .from('subscriptions')
