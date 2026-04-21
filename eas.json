@@ -27,6 +27,16 @@
         "EXPO_PUBLIC_ENV": "preview"
       }
     },
+    "preview-apk": {
+      "distribution": "internal",
+      "node": "22.21.0",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENV": "preview"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "env": {
