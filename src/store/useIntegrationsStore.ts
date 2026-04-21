@@ -14,6 +14,7 @@ import type {
   BiomarkerScope,
 } from '../types/cycle';
 import { getAdapter } from '../services/integrations/manager';
+import { routeSyncResult, type RouteStats } from '../services/integrations/router';
 
 interface IntegrationsState {
   integrations: ConnectedIntegration[];
@@ -22,11 +23,17 @@ interface IntegrationsState {
 }
 
 interface IntegrationsActions {
-  /** Connect a source via its adapter and persist the resulting record. */
+  /** Connect a source via its adapter, persist, and auto-sync. */
   connectSource: (source: BiomarkerSource, scopes: BiomarkerScope[]) => Promise<boolean>;
   /** Disconnect + revoke. Record stays but `connected` flips to false. */
   disconnectSource: (source: BiomarkerSource) => Promise<void>;
-  /** Trigger a sync for a connected source. Results land in the downstream stores. */
+  /**
+   * Sync and route — pulls from the adapter, routes each category into
+   * its downstream store (cycle / health profile / etc.), returns stats.
+   * This is the main entry point for triggered + scheduled syncs.
+   */
+  syncAndRoute: (source: BiomarkerSource, scopes: BiomarkerScope[]) => Promise<RouteStats>;
+  /** Legacy callback-style sync — kept for advanced consumers. */
   syncSource: (
     source: BiomarkerSource,
     scopes: BiomarkerScope[],
@@ -81,7 +88,71 @@ export const useIntegrationsStore = create<IntegrationsState & IntegrationsActio
           last_error: record.lastError ?? null,
         }).catch(() => {});
 
+        // Auto-sync right after a successful connect so the user sees
+        // data immediately rather than "Connected but empty."
+        if (ok) {
+          // Don't block the UI on this — fire and forget, errors surface
+          // via the integration record's lastError.
+          get().syncAndRoute(source, scopes).catch(() => {});
+        }
+
         return ok;
+      },
+
+      syncAndRoute: async (source, scopes) => {
+        const adapter = getAdapter(source);
+        const emptyStats: RouteStats = {
+          periodsImported: 0,
+          cycleDaysImported: 0,
+          skippedByPriority: 0,
+          errors: [],
+        };
+        if (!adapter) return emptyStats;
+
+        set({ syncingSources: [...get().syncingSources, source] });
+        try {
+          const result = await adapter.sync(scopes);
+          const stats = await routeSyncResult(result);
+
+          const existing = get().integrations.find((i) => i.source === source);
+          if (existing) {
+            const updated = {
+              ...existing,
+              lastSyncedAt: result.syncedAt,
+              lastError: stats.errors.length > 0 ? stats.errors.join('; ') : undefined,
+              statusMessage: `Last sync: ${new Date(result.syncedAt).toLocaleString()} · ${stats.periodsImported + stats.cycleDaysImported} new records`,
+            };
+            set({
+              integrations: get().integrations.map((i) =>
+                i.source === source ? updated : i,
+              ),
+            });
+            syncRecord('connected_integrations', {
+              id: updated.id,
+              source: updated.source,
+              connected: updated.connected,
+              scopes: updated.scopes,
+              last_synced_at: updated.lastSyncedAt ?? null,
+              status_message: updated.statusMessage ?? null,
+              last_error: updated.lastError ?? null,
+            }).catch(() => {});
+          }
+          return stats;
+        } catch (err) {
+          const existing = get().integrations.find((i) => i.source === source);
+          if (existing) {
+            set({
+              integrations: get().integrations.map((i) =>
+                i.source === source ? { ...i, lastError: String(err) } : i,
+              ),
+            });
+          }
+          return { ...emptyStats, errors: [String(err)] };
+        } finally {
+          set({
+            syncingSources: get().syncingSources.filter((s) => s !== source),
+          });
+        }
       },
 
       disconnectSource: async (source) => {

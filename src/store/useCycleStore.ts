@@ -282,11 +282,15 @@ export const useCycleStore = create<CycleState & CycleActions>()(
         const history = [...get().contraceptionHistory];
 
         // Close out the current method (if any) the day before the new one begins.
+        // Use date arithmetic so month/year boundaries work (Jan 1 → Dec 31).
         const current = history.find((h) => !h.endDate);
         if (current) {
-          const prior = parseInt(start.slice(8, 10), 10) - 1;
-          const yearMonth = start.slice(0, 7);
-          const endDate = prior > 0 ? `${yearMonth}-${String(prior).padStart(2, '0')}` : start;
+          const startParsed = new Date(start + 'T12:00:00Z');
+          startParsed.setUTCDate(startParsed.getUTCDate() - 1);
+          const y = startParsed.getUTCFullYear();
+          const m = String(startParsed.getUTCMonth() + 1).padStart(2, '0');
+          const d = String(startParsed.getUTCDate()).padStart(2, '0');
+          const endDate = `${y}-${m}-${d}`;
           current.endDate = endDate;
           syncRecord('contraception_history', {
             id: current.id,

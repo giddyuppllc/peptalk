@@ -82,14 +82,28 @@ function scopeToHKPerms(scopes: BiomarkerScope[]): string[] {
   return Array.from(out);
 }
 
-/** Map HealthKit menstrual flow category values (1-5) to our FlowIntensity. */
+/**
+ * Map HealthKit menstrual flow category values to our FlowIntensity.
+ * Apple HKCategoryValueMenstrualFlow enum:
+ *   1 = Unspecified — user logged a flow but didn't pick a level
+ *   2 = Light
+ *   3 = Medium
+ *   4 = Heavy
+ *   5 = None — logged "no flow" (skip, not a period day)
+ *
+ * Apple does NOT model "spotting" in this enum — spotting lives in a
+ * separate `HKCategoryTypeIdentifierIntermenstrualBleeding` category
+ * that we don't sync yet. We treat 1 (unspecified) as 'light' because
+ * that's the most common user intent when picking "flow" without a
+ * level, and 5 (none) as undefined so it doesn't create a period day.
+ */
 function mapMenstrualFlow(hkValue: number): FlowIntensity | undefined {
-  // 1=None (spotting), 2=Light, 3=Medium, 4=Heavy, 5=Unspecified
   switch (hkValue) {
-    case 1: return 'spotting';
     case 2: return 'light';
     case 3: return 'medium';
     case 4: return 'heavy';
+    case 1: return 'light';     // unspecified → safest default
+    case 5: return undefined;   // none → not a flow day, skip
     default: return undefined;
   }
 }
@@ -101,6 +115,31 @@ let lastSyncedAt: string | undefined;
 
 function log(...args: unknown[]) {
   if (__DEV__) console.log('[HealthKit]', ...args);
+}
+
+/**
+ * Runtime check against HealthKit — catches the case where a user has
+ * revoked permissions in iOS Settings while the app still thinks it's
+ * connected. Fires a small read and checks for auth-denied errors.
+ */
+async function verifyLiveAuth(): Promise<boolean> {
+  if (!AppleHealthKit) return false;
+  return new Promise((resolve) => {
+    // Pull the last 24h of steps — cheap read, fails fast if unauthorized.
+    const options = {
+      startDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      endDate: new Date().toISOString(),
+    };
+    AppleHealthKit.getDailyStepCountSamples(options, (err: Error | null) => {
+      if (err) {
+        // Error commonly indicates revoked authorization.
+        log('live-auth check failed:', err.message);
+        authorized = false;
+        return resolve(false);
+      }
+      resolve(true);
+    });
+  });
 }
 
 // ── Promise wrappers (react-native-health uses callbacks) ──────────────────
@@ -136,7 +175,9 @@ export const healthKitAdapter: BiomarkerAdapter = {
   },
 
   async isAuthorized() {
-    return authorized;
+    // Double-check against HealthKit — user may have revoked in iOS Settings.
+    if (!authorized) return false;
+    return verifyLiveAuth();
   },
 
   async connect(scopes: BiomarkerScope[]) {
@@ -162,13 +203,17 @@ export const healthKitAdapter: BiomarkerAdapter = {
   },
 
   async status(): Promise<AdapterStatus> {
+    // Re-verify against HealthKit so revoked-in-Settings shows correctly.
+    const live = authorized ? await verifyLiveAuth() : false;
     return {
-      connected: authorized,
+      connected: live,
       lastSyncedAt,
-      message: authorized
+      message: live
         ? 'Connected to Apple Health'
         : Platform.OS === 'ios'
-        ? 'Not connected'
+        ? authorized
+          ? 'Access revoked — reconnect in iOS Settings → Privacy → Health'
+          : 'Not connected'
         : 'iOS only',
     };
   },

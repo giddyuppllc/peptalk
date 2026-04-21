@@ -90,6 +90,7 @@ export default function IntegrationsSettingsScreen() {
   const syncing = useIntegrationsStore((s) => s.syncingSources);
   const connectSource = useIntegrationsStore((s) => s.connectSource);
   const disconnectSource = useIntegrationsStore((s) => s.disconnectSource);
+  const syncAndRoute = useIntegrationsStore((s) => s.syncAndRoute);
   const refreshStatuses = useIntegrationsStore((s) => s.refreshStatuses);
 
   const [connecting, setConnecting] = useState<BiomarkerSource | null>(null);
@@ -215,16 +216,29 @@ export default function IntegrationsSettingsScreen() {
                     {isConnecting || isSyncing ? (
                       <ActivityIndicator color={t.primary} />
                     ) : isConnected ? (
-                      <TouchableOpacity
-                        onPress={() => handleDisconnect(adapter.source)}
-                        style={styles.disconnectBtn}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Disconnect ${BIOMARKER_SOURCE_LABELS[adapter.source]}`}
-                      >
-                        <Text style={[styles.disconnectText, { color: t.textSecondary }]}>
-                          Disconnect
-                        </Text>
-                      </TouchableOpacity>
+                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                        <TouchableOpacity
+                          onPress={() =>
+                            syncAndRoute(adapter.source, DEFAULT_SCOPES[adapter.source])
+                          }
+                          style={[styles.syncBtn, { borderColor: t.primary }]}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Sync ${BIOMARKER_SOURCE_LABELS[adapter.source]} now`}
+                        >
+                          <Ionicons name="refresh" size={14} color={t.primary} />
+                          <Text style={[styles.syncText, { color: t.primary }]}>Sync</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleDisconnect(adapter.source)}
+                          style={styles.disconnectBtn}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Disconnect ${BIOMARKER_SOURCE_LABELS[adapter.source]}`}
+                        >
+                          <Text style={[styles.disconnectText, { color: t.textSecondary }]}>
+                            Disconnect
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                     ) : (
                       <TouchableOpacity
                         onPress={() => handleConnect(adapter.source)}
@@ -370,12 +384,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   disconnectBtn: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 8,
   },
   disconnectText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
+  },
+  syncBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  syncText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   footer: {
     fontSize: 12,
