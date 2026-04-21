@@ -105,7 +105,7 @@ export default function NewJournalEntryScreen() {
   const handleSave = () => {
     if (!canSave) return;
 
-    addEntry({
+    const result = addEntry({
       date: dateParam || undefined,
       category,
       title,
@@ -114,6 +114,18 @@ export default function NewJournalEntryScreen() {
       relatedPeptideIds: selectedPeptides.length > 0 ? selectedPeptides : undefined,
       mood,
     });
+
+    if (result === null) {
+      Alert.alert(
+        'Weekly limit reached',
+        'Free accounts get 3 journal entries per week. Upgrade to PepTalk+ for unlimited journaling.',
+        [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Upgrade', onPress: () => router.replace('/subscription' as any) },
+        ],
+      );
+      return;
+    }
 
     Alert.alert('Entry Saved', 'Your journal entry has been logged.', [
       { text: 'Done', onPress: () => router.back() },

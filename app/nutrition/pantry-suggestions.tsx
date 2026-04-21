@@ -72,6 +72,7 @@ function PantrySuggestionsInner() {
   const router = useRouter();
   const t = useTheme();
   const items = usePantryStore((s) => s.items);
+  const consumeQuantity = usePantryStore((s) => s.consumeQuantity);
   const targets = useMealStore((s) => s.targets);
   const addMeal = useMealStore((s) => s.addMeal);
   const activeProtocols = useDoseLogStore((s) => s.getActiveProtocols());
@@ -176,7 +177,37 @@ function PantrySuggestionsInner() {
       notes: ingredientsText,
       timestamp: now.toISOString(),
     });
-    Alert.alert('Logged', `"${s.name}" added to your ${mealType}.`);
+
+    // Deduct any pantry-sourced ingredients so the list reflects reality.
+    // Case-insensitive match on name + brand — same way the AI flagged them.
+    let deductedCount = 0;
+    for (const ing of s.ingredients ?? []) {
+      if (!ing.fromPantry || !ing.name) continue;
+      const needle = ing.name.toLowerCase().trim();
+      const match = items.find(
+        (p) =>
+          p.name.toLowerCase().includes(needle) ||
+          needle.includes(p.name.toLowerCase()),
+      );
+      if (match) {
+        // If units match, use the AI-suggested qty; otherwise subtract 1 unit
+        // of the pantry item. Better to under-deduct than over-deduct when
+        // the units disagree (e.g., "2 tbsp olive oil" vs "1 bottle").
+        const sameUnit =
+          ing.unit && match.unit &&
+          ing.unit.toLowerCase() === match.unit.toLowerCase();
+        const amount = sameUnit && ing.qty && ing.qty > 0 ? ing.qty : 1;
+        consumeQuantity(match.id, amount);
+        deductedCount++;
+      }
+    }
+
+    Alert.alert(
+      'Logged',
+      deductedCount > 0
+        ? `"${s.name}" added to your ${mealType}. ${deductedCount} pantry item${deductedCount === 1 ? '' : 's'} updated.`
+        : `"${s.name}" added to your ${mealType}.`,
+    );
   };
 
   return (

@@ -17,8 +17,6 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.peptalkapp.peptalk",
       "infoPlist": {
-        "NSHealthShareUsageDescription": "PepTalk reads Apple Health data — steps, weight, heart rate, sleep, cycle tracking, and other biometrics — so you don't have to log anything twice.",
-        "NSHealthUpdateUsageDescription": "PepTalk writes check-ins, weight, and symptom logs back to Apple Health so everything stays in sync.",
         "NSSpeechRecognitionUsageDescription": "PepTalk uses speech recognition to let you log meals and notes by voice.",
         "NSMicrophoneUsageDescription": "PepTalk needs microphone access for voice logging and meal dictation.",
         "NSCameraUsageDescription": "PepTalk needs camera access to scan barcodes and meals for automatic nutrition tracking.",

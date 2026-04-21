@@ -157,7 +157,12 @@ export const useAuthStore = create<AuthStore>()(
           // Profile is auto-created by DB trigger (handle_new_user) but as a
           // safety net we upsert here in case the trigger failed for any reason.
           // onConflict: 'id' means if the row exists we update; otherwise insert.
-          await db
+          //
+          // If the trigger ran successfully the upsert no-ops. If BOTH paths
+          // fail, log loudly — but don't block signup on it. Auth succeeded,
+          // and the app's profile-write paths (updateProfile, etc.) will
+          // retry the same data shape as the user uses the app.
+          const { error: upsertErr } = await db
             .from('profiles')
             .upsert(
               {
@@ -169,6 +174,9 @@ export const useAuthStore = create<AuthStore>()(
               },
               { onConflict: 'id' },
             );
+          if (upsertErr && __DEV__) {
+            console.warn('[useAuthStore] profile upsert failed (trigger likely ran ok):', upsertErr);
+          }
 
           const appUser: User = {
             id: data.user.id,

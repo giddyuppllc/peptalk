@@ -158,12 +158,31 @@ const tierStyles = StyleSheet.create({
 function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const { login, isLoading } = useAuthStore();
   const t = useTheme();
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) return;
-    await login(email.trim(), password.trim());
+    setError(null);
+    try {
+      await login(email.trim(), password.trim());
+    } catch (err: any) {
+      // Supabase throws readable errors — surface them so the user
+      // isn't stuck on a silent spinner wondering what happened.
+      const msg = String(err?.message ?? err ?? '').trim();
+      if (/invalid\s*login\s*credentials/i.test(msg)) {
+        setError('Email or password is wrong. Try again.');
+      } else if (/email\s*not\s*confirmed/i.test(msg)) {
+        setError('Check your inbox — you need to confirm your email first.');
+      } else if (/rate|too\s*many/i.test(msg)) {
+        setError('Too many attempts. Wait a minute and try again.');
+      } else if (/network|fetch|offline/i.test(msg)) {
+        setError('Can\'t reach the server. Check your connection.');
+      } else {
+        setError(msg || 'Login failed. Try again.');
+      }
+    }
   };
 
   return (
@@ -219,6 +238,13 @@ function LoginForm() {
             />
           </View>
         </View>
+
+        {error && (
+          <View style={styles.loginErrorBox}>
+            <Ionicons name="alert-circle" size={14} color="#B91C1C" />
+            <Text style={styles.loginErrorText}>{error}</Text>
+          </View>
+        )}
 
         <TouchableOpacity
           onPress={handleLogin}
@@ -1629,6 +1655,24 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.lg,
     fontWeight: '700',
     color: '#fff',
+  },
+  loginErrorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    padding: 10,
+    borderRadius: BorderRadius.md,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    marginBottom: 12,
+  },
+  loginErrorText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#B91C1C',
+    lineHeight: 18,
+    fontWeight: '600',
   },
 
   // -- User Profile

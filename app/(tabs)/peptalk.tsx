@@ -266,20 +266,32 @@ export default function PepTalkScreen() {
     const context = buildContext();
 
     if (useAI) {
-      // Try Grok AI first, fall back to local bot
-      const aiResponse = await generateAIResponse(text, context);
-      if (aiResponse) {
-        handleBotResponse(aiResponse);
-        setTyping(false);
-        return;
+      // Try Grok AI first, fall back to local bot. Wrapped so a throw
+      // from generateAIResponse (network failure, malformed JSON)
+      // doesn't strand the typing indicator in a permanent spinner.
+      try {
+        const aiResponse = await generateAIResponse(text, context);
+        if (aiResponse) {
+          handleBotResponse(aiResponse);
+          setTyping(false);
+          return;
+        }
+      } catch (err) {
+        if (__DEV__) console.warn('[aimee] generateAIResponse threw:', err);
+        // fall through to local fallback
       }
     }
 
-    // Local fallback (no API key, no consent, or API failure)
+    // Local fallback (no API key, no consent, API failure, or thrown error)
     setTimeout(() => {
-      const botResponse = generateLocalBotResponse(text, context);
-      handleBotResponse(botResponse);
-      setTyping(false);
+      try {
+        const botResponse = generateLocalBotResponse(text, context);
+        handleBotResponse(botResponse);
+      } catch (err) {
+        if (__DEV__) console.warn('[aimee] local fallback threw:', err);
+      } finally {
+        setTyping(false);
+      }
     }, 400 + Math.random() * 600);
   }, [inputText, addMessage, handleBotResponse, setTyping, buildContext, useAI]);
 
@@ -300,22 +312,31 @@ export default function PepTalkScreen() {
       const context = buildContext();
 
       if (useAI) {
-        const aiResponse = await generateAIResponse(reply, context);
-        if (aiResponse) {
-          handleBotResponse(aiResponse);
-          setTyping(false);
-          return;
+        try {
+          const aiResponse = await generateAIResponse(reply, context);
+          if (aiResponse) {
+            handleBotResponse(aiResponse);
+            setTyping(false);
+            return;
+          }
+        } catch (err) {
+          if (__DEV__) console.warn('[aimee] quick-reply AI threw:', err);
         }
       }
 
       // Local fallback
       setTimeout(() => {
-        const botResponse = generateLocalBotResponse(reply, context);
-        handleBotResponse(botResponse);
-        setTyping(false);
+        try {
+          const botResponse = generateLocalBotResponse(reply, context);
+          handleBotResponse(botResponse);
+        } catch (err) {
+          if (__DEV__) console.warn('[aimee] quick-reply local threw:', err);
+        } finally {
+          setTyping(false);
+        }
       }, 400 + Math.random() * 600);
     },
-    [addMessage, setTyping, buildContext, useAI],
+    [addMessage, setTyping, buildContext, useAI, handleBotResponse],
   );
 
   // Get quick replies from the last bot message

@@ -48,7 +48,10 @@ interface JournalStore {
   weeklyEntryCount: number;
   weekStartDate: string;
 
-  addEntry: (input: JournalInput) => JournalEntry;
+  /** Creates a journal entry. Returns the created entry, or `null` if the
+   *  free-tier weekly cap is hit. Check-and-increment is atomic so rapid
+   *  double-taps can't exceed the limit. */
+  addEntry: (input: JournalInput) => JournalEntry | null;
   updateEntry: (id: string, updates: Partial<JournalInput>) => void;
   deleteEntry: (id: string) => void;
   getEntriesByDate: (date: string) => JournalEntry[];
@@ -68,6 +71,25 @@ export const useJournalStore = create<JournalStore>()(
       weekStartDate: '',
 
       addEntry: (input) => {
+        // Atomic: determine tier, reconcile week boundary, and check the
+        // cap inside the same set() so two rapid taps can't both slip past.
+        const currentWeekStart = getWeekStart();
+        let tier: 'free' | 'plus' | 'pro' = 'free';
+        try {
+          const { useSubscriptionStore } = require('./useSubscriptionStore');
+          tier = useSubscriptionStore.getState().tier ?? 'free';
+        } catch {
+          tier = 'free';
+        }
+
+        const { weekStartDate, weeklyEntryCount, entries } = get();
+        const weekReset = weekStartDate !== currentWeekStart;
+        const effectiveCount = weekReset ? 0 : weeklyEntryCount;
+
+        if (tier === 'free' && effectiveCount >= FREE_WEEKLY_ENTRY_LIMIT) {
+          return null;
+        }
+
         const entry: JournalEntry = {
           id: uid(),
           date: input.date ?? toDateKey(new Date()),
@@ -81,9 +103,11 @@ export const useJournalStore = create<JournalStore>()(
           createdAt: new Date().toISOString(),
         };
 
-        set((state) => ({
-          entries: [entry, ...state.entries],
-        }));
+        set({
+          entries: [entry, ...entries],
+          weeklyEntryCount: effectiveCount + 1,
+          weekStartDate: currentWeekStart,
+        });
 
         syncRecord('journal_entries', {
           id: entry.id,
