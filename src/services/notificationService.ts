@@ -525,6 +525,43 @@ export async function scheduleGoalReminder(
   return identifier;
 }
 
+// ─── Schedule Meal Safety Checks ───────────────────────────────────────────
+
+/**
+ * Schedule a daily 9am local-time reminder that the app will check the
+ * user's meal preps for approaching expiry. This only schedules the
+ * wake-up; the actual "which preps" decision happens when the app
+ * opens and reads the meal store. Safe to call multiple times —
+ * cancels any prior instance first.
+ *
+ * No-op until expo-notifications is re-enabled (see file header).
+ */
+export async function scheduleMealSafetyChecks(hour: number = 9, minute: number = 0): Promise<string> {
+  if (!isAvailable()) return '';
+
+  // Cancel any previous food-safety reminders so we don't stack duplicates
+  await cancelRemindersByTag('meal-safety-');
+
+  const identifier = await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Food safety check',
+      body: 'Tap to see which meal preps are expiring or need to be frozen.',
+      sound: 'default',
+      data: { type: 'meal-safety', route: '/(tabs)/nutrition' },
+      ...(Platform.OS === 'android' && { channelId: 'reminders' }),
+    },
+    trigger: {
+      type: Notifications?.SchedulableTriggerInputTypes?.DAILY ?? 'daily',
+      hour,
+      minute,
+      ...(Platform.OS === 'android' && { channelId: 'reminders' }),
+    },
+    identifier: `meal-safety-daily-${Date.now()}`,
+  });
+
+  return identifier;
+}
+
 // ─── Get All Scheduled Reminders ───────────────────────────────────────────
 
 export async function getScheduledReminders(): Promise<Array<{

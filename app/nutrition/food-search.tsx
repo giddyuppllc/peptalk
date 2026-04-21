@@ -40,6 +40,7 @@ import {
   BorderRadius,
 } from '../../src/constants/theme';
 import { useMealStore, type RecentFood, type CustomMeal, type MealTemplate } from '../../src/store/useMealStore';
+import { computeSafetyStatus, statusBadge, DEFAULT_SAFETY_WINDOWS } from '../../src/data/foodSafety';
 import type { FoodItem } from '../../src/types/fitness';
 import { useFeatureGate } from '../../src/hooks/useFeatureGate';
 import { PaywallModal } from '../../src/components/PaywallModal';
@@ -1353,6 +1354,14 @@ export default function FoodSearchScreen() {
               const perServingCal = isPrep
                 ? Math.round(item.totalCalories / (item.totalServings ?? 1))
                 : item.totalCalories;
+              // Food-safety badge (prep only, only if dateMade + protein provided)
+              const safety = (() => {
+                if (!isPrep || !item.dateMade || !item.primaryProtein) return null;
+                const storage = item.storageMethod ?? 'fridge';
+                const window = DEFAULT_SAFETY_WINDOWS[item.primaryProtein];
+                return computeSafetyStatus(item.dateMade, item.primaryProtein, storage, window);
+              })();
+              const safetyLabel = safety ? statusBadge(safety.status) : null;
               return (
               <View style={styles.mealCard}>
                 <TouchableOpacity
@@ -1384,6 +1393,19 @@ export default function FoodSearchScreen() {
                         ? `~${perServingCal} cal per ${unitLabel}`
                         : `${item.totalCalories} cal · ${item.totalProteinGrams}p · ${item.totalCarbsGrams}c · ${item.totalFatGrams}f`}
                     </Text>
+                    {safety && safetyLabel && (
+                      <View style={[styles.safetyBadge, { borderColor: safetyLabel.color }]}>
+                        <View style={[styles.safetyDot, { backgroundColor: safetyLabel.color }]} />
+                        <Text style={[styles.safetyBadgeText, { color: safetyLabel.color }]}>
+                          {safetyLabel.label}
+                          {safety.status === 'fresh' && ` · ${safety.daysUntilExpiry}d left`}
+                          {safety.status === 'freeze_soon' && ' · freeze soon'}
+                          {safety.status === 'expiring' && safety.daysUntilExpiry >= 0 &&
+                            (safety.daysUntilExpiry === 0 ? ' · today' : ` · ${safety.daysUntilExpiry}d left`)}
+                          {safety.status === 'expired' && ' · throw out'}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                   <Ionicons name="add-circle" size={28} color={Colors.almostAquaDeep} style={styles.recentAddBtn} />
                 </TouchableOpacity>
@@ -1976,6 +1998,29 @@ const styles = StyleSheet.create({
   mealCardName: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.darkText, marginBottom: 2 },
   mealCardIngredients: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary },
   mealCardMacros: { fontSize: FontSizes.xs, color: Colors.almostAquaDeep, fontWeight: '600', marginTop: 2 },
+  safetyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 99,
+    borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+  },
+  safetyDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  safetyBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
   mealCardActions: {
     flexDirection: 'row', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.04)',
   },

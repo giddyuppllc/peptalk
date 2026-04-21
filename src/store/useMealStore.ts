@@ -152,6 +152,22 @@ export interface MealTemplate {
   emoji?: string;
   createdAt: string;
   updatedAt: string;
+
+  // ── Food safety (B1) ───────────────────────────────────────────────────
+  /** ISO date (YYYY-MM-DD) the food was actually prepared. Default = createdAt's date. */
+  dateMade?: string;
+  /** How the leftover is being kept. Drives safety window math. */
+  storageMethod?: 'fridge' | 'freezer' | 'pantry';
+  /** Primary protein category — picks the USDA-based safety window. */
+  primaryProtein?: 'chicken' | 'beef' | 'pork' | 'fish' | 'eggs' | 'vegetarian' | 'other';
+  /** ISO timestamp when the user last dismissed a safety notification for this prep. */
+  safetyNotifiedAt?: string;
+}
+
+/** User overrides for food-safety windows by protein category. */
+export interface FoodSafetyOverride {
+  fridgeDays?: number;
+  freezerMonths?: number;
 }
 
 export interface PlannedMeal {
@@ -183,6 +199,11 @@ interface MealState {
   customMeals: CustomMeal[];
   /** Saved meal templates — quick "My Meals" combos */
   mealTemplates: MealTemplate[];
+  /** User-set overrides for food-safety windows per protein category. */
+  foodSafetyOverrides: Partial<Record<
+    'chicken' | 'beef' | 'pork' | 'fish' | 'eggs' | 'vegetarian' | 'other',
+    FoodSafetyOverride
+  >>;
 }
 
 interface MealActions {
@@ -254,6 +275,15 @@ interface MealActions {
   // Copy previous meal — copies a single logged meal from one date to another
   copyMealToDate: (mealId: string, targetDate: string, targetMealType?: MealEntry['mealType']) => void;
 
+  // Food safety overrides
+  setFoodSafetyOverride: (
+    protein: 'chicken' | 'beef' | 'pork' | 'fish' | 'eggs' | 'vegetarian' | 'other',
+    override: FoodSafetyOverride,
+  ) => void;
+  clearFoodSafetyOverride: (
+    protein: 'chicken' | 'beef' | 'pork' | 'fish' | 'eggs' | 'vegetarian' | 'other',
+  ) => void;
+
   clearAll: () => void;
 }
 
@@ -286,6 +316,7 @@ export const useMealStore = create<MealState & MealActions>()(
       foodCache: [],
       customMeals: [],
       mealTemplates: [],
+      foodSafetyOverrides: {},
 
       // -----------------------------------------------------------------------
       // Targets
@@ -599,6 +630,20 @@ export const useMealStore = create<MealState & MealActions>()(
       // Copy previous meal
       // -----------------------------------------------------------------------
 
+      setFoodSafetyOverride: (protein, override) =>
+        set({
+          foodSafetyOverrides: {
+            ...get().foodSafetyOverrides,
+            [protein]: override,
+          },
+        }),
+
+      clearFoodSafetyOverride: (protein) => {
+        const next = { ...get().foodSafetyOverrides };
+        delete next[protein];
+        set({ foodSafetyOverrides: next });
+      },
+
       copyMealToDate: (mealId, targetDate, targetMealType) => {
         const source = get().meals.find((m) => m.id === mealId);
         if (!source) return;
@@ -629,6 +674,7 @@ export const useMealStore = create<MealState & MealActions>()(
           foodCache: [],
           customMeals: [],
           mealTemplates: [],
+          foodSafetyOverrides: {},
         }),
     }),
     {
@@ -644,6 +690,7 @@ export const useMealStore = create<MealState & MealActions>()(
         foodCache: state.foodCache,
         customMeals: state.customMeals,
         mealTemplates: state.mealTemplates,
+        foodSafetyOverrides: state.foodSafetyOverrides,
       }),
     },
   ),

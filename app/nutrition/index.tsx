@@ -27,7 +27,12 @@ import { CoachMark } from '../../src/components/tutorial/CoachMark';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { Colors, Gradients, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
-import { useMealStore } from '../../src/store/useMealStore';
+import { useMealStore, type MealTemplate } from '../../src/store/useMealStore';
+import {
+  computeSafetyStatus,
+  DEFAULT_SAFETY_WINDOWS,
+  type SafetyStatusInfo,
+} from '../../src/data/foodSafety';
 import type { MealEntry, MealType } from '../../src/types/fitness';
 import { tapLight } from '../../src/utils/haptics';
 
@@ -316,6 +321,12 @@ function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealMod
   const [isMealPrep,      setIsMealPrep]      = useState(false);
   const [totalServings,   setTotalServings]   = useState('8');
   const [servingUnit,     setServingUnit]     = useState('serving');
+  // Food-safety state (only shown for meal preps)
+  const [dateMade,        setDateMade]        = useState(''); // YYYY-MM-DD; '' = today
+  const [primaryProtein,  setPrimaryProtein]  = useState<
+    'chicken' | 'beef' | 'pork' | 'fish' | 'eggs' | 'vegetarian' | 'other'
+  >('chicken');
+  const [storageMethod,   setStorageMethod]   = useState<'fridge' | 'freezer' | 'pantry'>('fridge');
 
   // Seed form when meal changes
   React.useEffect(() => {
@@ -337,6 +348,9 @@ function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealMod
     setIsMealPrep(false);
     setTotalServings('8');
     setServingUnit('serving');
+    setDateMade('');
+    setPrimaryProtein('chicken');
+    setStorageMethod('fridge');
   }, [meal?.id]);
 
   const applyMultiplier = (mult: number) => {
@@ -426,6 +440,13 @@ function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealMod
       totalFatGrams: fatNum,
       totalServings: isMealPrep ? parsedServings : 1,
       servingUnit: isMealPrep ? (servingUnit.trim() || 'serving') : undefined,
+      // Food-safety — only meaningful for preps since a single-meal template
+      // doesn't have leftovers to worry about.
+      dateMade: isMealPrep
+        ? (dateMade.trim() || new Date().toISOString().slice(0, 10))
+        : undefined,
+      primaryProtein: isMealPrep ? primaryProtein : undefined,
+      storageMethod: isMealPrep ? storageMethod : undefined,
       logCount: 0,
       createdAt: now,
       updatedAt: now,
@@ -637,6 +658,73 @@ function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealMod
                     </Text>
                   );
                 })()}
+
+                {isMealPrep && (
+                  <>
+                    <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Date made</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={dateMade}
+                      onChangeText={setDateMade}
+                      placeholder={new Date().toISOString().slice(0, 10)}
+                      placeholderTextColor={Colors.darkTextSecondary}
+                      autoCapitalize="none"
+                    />
+                    <Text style={styles.fieldHint}>
+                      Optional — defaults to today. YYYY-MM-DD.
+                    </Text>
+
+                    <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Primary protein</Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      style={{ marginBottom: 8 }}
+                    >
+                      {(['chicken', 'beef', 'pork', 'fish', 'eggs', 'vegetarian', 'other'] as const).map((p) => (
+                        <TouchableOpacity
+                          key={p}
+                          onPress={() => setPrimaryProtein(p)}
+                          style={[
+                            styles.proteinChip,
+                            primaryProtein === p && styles.proteinChipOn,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.proteinChipText,
+                              primaryProtein === p && styles.proteinChipTextOn,
+                            ]}
+                          >
+                            {p}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+
+                    <Text style={[styles.fieldLabel, { marginTop: 4 }]}>Storage</Text>
+                    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
+                      {(['fridge', 'freezer', 'pantry'] as const).map((s) => (
+                        <TouchableOpacity
+                          key={s}
+                          onPress={() => setStorageMethod(s)}
+                          style={[
+                            styles.storageChip,
+                            storageMethod === s && styles.storageChipOn,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.storageChipText,
+                              storageMethod === s && styles.storageChipTextOn,
+                            ]}
+                          >
+                            {s}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                )}
 
                 <TouchableOpacity
                   style={styles.saveAsTplBtn}
@@ -907,6 +995,29 @@ export default function NutritionScreen() {
   const t = useTheme();
   const accent = useSectionAccent();
   const { meals, addMeal, removeMeal, updateMeal, getDailyProgress, targets } = useMealStore();
+  const mealTemplates = useMealStore((s) => s.mealTemplates);
+  const foodSafetyOverrides = useMealStore((s) => s.foodSafetyOverrides);
+
+  // Urgent food-safety alerts — preps that are expiring today or expired.
+  const urgentSafetyAlerts = useMemo(() => {
+    const alerts: { template: MealTemplate; status: SafetyStatusInfo }[] = [];
+    for (const tpl of mealTemplates) {
+      if (!tpl.dateMade || !tpl.primaryProtein) continue;
+      const storage = tpl.storageMethod ?? 'fridge';
+      const override = foodSafetyOverrides[tpl.primaryProtein];
+      const defaults = DEFAULT_SAFETY_WINDOWS[tpl.primaryProtein];
+      const window = {
+        fridgeDays: override?.fridgeDays ?? defaults.fridgeDays,
+        freezerMonths: override?.freezerMonths ?? defaults.freezerMonths,
+        highRisk: defaults.highRisk,
+      };
+      const status = computeSafetyStatus(tpl.dateMade, tpl.primaryProtein, storage, window);
+      if (status.status === 'expired' || status.status === 'expiring') {
+        alerts.push({ template: tpl, status });
+      }
+    }
+    return alerts;
+  }, [mealTemplates, foodSafetyOverrides]);
 
   const [showLog,        setShowLog]        = useState(false);
   const [editingMeal,    setEditingMeal]    = useState<MealEntry | null>(null);
@@ -1025,6 +1136,41 @@ export default function NutritionScreen() {
           body="Tap the 🔍 search, 📷 scan, or 🎤 voice buttons to quickly log any meal."
           icon="nutrition-outline"
         />
+
+        {/* Food safety alerts — expiring or expired meal preps */}
+        {urgentSafetyAlerts.length > 0 && (
+          <View style={styles.section}>
+            {urgentSafetyAlerts.map(({ template, status }) => {
+              const expired = status.status === 'expired';
+              return (
+                <View
+                  key={template.id}
+                  style={[
+                    styles.safetyBanner,
+                    expired ? styles.safetyBannerRed : styles.safetyBannerYellow,
+                  ]}
+                >
+                  <Ionicons
+                    name={expired ? 'warning' : 'time-outline'}
+                    size={20}
+                    color={expired ? '#B91C1C' : '#B45309'}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        styles.safetyBannerTitle,
+                        { color: expired ? '#B91C1C' : '#B45309' },
+                      ]}
+                    >
+                      {expired ? 'Throw out' : 'Eat or freeze today'}: {template.name}
+                    </Text>
+                    <Text style={styles.safetyBannerBody}>{status.message}</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
         {/* Week strip */}
         <View style={styles.section}>
           <View style={styles.weekHeader}>
@@ -2134,5 +2280,76 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.sm,
     fontWeight: '700',
     color: '#fff',
+  },
+  proteinChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+    marginRight: 6,
+  },
+  proteinChipOn: {
+    backgroundColor: Colors.almostAquaDeep,
+    borderColor: Colors.almostAquaDeep,
+  },
+  proteinChipText: {
+    fontSize: FontSizes.xs,
+    color: Colors.darkText,
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
+  proteinChipTextOn: {
+    color: '#fff',
+  },
+  storageChip: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+    alignItems: 'center',
+  },
+  storageChipOn: {
+    backgroundColor: Colors.almostAquaDeep,
+    borderColor: Colors.almostAquaDeep,
+  },
+  storageChipText: {
+    fontSize: FontSizes.sm,
+    color: Colors.darkText,
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
+  storageChipTextOn: {
+    color: '#fff',
+  },
+  safetyBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 12,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  safetyBannerRed: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  safetyBannerYellow: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  safetyBannerTitle: {
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  safetyBannerBody: {
+    fontSize: FontSizes.xs,
+    color: Colors.darkTextSecondary,
+    lineHeight: 16,
   },
 });

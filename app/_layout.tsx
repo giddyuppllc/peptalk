@@ -498,6 +498,11 @@ function RootLayout() {
               animation: 'slide_from_bottom',
             }}
           />
+          {/* Settings */}
+          <Stack.Screen
+            name="settings/food-safety"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
         </Stack>
       </View>
     </SafeAreaProvider>
