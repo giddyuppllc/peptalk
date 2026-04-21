@@ -303,12 +303,19 @@ interface EditMealModalProps {
 }
 
 function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealModalProps) {
+  const addMealTemplate = useMealStore((s) => s.addMealTemplate);
   const [desc,    setDesc]    = useState('');
   const [cal,     setCal]     = useState('');
   const [protein, setProtein] = useState('');
   const [carbs,   setCarbs]   = useState('');
   const [fat,     setFat]     = useState('');
   const [notes,   setNotes]   = useState('');
+  // Save-as-template / meal-prep state
+  const [saveSectionOpen, setSaveSectionOpen] = useState(false);
+  const [templateName,    setTemplateName]    = useState('');
+  const [isMealPrep,      setIsMealPrep]      = useState(false);
+  const [totalServings,   setTotalServings]   = useState('8');
+  const [servingUnit,     setServingUnit]     = useState('serving');
 
   // Seed form when meal changes
   React.useEffect(() => {
@@ -325,6 +332,11 @@ function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealMod
     setCarbs(String(baseCarbs));
     setFat(String(baseFat));
     setNotes(meal.notes ?? '');
+    setTemplateName(baseDesc.slice(0, 50));
+    setSaveSectionOpen(false);
+    setIsMealPrep(false);
+    setTotalServings('8');
+    setServingUnit('serving');
   }, [meal?.id]);
 
   const applyMultiplier = (mult: number) => {
@@ -378,6 +390,52 @@ function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealMod
         },
       ],
     );
+  };
+
+  const handleSaveAsTemplate = () => {
+    if (!meal) return;
+    const name = templateName.trim();
+    if (!name) {
+      Alert.alert('Name required', 'Give your meal a name before saving.');
+      return;
+    }
+    const calNum     = parseFloat(cal)     || 0;
+    const proteinNum = parseFloat(protein) || 0;
+    const carbsNum   = parseFloat(carbs)   || 0;
+    const fatNum     = parseFloat(fat)     || 0;
+    // If it's a meal prep the stored macros represent the FULL batch.
+    // We use the currently-displayed macros as the batch total.
+    const parsedServings = Math.max(1, Math.round(parseFloat(totalServings) || 1));
+    const now = new Date().toISOString();
+    addMealTemplate({
+      id: `tpl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name,
+      defaultMealType: meal.mealType,
+      foods: [{
+        foodId: `template-${Date.now()}`,
+        foodName: desc.trim() || name,
+        servings: 1,
+        calories: calNum,
+        proteinGrams: proteinNum,
+        carbsGrams: carbsNum,
+        fatGrams: fatNum,
+      }],
+      totalCalories: calNum,
+      totalProteinGrams: proteinNum,
+      totalCarbsGrams: carbsNum,
+      totalFatGrams: fatNum,
+      totalServings: isMealPrep ? parsedServings : 1,
+      servingUnit: isMealPrep ? (servingUnit.trim() || 'serving') : undefined,
+      logCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const perUnit = isMealPrep ? Math.round(calNum / parsedServings) : calNum;
+    const message = isMealPrep
+      ? `Saved "${name}" as a meal prep (${parsedServings} ${servingUnit || 'servings'}, ~${perUnit} cal each).`
+      : `Saved "${name}" to your meals.`;
+    Alert.alert('Saved', message);
+    setSaveSectionOpen(false);
   };
 
   if (!meal) return null;
@@ -496,6 +554,102 @@ function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealMod
               multiline
               numberOfLines={2}
             />
+
+            {/* Save as Template / Meal Prep */}
+            <TouchableOpacity
+              style={styles.saveAsTplToggle}
+              onPress={() => setSaveSectionOpen((s) => !s)}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={saveSectionOpen ? 'chevron-down' : 'chevron-forward'}
+                size={16}
+                color={Colors.darkText}
+              />
+              <Text style={styles.saveAsTplToggleText}>
+                Save as my meal / meal prep
+              </Text>
+            </TouchableOpacity>
+
+            {saveSectionOpen && (
+              <View style={styles.saveAsTplBox}>
+                <Text style={styles.fieldLabel}>Name</Text>
+                <TextInput
+                  style={[styles.input, { marginBottom: 12 }]}
+                  value={templateName}
+                  onChangeText={setTemplateName}
+                  placeholder="e.g. Chicken Rice Bowl"
+                  placeholderTextColor={Colors.darkTextSecondary}
+                />
+
+                <TouchableOpacity
+                  style={styles.prepToggleRow}
+                  onPress={() => setIsMealPrep((v) => !v)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.prepCheckbox, isMealPrep && styles.prepCheckboxOn]}>
+                    {isMealPrep && (
+                      <Ionicons name="checkmark" size={14} color="#fff" />
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.prepToggleTitle}>This is a meal prep batch</Text>
+                    <Text style={styles.prepToggleHint}>
+                      You made multiple servings at once
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {isMealPrep && (
+                  <View style={styles.prepFieldsRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.fieldLabel}>Total servings</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={totalServings}
+                        onChangeText={setTotalServings}
+                        keyboardType="number-pad"
+                        placeholder="8"
+                        placeholderTextColor={Colors.darkTextSecondary}
+                      />
+                    </View>
+                    <View style={{ flex: 1.2 }}>
+                      <Text style={styles.fieldLabel}>Unit</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={servingUnit}
+                        onChangeText={setServingUnit}
+                        placeholder="bowl, container, 100g"
+                        placeholderTextColor={Colors.darkTextSecondary}
+                        autoCapitalize="none"
+                      />
+                    </View>
+                  </View>
+                )}
+
+                {isMealPrep && (() => {
+                  const calNum = parseFloat(cal) || 0;
+                  const servs = Math.max(1, Math.round(parseFloat(totalServings) || 1));
+                  const perServing = Math.round(calNum / servs);
+                  return (
+                    <Text style={styles.prepPerServing}>
+                      ~{perServing} cal per {servingUnit.trim() || 'serving'}
+                    </Text>
+                  );
+                })()}
+
+                <TouchableOpacity
+                  style={styles.saveAsTplBtn}
+                  onPress={handleSaveAsTemplate}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="bookmark" size={16} color="#fff" />
+                  <Text style={styles.saveAsTplBtnText}>
+                    {isMealPrep ? 'Save as meal prep' : 'Save as my meal'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             {/* Save */}
             <GradientButton label="Save Changes" onPress={handleSave} style={{ marginTop: 12 }} />
@@ -1903,5 +2057,82 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.md,
     fontWeight: '700',
     color: Colors.error,
+  },
+
+  // Save as template / meal prep
+  saveAsTplToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 16,
+    paddingVertical: 8,
+  },
+  saveAsTplToggleText: {
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
+    color: Colors.darkText,
+  },
+  saveAsTplBox: {
+    marginTop: 4,
+    padding: 12,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(127, 179, 194, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(127, 179, 194, 0.18)',
+  },
+  prepToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  prepCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: Colors.darkTextSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  prepCheckboxOn: {
+    backgroundColor: Colors.almostAquaDeep,
+    borderColor: Colors.almostAquaDeep,
+  },
+  prepToggleTitle: {
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
+    color: Colors.darkText,
+  },
+  prepToggleHint: {
+    fontSize: FontSizes.xs,
+    color: Colors.darkTextSecondary,
+  },
+  prepFieldsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 4,
+  },
+  prepPerServing: {
+    fontSize: FontSizes.xs,
+    color: Colors.darkTextSecondary,
+    marginTop: 6,
+    fontStyle: 'italic',
+  },
+  saveAsTplBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 12,
+    paddingVertical: 11,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.almostAquaDeep,
+  },
+  saveAsTplBtnText: {
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
+    color: '#fff',
   },
 });

@@ -124,19 +124,31 @@ export interface CustomMeal {
   updatedAt: string;
 }
 
-/** A saved meal "template" — a quick combo the user eats often */
+/** A saved meal "template" — a quick combo the user eats often.
+ *  When `totalServings > 1`, it's treated as a meal prep batch:
+ *  the stored `foods`/totals represent the FULL batch; when the user
+ *  logs a serving we scale by (chosen servings / totalServings).
+ */
 export interface MealTemplate {
   id: string;
   name: string;
   /** Default meal type this template gets logged as */
   defaultMealType: MealEntry['mealType'];
-  /** Pre-computed food entries (same shape as MealEntry.foods) */
+  /** Pre-computed food entries (same shape as MealEntry.foods) — always the FULL batch */
   foods: MealEntry['foods'];
-  /** Totals cached for fast list rendering */
+  /** Totals cached for fast list rendering — for the FULL batch */
   totalCalories: number;
   totalProteinGrams: number;
   totalCarbsGrams: number;
   totalFatGrams: number;
+  /** Number of servings this batch makes. 1 = single meal, >1 = meal prep. Default 1. */
+  totalServings?: number;
+  /** Unit label for one serving when this is a meal prep (e.g. "bowl", "container", "cup", "100g"). */
+  servingUnit?: string;
+  /** How many times this template has been logged — used for "most used" sort. */
+  logCount?: number;
+  /** ISO timestamp of the most recent log — used for recency sort. */
+  lastLoggedAt?: string;
   emoji?: string;
   createdAt: string;
   updatedAt: string;
@@ -224,7 +236,20 @@ interface MealActions {
   addMealTemplate: (template: MealTemplate) => void;
   updateMealTemplate: (id: string, updates: Partial<MealTemplate>) => void;
   removeMealTemplate: (id: string) => void;
+  /** Log the FULL template (one batch). For preps this logs all servings. */
   logMealTemplate: (id: string, date: string, mealType: MealEntry['mealType']) => void;
+  /** Log `servings` units from a prep batch. Scales foods by servings/totalServings. */
+  logMealTemplateServings: (
+    id: string,
+    date: string,
+    mealType: MealEntry['mealType'],
+    servings: number,
+  ) => void;
+  /** Save a logged meal as a reusable template / meal prep. */
+  saveMealAsTemplate: (
+    mealId: string,
+    opts: { name: string; totalServings?: number; servingUnit?: string; emoji?: string },
+  ) => void;
 
   // Copy previous meal — copies a single logged meal from one date to another
   copyMealToDate: (mealId: string, targetDate: string, targetMealType?: MealEntry['mealType']) => void;
@@ -477,6 +502,9 @@ export const useMealStore = create<MealState & MealActions>()(
       logMealTemplate: (id, date, mealType) => {
         const template = get().mealTemplates.find((t) => t.id === id);
         if (!template) return;
+        // For single-serving templates this logs the full batch.
+        // For preps (totalServings > 1) this ALSO logs the full batch — use
+        // logMealTemplateServings to log a partial amount.
         const newMeal: MealEntry = {
           id: `meal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           date,
@@ -485,6 +513,86 @@ export const useMealStore = create<MealState & MealActions>()(
           timestamp: new Date().toISOString(),
         };
         get().addMeal(newMeal);
+        // Track usage so "My Meals" can sort by most recent / frequent.
+        set({
+          mealTemplates: get().mealTemplates.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  logCount: (t.logCount ?? 0) + 1,
+                  lastLoggedAt: new Date().toISOString(),
+                }
+              : t,
+          ),
+        });
+      },
+
+      logMealTemplateServings: (id, date, mealType, servings) => {
+        const template = get().mealTemplates.find((t) => t.id === id);
+        if (!template) return;
+        const totalServings = template.totalServings && template.totalServings > 0
+          ? template.totalServings
+          : 1;
+        const ratio = servings / totalServings;
+        // Scale each food by the ratio. Keep portion labels intact but
+        // scale the serving count so macros recalc correctly.
+        const scaledFoods = template.foods.map((f) => ({
+          ...f,
+          servings: Number((f.servings * ratio).toFixed(3)),
+          calories: Math.round(f.calories * ratio),
+          proteinGrams: Math.round(f.proteinGrams * ratio),
+          carbsGrams: Math.round(f.carbsGrams * ratio),
+          fatGrams: Math.round(f.fatGrams * ratio),
+        }));
+        const unitLabel = template.servingUnit ?? 'serving';
+        const unitDisplay = servings === 1 ? unitLabel : `${unitLabel}s`;
+        const newMeal: MealEntry = {
+          id: `meal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          date,
+          mealType,
+          foods: scaledFoods,
+          notes: `From ${template.name} · ${servings} ${unitDisplay}`,
+          timestamp: new Date().toISOString(),
+        };
+        get().addMeal(newMeal);
+        set({
+          mealTemplates: get().mealTemplates.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  logCount: (t.logCount ?? 0) + 1,
+                  lastLoggedAt: new Date().toISOString(),
+                }
+              : t,
+          ),
+        });
+      },
+
+      saveMealAsTemplate: (mealId, opts) => {
+        const source = get().meals.find((m) => m.id === mealId);
+        if (!source) return;
+        const totalCalories = source.foods.reduce((s, f) => s + (f.calories || 0), 0);
+        const totalProteinGrams = source.foods.reduce((s, f) => s + (f.proteinGrams || 0), 0);
+        const totalCarbsGrams = source.foods.reduce((s, f) => s + (f.carbsGrams || 0), 0);
+        const totalFatGrams = source.foods.reduce((s, f) => s + (f.fatGrams || 0), 0);
+        const now = new Date().toISOString();
+        const template: MealTemplate = {
+          id: `tpl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          name: opts.name,
+          defaultMealType: source.mealType,
+          foods: source.foods.map((f) => ({ ...f })),
+          totalCalories,
+          totalProteinGrams,
+          totalCarbsGrams,
+          totalFatGrams,
+          totalServings: opts.totalServings && opts.totalServings > 0 ? opts.totalServings : 1,
+          servingUnit: opts.servingUnit,
+          emoji: opts.emoji,
+          logCount: 0,
+          createdAt: now,
+          updatedAt: now,
+        };
+        get().addMealTemplate(template);
       },
 
       // -----------------------------------------------------------------------

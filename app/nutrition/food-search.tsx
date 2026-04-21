@@ -847,7 +847,12 @@ export default function FoodSearchScreen() {
     mealTemplates,
     removeMealTemplate,
     logMealTemplate,
+    logMealTemplateServings,
   } = useMealStore();
+
+  // Meal prep serving picker state
+  const [prepPickerTemplate, setPrepPickerTemplate] = useState<MealTemplate | null>(null);
+  const [prepServingsInput, setPrepServingsInput] = useState('1');
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UnifiedFood[]>([]);
@@ -1333,13 +1338,32 @@ export default function FoodSearchScreen() {
           </View>
 
           <FlatList
-            data={mealTemplates.filter((t) => !query.trim() || t.name.toLowerCase().includes(query.toLowerCase()))}
+            data={[...mealTemplates]
+              .filter((t) => !query.trim() || t.name.toLowerCase().includes(query.toLowerCase()))
+              .sort((a, b) => {
+                // Most-recently-logged first; unlogged fall to createdAt
+                const aKey = a.lastLoggedAt ?? a.createdAt;
+                const bKey = b.lastLoggedAt ?? b.createdAt;
+                return bKey.localeCompare(aKey);
+              })}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
+            renderItem={({ item }) => {
+              const isPrep = (item.totalServings ?? 1) > 1;
+              const unitLabel = item.servingUnit ?? 'serving';
+              const perServingCal = isPrep
+                ? Math.round(item.totalCalories / (item.totalServings ?? 1))
+                : item.totalCalories;
+              return (
               <View style={styles.mealCard}>
                 <TouchableOpacity
                   style={styles.mealCardMain}
                   onPress={() => {
+                    if (isPrep) {
+                      // Open serving picker for prep batches
+                      setPrepPickerTemplate(item);
+                      setPrepServingsInput('1');
+                      return;
+                    }
                     logMealTemplate(item.id, today(), initialMealType);
                     setLastLogged(`${item.name} — ${item.totalCalories} cal`);
                     setSuccessVisible(true);
@@ -1347,14 +1371,18 @@ export default function FoodSearchScreen() {
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.mealCardEmoji}>{item.emoji || '🍽️'}</Text>
+                  <Text style={styles.mealCardEmoji}>{item.emoji || (isPrep ? '🍱' : '🍽️')}</Text>
                   <View style={styles.mealCardInfo}>
                     <Text style={styles.mealCardName} numberOfLines={1}>{item.name}</Text>
                     <Text style={styles.mealCardIngredients}>
-                      {item.foods.length} item{item.foods.length !== 1 ? 's' : ''}
+                      {isPrep
+                        ? `Meal prep · ${item.totalServings} ${unitLabel}${item.totalServings !== 1 ? 's' : ''}`
+                        : `${item.foods.length} item${item.foods.length !== 1 ? 's' : ''}`}
                     </Text>
                     <Text style={styles.mealCardMacros}>
-                      {item.totalCalories} cal · {item.totalProteinGrams}p · {item.totalCarbsGrams}c · {item.totalFatGrams}f
+                      {isPrep
+                        ? `~${perServingCal} cal per ${unitLabel}`
+                        : `${item.totalCalories} cal · ${item.totalProteinGrams}p · ${item.totalCarbsGrams}c · ${item.totalFatGrams}f`}
                     </Text>
                   </View>
                   <Ionicons name="add-circle" size={28} color={Colors.almostAquaDeep} style={styles.recentAddBtn} />
@@ -1372,7 +1400,8 @@ export default function FoodSearchScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
-            )}
+              );
+            }}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
@@ -1585,6 +1614,116 @@ export default function FoodSearchScreen() {
           onDismiss={() => setPaywallFeature(null)}
         />
       )}
+
+      {/* Meal-prep serving picker */}
+      <Modal
+        visible={prepPickerTemplate !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPrepPickerTemplate(null)}
+      >
+        <View style={styles.prepPickerOverlay}>
+          <View style={styles.prepPickerCard}>
+            {prepPickerTemplate && (() => {
+              const total = prepPickerTemplate.totalServings ?? 1;
+              const unit = prepPickerTemplate.servingUnit ?? 'serving';
+              const servNum = Math.max(0, parseFloat(prepServingsInput) || 0);
+              const ratio = total > 0 ? servNum / total : 0;
+              const cal = Math.round(prepPickerTemplate.totalCalories * ratio);
+              const pro = Math.round(prepPickerTemplate.totalProteinGrams * ratio);
+              const carb = Math.round(prepPickerTemplate.totalCarbsGrams * ratio);
+              const fat = Math.round(prepPickerTemplate.totalFatGrams * ratio);
+              const quickOptions = [0.5, 1, 1.5, 2];
+              const tooMany = servNum > total;
+              return (
+                <>
+                  <Text style={styles.prepPickerTitle}>{prepPickerTemplate.name}</Text>
+                  <Text style={styles.prepPickerSub}>
+                    {total} {unit}{total !== 1 ? 's' : ''} made · how much are you having?
+                  </Text>
+
+                  <View style={styles.prepQuickRow}>
+                    {quickOptions.map((o) => (
+                      <TouchableOpacity
+                        key={o}
+                        style={[
+                          styles.prepQuickChip,
+                          parseFloat(prepServingsInput) === o && styles.prepQuickChipActive,
+                        ]}
+                        onPress={() => setPrepServingsInput(String(o))}
+                      >
+                        <Text
+                          style={[
+                            styles.prepQuickChipText,
+                            parseFloat(prepServingsInput) === o && styles.prepQuickChipTextActive,
+                          ]}
+                        >
+                          {o}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={styles.prepPickerLabel}>Servings ({unit})</Text>
+                  <TextInput
+                    style={styles.prepPickerInput}
+                    value={prepServingsInput}
+                    onChangeText={setPrepServingsInput}
+                    keyboardType="decimal-pad"
+                    placeholder="1"
+                    placeholderTextColor={Colors.darkTextSecondary}
+                  />
+
+                  <View style={styles.prepMacroPreview}>
+                    <Text style={styles.prepMacroPreviewText}>
+                      {cal} cal · {pro}p · {carb}c · {fat}f
+                    </Text>
+                  </View>
+
+                  {tooMany && (
+                    <Text style={styles.prepWarn}>
+                      That's more than you made — confirm you want to log {servNum}.
+                    </Text>
+                  )}
+
+                  <View style={styles.prepPickerActions}>
+                    <TouchableOpacity
+                      style={styles.prepPickerCancel}
+                      onPress={() => setPrepPickerTemplate(null)}
+                    >
+                      <Text style={styles.prepPickerCancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.prepPickerLog,
+                        (servNum <= 0) && { opacity: 0.4 },
+                      ]}
+                      disabled={servNum <= 0}
+                      onPress={() => {
+                        logMealTemplateServings(
+                          prepPickerTemplate.id,
+                          today(),
+                          initialMealType,
+                          servNum,
+                        );
+                        setLastLogged(
+                          `${servNum} ${unit}${servNum !== 1 ? 's' : ''} of ${prepPickerTemplate.name} — ${cal} cal`,
+                        );
+                        setPrepPickerTemplate(null);
+                        setSuccessVisible(true);
+                        setTimeout(() => setSuccessVisible(false), 3000);
+                      }}
+                    >
+                      <Ionicons name="add" size={16} color="#fff" />
+                      <Text style={styles.prepPickerLogText}>Log</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              );
+            })()}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -2054,5 +2193,127 @@ const styles = StyleSheet.create({
   scanHint: {
     marginTop: 20, fontSize: FontSizes.md, fontWeight: '600', color: '#fff',
     textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
+  },
+
+  // Meal-prep serving picker
+  prepPickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  prepPickerCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#fff',
+    borderRadius: BorderRadius.lg,
+    padding: 20,
+  },
+  prepPickerTitle: {
+    fontSize: FontSizes.lg,
+    fontWeight: '800',
+    color: Colors.darkText,
+    marginBottom: 2,
+  },
+  prepPickerSub: {
+    fontSize: FontSizes.sm,
+    color: Colors.darkTextSecondary,
+    marginBottom: 16,
+  },
+  prepQuickRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  prepQuickChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(127,179,194,0.3)',
+    backgroundColor: 'rgba(127,179,194,0.06)',
+    alignItems: 'center',
+  },
+  prepQuickChipActive: {
+    backgroundColor: Colors.almostAquaDeep,
+    borderColor: Colors.almostAquaDeep,
+  },
+  prepQuickChipText: {
+    fontSize: FontSizes.md,
+    fontWeight: '700',
+    color: Colors.darkText,
+  },
+  prepQuickChipTextActive: {
+    color: '#fff',
+  },
+  prepPickerLabel: {
+    fontSize: FontSizes.xs,
+    fontWeight: '700',
+    color: Colors.darkTextSecondary,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  prepPickerInput: {
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.12)',
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: FontSizes.md,
+    color: Colors.darkText,
+    marginBottom: 14,
+  },
+  prepMacroPreview: {
+    padding: 10,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(127,179,194,0.1)',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  prepMacroPreviewText: {
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
+    color: Colors.darkText,
+  },
+  prepWarn: {
+    fontSize: FontSizes.xs,
+    color: Colors.warning,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  prepPickerActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  prepPickerCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.12)',
+    alignItems: 'center',
+  },
+  prepPickerCancelText: {
+    fontSize: FontSizes.md,
+    fontWeight: '600',
+    color: Colors.darkText,
+  },
+  prepPickerLog: {
+    flex: 1.3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.almostAquaDeep,
+  },
+  prepPickerLogText: {
+    fontSize: FontSizes.md,
+    fontWeight: '700',
+    color: '#fff',
   },
 });
