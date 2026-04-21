@@ -51,7 +51,13 @@ plans/
 scripts/
 app-audit/
 logo-concepts/
-supabase/
+
+# Supabase: track edge functions + migrations + schema, ignore local CLI state
+supabase/.temp/
+supabase/.branches/
+supabase/config.toml
+supabase/.env
+supabase/.env.*
 
 # Markdown reference files
 JAMIES-DESIGN-IDEAS.md
