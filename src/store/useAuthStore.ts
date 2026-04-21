@@ -80,10 +80,12 @@ export const useAuthStore = create<AuthStore>()(
           return;
         }
 
-        // Real Supabase auth for non-dev emails
+        // Real Supabase auth for non-dev emails — use the normalized form
+        // computed above so trailing whitespace / caps don't produce a
+        // client-validates-but-server-rejects mismatch.
         try {
           const { data, error } = await db.auth.signInWithPassword({
-            email,
+            email: _email,
             password,
           });
 
@@ -109,12 +111,12 @@ export const useAuthStore = create<AuthStore>()(
           // Sync subscription tier
           useSubscriptionStore.getState().setTier(tier);
 
-          const profileName = profile?.name ?? email.split('@')[0];
+          const profileName = profile?.name ?? _email.split('@')[0];
           const nameParts = profileName.split(' ');
 
           const appUser: User = {
             id: data.user.id,
-            email: data.user.email ?? email,
+            email: data.user.email ?? _email,
             firstName: profile?.first_name ?? nameParts[0] ?? '',
             lastName: profile?.last_name ?? nameParts.slice(1).join(' ') ?? '',
             savedStacks: [],
@@ -136,8 +138,9 @@ export const useAuthStore = create<AuthStore>()(
 
         try {
           const fullName = `${firstName} ${lastName}`.trim();
+          const normalizedEmail = email.trim().toLowerCase();
           const { data, error } = await db.auth.signUp({
-            email,
+            email: normalizedEmail,
             password,
             options: {
               data: { name: fullName, first_name: firstName, last_name: lastName },

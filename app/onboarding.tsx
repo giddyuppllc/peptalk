@@ -140,7 +140,7 @@ export default function OnboardingScreen() {
     if (step === 0) return true; // Welcome — always can continue
     if (step === 1) return Boolean(profile.gender && selectedAge >= 13 && profile.healthGoals.length > 0);
     if (step === 2) return true; // Health basics is optional
-    if (step === 3) return accountFirstName.length > 0 && accountLastName.length > 0 && accountEmail.includes('@') && accountPassword.length >= 6 && acceptedTerms;
+    if (step === 3) return accountFirstName.length > 0 && accountLastName.length > 0 && accountEmail.trim().includes('@') && accountPassword.length >= 6 && acceptedTerms;
     return true;
   }, [step, profile.gender, profile.ageRange, profile.healthGoals.length, accountFirstName, accountLastName, accountEmail, accountPassword]);
 

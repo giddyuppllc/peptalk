@@ -42,13 +42,14 @@ export default function AuthScreen() {
   const completeOnboarding = useOnboardingStore((s) => s.completeOnboarding);
 
   const handleLogin = async () => {
-    if (!email.includes('@') || password.length < 6) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail.includes('@') || password.length < 6) {
       setError('Enter a valid email and password (6+ chars)');
       return;
     }
     setError('');
     try {
-      await login(email, password);
+      await login(normalizedEmail, password);
       completeOnboarding();
       router.replace('/(tabs)');
     } catch {
@@ -57,14 +58,15 @@ export default function AuthScreen() {
   };
 
   const handleSignup = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
     if (!firstName.trim()) { setError('Enter your first name'); return; }
     if (!lastName.trim()) { setError('Enter your last name'); return; }
-    if (!email.includes('@')) { setError('Enter a valid email'); return; }
+    if (!normalizedEmail.includes('@')) { setError('Enter a valid email'); return; }
     if (password.length < 6) { setError('Password must be 6+ characters'); return; }
     if (!acceptedTerms) { setError('You must accept the terms to continue'); return; }
     setError('');
     try {
-      await signup(firstName.trim(), lastName.trim(), email, password);
+      await signup(firstName.trim(), lastName.trim(), normalizedEmail, password);
       completeOnboarding();
       router.replace('/(tabs)');
     } catch {
