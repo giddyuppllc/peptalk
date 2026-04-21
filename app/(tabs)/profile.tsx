@@ -1422,7 +1422,7 @@ export default function ProfileScreen() {
               await logout();
               Alert.alert('Account Deleted', 'Your account and all data have been permanently removed.');
             } catch (err) {
-              console.error('[profile] delete account failed:', err);
+              if (__DEV__) console.warn('[profile] delete account failed:', err);
               Alert.alert(
                 'Deletion Failed',
                 'We couldn\'t delete your account right now. Please try again or contact support.',

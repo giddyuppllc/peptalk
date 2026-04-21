@@ -105,6 +105,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Rate limit — 20 vision calls/day. Grok Vision is the priciest call
+    // in the app; even Pro users shouldn't be able to burn through it.
+    const rateLimit = await checkRateLimit(supabase, user.id, 'food-scan', 20);
+    if (!rateLimit.allowed) {
+      return new Response(JSON.stringify({
+        error: `Daily food-scan limit reached (${rateLimit.limit}/day). Resets tomorrow.`,
+        retryAfter: rateLimit.retryAfter,
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // 3. Get image from request
     const { imageBase64 } = await req.json();
 
@@ -141,6 +154,7 @@ Deno.serve(async (req) => {
         max_tokens: 1024,
         temperature: 0.3,
       }),
+      signal: AbortSignal.timeout(60000),
     });
 
     if (!openaiResponse.ok) {
@@ -184,3 +198,45 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+async function checkRateLimit(
+  supabase: any,
+  userId: string,
+  functionName: string,
+  limit: number,
+): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number }> {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const { data: existing } = await supabase
+      .from('ai_usage_log')
+      .select('count')
+      .eq('user_id', userId)
+      .eq('function_name', functionName)
+      .eq('date', today)
+      .maybeSingle();
+    const count = existing?.count ?? 0;
+    if (count >= limit) {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setUTCHours(24, 0, 0, 0);
+      const retryAfter = Math.max(1, Math.round((tomorrow.getTime() - now.getTime()) / 1000));
+      return { allowed: false, limit, count, retryAfter };
+    }
+    await supabase
+      .from('ai_usage_log')
+      .upsert(
+        {
+          user_id: userId,
+          function_name: functionName,
+          date: today,
+          count: count + 1,
+          last_called_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,function_name,date' },
+      );
+    return { allowed: true, limit, count: count + 1 };
+  } catch (err) {
+    console.warn(`[${functionName}] rate-limit check failed, allowing:`, err);
+    return { allowed: true, limit, count: 0 };
+  }
+}

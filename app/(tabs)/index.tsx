@@ -214,8 +214,11 @@ export default function DashboardScreen() {
       }),
     ]).start();
 
-    // Subtle pulse for the streak fire icon
-    RNAnimated.loop(
+    // Subtle pulse for the streak fire icon. Hold the loop handle so we can
+    // stop it when the Home tab unmounts — otherwise the loop runs forever
+    // as the user navigates between tabs and the old values stay held in
+    // memory after each re-mount.
+    const pulseLoop = RNAnimated.loop(
       RNAnimated.sequence([
         RNAnimated.timing(pulseAnim, {
           toValue: 1.15,
@@ -228,7 +231,11 @@ export default function DashboardScreen() {
           useNativeDriver: true,
         }),
       ]),
-    ).start();
+    );
+    pulseLoop.start();
+    return () => {
+      pulseLoop.stop();
+    };
   }, []);
 
   // ── State ─────────────────────────────────────────────────────────────────
@@ -266,7 +273,12 @@ export default function DashboardScreen() {
   const protocols = useDoseLogStore((s) => s.protocols);
   const doses = useDoseLogStore((s) => s.doses);
   const notifPrefs = useNotificationStore((s) => s.preferences);
-  const { getLevel, checkAndAward, xp, earnedBadgeIds } = useAchievementStore();
+  // Select individual slices so this component doesn't re-render on every
+  // unrelated achievement store mutation (viewed peptides, articles read, etc.)
+  const xp = useAchievementStore((s) => s.xp);
+  const earnedBadgeIds = useAchievementStore((s) => s.earnedBadgeIds);
+  const getLevel = useAchievementStore((s) => s.getLevel);
+  const checkAndAward = useAchievementStore((s) => s.checkAndAward);
   const workoutLogs = useWorkoutStore((s) => s.logs);
   const activeProgram = useWorkoutStore((s) => s.activeProgram);
   const meals = useMealStore((s) => s.meals);

@@ -107,7 +107,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 5. Call OpenAI/Grok
+    // 5. Call OpenAI/Grok — 45s timeout prevents a hung upstream from
+    // burning our entire edge-function budget and erroring with a 500
+    // (which looks worse to the user than "AI unavailable, try again").
     const openaiResponse = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -123,6 +125,7 @@ Deno.serve(async (req) => {
         max_tokens: 1024,
         temperature: 0.7,
       }),
+      signal: AbortSignal.timeout(45000),
     });
 
     if (!openaiResponse.ok) {
