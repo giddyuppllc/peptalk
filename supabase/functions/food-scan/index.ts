@@ -121,9 +121,22 @@ Deno.serve(async (req) => {
     // 3. Get image from request
     const { imageBase64 } = await req.json();
 
-    if (!imageBase64) {
+    if (!imageBase64 || typeof imageBase64 !== 'string') {
       return new Response(JSON.stringify({ error: 'No image provided' }), {
         status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Hard server-side cap — a 48MP phone camera at quality 1.0 can produce
+    // ~10-15MB base64. We don't need more than ~5MB for vision recognition,
+    // and larger images scale vision-model cost linearly. Reject giant uploads
+    // rather than pass them upstream.
+    if (imageBase64.length > 6_000_000) {
+      return new Response(JSON.stringify({
+        error: 'Image too large. Please retake at lower quality.',
+      }), {
+        status: 413,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

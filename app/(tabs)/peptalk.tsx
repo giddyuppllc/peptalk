@@ -99,12 +99,21 @@ export default function PepTalkScreen() {
     prefill?: string;
     message?: string;
   }>();
-  const { messages, isTyping, addMessage, setTyping } = useChatStore();
-  const { profile } = useOnboardingStore();
-  const { entries: checkIns } = useCheckinStore();
-  const { currentStack, savedStacks } = useStackStore();
-  const { doses, protocols, alerts } = useDoseLogStore();
-  const { profile: healthProfile } = useHealthProfileStore();
+  // Split selectors — destructuring the full store subscribes to every change,
+  // causing the chat screen to re-render on any store update. At ~200 messages
+  // this turns into O(n) wasted work per keystroke. Select each slice we need.
+  const messages = useChatStore((s) => s.messages);
+  const isTyping = useChatStore((s) => s.isTyping);
+  const addMessage = useChatStore((s) => s.addMessage);
+  const setTyping = useChatStore((s) => s.setTyping);
+  const profile = useOnboardingStore((s) => s.profile);
+  const checkIns = useCheckinStore((s) => s.entries);
+  const currentStack = useStackStore((s) => s.currentStack);
+  const savedStacks = useStackStore((s) => s.savedStacks);
+  const doses = useDoseLogStore((s) => s.doses);
+  const protocols = useDoseLogStore((s) => s.protocols);
+  const alerts = useDoseLogStore((s) => s.alerts);
+  const healthProfile = useHealthProfileStore((s) => s.profile);
   const addJournalEntry = useJournalStore((s) => s.addEntry);
 
   const [inputText, setInputText] = React.useState('');

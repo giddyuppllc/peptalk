@@ -13,8 +13,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
-const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.openai.com/v1';
-const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL') ?? 'gpt-4o';
+// Default to Grok — matches the other edge functions. If secrets aren't set
+// for this function, at least we're calling the same provider consistently.
+const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
+const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL') ?? 'grok-4-1-fast-reasoning';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -23,8 +25,15 @@ const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const RATE_LIMITS: Record<string, number> = {
   free: 0,      // No AI access
   plus: 25,     // Limited
-  pro: 999999,  // Effectively unlimited
+  pro: 300,     // Generous but finite — protects against runaway cost on
+                // a leaked pro-tier token. Previously 999999 which was
+                // effectively uncapped.
 };
+
+// Hard limits on incoming payload to prevent "giant context" cost abuse.
+const MAX_MESSAGES = 30;
+const MAX_TOTAL_CHARS = 40_000;   // ~10K tokens — well above normal chat
+const MAX_SYSTEM_PROMPT_CHARS = 8_000;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -78,34 +87,54 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 3. Check rate limit (count today's messages)
-    const today = new Date().toISOString().slice(0, 10);
-    const { count } = await supabase
-      .from('chat_messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('role', 'user')
-      .gte('created_at', `${today}T00:00:00Z`);
-
-    if ((count ?? 0) >= limit) {
+    // 3. Check rate limit — uses ai_usage_log (service-role-writable only)
+    // so users can't reset their counter by deleting their own chat history.
+    const rateLimit = await checkRateLimit(supabase, user.id, 'aimee-chat', limit);
+    if (!rateLimit.allowed) {
       return new Response(JSON.stringify({
-        error: `Daily message limit reached (${limit}/day). Upgrade to Pro for unlimited.`,
+        error: `Daily message limit reached (${rateLimit.limit}/day)${tier === 'plus' ? '. Upgrade to Pro for more.' : '. Resets tomorrow.'}`,
         upgrade: tier === 'plus',
+        retryAfter: rateLimit.retryAfter,
       }), {
         status: 429,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // 4. Parse request body
+    // 4. Parse + validate request body
     const { messages, systemPrompt } = await req.json();
 
-    if (!messages || !Array.isArray(messages)) {
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: 'Invalid request: messages required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    if (messages.length > MAX_MESSAGES) {
+      return new Response(JSON.stringify({ error: `Too many messages (limit ${MAX_MESSAGES}). Please start a new conversation.` }), {
+        status: 413,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const totalChars = messages.reduce(
+      (acc: number, m: any) => acc + (typeof m?.content === 'string' ? m.content.length : 0),
+      0,
+    );
+    if (totalChars > MAX_TOTAL_CHARS) {
+      return new Response(JSON.stringify({ error: 'Message thread too large. Please start a new conversation.' }), {
+        status: 413,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Clamp client-supplied systemPrompt. Not a hard security boundary (caller's
+    // own account, own cost), but bounds cost-abuse from a giant prompt.
+    const safeSystemPrompt =
+      typeof systemPrompt === 'string'
+        ? systemPrompt.slice(0, MAX_SYSTEM_PROMPT_CHARS)
+        : '';
 
     // 5. Call OpenAI/Grok — 45s timeout prevents a hung upstream from
     // burning our entire edge-function budget and erroring with a 500
@@ -119,7 +148,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: OPENAI_MODEL,
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: safeSystemPrompt },
           ...messages,
         ],
         max_tokens: 1024,
@@ -160,3 +189,53 @@ Deno.serve(async (req) => {
     });
   }
 });
+
+/**
+ * Per-user, per-function, per-day call counter backed by `ai_usage_log`.
+ * Service role writes only — user RLS only permits SELECT — so deleting
+ * chat_messages can't reset the counter.
+ *
+ * Fail-open on DB error: we'd rather serve a paying user than strand them
+ * when our rate-limit table is unreachable.
+ */
+async function checkRateLimit(
+  supabase: any,
+  userId: string,
+  functionName: string,
+  limit: number,
+): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number }> {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const { data: existing } = await supabase
+      .from('ai_usage_log')
+      .select('count')
+      .eq('user_id', userId)
+      .eq('function_name', functionName)
+      .eq('date', today)
+      .maybeSingle();
+    const count = existing?.count ?? 0;
+    if (count >= limit) {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setUTCHours(24, 0, 0, 0);
+      const retryAfter = Math.max(1, Math.round((tomorrow.getTime() - now.getTime()) / 1000));
+      return { allowed: false, limit, count, retryAfter };
+    }
+    await supabase
+      .from('ai_usage_log')
+      .upsert(
+        {
+          user_id: userId,
+          function_name: functionName,
+          date: today,
+          count: count + 1,
+          last_called_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,function_name,date' },
+      );
+    return { allowed: true, limit, count: count + 1 };
+  } catch (err) {
+    console.warn(`[${functionName}] rate-limit check failed, allowing:`, err);
+    return { allowed: true, limit, count: 0 };
+  }
+}
