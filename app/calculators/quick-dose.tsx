@@ -23,6 +23,7 @@ import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/th
 import { PEPTIDES } from '../../src/data/peptides';
 import { getProtocolsByPeptide } from '../../src/data/protocols';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import { getPeptideTiming } from '../../src/data/peptideTiming';
 
 export default function QuickDoseScreen() {
   const router = useRouter();
@@ -57,6 +58,11 @@ export default function QuickDoseScreen() {
   );
 
   const protocol = protocols[0]; // Primary protocol
+
+  const timingRule = useMemo(
+    () => (selectedPeptide ? getPeptideTiming(selectedPeptide.id) : null),
+    [selectedPeptide],
+  );
 
   // Auto-calculate reconstitution
   const reconInfo = useMemo(() => {
@@ -291,6 +297,56 @@ export default function QuickDoseScreen() {
               </GlassCard>
             )}
 
+            {/* Timing rule */}
+            {timingRule && (
+              <GlassCard style={{ ...styles.section, ...styles.timingCard }}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons
+                    name="time-outline"
+                    size={20}
+                    color={timingRule.highSensitivity ? '#B45309' : '#7ABED0'}
+                  />
+                  <Text
+                    style={[
+                      styles.sectionTitle,
+                      timingRule.highSensitivity ? { color: '#B45309' } : null,
+                    ]}
+                  >
+                    Timing: {timingRule.title}
+                  </Text>
+                </View>
+                <Text style={styles.sectionText}>{timingRule.body}</Text>
+                {(timingRule.fastBeforeMin || timingRule.fastAfterMin) && (
+                  <View style={styles.timingMetaRow}>
+                    {timingRule.fastBeforeMin && (
+                      <View style={styles.timingChip}>
+                        <Ionicons name="arrow-back-outline" size={12} color="#6B7280" />
+                        <Text style={styles.timingChipText}>
+                          Fast {timingRule.fastBeforeMin} min before
+                        </Text>
+                      </View>
+                    )}
+                    {timingRule.fastAfterMin && (
+                      <View style={styles.timingChip}>
+                        <Ionicons name="arrow-forward-outline" size={12} color="#6B7280" />
+                        <Text style={styles.timingChipText}>
+                          Fast {timingRule.fastAfterMin} min after
+                        </Text>
+                      </View>
+                    )}
+                    {timingRule.suggestedTime && (
+                      <View style={styles.timingChip}>
+                        <Ionicons name="moon-outline" size={12} color="#6B7280" />
+                        <Text style={styles.timingChipText}>
+                          Best: {timingRule.suggestedTime}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </GlassCard>
+            )}
+
             {/* Storage */}
             {protocol.storageNotes && (
               <GlassCard style={styles.section}>
@@ -481,6 +537,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
+  },
+  timingCard: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  timingMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+  },
+  timingChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 99,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+  },
+  timingChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
   },
 
   // Ask Aimee

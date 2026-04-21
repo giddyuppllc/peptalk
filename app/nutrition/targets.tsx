@@ -20,17 +20,68 @@ import { GradientButton } from '../../src/components/GradientButton';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 import { useMealStore } from '../../src/store/useMealStore';
 import { useProgressGoalsStore } from '../../src/store/useProgressGoalsStore';
+import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import { useDoseLogStore } from '../../src/store/useDoseLogStore';
+import {
+  computeMacroRecommendation,
+  type GoalType,
+  type ActivityLevel,
+} from '../../src/services/macroCalculator';
 
 export default function MacroTargetsScreen() {
   const router = useRouter();
   const { targets, setTargets } = useMealStore();
   const setGoalValue = useProgressGoalsStore((s) => s.setGoalValue);
+  const profile = useHealthProfileStore((s) => s.profile);
+  const activeProtocols = useDoseLogStore((s) => s.getActiveProtocols());
   const [cal, setCal] = useState(String(targets.calories));
   const [protein, setProtein] = useState(String(targets.proteinGrams));
   const [carbs, setCarbs] = useState(String(targets.carbsGrams));
   const [fat, setFat] = useState(String(targets.fatGrams));
   const [fiber, setFiber] = useState(String(targets.fiberGrams ?? 30));
   const [water, setWater] = useState(String(targets.waterOz ?? 100));
+  const [autoGoal, setAutoGoal] = useState<GoalType>('maintenance');
+  const [autoActivity, setAutoActivity] = useState<ActivityLevel>('moderate');
+  const [autoRationale, setAutoRationale] = useState<string[] | null>(null);
+
+  // Auto-compute eligibility — need weight, height, age, sex at minimum
+  const weightLbs = profile?.bodyMetrics?.weightLbs;
+  const heightInches = profile?.bodyMetrics?.heightInches;
+  const dob = profile?.dateOfBirth;
+  const sex =
+    profile?.biologicalSex === 'male'
+      ? 'male'
+      : profile?.biologicalSex === 'female'
+      ? 'female'
+      : undefined;
+  const ageYears = dob ? Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 24 * 3600 * 1000)) : undefined;
+  const canAutoCalc = Boolean(weightLbs && heightInches && ageYears && sex);
+
+  const handleAutoCalc = () => {
+    if (!canAutoCalc) {
+      Alert.alert(
+        'Missing profile info',
+        'Add your weight, height, age, and sex in Health Profile to auto-calculate your targets.',
+      );
+      return;
+    }
+    const rec = computeMacroRecommendation({
+      weightLbs: weightLbs!,
+      heightInches: heightInches!,
+      ageYears: ageYears!,
+      biologicalSex: sex as 'male' | 'female',
+      activityLevel: autoActivity,
+      goal: autoGoal,
+      activePeptides: activeProtocols.map((p) => p.peptideId),
+    });
+    setCal(String(rec.calories));
+    setProtein(String(rec.proteinGrams));
+    setCarbs(String(rec.carbsGrams));
+    setFat(String(rec.fatGrams));
+    setFiber(String(rec.fiberGrams));
+    setWater(String(rec.waterOz));
+    setAutoRationale(rec.rationale);
+  };
 
   const handleSave = () => {
     const newTargets = {
@@ -75,6 +126,86 @@ export default function MacroTargetsScreen() {
             <Field label="Fat" value={fat} onChange={setFat} unit="g" />
             <Field label="Fiber" value={fiber} onChange={setFiber} unit="g" />
             <Field label="Water" value={water} onChange={setWater} unit="oz" />
+          </GlassCard>
+        </View>
+
+        {/* Auto-calculate from profile */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Auto-calculate</Text>
+          <GlassCard>
+            <Text style={styles.autoLead}>
+              Use your weight, height, age, and goal to compute targets using the Mifflin-St Jeor formula.
+            </Text>
+
+            <Text style={styles.autoLabel}>Goal</Text>
+            <View style={styles.autoChipRow}>
+              {(
+                [
+                  { k: 'weight_loss', label: 'Fat loss' },
+                  { k: 'maintenance', label: 'Maintain' },
+                  { k: 'body_recomp', label: 'Recomp' },
+                  { k: 'muscle_gain', label: 'Muscle' },
+                ] as Array<{ k: GoalType; label: string }>
+              ).map(({ k, label }) => (
+                <TouchableOpacity
+                  key={k}
+                  onPress={() => setAutoGoal(k)}
+                  style={[
+                    styles.autoChip,
+                    autoGoal === k && styles.autoChipOn,
+                  ]}
+                >
+                  <Text style={[styles.autoChipText, autoGoal === k && styles.autoChipTextOn]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.autoLabel}>Activity</Text>
+            <View style={styles.autoChipRow}>
+              {(
+                [
+                  { k: 'sedentary', label: 'Low' },
+                  { k: 'light', label: 'Light' },
+                  { k: 'moderate', label: 'Moderate' },
+                  { k: 'very_active', label: 'High' },
+                ] as Array<{ k: ActivityLevel; label: string }>
+              ).map(({ k, label }) => (
+                <TouchableOpacity
+                  key={k}
+                  onPress={() => setAutoActivity(k)}
+                  style={[
+                    styles.autoChip,
+                    autoActivity === k && styles.autoChipOn,
+                  ]}
+                >
+                  <Text style={[styles.autoChipText, autoActivity === k && styles.autoChipTextOn]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.autoCTA, !canAutoCalc && { opacity: 0.5 }]}
+              onPress={handleAutoCalc}
+              disabled={!canAutoCalc}
+            >
+              <Ionicons name="calculator-outline" size={16} color="#fff" />
+              <Text style={styles.autoCTAText}>
+                {canAutoCalc ? 'Auto-calculate my targets' : 'Complete health profile first'}
+              </Text>
+            </TouchableOpacity>
+
+            {autoRationale && (
+              <View style={styles.rationaleBox}>
+                <Text style={styles.rationaleTitle}>How this was calculated</Text>
+                {autoRationale.map((line, i) => (
+                  <Text key={i} style={styles.rationaleLine}>• {line}</Text>
+                ))}
+              </View>
+            )}
           </GlassCard>
         </View>
 
@@ -248,5 +379,83 @@ const styles = StyleSheet.create({
     color: Colors.darkTextSecondary,
     marginTop: 3,
     textAlign: 'center',
+  },
+
+  // Auto-calc
+  autoLead: {
+    fontSize: FontSizes.sm,
+    color: Colors.darkTextSecondary,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  autoLabel: {
+    fontSize: FontSizes.xs,
+    fontWeight: '700',
+    color: Colors.darkTextSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+    marginTop: 8,
+  },
+  autoChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 6,
+  },
+  autoChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+  autoChipOn: {
+    backgroundColor: Colors.almostAquaDeep,
+    borderColor: Colors.almostAquaDeep,
+  },
+  autoChipText: {
+    fontSize: FontSizes.xs,
+    color: Colors.darkText,
+    fontWeight: '600',
+  },
+  autoChipTextOn: {
+    color: '#fff',
+  },
+  autoCTA: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.almostAquaDeep,
+    marginTop: 12,
+  },
+  autoCTAText: {
+    color: '#fff',
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
+  },
+  rationaleBox: {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: 'rgba(127,179,194,0.08)',
+  },
+  rationaleTitle: {
+    fontSize: FontSizes.xs,
+    fontWeight: '700',
+    color: Colors.darkTextSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  rationaleLine: {
+    fontSize: FontSizes.xs,
+    color: Colors.darkText,
+    lineHeight: 16,
+    marginBottom: 2,
   },
 });

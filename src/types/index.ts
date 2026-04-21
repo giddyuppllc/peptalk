@@ -554,6 +554,21 @@ export interface DeviceConnections {
   googleFitEnabled: boolean;
 }
 
+/**
+ * Optional cycle tracking for users with a menstrual cycle.
+ * Only meaningful when `biologicalSex === 'female'`.
+ */
+export interface CycleTracking {
+  /** Date of last period start (YYYY-MM-DD). */
+  lastPeriodStartDate?: string;
+  /** User-reported typical cycle length. Default 28 days if unset. */
+  typicalCycleLength?: number;
+  /** User-reported typical period duration in days. Default 5 if unset. */
+  typicalPeriodLength?: number;
+  /** Explicit opt-in so the feature stays hidden for users who don't track. */
+  trackingEnabled?: boolean;
+}
+
 export interface HealthProfile {
   // Basic demographics (extends onboarding)
   biologicalSex?: BiologicalSex;
@@ -562,6 +577,9 @@ export interface HealthProfile {
 
   // Health background
   medical: MedicalHistory;
+
+  // Cycle tracking (female users who opt in)
+  cycle?: CycleTracking;
 
   // Lifestyle pillars
   nutrition: NutritionProfile;

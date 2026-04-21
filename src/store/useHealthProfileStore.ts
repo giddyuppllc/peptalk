@@ -17,6 +17,7 @@ import {
   SleepPattern,
   ActivityLevel,
   ConnectedDevice,
+  CycleTracking,
 } from '../types';
 import { secureStorage } from '../services/secureStorage';
 import { syncHealthProfile } from '../services/syncService';
@@ -136,6 +137,7 @@ interface HealthProfileStore {
   setBasicInfo: (sex?: BiologicalSex, dob?: string) => void;
   setBodyMetrics: (metrics: Partial<BodyMetrics>) => void;
   setMedicalHistory: (medical: Partial<MedicalHistory>) => void;
+  setCycleTracking: (cycle: Partial<CycleTracking>) => void;
   setNutrition: (nutrition: Partial<NutritionProfile>) => void;
   setSleep: (sleep: Partial<SleepProfile>) => void;
   setLifestyle: (lifestyle: Partial<LifestyleProfile>) => void;
@@ -209,6 +211,16 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
           const updated = {
             ...state.profile,
             medical: { ...state.profile.medical, ...medical },
+            lastUpdated: new Date().toISOString(),
+          };
+          return { profile: { ...updated, profileCompleteness: calcCompleteness(updated) } };
+        }),
+
+      setCycleTracking: (cycle) =>
+        set((state) => {
+          const updated = {
+            ...state.profile,
+            cycle: { ...(state.profile.cycle ?? {}), ...cycle },
             lastUpdated: new Date().toISOString(),
           };
           return { profile: { ...updated, profileCompleteness: calcCompleteness(updated) } };

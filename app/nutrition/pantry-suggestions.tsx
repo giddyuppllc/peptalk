@@ -26,6 +26,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 import { usePantryStore } from '../../src/store/usePantryStore';
 import { useMealStore } from '../../src/store/useMealStore';
+import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { supabase } from '../../src/services/supabase';
 
 interface SuggestedIngredient {
@@ -71,6 +72,8 @@ function PantrySuggestionsInner() {
   const items = usePantryStore((s) => s.items);
   const targets = useMealStore((s) => s.targets);
   const addMeal = useMealStore((s) => s.addMeal);
+  const activeProtocols = useDoseLogStore((s) => s.getActiveProtocols());
+  const activeStackPeptides = activeProtocols.map((p) => p.peptideId);
 
   const [mealType, setMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(inferMealType());
   const [loading, setLoading] = useState(false);
@@ -110,6 +113,7 @@ function PantrySuggestionsInner() {
           })),
           macroTargets: perMealTargets,
           mealType,
+          activeStackPeptides,
           count: 3,
         },
       });

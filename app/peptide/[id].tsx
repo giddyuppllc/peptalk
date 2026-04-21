@@ -22,6 +22,7 @@ import { getProtocolsByPeptide } from '../../src/data/protocols';
 import { getTrialsByPeptideId } from '../../src/data/clinicalTrials';
 import { getSafetyProfileByPeptideId } from '../../src/data/safetyProfiles';
 import { getCuratedStacksByPeptideId } from '../../src/data/curatedStacks';
+import { getPeptideNutrition } from '../../src/data/peptideNutrition';
 import { getVideosByPeptideId } from '../../src/data/videos';
 import { getGuidesByPeptideId } from '../../src/data/howToGuides';
 import { getInteractionsByPeptideId } from '../../src/data/interactions';
@@ -109,6 +110,7 @@ export default function PeptideDetailScreen() {
   const clinicalTrials = getTrialsByPeptideId(peptide.id);
   const protocols = getProtocolsByPeptide(peptide.id);
   const relatedStacks = getCuratedStacksByPeptideId(peptide.id);
+  const nutritionGuidance = getPeptideNutrition(peptide.id);
   const relatedVideos = getVideosByPeptideId(peptide.id);
   const relatedGuides = getGuidesByPeptideId(peptide.id);
 
@@ -502,6 +504,66 @@ export default function PeptideDetailScreen() {
                 <Text style={styles.bulletText}>{interaction}</Text>
               </View>
             ))}
+          </GlassCard>
+        )}
+
+        {/* Nutrition guidance for this peptide */}
+        {nutritionGuidance && (
+          <GlassCard style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="nutrition-outline" size={18} color="#7ABED0" />
+              <Text style={styles.sectionTitle}>Nutrition on this peptide</Text>
+            </View>
+            <Text style={styles.nutritionSummary}>{nutritionGuidance.summary}</Text>
+            {nutritionGuidance.proteinGPerLbRange && (
+              <View style={styles.nutritionRow}>
+                <Ionicons name="fitness-outline" size={14} color="#6B7280" />
+                <Text style={styles.nutritionRowText}>
+                  Protein target:{' '}
+                  <Text style={styles.nutritionBold}>
+                    {nutritionGuidance.proteinGPerLbRange[0]}–
+                    {nutritionGuidance.proteinGPerLbRange[1]} g per lb bodyweight
+                  </Text>
+                </Text>
+              </View>
+            )}
+            {nutritionGuidance.hydrationMultiplier &&
+              nutritionGuidance.hydrationMultiplier > 1 && (
+                <View style={styles.nutritionRow}>
+                  <Ionicons name="water-outline" size={14} color="#6B7280" />
+                  <Text style={styles.nutritionRowText}>
+                    Hydration: bump{' '}
+                    <Text style={styles.nutritionBold}>
+                      {Math.round((nutritionGuidance.hydrationMultiplier - 1) * 100)}%
+                    </Text>{' '}
+                    above baseline
+                  </Text>
+                </View>
+              )}
+            {nutritionGuidance.foodsEmphasize && nutritionGuidance.foodsEmphasize.length > 0 && (
+              <View style={styles.nutritionBlock}>
+                <Text style={styles.nutritionBlockLabel}>Emphasize</Text>
+                <Text style={styles.nutritionBlockText}>
+                  {nutritionGuidance.foodsEmphasize.join(' · ')}
+                </Text>
+              </View>
+            )}
+            {nutritionGuidance.foodsAvoid && nutritionGuidance.foodsAvoid.length > 0 && (
+              <View style={styles.nutritionBlock}>
+                <Text style={styles.nutritionBlockLabel}>Limit</Text>
+                <Text style={styles.nutritionBlockText}>
+                  {nutritionGuidance.foodsAvoid.join(' · ')}
+                </Text>
+              </View>
+            )}
+            {nutritionGuidance.microEmphasis && nutritionGuidance.microEmphasis.length > 0 && (
+              <View style={styles.nutritionBlock}>
+                <Text style={styles.nutritionBlockLabel}>Micronutrients</Text>
+                <Text style={styles.nutritionBlockText}>
+                  {nutritionGuidance.microEmphasis.join(' · ')}
+                </Text>
+              </View>
+            )}
           </GlassCard>
         )}
 
@@ -1005,6 +1067,47 @@ const styles = StyleSheet.create({
     fontFamily: 'Playfair-Black',
     color: TEXT,
     letterSpacing: -0.3,
+  },
+  // Peptide nutrition section
+  nutritionSummary: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: TEXT,
+    marginBottom: 12,
+    fontFamily: 'DMSans-Regular',
+  },
+  nutritionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  nutritionRowText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#6B7280',
+    fontFamily: 'DMSans-Regular',
+  },
+  nutritionBold: {
+    color: TEXT,
+    fontFamily: 'DMSans-Bold',
+  },
+  nutritionBlock: {
+    marginTop: 10,
+  },
+  nutritionBlockLabel: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  nutritionBlockText: {
+    fontSize: 13,
+    color: TEXT,
+    fontFamily: 'DMSans-Regular',
+    lineHeight: 18,
   },
   sectionText: {
     fontSize: 14,
