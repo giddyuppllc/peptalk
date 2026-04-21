@@ -428,6 +428,8 @@ export async function generateRecipe(params: {
   mealType: string;
   preferences: string;
   targets: { calories: number; proteinGrams: number; carbsGrams: number; fatGrams: number };
+  /** User's allergens — pushed into the constraints list so the AI avoids them. */
+  allergens?: string[];
 }): Promise<Array<{
   name: string;
   description: string;
@@ -438,7 +440,7 @@ export async function generateRecipe(params: {
   instructions: string[];
   macros: { calories: number; protein: number; carbs: number; fat: number };
 }> | null> {
-  const { diet, mealType, preferences, targets } = params;
+  const { diet, mealType, preferences, targets, allergens } = params;
 
   // ── Try server edge function first (production path — key stays server-side) ──
   if (SUPABASE_URL) {
@@ -448,6 +450,13 @@ export async function generateRecipe(params: {
         const constraints: string[] = [];
         if (diet && diet !== 'any') constraints.push(diet);
         if (preferences) constraints.push(preferences);
+        // Allergens get pushed as strict "no X" entries so the AI avoids them.
+        // Duplicate entries are fine — constraints are a free-form list.
+        if (allergens && allergens.length > 0) {
+          for (const a of allergens) {
+            if (a.trim()) constraints.push(`strictly no ${a.trim()}`);
+          }
+        }
 
         const res = await fetch(`${SUPABASE_URL}/functions/v1/aimee-recipe`, {
           method: 'POST',

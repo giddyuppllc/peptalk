@@ -35,6 +35,15 @@ function isAvailable(): boolean {
   return Notifications != null;
 }
 
+/**
+ * Public helper used by settings + banners to know whether push
+ * notifications are actually functional on this build. Returns false
+ * while expo-notifications is disabled (see file header for why).
+ */
+export function notificationsAvailable(): boolean {
+  return isAvailable();
+}
+
 // ─── Configure Notification Handler ──────────────────────────────────────────
 
 export function configureNotificationHandler(): void {

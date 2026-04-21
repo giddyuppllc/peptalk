@@ -25,6 +25,8 @@ import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/th
 import { useMealStore } from '../../src/store/useMealStore';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { generateRecipe, isAIAvailable } from '../../src/services/llmService';
+import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import { useAllergyStore } from '../../src/store/useAllergyStore';
 import { PaywallGate } from '../../src/hooks/useFeatureGate';
 
 // ---------------------------------------------------------------------------
@@ -256,12 +258,26 @@ export default function RecipeGeneratorScreen() {
   const handleGenerate = async () => {
     setLoading(true);
     try {
+      // Collect allergens from every source we track so AI recipes avoid
+      // anything the user can't (or won't) eat. De-duped, severe flagged.
+      const profile = useHealthProfileStore.getState().profile;
+      const structuredAllergens = useAllergyStore.getState().allergens;
+      const allergens = Array.from(
+        new Set(
+          [
+            ...(profile?.medical?.allergies ?? []),
+            ...(profile?.nutrition?.foodAllergies ?? []),
+            ...structuredAllergens.map((a) => a.label),
+          ].filter(Boolean),
+        ),
+      );
       if (isAIAvailable()) {
         const aiRecipes = await generateRecipe({
           diet,
           mealType,
           preferences,
           targets,
+          allergens,
         });
         if (aiRecipes && aiRecipes.length > 0) {
           setRecipes(aiRecipes);

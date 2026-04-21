@@ -27,6 +27,8 @@ import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/th
 import { usePantryStore } from '../../src/store/usePantryStore';
 import { useMealStore } from '../../src/store/useMealStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
+import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import { useAllergyStore } from '../../src/store/useAllergyStore';
 import { supabase } from '../../src/services/supabase';
 
 interface SuggestedIngredient {
@@ -100,6 +102,18 @@ function PantrySuggestionsInner() {
     setLoading(true);
     setSuggestions([]);
     try {
+      // Collect allergens — structured store + legacy profile fields.
+      const profile = useHealthProfileStore.getState().profile;
+      const structuredAllergens = useAllergyStore.getState().allergens;
+      const allergens = Array.from(
+        new Set(
+          [
+            ...(profile?.medical?.allergies ?? []),
+            ...(profile?.nutrition?.foodAllergies ?? []),
+            ...structuredAllergens.map((a) => a.label),
+          ].filter(Boolean),
+        ),
+      );
       const { data, error } = await supabase.functions.invoke('aimee-pantry-meal', {
         body: {
           pantryItems: items.map((i) => ({
@@ -114,6 +128,7 @@ function PantrySuggestionsInner() {
           macroTargets: perMealTargets,
           mealType,
           activeStackPeptides,
+          allergens,
           count: 3,
         },
       });

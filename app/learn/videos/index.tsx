@@ -265,6 +265,11 @@ export default function VideoGalleryScreen() {
                             </Text>
                           </View>
                         )}
+                        {/PLACEHOLDER/i.test(video.videoUrl) && (
+                          <View style={styles.durationBadgeSmall}>
+                            <Text style={styles.durationSmallText}>Coming soon</Text>
+                          </View>
+                        )}
                       </View>
                       <Text style={styles.videoTitle} numberOfLines={2}>
                         {video.title}

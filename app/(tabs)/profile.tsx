@@ -26,6 +26,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { Disclaimer } from '../../src/components/Disclaimer';
 import { trackConsentUpdated } from '../../src/services/analyticsEvents';
 import { useNotificationStore } from '../../src/store/useNotificationStore';
+import { notificationsAvailable } from '../../src/services/notificationService';
 import {
   scheduleDailyCheckInReminder,
   cancelAllReminders,
@@ -1450,7 +1451,18 @@ export default function ProfileScreen() {
             <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
             <ProfileRow icon="snow-outline" label="Food safety windows" onPress={() => router.push('/settings/food-safety' as any)} color={t.text} />
             <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
-            <ProfileRow icon="notifications-outline" label="Notifications" onPress={() => {}} color={t.text} />
+            <ProfileRow
+              icon="notifications-outline"
+              label={notificationsAvailable() ? 'Notifications' : 'Notifications · Off'}
+              onPress={() => {
+                if (notificationsAvailable()) return;
+                Alert.alert(
+                  'Notifications currently off',
+                  "Push notifications are disabled in this build while we sort out a native compatibility issue. In-app banners still show for urgent items like expiring meal preps. We'll re-enable push in a later update.",
+                );
+              }}
+              color={t.text}
+            />
             <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
             <ProfileRow
               icon="help-circle-outline"

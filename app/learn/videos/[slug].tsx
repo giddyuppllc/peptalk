@@ -65,7 +65,18 @@ export default function VideoPlayerScreen() {
     );
   }
 
+  // Pre-release videos use PLACEHOLDER_* IDs until production filming wraps.
+  // Detect and gracefully tell users instead of dumping them into a 404.
+  const isPlaceholder = /PLACEHOLDER/i.test(video.videoUrl);
+
   const handleOpenVideo = () => {
+    if (isPlaceholder) {
+      Alert.alert(
+        'Coming soon',
+        'This video is being produced. It\'ll be available in a future update — thanks for your patience.',
+      );
+      return;
+    }
     Linking.openURL(video.videoUrl).catch(() => {
       Alert.alert('Error', 'Could not open the video link.');
     });
@@ -177,12 +188,18 @@ export default function VideoPlayerScreen() {
 
         {/* Open in Browser Button */}
         <TouchableOpacity
-          style={styles.openButton}
+          style={[styles.openButton, isPlaceholder && { opacity: 0.55 }]}
           onPress={handleOpenVideo}
           activeOpacity={0.8}
         >
-          <Ionicons name="play-circle-outline" size={20} color="#2D2D2D" />
-          <Text style={styles.openButtonText}>Watch Video</Text>
+          <Ionicons
+            name={isPlaceholder ? 'time-outline' : 'play-circle-outline'}
+            size={20}
+            color="#2D2D2D"
+          />
+          <Text style={styles.openButtonText}>
+            {isPlaceholder ? 'Coming soon' : 'Watch Video'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
