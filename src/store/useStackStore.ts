@@ -24,8 +24,13 @@ interface StackStore {
   addToStack: (peptideId: string) => void;
   removeFromStack: (peptideId: string) => void;
   clearStack: () => void;
+  /** Wipe all saved stacks + current + analysis. Called on logout. */
+  clearAll: () => void;
+  /** Whether the current user can save another stack given their tier. */
+  canSaveAnotherStack: () => boolean;
   analyzeCurrentStack: () => Promise<void>;
-  saveStack: (name: string) => void;
+  /** Returns the saved stack ID on success, or null if the free-tier limit blocks the save. */
+  saveStack: (name: string) => string | null;
   deleteStack: (stackId: string) => void;
   loadStack: (stack: PeptideStack) => void;
 }
@@ -74,6 +79,15 @@ export const useStackStore = create<StackStore>()(
         });
       },
 
+      clearAll: () => {
+        set({
+          currentStack: [],
+          savedStacks: [],
+          currentAnalysis: null,
+          isAnalyzing: false,
+        });
+      },
+
       analyzeCurrentStack: async () => {
         const { currentStack } = get();
 
@@ -93,11 +107,31 @@ export const useStackStore = create<StackStore>()(
         }
       },
 
+      canSaveAnotherStack: () => {
+        const { savedStacks } = get();
+        const userStackCount = savedStacks.filter((s) => !s.isCurated).length;
+        // Lazy require to avoid a circular dep between the two stores
+        try {
+          const { useSubscriptionStore } = require('./useSubscriptionStore');
+          const tier = useSubscriptionStore.getState().tier;
+          if (tier === 'free') return userStackCount < 1;
+        } catch {
+          // If the subscription store isn't available, fall open so dev/test
+          // flows aren't blocked. Server is still source of truth.
+        }
+        return true;
+      },
+
       saveStack: (name: string) => {
         const { currentStack, currentAnalysis, savedStacks } = get();
 
         if (currentStack.length === 0) {
-          return;
+          return null;
+        }
+
+        // Free-tier cap: 1 saved user stack. Curated stacks don't count.
+        if (!get().canSaveAnotherStack()) {
+          return null;
         }
 
         const timestamp = new Date().toISOString();
@@ -123,6 +157,7 @@ export const useStackStore = create<StackStore>()(
           peptides: newStack.peptideIds.map((pid) => ({ peptideId: pid })),
           notes: null,
         });
+        return id;
       },
 
       deleteStack: (stackId: string) => {

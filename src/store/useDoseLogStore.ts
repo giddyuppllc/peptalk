@@ -12,6 +12,7 @@ import {
 import { secureStorage } from '../services/secureStorage';
 import { syncRecord, deleteRecord } from '../services/syncService';
 import { getPeptideById } from '../data/peptides';
+import { PROTOCOL_TEMPLATES } from '../data/protocols';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -110,6 +111,41 @@ function detectAlerts(
     }
   });
 
+  // Check active protocols that have exceeded their recommended max duration.
+  // We lookup the protocol templates to find `durationWeeks.max` for the
+  // peptide, add a 2-week grace, and warn once the user crosses that line.
+  protocols
+    .filter((p) => p.isActive && p.startDate)
+    .forEach((protocol) => {
+      const templates = PROTOCOL_TEMPLATES.filter(
+        (t) => t.peptideId === protocol.peptideId,
+      );
+      if (templates.length === 0) return;
+
+      // Use the widest max across matching templates so we don't false-positive
+      // on users following a longer variant of the protocol.
+      const maxWeeks = Math.max(...templates.map((t) => t.durationWeeks.max));
+      if (!isFinite(maxWeeks) || maxWeeks <= 0) return;
+
+      const start = new Date(protocol.startDate as string);
+      if (isNaN(start.getTime())) return;
+      const weeksActive = (now.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000);
+      if (weeksActive <= maxWeeks + 2) return;
+
+      const peptide = getPeptideById(protocol.peptideId);
+      const name = peptide?.name ?? protocol.peptideId;
+      alerts.push({
+        id: `alert-duration-${protocol.peptideId}`,
+        level: 'warning',
+        title: `${name} past recommended duration`,
+        message: `You've been on ${name} for about ${Math.round(weeksActive)} weeks. Research protocols typically run up to ${maxWeeks} weeks. Consider taking a break and discussing with your provider.`,
+        triggeredBy: 'dose_frequency',
+        actionLabel: 'Review with your doctor',
+        dismissed: false,
+        createdAt: now.toISOString(),
+      });
+    });
+
   return alerts;
 }
 
@@ -167,6 +203,9 @@ interface DoseLogStore {
   getRecentDoses: (days: number) => DoseLogEntry[];
   getActiveProtocols: () => ActiveProtocol[];
   getDatesWithDoses: () => Set<string>;
+
+  /** Wipe all local dose/protocol/alert state. Called on logout. */
+  clearAll: () => void;
 }
 
 export const useDoseLogStore = create<DoseLogStore>()(
@@ -299,6 +338,15 @@ export const useDoseLogStore = create<DoseLogStore>()(
 
       getDatesWithDoses: () =>
         new Set(get().doses.map((d) => d.date)),
+
+      clearAll: () =>
+        set({
+          doses: [],
+          protocols: [],
+          alerts: [],
+          dismissedAlertIds: [],
+          hasAcceptedDoseDisclaimer: false,
+        }),
     }),
     {
       name: 'peptalk-doselog',

@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useStackStore } from '../../src/store/useStackStore';
+import { PaywallModal } from '../../src/components/PaywallModal';
 import { PEPTIDES, getPeptideById } from '../../src/data/peptides';
 import { SearchBar } from '../../src/components/SearchBar';
 import { AnalysisCard } from '../../src/components/AnalysisCard';
@@ -64,6 +65,7 @@ export default function StackBuilderScreen() {
   const [selectedCategory, setSelectedCategory] = useState<PeptideCategory | null>(null);
   const [showSaveInput, setShowSaveInput] = useState(false);
   const [stackName, setStackName] = useState('');
+  const [paywallVisible, setPaywallVisible] = useState(false);
 
   const {
     currentStack,
@@ -146,7 +148,12 @@ export default function StackBuilderScreen() {
       Alert.alert('Name Required', 'Please enter a name for your stack.');
       return;
     }
-    saveStack(name);
+    const savedId = saveStack(name);
+    if (savedId === null) {
+      // Free tier already has its one allowed stack — surface the paywall
+      setPaywallVisible(true);
+      return;
+    }
     setStackName('');
     setShowSaveInput(false);
     Alert.alert('Saved', `"${name}" has been saved to My Stacks.`);
@@ -363,11 +370,20 @@ export default function StackBuilderScreen() {
           <View style={styles.analysisSection}>
             <Text style={[styles.sectionLabel, { color: t.textSecondary }]}>ANALYSIS</Text>
             <AnalysisCard analysis={currentAnalysis} />
+            <Disclaimer variant="safety" />
           </View>
         )}
 
         <Disclaimer />
       </ScrollView>
+
+      {paywallVisible && (
+        <PaywallModal
+          visible
+          feature="unlimited_stacks"
+          onDismiss={() => setPaywallVisible(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }

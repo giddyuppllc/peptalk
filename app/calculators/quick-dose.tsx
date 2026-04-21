@@ -27,6 +27,9 @@ import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 export default function QuickDoseScreen() {
   const router = useRouter();
   const weightLbs = useHealthProfileStore((s) => s.profile?.bodyMetrics?.weightLbs);
+  const isPregnantOrNursing = useHealthProfileStore(
+    (s) => s.profile?.medical?.pregnantOrNursing === true,
+  );
   const [search, setSearch] = useState('');
   const [selectedPeptideId, setSelectedPeptideId] = useState<string | null>(null);
 
@@ -299,6 +302,27 @@ export default function QuickDoseScreen() {
               </GlassCard>
             )}
 
+            {/* Pregnancy / nursing contraindication hit */}
+            {isPregnantOrNursing &&
+              protocol.contraindications &&
+              protocol.contraindications.some((c: string) =>
+                /pregnan|nursing|breastfeed/i.test(c),
+              ) && (
+                <GlassCard style={{ ...styles.section, ...styles.pregWarnCard }}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="alert-circle" size={22} color="#B91C1C" />
+                    <Text style={[styles.sectionTitle, { color: '#B91C1C' }]}>
+                      Not recommended during pregnancy / nursing
+                    </Text>
+                  </View>
+                  <Text style={[styles.sectionText, { color: '#B91C1C' }]}>
+                    Your health profile indicates you're pregnant or nursing. This peptide is
+                    contraindicated in that scenario per research protocols. Please consult a
+                    licensed provider before proceeding.
+                  </Text>
+                </GlassCard>
+              )}
+
             {/* Side effects */}
             {protocol.contraindications && protocol.contraindications.length > 0 && (
               <GlassCard variant="accent" style={styles.section}>
@@ -453,6 +477,11 @@ const styles = StyleSheet.create({
   // Warnings
   warningRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'flex-start', marginBottom: 4 },
   warningText: { flex: 1, fontSize: FontSizes.sm, color: Colors.darkTextSecondary },
+  pregWarnCard: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
 
   // Ask Aimee
   askAimeeBtn: { marginTop: Spacing.md },

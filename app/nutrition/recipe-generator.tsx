@@ -194,7 +194,7 @@ export default function RecipeGeneratorScreen() {
   const [recipes, setRecipes] = useState<GeneratedRecipe[]>([]);
 
   const addMeal = useMealStore((s) => s.addMeal);
-  const canUse = hasFeature('ai_recipe_generator');
+  const canUse = hasFeature('recipe_generator');
 
   const handleLogRecipe = useCallback((recipe: GeneratedRecipe) => {
     const toDateKey = (d: Date) => {

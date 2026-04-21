@@ -104,6 +104,8 @@ interface AchievementActions {
     profileComplete: boolean;
     programComplete: boolean;
   }) => void;
+  /** Wipe all XP / badges. Called on logout. */
+  clearAll: () => void;
 }
 
 export const useAchievementStore = create<AchievementState & AchievementActions>()(
@@ -190,6 +192,15 @@ export const useAchievementStore = create<AchievementState & AchievementActions>
         // Program complete
         if (stats.programComplete) earn('program-finish');
       },
+
+      clearAll: () =>
+        set({
+          xp: 0,
+          earnedBadgeIds: [],
+          pendingCelebrations: [],
+          viewedPeptides: [],
+          articlesRead: 0,
+        }),
     }),
     {
       name: 'peptalk-achievements',

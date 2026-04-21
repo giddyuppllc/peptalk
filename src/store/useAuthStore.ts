@@ -230,9 +230,56 @@ export const useAuthStore = create<AuthStore>()(
       logout: () => {
         db.auth.signOut().catch(() => {});
 
+        // Wipe every user-specific data store so the next person to log in
+        // on this device can't see the previous user's data. Required for
+        // HIPAA-style privacy since we track meals, doses, health profile,
+        // check-ins, journal entries, body map, workouts, and chat history.
         try {
           useSubscriptionStore.getState().setTier('free');
           useOnboardingStore.getState().reset();
+        } catch {}
+
+        // Lazy-require the rest so this file doesn't force early
+        // initialization of every store on app boot.
+        try {
+          const { useMealStore } = require('./useMealStore');
+          useMealStore.getState().clearAll?.();
+        } catch {}
+        try {
+          const { useDoseLogStore } = require('./useDoseLogStore');
+          useDoseLogStore.getState().clearAll?.();
+        } catch {}
+        try {
+          const { useHealthProfileStore } = require('./useHealthProfileStore');
+          useHealthProfileStore.getState().resetProfile?.();
+        } catch {}
+        try {
+          const { useCheckinStore } = require('./useCheckinStore');
+          useCheckinStore.getState().clearAll?.();
+        } catch {}
+        try {
+          const { useStackStore } = require('./useStackStore');
+          useStackStore.getState().clearAll?.();
+        } catch {}
+        try {
+          const { useJournalStore } = require('./useJournalStore');
+          useJournalStore.getState().clearAll?.();
+        } catch {}
+        try {
+          const { useBodyMapStore } = require('./useBodyMapStore');
+          useBodyMapStore.getState().clearAll?.();
+        } catch {}
+        try {
+          const { useWorkoutStore } = require('./useWorkoutStore');
+          useWorkoutStore.getState().clearAll?.();
+        } catch {}
+        try {
+          const { useChatStore } = require('./useChatStore');
+          useChatStore.getState().clearChat?.();
+        } catch {}
+        try {
+          const { useAchievementStore } = require('./useAchievementStore');
+          useAchievementStore.getState().clearAll?.();
         } catch {}
 
         set({

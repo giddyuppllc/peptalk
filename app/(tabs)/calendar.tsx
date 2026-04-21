@@ -24,6 +24,9 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
 import { DaySummarySheet } from '../../src/components/DaySummarySheet';
 import { DOSE_LOG_GATE_DISCLAIMER } from '../../src/constants/legal';
+import { checkDoseSafety } from '../../src/services/doseSafety';
+import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import { PROTOCOL_TEMPLATES } from '../../src/data/protocols';
 import {
   DoseLogEntry,
   DoseUnit,
@@ -374,66 +377,150 @@ export default function CalendarScreen() {
       return;
     }
 
-    logDose({
-      peptideId: logSubstanceName.trim(),
-      amount,
-      unit: logUnit,
-      route: logRoute,
-      date: selectedDate,
-      injectionSite: logSite || undefined,
-      notes: logNotes || undefined,
-    });
+    const safety = checkDoseSafety(logSubstanceName.trim(), amount, logUnit);
 
-    // Protocol-specific timing tip after logging
-    const name = logSubstanceName.trim().toLowerCase();
-    const timingTip = getDosingTip(name);
-
-    // Reset form
-    setLogSubstanceName('');
-    setLogAmount('');
-    setLogSite('');
-    setLogNotes('');
-    setShowLogModal(false);
-
-    // Build alert buttons based on today's activity
-    const todayStr = toDateKey(new Date());
-    const hasCheckinToday = checkins.some((c) => c.date === todayStr);
-
-    if (timingTip) {
-      const buttons: { text: string; onPress?: () => void }[] = [
-        { text: 'Got It' },
-      ];
-      if (!hasCheckinToday) {
-        buttons.push({
-          text: 'Check In',
-          onPress: () => router.push('/(tabs)/check-in'),
-        });
-      }
-      buttons.push({
-        text: 'Ask Aimee',
-        onPress: () => router.push('/(tabs)/peptalk'),
-      });
-      Alert.alert('Dose Logged', timingTip, buttons);
-    } else {
-      const buttons: { text: string; onPress?: () => void }[] = [
-        { text: 'OK' },
-      ];
-      if (!hasCheckinToday) {
-        buttons.push({
-          text: 'Check In',
-          onPress: () => router.push('/(tabs)/check-in'),
-        });
-      }
-      buttons.push({
-        text: 'Ask Aimee',
-        onPress: () => router.push('/(tabs)/peptalk'),
-      });
-      Alert.alert(
-        'Dose Logged',
-        'Entry saved. Track how you feel with a check-in.',
-        buttons,
+    // Pregnancy contraindication check — lookup the peptide's protocol and
+    // if its `contraindications` mentions pregnancy/nursing and the user
+    // has flagged themselves as such in their health profile, warn.
+    const isPregnantOrNursing =
+      useHealthProfileStore.getState().profile?.medical?.pregnantOrNursing === true;
+    const substanceLower = logSubstanceName.trim().toLowerCase();
+    const matchedProtocols = PROTOCOL_TEMPLATES.filter(
+      (p) =>
+        p.peptideId.toLowerCase() === substanceLower ||
+        p.name.toLowerCase().includes(substanceLower) ||
+        substanceLower.includes(p.peptideId.toLowerCase()),
+    );
+    const pregnancyContra =
+      isPregnantOrNursing &&
+      matchedProtocols.some((p) =>
+        (p.contraindications ?? []).some((c) => /pregnan|nursing|breastfeed/i.test(c)),
       );
+
+    const persist = () => {
+      logDose({
+        peptideId: logSubstanceName.trim(),
+        amount,
+        unit: logUnit,
+        route: logRoute,
+        date: selectedDate,
+        injectionSite: logSite || undefined,
+        notes: logNotes || undefined,
+      });
+    };
+
+    const continueAfterLog = () => {
+      // Protocol-specific timing tip after logging
+      const name = logSubstanceName.trim().toLowerCase();
+      const timingTip = getDosingTip(name);
+
+      // Reset form
+      setLogSubstanceName('');
+      setLogAmount('');
+      setLogSite('');
+      setLogNotes('');
+      setShowLogModal(false);
+
+      // Build alert buttons based on today's activity
+      const todayStr = toDateKey(new Date());
+      const hasCheckinToday = checkins.some((c) => c.date === todayStr);
+
+      if (timingTip) {
+        const buttons: { text: string; onPress?: () => void }[] = [
+          { text: 'Got It' },
+        ];
+        if (!hasCheckinToday) {
+          buttons.push({
+            text: 'Check In',
+            onPress: () => router.push('/(tabs)/check-in'),
+          });
+        }
+        buttons.push({
+          text: 'Ask Aimee',
+          onPress: () => router.push('/(tabs)/peptalk'),
+        });
+        Alert.alert('Dose Logged', timingTip, buttons);
+      } else {
+        const buttons: { text: string; onPress?: () => void }[] = [
+          { text: 'OK' },
+        ];
+        if (!hasCheckinToday) {
+          buttons.push({
+            text: 'Check In',
+            onPress: () => router.push('/(tabs)/check-in'),
+          });
+        }
+        buttons.push({
+          text: 'Ask Aimee',
+          onPress: () => router.push('/(tabs)/peptalk'),
+        });
+        Alert.alert(
+          'Dose Logged',
+          'Entry saved. Track how you feel with a check-in.',
+          buttons,
+        );
+      }
+    };
+
+    if (pregnancyContra) {
+      Alert.alert(
+        'Not recommended during pregnancy / nursing',
+        `Your profile indicates you're pregnant or nursing, and this substance is contraindicated in that scenario per research protocols. Please consult a licensed provider before continuing.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Log anyway',
+            style: 'destructive',
+            onPress: () => {
+              if (!safety.safe) {
+                // Chain to the dose-safety confirm next
+                Alert.alert(
+                  'Double-check this dose',
+                  safety.message ?? 'This dose looks unusual.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Log anyway',
+                      style: 'destructive',
+                      onPress: () => {
+                        persist();
+                        continueAfterLog();
+                      },
+                    },
+                  ],
+                );
+                return;
+              }
+              persist();
+              continueAfterLog();
+            },
+          },
+        ],
+      );
+      return;
     }
+
+    if (!safety.safe) {
+      Alert.alert(
+        'Double-check this dose',
+        safety.message ?? 'This dose looks unusual.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Log anyway',
+            style: 'destructive',
+            onPress: () => {
+              persist();
+              continueAfterLog();
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    persist();
+    continueAfterLog();
   };
 
   const alertLevelColor = (level: HealthAlert['level']) => {
