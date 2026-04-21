@@ -140,15 +140,67 @@ export default function DosingCalculatorScreen() {
     return `${mcg.toFixed(1)} mcg`;
   };
 
-  // Alert the user if the requested volume is over 1mL (won't fit in a U-100 syringe)
-  const volumeWarning = showResults && volumeToInjectMl > 1
-    ? 'This dose is more than 1mL — it won\'t fit in a standard U-100 insulin syringe. Use less BAC water, or split the injection.'
-    : null;
+  // Round to nearest practical syringe tick. U-100 syringes have 1-unit
+  // marks, with half-unit estimation between them.
+  const roundSyringeUnits = (units: number): number => {
+    if (units < 0.5) return 0;
+    if (units < 2) return Math.round(units * 2) / 2; // half-units for tiny doses
+    return Math.round(units);
+  };
 
-  // Alert if dose is larger than vial
-  const doseTooBig = showResults && doseMcg > vialMcg
-    ? 'Your target dose is larger than the total amount in the vial. Double-check your numbers.'
-    : null;
+  const roundedUnits = roundSyringeUnits(syringeUnits);
+
+  // Compact dose formatter for inline warning text
+  function formatDoseInline(mcg: number): string {
+    if (mcg >= 10000) return `${(mcg / 1000).toFixed(1)} mg`;
+    if (mcg >= 1000) return `${(mcg / 1000).toFixed(2)} mg`;
+    return `${Math.round(mcg)} mcg`;
+  }
+
+  // Build up safety warnings — ordered most severe to least
+  const warnings: string[] = [];
+  if (showResults) {
+    // Dose larger than the entire vial
+    if (doseMcg > vialMcg) {
+      warnings.push(
+        'Your dose is larger than the total peptide in the vial. Double-check your numbers — this usually means the dose unit (mg vs mcg) is wrong.'
+      );
+    }
+
+    // Dose outside the selected peptide's typical research range
+    const proto = protocolsForPeptide[0];
+    if (proto && proto.typicalDose) {
+      const { min, max, unit } = proto.typicalDose;
+      const minMcg = unit === 'mg' ? min * 1000 : min;
+      const maxMcg = unit === 'mg' ? max * 1000 : max;
+      if (doseMcg > 0 && (doseMcg < minMcg || doseMcg > maxMcg)) {
+        warnings.push(
+          `Your dose (${formatDoseInline(doseMcg)}) is outside the typical research range for ${selectedPeptide!.name} (${min}–${max} ${unit}). Verify with your protocol.`
+        );
+      }
+    }
+
+    // Unusually high dose when no peptide is selected for range-checking
+    if (!proto && doseMcg > 5000) {
+      warnings.push(
+        `${formatDoseInline(doseMcg)} is a very high dose for most peptides. Double-check the unit (mg vs mcg) before drawing.`
+      );
+    }
+
+    // Volume larger than a U-100 syringe holds
+    if (volumeToInjectMl > 1) {
+      warnings.push(
+        'This dose is more than 1mL — it won\'t fit in a standard U-100 insulin syringe. Use less BAC water to increase concentration, or split the injection.'
+      );
+    }
+
+    // Volume too small to measure accurately on a standard insulin syringe
+    if (volumeToInjectMl > 0 && syringeUnits < 0.5) {
+      warnings.push(
+        'This dose would be less than half a unit on a U-100 syringe — too small to draw accurately. Reconstitute with less BAC water for a higher concentration.'
+      );
+    }
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
@@ -408,20 +460,14 @@ export default function DosingCalculatorScreen() {
         </View>
 
         {/* Warnings */}
-        {showResults && doseTooBig && (
+        {showResults && warnings.length > 0 && (
           <View style={styles.section}>
-            <View style={styles.warnBox}>
-              <Ionicons name="alert-circle" size={18} color="#B91C1C" />
-              <Text style={styles.warnText}>{doseTooBig}</Text>
-            </View>
-          </View>
-        )}
-        {showResults && volumeWarning && (
-          <View style={styles.section}>
-            <View style={styles.warnBox}>
-              <Ionicons name="alert-circle" size={18} color="#B91C1C" />
-              <Text style={styles.warnText}>{volumeWarning}</Text>
-            </View>
+            {warnings.map((w, i) => (
+              <View key={i} style={[styles.warnBox, i > 0 && { marginTop: 8 }]}>
+                <Ionicons name="alert-circle" size={18} color="#B91C1C" />
+                <Text style={styles.warnText}>{w}</Text>
+              </View>
+            ))}
           </View>
         )}
 
@@ -432,7 +478,8 @@ export default function DosingCalculatorScreen() {
             <GlassCard variant="glow">
               <ResultRow
                 label="Draw to"
-                value={`${syringeUnits.toFixed(1)} units (U-100)`}
+                value={`${roundedUnits} units (U-100)`}
+                hint={`precise: ${syringeUnits.toFixed(2)} units`}
                 highlight
               />
               <ResultRow
@@ -674,16 +721,23 @@ function ResultRow({
   label,
   value,
   highlight,
+  hint,
 }: {
   label: string;
   value: string;
   highlight?: boolean;
+  hint?: string;
 }) {
   const t = useTheme();
   return (
     <View style={[styles.resultRow, { borderBottomColor: t.glassBorder }]}>
       <Text style={[styles.resultLabel, { color: t.textSecondary }]}>{label}</Text>
-      <Text style={[styles.resultValue, { color: t.text }, highlight && styles.resultHighlight]}>{value}</Text>
+      <View style={{ alignItems: 'flex-end' }}>
+        <Text style={[styles.resultValue, { color: t.text }, highlight && styles.resultHighlight]}>{value}</Text>
+        {hint && (
+          <Text style={[styles.resultHint, { color: t.textSecondary }]}>{hint}</Text>
+        )}
+      </View>
     </View>
   );
 }
@@ -899,6 +953,12 @@ const styles = StyleSheet.create({
   resultHighlight: {
     color: Colors.iceMeltDeep,
     fontSize: FontSizes.lg,
+  },
+  resultHint: {
+    fontSize: FontSizes.xs,
+    color: Colors.darkTextSecondary,
+    marginTop: 2,
+    fontStyle: 'italic',
   },
 
   // Syringe
