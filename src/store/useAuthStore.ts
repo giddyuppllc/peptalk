@@ -285,6 +285,18 @@ export const useAuthStore = create<AuthStore>()(
           const { usePantryStore } = require('./usePantryStore');
           usePantryStore.getState().clearAll?.();
         } catch {}
+        try {
+          const { useCycleStore } = require('./useCycleStore');
+          useCycleStore.getState().clearAll?.();
+        } catch {}
+        try {
+          const { useIntegrationsStore } = require('./useIntegrationsStore');
+          useIntegrationsStore.getState().clearAll?.();
+        } catch {}
+        try {
+          const { useAllergyStore } = require('./useAllergyStore');
+          useAllergyStore.getState().clearAll?.();
+        } catch {}
 
         set({
           user: null,

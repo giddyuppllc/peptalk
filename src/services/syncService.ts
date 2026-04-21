@@ -25,7 +25,12 @@ type TableName =
   | 'saved_stacks'
   | 'health_profiles'
   | 'injection_sites'
-  | 'pantry_items';
+  | 'pantry_items'
+  | 'cycle_period_entries'
+  | 'cycle_day_logs'
+  | 'contraception_history'
+  | 'connected_integrations'
+  | 'allergen_entries';
 
 // ---------------------------------------------------------------------------
 // Generic helpers
