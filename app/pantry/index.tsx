@@ -134,6 +134,29 @@ export default function PantryScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        {items.length > 0 && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={[styles.aiSuggestBanner, { borderColor: t.primary }]}
+              onPress={() => router.push('/nutrition/pantry-suggestions' as any)}
+              activeOpacity={0.85}
+            >
+              <View style={[styles.aiSuggestIcon, { backgroundColor: t.primary }]}>
+                <Ionicons name="sparkles" size={18} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.aiSuggestTitle, { color: t.text }]}>
+                  What should I cook tonight?
+                </Text>
+                <Text style={[styles.aiSuggestBody, { color: t.textSecondary }]}>
+                  AI meal ideas using what you have — Pro
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={t.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {items.length === 0 && (
           <View style={styles.emptyState}>
             <View style={styles.emptyIcon}>
@@ -347,5 +370,29 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
+  },
+  aiSuggestBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    backgroundColor: 'rgba(127,179,194,0.06)',
+  },
+  aiSuggestIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiSuggestTitle: {
+    fontSize: FontSizes.md,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  aiSuggestBody: {
+    fontSize: FontSizes.xs,
   },
 });

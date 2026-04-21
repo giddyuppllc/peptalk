@@ -516,6 +516,10 @@ function RootLayout() {
               animation: 'slide_from_bottom',
             }}
           />
+          <Stack.Screen
+            name="nutrition/pantry-suggestions"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
         </Stack>
       </View>
     </SafeAreaProvider>
