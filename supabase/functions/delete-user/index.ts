@@ -80,6 +80,7 @@ Deno.serve(async (req) => {
       'connected_integrations',
       'allergen_entries',
       'ai_usage_log',
+      'subscription_events',
       'subscriptions',
       'profiles',
     ];
