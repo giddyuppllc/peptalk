@@ -309,6 +309,10 @@ interface EditMealModalProps {
 
 function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealModalProps) {
   const addMealTemplate = useMealStore((s) => s.addMealTemplate);
+  // Double-tap guard for template save — addMealTemplate generates a fresh
+  // `Date.now()`-based id each call, so two rapid taps create two duplicate
+  // template rows before the confirmation alert tears down.
+  const savingTemplateRef = React.useRef(false);
   const [desc,    setDesc]    = useState('');
   const [cal,     setCal]     = useState('');
   const [protein, setProtein] = useState('');
@@ -351,6 +355,7 @@ function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealMod
     setDateMade('');
     setPrimaryProtein('chicken');
     setStorageMethod('fridge');
+    savingTemplateRef.current = false;
   }, [meal?.id]);
 
   const applyMultiplier = (mult: number) => {
@@ -408,11 +413,13 @@ function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealMod
 
   const handleSaveAsTemplate = () => {
     if (!meal) return;
+    if (savingTemplateRef.current) return;
     const name = templateName.trim();
     if (!name) {
       Alert.alert('Name required', 'Give your meal a name before saving.');
       return;
     }
+    savingTemplateRef.current = true;
     const calNum     = parseFloat(cal)     || 0;
     const proteinNum = parseFloat(protein) || 0;
     const carbsNum   = parseFloat(carbs)   || 0;
@@ -455,7 +462,9 @@ function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealMod
     const message = isMealPrep
       ? `Saved "${name}" as a meal prep (${parsedServings} ${servingUnit || 'servings'}, ~${perUnit} cal each).`
       : `Saved "${name}" to your meals.`;
-    Alert.alert('Saved', message);
+    Alert.alert('Saved', message, [
+      { text: 'OK', onPress: () => { savingTemplateRef.current = false; } },
+    ]);
     setSaveSectionOpen(false);
   };
 

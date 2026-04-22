@@ -139,6 +139,10 @@ function TierCard({ info, isActive, highlighted }: { info: TierInfo; isActive: b
 
   const handleUpgrade = async () => {
     if (info.tier === 'free' || !info.productId) return;
+    // Re-entry guard — label flips to "Processing…" but the button stays
+    // pressable; a double-tap would otherwise fire the native purchase
+    // sheet twice.
+    if (purchasing) return;
     try {
       setPurchasing(true);
       // Triggers native purchase sheet. Validation happens in the
@@ -253,7 +257,8 @@ function tierForFeature(feature: string | undefined): SubscriptionTier | null {
 
 export default function SubscriptionScreen() {
   const router = useRouter();
-  const { tier } = useSubscriptionStore();
+  const tier = useSubscriptionStore((s) => s.tier);
+  const [restoring, setRestoring] = React.useState(false);
   const { highlight } = useLocalSearchParams<{ highlight?: string }>();
   const highlightedTier = tierForFeature(highlight);
 
@@ -314,7 +319,10 @@ export default function SubscriptionScreen() {
         {/* Restore purchases */}
         <TouchableOpacity
           style={styles.restoreBtn}
+          disabled={restoring}
           onPress={async () => {
+            if (restoring) return;
+            setRestoring(true);
             try {
               const count = await restorePurchases();
               // syncFromServer is called in the purchase listener for each restored item
@@ -327,12 +335,14 @@ export default function SubscriptionScreen() {
               );
             } catch (err: any) {
               Alert.alert('Restore Failed', err?.message ?? 'Could not restore purchases. Please try again.');
+            } finally {
+              setRestoring(false);
             }
           }}
           accessibilityRole="button"
           accessibilityLabel="Restore previous purchases"
         >
-          <Text style={styles.restoreBtnText}>Restore Purchases</Text>
+          <Text style={styles.restoreBtnText}>{restoring ? 'Restoring…' : 'Restore Purchases'}</Text>
         </TouchableOpacity>
 
         {/* Footer */}

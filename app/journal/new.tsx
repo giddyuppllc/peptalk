@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -76,6 +76,11 @@ export default function NewJournalEntryScreen() {
 
   const canSave = title.trim().length > 0 && content.trim().length > 0;
 
+  // Double-tap guard — Alert.alert is async, so a rapid second tap before
+  // the alert stack tears down would fire handleSave twice and create
+  // duplicate entries. Synchronous ref flips before the alert opens.
+  const savingRef = useRef(false);
+
   // ------- Handlers -------
 
   const handleAddTag = () => {
@@ -103,7 +108,8 @@ export default function NewJournalEntryScreen() {
   };
 
   const handleSave = () => {
-    if (!canSave) return;
+    if (!canSave || savingRef.current) return;
+    savingRef.current = true;
 
     const result = addEntry({
       date: dateParam || undefined,
@@ -116,6 +122,7 @@ export default function NewJournalEntryScreen() {
     });
 
     if (result === null) {
+      savingRef.current = false;
       Alert.alert(
         'Weekly limit reached',
         'Free accounts get 3 journal entries per week. Upgrade to PepTalk+ for unlimited journaling.',

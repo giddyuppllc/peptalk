@@ -873,6 +873,21 @@ export default function FoodSearchScreen() {
   const foodTabBarRef = useTourTarget('food_search_tab_bar');
   const [successVisible, setSuccessVisible] = useState(false);
   const [lastLogged, setLastLogged] = useState('');
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear the success-toast timer on unmount so setState doesn't fire on
+  // an unmounted component when the user navigates away mid-3s-window.
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    };
+  }, []);
+
+  const flashSuccess = useCallback(() => {
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    setSuccessVisible(true);
+    successTimerRef.current = setTimeout(() => setSuccessVisible(false), 3000);
+  }, []);
 
   const debouncedQuery = useDebounce(query, 400);
 
@@ -1059,10 +1074,9 @@ export default function FoodSearchScreen() {
 
       setPickerVisible(false);
       setLastLogged(`${food.name} (${grams}g) — ${macros.calories} cal`);
-      setSuccessVisible(true);
-      setTimeout(() => setSuccessVisible(false), 3000);
+      flashSuccess();
     },
-    [addMeal, updateMeal, meals, params.mealId, addRecentFood],
+    [addMeal, updateMeal, meals, params.mealId, addRecentFood, flashSuccess],
   );
 
   // Handle tapping + on a recent food
@@ -1375,8 +1389,7 @@ export default function FoodSearchScreen() {
                     }
                     logMealTemplate(item.id, today(), initialMealType);
                     setLastLogged(`${item.name} — ${item.totalCalories} cal`);
-                    setSuccessVisible(true);
-                    setTimeout(() => setSuccessVisible(false), 3000);
+                    flashSuccess();
                   }}
                   activeOpacity={0.7}
                 >
@@ -1732,8 +1745,7 @@ export default function FoodSearchScreen() {
                           `${servNum} ${unit}${servNum !== 1 ? 's' : ''} of ${prepPickerTemplate.name} — ${cal} cal`,
                         );
                         setPrepPickerTemplate(null);
-                        setSuccessVisible(true);
-                        setTimeout(() => setSuccessVisible(false), 3000);
+                        flashSuccess();
                       }}
                     >
                       <Ionicons name="add" size={16} color="#fff" />
