@@ -243,6 +243,10 @@ function RootLayout() {
     // picks up the full history instead of a blank slate. Each store
     // handles its own schema mapping and falls back to local-only if the
     // pull fails — nothing blocks boot.
+    //
+    // Also re-runs below in a separate effect when isAuthenticated flips
+    // from false → true so signup/login flows correctly hydrate without
+    // requiring a restart or network disconnect.
     const bootHydrations: Array<[string, () => Promise<void>]> = [
       ['meals',      () => useMealStore.getState().syncFromServer()],
       ['check-ins',  () => useCheckinStore.getState().syncFromServer()],
@@ -289,6 +293,31 @@ function RootLayout() {
       try { unsubReconnect?.(); } catch {}
     };
   }, []);
+
+  // When auth flips from logged-out → logged-in (signup flow, or a
+  // sign-in after the boot hydrations already no-op'd with no session),
+  // re-run the hydrations so the user sees their server data without
+  // having to restart the app or toggle airplane mode.
+  const wasAuthenticatedRef = useRef(isAuthenticated);
+  useEffect(() => {
+    if (!authHydrated) return;
+    if (isAuthenticated && !wasAuthenticatedRef.current) {
+      if (__DEV__) console.log('[auth] logged in — rehydrating user stores');
+      useSubscriptionStore.getState().syncFromServer()?.catch?.(() => {});
+      useMealStore.getState().syncFromServer()?.catch?.(() => {});
+      useCheckinStore.getState().syncFromServer()?.catch?.(() => {});
+      useDoseLogStore.getState().syncFromServer()?.catch?.(() => {});
+      useWorkoutStore.getState().syncFromServer()?.catch?.(() => {});
+      useJournalStore.getState().syncFromServer()?.catch?.(() => {});
+      useStackStore.getState().syncFromServer()?.catch?.(() => {});
+      useAllergyStore.getState().syncFromServer()?.catch?.(() => {});
+      useBodyMapStore.getState().syncFromServer()?.catch?.(() => {});
+      usePantryStore.getState().syncFromServer()?.catch?.(() => {});
+      useCycleStore.getState().syncFromServer()?.catch?.(() => {});
+      useIntegrationsStore.getState().syncFromServer()?.catch?.(() => {});
+    }
+    wasAuthenticatedRef.current = isAuthenticated;
+  }, [isAuthenticated, authHydrated]);
 
   useEffect(() => {
     if (!navReady || !hasHydrated) return;
