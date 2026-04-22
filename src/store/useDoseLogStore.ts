@@ -245,15 +245,24 @@ export const useDoseLogStore = create<DoseLogStore>()(
           doses: [entry, ...state.doses],
         }));
 
-        // Sync to Supabase
+        // Sync to Supabase. Column names match the `dose_logs` table from
+        // migration 20260420000000 (amount/unit/site/batch_number) — an
+        // earlier version of this code wrote `dose_mcg` instead of
+        // `amount`, which silently failed at PostgREST and left doses
+        // local-only. Also look up the peptide's display name so the row
+        // is readable without joining to the app's peptide catalog.
+        const peptide = getPeptideById(entry.peptideId);
         syncRecord('dose_logs', {
           id: entry.id,
           peptide_id: entry.peptideId,
-          peptide_name: entry.peptideId,
-          dose_mcg: entry.amount,
+          peptide_name: peptide?.name ?? entry.peptideId,
+          amount: entry.amount,
+          unit: entry.unit,
           route: entry.route,
           date: entry.date,
           time: entry.time,
+          site: entry.injectionSite ?? null,
+          batch_number: entry.batchNumber ?? null,
           notes: entry.notes ?? null,
           source: 'user',
         });

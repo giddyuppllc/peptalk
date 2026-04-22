@@ -115,8 +115,11 @@ export const useJournalStore = create<JournalStore>()(
           id: entry.id,
           date: entry.date,
           title: entry.title,
+          category: entry.category,
           content: entry.content,
           tags: entry.tags,
+          related_peptide_ids: entry.relatedPeptideIds ?? [],
+          mood: entry.mood ?? null,
         });
 
         return entry;
@@ -138,6 +141,21 @@ export const useJournalStore = create<JournalStore>()(
               : e
           ),
         }));
+        // Cloud-sync the updated row — previously this set() was local-only,
+        // so edits to title/content/category/mood never propagated.
+        const updated = get().entries.find((e) => e.id === id);
+        if (updated) {
+          syncRecord('journal_entries', {
+            id: updated.id,
+            date: updated.date,
+            title: updated.title,
+            category: updated.category,
+            content: updated.content,
+            tags: updated.tags,
+            related_peptide_ids: updated.relatedPeptideIds ?? [],
+            mood: updated.mood ?? null,
+          });
+        }
       },
 
       deleteEntry: (id) => {
