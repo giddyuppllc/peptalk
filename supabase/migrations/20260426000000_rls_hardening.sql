@@ -16,10 +16,9 @@
 --      broke the authority of the daily-quota window query (user could
 --      rewrite their system clock to backdate messages).
 --
--- Also lands two net-new bits that the app already references:
---
---   4. `chat_quota_today(uuid)` — server-authoritative free-tier count.
---   5. Confirmation that every PII-bearing table has RLS enabled.
+-- Also reasserts RLS across every PII-bearing table via the existing
+-- `_apply_user_id_rls` helper as a safety net in case anyone toggles it
+-- off via the Supabase dashboard.
 --
 -- Safe to re-run.
 -- ============================================================================
@@ -100,44 +99,7 @@ CREATE TRIGGER chat_messages_server_timestamp
   EXECUTE FUNCTION public.chat_messages_pin_created_at();
 
 
--- ── 4. chat_quota_today() — server-authoritative free-tier counter ────────
-
--- Called by useChatStore.refreshDailyQuotaFromServer. Returns the number
--- of USER messages the caller has sent today (UTC), counted against
--- server-pinned created_at so clock skew is irrelevant.
---
--- SECURITY DEFINER so the function itself bypasses the caller's RLS,
--- but we reject any call where p_user_id does not match auth.uid() — that
--- way a malicious client can't peek at someone else's message count.
-CREATE OR REPLACE FUNCTION public.chat_quota_today(p_user_id UUID)
-RETURNS INTEGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  result INTEGER;
-BEGIN
-  IF p_user_id IS DISTINCT FROM auth.uid() THEN
-    RAISE EXCEPTION 'user_id mismatch';
-  END IF;
-
-  SELECT count(*)::INTEGER
-    INTO result
-    FROM public.chat_messages
-   WHERE user_id = p_user_id
-     AND role = 'user'
-     AND created_at >= date_trunc('day', now() AT TIME ZONE 'utc');
-
-  RETURN coalesce(result, 0);
-END;
-$$;
-
-REVOKE ALL ON FUNCTION public.chat_quota_today(UUID) FROM public;
-GRANT EXECUTE ON FUNCTION public.chat_quota_today(UUID) TO authenticated;
-
-
--- ── 5. RLS coverage sanity check ───────────────────────────────────────────
+-- ── 4. RLS coverage sanity check ───────────────────────────────────────────
 
 -- Re-assert RLS on every user-data table in case someone disables it via
 -- the dashboard. Idempotent — the _apply_user_id_rls helper drops and

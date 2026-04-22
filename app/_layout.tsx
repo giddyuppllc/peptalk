@@ -219,15 +219,6 @@ function RootLayout() {
       if (__DEV__) console.warn('[boot] warmKnowledgeBase threw:', err);
     }
 
-    // Reconcile free-tier chat quota with the server so device-clock
-    // tampering can't silently reset the daily counter.
-    useChatStore
-      .getState()
-      .refreshDailyQuotaFromServer()
-      ?.catch?.((err: unknown) => {
-        if (__DEV__) console.warn('[boot] chat quota refresh failed:', err);
-      });
-
     // Drain any chat messages whose cloud sync failed on a previous
     // session (offline send, flaky network). Without this, chat history
     // silently diverges across the user's devices.
@@ -255,7 +246,6 @@ function RootLayout() {
     const unsubReconnect = subscribeToReconnect(() => {
       if (__DEV__) console.log('[net] back online — running recovery syncs');
       useChatStore.getState().flushPendingSyncs()?.catch?.(() => {});
-      useChatStore.getState().refreshDailyQuotaFromServer()?.catch?.(() => {});
       useSubscriptionStore.getState().syncFromServer()?.catch?.(() => {});
       useMealStore.getState().syncFromServer()?.catch?.(() => {});
     });

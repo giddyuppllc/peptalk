@@ -1,6 +1,8 @@
 -- ============================================================================
 -- Reference Data Tables (admin-updatable, not user-owned)
--- Run AFTER schema.sql
+-- Legacy / optional: these tables aren't used at runtime today (the app
+-- loads peptide + stack reference data from local TypeScript constants
+-- under src/data/). Kept around for future DB-backed reference data.
 -- ============================================================================
 
 -- Peptides reference table
