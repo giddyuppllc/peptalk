@@ -44,22 +44,32 @@ async function getUserId(): Promise<string | null> {
 /**
  * Upsert a single record to a Supabase table.
  * Silently fails if offline or unauthenticated.
+ *
+ * Returns `true` when the row was accepted by PostgREST, `false` on
+ * auth/network/validation failure. Most callers don't care and ignore
+ * the result — but the chat retry queue needs it so it can re-enqueue
+ * messages whose upserts rejected (schema mismatch, RLS, offline).
  */
 export async function syncRecord(
   table: TableName,
   record: Record<string, unknown>
-): Promise<void> {
+): Promise<boolean> {
   const userId = await getUserId();
-  if (!userId) return;
+  if (!userId) return false;
 
   try {
     const { error } = await db
       .from(table)
       .upsert({ ...record, user_id: userId }, { onConflict: 'id' });
 
-    if (error) console.warn(`[sync] ${table} upsert failed:`, error.message);
+    if (error) {
+      console.warn(`[sync] ${table} upsert failed:`, error.message);
+      return false;
+    }
+    return true;
   } catch (e) {
     console.warn(`[sync] ${table} sync error:`, e);
+    return false;
   }
 }
 

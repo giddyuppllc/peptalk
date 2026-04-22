@@ -78,20 +78,20 @@ interface ChatStore {
 
 const MAX_SYNC_ATTEMPTS = 5;
 
-/** Sync a single message record, returning true on success. */
+/** Sync a single message record. Returns the boolean success from
+ *  syncRecord so the retry queue can decide whether to re-enqueue. */
 async function syncChatMessage(
   message: ChatMessage,
   chatId: string | null,
 ): Promise<boolean> {
   try {
-    await syncRecord('chat_messages', {
+    return await syncRecord('chat_messages', {
       id: message.id,
       chat_id: chatId,
       role: message.role,
       content: message.content,
       created_at: message.timestamp ?? new Date().toISOString(),
     });
-    return true;
   } catch (err) {
     if (__DEV__) console.warn('[useChatStore] syncChatMessage threw:', err);
     return false;
