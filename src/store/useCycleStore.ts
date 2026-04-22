@@ -11,7 +11,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord, deleteRecord } from '../services/syncService';
+import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
 import type {
   PeriodEntry,
   CycleDayLog,
@@ -75,6 +75,14 @@ interface CycleActions {
   getStats: () => ReturnType<typeof computeCycleStats>;
 
   clearAll: () => void;
+  /**
+   * Hydrate periods + day logs + contraception history from Supabase on
+   * boot / device switch. Cycle data is extra-sensitive (post-Dobbs);
+   * losing it on reinstall isn't just an inconvenience, so this is a
+   * must-have for users who've opted into cloud sync. Server wins on id
+   * conflict.
+   */
+  syncFromServer: () => Promise<void>;
 }
 
 export const useCycleStore = create<CycleState & CycleActions>()(
@@ -338,6 +346,102 @@ export const useCycleStore = create<CycleState & CycleActions>()(
 
       clearAll: () =>
         set({ periods: [], dayLogs: [], contraceptionHistory: [] }),
+
+      syncFromServer: async () => {
+        type PeriodRow = {
+          id: string;
+          start_date: string;
+          end_date: string | null;
+          daily_flow: Record<string, FlowIntensity> | null;
+          notes: string | null;
+          source: BiomarkerSource | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        type DayLogRow = {
+          id: string;
+          date: string;
+          flow: FlowIntensity | null;
+          symptoms: BodySymptom[] | null;
+          moods: MoodTag[] | null;
+          discharge: DischargeType | null;
+          bbt: number | null;
+          bbt_source: BiomarkerSource | null;
+          notes: string | null;
+          sexual_activity: boolean | null;
+          positive_ovulation_test: boolean | null;
+          positive_pregnancy_test: boolean | null;
+          source: BiomarkerSource | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        type ContraRow = {
+          id: string;
+          method: ContraceptionMethod;
+          start_date: string;
+          end_date: string | null;
+          notes: string | null;
+          created_at: string | null;
+        };
+
+        const [periods, dayLogs, contra] = await Promise.all([
+          hydrateFromServer<PeriodRow, PeriodEntry>(
+            'cycle_period_entries',
+            get().periods,
+            (r) => ({
+              id: r.id,
+              startDate: r.start_date,
+              endDate: r.end_date ?? undefined,
+              dailyFlow: r.daily_flow ?? undefined,
+              notes: r.notes ?? undefined,
+              source: r.source ?? 'manual',
+              createdAt: r.created_at ?? new Date().toISOString(),
+              updatedAt: r.updated_at ?? new Date().toISOString(),
+            }),
+            { orderBy: 'start_date', ascending: false, limit: 500 },
+          ),
+          hydrateFromServer<DayLogRow, CycleDayLog>(
+            'cycle_day_logs',
+            get().dayLogs,
+            (r) => ({
+              id: r.id,
+              date: r.date,
+              flow: r.flow ?? undefined,
+              symptoms: r.symptoms ?? [],
+              moods: r.moods ?? [],
+              discharge: r.discharge ?? undefined,
+              bbt: r.bbt ?? undefined,
+              bbtSource: r.bbt_source ?? undefined,
+              notes: r.notes ?? undefined,
+              sexualActivity: r.sexual_activity ?? undefined,
+              positiveOvulationTest: r.positive_ovulation_test ?? undefined,
+              positivePregnancyTest: r.positive_pregnancy_test ?? undefined,
+              source: r.source ?? 'manual',
+              createdAt: r.created_at ?? new Date().toISOString(),
+              updatedAt: r.updated_at ?? new Date().toISOString(),
+            }),
+            { orderBy: 'date', ascending: false, limit: 1000 },
+          ),
+          hydrateFromServer<ContraRow, ContraceptionHistoryEntry>(
+            'contraception_history',
+            get().contraceptionHistory,
+            (r) => ({
+              id: r.id,
+              method: r.method,
+              startDate: r.start_date,
+              endDate: r.end_date ?? undefined,
+              notes: r.notes ?? undefined,
+            }),
+            { orderBy: 'start_date', ascending: false, limit: 100 },
+          ),
+        ]);
+
+        set({
+          periods: periods.sort((a, b) => b.startDate.localeCompare(a.startDate)),
+          dayLogs: dayLogs.sort((a, b) => b.date.localeCompare(a.date)),
+          contraceptionHistory: contra,
+        });
+      },
     }),
     {
       name: 'peptalk-cycle',

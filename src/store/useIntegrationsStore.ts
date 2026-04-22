@@ -7,7 +7,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord, deleteRecord } from '../services/syncService';
+import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
 import type {
   ConnectedIntegration,
   BiomarkerSource,
@@ -43,6 +43,13 @@ interface IntegrationsActions {
   refreshStatuses: () => Promise<void>;
   get: (source: BiomarkerSource) => ConnectedIntegration | undefined;
   clearAll: () => void;
+  /**
+   * Hydrate connection metadata from Supabase. On a new device the
+   * OS-level permission has to be re-granted regardless, but pulling
+   * the record means the settings screen shows accurate "last synced"
+   * timestamps + previously-granted scopes instead of looking blank.
+   */
+  syncFromServer: () => Promise<void>;
 }
 
 function uid(): string {
@@ -254,6 +261,37 @@ export const useIntegrationsStore = create<IntegrationsState & IntegrationsActio
       get: (source) => get().integrations.find((i) => i.source === source),
 
       clearAll: () => set({ integrations: [], syncingSources: [] }),
+
+      syncFromServer: async () => {
+        type Row = {
+          id: string;
+          source: BiomarkerSource;
+          connected: boolean | null;
+          scopes: BiomarkerScope[] | null;
+          last_synced_at: string | null;
+          status_message: string | null;
+          last_error: string | null;
+        };
+        const merged = await hydrateFromServer<Row, ConnectedIntegration>(
+          'connected_integrations',
+          get().integrations,
+          (r) => ({
+            id: r.id,
+            source: r.source,
+            // A reinstall means the OS-level permission must be
+            // re-granted — never trust the server's `connected=true` on a
+            // fresh device. Force `connected: false` so the settings UI
+            // prompts the user to reconnect before we trust the adapter.
+            connected: false,
+            scopes: r.scopes ?? [],
+            lastSyncedAt: r.last_synced_at ?? undefined,
+            statusMessage: r.status_message ?? undefined,
+            lastError: r.last_error ?? undefined,
+          }),
+          { orderBy: 'last_synced_at', ascending: false, limit: 50 },
+        );
+        set({ integrations: merged });
+      },
     }),
     {
       name: 'peptalk-integrations',

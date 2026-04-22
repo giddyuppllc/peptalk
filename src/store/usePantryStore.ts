@@ -10,7 +10,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord, deleteRecord } from '../services/syncService';
+import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
 
 export type StorageLocation = 'fridge' | 'freezer' | 'pantry';
 
@@ -46,6 +46,8 @@ interface PantryActions {
   /** Crude search by name/brand, case-insensitive. */
   search: (query: string) => PantryItem[];
   clearAll: () => void;
+  /** Hydrate from Supabase on boot / device switch. Server wins on id conflict. */
+  syncFromServer: () => Promise<void>;
 }
 
 function toSupabaseRow(item: PantryItem) {
@@ -137,6 +139,47 @@ export const usePantryStore = create<PantryState & PantryActions>()(
       },
 
       clearAll: () => set({ items: [] }),
+
+      syncFromServer: async () => {
+        type Row = {
+          id: string;
+          name: string;
+          brand: string | null;
+          quantity: number;
+          unit: string;
+          category: string | null;
+          storage_location: StorageLocation;
+          expiry_date: string | null;
+          purchase_date: string | null;
+          opened_date: string | null;
+          barcode: string | null;
+          notes: string | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        const merged = await hydrateFromServer<Row, PantryItem>(
+          'pantry_items',
+          get().items,
+          (r) => ({
+            id: r.id,
+            name: r.name,
+            brand: r.brand ?? undefined,
+            quantity: r.quantity,
+            unit: r.unit,
+            category: r.category ?? undefined,
+            storageLocation: r.storage_location,
+            expiryDate: r.expiry_date ?? undefined,
+            purchaseDate: r.purchase_date ?? undefined,
+            openedDate: r.opened_date ?? undefined,
+            barcode: r.barcode ?? undefined,
+            notes: r.notes ?? undefined,
+            createdAt: r.created_at ?? new Date().toISOString(),
+            updatedAt: r.updated_at ?? new Date().toISOString(),
+          }),
+          { orderBy: 'created_at', ascending: false, limit: 500 },
+        );
+        set({ items: merged });
+      },
     }),
     {
       name: 'peptalk-pantry',

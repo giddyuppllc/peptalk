@@ -42,6 +42,9 @@ import { useJournalStore } from '../src/store/useJournalStore';
 import { useStackStore } from '../src/store/useStackStore';
 import { useAllergyStore } from '../src/store/useAllergyStore';
 import { useBodyMapStore } from '../src/store/useBodyMapStore';
+import { usePantryStore } from '../src/store/usePantryStore';
+import { useCycleStore } from '../src/store/useCycleStore';
+import { useIntegrationsStore } from '../src/store/useIntegrationsStore';
 import { subscribeToReconnect } from '../src/hooks/useNetworkStatus';
 import { initTelemetry } from '../src/services/telemetry';
 
@@ -249,6 +252,9 @@ function RootLayout() {
       ['stacks',     () => useStackStore.getState().syncFromServer()],
       ['allergies',  () => useAllergyStore.getState().syncFromServer()],
       ['body map',   () => useBodyMapStore.getState().syncFromServer()],
+      ['pantry',     () => usePantryStore.getState().syncFromServer()],
+      ['cycle',      () => useCycleStore.getState().syncFromServer()],
+      ['integrations', () => useIntegrationsStore.getState().syncFromServer()],
     ];
     for (const [label, run] of bootHydrations) {
       run().catch((err: unknown) => {
@@ -273,6 +279,9 @@ function RootLayout() {
       useStackStore.getState().syncFromServer()?.catch?.(() => {});
       useAllergyStore.getState().syncFromServer()?.catch?.(() => {});
       useBodyMapStore.getState().syncFromServer()?.catch?.(() => {});
+      usePantryStore.getState().syncFromServer()?.catch?.(() => {});
+      useCycleStore.getState().syncFromServer()?.catch?.(() => {});
+      useIntegrationsStore.getState().syncFromServer()?.catch?.(() => {});
     });
 
     return () => {
