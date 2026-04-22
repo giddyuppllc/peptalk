@@ -193,10 +193,18 @@ function TierCard({
     trackUpgradeInitiated(plan.productId, info.tier);
     try {
       setPurchasing(true);
+      // Pass the Supabase user id to Apple (appAccountToken) / Google
+      // (obfuscatedAccountIdAndroid) so server-to-server notifications
+      // for this subscription (renewal, refund, cancel, etc.) echo it
+      // back — that's how the webhook maps events to the right user
+      // without fuzzy-matching on receipt blobs. Lazy-imported to avoid
+      // pulling the auth store into the module graph at boot.
+      const { useAuthStore } = await import('../src/store/useAuthStore');
+      const appAccountToken = useAuthStore.getState().user?.id ?? null;
       // Triggers native purchase sheet. Validation happens in the
       // purchaseUpdatedListener registered in _layout.tsx, which emits
       // the upgrade_succeeded event on actual server-side validation.
-      await purchaseProduct(plan.productId);
+      await purchaseProduct(plan.productId, { appAccountToken });
     } catch (err: any) {
       const msg = err?.message ?? 'Purchase could not be completed.';
       const cancelled =

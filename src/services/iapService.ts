@@ -255,8 +255,24 @@ export async function getProducts(): Promise<IAPProduct[]> {
 /**
  * Triggers the native purchase sheet. Successful purchases land in
  * the purchaseUpdatedListener registered via initIAP().
+ *
+ * `appAccountToken` is the user's Supabase id, passed to Apple so it
+ * echoes back on every future Server Notification for this subscription.
+ * That's the reliable way the apple-notifications webhook figures out
+ * which user a renewal/refund event belongs to without having to match
+ * giant opaque receipts. Android's lookup is token-based and doesn't
+ * need this.
+ *
+ * Apple requires appAccountToken to be a UUID, which Supabase user ids
+ * already are. If callers pass something non-UUID we silently drop it so
+ * the purchase still goes through.
  */
-export async function purchaseProduct(productId: ProductId): Promise<void> {
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function purchaseProduct(
+  productId: ProductId,
+  options?: { appAccountToken?: string | null },
+): Promise<void> {
   if (!isAvailable()) {
     throw new Error('In-App Purchases not available on this platform.');
   }
@@ -264,8 +280,14 @@ export async function purchaseProduct(productId: ProductId): Promise<void> {
     throw new Error('IAP not initialized. Call initIAP() first.');
   }
 
+  const rawToken = options?.appAccountToken ?? null;
+  const appAccountToken = rawToken && UUID_RE.test(rawToken) ? rawToken : undefined;
+
   if (Platform.OS === 'ios') {
-    await IAP.requestSubscription({ sku: productId });
+    await IAP.requestSubscription({
+      sku: productId,
+      ...(appAccountToken ? { appAccountToken } : {}),
+    });
     return;
   }
 
@@ -285,8 +307,13 @@ export async function purchaseProduct(productId: ProductId): Promise<void> {
   } catch (err) {
     if (__DEV__) console.warn('[iapService] Failed to fetch offers, falling back:', err);
   }
+  // Android: `obfuscatedAccountIdAndroid` plays the same role Apple's
+  // appAccountToken plays — it's echoed back on RTDN subscription
+  // notifications so the webhook can map events to users without having
+  // to index by purchaseToken.
   await IAP.requestSubscription({
     subscriptionOffers: [{ sku: productId, offerToken }],
+    ...(appAccountToken ? { obfuscatedAccountIdAndroid: appAccountToken } : {}),
   });
 }
 

@@ -108,18 +108,23 @@ Deno.serve(async (req) => {
       txInfo?.originalTransactionId ?? data.originalTransactionId;
     const appAccountToken: string | undefined = txInfo?.appAccountToken;
 
+    // Primary user identification: the appAccountToken the client passed
+    // to `purchaseProduct` at purchase time. Apple echoes this on every
+    // subsequent notification for the same subscription. No appAccountToken
+    // means either a pre-appAccountToken purchase (early test builds) or a
+    // client that didn't pass one — fall back to logging the event with a
+    // null user_id so ops can reconcile manually.
     let userId: string | null = null;
     if (appAccountToken) {
-      userId = appAccountToken; // client should pass user id as appAccountToken during purchase
+      userId = appAccountToken;
     } else if (originalTxId) {
-      // Fallback: look up via subscriptions row we stored at validate time.
-      const { data: row } = await admin
-        .from('subscriptions')
-        .select('user_id')
-        .eq('receipt_data', originalTxId.substring(0, 500))
-        .limit(1)
-        .maybeSingle();
-      userId = row?.user_id ?? null;
+      // Best-effort fallback via original_transaction_id if that column
+      // is ever added to subscriptions. Today receipt_data stores the
+      // full base64 receipt blob, NOT the original transaction id, so
+      // the previous match here was broken and could only match by
+      // coincidence. Leave the query shape as a no-op until we add the
+      // explicit column.
+      void originalTxId;
     }
 
     const expiresMs = parseInt(txInfo?.expiresDate ?? '0', 10);
