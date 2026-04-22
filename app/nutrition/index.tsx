@@ -16,6 +16,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -170,20 +171,44 @@ function QuickLogModal({
       Alert.alert('Missing Info', 'Please describe what you ate.');
       return;
     }
-    onSave({
-      mealType,
-      description: desc.trim(),
-      calories:    parseInt(cal,     10) || 0,
-      protein:     parseInt(protein, 10) || 0,
-      carbs:       parseInt(carbs,   10) || 0,
-      fat:         parseInt(fat,     10) || 0,
-    });
-    setDesc('');
-    setCal('');
-    setProtein('');
-    setCarbs('');
-    setFat('');
-    onClose();
+    // Sanity caps on per-meal macros. These are deliberately loose enough
+    // to accommodate a big-day bulk meal but tight enough to catch typos
+    // like dropping an extra zero ("5000 cal" vs "500 cal").
+    const CAPS = { calories: 5000, protein: 500, carbs: 1000, fat: 500 };
+    const parsed = {
+      calories: Math.max(0, Math.min(CAPS.calories, parseInt(cal, 10) || 0)),
+      protein:  Math.max(0, Math.min(CAPS.protein,  parseInt(protein, 10) || 0)),
+      carbs:    Math.max(0, Math.min(CAPS.carbs,    parseInt(carbs, 10) || 0)),
+      fat:      Math.max(0, Math.min(CAPS.fat,      parseInt(fat, 10) || 0)),
+    };
+    // Warn before saving anything that looks like a typo. Keep the
+    // threshold well under the hard cap so most legitimate entries pass.
+    const suspicious =
+      parsed.calories >= 2500 ||
+      parsed.protein >= 250 ||
+      parsed.carbs >= 500 ||
+      parsed.fat >= 250;
+    const commit = () => {
+      onSave({ mealType, description: desc.trim(), ...parsed });
+      setDesc('');
+      setCal('');
+      setProtein('');
+      setCarbs('');
+      setFat('');
+      onClose();
+    };
+    if (suspicious) {
+      Alert.alert(
+        'Double-check macros',
+        `These numbers look high for one meal:\n${parsed.calories} cal · ${parsed.protein}P · ${parsed.carbs}C · ${parsed.fat}F`,
+        [
+          { text: 'Edit', style: 'cancel' },
+          { text: 'Save anyway', onPress: commit },
+        ],
+      );
+      return;
+    }
+    commit();
   };
 
   return (
@@ -228,6 +253,8 @@ function QuickLogModal({
             onChangeText={setDesc}
             placeholder="e.g. Grilled chicken salad"
             placeholderTextColor={Colors.darkTextSecondary}
+            accessibilityLabel="Meal description"
+            maxLength={140}
           />
 
           {/* Macros row */}
@@ -242,6 +269,8 @@ function QuickLogModal({
                 keyboardType="numeric"
                 placeholder="0"
                 placeholderTextColor={Colors.darkTextSecondary}
+                maxLength={4}
+                accessibilityLabel="Calories"
               />
             </View>
             <View style={styles.macroInput}>
@@ -253,6 +282,8 @@ function QuickLogModal({
                 keyboardType="numeric"
                 placeholder="0"
                 placeholderTextColor={Colors.darkTextSecondary}
+                maxLength={3}
+                accessibilityLabel="Protein in grams"
               />
             </View>
             <View style={styles.macroInput}>
@@ -264,6 +295,8 @@ function QuickLogModal({
                 keyboardType="numeric"
                 placeholder="0"
                 placeholderTextColor={Colors.darkTextSecondary}
+                maxLength={4}
+                accessibilityLabel="Carbs in grams"
               />
             </View>
             <View style={styles.macroInput}>
@@ -275,11 +308,13 @@ function QuickLogModal({
                 keyboardType="numeric"
                 placeholder="0"
                 placeholderTextColor={Colors.darkTextSecondary}
+                maxLength={3}
+                accessibilityLabel="Fat in grams"
               />
             </View>
           </View>
 
-          <GradientButton label="Log Meal" onPress={handleSave} />
+          <GradientButton label="Log Meal" onPress={handleSave} accessibilityLabel="Save logged meal" />
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -1006,6 +1041,17 @@ export default function NutritionScreen() {
   const { meals, addMeal, removeMeal, updateMeal, getDailyProgress, targets } = useMealStore();
   const mealTemplates = useMealStore((s) => s.mealTemplates);
   const foodSafetyOverrides = useMealStore((s) => s.foodSafetyOverrides);
+  const syncMealsFromServer = useMealStore((s) => s.syncFromServer);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await syncMealsFromServer();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [syncMealsFromServer]);
 
   // Urgent food-safety alerts — preps that are expiring today or expired.
   const urgentSafetyAlerts = useMemo(() => {
@@ -1146,7 +1192,19 @@ export default function NutritionScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} overScrollMode="never" contentContainerStyle={styles.scroll}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        overScrollMode="never"
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={accent.deep}
+            colors={[accent.deep]}
+          />
+        }
+      >
         <CoachMark
           id="first_nutrition_visit"
           title="Track everything you eat"

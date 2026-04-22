@@ -12,8 +12,12 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Image,
 } from 'react-native';
+// expo-image gives us built-in memory + disk caching, so horizontally
+// scrolling through avatars doesn't re-download the same URLs each tab
+// switch. The API shape is intentionally close to RN Image so this stays
+// a 1:1 swap.
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { useAchievementStore, getLevelForXP } from '../store/useAchievementStore';
@@ -55,7 +59,7 @@ function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
-export function LeaderboardStrip() {
+function LeaderboardStripImpl() {
   const t = useTheme();
   const xp = useAchievementStore((s) => s.xp);
   const user = useAuthStore((s) => s.user);
@@ -119,7 +123,7 @@ export function LeaderboardStrip() {
                   >
                     <View style={[styles.avatarInner, { backgroundColor: t.card }]}>
                       {entry.avatarUri ? (
-                        <Image source={{ uri: entry.avatarUri }} style={styles.avatarImg} />
+                        <Image source={{ uri: entry.avatarUri }} style={styles.avatarImg} cachePolicy="memory-disk" transition={150} />
                       ) : (
                         <View style={[styles.avatarFallback, { backgroundColor: isMe ? `${t.primary}25` : `${t.textMuted}15` }]}>
                           <Text style={[styles.avatarInitials, { color: isMe ? t.primary : t.textSecondary }]}>
@@ -133,7 +137,7 @@ export function LeaderboardStrip() {
                   <View style={[styles.avatarRing, { backgroundColor: isMe ? `${t.primary}30` : `${t.textMuted}18` }]}>
                     <View style={[styles.avatarInner, { backgroundColor: t.card }]}>
                       {entry.avatarUri ? (
-                        <Image source={{ uri: entry.avatarUri }} style={styles.avatarImg} />
+                        <Image source={{ uri: entry.avatarUri }} style={styles.avatarImg} cachePolicy="memory-disk" transition={150} />
                       ) : (
                         <View style={[styles.avatarFallback, { backgroundColor: isMe ? `${t.primary}25` : `${t.textMuted}12` }]}>
                           <Text style={[styles.avatarInitials, { color: isMe ? t.primary : t.textSecondary }]}>
@@ -278,3 +282,7 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans-SemiBold',
   },
 });
+
+// Memoize so unrelated Dashboard re-renders don't tear through the strip;
+// this component owns its own state and takes no props.
+export const LeaderboardStrip = React.memo(LeaderboardStripImpl);

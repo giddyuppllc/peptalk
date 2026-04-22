@@ -11,6 +11,8 @@ import {
   StyleSheet,
   Alert,
   Image,
+  Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -25,32 +27,48 @@ import {
   PRODUCT_IDS,
   purchaseProduct,
   restorePurchases,
+  waitForPendingValidations,
   type ProductId,
 } from '../src/services/iapService';
+import {
+  trackPaywallViewed,
+  trackUpgradeInitiated,
+  trackUpgradeFailed,
+  trackRestoreAttempted,
+  trackRestoreSucceeded,
+  trackRestoreFailed,
+} from '../src/services/analyticsEvents';
 
 // ---------------------------------------------------------------------------
 // Tier data
 // ---------------------------------------------------------------------------
 
+type BillingPeriod = 'monthly' | 'yearly';
+
+interface PricedPlan {
+  price: string;
+  period: string;
+  productId?: ProductId;
+  /** Label like "Save 30%" shown on the yearly option. */
+  savingsLabel?: string;
+}
+
 interface TierInfo {
   tier: SubscriptionTier;
   name: string;
-  price: string;
-  period: string;
   description: string;
   features: string[];
   colors: [string, string];
   icon: string;
   badge?: string;
-  productId?: ProductId;
+  /** Per-period pricing. Free tier only populates `monthly`. */
+  pricing: Record<BillingPeriod, PricedPlan | null>;
 }
 
 const TIERS: TierInfo[] = [
   {
     tier: 'free',
     name: 'Free',
-    price: '$0',
-    period: '',
     description: 'Try PepTalk at your own pace',
     features: [
       'Full peptide research library',
@@ -63,12 +81,14 @@ const TIERS: TierInfo[] = [
     ],
     colors: ['#9CA3AF', '#6B7280'],
     icon: 'leaf-outline',
+    pricing: {
+      monthly: { price: '$0', period: '' },
+      yearly: { price: '$0', period: '' },
+    },
   },
   {
     tier: 'plus',
     name: 'PepTalk+',
-    price: '$9.99',
-    period: '/mo',
     description: 'For the serious tracker',
     features: [
       'Everything in Free',
@@ -85,13 +105,20 @@ const TIERS: TierInfo[] = [
     colors: ['#E89672', '#F5DAD6'],
     icon: 'pulse-outline',
     badge: 'Most Popular',
-    productId: PRODUCT_IDS.plusMonthly,
+    pricing: {
+      monthly: { price: '$9.99', period: '/mo', productId: PRODUCT_IDS.plusMonthly },
+      // ~25% off annual vs monthly ($9.99 × 12 = $119.88).
+      yearly: {
+        price: '$89.99',
+        period: '/yr',
+        productId: PRODUCT_IDS.plusYearly,
+        savingsLabel: 'Save 25%',
+      },
+    },
   },
   {
     tier: 'pro',
     name: 'PepTalk Pro',
-    price: '$49.99',
-    period: '/mo',
     description: 'Full AI coaching + programs',
     features: [
       'Everything in Plus',
@@ -108,7 +135,16 @@ const TIERS: TierInfo[] = [
     colors: ['#E9B45C', '#C98E3E'],
     icon: 'star',
     badge: 'Best Value',
-    productId: PRODUCT_IDS.proMonthly,
+    pricing: {
+      monthly: { price: '$49.99', period: '/mo', productId: PRODUCT_IDS.proMonthly },
+      // ~33% off annual vs monthly ($49.99 × 12 = $599.88).
+      yearly: {
+        price: '$399.99',
+        period: '/yr',
+        productId: PRODUCT_IDS.proYearly,
+        savingsLabel: 'Save 33%',
+      },
+    },
   },
 ];
 
@@ -134,24 +170,39 @@ const SOCIAL_PROOF = [
 // Tier Card
 // ---------------------------------------------------------------------------
 
-function TierCard({ info, isActive, highlighted }: { info: TierInfo; isActive: boolean; highlighted?: boolean }) {
+function TierCard({
+  info,
+  isActive,
+  highlighted,
+  period,
+}: {
+  info: TierInfo;
+  isActive: boolean;
+  highlighted?: boolean;
+  period: BillingPeriod;
+}) {
   const [purchasing, setPurchasing] = React.useState(false);
+  const plan = info.pricing[period] ?? info.pricing.monthly;
 
   const handleUpgrade = async () => {
-    if (info.tier === 'free' || !info.productId) return;
+    if (info.tier === 'free' || !plan?.productId) return;
     // Re-entry guard — label flips to "Processing…" but the button stays
     // pressable; a double-tap would otherwise fire the native purchase
     // sheet twice.
     if (purchasing) return;
+    trackUpgradeInitiated(plan.productId, info.tier);
     try {
       setPurchasing(true);
       // Triggers native purchase sheet. Validation happens in the
-      // purchaseUpdatedListener registered in _layout.tsx.
-      await purchaseProduct(info.productId);
+      // purchaseUpdatedListener registered in _layout.tsx, which emits
+      // the upgrade_succeeded event on actual server-side validation.
+      await purchaseProduct(plan.productId);
     } catch (err: any) {
       const msg = err?.message ?? 'Purchase could not be completed.';
-      // User cancellation is not an error we need to surface
-      if (!msg.toLowerCase().includes('cancelled') && !msg.toLowerCase().includes('canceled')) {
+      const cancelled =
+        msg.toLowerCase().includes('cancelled') || msg.toLowerCase().includes('canceled');
+      trackUpgradeFailed(plan.productId, cancelled ? 'user_cancelled' : msg);
+      if (!cancelled) {
         Alert.alert('Purchase Failed', msg);
       }
     } finally {
@@ -193,9 +244,14 @@ function TierCard({ info, isActive, highlighted }: { info: TierInfo; isActive: b
             )}
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.tierPrice}>{info.price}</Text>
-            {info.period ? (
-              <Text style={styles.tierPeriod}>{info.period}</Text>
+            <Text style={styles.tierPrice}>{plan?.price ?? ''}</Text>
+            {plan?.period ? (
+              <Text style={styles.tierPeriod}>{plan.period}</Text>
+            ) : null}
+            {plan?.savingsLabel && info.tier !== 'free' ? (
+              <View style={styles.savingsPill}>
+                <Text style={styles.savingsPillText}>{plan.savingsLabel}</Text>
+              </View>
             ) : null}
           </View>
         </View>
@@ -225,6 +281,8 @@ function TierCard({ info, isActive, highlighted }: { info: TierInfo; isActive: b
             label={purchasing ? 'Processing…' : `Upgrade to ${info.name}`}
             onPress={handleUpgrade}
             colors={info.colors}
+            accessibilityLabel={`Upgrade to ${info.name} for ${plan?.price}${plan?.period ?? ''}`}
+            accessibilityState={{ disabled: purchasing, busy: purchasing }}
           />
         </View>
       )}
@@ -255,12 +313,51 @@ function tierForFeature(feature: string | undefined): SubscriptionTier | null {
   return 'plus';
 }
 
+/** Deep-link to the OS's native Manage Subscriptions screen so users can
+ *  cancel, change plans, or see renewal dates. Required by Apple's App
+ *  Store Review Guideline 3.1.2 for auto-renewing subs. */
+// Must match `android.package` in app.json — gets used in the Play Store
+// deep link so users land on the correct subscription page.
+const ANDROID_PACKAGE_NAME = 'com.peptalkapp.peptalk';
+
+async function openManageSubscriptions(productId?: string | null) {
+  const url = Platform.OS === 'ios'
+    ? 'https://apps.apple.com/account/subscriptions'
+    : productId
+      ? `https://play.google.com/store/account/subscriptions?sku=${encodeURIComponent(productId)}&package=${ANDROID_PACKAGE_NAME}`
+      : 'https://play.google.com/store/account/subscriptions';
+  try {
+    await Linking.openURL(url);
+  } catch {
+    Alert.alert(
+      'Could not open',
+      Platform.OS === 'ios'
+        ? 'Open Settings → Apple ID → Subscriptions to manage PepTalk.'
+        : 'Open Google Play Store → Payments & subscriptions to manage PepTalk.',
+    );
+  }
+}
+
 export default function SubscriptionScreen() {
   const router = useRouter();
   const tier = useSubscriptionStore((s) => s.tier);
+  const productId = useSubscriptionStore((s) => s.productId);
+  const pendingPurchase = useSubscriptionStore((s) => s.pendingPurchase);
   const [restoring, setRestoring] = React.useState(false);
+  // Default to yearly so the cheaper long-term option is front-and-center.
+  // Users can flip to monthly via the toggle below if they prefer.
+  const [billingPeriod, setBillingPeriod] = React.useState<BillingPeriod>('yearly');
   const { highlight } = useLocalSearchParams<{ highlight?: string }>();
   const highlightedTier = tierForFeature(highlight);
+  const hasPaidTier = tier === 'plus' || tier === 'pro';
+  // Beta grants don't route through the stores, so skip the "manage" link.
+  const showManageLink = hasPaidTier && productId !== 'beta_tester_grant';
+
+  // Funnel analytics: fire once per mount, tagged with the feature the user
+  // hit (if any) so we can measure which gates are the highest-intent.
+  React.useEffect(() => {
+    trackPaywallViewed(highlight ?? 'direct', highlightedTier ?? 'plus');
+  }, [highlight, highlightedTier]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -305,6 +402,50 @@ export default function SubscriptionScreen() {
           ))}
         </View>
 
+        {/* Billing-period toggle (paid tiers only). */}
+        <View style={styles.billingToggleWrap}>
+          <View style={styles.billingToggle} accessibilityRole="tablist">
+            {(['monthly', 'yearly'] as const).map((p) => (
+              <TouchableOpacity
+                key={p}
+                style={[
+                  styles.billingToggleOption,
+                  billingPeriod === p && styles.billingToggleOptionActive,
+                ]}
+                onPress={() => setBillingPeriod(p)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: billingPeriod === p }}
+                accessibilityLabel={`${p === 'monthly' ? 'Monthly' : 'Yearly'} pricing`}
+              >
+                <Text
+                  style={[
+                    styles.billingToggleText,
+                    billingPeriod === p && styles.billingToggleTextActive,
+                  ]}
+                >
+                  {p === 'monthly' ? 'Monthly' : 'Yearly'}
+                </Text>
+                {p === 'yearly' && (
+                  <View style={styles.billingToggleBadge}>
+                    <Text style={styles.billingToggleBadgeText}>Best value</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Pending-purchase banner (Ask to Buy / SCA / parental consent). */}
+        {pendingPurchase && (
+          <View style={styles.pendingBanner}>
+            <Ionicons name="hourglass-outline" size={18} color="#B45309" />
+            <Text style={styles.pendingBannerText}>
+              Waiting for approval on your purchase. You'll get access once it's
+              confirmed — no need to buy again.
+            </Text>
+          </View>
+        )}
+
         {/* Tiers */}
         {TIERS.map((info) => (
           <View key={info.tier} style={styles.tierWrap}>
@@ -312,6 +453,7 @@ export default function SubscriptionScreen() {
               info={info}
               isActive={tier === info.tier}
               highlighted={highlightedTier === info.tier && tier !== info.tier}
+              period={billingPeriod}
             />
           </View>
         ))}
@@ -323,17 +465,32 @@ export default function SubscriptionScreen() {
           onPress={async () => {
             if (restoring) return;
             setRestoring(true);
+            trackRestoreAttempted();
+            const tierBefore = useSubscriptionStore.getState().tier;
             try {
               const count = await restorePurchases();
-              // syncFromServer is called in the purchase listener for each restored item
+              // Each restored purchase fires the purchaseUpdatedListener,
+              // which calls validatePurchase server-side. Block here until
+              // those background validations settle so the subsequent
+              // syncFromServer sees the fresh rows — otherwise the user
+              // sees "Restore Complete" while still on the free tier.
+              if (count > 0) {
+                await waitForPendingValidations(10_000);
+              }
               await useSubscriptionStore.getState().syncFromServer();
+              const tierAfter = useSubscriptionStore.getState().tier;
+              const upgraded = tierAfter !== 'free' && tierAfter !== tierBefore;
+              trackRestoreSucceeded(count);
               Alert.alert(
                 'Restore Complete',
-                count > 0
-                  ? `Found ${count} previous purchase${count === 1 ? '' : 's'}. Your subscription has been restored.`
-                  : 'No previous purchases found on this Apple ID.',
+                count === 0
+                  ? 'No previous purchases found on this account.'
+                  : upgraded
+                    ? `Your ${tierAfter === 'pro' ? 'Pro' : 'Plus'} subscription has been restored.`
+                    : `Found ${count} previous purchase${count === 1 ? '' : 's'}. If your plan doesn't show as active, try again in a moment.`,
               );
             } catch (err: any) {
+              trackRestoreFailed(err?.message ?? 'unknown');
               Alert.alert('Restore Failed', err?.message ?? 'Could not restore purchases. Please try again.');
             } finally {
               setRestoring(false);
@@ -344,6 +501,20 @@ export default function SubscriptionScreen() {
         >
           <Text style={styles.restoreBtnText}>{restoring ? 'Restoring…' : 'Restore Purchases'}</Text>
         </TouchableOpacity>
+
+        {/* Manage Subscription (paid users only). Required by Apple for
+            auto-renewing subscriptions — deep-links to the native manage
+            screen so users can cancel, change plans, or see renewal dates. */}
+        {showManageLink && (
+          <TouchableOpacity
+            style={styles.restoreBtn}
+            onPress={() => openManageSubscriptions(productId)}
+            accessibilityRole="button"
+            accessibilityLabel="Manage subscription in the App Store"
+          >
+            <Text style={styles.restoreBtnText}>Manage Subscription</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Footer */}
         <View style={styles.footer}>
@@ -575,5 +746,91 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6b7280',
     textDecorationLine: 'underline',
+  },
+
+  // Billing period toggle
+  billingToggleWrap: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  billingToggle: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: BorderRadius.full,
+    padding: 4,
+  },
+  billingToggleOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.full,
+  },
+  billingToggleOptionActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  billingToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  billingToggleTextActive: {
+    color: Colors.darkText,
+    fontWeight: '700',
+  },
+  billingToggleBadge: {
+    backgroundColor: 'rgba(232, 150, 114, 0.18)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  billingToggleBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#C85A2E',
+    letterSpacing: 0.3,
+  },
+
+  // Savings pill on the tier price row
+  savingsPill: {
+    marginLeft: 8,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  savingsPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#059669',
+    letterSpacing: 0.3,
+  },
+
+  // Pending purchase banner
+  pendingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: 'rgba(245, 158, 11, 0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+  },
+  pendingBannerText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#92400E',
   },
 });

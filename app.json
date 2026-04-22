@@ -20,6 +20,8 @@
         "NSSpeechRecognitionUsageDescription": "PepTalk uses speech recognition to let you log meals and notes by voice.",
         "NSMicrophoneUsageDescription": "PepTalk needs microphone access for voice logging and meal dictation.",
         "NSCameraUsageDescription": "PepTalk needs camera access to scan barcodes and meals for automatic nutrition tracking.",
+        "NSPhotoLibraryUsageDescription": "PepTalk lets you pick a profile photo and attach images to meals and journal entries from your photo library.",
+        "NSPhotoLibraryAddUsageDescription": "PepTalk saves generated health reports and exports to your photo library when you tap share.",
         "UIBackgroundModes": [
           "remote-notification"
         ],
@@ -59,6 +61,13 @@
           "cameraPermission": "PepTalk needs camera access to scan your meals for automatic nutrition tracking."
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "PepTalk lets you pick a profile photo and attach images to meals and journal entries.",
+          "cameraPermission": "PepTalk needs camera access to scan meals and capture progress photos."
+        }
+      ],
       "react-native-iap",
       [
         "react-native-health",
@@ -74,7 +83,8 @@
           "ios": { "deploymentTarget": "15.1" },
           "android": { "compileSdkVersion": 35, "targetSdkVersion": 35, "minSdkVersion": 24 }
         }
-      ]
+      ],
+      "./plugins/with-privacy-manifest.js"
     ],
     "extra": {
       "router": {},

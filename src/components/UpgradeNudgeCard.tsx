@@ -57,7 +57,7 @@ const NUDGES: NudgeContent[] = [
   },
 ];
 
-export function UpgradeNudgeCard() {
+function UpgradeNudgeCardImpl() {
   const router = useRouter();
   const tier = useTier();
 
@@ -201,4 +201,7 @@ const styles = StyleSheet.create({
   },
 });
 
+// Self-contained (its own tier hook, day-of-year calc from Date.now()) so
+// parent re-renders don't need to ripple in.
+export const UpgradeNudgeCard = React.memo(UpgradeNudgeCardImpl);
 export default UpgradeNudgeCard;

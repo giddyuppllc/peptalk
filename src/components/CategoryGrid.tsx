@@ -33,7 +33,7 @@ const CategoryCard: React.FC<{ category: CategoryInfo; onPress: () => void }> = 
   );
 };
 
-export const CategoryGrid: React.FC = () => {
+const CategoryGridImpl: React.FC = () => {
   const router = useRouter();
 
   const handleCategoryPress = (categoryName: string) => {
@@ -99,4 +99,6 @@ const styles = StyleSheet.create({
   },
 });
 
+// Zero-prop; memoize so Dashboard re-renders don't cascade through.
+export const CategoryGrid = React.memo(CategoryGridImpl);
 export default CategoryGrid;

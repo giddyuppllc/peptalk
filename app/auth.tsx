@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useOnboardingStore } from '../src/store/useOnboardingStore';
+import { isValidEmail, validatePassword, PASSWORD_MIN_LENGTH } from '../src/utils/validation';
 
 const ACCENT = '#E89672';
 
@@ -43,8 +44,12 @@ export default function AuthScreen() {
 
   const handleLogin = async () => {
     const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail.includes('@') || password.length < 6) {
-      setError('Enter a valid email and password (6+ chars)');
+    // On login we don't enforce the full password strength rule — existing
+    // accounts may have been created under the old 6-char rule, and the
+    // server is the authoritative validator. We just want to catch empty
+    // fields and obvious typos.
+    if (!isValidEmail(normalizedEmail) || password.length === 0) {
+      setError('Enter a valid email and password.');
       return;
     }
     setError('');
@@ -52,8 +57,8 @@ export default function AuthScreen() {
       await login(normalizedEmail, password);
       completeOnboarding();
       router.replace('/(tabs)');
-    } catch {
-      setError('Invalid email or password');
+    } catch (err: any) {
+      setError(err?.message ?? 'Invalid email or password');
     }
   };
 
@@ -61,16 +66,17 @@ export default function AuthScreen() {
     const normalizedEmail = email.trim().toLowerCase();
     if (!firstName.trim()) { setError('Enter your first name'); return; }
     if (!lastName.trim()) { setError('Enter your last name'); return; }
-    if (!normalizedEmail.includes('@')) { setError('Enter a valid email'); return; }
-    if (password.length < 6) { setError('Password must be 6+ characters'); return; }
+    if (!isValidEmail(normalizedEmail)) { setError('Enter a valid email'); return; }
+    const pwCheck = validatePassword(password);
+    if (!pwCheck.valid) { setError(pwCheck.message); return; }
     if (!acceptedTerms) { setError('You must accept the terms to continue'); return; }
     setError('');
     try {
       await signup(firstName.trim(), lastName.trim(), normalizedEmail, password);
       completeOnboarding();
       router.replace('/(tabs)');
-    } catch {
-      setError('Something went wrong. Try again.');
+    } catch (err: any) {
+      setError(err?.message ?? 'Something went wrong. Try again.');
     }
   };
 
@@ -103,16 +109,22 @@ export default function AuthScreen() {
           </View>
 
           {/* Tab switcher */}
-          <View style={s.tabs}>
+          <View style={s.tabs} accessibilityRole="tablist">
             <TouchableOpacity
               style={[s.tab, mode === 'login' && s.tabActive]}
               onPress={() => switchMode('login')}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: mode === 'login' }}
+              accessibilityLabel="Log in tab"
             >
               <Text style={[s.tabText, mode === 'login' && s.tabTextActive]}>Log In</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.tab, mode === 'signup' && s.tabActive]}
               onPress={() => switchMode('signup')}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: mode === 'signup' }}
+              accessibilityLabel="Sign up tab"
             >
               <Text style={[s.tabText, mode === 'signup' && s.tabTextActive]}>Sign Up</Text>
             </TouchableOpacity>
@@ -131,7 +143,10 @@ export default function AuthScreen() {
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
+                  autoComplete="email"
+                  textContentType="emailAddress"
                   keyboardType="email-address"
+                  accessibilityLabel="Email address"
                 />
               </View>
 
@@ -145,15 +160,30 @@ export default function AuthScreen() {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPw}
+                  autoComplete="current-password"
+                  textContentType="password"
+                  accessibilityLabel="Password"
                 />
-                <TouchableOpacity onPress={() => setShowPw(!showPw)} style={s.eyeBtn}>
+                <TouchableOpacity
+                  onPress={() => setShowPw(!showPw)}
+                  style={s.eyeBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPw ? 'Hide password' : 'Show password'}
+                >
                   <Ionicons name={showPw ? 'eye-off' : 'eye'} size={18} color="#9CA3AF" />
                 </TouchableOpacity>
               </View>
 
-              {!!error && <Text style={s.error}>{error}</Text>}
+              {!!error && <Text style={s.error} accessibilityRole="alert" accessibilityLiveRegion="polite">{error}</Text>}
 
-              <TouchableOpacity onPress={handleLogin} activeOpacity={0.85} disabled={isLoading}>
+              <TouchableOpacity
+                onPress={handleLogin}
+                activeOpacity={0.85}
+                disabled={isLoading}
+                accessibilityRole="button"
+                accessibilityLabel="Log in"
+                accessibilityState={{ disabled: isLoading, busy: isLoading }}
+              >
                 <View style={s.primaryBtn}>
                   {isLoading ? (
                     <ActivityIndicator color="#fff" />
@@ -166,7 +196,11 @@ export default function AuthScreen() {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity style={s.forgotBtn}>
+              <TouchableOpacity
+                style={s.forgotBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Forgot password"
+              >
                 <Text style={s.forgotText}>Forgot password?</Text>
               </TouchableOpacity>
             </View>
@@ -186,6 +220,9 @@ export default function AuthScreen() {
                       placeholderTextColor="#C7C7CC"
                       value={firstName}
                       onChangeText={setFirstName}
+                      autoComplete="given-name"
+                      textContentType="givenName"
+                      accessibilityLabel="First name"
                     />
                   </View>
                 </View>
@@ -198,6 +235,9 @@ export default function AuthScreen() {
                       placeholderTextColor="#C7C7CC"
                       value={lastName}
                       onChangeText={setLastName}
+                      autoComplete="family-name"
+                      textContentType="familyName"
+                      accessibilityLabel="Last name"
                     />
                   </View>
                 </View>
@@ -213,7 +253,10 @@ export default function AuthScreen() {
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
+                  autoComplete="email"
+                  textContentType="emailAddress"
                   keyboardType="email-address"
+                  accessibilityLabel="Email address"
                 />
               </View>
 
@@ -222,13 +265,22 @@ export default function AuthScreen() {
                 <Ionicons name="lock-closed-outline" size={18} color="#9CA3AF" />
                 <TextInput
                   style={s.input}
-                  placeholder="6+ characters"
+                  placeholder="8+ characters with a number"
                   placeholderTextColor="#C7C7CC"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPw}
+                  autoComplete="password-new"
+                  textContentType="newPassword"
+                  accessibilityLabel="Password"
+                  accessibilityHint="Minimum 8 characters including at least one letter and one number"
                 />
-                <TouchableOpacity onPress={() => setShowPw(!showPw)} style={s.eyeBtn}>
+                <TouchableOpacity
+                  onPress={() => setShowPw(!showPw)}
+                  style={s.eyeBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPw ? 'Hide password' : 'Show password'}
+                >
                   <Ionicons name={showPw ? 'eye-off' : 'eye'} size={18} color="#9CA3AF" />
                 </TouchableOpacity>
               </View>
@@ -249,16 +301,20 @@ export default function AuthScreen() {
                     onValueChange={setAcceptedTerms}
                     trackColor={{ false: 'rgba(0,0,0,0.10)', true: `${ACCENT}55` }}
                     thumbColor={acceptedTerms ? ACCENT : '#D1D5DB'}
+                    accessibilityLabel="Accept terms and disclaimer"
                   />
                 </View>
               </View>
 
-              {!!error && <Text style={s.error}>{error}</Text>}
+              {!!error && <Text style={s.error} accessibilityRole="alert" accessibilityLiveRegion="polite">{error}</Text>}
 
               <TouchableOpacity
                 onPress={handleSignup}
                 activeOpacity={0.85}
                 disabled={isLoading || !acceptedTerms}
+                accessibilityRole="button"
+                accessibilityLabel="Create account"
+                accessibilityState={{ disabled: isLoading || !acceptedTerms, busy: isLoading }}
               >
                 <View style={[s.primaryBtn, (!acceptedTerms) && { opacity: 0.4 }]}>
                   {isLoading ? (

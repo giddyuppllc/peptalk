@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { captureException } from '../services/telemetry';
 
 interface Props {
   children: ReactNode;
@@ -25,7 +26,13 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('[ErrorBoundary] Caught error:', error, errorInfo);
     this.setState({ errorInfo });
-    // Crash reporting removed for testing builds — can be re-added via Sentry/Bugsnag later.
+    // Route through the telemetry facade so this boundary reports to
+    // Sentry/Bugsnag/etc. once one is wired up — without us having to
+    // revisit this component. See src/services/telemetry.ts.
+    captureException(error, {
+      source: 'ErrorBoundary',
+      componentStack: errorInfo.componentStack,
+    });
   }
 
   handleReset = () => {

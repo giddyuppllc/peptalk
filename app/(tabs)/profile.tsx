@@ -45,6 +45,8 @@ import {
 import { useTheme } from '../../src/hooks/useTheme';
 import { useThemeStore } from '../../src/store/useThemeStore';
 import { getTestProfile } from '../../src/constants/testProfiles';
+import { sendFeedback } from '../../src/services/feedback';
+import { disableReviewPrompt } from '../../src/services/reviewPrompt';
 
 // ---------------------------------------------------------------------------
 // Progress Ring Component
@@ -1369,7 +1371,7 @@ function ProfileRow({ icon, label, onPress, color }: { icon: string; label: stri
 }
 
 export default function ProfileScreen() {
-  const { isAuthenticated, logout } = useAuthStore();
+  const { isAuthenticated, logout, user } = useAuthStore();
   const t = useTheme();
   const router = useRouter();
   const themeMode = useThemeStore((s) => s.mode);
@@ -1406,26 +1408,16 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const { supabase } = await import('../../src/services/supabase');
-              const { data: { session } } = await (supabase as any).auth.getSession();
-              if (!session?.access_token) {
-                Alert.alert('Error', 'You must be signed in to delete your account.');
-                return;
-              }
-              const { error } = await (supabase as any).functions.invoke('delete-user', {
-                headers: { Authorization: `Bearer ${session.access_token}` },
-              });
-              if (error) throw error;
-              // Clear all local data
-              useOnboardingStore.getState().reset();
-              useHealthProfileStore.getState().resetProfile();
-              await logout();
+              // All server + local teardown lives behind this single
+              // store action so a future change (additional cleanup,
+              // analytics event, etc.) has one place to update.
+              await useAuthStore.getState().deleteAccount();
               Alert.alert('Account Deleted', 'Your account and all data have been permanently removed.');
-            } catch (err) {
+            } catch (err: any) {
               if (__DEV__) console.warn('[profile] delete account failed:', err);
               Alert.alert(
                 'Deletion Failed',
-                'We couldn\'t delete your account right now. Please try again or contact support.',
+                err?.message ?? "We couldn't delete your account right now. Please try again or contact support.",
               );
             }
           },
@@ -1497,6 +1489,36 @@ export default function ProfileScreen() {
                 useTutorialStore.getState().resetTour();
                 useTutorialStore.getState().startTour();
                 router.push('/(tabs)/' as any);
+              }}
+              color={t.text}
+            />
+          </View>
+        </View>
+
+        {/* ── Support Section ── */}
+        <View style={profileStyles.section}>
+          <Text style={[profileStyles.sectionTitle, { color: t.textSecondary }]}>SUPPORT</Text>
+          <View style={[profileStyles.card, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
+            <ProfileRow
+              icon="chatbubble-ellipses-outline"
+              label="Send feedback"
+              onPress={() => sendFeedback({ kind: 'feedback', userEmail: user?.email, userId: user?.id })}
+              color={t.text}
+            />
+            <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+            <ProfileRow
+              icon="bug-outline"
+              label="Report a bug"
+              onPress={() => sendFeedback({ kind: 'bug', userEmail: user?.email, userId: user?.id })}
+              color={t.text}
+            />
+            <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+            <ProfileRow
+              icon="star-outline"
+              label="Don't ask me to review PepTalk"
+              onPress={() => {
+                disableReviewPrompt();
+                Alert.alert('Got it', "We won't prompt you for an App Store review again. You can still leave one anytime from the App Store listing.");
               }}
               color={t.text}
             />

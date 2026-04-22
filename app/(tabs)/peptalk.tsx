@@ -55,6 +55,22 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
 
+/** How long to wait for Aimee's response before giving up and falling back
+ *  to the local bot. Longer than the LLM's own timeout so we don't race
+ *  it, short enough that a truly hung network doesn't leave the typing
+ *  indicator spinning forever. */
+const AIMEE_RESPONSE_TIMEOUT_MS = 35_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
 /* ─── Journal Toast Component ────────────────────────────────────── */
 
 const JournalToast: React.FC = () => {
@@ -212,31 +228,36 @@ export default function PepTalkScreen() {
       addMessage(userMsg);
       setTyping(true);
       const context = buildContext();
-      if (useAI) {
-        generateAIResponse(prefillMessage, context).then((aiResponse) => {
-          if (aiResponse) {
-            handleBotResponse(aiResponse);
-            setTyping(false);
-          } else {
-            setTimeout(() => {
-              const botResponse = generateLocalBotResponse(
-                prefillMessage,
-                context,
-              );
-              handleBotResponse(botResponse);
-              setTyping(false);
-            }, 400 + Math.random() * 600);
-          }
-        });
-      } else {
-        setTimeout(() => {
-          const botResponse = generateLocalBotResponse(
-            prefillMessage,
-            context,
-          );
+      const localFallback = () => {
+        try {
+          const botResponse = generateLocalBotResponse(prefillMessage, context);
           handleBotResponse(botResponse);
+        } catch (err) {
+          if (__DEV__) console.warn('[aimee] prefill local fallback threw:', err);
+        } finally {
           setTyping(false);
-        }, 400 + Math.random() * 600);
+        }
+      };
+      if (useAI) {
+        withTimeout(
+          generateAIResponse(prefillMessage, context),
+          AIMEE_RESPONSE_TIMEOUT_MS,
+          'aimee prefill response',
+        )
+          .then((aiResponse) => {
+            if (aiResponse) {
+              handleBotResponse(aiResponse);
+              setTyping(false);
+            } else {
+              setTimeout(localFallback, 400 + Math.random() * 600);
+            }
+          })
+          .catch((err) => {
+            if (__DEV__) console.warn('[aimee] prefill AI failed/timed out:', err);
+            localFallback();
+          });
+      } else {
+        setTimeout(localFallback, 400 + Math.random() * 600);
       }
     }
   }, [
@@ -276,28 +297,40 @@ export default function PepTalkScreen() {
 
     if (useAI) {
       // Try Grok AI first, fall back to local bot. Wrapped so a throw
-      // from generateAIResponse (network failure, malformed JSON)
-      // doesn't strand the typing indicator in a permanent spinner.
+      // OR a hang from generateAIResponse (network failure, edge fn stall,
+      // malformed JSON) doesn't strand the typing indicator forever.
       try {
-        const aiResponse = await generateAIResponse(text, context);
+        const aiResponse = await withTimeout(
+          generateAIResponse(text, context),
+          AIMEE_RESPONSE_TIMEOUT_MS,
+          'aimee response',
+        );
         if (aiResponse) {
           handleBotResponse(aiResponse);
           setTyping(false);
           return;
         }
       } catch (err) {
-        if (__DEV__) console.warn('[aimee] generateAIResponse threw:', err);
+        if (__DEV__) console.warn('[aimee] generateAIResponse failed/timed out:', err);
         // fall through to local fallback
       }
     }
 
-    // Local fallback (no API key, no consent, API failure, or thrown error)
+    // Local fallback (no API key, no consent, API failure, timeout, thrown error)
     setTimeout(() => {
       try {
         const botResponse = generateLocalBotResponse(text, context);
         handleBotResponse(botResponse);
       } catch (err) {
         if (__DEV__) console.warn('[aimee] local fallback threw:', err);
+        // Last-resort: a hand-written apology message so the user is never
+        // left staring at a frozen typing indicator.
+        handleBotResponse({
+          id: `bot-${Date.now()}`,
+          role: 'bot',
+          content: "I'm having trouble connecting right now. Please try again in a moment.",
+          timestamp: new Date().toISOString(),
+        });
       } finally {
         setTyping(false);
       }
@@ -322,14 +355,18 @@ export default function PepTalkScreen() {
 
       if (useAI) {
         try {
-          const aiResponse = await generateAIResponse(reply, context);
+          const aiResponse = await withTimeout(
+            generateAIResponse(reply, context),
+            AIMEE_RESPONSE_TIMEOUT_MS,
+            'aimee quick-reply',
+          );
           if (aiResponse) {
             handleBotResponse(aiResponse);
             setTyping(false);
             return;
           }
         } catch (err) {
-          if (__DEV__) console.warn('[aimee] quick-reply AI threw:', err);
+          if (__DEV__) console.warn('[aimee] quick-reply AI failed/timed out:', err);
         }
       }
 
@@ -340,6 +377,12 @@ export default function PepTalkScreen() {
           handleBotResponse(botResponse);
         } catch (err) {
           if (__DEV__) console.warn('[aimee] quick-reply local threw:', err);
+          handleBotResponse({
+            id: `bot-${Date.now()}`,
+            role: 'bot',
+            content: "I'm having trouble connecting right now. Please try again in a moment.",
+            timestamp: new Date().toISOString(),
+          });
         } finally {
           setTyping(false);
         }
@@ -583,6 +626,8 @@ export default function PepTalkScreen() {
                 onSubmitEditing={handleSend}
                 blurOnSubmit={false}
                 returnKeyType="send"
+                accessibilityLabel="Message to Aimee"
+                accessibilityHint="Type a question about peptides, nutrition, or training. Tap send when ready."
               />
             </View>
             <AnimatedPress
@@ -593,6 +638,9 @@ export default function PepTalkScreen() {
               }}
               disabled={!inputText.trim()}
               scaleTo={0.88}
+              accessibilityRole="button"
+              accessibilityLabel="Send message"
+              accessibilityState={{ disabled: !inputText.trim() }}
             >
               <LinearGradient
                 colors={

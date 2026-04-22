@@ -22,6 +22,12 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 
   try {
     const authHeader = req.headers.get('Authorization');
@@ -53,6 +59,9 @@ Deno.serve(async (req) => {
     // Kept in sync with the TableName union in src/services/syncService.ts.
     //
     // Ordering: data tables first, profiles last (some reference profiles.id).
+    // Keep this list in sync with the TableName union in
+    // src/services/syncService.ts + any new user-keyed table added via
+    // a migration. `ai_usage_log` is non-PII counters but still user-scoped.
     const tables = [
       'check_ins',
       'dose_logs',
@@ -70,6 +79,7 @@ Deno.serve(async (req) => {
       'contraception_history',
       'connected_integrations',
       'allergen_entries',
+      'ai_usage_log',
       'subscriptions',
       'profiles',
     ];

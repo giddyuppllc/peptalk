@@ -85,3 +85,44 @@ export const trackConsentUpdated = (
 ) => {
   return sendAnalyticsEvent('consent_updated', { acceptedSafety, dataShareConsent });
 };
+
+// ── Auth funnel ─────────────────────────────────────────────────────────────
+
+export const trackSignupStarted = () => sendAnalyticsEvent('signup_started');
+export const trackSignupCompleted = () => sendAnalyticsEvent('signup_completed');
+export const trackSignupFailed = (reason: string) =>
+  sendAnalyticsEvent('signup_failed', { reason: reason.slice(0, 120) });
+export const trackLoginSucceeded = () => sendAnalyticsEvent('login_succeeded');
+export const trackLoginFailed = (reason: string) =>
+  sendAnalyticsEvent('login_failed', { reason: reason.slice(0, 120) });
+
+// ── Paywall / subscription funnel ──────────────────────────────────────────
+
+export const trackPaywallViewed = (feature: string, requiredTier: string) =>
+  sendAnalyticsEvent('paywall_viewed', { feature, requiredTier });
+export const trackPaywallDismissed = (feature: string) =>
+  sendAnalyticsEvent('paywall_dismissed', { feature });
+export const trackUpgradeInitiated = (productId: string, tier: string) =>
+  sendAnalyticsEvent('upgrade_initiated', { productId, tier });
+export const trackUpgradeSucceeded = (productId: string, tier: string) =>
+  sendAnalyticsEvent('upgrade_succeeded', { productId, tier });
+export const trackUpgradeFailed = (productId: string, reason: string) =>
+  sendAnalyticsEvent('upgrade_failed', { productId, reason: reason.slice(0, 120) });
+export const trackRestoreAttempted = () => sendAnalyticsEvent('restore_attempted');
+export const trackRestoreSucceeded = (restoredCount: number) =>
+  sendAnalyticsEvent('restore_succeeded', { restoredCount });
+export const trackRestoreFailed = (reason: string) =>
+  sendAnalyticsEvent('restore_failed', { reason: reason.slice(0, 120) });
+
+// ── Core actions ────────────────────────────────────────────────────────────
+
+export const trackMealLogged = (mealType: string, hasPhoto: boolean) =>
+  sendAnalyticsEvent('meal_logged', { mealType, hasPhoto });
+export const trackDoseLogged = (peptideId: string) =>
+  sendAnalyticsEvent('dose_logged', { peptideId });
+export const trackWorkoutLogged = (durationMinutes: number) =>
+  sendAnalyticsEvent('workout_logged', { durationMinutes });
+export const trackChatMessageSent = (isAI: boolean) =>
+  sendAnalyticsEvent('chat_message_sent', { isAI });
+export const trackFeatureGated = (feature: string, currentTier: string) =>
+  sendAnalyticsEvent('feature_gated', { feature, currentTier });

@@ -5,8 +5,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord, deleteRecord } from '../services/syncService';
-import type { MealEntry, MacroTargets, FoodItem } from '../types/fitness';
+import { syncRecord, deleteRecord, fetchUserRecords } from '../services/syncService';
+import type { MealEntry, MealType, MacroTargets, FoodItem } from '../types/fitness';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -285,6 +285,13 @@ interface MealActions {
   ) => void;
 
   clearAll: () => void;
+
+  /**
+   * Hydrate meals from Supabase. Server wins on id conflicts so fresh
+   * installs / device swaps pick up the user's full history; any local
+   * rows that haven't synced yet (offline edits) are preserved.
+   */
+  syncFromServer: () => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -677,6 +684,49 @@ export const useMealStore = create<MealState & MealActions>()(
           mealTemplates: [],
           foodSafetyOverrides: {},
         }),
+
+      syncFromServer: async () => {
+        try {
+          type Row = {
+            id: string;
+            date: string;
+            meal_type: MealType;
+            foods: MealEntry['foods'] | null;
+            quick_log: MealEntry['quickLog'] | null;
+            notes: string | null;
+            created_at?: string;
+          };
+          const rows = await fetchUserRecords<Row>('meal_entries', {
+            orderBy: 'date',
+            ascending: false,
+            limit: 2000,
+          });
+          if (!rows.length) return;
+          const serverMeals: MealEntry[] = rows.map((r) => ({
+            id: r.id,
+            date: r.date,
+            mealType: r.meal_type,
+            foods: r.foods ?? [],
+            quickLog: r.quick_log ?? undefined,
+            notes: r.notes ?? undefined,
+            timestamp: r.created_at ?? `${r.date}T00:00:00.000Z`,
+          }));
+          // Merge by id — server is authoritative for rows we both know
+          // about; any local rows that haven't synced yet (offline edits,
+          // just-logged meals) are preserved.
+          const byId = new Map<string, MealEntry>();
+          for (const m of get().meals) byId.set(m.id, m);
+          for (const m of serverMeals) byId.set(m.id, m);
+          // Sort newest-first (primary: date desc, secondary: timestamp desc).
+          const merged = Array.from(byId.values()).sort((a, b) => {
+            if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+            return a.timestamp < b.timestamp ? 1 : -1;
+          });
+          set({ meals: merged });
+        } catch (err) {
+          if (__DEV__) console.warn('[useMealStore] syncFromServer failed:', err);
+        }
+      },
     }),
     {
       name: 'peptalk-meals',

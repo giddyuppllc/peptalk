@@ -29,6 +29,7 @@ import { useHealthProfileStore } from '../src/store/useHealthProfileStore';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
 import { calculateMacros } from '../src/utils/macroCalculator';
+import { isValidEmail, validatePassword, PASSWORD_MIN_LENGTH } from '../src/utils/validation';
 import { useMealStore } from '../src/store/useMealStore';
 import { useProgressGoalsStore } from '../src/store/useProgressGoalsStore';
 import { trackOnboardingComplete } from '../src/services/analyticsEvents';
@@ -123,6 +124,7 @@ export default function OnboardingScreen() {
 
   // Stores
   const login = useAuthStore((s) => s.login);
+  const isLoggingIn = useAuthStore((s) => s.isLoading);
   const setTier = useSubscriptionStore((s) => s.setTier);
   const setMealTargets = useMealStore((s) => s.setTargets);
   const setGoalValue = useProgressGoalsStore((s) => s.setGoalValue);
@@ -136,13 +138,24 @@ export default function OnboardingScreen() {
 
   const totalSteps = 4;
 
+  const passwordCheck = useMemo(() => validatePassword(accountPassword), [accountPassword]);
+  const emailOk = useMemo(() => isValidEmail(accountEmail), [accountEmail]);
+
   const canContinue = useMemo(() => {
     if (step === 0) return true; // Welcome — always can continue
     if (step === 1) return Boolean(profile.gender && selectedAge >= 13 && profile.healthGoals.length > 0);
     if (step === 2) return true; // Health basics is optional
-    if (step === 3) return accountFirstName.length > 0 && accountLastName.length > 0 && accountEmail.trim().includes('@') && accountPassword.length >= 6 && acceptedTerms;
+    if (step === 3) {
+      return (
+        accountFirstName.trim().length > 0 &&
+        accountLastName.trim().length > 0 &&
+        emailOk &&
+        passwordCheck.valid &&
+        acceptedTerms
+      );
+    }
     return true;
-  }, [step, profile.gender, profile.ageRange, profile.healthGoals.length, accountFirstName, accountLastName, accountEmail, accountPassword]);
+  }, [step, profile.gender, profile.ageRange, profile.healthGoals.length, accountFirstName, accountLastName, emailOk, passwordCheck.valid, acceptedTerms]);
 
   const handleNext = async () => {
     if (!canContinue) return;
@@ -360,11 +373,16 @@ export default function OnboardingScreen() {
                   onChangeText={(val) => {
                     const num = parseInt(val, 10);
                     if (!val) setSelectedAge(0);
-                    else if (!isNaN(num) && num >= 0 && num <= 120) setSelectedAge(num);
+                    else if (!isNaN(num) && num >= 0 && num <= 100) setSelectedAge(num);
                   }}
                   keyboardType="number-pad"
                   maxLength={3}
+                  accessibilityLabel="Age"
+                  accessibilityHint="Enter your age between 13 and 100"
                 />
+                {selectedAge > 0 && selectedAge < 13 && (
+                  <Text style={s.inlineHint}>You must be 13 or older to use PepTalk.</Text>
+                )}
 
                 {/* Goals */}
                 <Text style={s.label}>What are your goals?</Text>
@@ -507,13 +525,38 @@ export default function OnboardingScreen() {
                   <TextInput style={[s.input, { flex: 1 }]} placeholder="First name" placeholderTextColor="#9CA3AF" value={accountFirstName} onChangeText={setAccountFirstName} />
                   <TextInput style={[s.input, { flex: 1 }]} placeholder="Last name" placeholderTextColor="#9CA3AF" value={accountLastName} onChangeText={setAccountLastName} />
                 </View>
-                <TextInput style={s.input} placeholder="Email" placeholderTextColor="#9CA3AF" value={accountEmail} onChangeText={setAccountEmail} autoCapitalize="none" keyboardType="email-address" />
+                <TextInput
+                  style={s.input}
+                  placeholder="Email"
+                  placeholderTextColor="#9CA3AF"
+                  value={accountEmail}
+                  onChangeText={setAccountEmail}
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  keyboardType="email-address"
+                  textContentType="emailAddress"
+                />
+                {accountEmail.length > 0 && !emailOk && (
+                  <Text style={s.inlineHint}>Enter a valid email address.</Text>
+                )}
                 <View style={s.passwordWrap}>
-                  <TextInput style={[s.input, { flex: 1, marginBottom: 0 }]} placeholder="Password (6+ characters)" placeholderTextColor="#9CA3AF" value={accountPassword} onChangeText={setAccountPassword} secureTextEntry={!showPassword} />
+                  <TextInput
+                    style={[s.input, { flex: 1, marginBottom: 0 }]}
+                    placeholder={`Password (${PASSWORD_MIN_LENGTH}+ characters)`}
+                    placeholderTextColor="#9CA3AF"
+                    value={accountPassword}
+                    onChangeText={setAccountPassword}
+                    secureTextEntry={!showPassword}
+                    autoComplete="password-new"
+                    textContentType="newPassword"
+                  />
                   <TouchableOpacity style={s.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
                     <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#6B7280" />
                   </TouchableOpacity>
                 </View>
+                {accountPassword.length > 0 && !passwordCheck.valid && (
+                  <Text style={s.inlineHint}>{passwordCheck.message}</Text>
+                )}
 
                 {!!accountError && <Text style={s.errorText}>{accountError}</Text>}
 
@@ -593,13 +636,13 @@ export default function OnboardingScreen() {
               <Text style={s.footerBackText}>Back</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[s.footerNextBtn, !canContinue && { opacity: 0.4 }]}
+              style={[s.footerNextBtn, (!canContinue || isLoggingIn) && { opacity: 0.4 }]}
               onPress={handleNext}
-              disabled={!canContinue}
+              disabled={!canContinue || isLoggingIn}
               activeOpacity={0.85}
             >
-              <Text style={s.footerNextText}>Create Account</Text>
-              <Ionicons name="checkmark" size={18} color="#fff" />
+              <Text style={s.footerNextText}>{isLoggingIn ? 'Creating…' : 'Create Account'}</Text>
+              <Ionicons name={isLoggingIn ? 'hourglass' : 'checkmark'} size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -856,6 +899,13 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: '#DC2626',
     marginBottom: 8,
+  },
+  inlineHint: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Medium',
+    color: '#DC2626',
+    marginTop: 6,
+    marginBottom: 4,
   },
 
   // ── Activity levels ──────────────────────────────────────────────────────

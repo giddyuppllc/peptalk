@@ -15,6 +15,8 @@ interface GradientButtonProps {
   accessibilityLabel?: string;
   /** Longer explanation read out after the label. */
   accessibilityHint?: string;
+  /** AccessibilityState — for busy/selected/checked propagation. */
+  accessibilityState?: { disabled?: boolean; busy?: boolean; selected?: boolean };
 }
 
 export function GradientButton({
@@ -25,9 +27,11 @@ export function GradientButton({
   style,
   accessibilityLabel,
   accessibilityHint,
+  accessibilityState,
 }: GradientButtonProps) {
   const accent = useSectionAccent();
   const c = colors ?? ([accent.deep, accent.deep] as [string, string]);
+  const mergedState = { disabled, ...(accessibilityState ?? {}) };
   return (
     <AnimatedPress
       onPress={onPress}
@@ -37,7 +41,7 @@ export function GradientButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityHint={accessibilityHint}
-      accessibilityState={{ disabled }}
+      accessibilityState={mergedState}
     >
       <LinearGradient
         colors={c}

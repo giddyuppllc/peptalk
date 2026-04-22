@@ -24,14 +24,25 @@ import { supabase } from './supabase';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 
-// Fallback: direct API call (dev/testing only)
-const XAI_API_KEY = process.env.EXPO_PUBLIC_XAI_API_KEY ?? '';
+// Fallback: direct API call — DEV ONLY. Production builds must route all
+// traffic through the Supabase Edge Function so the XAI key stays server-
+// side. We still read the env var because Metro bundles whatever is set
+// at build time; the real protection is NOT setting
+// EXPO_PUBLIC_XAI_API_KEY for production EAS profiles. The `__DEV__` gates
+// below are defense-in-depth in case someone ships a misconfigured build.
+const XAI_API_KEY = __DEV__ ? (process.env.EXPO_PUBLIC_XAI_API_KEY ?? '') : '';
 const MODEL = 'grok-4-1-fast-reasoning';
 const TIMEOUT_MS = 30_000;
 
 // Lazy-init the OpenAI client (avoid creating at import time)
 let _client: OpenAI | null = null;
 function getClient(): OpenAI {
+  // Hard-stop: never instantiate the direct-API client off a dev build.
+  // If we ever get here in production, the fallback gate has been
+  // bypassed and we want to fail loudly rather than leak a key.
+  if (!__DEV__) {
+    throw new Error('[llmService] Direct XAI client is dev-only; route via Supabase Edge Function in production.');
+  }
   if (!_client) {
     _client = new OpenAI({
       apiKey: XAI_API_KEY || 'dummy',
@@ -119,6 +130,32 @@ let _knowledgeBase: string | null = null;
 function getKnowledgeBase(): string {
   if (!_knowledgeBase) _knowledgeBase = buildPeptideKnowledgeBase();
   return _knowledgeBase;
+}
+
+/**
+ * Build the knowledge base ahead of the first chat message so the user
+ * doesn't eat the ~100ms concat cost when they send their first prompt.
+ * Call this once at boot, deferred until after interactions so we don't
+ * compete with splash / first paint.
+ *
+ * Safe to call repeatedly — the underlying cache is a no-op after the
+ * first successful build.
+ */
+export function warmKnowledgeBase(): void {
+  if (_knowledgeBase) return;
+  try {
+    // Defer until after first frame so this can't contend with UI work.
+    const { InteractionManager } = require('react-native');
+    InteractionManager.runAfterInteractions(() => {
+      try {
+        if (!_knowledgeBase) _knowledgeBase = buildPeptideKnowledgeBase();
+      } catch (err) {
+        if (__DEV__) console.warn('[llmService] warmKnowledgeBase build failed:', err);
+      }
+    });
+  } catch (err) {
+    if (__DEV__) console.warn('[llmService] warmKnowledgeBase schedule failed:', err);
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -21,6 +21,7 @@ import { DMSans_600SemiBold } from '@expo-google-fonts/dm-sans/600SemiBold';
 import { DMSans_700Bold } from '@expo-google-fonts/dm-sans/700Bold';
 import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
+import { OfflineBanner } from '../src/components/OfflineBanner';
 import { CelebrationModal } from '../src/components/CelebrationModal';
 import { PepTalkCharacter } from '../src/components/PepTalkCharacter';
 import { SpotlightTour } from '../src/components/tutorial/SpotlightTour';
@@ -31,6 +32,15 @@ import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
 import { syncHealthProfileFromServer } from '../src/store/useHealthProfileStore';
 import { configureNotificationHandler } from '../src/services/notificationService';
 import { initIAP, endIAP } from '../src/services/iapService';
+import { warmKnowledgeBase } from '../src/services/llmService';
+import { useChatStore } from '../src/store/useChatStore';
+import { useMealStore } from '../src/store/useMealStore';
+import { subscribeToReconnect } from '../src/hooks/useNetworkStatus';
+import { initTelemetry } from '../src/services/telemetry';
+
+// Boot-time telemetry init (no-op if no DSN). Done at module scope so it
+// fires before any component renders or stores hydrate.
+initTelemetry();
 import { Platform } from 'react-native';
 import { useTheme } from '../src/hooks/useTheme';
 
@@ -40,10 +50,12 @@ function RootLayout() {
   const { edit } = useGlobalSearchParams<{ edit?: string }>();
   const isComplete = useOnboardingStore((state) => state.isComplete);
   const hasHydrated = useOnboardingStore((state) => state.hasHydrated);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const authHydrated = useAuthStore((state) => state.hasHydrated);
   const t = useTheme();
 
   // Load custom fonts
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontsError] = useFonts({
     'Playfair-Bold': PlayfairDisplay_700Bold,
     'Playfair-ExtraBold': PlayfairDisplay_800ExtraBold,
     'Playfair-Black': PlayfairDisplay_900Black,
@@ -52,6 +64,19 @@ function RootLayout() {
     'DMSans-SemiBold': DMSans_600SemiBold,
     'DMSans-Bold': DMSans_700Bold,
   });
+
+  // Safety net: if @expo-google-fonts can't reach its CDN (captive wifi,
+  // regional block, sneaky VPN), `fontsLoaded` never flips and the splash
+  // hangs forever. Accept "fonts ready OR 5 seconds elapsed OR load error"
+  // as the trigger to proceed — the app simply renders with the system
+  // font stack in that case.
+  const [fontsTimedOut, setFontsTimedOut] = useState(false);
+  useEffect(() => {
+    if (fontsLoaded) return;
+    const timer = setTimeout(() => setFontsTimedOut(true), 5000);
+    return () => clearTimeout(timer);
+  }, [fontsLoaded]);
+  const fontsReady = fontsLoaded || fontsTimedOut || !!fontsError;
 
   // Wait for the navigator (<Stack>) to mount before attempting navigation
   const [navReady, setNavReady] = useState(false);
@@ -62,12 +87,21 @@ function RootLayout() {
   const splashScale = useRef(new Animated.Value(1)).current;
   const logoScale = useRef(new Animated.Value(0.7)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
+  // Ensure the splash animation only runs once — isAuthenticated / isComplete
+  // can flip as stores hydrate, and without this guard the effect re-fires
+  // and layers animations.
+  const splashStarted = useRef(false);
 
   useEffect(() => {
-    if (!fontsLoaded) return;
+    // Wait for fonts AND hydrated auth/onboarding state before deciding
+    // which splash path to play. Otherwise returning users briefly get the
+    // full welcome animation before we know they've seen it already.
+    if (!fontsReady || !hasHydrated || !authHydrated) return;
+    if (splashStarted.current) return;
+    splashStarted.current = true;
+
     let cancelled = false;
-    // Respect the OS reduced-motion setting — if the user asked for less
-    // motion, skip the spring + timing chain and just drop the splash.
+    const isReturning = isComplete && isAuthenticated;
     (async () => {
       // AccessibilityInfo.isReduceMotionEnabled may not exist on older
       // OS versions / custom ROMs. Guard with optional chaining AND a
@@ -80,20 +114,31 @@ function RootLayout() {
         reduceMotion = false;
       }
       if (cancelled) return;
-      if (reduceMotion) {
+
+      // Fast path: returning users OR reduce-motion. No hold, no spring —
+      // just a quick fade so boot feels instant on repeat launches.
+      if (reduceMotion || isReturning) {
         logoScale.setValue(1);
         logoOpacity.setValue(1);
+        const holdMs = reduceMotion ? 0 : 150;
         setTimeout(() => {
-          if (!cancelled) setSplashVisible(false);
-        }, 600);
+          if (cancelled) return;
+          Animated.timing(splashOpacity, {
+            toValue: 0,
+            duration: 250,
+            useNativeDriver: true,
+          }).start(() => {
+            if (!cancelled) setSplashVisible(false);
+          });
+        }, holdMs);
         return;
       }
-      // Logo entrance
+
+      // First-launch / logged-out welcome — full brand animation.
       Animated.parallel([
         Animated.spring(logoScale, { toValue: 1, tension: 60, friction: 7, useNativeDriver: true }),
         Animated.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
       ]).start(() => {
-        // Hold briefly then fade out
         setTimeout(() => {
           Animated.parallel([
             Animated.timing(splashOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
@@ -105,7 +150,7 @@ function RootLayout() {
     return () => {
       cancelled = true;
     };
-  }, [fontsLoaded]);
+  }, [fontsReady, hasHydrated, authHydrated, isComplete, isAuthenticated]);
 
   // Initialize notifications and restore session — no-ops gracefully in Expo Go
   useEffect(() => {
@@ -125,17 +170,25 @@ function RootLayout() {
         if (__DEV__) console.warn('[boot] restoreSession failed:', err);
       });
 
-    // Hook IAP into the app so purchase events flow into subscription validation
+    // Hook IAP into the app so purchase events flow into subscription
+    // validation. `onPending` surfaces Ask-to-Buy / SCA / parental-consent
+    // flows so the UI can show a "waiting for approval" state instead of
+    // silently hanging.
     try {
-      initIAP(async ({ productId, transactionReceipt }) => {
-        const platform: 'ios' | 'android' = Platform.OS === 'ios' ? 'ios' : 'android';
-        try {
-          await useSubscriptionStore
-            .getState()
-            .validatePurchase(platform, productId, transactionReceipt);
-        } catch (err) {
-          if (__DEV__) console.warn('[boot] validatePurchase failed:', err);
-        }
+      initIAP({
+        onPurchase: async ({ productId, transactionReceipt }) => {
+          const platform: 'ios' | 'android' = Platform.OS === 'ios' ? 'ios' : 'android';
+          try {
+            await useSubscriptionStore
+              .getState()
+              .validatePurchase(platform, productId, transactionReceipt);
+          } catch (err) {
+            if (__DEV__) console.warn('[boot] validatePurchase failed:', err);
+          }
+        },
+        onPending: ({ productId }) => {
+          useSubscriptionStore.getState().setPendingPurchase({ productId });
+        },
       });
     } catch (err) {
       if (__DEV__) console.warn('[boot] initIAP threw:', err);
@@ -158,11 +211,58 @@ function RootLayout() {
       if (__DEV__) console.warn('[boot] syncHealthProfileFromServer threw:', err);
     }
 
+    // Pre-build the Aimee knowledge base in the background so the first
+    // chat message doesn't pay the build cost. No-op on subsequent calls.
+    try {
+      warmKnowledgeBase();
+    } catch (err) {
+      if (__DEV__) console.warn('[boot] warmKnowledgeBase threw:', err);
+    }
+
+    // Reconcile free-tier chat quota with the server so device-clock
+    // tampering can't silently reset the daily counter.
+    useChatStore
+      .getState()
+      .refreshDailyQuotaFromServer()
+      ?.catch?.((err: unknown) => {
+        if (__DEV__) console.warn('[boot] chat quota refresh failed:', err);
+      });
+
+    // Drain any chat messages whose cloud sync failed on a previous
+    // session (offline send, flaky network). Without this, chat history
+    // silently diverges across the user's devices.
+    useChatStore
+      .getState()
+      .flushPendingSyncs()
+      ?.catch?.((err: unknown) => {
+        if (__DEV__) console.warn('[boot] chat sync flush failed:', err);
+      });
+
+    // Hydrate meals from the server so a reinstall / new device picks up
+    // the user's logged meal history instead of a blank slate.
+    useMealStore
+      .getState()
+      .syncFromServer()
+      ?.catch?.((err: unknown) => {
+        if (__DEV__) console.warn('[boot] meal syncFromServer failed:', err);
+      });
+
     // Mark navigator as mounted on next frame so <Stack> is in the tree
     requestAnimationFrame(() => setNavReady(true));
 
+    // When the device reconnects after being offline, silently re-run the
+    // recovery routines so queued work catches up without any user action.
+    const unsubReconnect = subscribeToReconnect(() => {
+      if (__DEV__) console.log('[net] back online — running recovery syncs');
+      useChatStore.getState().flushPendingSyncs()?.catch?.(() => {});
+      useChatStore.getState().refreshDailyQuotaFromServer()?.catch?.(() => {});
+      useSubscriptionStore.getState().syncFromServer()?.catch?.(() => {});
+      useMealStore.getState().syncFromServer()?.catch?.(() => {});
+    });
+
     return () => {
       try { endIAP(); } catch {}
+      try { unsubReconnect?.(); } catch {}
     };
   }, []);
 
@@ -187,6 +287,7 @@ function RootLayout() {
     <SafeAreaProvider>
       <View style={[styles.container, { backgroundColor: t.bg }]}>
         <StatusBar style={t.statusBar} />
+        <OfflineBanner />
         <CelebrationModal />
         {/* First-run walkthrough + upgrade delta tours (mounted at root so they survive navigation) */}
         <SpotlightTour />

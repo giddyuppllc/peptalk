@@ -18,6 +18,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, FontSizes, BorderRadius, Gradients } from '../constants/theme';
 import { TIER_FEATURES } from '../types/fitness';
 import type { SubscriptionTier } from '../types/fitness';
+import { useSubscriptionStore } from '../store/useSubscriptionStore';
+import { TIER_LABEL, tierPriceShort } from '../constants/tierPricing';
+import { trackPaywallDismissed } from '../services/analyticsEvents';
 
 // ---------------------------------------------------------------------------
 // Feature metadata — human-readable names & descriptions
@@ -241,16 +244,14 @@ function getRequiredTier(feature: string): SubscriptionTier {
   return 'free';
 }
 
-const TIER_LABELS: Record<SubscriptionTier, string> = {
-  free: 'Free',
-  plus: 'PepTalk+',
-  pro: 'PepTalk Pro',
-};
-
+// Tier labels + prices live in ../constants/tierPricing so this modal
+// doesn't drift out of sync with the subscription screen's yearly-default
+// pricing (which the modal eventually routes the user to).
+const TIER_LABELS = TIER_LABEL;
 const TIER_PRICES: Record<SubscriptionTier, string> = {
-  free: '$0',
-  plus: '$9.99/mo',
-  pro: '$49.99/mo',
+  free: tierPriceShort('free', false),
+  plus: tierPriceShort('plus', true),
+  pro: tierPriceShort('pro', true),
 };
 
 // ---------------------------------------------------------------------------
@@ -265,15 +266,35 @@ interface PaywallModalProps {
 
 export function PaywallModal({ visible, feature, onDismiss }: PaywallModalProps) {
   const router = useRouter();
+  const currentTier = useSubscriptionStore((s) => s.tier);
   const requiredTier = getRequiredTier(feature);
   const meta = FEATURE_META[feature] ?? {
     name: feature.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
     description: 'This feature requires an upgraded plan.',
   };
 
+  // If the user upgrades while this modal is open (completes a purchase on
+  // /subscription, a beta grant kicks in, syncFromServer reconciles a stale
+  // cache, etc.) and they now have access to the gated feature, dismiss the
+  // paywall instead of leaving a stale "upgrade required" screen up.
+  const hasAccessNow = React.useMemo(
+    () => TIER_FEATURES[currentTier]?.includes(feature) ?? false,
+    [currentTier, feature],
+  );
+  React.useEffect(() => {
+    if (visible && hasAccessNow) {
+      onDismiss();
+    }
+  }, [visible, hasAccessNow, onDismiss]);
+
   const handleUpgrade = () => {
     onDismiss();
     router.push('/subscription');
+  };
+
+  const handleDismiss = () => {
+    trackPaywallDismissed(feature);
+    onDismiss();
   };
 
   return (
@@ -281,7 +302,7 @@ export function PaywallModal({ visible, feature, onDismiss }: PaywallModalProps)
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onDismiss}
+      onRequestClose={handleDismiss}
     >
       <View style={styles.overlay}>
         <View style={styles.modal}>
@@ -328,7 +349,7 @@ export function PaywallModal({ visible, feature, onDismiss }: PaywallModalProps)
 
           {/* Dismiss */}
           <TouchableOpacity
-            onPress={onDismiss}
+            onPress={handleDismiss}
             style={styles.dismissBtn}
             accessibilityRole="button"
             accessibilityLabel="Dismiss paywall"

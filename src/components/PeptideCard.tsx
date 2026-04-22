@@ -34,7 +34,7 @@ interface PeptideCardProps {
   peptide: Peptide;
 }
 
-export const PeptideCard: React.FC<PeptideCardProps> = ({ peptide }) => {
+const PeptideCardImpl: React.FC<PeptideCardProps> = ({ peptide }) => {
   const router = useRouter();
 
   const handlePress = () => {
@@ -175,4 +175,7 @@ const styles = StyleSheet.create({
   },
 });
 
+// Rendered in long peptide lists — memoize on `peptide` identity so typing
+// in the search bar doesn't re-render every card in the list.
+export const PeptideCard = React.memo(PeptideCardImpl);
 export default PeptideCard;

@@ -77,11 +77,19 @@ Deno.serve(async (req) => {
     }
 
     // ── Validate receipt with store ──
+    //
+    // CRITICAL: We must confirm the receipt is actually for the product_id
+    // the client claims. Without that check, a user could send a legitimate
+    // Plus-monthly receipt but pass `productId=peptalk_pro_yearly` in the
+    // body — Apple/Google would return success for the receipt, we'd map
+    // our claimed productId to 'pro', and grant them a tier they didn't pay
+    // for. Apple doesn't enforce product match; we do it explicitly below.
+    // Google does, because the product_id is part of the verify URL path.
     let validated = false;
     let expiresAt: string | null = null;
 
     if (body.platform === 'ios') {
-      const result = await verifyAppleReceipt(body.receipt);
+      const result = await verifyAppleReceipt(body.receipt, body.productId);
       validated = result.valid;
       expiresAt = result.expiresAt;
     } else {
@@ -149,7 +157,10 @@ Deno.serve(async (req) => {
 // Apple receipt verification
 // ---------------------------------------------------------------------------
 
-async function verifyAppleReceipt(receipt: string): Promise<{ valid: boolean; expiresAt: string | null }> {
+async function verifyAppleReceipt(
+  receipt: string,
+  expectedProductId: string,
+): Promise<{ valid: boolean; expiresAt: string | null }> {
   // Try production first, fall back to sandbox if Apple responds with 21007
   let res = await postAppleReceipt(APPLE_PROD_URL, receipt);
   if (res.status === 21007) {
@@ -160,14 +171,31 @@ async function verifyAppleReceipt(receipt: string): Promise<{ valid: boolean; ex
     return { valid: false, expiresAt: null };
   }
 
-  // Find the latest active subscription info
-  const latestReceipt = res.latest_receipt_info?.[0] ?? res.receipt?.in_app?.[0];
-  if (!latestReceipt) {
+  // Apple can return multiple in-app entries (renewals, upgrades, etc.).
+  // Walk latest_receipt_info — which is sorted most-recent first when
+  // `exclude-old-transactions` is set — and pick the most recent entry
+  // whose product_id matches what the client claimed. Falls back to the
+  // legacy in_app array for first-purchase receipts.
+  const candidates: any[] = [
+    ...(Array.isArray(res.latest_receipt_info) ? res.latest_receipt_info : []),
+    ...(Array.isArray(res.receipt?.in_app) ? res.receipt.in_app : []),
+  ];
+  const match = candidates.find((r) => r?.product_id === expectedProductId);
+  if (!match) {
+    console.warn(
+      '[validate-purchase] Apple receipt valid but product_id mismatch:',
+      'expected', expectedProductId,
+      'got', candidates.map((c) => c?.product_id).join(','),
+    );
     return { valid: false, expiresAt: null };
   }
 
-  const expiresMs = parseInt(latestReceipt.expires_date_ms ?? '0', 10);
-  const isActive = expiresMs > Date.now();
+  const expiresMs = parseInt(match.expires_date_ms ?? '0', 10);
+  // Apple cancellation_date_ms is set when the user cancels mid-period OR
+  // Apple revokes the purchase. Treat either as invalid even if the
+  // subscription window hasn't yet elapsed.
+  const cancelledMs = parseInt(match.cancellation_date_ms ?? '0', 10);
+  const isActive = expiresMs > Date.now() && cancelledMs === 0;
 
   return {
     valid: isActive,
@@ -218,9 +246,23 @@ async function verifyGoogleReceipt(
     }
 
     const data = await res.json();
-    // Google returns expiryTimeMillis as a string
+    // Google returns expiryTimeMillis as a string.
+    // paymentState: 0=pending, 1=received, 2=free trial, 3=pending deferred
+    // upgrade/downgrade. Accept 1 and 2 as paid/valid.
     const expiresMs = parseInt(data.expiryTimeMillis ?? '0', 10);
-    const isActive = expiresMs > Date.now() && data.paymentState !== 0; // 0 = payment pending
+    const paymentState = data.paymentState;
+    const paid = paymentState === 1 || paymentState === 2;
+    const isActive = expiresMs > Date.now() && paid;
+
+    // CRITICAL: acknowledge the purchase so Google doesn't auto-refund after
+    // 3 days. acknowledgementState: 0 = not acknowledged, 1 = acknowledged.
+    // Fire-and-forget — a failed acknowledge isn't a reason to deny entitlement,
+    // the user's already paid; we just log so ops can catch systemic issues.
+    if (isActive && data.acknowledgementState === 0) {
+      await acknowledgeGoogleSubscription(productId, purchaseToken, accessToken).catch((err) => {
+        console.warn('[validate-purchase] Google acknowledge failed (non-fatal):', err);
+      });
+    }
 
     return {
       valid: isActive,
@@ -229,6 +271,32 @@ async function verifyGoogleReceipt(
   } catch (err) {
     console.error('[validate-purchase] Google verify threw:', err);
     return { valid: false, expiresAt: null };
+  }
+}
+
+/**
+ * Acknowledge a Google Play subscription purchase so Play Billing doesn't
+ * auto-refund after the 3-day acknowledgement window. Required by Play
+ * Billing Library per https://developer.android.com/google/play/billing/integrate#acknowledge.
+ */
+async function acknowledgeGoogleSubscription(
+  productId: string,
+  purchaseToken: string,
+  accessToken: string,
+): Promise<void> {
+  const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${ANDROID_PACKAGE_NAME}/purchases/subscriptions/${productId}/tokens/${encodeURIComponent(purchaseToken)}:acknowledge`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({}),
+  });
+  if (!res.ok && res.status !== 409) {
+    // 409 Conflict is returned when the purchase is already acknowledged
+    // (likely a retry) — safe to ignore.
+    throw new Error(`acknowledge responded ${res.status}: ${await res.text()}`);
   }
 }
 

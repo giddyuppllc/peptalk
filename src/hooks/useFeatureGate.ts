@@ -4,9 +4,10 @@
  * Checks subscription tier for feature access; shows PaywallModal when blocked.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useSubscriptionStore } from '../store/useSubscriptionStore';
 import { PaywallModal } from '../components/PaywallModal';
+import { trackFeatureGated } from '../services/analyticsEvents';
 
 /**
  * Returns true if the current user has access to the given feature.
@@ -38,7 +39,16 @@ export const PaywallGate: React.FC<{ feature: string; children: React.ReactNode 
   children,
 }) => {
   const hasAccess = useFeatureGate(feature);
+  const currentTier = useSubscriptionStore((s) => s.tier);
   const [dismissed, setDismissed] = useState(false);
+
+  // Emit a feature_gated event the first time this gate blocks the user so
+  // we can see which features drive the most paywall exposure.
+  useEffect(() => {
+    if (!hasAccess) {
+      trackFeatureGated(feature, currentTier);
+    }
+  }, [hasAccess, feature, currentTier]);
 
   const handleDismiss = useCallback(() => {
     setDismissed(true);

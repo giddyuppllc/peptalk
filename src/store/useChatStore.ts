@@ -46,6 +46,13 @@ const deriveTitle = (messages: ChatMessage[]): string => {
   return clean.slice(0, 30).trim() + '…';
 };
 
+/** Message ids whose sync to Supabase has not yet succeeded. */
+interface PendingSyncEntry {
+  messageId: string;
+  chatId: string | null;
+  attempts: number;
+}
+
 interface ChatStore {
   chats: Chat[];
   activeChatId: string | null;
@@ -53,6 +60,10 @@ interface ChatStore {
   isTyping: boolean;
   dailyMessageCount: number;
   lastMessageDate: string;
+  /** Last time we reconciled dailyMessageCount with the server (ms epoch). */
+  quotaLastCheckedAt: number;
+  /** Messages whose cloud sync failed. Flushed on boot + after every new message. */
+  pendingSyncs: PendingSyncEntry[];
 
   // Chat management
   newChat: () => string;
@@ -68,6 +79,40 @@ interface ChatStore {
   // Rate limiting
   incrementMessageCount: () => void;
   canSendMessage: () => boolean;
+  /**
+   * Pull the authoritative daily message count from the server to block
+   * device-clock bypasses (changing system time to reset the local counter).
+   * Safe to call repeatedly — does a no-op if called more than once a minute.
+   */
+  refreshDailyQuotaFromServer: () => Promise<void>;
+  /**
+   * Retry any previously-failed message syncs. Call on app boot and after
+   * network comes back. Drops entries that have exceeded max attempts so
+   * the queue can't grow unbounded.
+   */
+  flushPendingSyncs: () => Promise<void>;
+}
+
+const MAX_SYNC_ATTEMPTS = 5;
+
+/** Sync a single message record, returning true on success. */
+async function syncChatMessage(
+  message: ChatMessage,
+  chatId: string | null,
+): Promise<boolean> {
+  try {
+    await syncRecord('chat_messages', {
+      id: message.id,
+      chat_id: chatId,
+      role: message.role,
+      content: message.content,
+      created_at: message.timestamp ?? new Date().toISOString(),
+    });
+    return true;
+  } catch (err) {
+    if (__DEV__) console.warn('[useChatStore] syncChatMessage threw:', err);
+    return false;
+  }
 }
 
 /** Helper: compute the `messages` mirror from chats + activeChatId */
@@ -85,6 +130,8 @@ export const useChatStore = create<ChatStore>()(
       isTyping: false,
       dailyMessageCount: 0,
       lastMessageDate: '',
+      quotaLastCheckedAt: 0,
+      pendingSyncs: [],
 
       newChat: () => {
         const chat = makeEmptyChat();
@@ -172,14 +219,25 @@ export const useChatStore = create<ChatStore>()(
           };
         });
 
-        // Cloud sync message (fire and forget)
-        syncRecord('chat_messages', {
-          id: message.id,
-          chat_id: get().activeChatId,
-          role: message.role,
-          content: message.content,
-          created_at: message.timestamp ?? new Date().toISOString(),
-        }).catch(() => {});
+        // Cloud sync with retry queue: try once now, and if that fails,
+        // persist to `pendingSyncs` so we can retry on the next message
+        // or app boot. This is why chat history doesn't diverge across
+        // devices when the network flakes during a send.
+        const chatId = get().activeChatId;
+        (async () => {
+          const ok = await syncChatMessage(message, chatId);
+          if (!ok) {
+            set((st) => ({
+              pendingSyncs: [
+                ...st.pendingSyncs,
+                { messageId: message.id, chatId, attempts: 1 },
+              ],
+            }));
+          }
+          // Either way, opportunistically try to drain the backlog —
+          // network might have just come back.
+          void get().flushPendingSyncs();
+        })();
       },
 
       setTyping: (isTyping) => set({ isTyping }),
@@ -211,8 +269,107 @@ export const useChatStore = create<ChatStore>()(
 
         const today = todayKey();
         const { lastMessageDate, dailyMessageCount } = get();
-        if (lastMessageDate !== today) return true;
+        // IMPORTANT: do NOT silently reset the counter when the device's
+        // client-side date differs from lastMessageDate — a user can change
+        // their system clock to get free quota. Instead trust only the
+        // stored count; `refreshDailyQuotaFromServer` is responsible for
+        // rolling the window based on authoritative server time.
+        if (lastMessageDate !== today) {
+          // Client clock says it's a new day, but we haven't confirmed with
+          // the server yet. Allow the send (optimistic), and let the next
+          // server refresh correct the count if the client was lying.
+          return true;
+        }
         return dailyMessageCount < FREE_DAILY_MESSAGE_LIMIT;
+      },
+
+      flushPendingSyncs: async () => {
+        const queue = get().pendingSyncs;
+        if (queue.length === 0) return;
+
+        // Look up the message bodies from the local chat store. If the
+        // message was deleted (clearChat), drop it from the queue.
+        const allMessages = new Map<string, { message: ChatMessage; chatId: string | null }>();
+        for (const c of get().chats) {
+          for (const m of c.messages) {
+            allMessages.set(m.id, { message: m, chatId: c.id });
+          }
+        }
+
+        const stillFailing: PendingSyncEntry[] = [];
+        for (const entry of queue) {
+          const hit = allMessages.get(entry.messageId);
+          if (!hit) continue; // message gone — drop silently
+
+          // Prefer the chatId recorded at queue time; fall back to the
+          // current owning chat if unknown.
+          const chatId = entry.chatId ?? hit.chatId;
+          const ok = await syncChatMessage(hit.message, chatId);
+          if (ok) continue;
+
+          const attempts = entry.attempts + 1;
+          if (attempts >= MAX_SYNC_ATTEMPTS) {
+            if (__DEV__) {
+              console.warn(
+                '[useChatStore] giving up on message sync after',
+                attempts,
+                'attempts:',
+                entry.messageId,
+              );
+            }
+            continue;
+          }
+          stillFailing.push({ messageId: entry.messageId, chatId, attempts });
+        }
+
+        set({ pendingSyncs: stillFailing });
+      },
+
+      refreshDailyQuotaFromServer: async () => {
+        // Throttle — at most one server check per minute.
+        const now = Date.now();
+        if (now - get().quotaLastCheckedAt < 60_000) return;
+        set({ quotaLastCheckedAt: now });
+
+        try {
+          const { supabase } = await import('../services/supabase');
+          const db = supabase as any;
+          const { data: { user } } = await db.auth.getUser();
+          if (!user) return;
+
+          // Preferred path: a Postgres function that counts today's user
+          // messages using server-side `now()` — fully bypass-proof.
+          //
+          // Deploy this once in Supabase SQL editor:
+          //
+          //   create or replace function chat_quota_today(p_user_id uuid)
+          //   returns integer language sql security definer as $$
+          //     select count(*)::integer from chat_messages
+          //     where user_id = p_user_id
+          //       and role = 'user'
+          //       and created_at >= date_trunc('day', now() at time zone 'utc');
+          //   $$;
+          const rpc = await db.rpc('chat_quota_today', { p_user_id: user.id });
+          if (!rpc.error && typeof rpc.data === 'number') {
+            set({ dailyMessageCount: rpc.data, lastMessageDate: todayKey() });
+            return;
+          }
+
+          // Fallback: direct table count. `created_at` is client-supplied
+          // today (see syncService.syncRecord) so this is only partially
+          // authoritative — use it until the RPC above is deployed.
+          const since = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+          const { count, error } = await db
+            .from('chat_messages')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('role', 'user')
+            .gte('created_at', since);
+          if (error || typeof count !== 'number') return;
+          set({ dailyMessageCount: count, lastMessageDate: todayKey() });
+        } catch (err) {
+          if (__DEV__) console.warn('[useChatStore] refreshDailyQuotaFromServer failed:', err);
+        }
       },
     }),
     {
@@ -224,6 +381,8 @@ export const useChatStore = create<ChatStore>()(
         activeChatId: state.activeChatId,
         dailyMessageCount: state.dailyMessageCount,
         lastMessageDate: state.lastMessageDate,
+        quotaLastCheckedAt: state.quotaLastCheckedAt,
+        pendingSyncs: state.pendingSyncs,
       }),
       migrate: (persisted: any, version) => {
         // v1 → v2: wrap legacy flat messages[] into a single Chat
