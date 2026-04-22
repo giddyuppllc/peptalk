@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { PeptideStack, StackAnalysis } from '../types';
 import { analyzeStack } from '../services/analysisEngine';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord, deleteRecord } from '../services/syncService';
+import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
 import { CURATED_STACKS } from '../data/curatedStacks';
 
 const MAX_STACK_SIZE = 5;
@@ -33,6 +33,8 @@ interface StackStore {
   saveStack: (name: string) => string | null;
   deleteStack: (stackId: string) => void;
   loadStack: (stack: PeptideStack) => void;
+  /** Hydrate user-saved stacks from Supabase on boot / device switch. Curated stacks unaffected. */
+  syncFromServer: () => Promise<void>;
 }
 
 export const useStackStore = create<StackStore>()(
@@ -174,6 +176,43 @@ export const useStackStore = create<StackStore>()(
           currentStack: [...stack.peptideIds],
           currentAnalysis: stack.analysis ?? null,
         });
+      },
+
+      syncFromServer: async () => {
+        type Row = {
+          id: string;
+          name: string | null;
+          peptides: Array<{ peptideId?: string } | string> | string[] | null;
+          target_goals: string[] | null;
+          notes: string | null;
+          is_curated: boolean | null;
+          created_at: string | null;
+        };
+        // Only merge USER stacks — the curated list is baked into the app
+        // and re-merged on rehydrate, so server-side curated rows (if any)
+        // are ignored here.
+        const userLocal = get().savedStacks.filter((s) => !s.isCurated);
+        const merged = await hydrateFromServer<Row, PeptideStack>(
+          'saved_stacks',
+          userLocal,
+          (r) => {
+            const peptideIds = Array.isArray(r.peptides)
+              ? r.peptides
+                  .map((p) => (typeof p === 'string' ? p : p?.peptideId))
+                  .filter((x): x is string => typeof x === 'string')
+              : [];
+            return {
+              id: r.id,
+              name: r.name ?? 'Untitled stack',
+              peptideIds,
+              createdAt: r.created_at ?? new Date().toISOString(),
+              updatedAt: r.created_at ?? new Date().toISOString(),
+              isCurated: false,
+            };
+          },
+          { orderBy: 'created_at', ascending: false, limit: 500 },
+        );
+        set({ savedStacks: mergeCuratedStacks(merged) });
       },
     }),
     {

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { CheckInEntry, CheckInRating, EmotionTag, PeptideEffect, SleepStageData } from '../types';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord, deleteRecord } from '../services/syncService';
+import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
 
 const toDateKey = (date: Date) => {
   const year = date.getFullYear();
@@ -51,6 +51,8 @@ interface CheckinStore {
   getEmotionFrequency: (days: number) => Record<string, number>;
   getStreak: () => number;
   clearAll: () => void;
+  /** Hydrate from Supabase on boot / device switch. Server wins on id conflict. */
+  syncFromServer: () => Promise<void>;
 }
 
 export const useCheckinStore = create<CheckinStore>()(
@@ -167,6 +169,62 @@ export const useCheckinStore = create<CheckinStore>()(
       },
 
       clearAll: () => set({ entries: [] }),
+
+      syncFromServer: async () => {
+        type Row = {
+          id: string;
+          date: string;
+          mood: number;
+          energy: number;
+          stress: number;
+          sleep_quality: number;
+          recovery: number;
+          appetite: number;
+          weight_lbs: number | null;
+          resting_heart_rate: number | null;
+          steps: number | null;
+          hrv_ms: number | null;
+          vo2_max: number | null;
+          spo2: number | null;
+          notes: string | null;
+          emotion_tags: string[] | null;
+          side_effect_tags: string[] | null;
+          peptide_effects: PeptideEffect[] | null;
+          sleep_stages: SleepStageData | null;
+          active_calories: number | null;
+          created_at: string | null;
+        };
+        const merged = await hydrateFromServer<Row, CheckInEntry>(
+          'check_ins',
+          get().entries,
+          (r) => ({
+            id: r.id,
+            date: r.date,
+            createdAt: r.created_at ?? new Date().toISOString(),
+            mood: clampRating(r.mood),
+            energy: clampRating(r.energy),
+            stress: clampRating(r.stress),
+            sleepQuality: clampRating(r.sleep_quality),
+            recovery: clampRating(r.recovery),
+            appetite: clampRating(r.appetite),
+            weightLbs: r.weight_lbs ?? undefined,
+            restingHeartRate: r.resting_heart_rate ?? undefined,
+            steps: r.steps ?? undefined,
+            hrvMs: r.hrv_ms ?? undefined,
+            vo2Max: r.vo2_max ?? undefined,
+            spo2: r.spo2 ?? undefined,
+            activeCalories: r.active_calories ?? undefined,
+            sleepStages: r.sleep_stages ?? undefined,
+            notes: r.notes ?? undefined,
+            emotionTags: (r.emotion_tags as EmotionTag[]) ?? undefined,
+            sideEffectTags: r.side_effect_tags ?? undefined,
+            peptideEffects: r.peptide_effects ?? undefined,
+          }),
+          { orderBy: 'date', ascending: false, limit: 1000 },
+        );
+        const sorted = merged.sort((a, b) => (a.date < b.date ? 1 : -1));
+        set({ entries: sorted });
+      },
     }),
     {
       name: 'peptalk-checkins',

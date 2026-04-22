@@ -10,7 +10,7 @@ import {
   AlertLevel,
 } from '../types';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord, deleteRecord } from '../services/syncService';
+import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
 import { getPeptideById } from '../data/peptides';
 import { PROTOCOL_TEMPLATES } from '../data/protocols';
 
@@ -206,6 +206,9 @@ interface DoseLogStore {
 
   /** Wipe all local dose/protocol/alert state. Called on logout. */
   clearAll: () => void;
+
+  /** Hydrate from Supabase on boot / device switch. Server wins on id conflict. */
+  syncFromServer: () => Promise<void>;
 }
 
 export const useDoseLogStore = create<DoseLogStore>()(
@@ -348,6 +351,43 @@ export const useDoseLogStore = create<DoseLogStore>()(
           dismissedAlertIds: [],
           hasAcceptedDoseDisclaimer: false,
         }),
+
+      syncFromServer: async () => {
+        type Row = {
+          id: string;
+          peptide_id: string;
+          peptide_name: string | null;
+          amount: number | null;
+          dose_mcg: number | null;
+          unit: string | null;
+          route: string | null;
+          date: string;
+          time: string | null;
+          site: string | null;
+          batch_number: string | null;
+          notes: string | null;
+          created_at: string | null;
+        };
+        const merged = await hydrateFromServer<Row, DoseLogEntry>(
+          'dose_logs',
+          get().doses,
+          (r) => ({
+            id: r.id,
+            peptideId: r.peptide_id,
+            date: r.date,
+            time: r.time ?? '00:00',
+            amount: r.amount ?? r.dose_mcg ?? 0,
+            unit: (r.unit as DoseUnit) ?? 'mcg',
+            route: (r.route as AdministrationRoute) ?? 'subcutaneous',
+            injectionSite: r.site ?? undefined,
+            batchNumber: r.batch_number ?? undefined,
+            notes: r.notes ?? undefined,
+            createdAt: r.created_at ?? new Date().toISOString(),
+          }),
+          { orderBy: 'date', ascending: false, limit: 2000 },
+        );
+        set({ doses: merged.sort((a, b) => (a.date < b.date ? 1 : -1)) });
+      },
     }),
     {
       name: 'peptalk-doselog',

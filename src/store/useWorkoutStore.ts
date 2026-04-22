@@ -5,7 +5,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord, deleteRecord } from '../services/syncService';
+import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
 import type { WorkoutLog, WorkoutLogSet } from '../types/fitness';
 import type { GeneratedWorkout } from '../services/workoutGenerator';
 
@@ -86,6 +86,8 @@ interface WorkoutActions {
   getTotalVolume: () => { sets: number; reps: number; weightLbs: number };
   getRecentExercises: (limit?: number) => string[];
   clearAll: () => void;
+  /** Hydrate from Supabase on boot / device switch. Server wins on id conflict. */
+  syncFromServer: () => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -352,6 +354,41 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
 
       clearAll: () =>
         set({ activeProgram: null, logs: [], inProgress: null, savedGeneratedWorkouts: [] }),
+
+      syncFromServer: async () => {
+        type Row = {
+          id: string;
+          started_at: string | null;
+          completed_at: string | null;
+          duration_minutes: number | null;
+          program_id: string | null;
+          day_id: string | null;
+          sets: WorkoutLogSet[] | null;
+          rating: number | null;
+          notes: string | null;
+          workout_name: string | null;
+          created_at: string | null;
+        };
+        const merged = await hydrateFromServer<Row, WorkoutLog>(
+          'workout_logs',
+          get().logs,
+          (r) => ({
+            id: r.id,
+            date: (r.started_at ?? r.created_at ?? new Date().toISOString()).slice(0, 10),
+            programId: r.program_id ?? undefined,
+            dayId: r.day_id ?? undefined,
+            sets: r.sets ?? [],
+            durationMinutes: r.duration_minutes ?? 0,
+            rating: r.rating ? (Math.max(1, Math.min(5, r.rating)) as 1 | 2 | 3 | 4 | 5) : undefined,
+            notes: r.notes ?? undefined,
+            workoutName: r.workout_name ?? undefined,
+            startedAt: r.started_at ?? new Date().toISOString(),
+            completedAt: r.completed_at ?? undefined,
+          }),
+          { orderBy: 'started_at', ascending: false, limit: 2000 },
+        );
+        set({ logs: merged.sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1)) });
+      },
     }),
     {
       name: 'peptalk-workouts',

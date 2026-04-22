@@ -35,6 +35,11 @@ import { initIAP, endIAP } from '../src/services/iapService';
 import { warmKnowledgeBase } from '../src/services/llmService';
 import { useChatStore } from '../src/store/useChatStore';
 import { useMealStore } from '../src/store/useMealStore';
+import { useCheckinStore } from '../src/store/useCheckinStore';
+import { useDoseLogStore } from '../src/store/useDoseLogStore';
+import { useWorkoutStore } from '../src/store/useWorkoutStore';
+import { useJournalStore } from '../src/store/useJournalStore';
+import { useStackStore } from '../src/store/useStackStore';
 import { subscribeToReconnect } from '../src/hooks/useNetworkStatus';
 import { initTelemetry } from '../src/services/telemetry';
 
@@ -229,14 +234,23 @@ function RootLayout() {
         if (__DEV__) console.warn('[boot] chat sync flush failed:', err);
       });
 
-    // Hydrate meals from the server so a reinstall / new device picks up
-    // the user's logged meal history instead of a blank slate.
-    useMealStore
-      .getState()
-      .syncFromServer()
-      ?.catch?.((err: unknown) => {
-        if (__DEV__) console.warn('[boot] meal syncFromServer failed:', err);
+    // Hydrate user-owned data from the server so a reinstall / new device
+    // picks up the full history instead of a blank slate. Each store
+    // handles its own schema mapping and falls back to local-only if the
+    // pull fails — nothing blocks boot.
+    const bootHydrations: Array<[string, () => Promise<void>]> = [
+      ['meals',      () => useMealStore.getState().syncFromServer()],
+      ['check-ins',  () => useCheckinStore.getState().syncFromServer()],
+      ['dose logs',  () => useDoseLogStore.getState().syncFromServer()],
+      ['workouts',   () => useWorkoutStore.getState().syncFromServer()],
+      ['journal',    () => useJournalStore.getState().syncFromServer()],
+      ['stacks',     () => useStackStore.getState().syncFromServer()],
+    ];
+    for (const [label, run] of bootHydrations) {
+      run().catch((err: unknown) => {
+        if (__DEV__) console.warn(`[boot] ${label} syncFromServer failed:`, err);
       });
+    }
 
     // Mark navigator as mounted on next frame so <Stack> is in the tree
     requestAnimationFrame(() => setNavReady(true));
@@ -248,6 +262,11 @@ function RootLayout() {
       useChatStore.getState().flushPendingSyncs()?.catch?.(() => {});
       useSubscriptionStore.getState().syncFromServer()?.catch?.(() => {});
       useMealStore.getState().syncFromServer()?.catch?.(() => {});
+      useCheckinStore.getState().syncFromServer()?.catch?.(() => {});
+      useDoseLogStore.getState().syncFromServer()?.catch?.(() => {});
+      useWorkoutStore.getState().syncFromServer()?.catch?.(() => {});
+      useJournalStore.getState().syncFromServer()?.catch?.(() => {});
+      useStackStore.getState().syncFromServer()?.catch?.(() => {});
     });
 
     return () => {

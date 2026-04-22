@@ -204,6 +204,50 @@ export async function batchSync(
 }
 
 /**
+ * Generic "hydrate local store from server" helper.
+ *
+ * The stores handle their own TypeScript shapes — pass a mapper that
+ * takes a DB row and returns the local entry. Local entries keyed by
+ * the same id as the DB row are overwritten by the server copy; any
+ * local-only entries (e.g. offline edits that haven't synced yet) are
+ * preserved.
+ *
+ * Callers:
+ *   const merged = await hydrateFromServer<DbMeal, MealEntry>(
+ *     'meal_entries',
+ *     localMeals,
+ *     (row) => toMealEntry(row),
+ *     { orderBy: 'date', limit: 2000 },
+ *   );
+ */
+export async function hydrateFromServer<Row, Entry extends { id: string }>(
+  table: TableName,
+  localEntries: Entry[],
+  mapRow: (row: Row) => Entry,
+  options?: { orderBy?: string; ascending?: boolean; limit?: number },
+): Promise<Entry[]> {
+  try {
+    const rows = await fetchUserRecords<Row>(table, {
+      orderBy: options?.orderBy,
+      ascending: options?.ascending ?? false,
+      limit: options?.limit,
+    });
+    if (rows.length === 0) return localEntries;
+    const serverEntries = rows.map(mapRow).filter((e): e is Entry => !!e && !!e.id);
+    const byId = new Map<string, Entry>();
+    for (const e of localEntries) byId.set(e.id, e);
+    for (const e of serverEntries) byId.set(e.id, e); // server wins on id conflict
+    return Array.from(byId.values());
+  } catch (e) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      // eslint-disable-next-line no-console
+      console.warn(`[sync] ${table} hydrate failed:`, e);
+    }
+    return localEntries;
+  }
+}
+
+/**
  * Sync subscription tier to profile.
  */
 export async function syncSubscriptionTier(tier: string): Promise<void> {

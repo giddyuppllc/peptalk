@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { JournalCategory, JournalEntry } from '../types';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord, deleteRecord } from '../services/syncService';
+import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
 import { useSubscriptionStore } from './useSubscriptionStore';
 
 const uid = () =>
@@ -61,6 +61,8 @@ interface JournalStore {
   clearAll: () => void;
   incrementEntryCount: () => void;
   canCreateEntry: () => boolean;
+  /** Hydrate from Supabase on boot / device switch. Server wins on id conflict. */
+  syncFromServer: () => Promise<void>;
 }
 
 export const useJournalStore = create<JournalStore>()(
@@ -188,6 +190,38 @@ export const useJournalStore = create<JournalStore>()(
         const { weekStartDate, weeklyEntryCount } = get();
         if (weekStartDate !== currentWeekStart) return true; // new week, count resets
         return weeklyEntryCount < FREE_WEEKLY_ENTRY_LIMIT;
+      },
+
+      syncFromServer: async () => {
+        type Row = {
+          id: string;
+          date: string;
+          title: string | null;
+          category: string | null;
+          content: string | null;
+          tags: string[] | null;
+          related_peptide_ids: string[] | null;
+          mood: number | null;
+          created_at: string | null;
+        };
+        const merged = await hydrateFromServer<Row, JournalEntry>(
+          'journal_entries',
+          get().entries,
+          (r) => ({
+            id: r.id,
+            date: r.date,
+            time: '00:00',
+            category: (r.category as JournalCategory) ?? 'other',
+            title: r.title ?? '',
+            content: r.content ?? '',
+            tags: r.tags ?? [],
+            relatedPeptideIds: r.related_peptide_ids ?? undefined,
+            mood: r.mood ? (Math.max(1, Math.min(5, r.mood)) as 1 | 2 | 3 | 4 | 5) : undefined,
+            createdAt: r.created_at ?? new Date().toISOString(),
+          }),
+          { orderBy: 'date', ascending: false, limit: 2000 },
+        );
+        set({ entries: merged.sort((a, b) => (a.date < b.date ? 1 : -1)) });
       },
     }),
     {
