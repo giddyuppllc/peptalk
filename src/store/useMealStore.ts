@@ -338,8 +338,18 @@ export const useMealStore = create<MealState & MealActions>()(
       addMeal: (meal) => {
         set({ meals: [meal, ...get().meals] });
         syncRecord('meal_entries', {
-          id: meal.id, date: meal.date, meal_type: meal.mealType,
-          foods: meal.foods, quick_log: meal.quickLog ?? null, notes: meal.notes ?? null,
+          id: meal.id,
+          date: meal.date,
+          meal_type: meal.mealType,
+          // `timestamp` is the meal-eaten-at moment (distinct from
+          // created_at which is when the row was written). Previously
+          // skipped, so restored meals came back with a synthesized
+          // T00:00 time and analytics that care about time-of-day were
+          // off by hours.
+          timestamp: meal.timestamp,
+          foods: meal.foods,
+          quick_log: meal.quickLog ?? null,
+          notes: meal.notes ?? null,
           source: 'user',
         });
       },
@@ -353,8 +363,13 @@ export const useMealStore = create<MealState & MealActions>()(
         const updated = get().meals.find((m) => m.id === mealId);
         if (updated) {
           syncRecord('meal_entries', {
-            id: updated.id, date: updated.date, meal_type: updated.mealType,
-            foods: updated.foods, quick_log: updated.quickLog ?? null, notes: updated.notes ?? null,
+            id: updated.id,
+            date: updated.date,
+            meal_type: updated.mealType,
+            timestamp: updated.timestamp,
+            foods: updated.foods,
+            quick_log: updated.quickLog ?? null,
+            notes: updated.notes ?? null,
           });
         }
       },
@@ -691,6 +706,7 @@ export const useMealStore = create<MealState & MealActions>()(
             id: string;
             date: string;
             meal_type: MealType;
+            timestamp: string | null;
             foods: MealEntry['foods'] | null;
             quick_log: MealEntry['quickLog'] | null;
             notes: string | null;
@@ -709,7 +725,10 @@ export const useMealStore = create<MealState & MealActions>()(
             foods: r.foods ?? [],
             quickLog: r.quick_log ?? undefined,
             notes: r.notes ?? undefined,
-            timestamp: r.created_at ?? `${r.date}T00:00:00.000Z`,
+            // Prefer the explicit meal-eaten-at timestamp; fall back to
+            // created_at (row-written-at), and finally to midnight on
+            // the date so sorts don't blow up on legacy rows.
+            timestamp: r.timestamp ?? r.created_at ?? `${r.date}T00:00:00.000Z`,
           }));
           // Merge by id — server is authoritative for rows we both know
           // about; any local rows that haven't synced yet (offline edits,

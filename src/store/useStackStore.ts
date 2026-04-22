@@ -153,10 +153,15 @@ export const useStackStore = create<StackStore>()(
 
         set({ savedStacks: [...savedStacks, newStack] });
 
+        // `saved_stacks.peptides` is TEXT[] (see migration 20260420000000).
+        // A previous version of this code wrote an array of objects
+        // ({peptideId: pid}) which PostgREST rejected as a type error, so
+        // stack saves have been silently failing against the current
+        // schema. Write plain string[] to match the column type.
         syncRecord('saved_stacks', {
           id: newStack.id,
           name: newStack.name,
-          peptides: newStack.peptideIds.map((pid) => ({ peptideId: pid })),
+          peptides: newStack.peptideIds,
           notes: null,
         });
         return id;
@@ -182,15 +187,15 @@ export const useStackStore = create<StackStore>()(
         type Row = {
           id: string;
           name: string | null;
+          // Kept tolerant: new writes send string[] (matching the TEXT[]
+          // column) but any legacy rows written as jsonb-of-objects still
+          // hydrate correctly.
           peptides: Array<{ peptideId?: string } | string> | string[] | null;
           target_goals: string[] | null;
           notes: string | null;
           is_curated: boolean | null;
           created_at: string | null;
         };
-        // Only merge USER stacks — the curated list is baked into the app
-        // and re-merged on rehydrate, so server-side curated rows (if any)
-        // are ignored here.
         const userLocal = get().savedStacks.filter((s) => !s.isCurated);
         const merged = await hydrateFromServer<Row, PeptideStack>(
           'saved_stacks',

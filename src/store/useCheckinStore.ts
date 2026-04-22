@@ -98,7 +98,11 @@ export const useCheckinStore = create<CheckinStore>()(
           };
         });
 
-        // Sync to Supabase
+        // Sync to Supabase. Columns match migration 20260420000000 —
+        // earlier versions of this code skipped peptide_effects,
+        // sleep_stages, and active_calories, which meant Apple Watch
+        // sleep breakdowns and peptide-attributed effect tags were
+        // local-only and would disappear on reinstall.
         syncRecord('check_ins', {
           id: nextEntry.id,
           date: nextEntry.date,
@@ -117,6 +121,9 @@ export const useCheckinStore = create<CheckinStore>()(
           notes: nextEntry.notes ?? null,
           emotion_tags: nextEntry.emotionTags ?? [],
           side_effect_tags: nextEntry.sideEffectTags ?? [],
+          peptide_effects: nextEntry.peptideEffects ?? [],
+          sleep_stages: nextEntry.sleepStages ?? null,
+          active_calories: nextEntry.activeCalories ?? null,
           source: 'user',
         });
 
