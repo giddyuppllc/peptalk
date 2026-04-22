@@ -372,8 +372,24 @@ export default function AuthScreen() {
 
               <Text style={s.legalLinks}>
                 By creating an account you agree to our{' '}
-                <Text style={s.legalLink}>Terms of Service</Text> and{' '}
-                <Text style={s.legalLink}>Privacy Policy</Text>.
+                <Text
+                  style={s.legalLink}
+                  onPress={() => router.push('/terms' as any)}
+                  accessibilityRole="link"
+                  accessibilityLabel="Open Terms of Service"
+                >
+                  Terms of Service
+                </Text>
+                {' '}and{' '}
+                <Text
+                  style={s.legalLink}
+                  onPress={() => router.push('/privacy' as any)}
+                  accessibilityRole="link"
+                  accessibilityLabel="Open Privacy Policy"
+                >
+                  Privacy Policy
+                </Text>
+                .
               </Text>
             </View>
           )}
