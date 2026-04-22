@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -77,6 +78,42 @@ export default function AuthScreen() {
       router.replace('/(tabs)');
     } catch (err: any) {
       setError(err?.message ?? 'Something went wrong. Try again.');
+    }
+  };
+
+  const [resetting, setResetting] = useState(false);
+  const handleForgotPassword = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!isValidEmail(normalizedEmail)) {
+      setError('Enter the email on your account above, then tap Forgot password again.');
+      return;
+    }
+    if (resetting) return;
+    setResetting(true);
+    try {
+      // Uses Supabase's default "Site URL" for the reset link (configured
+      // in dashboard → Auth → URL Configuration). Users land on a
+      // web-hosted reset screen; deep linking back into the app is a
+      // follow-up once the associated-domains setup is in place.
+      const { supabase } = await import('../src/services/supabase');
+      const { error: resetErr } = await (supabase as any).auth.resetPasswordForEmail(
+        normalizedEmail,
+      );
+      if (resetErr) throw resetErr;
+      Alert.alert(
+        'Reset email sent',
+        `If an account exists for ${normalizedEmail}, we sent a password-reset link. Check your inbox (and spam) and follow the link to pick a new password.`,
+      );
+    } catch (err: any) {
+      // Don't leak whether the email exists — return the same friendly
+      // message on any error so scrapers can't enumerate accounts.
+      Alert.alert(
+        'Reset email sent',
+        `If an account exists for ${normalizedEmail}, we sent a password-reset link. Check your inbox (and spam) and follow the link to pick a new password.`,
+      );
+      if (__DEV__) console.warn('[auth] resetPasswordForEmail threw:', err);
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -198,10 +235,15 @@ export default function AuthScreen() {
 
               <TouchableOpacity
                 style={s.forgotBtn}
+                onPress={handleForgotPassword}
+                disabled={resetting}
                 accessibilityRole="button"
                 accessibilityLabel="Forgot password"
+                accessibilityState={{ disabled: resetting, busy: resetting }}
               >
-                <Text style={s.forgotText}>Forgot password?</Text>
+                <Text style={s.forgotText}>
+                  {resetting ? 'Sending reset email…' : 'Forgot password?'}
+                </Text>
               </TouchableOpacity>
             </View>
           )}
