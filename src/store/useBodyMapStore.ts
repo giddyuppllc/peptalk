@@ -10,7 +10,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord, deleteRecord } from '../services/syncService';
+import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
 
 export interface InjectionSite {
   id: string;
@@ -35,6 +35,8 @@ interface BodyMapActions {
   getLastInjectionForRegion: (region: string) => InjectionSite | undefined;
   getRecentInjections: (days: number) => InjectionSite[];
   clearAll: () => void;
+  /** Hydrate from Supabase on boot / device switch. Server wins on id conflict. */
+  syncFromServer: () => Promise<void>;
 }
 
 export const useBodyMapStore = create<BodyMapState & BodyMapActions>()(
@@ -85,6 +87,37 @@ export const useBodyMapStore = create<BodyMapState & BodyMapActions>()(
       },
 
       clearAll: () => set({ injections: [] }),
+
+      syncFromServer: async () => {
+        type Row = {
+          id: string;
+          region: string;
+          side: 'left' | 'right' | null;
+          peptide_id: string | null;
+          peptide_name: string | null;
+          date: string;
+          time: string | null;
+          notes: string | null;
+          created_at: string | null;
+        };
+        const merged = await hydrateFromServer<Row, InjectionSite>(
+          'injection_sites',
+          get().injections,
+          (r) => ({
+            id: r.id,
+            region: r.region,
+            side: r.side ?? undefined,
+            peptideId: r.peptide_id ?? undefined,
+            peptideName: r.peptide_name ?? undefined,
+            date: r.date,
+            time: r.time ?? undefined,
+            notes: r.notes ?? undefined,
+            createdAt: r.created_at ?? new Date().toISOString(),
+          }),
+          { orderBy: 'date', ascending: false, limit: 1000 },
+        );
+        set({ injections: merged.sort((a, b) => (a.date < b.date ? 1 : -1)) });
+      },
     }),
     {
       name: 'peptalk-bodymap',

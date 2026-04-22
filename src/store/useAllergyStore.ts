@@ -10,7 +10,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord, deleteRecord } from '../services/syncService';
+import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
 import type { AllergenEntry, AllergySeverity } from '../types/cycle';
 
 function uid(): string {
@@ -29,6 +29,14 @@ interface AllergyActions {
   /** Returns all severe / anaphylaxis allergens for high-stakes prompts. */
   getCriticalAllergens: () => AllergenEntry[];
   clearAll: () => void;
+  /**
+   * Hydrate from Supabase on boot / device switch. Allergies are
+   * safety-critical (Aimee filters recipes against them, the peptide
+   * detail page flags drug-class conflicts) so losing them on reinstall
+   * isn't just an annoyance — it could let a severe allergen slip into
+   * a suggestion. Server wins on id conflict.
+   */
+  syncFromServer: () => Promise<void>;
 }
 
 export const useAllergyStore = create<AllergyState & AllergyActions>()(
@@ -89,6 +97,35 @@ export const useAllergyStore = create<AllergyState & AllergyActions>()(
         ),
 
       clearAll: () => set({ allergens: [] }),
+
+      syncFromServer: async () => {
+        type Row = {
+          id: string;
+          category: string;
+          label: string;
+          severity: string;
+          notes: string | null;
+          reaction_history: string | null;
+          diagnosed_by: string | null;
+          created_at: string | null;
+        };
+        const merged = await hydrateFromServer<Row, AllergenEntry>(
+          'allergen_entries',
+          get().allergens,
+          (r) => ({
+            id: r.id,
+            category: r.category as AllergenEntry['category'],
+            label: r.label,
+            severity: r.severity as AllergySeverity,
+            notes: r.notes ?? undefined,
+            reactionHistory: r.reaction_history ?? undefined,
+            diagnosedBy: (r.diagnosed_by as AllergenEntry['diagnosedBy']) ?? undefined,
+            createdAt: r.created_at ?? new Date().toISOString(),
+          }),
+          { orderBy: 'created_at', ascending: false, limit: 200 },
+        );
+        set({ allergens: merged });
+      },
     }),
     {
       name: 'peptalk-allergy',

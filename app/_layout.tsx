@@ -40,6 +40,8 @@ import { useDoseLogStore } from '../src/store/useDoseLogStore';
 import { useWorkoutStore } from '../src/store/useWorkoutStore';
 import { useJournalStore } from '../src/store/useJournalStore';
 import { useStackStore } from '../src/store/useStackStore';
+import { useAllergyStore } from '../src/store/useAllergyStore';
+import { useBodyMapStore } from '../src/store/useBodyMapStore';
 import { subscribeToReconnect } from '../src/hooks/useNetworkStatus';
 import { initTelemetry } from '../src/services/telemetry';
 
@@ -245,6 +247,8 @@ function RootLayout() {
       ['workouts',   () => useWorkoutStore.getState().syncFromServer()],
       ['journal',    () => useJournalStore.getState().syncFromServer()],
       ['stacks',     () => useStackStore.getState().syncFromServer()],
+      ['allergies',  () => useAllergyStore.getState().syncFromServer()],
+      ['body map',   () => useBodyMapStore.getState().syncFromServer()],
     ];
     for (const [label, run] of bootHydrations) {
       run().catch((err: unknown) => {
@@ -267,6 +271,8 @@ function RootLayout() {
       useWorkoutStore.getState().syncFromServer()?.catch?.(() => {});
       useJournalStore.getState().syncFromServer()?.catch?.(() => {});
       useStackStore.getState().syncFromServer()?.catch?.(() => {});
+      useAllergyStore.getState().syncFromServer()?.catch?.(() => {});
+      useBodyMapStore.getState().syncFromServer()?.catch?.(() => {});
     });
 
     return () => {

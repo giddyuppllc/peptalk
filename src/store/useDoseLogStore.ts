@@ -264,10 +264,14 @@ export const useDoseLogStore = create<DoseLogStore>()(
         return entry;
       },
 
-      deleteDose: (id) =>
+      deleteDose: (id) => {
         set((state) => ({
           doses: state.doses.filter((d) => d.id !== id),
-        })),
+        }));
+        // Also delete from Supabase — otherwise the row stays on the
+        // server and reappears on the next syncFromServer() pull.
+        deleteRecord('dose_logs', id);
+      },
 
       // ── Protocols ────────────────────────────────────────────────────────
 
