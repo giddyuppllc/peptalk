@@ -146,6 +146,38 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Log the initial-purchase event to the audit table alongside the
+    // renewals/refunds/cancels that come via apple-notifications +
+    // google-rtdn. Without this, the events table only captures the
+    // lifecycle events AFTER the first purchase and ops can't trace a
+    // "where did this subscription come from?" question end-to-end.
+    //
+    // Best-effort: a failure here doesn't affect entitlement (the
+    // subscriptions row is already correct) — just log and continue.
+    const externalEventId =
+      body.platform === 'ios'
+        ? `validate-ios-${user.id}-${body.productId}-${Date.now()}`
+        : `validate-android-${body.productId}-${body.receipt.substring(0, 40)}`;
+    await adminClient
+      .from('subscription_events')
+      .upsert(
+        {
+          user_id: user.id,
+          product_id: body.productId,
+          platform: body.platform,
+          event_type: 'initial_purchase',
+          external_event_id: externalEventId,
+          raw_payload: { source: 'validate-purchase', tier, expiresAt },
+          expires_at: expiresAt,
+        },
+        { onConflict: 'platform,external_event_id', ignoreDuplicates: true },
+      )
+      .then(({ error }) => {
+        if (error) {
+          console.warn('[validate-purchase] subscription_events insert failed:', error);
+        }
+      });
+
     return json({ success: true, tier, expiresAt });
   } catch (err) {
     console.error('[validate-purchase] Unhandled error:', err);
