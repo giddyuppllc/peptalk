@@ -17,6 +17,7 @@
     "preview": {
       "distribution": "store",
       "node": "22.21.0",
+      "environment": "preview",
       "ios": {
         "simulator": false
       },
@@ -30,6 +31,7 @@
     "preview-apk": {
       "distribution": "internal",
       "node": "22.21.0",
+      "environment": "preview",
       "android": {
         "buildType": "apk"
       },
@@ -39,6 +41,7 @@
     },
     "production": {
       "autoIncrement": true,
+      "environment": "production",
       "env": {
         "EXPO_PUBLIC_ENV": "production"
       }
