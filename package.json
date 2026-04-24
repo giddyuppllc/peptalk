@@ -13,8 +13,10 @@
       "reactNativeDirectoryCheck": {
         "exclude": [
           "react-native-iap",
-          "react-native-health"
-        ]
+          "react-native-health",
+          "react-native-encrypted-storage"
+        ],
+        "listUnknownPackages": false
       }
     }
   },
