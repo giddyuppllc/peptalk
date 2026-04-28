@@ -43,12 +43,28 @@ import { resolveVideoUrl } from '../../src/services/r2VideoResolver';
 import EXERCISES from '../../src/data/exercises';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
-import { selectionTick, successTick } from '../../src/utils/haptics';
+import { selectionTick, notifySuccess as successTick } from '../../src/utils/haptics';
+import { useAuthStore } from '../../src/store/useAuthStore';
+
+// Mirrors ALLOW_TAGGER_FREE / ADMIN_EMAILS on the get-workout-video edge
+// function. The server still enforces — this is just to stop the screen
+// from rendering the manifest of every R2 object key to a curious user
+// who deep-links here. Kept lowercase for case-insensitive comparison.
+const TAGGER_ADMIN_EMAILS = new Set(['edward@giddyupp.com']);
 
 export default function VideoTaggerScreen() {
   const router = useRouter();
   const t = useTheme();
   const accent = useSectionAccent('workouts');
+  const userEmail = useAuthStore((s) => s.user?.email?.toLowerCase() ?? '');
+
+  // Email guard — production users get bounced before any state initializes.
+  // Server still refuses to sign URLs without ALLOW_TAGGER_FREE+ADMIN_EMAILS,
+  // but we don't want to leak the manifest UI either.
+  if (!TAGGER_ADMIN_EMAILS.has(userEmail)) {
+    React.useEffect(() => { router.replace('/(tabs)'); }, []);
+    return null;
+  }
   const edits = useVideoTaggerStore((s) => s.edits);
   const setEdit = useVideoTaggerStore((s) => s.setEdit);
   const resetAll = useVideoTaggerStore((s) => s.resetAll);
@@ -273,8 +289,8 @@ export default function VideoTaggerScreen() {
                   ]}
                 >
                   <Text style={[styles.exerciseName, { color: t.text }]} numberOfLines={1}>{e.name}</Text>
-                  {e.muscles?.[0] && (
-                    <Text style={[styles.exerciseMuscle, { color: t.textSecondary }]}>{e.muscles[0]}</Text>
+                  {e.primaryMuscle && (
+                    <Text style={[styles.exerciseMuscle, { color: t.textSecondary }]}>{e.primaryMuscle}</Text>
                   )}
                 </TouchableOpacity>
               );

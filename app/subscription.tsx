@@ -133,7 +133,7 @@ const TIERS: TierInfo[] = [
       'Aimee Health Scheduler',
       'Early access to new features',
     ],
-    colors: ['#E9B45C', '#C98E3E'],
+    colors: ['#7FB3D8', '#3E7CB1'],
     icon: 'star',
     badge: 'Best Value',
     pricing: {

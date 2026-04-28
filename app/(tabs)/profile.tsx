@@ -391,7 +391,7 @@ function UserProfile() {
           style={styles.upgradeRowWrap}
         >
           <LinearGradient
-            colors={tier === 'free' ? ['#E89672', '#F5DAD6'] : ['#E9B45C', '#C98E3E']}
+            colors={tier === 'free' ? ['#E89672', '#F5DAD6'] : ['#7FB3D8', '#3E7CB1']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.upgradeRowGradient}
@@ -421,7 +421,7 @@ function UserProfile() {
       {tier === 'pro' && (
         <View style={styles.upgradeRowWrap}>
           <LinearGradient
-            colors={['#E9B45C', '#C98E3E']}
+            colors={['#7FB3D8', '#3E7CB1']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.upgradeRowGradient}

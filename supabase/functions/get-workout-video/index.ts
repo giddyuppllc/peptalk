@@ -27,6 +27,16 @@ import {
   GetObjectCommand,
 } from 'npm:@aws-sdk/client-s3@3.658.1';
 import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner@3.658.1';
+import manifest from './manifest.json' with { type: 'json' };
+
+// Slug → objectKey allowlist built once at cold start. We refuse to sign
+// any key that isn't in this map, even for authenticated Pro users —
+// otherwise a tampered client could ask us to sign arbitrary R2 paths
+// (e.g. `../private/*`) and use Pro tier as a bucket-wide URL minter.
+const ALLOWED_KEYS = new Map<string, string>();
+for (const v of manifest as Array<{ slug: string; objectKey: string }>) {
+  if (v.slug && v.objectKey) ALLOWED_KEYS.set(v.slug, v.objectKey);
+}
 
 const SIGN_TTL_SEC = 6 * 60 * 60; // 6 hours
 
@@ -104,13 +114,16 @@ Deno.serve(async (req: Request) => {
   } catch {
     return json({ error: 'Invalid JSON body' }, 400);
   }
-  // Accept either slug (looked up against the manifest server-side eventually)
-  // OR the raw objectKey if the client already knows it. For now we trust the
-  // app's manifest and accept objectKey directly — sligthly chattier API but
-  // means we don't have to ship the manifest twice (client + server).
-  const objectKey = body.objectKey;
-  if (!objectKey || typeof objectKey !== 'string') {
-    return json({ error: 'objectKey required' }, 400);
+  // Resolve slug → objectKey via the server-side allowlist. We ignore any
+  // objectKey the client passed and look it up ourselves; this prevents a
+  // tampered client from asking us to sign arbitrary R2 paths.
+  const slug = body.slug;
+  if (!slug || typeof slug !== 'string') {
+    return json({ error: 'slug required' }, 400);
+  }
+  const objectKey = ALLOWED_KEYS.get(slug);
+  if (!objectKey) {
+    return json({ error: 'Unknown video slug' }, 404);
   }
 
   // 4. Sign

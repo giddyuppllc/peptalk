@@ -37,6 +37,13 @@ const MaxAdContentRatingRef: any = {};
 // ---------------------------------------------------------------------------
 // Ad Unit IDs
 // ---------------------------------------------------------------------------
+//
+// LAUNCH FLAG: ads are disabled in production until real AdMob unit IDs
+// are issued. Until then we hard-disable to avoid serving placeholder IDs
+// that 404 + risk getting flagged for invalid traffic. Flip ADS_ENABLED
+// to true and replace the XXXX placeholders once real units exist.
+
+export const ADS_ENABLED: boolean = __DEV__; // dev-only until real units exist
 
 export const BANNER_AD_UNIT: string = __DEV__
   ? (TestIdsRef.BANNER ?? 'ca-app-pub-test/banner')
@@ -68,6 +75,7 @@ export function isAdModuleAvailable(): boolean {
  * No-ops gracefully if the native module isn't available (Expo Go).
  */
 export async function initializeAds(): Promise<void> {
+  if (!ADS_ENABLED) return; // hard-disabled in production until real units exist
   if (adsInitialized || !mobileAdsModule) return;
 
   try {

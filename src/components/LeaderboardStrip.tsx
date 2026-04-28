@@ -50,7 +50,7 @@ const MOCK_USERS: LeaderboardEntry[] = [
 ];
 
 const RANK_RING_COLORS: Record<number, [string, string]> = {
-  0: ['#FFD700', '#FFA500'], // Gold
+  0: ['#BFDBF7', '#3E7CB1'], // Premium light-blue (was gold)
   1: ['#C0C0C0', '#A0A0A0'], // Silver
   2: ['#CD7F32', '#A0522D'], // Bronze
 };
@@ -88,7 +88,7 @@ function LeaderboardStripImpl() {
       {/* Header + rank inline */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="trophy" size={13} color="#FFD700" />
+          <Ionicons name="trophy" size={13} color="#3E7CB1" />
           <Text style={[styles.headerTitle, { color: t.text }]}>Community</Text>
         </View>
         <Text style={[styles.rankInline, { color: t.textSecondary }]}>

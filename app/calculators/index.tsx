@@ -33,10 +33,36 @@ export default function CalculatorsHubScreen() {
           Pick your peptide — we'll handle the math.
         </Text>
 
-        {/* Quick Dose Guide — Primary CTA */}
+        {/* ── Plan Your Cycle — primary CTA (goal-driven recommender) ── */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => router.push('/calculators/plan')}
+        >
+          <LinearGradient
+            colors={['#3E7CB1', '#7FB3D8']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.card, styles.primaryCard]}
+          >
+            <View style={[styles.cardIcon, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
+              <Ionicons name="compass" size={32} color="#fff" />
+            </View>
+            <View style={styles.cardContent}>
+              <Text style={[styles.cardTitle, { color: '#fff' }]}>Plan Your Cycle</Text>
+              <Text style={[styles.cardDesc, { color: 'rgba(255,255,255,0.85)' }]}>
+                Tell us your goal — we'll suggest peptides commonly researched for it,
+                pull your stats, and walk you through the math.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#fff" />
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* Quick Dose Guide — secondary CTA (peptide-first entry) */}
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={() => router.push('/calculators/quick-dose')}
+          style={{ marginTop: Spacing.md }}
         >
           <LinearGradient
             colors={['#7ABED0', '#7ABED0']}
@@ -50,7 +76,7 @@ export default function CalculatorsHubScreen() {
             <View style={styles.cardContent}>
               <Text style={[styles.cardTitle, { color: '#fff' }]}>Quick Dose Guide</Text>
               <Text style={[styles.cardDesc, { color: 'rgba(0,0,0,0.60)' }]}>
-                Pick a peptide → get dosing, reconstitution, injection instructions, and cycling — all in one place.
+                Already know which peptide? Jump straight to dosing, reconstitution, and cycling.
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="rgba(0,0,0,0.50)" />

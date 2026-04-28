@@ -43,6 +43,13 @@ export const Colors = {
   orchidDeep: '#9B86A4',
   orchidDarker: '#75627D',
 
+  // ── Pro-tier "premium" accent — replaces the old gold gradient app-wide.
+  // Light → deep light-blues, medical-feeling, harmonizes with iceMelt/powder.
+  proBlueLight: '#BFDBF7',
+  proBlue: '#7FB3D8',
+  proBlueDeep: '#3E7CB1',
+  proBlueDarker: '#2C5F8E',
+
   // ── Legacy named constants (repointed to new palette) ───────────────
   rose: '#e3a7a1',
   sage: '#b9cbb6',

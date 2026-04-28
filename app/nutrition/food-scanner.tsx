@@ -26,6 +26,7 @@ import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { useMealStore } from '../../src/store/useMealStore';
 import { supabase } from '../../src/services/supabase';
+import { trackFeatureGated } from '../../src/services/analyticsEvents';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 
@@ -63,7 +64,12 @@ export default function FoodScannerScreen() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [selectedMealType, setSelectedMealType] = useState<string>('lunch');
 
-  // Gate: Pro only
+  // Gate: Pro only — fire feature_gated analytics so paywall funnel data is
+  // complete (matches what <PaywallGate> does for other Pro screens).
+  React.useEffect(() => {
+    if (tier !== 'pro') trackFeatureGated('ai_food_scanner', tier);
+  }, [tier]);
+
   if (tier !== 'pro') {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>

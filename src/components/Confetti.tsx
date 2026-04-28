@@ -22,7 +22,7 @@ const COLORS = [
   '#E89672', // pepBlue
   '#E89672', // pepTeal
   '#06CEFF', // pepCyan
-  '#F4E9A7', // gold
+  '#BFDBF7', // light blue (was gold)
   '#10B981', // green
   '#a855f7', // purple
   '#ef4444', // red

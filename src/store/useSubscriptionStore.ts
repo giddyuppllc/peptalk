@@ -296,14 +296,30 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
               .maybeSingle();
             if (error) throw error;
             if (!data) {
-              // No subscription row → free tier.
-              set({
-                tier: 'free',
-                productId: null,
-                expiresAt: null,
-                isActive: false,
-                lastSyncedAt: Date.now(),
-              });
+              // No subscription row. Two cases:
+              //   (a) brand-new user (current tier is 'free' anyway) → fine to set
+              //   (b) previously-paid user whose row is missing because of a sync
+              //       race, RLS issue, or captive-wifi giving us an empty
+              //       response without an error → DO NOT silently downgrade.
+              //
+              // The legitimate downgrade signal comes from apple-notifications /
+              // google-rtdn webhooks writing is_active=false. If we never see
+              // that signal, prefer to keep the cached paid state and rely on
+              // a future sync to converge.
+              const prevTier = get().tier;
+              if (prevTier === 'free') {
+                set({
+                  tier: 'free',
+                  productId: null,
+                  expiresAt: null,
+                  isActive: false,
+                  lastSyncedAt: Date.now(),
+                });
+              } else if (__DEV__) {
+                console.warn(
+                  `[useSubscriptionStore] empty subscription row but cached tier=${prevTier} — keeping cached state, awaiting webhook signal`,
+                );
+              }
               return;
             }
             const stillValid =
