@@ -42,7 +42,6 @@ import { getPeptideById } from '../../src/data/peptides';
 import { useJournalStore } from '../../src/store/useJournalStore';
 import { ChatMessage, EnhancedBotContext, GoalType } from '../../src/types';
 import { getGoalLabel } from '../../src/constants/goals';
-import { PaywallGate } from '../../src/hooks/useFeatureGate';
 import {
   Colors,
   Fonts,
@@ -466,8 +465,11 @@ export default function PepTalkScreen() {
     [handleQuickReply, t],
   );
 
+  // NOTE: do not wrap this entire tab in <PaywallGate>. Tabs can't pop
+  // back, so a free-tier user dismissing the paywall would land on a blank
+  // tab and be stuck. The local-bot fallback below already gracefully
+  // degrades when the user lacks AI access (useAI flag).
   return (
-    <PaywallGate feature="aimee_ai_limited">
     <SafeAreaView style={[styles.safe, { backgroundColor: t.bg }]}>
       <KeyboardAvoidingView
         style={styles.container}
@@ -674,7 +676,6 @@ export default function PepTalkScreen() {
 
       <ChatHistoryDrawer visible={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </SafeAreaView>
-    </PaywallGate>
   );
 }
 

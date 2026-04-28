@@ -92,8 +92,14 @@ const RatingRow: React.FC<{
   label: string;
   value: CheckInRating;
   onChange: (value: CheckInRating) => void;
-}> = ({ label, value, onChange }) => {
+  // Optional endpoint labels — when provided, overrides the default
+  // "higher is better" wording (Low/Below/Okay/Good/Great). Useful for
+  // metrics like Stress where higher is WORSE.
+  lowLabel?: string;
+  highLabel?: string;
+}> = ({ label, value, onChange, lowLabel, highLabel }) => {
   const t = useTheme();
+  const useEndpoints = !!(lowLabel && highLabel);
   return (
     <View style={styles.ratingRow}>
       <Text style={[styles.ratingLabel, { color: t.tint }]}>{label}</Text>
@@ -121,7 +127,14 @@ const RatingRow: React.FC<{
           </AnimatedPress>
         ))}
       </View>
-      <Text style={[styles.ratingHint, { color: t.textMuted }]}>{ratingLabel(value)}</Text>
+      {useEndpoints ? (
+        <View style={styles.ratingEndpoints}>
+          <Text style={[styles.ratingHint, { color: t.textMuted }]}>1 — {lowLabel}</Text>
+          <Text style={[styles.ratingHint, { color: t.textMuted }]}>5 — {highLabel}</Text>
+        </View>
+      ) : (
+        <Text style={[styles.ratingHint, { color: t.textMuted }]}>{ratingLabel(value)}</Text>
+      )}
     </View>
   );
 };
@@ -627,7 +640,13 @@ export default function CheckInScreen() {
         {step.key === 'sleep' && (
           <>
             <RatingRow label="Sleep Quality" value={sleepQuality} onChange={setSleepQuality} />
-            <RatingRow label="Stress" value={stress} onChange={setStress} />
+            <RatingRow
+              label="Stress"
+              value={stress}
+              onChange={setStress}
+              lowLabel="Calm"
+              highLabel="Overwhelmed"
+            />
           </>
         )}
 
@@ -1046,6 +1065,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6b7280',
     marginTop: 6,
+  },
+  ratingEndpoints: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignSelf: 'stretch',
+    marginTop: 6,
+    paddingHorizontal: 4,
   },
 
   // ── Chip Wrap (Emotion Tags & Side Effects) ─────────────────────────────

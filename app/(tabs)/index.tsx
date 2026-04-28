@@ -733,11 +733,15 @@ export default function DashboardScreen() {
   const filteredPeptides = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return basePeptides;
+    // Strip dashes/spaces from both query and target so "MOTSC" matches "MOTS-C",
+    // "GHK CU" matches "GHK-Cu", etc. Tester-reported.
+    const normalize = (s: string) => s.toLowerCase().replace(/[-\s]/g, '');
+    const nq = normalize(q);
     return basePeptides.filter(
       (p) =>
-        p.name.toLowerCase().includes(q) ||
-        (p.abbreviation && p.abbreviation.toLowerCase().includes(q)) ||
-        p.categories.some((c) => c.toLowerCase().includes(q)),
+        normalize(p.name).includes(nq) ||
+        (p.abbreviation && normalize(p.abbreviation).includes(nq)) ||
+        p.categories.some((c) => normalize(c).includes(nq)),
     );
   }, [basePeptides, searchQuery]);
 

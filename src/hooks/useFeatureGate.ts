@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { router } from 'expo-router';
 import { useSubscriptionStore } from '../store/useSubscriptionStore';
 import { PaywallModal } from '../components/PaywallModal';
 import { trackFeatureGated } from '../services/analyticsEvents';
@@ -54,11 +55,25 @@ export const PaywallGate: React.FC<{ feature: string; children: React.ReactNode 
     setDismissed(true);
   }, []);
 
+  // When the paywall is dismissed (Maybe Later), pop back to the previous
+  // screen instead of leaving the user stranded on a blank page. If we can't
+  // pop (e.g. deep link landed here), fall back to the home tab.
+  useEffect(() => {
+    if (dismissed) {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)');
+      }
+    }
+  }, [dismissed]);
+
   if (hasAccess) {
     return React.createElement(React.Fragment, null, children);
   }
 
   if (dismissed) {
+    // Render nothing for the brief tick before the navigation effect runs.
     return null;
   }
 

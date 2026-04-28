@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -105,14 +105,15 @@ export default function PeptideDetailScreen() {
     );
   }
 
-  // ── Data lookups ────────────────────────────────────────────────
-  const safetyProfile = getSafetyProfileByPeptideId(peptide.id);
-  const clinicalTrials = getTrialsByPeptideId(peptide.id);
-  const protocols = getProtocolsByPeptide(peptide.id);
-  const relatedStacks = getCuratedStacksByPeptideId(peptide.id);
-  const nutritionGuidance = getPeptideNutrition(peptide.id);
-  const relatedVideos = getVideosByPeptideId(peptide.id);
-  const relatedGuides = getGuidesByPeptideId(peptide.id);
+  // ── Data lookups (memoized — these scan large in-memory tables and were
+  //    blocking the JS thread on every render, causing the MOTSC freeze) ──
+  const safetyProfile = useMemo(() => getSafetyProfileByPeptideId(peptide.id), [peptide.id]);
+  const clinicalTrials = useMemo(() => getTrialsByPeptideId(peptide.id), [peptide.id]);
+  const protocols = useMemo(() => getProtocolsByPeptide(peptide.id), [peptide.id]);
+  const relatedStacks = useMemo(() => getCuratedStacksByPeptideId(peptide.id), [peptide.id]);
+  const nutritionGuidance = useMemo(() => getPeptideNutrition(peptide.id), [peptide.id]);
+  const relatedVideos = useMemo(() => getVideosByPeptideId(peptide.id), [peptide.id]);
+  const relatedGuides = useMemo(() => getGuidesByPeptideId(peptide.id), [peptide.id]);
 
   const isInStack = currentStack.includes(peptide.id);
   const stackFull = currentStack.length >= 5;

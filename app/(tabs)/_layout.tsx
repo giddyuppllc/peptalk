@@ -14,6 +14,8 @@ interface TabConfig {
   activeIcon: TabIconName;
 }
 
+// Tab order — Jamie wants peptides before nutrition (peps come first since the
+// app is peptide-led). Aimee anchors the center.
 const TAB_CONFIG: TabConfig[] = [
   {
     name: 'index',
@@ -22,10 +24,10 @@ const TAB_CONFIG: TabConfig[] = [
     activeIcon: 'home',
   },
   {
-    name: 'nutrition',
-    title: 'Nutrition',
-    icon: 'nutrition-outline',
-    activeIcon: 'nutrition',
+    name: 'my-stacks',
+    title: 'Peptides',
+    icon: 'flask-outline',
+    activeIcon: 'flask',
   },
   {
     name: 'peptalk',
@@ -34,16 +36,16 @@ const TAB_CONFIG: TabConfig[] = [
     activeIcon: 'chatbubbles',
   },
   {
+    name: 'nutrition',
+    title: 'Nutrition',
+    icon: 'nutrition-outline',
+    activeIcon: 'nutrition',
+  },
+  {
     name: 'workouts',
     title: 'Workouts',
     icon: 'barbell-outline',
     activeIcon: 'barbell',
-  },
-  {
-    name: 'my-stacks',
-    title: 'Peptides',
-    icon: 'flask-outline',
-    activeIcon: 'flask',
   },
 ];
 
