@@ -133,6 +133,9 @@ export default function PepTalkScreen() {
 
   const [inputText, setInputText] = React.useState('');
   const [drawerOpen, setDrawerOpen] = React.useState(false);
+  // "Keep it simple" — when on, Aimee replies in plain language with short
+  // paragraphs and no headers/bullets. Tester request from Jamie.
+  const [simpleMode, setSimpleMode] = React.useState(false);
   const prefillHandled = useRef(false);
   const messageHandled = useRef(false);
   const flatListRef = useRef<FlatList>(null);
@@ -177,6 +180,7 @@ export default function PepTalkScreen() {
       recentEffects: [],
       healthAlerts: (alerts ?? []).filter((a) => !a.dismissed),
       healthProfile: healthProfile.setupComplete ? healthProfile : null,
+      simpleMode,
       _correlationSummary: correlationSummary,
     };
 
@@ -191,6 +195,7 @@ export default function PepTalkScreen() {
     protocols,
     alerts,
     healthProfile,
+    simpleMode,
   ]);
 
   // Determine if we should use AI or local bot
@@ -511,6 +516,29 @@ export default function PepTalkScreen() {
               </View>
             </View>
           </View>
+
+          <TouchableOpacity
+            onPress={() => setSimpleMode((v) => !v)}
+            style={[
+              styles.iconBtn,
+              {
+                backgroundColor: simpleMode ? `${accent.deep}22` : t.surface,
+                borderWidth: simpleMode ? 1 : 0,
+                borderColor: `${accent.deep}55`,
+              },
+            ]}
+            activeOpacity={0.7}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            accessibilityRole="button"
+            accessibilityLabel={simpleMode ? 'Disable simple mode' : 'Enable simple mode'}
+            accessibilityHint="Tap to toggle plain-language replies from Aimee"
+          >
+            <Ionicons
+              name={simpleMode ? 'sparkles' : 'sparkles-outline'}
+              size={18}
+              color={simpleMode ? accent.deep : t.text}
+            />
+          </TouchableOpacity>
 
           <TouchableOpacity
             onPress={() => useChatStore.getState().newChat()}

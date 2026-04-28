@@ -96,7 +96,7 @@ export default function PeptideDetailScreen() {
           </Text>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/(tabs)/my-stacks'); }}
           >
             <Text style={styles.backButtonText}>Go Back</Text>
           </TouchableOpacity>

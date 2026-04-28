@@ -556,7 +556,7 @@ export default function WorkoutsScreen() {
           </View>
         ) : null}
 
-        {/* Generate Custom Workout */}
+        {/* Generate Custom Program */}
         <View style={s.section}>
           <TouchableOpacity
             style={[s.generateCard, { backgroundColor: t.surface, borderColor: `${accent.deep}30` }]}
@@ -574,7 +574,7 @@ export default function WorkoutsScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={[s.generateTitle, { color: t.text }]}>Generate Custom Workout</Text>
+                <Text style={[s.generateTitle, { color: t.text }]}>Generate Custom Program</Text>
                 {!hasCustomGenerator && <LockBadge tier="pro" size="sm" />}
               </View>
               <Text style={[s.generateSub, { color: t.textSecondary }]}>
@@ -685,18 +685,14 @@ export default function WorkoutsScreen() {
           </View>
         )}
 
-        {/* Workout Videos */}
-        <View style={s.sectionHeaderRow}>
-          <Text style={[s.sectionTitle, { color: t.text }]}>Workout Videos</Text>
-          <TouchableOpacity onPress={() => Alert.alert('Coming soon', 'Full video library coming soon.')}>
-            <Text style={[s.seeAllText, { color: accent.deep }]}>See all</Text>
-          </TouchableOpacity>
-        </View>
-        <WorkoutVideos />
+        {/* Workout Videos — hidden until R2 video library is wired.
+            Once the R2 manifest is in place, render <WorkoutVideos />
+            backed by the real catalog instead of the placeholder array.
+            Tester feedback #11 + #27: don't show "Coming soon" placeholders. */}
 
-        {/* Programs by Jamie */}
+        {/* Curated Programs */}
         <View style={[s.sectionHeaderRow, { marginTop: 24 }]}>
-          <Text style={[s.sectionTitle, { color: t.text }]}>Programs by Jamie</Text>
+          <Text style={[s.sectionTitle, { color: t.text }]}>Curated Programs</Text>
         </View>
         <View ref={programsSectionRef} style={s.section}>
           {WORKOUT_PROGRAMS.map((program) => (

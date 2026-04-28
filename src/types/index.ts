@@ -450,6 +450,11 @@ export interface EnhancedBotContext extends BotContext {
   recentEffects: PeptideEffect[];
   healthAlerts: HealthAlert[];
   healthProfile: HealthProfile | null;
+  /**
+   * When true, Aimee responds in plain language with short paragraphs and
+   * no headers / bullet lists. Toggleable from the chat header.
+   */
+  simpleMode?: boolean;
 }
 
 // ─── Comprehensive Health Profile ─────────────────────────────────────────────

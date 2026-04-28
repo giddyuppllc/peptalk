@@ -347,6 +347,40 @@ export default function DosingCalculatorScreen() {
         {/* Target Dose */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: t.text }]}>Dose Per Injection</Text>
+          {/* Suggested-min-dose pill — surfaces typical research dose so users
+              don't have to guess or wait until after Calculate. Tester #14. */}
+          {protocolsForPeptide[0]?.typicalDose && (
+            <TouchableOpacity
+              onPress={() => {
+                const proto = protocolsForPeptide[0]!;
+                const min = proto.typicalDose!.min;
+                const unit = proto.typicalDose!.unit;
+                // Convert if the user has the opposite unit selected
+                const value = unit === doseUnit
+                  ? String(min)
+                  : doseUnit === 'mg'
+                    ? String(min / 1000)
+                    : String(min * 1000);
+                setTargetDose(value);
+                resetResults();
+              }}
+              activeOpacity={0.7}
+              style={{
+                alignSelf: 'flex-start',
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 999,
+                backgroundColor: `${t.primary}18`,
+                marginBottom: 8,
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Use suggested minimum dose ${protocolsForPeptide[0].typicalDose.min} ${protocolsForPeptide[0].typicalDose.unit}`}
+            >
+              <Text style={{ fontSize: 12, color: t.primary, fontWeight: '600' }}>
+                Use suggested min: {protocolsForPeptide[0].typicalDose.min}{protocolsForPeptide[0].typicalDose.unit}
+              </Text>
+            </TouchableOpacity>
+          )}
           <GlassCard>
             <View style={styles.row}>
               <TextInput

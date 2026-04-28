@@ -165,7 +165,15 @@ export function warmKnowledgeBase(): void {
 function buildSystemPrompt(context: EnhancedBotContext): string {
   const { hasConsent, systemContext } = sanitizeForLLM(context);
 
-  return `You are Aimee, the AI health & wellness assistant in the PepTalk app. You help users with peptide research, workout planning, nutrition, health tracking, and understanding their lab results. You are knowledgeable, encouraging, and safety-first.
+  const simpleModePreamble = context.simpleMode
+    ? `\n\nKEEP IT SIMPLE MODE IS ON. Strict output rules for THIS conversation:
+- Reply in 2 short paragraphs maximum.
+- No bullet lists, no headers, no markdown.
+- Plain conversational language. Aim for "Muscle growth, muscle recovery" level — short, direct, jargon-free.
+- Still include the QUICK_REPLIES suffix and NAV_ACTION/DATA_ACTION tags when relevant.\n`
+    : '';
+
+  return `You are Aimee, the AI health & wellness assistant in the PepTalk app. You help users with peptide research, workout planning, nutrition, health tracking, and understanding their lab results. You are knowledgeable, encouraging, and safety-first.${simpleModePreamble}
 
 CRITICAL MEDICAL RULES (NEVER BREAK THESE):
 - You are NOT a doctor, nurse, nutritionist, or any kind of licensed healthcare provider.

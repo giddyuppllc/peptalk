@@ -92,6 +92,8 @@ const TIERS: TierInfo[] = [
     description: 'For the serious tracker',
     features: [
       'Everything in Free',
+      'Peptide Stack Builder + unlimited stacks',
+      'AI peptide explanations + intelligent feedback',
       'Aimee AI chat (20 msgs/day)',
       'Voice Log — AI meal parser',
       'Unlimited meal logging',
@@ -99,7 +101,6 @@ const TIERS: TierInfo[] = [
       'Full micronutrient tracking',
       'Apple Watch & Google Fit sync',
       'HRV, VO2, weight trends',
-      'Unlimited peptide stacks',
       'Ad-free experience',
     ],
     colors: ['#E89672', '#F5DAD6'],
