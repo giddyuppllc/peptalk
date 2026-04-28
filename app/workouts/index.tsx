@@ -332,83 +332,6 @@ function StatsBar() {
 }
 
 // ---------------------------------------------------------------------------
-// Workout Videos (placeholder)
-// ---------------------------------------------------------------------------
-
-const VIDEO_PLACEHOLDERS = [
-  {
-    id: 'form-squat',
-    title: 'Perfect Squat Form',
-    category: 'Form Tutorial',
-    duration: '4:12',
-    thumbnail: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=600&q=80',
-  },
-  {
-    id: 'form-rdl',
-    title: 'RDL Technique & Common Mistakes',
-    category: 'Form Tutorial',
-    duration: '6:38',
-    thumbnail: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=600&q=80',
-  },
-  {
-    id: 'glute-activation',
-    title: '5-Minute Glute Activation',
-    category: 'Warm-up',
-    duration: '5:00',
-    thumbnail: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=80',
-  },
-  {
-    id: 'hiit-circuit',
-    title: '20-Minute HIIT Circuit',
-    category: 'Full Workout',
-    duration: '20:14',
-    thumbnail: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&q=80',
-  },
-];
-
-function WorkoutVideos() {
-  const t = useTheme();
-  const accent = useSectionAccent();
-
-  return (
-    <View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: Spacing.lg, gap: 12 }}
-      >
-        {VIDEO_PLACEHOLDERS.map((v) => (
-          <TouchableOpacity
-            key={v.id}
-            style={[s.videoCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}
-            activeOpacity={0.85}
-            onPress={() => Alert.alert('Coming soon', 'Video playback will be added once Jamie delivers the video library.')}
-          >
-            <View style={s.videoThumbWrap}>
-              <Image source={{ uri: v.thumbnail }} style={s.videoThumb} />
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.65)']}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <View style={s.videoPlayBtn}>
-                <Ionicons name="play" size={18} color="#fff" />
-              </View>
-              <View style={s.videoDuration}>
-                <Text style={s.videoDurationText}>{v.duration}</Text>
-              </View>
-            </View>
-            <View style={s.videoInfo}>
-              <Text style={[s.videoCategory, { color: accent.deep }]}>{v.category.toUpperCase()}</Text>
-              <Text style={[s.videoTitle, { color: t.text }]} numberOfLines={2}>{v.title}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Main Screen
 // ---------------------------------------------------------------------------
 
@@ -685,10 +608,29 @@ export default function WorkoutsScreen() {
           </View>
         )}
 
-        {/* Workout Videos — hidden until R2 video library is wired.
-            Once the R2 manifest is in place, render <WorkoutVideos />
-            backed by the real catalog instead of the placeholder array.
-            Tester feedback #11 + #27: don't show "Coming soon" placeholders. */}
+        {/* Workout Library entry — opens the R2-backed video library
+            (Pro-gated). Replaces the old "Coming soon" placeholder carousel. */}
+        <View style={s.section}>
+          <TouchableOpacity
+            style={[s.generateCard, { backgroundColor: t.surface, borderColor: `${accent.deep}30` }]}
+            onPress={() => router.push('/workouts/library')}
+            activeOpacity={0.85}
+          >
+            <View style={[s.generateIcon, { backgroundColor: `${accent.deep}18` }]}>
+              <Ionicons name="play-circle" size={22} color={accent.deep} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={[s.generateTitle, { color: t.text }]}>Workout Video Library</Text>
+                {!hasCustomGenerator && <LockBadge tier="pro" size="sm" />}
+              </View>
+              <Text style={[s.generateSub, { color: t.textSecondary }]}>
+                Jamie's guided clips — form, programs, recovery
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={t.textSecondary} />
+          </TouchableOpacity>
+        </View>
 
         {/* Curated Programs */}
         <View style={[s.sectionHeaderRow, { marginTop: 24 }]}>
