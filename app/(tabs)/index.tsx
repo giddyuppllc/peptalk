@@ -37,6 +37,7 @@ import { TodaysPlanCard } from '../../src/components/TodaysPlanCard';
 import { PantryAlertCard } from '../../src/components/PantryAlertCard';
 import { DailyInsightCard } from '../../src/components/DailyInsightCard';
 import { ReadinessCard } from '../../src/components/ReadinessCard';
+import { ProfileCompletionCard } from '../../src/components/ProfileCompletionCard';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import {
@@ -1019,6 +1020,11 @@ export default function DashboardScreen() {
         {/* Pantry expiring-soon alert — hides when nothing's near expiry. */}
         <View style={styles.protocolBannerWrap}>
           <PantryAlertCard />
+        </View>
+
+        {/* Profile completion nudge — hides ≥90% or 0%. */}
+        <View style={styles.protocolBannerWrap}>
+          <ProfileCompletionCard />
         </View>
 
         {/* ═══════════════════════════════════════════════════════════════

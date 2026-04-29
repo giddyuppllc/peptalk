@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useStackStore } from '../../src/store/useStackStore';
 import { PaywallModal } from '../../src/components/PaywallModal';
 import { PEPTIDES, getPeptideById } from '../../src/data/peptides';
+import { getCategoryColor } from '../../src/constants/categories';
 import { SearchBar } from '../../src/components/SearchBar';
 import { AnalysisCard } from '../../src/components/AnalysisCard';
 import { GlassCard } from '../../src/components/GlassCard';
@@ -114,6 +115,24 @@ export default function StackBuilderScreen() {
         .filter(Boolean) as Peptide[],
     [currentStack]
   );
+
+  // Stack-level intent — counts how the user's current stack tilts across
+  // peptide categories. Lets us surface "GH-axis loaded" or "Metabolic-
+  // heavy" so the user knows what they're actually building. Counted by
+  // peptide membership, not by the count of categories on each peptide
+  // (otherwise multi-category peptides would over-weight).
+  const stackIntent = useMemo(() => {
+    if (stackPeptides.length === 0) return null;
+    const counts = new Map<string, number>();
+    for (const p of stackPeptides) {
+      for (const c of p.categories) {
+        counts.set(c, (counts.get(c) ?? 0) + 1);
+      }
+    }
+    const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+    const top = sorted.slice(0, 3);
+    return { top, total: stackPeptides.length };
+  }, [stackPeptides]);
 
   // Real-time pairwise interactions
   const pairwiseInteractions = useMemo(() => {
@@ -224,6 +243,39 @@ export default function StackBuilderScreen() {
             );
           })}
         </View>
+
+        {/* ── Stack intent overview ──
+            Shows what the current stack is biased toward (e.g. "GH-axis
+            loaded · 3 peptides", "Metabolic · 2 peptides"). Helps the
+            user understand the *shape* of their stack at a glance,
+            not just which peptides are in it. */}
+        {stackIntent && stackIntent.top.length > 0 && (
+          <View style={styles.previewSection}>
+            <Text style={[styles.sectionLabel, { color: t.textSecondary }]}>STACK INTENT</Text>
+            <View style={[styles.intentCard, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
+              {stackIntent.top.map(([category, count], idx) => {
+                const color = getCategoryColor(category as any);
+                const ratio = count / stackIntent.total;
+                return (
+                  <View key={category} style={[styles.intentRow, idx > 0 && { marginTop: 6 }]}>
+                    <Text style={[styles.intentName, { color: t.text }]}>{category}</Text>
+                    <View style={[styles.intentBarTrack, { backgroundColor: `${color}1F` }]}>
+                      <View
+                        style={[
+                          styles.intentBarFill,
+                          { width: `${Math.round(ratio * 100)}%`, backgroundColor: color },
+                        ]}
+                      />
+                    </View>
+                    <Text style={[styles.intentCount, { color: t.textSecondary }]}>
+                      {count}/{stackIntent.total}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* ── Interaction Preview ── */}
         {pairwiseInteractions.length > 0 && (
@@ -446,6 +498,16 @@ const styles = StyleSheet.create({
   previewScore: { fontSize: 13, fontFamily: 'DMSans-Bold', marginLeft: 8 },
   previewType: { fontSize: 11, fontFamily: 'DMSans-Medium', textTransform: 'capitalize', marginTop: 4 },
   previewMechanism: { fontSize: 12, lineHeight: 17, marginTop: 6 },
+  intentCard: {
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  intentRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  intentName: { fontSize: 12, fontFamily: 'DMSans-SemiBold', width: 90 },
+  intentBarTrack: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
+  intentBarFill: { height: '100%', borderRadius: 3 },
+  intentCount: { fontSize: 11, fontFamily: 'DMSans-Medium', width: 28, textAlign: 'right' },
 
   // Add peptides
   addSection: { marginBottom: 16 },

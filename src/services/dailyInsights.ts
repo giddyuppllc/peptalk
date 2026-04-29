@@ -152,6 +152,78 @@ export function getTodaysInsight(): DailyInsight | null {
     }
   } catch { /* ignore */ }
 
+  // ── 3.5. Cycle phase × ACTIVE peptide guidance ──
+  // Surfaces only when the user is BOTH cycle-tracked AND on a peptide
+  // where there's a meaningful phase interaction. Examples:
+  //   - GLP-1 + luteal → progesterone increases hunger; appetite-
+  //     suppression may feel lighter for a few days
+  //   - GH peptide + menstrual → low energy phase, normal not to PR
+  //   - BPC-157 / TB-500 + follicular → repair signaling amplified
+  try {
+    const profile = useHealthProfileStore.getState().profile;
+    const dose = useDoseLogStore.getState();
+    if (
+      profile?.biologicalSex === 'female' &&
+      profile?.cycle?.trackingEnabled &&
+      profile?.cycle?.lastPeriodStartDate
+    ) {
+      const phaseInfo = computeCyclePhase(
+        profile.cycle.lastPeriodStartDate,
+        profile.cycle.typicalCycleLength,
+        profile.cycle.typicalPeriodLength,
+      );
+      const activePeptideIds = dose.protocols.filter((p) => p.isActive).map((p) => p.peptideId);
+
+      const GLP1_IDS = ['semaglutide', 'tirzepatide', 'retatrutide', 'cagrilintide', 'mazdutide', 'survodutide'];
+      const GH_IDS = ['ipamorelin', 'cjc-1295', 'sermorelin', 'tesamorelin', 'ghrp-2', 'ghrp-6', 'hexarelin'];
+      const REPAIR_IDS = ['bpc-157', 'tb-500', 'ghk-cu'];
+
+      if (phaseInfo) {
+        const onGLP1 = activePeptideIds.find((id) => GLP1_IDS.includes(id));
+        const onGH = activePeptideIds.find((id) => GH_IDS.includes(id));
+        const onRepair = activePeptideIds.find((id) => REPAIR_IDS.includes(id));
+
+        if (onGLP1 && phaseInfo.phase === 'luteal') {
+          const name = getPeptideById(onGLP1)?.name ?? onGLP1;
+          candidates.push({
+            id: `cycle-x-glp1-luteal`,
+            title: 'Luteal × GLP-1 window',
+            body: `You're in the luteal phase on ${name}. Progesterone tends to bump hunger this week, so your appetite suppression may feel lighter than usual — protein-forward meals help. Don't read it as the protocol losing efficacy.`,
+            ctaLabel: 'Open Aimee',
+            ctaRoute: `/(tabs)/peptalk?prefill=I'm in luteal phase on ${name} — give me a meal-plan tweak for this week`,
+            icon: 'flower-outline',
+            accentColor: '#9B86A4',
+            priority: 78,
+          });
+        } else if (onGH && phaseInfo.phase === 'menstrual') {
+          const name = getPeptideById(onGH)?.name ?? onGH;
+          candidates.push({
+            id: `cycle-x-gh-menstrual`,
+            title: 'Menstrual × GH peptide',
+            body: `${name} pulses can feel lighter on day 1-3 of your cycle. Iron stores dip, sleep often shifts. Stay the course on dosing — don't bump to compensate. Recovery work + slow lifts > PRs this week.`,
+            ctaLabel: 'See cycle dashboard',
+            ctaRoute: '/cycle',
+            icon: 'flower-outline',
+            accentColor: '#9B86A4',
+            priority: 72,
+          });
+        } else if (onRepair && phaseInfo.phase === 'follicular') {
+          const name = getPeptideById(onRepair)?.name ?? onRepair;
+          candidates.push({
+            id: `cycle-x-repair-follicular`,
+            title: 'Follicular × tissue repair',
+            body: `Estrogen rising during follicular phase amplifies the same collagen + repair pathways ${name} works on. Good window to push training a bit and let recovery compound.`,
+            ctaLabel: 'See workouts',
+            ctaRoute: '/(tabs)/workouts',
+            icon: 'trending-up-outline',
+            accentColor: '#6FA891',
+            priority: 60,
+          });
+        }
+      }
+    }
+  } catch { /* ignore */ }
+
   // ── 4. Cycle phase × peptide guidance ──
   try {
     const profile = useHealthProfileStore.getState().profile;
