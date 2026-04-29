@@ -57,14 +57,16 @@ export default function VideoTaggerScreen() {
   const t = useTheme();
   const accent = useSectionAccent('workouts');
   const userEmail = useAuthStore((s) => s.user?.email?.toLowerCase() ?? '');
+  const isAdmin = TAGGER_ADMIN_EMAILS.has(userEmail);
 
-  // Email guard — production users get bounced before any state initializes.
-  // Server still refuses to sign URLs without ALLOW_TAGGER_FREE+ADMIN_EMAILS,
-  // but we don't want to leak the manifest UI either.
-  if (!TAGGER_ADMIN_EMAILS.has(userEmail)) {
-    React.useEffect(() => { router.replace('/(tabs)'); }, []);
-    return null;
-  }
+  // Email guard — production users get bounced. Server still refuses to sign
+  // URLs without ALLOW_TAGGER_FREE+ADMIN_EMAILS, but we don't want to leak
+  // the manifest UI either. Effect runs unconditionally to keep hook order
+  // stable across renders (rules of hooks).
+  React.useEffect(() => {
+    if (!isAdmin) router.replace('/(tabs)');
+  }, [isAdmin, router]);
+
   const edits = useVideoTaggerStore((s) => s.edits);
   const setEdit = useVideoTaggerStore((s) => s.setEdit);
   const resetAll = useVideoTaggerStore((s) => s.resetAll);
@@ -155,6 +157,9 @@ export default function VideoTaggerScreen() {
       `${exported.length} entries on the clipboard. Paste into src/data/workoutVideos.json and commit. Then run "Reset edits" to clear the local store.`,
     );
   };
+
+  // ── Non-admin bail (effect above triggers the redirect) ──
+  if (!isAdmin) return null;
 
   // ── Empty state ────────────────────────────────────────────────
   if (queue.length === 0) {

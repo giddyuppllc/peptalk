@@ -111,6 +111,8 @@ export const useIntegrationsStore = create<IntegrationsState & IntegrationsActio
         const emptyStats: RouteStats = {
           periodsImported: 0,
           cycleDaysImported: 0,
+          biometricsImported: 0,
+          sleepsImported: 0,
           skippedByPriority: 0,
           errors: [],
         };

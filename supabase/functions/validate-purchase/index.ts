@@ -87,19 +87,59 @@ Deno.serve(async (req) => {
     // Google does, because the product_id is part of the verify URL path.
     let validated = false;
     let expiresAt: string | null = null;
+    let originalTransactionId: string | null = null;
 
     if (body.platform === 'ios') {
       const result = await verifyAppleReceipt(body.receipt, body.productId);
       validated = result.valid;
       expiresAt = result.expiresAt;
+      originalTransactionId = result.originalTransactionId;
     } else {
       const result = await verifyGoogleReceipt(body.productId, body.receipt);
       validated = result.valid;
       expiresAt = result.expiresAt;
+      originalTransactionId = result.originalTransactionId;
     }
 
     if (!validated) {
       return json({ error: 'Receipt could not be verified' }, 400);
+    }
+
+    // ── Cross-user dedup ──
+    // Reject if the same Apple original_transaction_id (or Google orderId
+    // base) is already bound to a DIFFERENT user. Without this check, a
+    // leaked receipt shared in a forum could grant Pro to multiple accounts.
+    // Same-user re-validation is fine — that's the upsert path below.
+    if (originalTransactionId) {
+      const adminLookupClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+      const { data: existing, error: dupErr } = await adminLookupClient
+        .from('subscriptions')
+        .select('user_id')
+        .eq('original_transaction_id', originalTransactionId)
+        .neq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+      if (dupErr) {
+        // Fail-closed on lookup failure — it's safer to reject than to
+        // silently grant duplicate entitlements while the dedup check is
+        // unavailable.
+        console.error(
+          '[validate-purchase] dedup lookup failed for txn',
+          originalTransactionId,
+          dupErr,
+        );
+        return json({ error: 'Could not validate receipt; please try again' }, 503);
+      }
+      if (existing) {
+        console.warn(
+          '[validate-purchase] receipt already bound to another user',
+          { txn: originalTransactionId, otherUser: existing.user_id, claimingUser: user.id },
+        );
+        return json(
+          { error: 'This purchase is already linked to another account. Contact support.' },
+          409,
+        );
+      }
     }
 
     // ── Update subscription tier in DB ──
@@ -121,6 +161,7 @@ Deno.serve(async (req) => {
       is_active: true,
       last_validated_at: new Date().toISOString(),
       receipt_data: body.receipt.substring(0, 500),
+      original_transaction_id: originalTransactionId,
     }, { onConflict: 'user_id,product_id' });
 
     if (subErr) {
@@ -192,7 +233,7 @@ Deno.serve(async (req) => {
 async function verifyAppleReceipt(
   receipt: string,
   expectedProductId: string,
-): Promise<{ valid: boolean; expiresAt: string | null }> {
+): Promise<{ valid: boolean; expiresAt: string | null; originalTransactionId: string | null }> {
   // Try production first, fall back to sandbox if Apple responds with 21007
   let res = await postAppleReceipt(APPLE_PROD_URL, receipt);
   if (res.status === 21007) {
@@ -200,7 +241,7 @@ async function verifyAppleReceipt(
   }
 
   if (res.status !== 0) {
-    return { valid: false, expiresAt: null };
+    return { valid: false, expiresAt: null, originalTransactionId: null };
   }
 
   // Apple can return multiple in-app entries (renewals, upgrades, etc.).
@@ -219,7 +260,7 @@ async function verifyAppleReceipt(
       'expected', expectedProductId,
       'got', candidates.map((c) => c?.product_id).join(','),
     );
-    return { valid: false, expiresAt: null };
+    return { valid: false, expiresAt: null, originalTransactionId: null };
   }
 
   const expiresMs = parseInt(match.expires_date_ms ?? '0', 10);
@@ -229,9 +270,17 @@ async function verifyAppleReceipt(
   const cancelledMs = parseInt(match.cancellation_date_ms ?? '0', 10);
   const isActive = expiresMs > Date.now() && cancelledMs === 0;
 
+  // original_transaction_id is stable across renewals — that's the natural
+  // dedup key. transaction_id changes per renewal; don't use it.
+  const originalTransactionId =
+    typeof match.original_transaction_id === 'string'
+      ? match.original_transaction_id
+      : null;
+
   return {
     valid: isActive,
     expiresAt: expiresMs > 0 ? new Date(expiresMs).toISOString() : null,
+    originalTransactionId,
   };
 }
 
@@ -255,15 +304,15 @@ async function postAppleReceipt(url: string, receipt: string): Promise<any> {
 async function verifyGoogleReceipt(
   productId: string,
   purchaseToken: string,
-): Promise<{ valid: boolean; expiresAt: string | null }> {
+): Promise<{ valid: boolean; expiresAt: string | null; originalTransactionId: string | null }> {
   if (!GOOGLE_SERVICE_ACCOUNT_JSON) {
     console.error('[validate-purchase] GOOGLE_SERVICE_ACCOUNT_JSON not set');
-    return { valid: false, expiresAt: null };
+    return { valid: false, expiresAt: null, originalTransactionId: null };
   }
 
   try {
     const accessToken = await getGoogleAccessToken();
-    if (!accessToken) return { valid: false, expiresAt: null };
+    if (!accessToken) return { valid: false, expiresAt: null, originalTransactionId: null };
 
     const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${ANDROID_PACKAGE_NAME}/purchases/subscriptions/${productId}/tokens/${encodeURIComponent(purchaseToken)}`;
 
@@ -274,7 +323,7 @@ async function verifyGoogleReceipt(
     if (!res.ok) {
       const err = await res.text();
       console.error('[validate-purchase] Google API error:', res.status, err);
-      return { valid: false, expiresAt: null };
+      return { valid: false, expiresAt: null, originalTransactionId: null };
     }
 
     const data = await res.json();
@@ -285,6 +334,13 @@ async function verifyGoogleReceipt(
     const paymentState = data.paymentState;
     const paid = paymentState === 1 || paymentState === 2;
     const isActive = expiresMs > Date.now() && paid;
+    // orderId is the per-purchase identifier on Google. Stable across renewals
+    // (renewals get a `..0` `..1` suffix on the base orderId — strip it for
+    // dedup so all renewals of the same subscription map to one key).
+    const orderId =
+      typeof data.orderId === 'string'
+        ? data.orderId.split('..')[0]
+        : null;
 
     // CRITICAL: acknowledge the purchase so Google doesn't auto-refund after
     // 3 days. acknowledgementState: 0 = not acknowledged, 1 = acknowledged.
@@ -299,10 +355,11 @@ async function verifyGoogleReceipt(
     return {
       valid: isActive,
       expiresAt: expiresMs > 0 ? new Date(expiresMs).toISOString() : null,
+      originalTransactionId: orderId,
     };
   } catch (err) {
     console.error('[validate-purchase] Google verify threw:', err);
-    return { valid: false, expiresAt: null };
+    return { valid: false, expiresAt: null, originalTransactionId: null };
   }
 }
 

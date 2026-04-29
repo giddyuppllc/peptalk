@@ -15,6 +15,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useDaySummary } from '../hooks/useDaySummary';
 import { useTheme } from '../hooks/useTheme';
@@ -23,6 +24,7 @@ import { getPeptideById } from '../data/peptides';
 import { Colors, FontSizes } from '../constants/theme';
 import { useHealthProfileStore } from '../store/useHealthProfileStore';
 import { computeCyclePhase, PHASE_LABELS } from '../services/cycleService';
+import { useBiometricsStore } from '../store/useBiometricsStore';
 
 interface DaySummarySheetProps {
   visible: boolean;
@@ -38,8 +40,30 @@ function formatDate(dateKey: string): string {
 export function DaySummarySheet({ visible, dateKey, onClose }: DaySummarySheetProps) {
   const t = useTheme();
   const accent = useSectionAccent();
+  const router = useRouter();
   const summary = useDaySummary(dateKey);
   const healthProfile = useHealthProfileStore((s) => s.profile);
+  const biometrics = useBiometricsStore((s) => s.getReadingsForDate(dateKey));
+
+  const stepsReading = biometrics.find((r) => r.scope === 'steps');
+  const hrvReading = biometrics.find((r) => r.scope === 'hrv');
+  const rhrReading = biometrics.find((r) => r.scope === 'resting_heart_rate');
+  const sleepReading = biometrics.find((r) => r.scope === 'sleep_minutes');
+  const activeCalReading = biometrics.find((r) => r.scope === 'active_calories');
+  const hasBiometrics = biometrics.length > 0;
+
+  const navigateAndClose = (path: string) => {
+    onClose();
+    // Defer to let the close animation start before navigation thrashes
+    // the modal stack on slow devices.
+    setTimeout(() => router.push(path as any), 80);
+  };
+
+  const isToday = dateKey === new Date().toISOString().slice(0, 10);
+  // Past dates can still be logged into (back-fill use case) but the
+  // routes default to "today" so we pass the date as a query param when
+  // we have one wired up.
+  const dateParam = isToday ? '' : `?date=${dateKey}`;
 
   // Cycle phase — female users who opted in. Computed for THIS dateKey,
   // not just today, so historical days show the correct phase.
@@ -83,6 +107,99 @@ export function DaySummarySheet({ visible, dateKey, onClose }: DaySummarySheetPr
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
             >
+              {/* ── Quick-Add row ── always visible, lets user log new entries
+                   for THIS date without leaving the calendar context. ── */}
+              <View style={[styles.quickAddRow, { borderBottomColor: t.cardBorder }]}>
+                <TouchableOpacity
+                  onPress={() => navigateAndClose(`/nutrition${dateParam}`)}
+                  style={[styles.quickAddBtn, { borderColor: t.cardBorder }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Log a meal"
+                >
+                  <Ionicons name="restaurant-outline" size={18} color="#6FA891" />
+                  <Text style={[styles.quickAddText, { color: t.text }]}>Meal</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => navigateAndClose(`/(tabs)/calendar${dateParam}`)}
+                  style={[styles.quickAddBtn, { borderColor: t.cardBorder }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Log a dose"
+                >
+                  <Ionicons name="flask-outline" size={18} color="#3E7CB1" />
+                  <Text style={[styles.quickAddText, { color: t.text }]}>Dose</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => navigateAndClose(`/(tabs)/workouts${dateParam}`)}
+                  style={[styles.quickAddBtn, { borderColor: t.cardBorder }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Log a workout"
+                >
+                  <Ionicons name="barbell-outline" size={18} color="#D98C86" />
+                  <Text style={[styles.quickAddText, { color: t.text }]}>Workout</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => navigateAndClose(`/(tabs)/check-in${dateParam}`)}
+                  style={[styles.quickAddBtn, { borderColor: t.cardBorder }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Daily check-in"
+                >
+                  <Ionicons name="clipboard-outline" size={18} color="#E89672" />
+                  <Text style={[styles.quickAddText, { color: t.text }]}>Check-in</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* ── Biometrics (HealthKit / Health Connect / wearable readings) ── */}
+              {hasBiometrics && (
+                <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="pulse-outline" size={16} color="#3E7CB1" />
+                    <Text style={[styles.sectionLabel, { color: t.text }]}>Biometrics</Text>
+                  </View>
+                  <View style={styles.biometricsGrid}>
+                    {stepsReading && (
+                      <View style={[styles.bioCell, { backgroundColor: t.surface }]}>
+                        <Text style={[styles.bioValue, { color: t.text }]}>
+                          {Math.round(stepsReading.value).toLocaleString()}
+                        </Text>
+                        <Text style={[styles.bioLabel, { color: t.textSecondary }]}>steps</Text>
+                      </View>
+                    )}
+                    {activeCalReading && (
+                      <View style={[styles.bioCell, { backgroundColor: t.surface }]}>
+                        <Text style={[styles.bioValue, { color: t.text }]}>
+                          {Math.round(activeCalReading.value)}
+                        </Text>
+                        <Text style={[styles.bioLabel, { color: t.textSecondary }]}>active cal</Text>
+                      </View>
+                    )}
+                    {sleepReading && (
+                      <View style={[styles.bioCell, { backgroundColor: t.surface }]}>
+                        <Text style={[styles.bioValue, { color: t.text }]}>
+                          {Math.floor(sleepReading.value / 60)}h{Math.round(sleepReading.value % 60)}m
+                        </Text>
+                        <Text style={[styles.bioLabel, { color: t.textSecondary }]}>sleep</Text>
+                      </View>
+                    )}
+                    {rhrReading && (
+                      <View style={[styles.bioCell, { backgroundColor: t.surface }]}>
+                        <Text style={[styles.bioValue, { color: t.text }]}>
+                          {Math.round(rhrReading.value)}
+                        </Text>
+                        <Text style={[styles.bioLabel, { color: t.textSecondary }]}>resting HR</Text>
+                      </View>
+                    )}
+                    {hrvReading && (
+                      <View style={[styles.bioCell, { backgroundColor: t.surface }]}>
+                        <Text style={[styles.bioValue, { color: t.text }]}>
+                          {Math.round(hrvReading.value)}
+                        </Text>
+                        <Text style={[styles.bioLabel, { color: t.textSecondary }]}>HRV ms</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )}
+
               {/* ── Cycle phase (female users who opted in) ── */}
               {cycleForDate && (
                 <View style={styles.section}>
@@ -323,6 +440,42 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
   },
+
+  // Quick-add row
+  quickAddRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 12,
+    marginBottom: 16,
+    borderBottomWidth: 1,
+  },
+  quickAddBtn: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  quickAddText: { fontSize: 11, fontFamily: 'DMSans-SemiBold' },
+
+  // Biometrics grid
+  biometricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  bioCell: {
+    minWidth: 80,
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+  },
+  bioValue: { fontSize: 16, fontFamily: 'DMSans-Bold' },
+  bioLabel: { fontSize: 11, fontFamily: 'DMSans-Regular', marginTop: 2 },
+
   section: {
     marginBottom: 20,
   },

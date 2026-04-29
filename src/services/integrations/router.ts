@@ -16,6 +16,10 @@ import { SOURCE_PRIORITY } from '../../types/cycle';
 export interface RouteStats {
   periodsImported: number;
   cycleDaysImported: number;
+  /** Daily-aggregate scalars (steps / hrv / rhr / etc.) written to biometrics store. */
+  biometricsImported: number;
+  /** Sleep nights summarized into biometrics store. */
+  sleepsImported: number;
   skippedByPriority: number;
   errors: string[];
 }
@@ -29,6 +33,8 @@ export async function routeSyncResult(result: SyncResult): Promise<RouteStats> {
   const stats: RouteStats = {
     periodsImported: 0,
     cycleDaysImported: 0,
+    biometricsImported: 0,
+    sleepsImported: 0,
     skippedByPriority: 0,
     errors: [],
   };
@@ -113,16 +119,69 @@ export async function routeSyncResult(result: SyncResult): Promise<RouteStats> {
     stats.errors.push(`weight route failed: ${String(err)}`);
   }
 
-  // ── Sleep / HRV / RHR — noted for 1.9.1 check-in auto-fill ─────────────
-  // We don't have a dedicated biometrics store yet; the check-in flow
-  // reads live from HealthKit rather than from a cached layer. This is
-  // where we'd land sleeps / hrv / rhr samples once that store exists.
-  void _keepReferenced(result.sleeps);
+  // ── Daily biometrics (steps / hrv / rhr / spo2 / vo2 / respiratory) ───
+  try {
+    const {
+      useBiometricsStore,
+      biometricScopeFromSyncScope,
+      toLocalDateKey,
+    } = require('../../store/useBiometricsStore');
+    const biometricsStore = useBiometricsStore.getState();
+
+    // Scalars → daily readings
+    const dailyAggregates = new Map<string, ScalarSample>();
+    for (const sample of result.scalars) {
+      const cacheScope = biometricScopeFromSyncScope(sample.scope);
+      if (!cacheScope) continue;
+      const dateKey = toLocalDateKey(sample.timestamp);
+      const aggKey = `${dateKey}|${cacheScope}|${sample.source}`;
+      // For cumulative scopes (steps / active_calories) we want the
+      // most recent / highest sample for the day. For instantaneous
+      // scopes (hrv / rhr) the most recent is also fine.
+      const existing = dailyAggregates.get(aggKey);
+      if (!existing || sample.timestamp > existing.timestamp) {
+        dailyAggregates.set(aggKey, sample);
+      }
+    }
+    for (const [key, sample] of dailyAggregates) {
+      const [dateKey, cacheScope] = key.split('|');
+      const wrote = biometricsStore.upsertReading({
+        date: dateKey,
+        scope: cacheScope as any,
+        value: sample.value,
+        unit: sample.unit,
+        source: sample.source,
+        updatedAt: result.syncedAt,
+      });
+      if (wrote) stats.biometricsImported++;
+      else stats.skippedByPriority++;
+    }
+
+    // Sleep → totalMinutes + deep + rem (3 readings per night)
+    for (const sleep of result.sleeps) {
+      const dateKey = toLocalDateKey(sleep.endIso); // sleep "belongs" to wake date
+      const writes: Array<{ scope: any; value?: number }> = [
+        { scope: 'sleep_minutes', value: sleep.totalMinutes },
+        { scope: 'sleep_deep_minutes', value: sleep.deepMinutes },
+        { scope: 'sleep_rem_minutes', value: sleep.remMinutes },
+      ];
+      for (const w of writes) {
+        if (w.value == null) continue;
+        const wrote = biometricsStore.upsertReading({
+          date: dateKey,
+          scope: w.scope,
+          value: w.value,
+          unit: 'min',
+          source: sleep.source,
+          updatedAt: result.syncedAt,
+        });
+        if (wrote && w.scope === 'sleep_minutes') stats.sleepsImported++;
+        else if (!wrote) stats.skippedByPriority++;
+      }
+    }
+  } catch (err) {
+    stats.errors.push(`biometrics route failed: ${String(err)}`);
+  }
 
   return stats;
-}
-
-function _keepReferenced(_: SleepSample[]): void {
-  // Intentionally empty — placeholder so the sleep-sample param isn't
-  // treated as unused while the downstream store is under construction.
 }

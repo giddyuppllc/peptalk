@@ -23,6 +23,7 @@ import { useMealStore } from '../../src/store/useMealStore';
 import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
 import { DaySummarySheet } from '../../src/components/DaySummarySheet';
+import { WeeklySummaryCard } from '../../src/components/WeeklySummaryCard';
 import { DOSE_LOG_GATE_DISCLAIMER } from '../../src/constants/legal';
 import { checkDoseSafety } from '../../src/services/doseSafety';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
@@ -577,6 +578,11 @@ export default function CalendarScreen() {
               <Ionicons name="calendar" size={22} color={Colors.rose} />
             </View>
           </View>
+        </View>
+
+        {/* This-week summary — meals + workouts + doses + check-ins + biometrics */}
+        <View style={styles.weeklyWrap}>
+          <WeeklySummaryCard />
         </View>
 
         {/* Health Alerts */}
@@ -1289,6 +1295,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(232, 150, 114, 0.12)',
     alignItems: 'center', justifyContent: 'center',
   },
+
+  // Weekly summary card
+  weeklyWrap: { paddingHorizontal: Spacing.md, marginTop: Spacing.md },
 
   // Alerts
   alertSection: { paddingHorizontal: Spacing.md, marginTop: Spacing.md, gap: Spacing.sm },
