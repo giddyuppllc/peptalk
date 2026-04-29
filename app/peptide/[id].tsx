@@ -16,6 +16,7 @@ import { getPeptideById } from '../../src/data/peptides';
 import { useStackStore } from '../../src/store/useStackStore';
 import { GlassCard } from '../../src/components/GlassCard';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
+import { KeepItSimpleCard } from '../../src/components/KeepItSimpleCard';
 import { getCategoryColor } from '../../src/constants/categories';
 import { Disclaimer } from '../../src/components/Disclaimer';
 import { trackPeptideView } from '../../src/services/analyticsEvents';
@@ -161,6 +162,12 @@ export default function PeptideDetailScreen() {
               </Text>
             </View>
           )}
+        </View>
+
+        {/* Plain-language "what is this for" — top of page so user gets
+            the answer before any technical content. */}
+        <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
+          <KeepItSimpleCard peptideId={peptide.id} />
         </View>
 
         {/* Category Tags */}

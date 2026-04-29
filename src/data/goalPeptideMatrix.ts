@@ -157,3 +157,37 @@ export function recommendPeptidesForGoal(
   }
   return filtered;
 }
+
+/**
+ * Reverse lookup — what is this peptide commonly used for?
+ *
+ * Walks the matrix and collects every goal where this peptide appears
+ * as a primary or secondary candidate. Powers the "Keep It Simple"
+ * card on the peptide detail page so a user immediately sees plain-
+ * language goals without parsing the long research summary.
+ *
+ * Returns goals in order of how strongly the peptide is associated
+ * (primary tier first, then secondary). Experimental matches are
+ * dropped to keep the simple summary high-signal.
+ */
+export function plainGoalsForPeptide(peptideId: string): Array<{
+  goal: GoalType;
+  tier: GoalPeptideMatch['tier'];
+  reason: string;
+}> {
+  const hits: Array<{ goal: GoalType; tier: GoalPeptideMatch['tier']; reason: string }> = [];
+  for (const [goalKey, matches] of Object.entries(GOAL_PEPTIDE_MATRIX) as Array<[
+    GoalType,
+    GoalPeptideMatch[],
+  ]>) {
+    const m = matches.find((x) => x.id === peptideId);
+    if (m && m.tier !== 'experimental') {
+      hits.push({ goal: goalKey, tier: m.tier, reason: m.reason });
+    }
+  }
+  // Primary first, then secondary, preserve order within each tier
+  return hits.sort((a, b) => {
+    if (a.tier === b.tier) return 0;
+    return a.tier === 'primary' ? -1 : 1;
+  });
+}
