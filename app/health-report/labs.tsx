@@ -18,10 +18,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import {
@@ -31,7 +33,11 @@ import {
   type LabCategory,
   type LabMarker,
 } from '../../src/store/useLabResultsStore';
+import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
+import { supabase } from '../../src/services/supabase';
 import { Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
+
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
@@ -48,6 +54,91 @@ export default function LabsScreen() {
   const [drawDate, setDrawDate] = useState(todayKey());
   const [values, setValues] = useState<Record<string, string>>({});
   const [expandedCategory, setExpandedCategory] = useState<LabCategory | null>('lipid');
+  const [scanning, setScanning] = useState(false);
+  const tier = useSubscriptionStore((s) => s.tier);
+
+  /**
+   * Photo upload → Grok Vision → pre-filled lab values.
+   * Pro-only at the edge function level — surfaced in UI as upgrade
+   * prompt for non-Pro tiers.
+   */
+  const handleScanLabReport = async () => {
+    if (tier !== 'pro') {
+      Alert.alert(
+        'Pro feature',
+        'Photo / PDF lab parsing is a PepTalk Pro feature. You can still type values in below — that\'s available to everyone.',
+        [
+          { text: 'OK', style: 'cancel' },
+          { text: 'See plans', onPress: () => router.push('/subscription' as any) },
+        ],
+      );
+      return;
+    }
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Photo library access denied', 'Allow photos so we can pick your lab report image.');
+      return;
+    }
+    const pick = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      base64: true,
+      quality: 0.6,
+      allowsEditing: false,
+    });
+    if (pick.canceled || !pick.assets?.[0]?.base64) return;
+    const base64 = pick.assets[0].base64;
+    if (base64.length > 5_000_000) {
+      Alert.alert('Photo too large', 'Try a smaller / lower-quality photo (most lab reports compress fine at medium quality).');
+      return;
+    }
+    setScanning(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        Alert.alert('Sign in required', 'Please sign in to use lab parsing.');
+        return;
+      }
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/lab-scan`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        },
+        body: JSON.stringify({ imageBase64: base64 }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        Alert.alert('Scan failed', data.error ?? 'Could not parse the image.');
+        return;
+      }
+      // Pre-fill the form with what Grok extracted. User reviews + saves.
+      const extracted: Record<string, string> = { ...values };
+      let count = 0;
+      for (const r of data.results ?? []) {
+        if (typeof r.markerId === 'string' && typeof r.value === 'number') {
+          extracted[r.markerId] = String(r.value);
+          count++;
+        }
+      }
+      setValues(extracted);
+      if (typeof data.drawDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.drawDate)) {
+        setDrawDate(data.drawDate);
+      }
+      const unmapped = (data.unmappedNotes ?? []) as string[];
+      const unmappedMsg = unmapped.length > 0
+        ? `\n\nWe couldn't auto-map these — review and add manually:\n${unmapped.slice(0, 6).map((n) => `• ${n}`).join('\n')}`
+        : '';
+      Alert.alert(
+        'Pre-filled',
+        `Parsed ${count} lab value${count === 1 ? '' : 's'} from your image. Review the panels below and tap Save.${unmappedMsg}`,
+      );
+    } catch (err) {
+      Alert.alert('Network error', 'Could not reach the lab parser. Try again or enter values manually.');
+    } finally {
+      setScanning(false);
+    }
+  };
 
   const grouped = useMemo(() => {
     const out: Record<LabCategory, LabMarker[]> = {} as any;
@@ -134,10 +225,36 @@ export default function LabsScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={[styles.subtitle, { color: t.textSecondary }]}>
-          Enter your most recent bloodwork. Aimee will reference these values
-          when answering questions about your health. PDF / photo upload is
-          coming — for now, type in the numbers from your provider.
+          Snap a photo of your bloodwork or type the values in. Aimee will
+          reference these when answering questions about your health.
         </Text>
+
+        {/* Photo upload — Pro feature, gracefully degrades to a "see plans"
+            prompt for free / plus tiers. */}
+        <TouchableOpacity
+          onPress={handleScanLabReport}
+          disabled={scanning}
+          style={[
+            styles.scanBtn,
+            { backgroundColor: scanning ? t.textMuted : '#3E7CB1' },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Scan a photo of your lab report"
+        >
+          {scanning ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Ionicons name="scan-outline" size={18} color="#fff" />
+          )}
+          <Text style={styles.scanBtnText}>
+            {scanning ? 'Parsing your lab report…' : 'Scan lab report photo'}
+          </Text>
+          {tier !== 'pro' && !scanning && (
+            <View style={styles.proBadge}>
+              <Text style={styles.proBadgeText}>PRO</Text>
+            </View>
+          )}
+        </TouchableOpacity>
 
         {/* Draw date */}
         <View style={styles.dateRow}>
@@ -299,6 +416,23 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.md,
     textAlign: 'right',
   },
+  scanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    height: 48,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
+  },
+  scanBtnText: { color: '#fff', fontSize: FontSizes.md, fontWeight: '700' },
+  proBadge: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  proBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 0.6 },
   saveBtn: {
     flexDirection: 'row',
     alignItems: 'center',

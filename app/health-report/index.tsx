@@ -20,6 +20,7 @@ import { getGoalLabel } from '../../src/constants/goals';
 import { GoalType } from '../../src/types';
 import { getPeptideById } from '../../src/data/peptides';
 import { PaywallGate } from '../../src/hooks/useFeatureGate';
+import { LabTrendsCard } from '../../src/components/LabTrendsCard';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -303,6 +304,12 @@ export default function HealthReportScreen() {
           <Text style={styles.dateRangeText}>
             Report Period: {rangeStart} - {rangeEnd}
           </Text>
+        </View>
+
+        {/* Lab Trends — surfaces user's actual bloodwork before the
+            generated report so they can see Aimee-relevant data inline. */}
+        <View style={{ marginTop: 12, marginBottom: 4 }}>
+          <LabTrendsCard />
         </View>
 
         {/* Report Preview */}
