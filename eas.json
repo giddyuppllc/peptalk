@@ -18,6 +18,7 @@
       "distribution": "store",
       "node": "22.21.0",
       "environment": "preview",
+      "autoIncrement": true,
       "ios": {
         "simulator": false
       },
