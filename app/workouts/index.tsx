@@ -92,7 +92,7 @@ function GeneratorSheet({ visible, onClose, onGenerate, gender }: GeneratorSheet
       <TouchableOpacity style={s.sheetBackdrop} activeOpacity={1} onPress={onClose}>
         <TouchableOpacity activeOpacity={1} style={[s.sheetContent, { backgroundColor: t.bg }]}>
           <View style={s.sheetHandle} />
-          <Text style={[s.sheetTitle, { color: t.text }]}>Generate Workout</Text>
+          <Text style={[s.sheetTitle, { color: t.text }]}>Generate Custom Program</Text>
           <Text style={[s.sheetSub, { color: t.textSecondary }]}>
             Built from Jamie's exercise pool using her P1/P2/P3 priority system
           </Text>
@@ -205,7 +205,7 @@ function GeneratorSheet({ visible, onClose, onGenerate, gender }: GeneratorSheet
             activeOpacity={0.85}
           >
             <Ionicons name="sparkles" size={18} color="#fff" />
-            <Text style={s.generateBtnText}>Generate Workout</Text>
+            <Text style={s.generateBtnText}>Generate Custom Program</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={s.sheetCancel} onPress={onClose}>

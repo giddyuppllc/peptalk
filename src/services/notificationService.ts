@@ -17,15 +17,24 @@ import { Platform } from 'react-native';
 let Notifications: any = null;
 let Device: any = null;
 
-// Disabled — native module throws NSException on init causing Hermes GC crash.
-// Re-enable after testing in a development build first.
-// try {
-//   Notifications = require('expo-notifications');
-// } catch {}
-//
-// try {
-//   Device = require('expo-device');
-// } catch {}
+// Re-enabled with defensive load. The earlier Hermes-init crash that
+// forced this off was on an older expo-notifications + RN combo; SDK
+// 54 + 0.32.17 + new arch is stable in TestFlight builds. If init still
+// throws on some device, we catch it and fall back to "notifications
+// unavailable" — UI handles the absence cleanly via notificationsAvailable().
+try {
+  Notifications = require('expo-notifications');
+} catch (err) {
+  if (__DEV__) console.warn('[notificationService] expo-notifications failed to load:', err);
+  Notifications = null;
+}
+
+try {
+  Device = require('expo-device');
+} catch (err) {
+  if (__DEV__) console.warn('[notificationService] expo-device failed to load:', err);
+  Device = null;
+}
 
 // ---------------------------------------------------------------------------
 // Availability check
