@@ -38,12 +38,15 @@ export default function QuickDoseScreen() {
 
   const filteredPeptides = useMemo(() => {
     if (!search.trim()) return PEPTIDES.slice(0, 20);
-    const q = search.toLowerCase();
+    // Dash/space-tolerant — "MOTSC" finds "MOTS-c", "BPC157" finds "BPC-157".
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const q = norm(search);
+    if (!q) return PEPTIDES.slice(0, 20);
     return PEPTIDES.filter(
       (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.id.toLowerCase().includes(q) ||
-        (p.abbreviation && p.abbreviation.toLowerCase().includes(q))
+        norm(p.name).includes(q) ||
+        norm(p.id).includes(q) ||
+        (p.abbreviation && norm(p.abbreviation).includes(q)),
     ).slice(0, 20);
   }, [search]);
 

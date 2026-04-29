@@ -88,14 +88,26 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Check Pro tier
+    // 2. Check Pro tier — beta-tester allowlist gets Pro access without
+    // a paid subscription. Mirrors the client-side BETA_TESTER_EMAILS in
+    // src/store/useSubscriptionStore.ts so testers see consistent behavior
+    // (UI says Pro; edge functions also honor it).
+    const BETA_TESTER_EMAILS = new Set<string>([
+      'edward@giddyupp.com',
+      'sales@sbbpeptides.com',
+    ]);
+    const isBetaTester =
+      !!user.email && BETA_TESTER_EMAILS.has(user.email.toLowerCase());
+
     const { data: profile } = await supabase
       .from('profiles')
       .select('subscription_tier')
       .eq('id', user.id)
       .single();
 
-    if (profile?.subscription_tier !== 'pro') {
+    const effectiveTier = isBetaTester ? 'pro' : (profile?.subscription_tier ?? 'free');
+
+    if (effectiveTier !== 'pro') {
       return new Response(JSON.stringify({
         error: 'Food scanning requires PepTalk Pro subscription',
         upgrade: true,

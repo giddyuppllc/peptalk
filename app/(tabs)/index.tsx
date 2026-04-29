@@ -1329,7 +1329,7 @@ export default function DashboardScreen() {
                 style={styles.maxStackCTA}
               >
                 <Text style={styles.maxStackCTALabel}>UNLOCK EVERYTHING</Text>
-                <Text style={styles.maxStackCTATitle}>Max Your Stack</Text>
+                <Text style={styles.maxStackCTATitle}>Maximize Your Stack</Text>
                 <Text style={styles.maxStackCTASub}>
                   Custom workouts, meal plans, and peptide coaching — built for your goals.
                 </Text>

@@ -73,13 +73,20 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) return json({ error: 'Invalid session' }, 401);
 
-    // Plus-tier gate (voice input is a Plus feature)
+    // Plus-tier gate — beta-tester allowlist mirrors the client allowlist.
+    const BETA_TESTER_EMAILS = new Set<string>([
+      'edward@giddyupp.com',
+      'sales@sbbpeptides.com',
+    ]);
+    const isBetaTester =
+      !!user.email && BETA_TESTER_EMAILS.has(user.email.toLowerCase());
+
     const { data: profile } = await supabase
       .from('profiles')
       .select('subscription_tier')
       .eq('id', user.id)
       .maybeSingle();
-    const tier = profile?.subscription_tier ?? 'free';
+    const tier = isBetaTester ? 'pro' : (profile?.subscription_tier ?? 'free');
     if (tier === 'free') {
       return json({ error: 'Plus or Pro tier required', upgrade: true }, 403);
     }

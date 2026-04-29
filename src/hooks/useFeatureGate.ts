@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text } from 'react-native';
 import { router } from 'expo-router';
 import { useSubscriptionStore } from '../store/useSubscriptionStore';
 import { PaywallModal } from '../components/PaywallModal';
@@ -51,30 +52,45 @@ export const PaywallGate: React.FC<{ feature: string; children: React.ReactNode 
     }
   }, [hasAccess, feature, currentTier]);
 
+  // When the paywall is dismissed (Maybe Later), pop back to the previous
+  // screen synchronously so there's no blank-render frame. Defer with
+  // requestAnimationFrame so the modal close animation can finish, then
+  // navigate. If we can't pop (deep link landed here), fall back to home.
   const handleDismiss = useCallback(() => {
     setDismissed(true);
-  }, []);
-
-  // When the paywall is dismissed (Maybe Later), pop back to the previous
-  // screen instead of leaving the user stranded on a blank page. If we can't
-  // pop (e.g. deep link landed here), fall back to the home tab.
-  useEffect(() => {
-    if (dismissed) {
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace('/(tabs)');
+    requestAnimationFrame(() => {
+      try {
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace('/(tabs)');
+        }
+      } catch {
+        // Last-resort hard-route to home — never leave the user stranded.
+        try { router.replace('/(tabs)'); } catch {}
       }
-    }
-  }, [dismissed]);
+    });
+  }, []);
 
   if (hasAccess) {
     return React.createElement(React.Fragment, null, children);
   }
 
+  // While the dismiss navigation animates, fall back to a parent-shaped
+  // wrapper rather than a blank null. If for any reason navigation fails,
+  // user sees a tap-anywhere recovery prompt instead of a frozen screen.
   if (dismissed) {
-    // Render nothing for the brief tick before the navigation effect runs.
-    return null;
+    return React.createElement(
+      View,
+      {
+        style: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+        accessibilityRole: 'button',
+        onTouchEnd: () => {
+          try { router.replace('/(tabs)'); } catch {}
+        },
+      },
+      React.createElement(Text, { style: { color: '#9ca3af', fontSize: 13 } }, 'Returning…'),
+    );
   }
 
   return React.createElement(PaywallModal, {

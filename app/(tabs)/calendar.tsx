@@ -253,6 +253,7 @@ export default function CalendarScreen() {
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [selectedDate, setSelectedDate] = useState(toDateKey(now));
   const [daySummaryOpen, setDaySummaryOpen] = useState(false);
+  const [showAddSheet, setShowAddSheet] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
 
   // Auto-open the dose log modal when arriving with ?openLog=1 (from Home FAB)
@@ -608,9 +609,15 @@ export default function CalendarScreen() {
               <Text style={[styles.headerTitle, { color: t.text }]}>My Calendar</Text>
               <Text style={[styles.headerSub, { color: t.textSecondary }]}>Wellness journal & personal tracking</Text>
             </View>
-            <View style={styles.headerIconWrap}>
-              <Ionicons name="calendar" size={22} color={Colors.rose} />
-            </View>
+            <TouchableOpacity
+              style={[styles.headerAddBtn, { backgroundColor: t.primary }]}
+              onPress={() => setShowAddSheet(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Add to calendar"
+              activeOpacity={0.85}
+            >
+              <Ionicons name="add" size={22} color="#fff" />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -1336,6 +1343,55 @@ export default function CalendarScreen() {
         dateKey={selectedDate}
         onClose={() => setDaySummaryOpen(false)}
       />
+
+      {/* Quick-add picker — covers Workouts / Meals / Doses / Cycle.
+          Free + Pro both have access to manual logging from this entry. */}
+      <Modal
+        visible={showAddSheet}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowAddSheet(false)}
+      >
+        <TouchableOpacity
+          style={styles.addSheetOverlay}
+          activeOpacity={1}
+          onPress={() => setShowAddSheet(false)}
+        >
+          <View style={[styles.addSheet, { backgroundColor: t.bg }]}>
+            <SafeAreaView edges={['bottom']}>
+              <View style={styles.addSheetHandle}>
+                <View style={[styles.addSheetHandleBar, { backgroundColor: t.textMuted }]} />
+              </View>
+              <Text style={[styles.addSheetTitle, { color: t.text }]}>Add to {selectedDate === toDateKey(now) ? 'today' : new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
+              <Text style={[styles.addSheetSub, { color: t.textSecondary }]}>What would you like to log?</Text>
+              {[
+                { label: 'Meal', icon: 'restaurant-outline' as const, color: '#6FA891', route: '/nutrition' },
+                { label: 'Peptide dose', icon: 'flask-outline' as const, color: '#3E7CB1', route: `/(tabs)/calendar?openLog=1&date=${selectedDate}` },
+                { label: 'Workout', icon: 'barbell-outline' as const, color: '#D98C86', route: '/workouts' },
+                { label: 'Daily check-in', icon: 'clipboard-outline' as const, color: '#E89672', route: `/(tabs)/check-in?date=${selectedDate}` },
+                { label: 'Stack', icon: 'layers-outline' as const, color: '#9B86A4', route: '/(tabs)/my-stacks' },
+              ].map((opt) => (
+                <TouchableOpacity
+                  key={opt.label}
+                  style={[styles.addSheetRow, { borderBottomColor: t.cardBorder }]}
+                  onPress={() => {
+                    setShowAddSheet(false);
+                    // Defer routing so the sheet animation isn't thrashed
+                    setTimeout(() => router.push(opt.route as any), 80);
+                  }}
+                  accessibilityRole="button"
+                >
+                  <View style={[styles.addSheetIcon, { backgroundColor: `${opt.color}20` }]}>
+                    <Ionicons name={opt.icon} size={20} color={opt.color} />
+                  </View>
+                  <Text style={[styles.addSheetLabel, { color: t.text }]}>{opt.label}</Text>
+                  <Ionicons name="chevron-forward" size={18} color={t.textSecondary} />
+                </TouchableOpacity>
+              ))}
+            </SafeAreaView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1362,6 +1418,47 @@ const styles = StyleSheet.create({
 
   // Weekly summary card
   weeklyWrap: { paddingHorizontal: Spacing.md, marginTop: Spacing.md },
+
+  // Calendar header add button
+  headerAddBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Add-to-calendar bottom sheet
+  addSheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  addSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  addSheetHandle: { alignItems: 'center', paddingTop: 10, paddingBottom: 12 },
+  addSheetHandleBar: { width: 36, height: 4, borderRadius: 2, opacity: 0.3 },
+  addSheetTitle: { fontSize: 18, fontWeight: '700', marginBottom: 2 },
+  addSheetSub: { fontSize: 13, marginBottom: 12 },
+  addSheetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
+  addSheetIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addSheetLabel: { flex: 1, fontSize: 15, fontWeight: '600' },
 
   // Alerts
   alertSection: { paddingHorizontal: Spacing.md, marginTop: Spacing.md, gap: Spacing.sm },

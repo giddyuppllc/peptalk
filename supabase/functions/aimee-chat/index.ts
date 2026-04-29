@@ -67,14 +67,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Check subscription tier
+    // 2. Check subscription tier — beta-tester allowlist gets Pro access
+    // without a paid sub, mirroring the client BETA_TESTER_EMAILS.
+    const BETA_TESTER_EMAILS = new Set<string>([
+      'edward@giddyupp.com',
+      'sales@sbbpeptides.com',
+    ]);
+    const isBetaTester =
+      !!user.email && BETA_TESTER_EMAILS.has(user.email.toLowerCase());
+
     const { data: profile } = await supabase
       .from('profiles')
       .select('subscription_tier')
       .eq('id', user.id)
       .single();
 
-    const tier = profile?.subscription_tier ?? 'free';
+    const tier = isBetaTester ? 'pro' : (profile?.subscription_tier ?? 'free');
     const limit = RATE_LIMITS[tier] ?? 0;
 
     if (limit === 0) {

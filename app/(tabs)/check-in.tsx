@@ -579,7 +579,7 @@ export default function CheckInScreen() {
         {/* Step 1: Mood */}
         {step.key === 'mood' && (
           <>
-            <RatingRow label="Mood" value={mood} onChange={setMood} />
+            <RatingRow label="Mood" value={mood} onChange={setMood} lowLabel="Low" highLabel="Great" />
             <View style={styles.chipWrap}>
               {EMOTION_OPTIONS.map((opt) => {
                 const selected = emotionTags.includes(opt.value);
@@ -630,16 +630,16 @@ export default function CheckInScreen() {
         {/* Step 2: Body & Energy */}
         {step.key === 'body' && (
           <>
-            <RatingRow label="Energy" value={energy} onChange={setEnergy} />
-            <RatingRow label="Recovery" value={recovery} onChange={setRecovery} />
-            <RatingRow label="Appetite" value={appetite} onChange={setAppetite} />
+            <RatingRow label="Energy" value={energy} onChange={setEnergy} lowLabel="Drained" highLabel="High" />
+            <RatingRow label="Recovery" value={recovery} onChange={setRecovery} lowLabel="Sore" highLabel="Recovered" />
+            <RatingRow label="Appetite" value={appetite} onChange={setAppetite} lowLabel="Suppressed" highLabel="Hungry" />
           </>
         )}
 
         {/* Step 3: Sleep & Stress */}
         {step.key === 'sleep' && (
           <>
-            <RatingRow label="Sleep Quality" value={sleepQuality} onChange={setSleepQuality} />
+            <RatingRow label="Sleep Quality" value={sleepQuality} onChange={setSleepQuality} lowLabel="Poor" highLabel="Great" />
             <RatingRow
               label="Stress"
               value={stress}

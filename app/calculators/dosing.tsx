@@ -78,12 +78,16 @@ export default function DosingCalculatorScreen() {
 
   const filteredPeptides = useMemo(() => {
     if (!searchQuery.trim()) return PEPTIDES;
-    const q = searchQuery.toLowerCase();
+    // Strip non-alphanumerics so "MOTSC" finds "MOTS-c", "BPC157" finds
+    // "BPC-157", etc. Real-world users frequently omit the dash.
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const q = norm(searchQuery);
+    if (!q) return PEPTIDES;
     return PEPTIDES.filter(
       (p) =>
-        p.name.toLowerCase().includes(q) ||
-        (p.abbreviation && p.abbreviation.toLowerCase().includes(q)) ||
-        p.id.toLowerCase().includes(q)
+        norm(p.name).includes(q) ||
+        (p.abbreviation && norm(p.abbreviation).includes(q)) ||
+        norm(p.id).includes(q),
     );
   }, [searchQuery]);
 
@@ -175,7 +179,7 @@ export default function DosingCalculatorScreen() {
       const maxMcg = unit === 'mg' ? max * 1000 : max;
       if (doseMcg > 0 && (doseMcg < minMcg || doseMcg > maxMcg)) {
         warnings.push(
-          `Your dose (${formatDoseInline(doseMcg)}) is outside the typical research range for ${selectedPeptide!.name} (${min}–${max} ${unit}). Verify with your protocol.`
+          `Your dose (${formatDoseInline(doseMcg)}) is outside the typical research range for ${selectedPeptide?.name ?? 'this peptide'} (${min}–${max} ${unit}). Verify with your protocol.`
         );
       }
     }
