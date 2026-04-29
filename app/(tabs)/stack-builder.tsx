@@ -231,6 +231,13 @@ export default function StackBuilderScreen() {
             <Text style={[styles.sectionLabel, { color: t.textSecondary }]}>INTERACTIONS</Text>
             {pairwiseInteractions.map((pair, index) => {
               const color = getInteractionColor(pair.interaction.interactionType);
+              // Mechanism summary — first sentence of mechanismAnalysis is
+              // the lay-friendly explanation. Gives users actual context
+              // beyond a score, so they understand WHY the pairing scored
+              // the way it did.
+              const mechanismFirstSentence = (pair.interaction.mechanismAnalysis ?? '')
+                .split(/\.\s|\.$/)
+                .find((s) => s.trim().length > 0);
               return (
                 <View key={index} style={[styles.previewCard, { borderLeftColor: color, backgroundColor: t.card, borderColor: t.cardBorder }]}>
                   <View style={styles.previewRow}>
@@ -240,6 +247,14 @@ export default function StackBuilderScreen() {
                     <Text style={[styles.previewScore, { color }]}>{pair.interaction.synergyScore}/10</Text>
                   </View>
                   <Text style={[styles.previewType, { color }]}>{pair.interaction.interactionType}</Text>
+                  {mechanismFirstSentence && (
+                    <Text
+                      style={[styles.previewMechanism, { color: t.textSecondary }]}
+                      numberOfLines={3}
+                    >
+                      {mechanismFirstSentence.trim()}.
+                    </Text>
+                  )}
                 </View>
               );
             })}
@@ -430,6 +445,7 @@ const styles = StyleSheet.create({
   previewPair: { fontSize: 13, fontFamily: 'DMSans-SemiBold', flex: 1 },
   previewScore: { fontSize: 13, fontFamily: 'DMSans-Bold', marginLeft: 8 },
   previewType: { fontSize: 11, fontFamily: 'DMSans-Medium', textTransform: 'capitalize', marginTop: 4 },
+  previewMechanism: { fontSize: 12, lineHeight: 17, marginTop: 6 },
 
   // Add peptides
   addSection: { marginBottom: 16 },

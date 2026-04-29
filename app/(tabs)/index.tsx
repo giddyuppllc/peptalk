@@ -35,6 +35,8 @@ import { MacroProgressRing } from '../../src/components/MacroProgressRing';
 import { ActiveProtocolBanner } from '../../src/components/ActiveProtocolBanner';
 import { TodaysPlanCard } from '../../src/components/TodaysPlanCard';
 import { PantryAlertCard } from '../../src/components/PantryAlertCard';
+import { DailyInsightCard } from '../../src/components/DailyInsightCard';
+import { ReadinessCard } from '../../src/components/ReadinessCard';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import {
@@ -996,6 +998,17 @@ export default function DashboardScreen() {
         </View>
         <View style={styles.protocolBannerWrap}>
           <ActiveProtocolBanner />
+        </View>
+
+        {/* Readiness composite — HRV/RHR/sleep vs baselines + check-in. */}
+        <View style={styles.protocolBannerWrap}>
+          <ReadinessCard />
+        </View>
+
+        {/* "Aimee noticed..." — single most-relevant data-derived insight.
+            Hides when nothing fires. Different voice from chat chips. */}
+        <View style={styles.protocolBannerWrap}>
+          <DailyInsightCard />
         </View>
 
         {/* Today's plan — context-aware to-do list. Hides itself when nothing's left. */}
