@@ -8,7 +8,7 @@ import {
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Animated, Text } from 'react-native';
+import { View, StyleSheet, Animated, Text, AppState } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts } from 'expo-font';
@@ -288,9 +288,45 @@ function RootLayout() {
       useIntegrationsStore.getState().syncFromServer()?.catch?.(() => {});
     });
 
+    // Foreground sync — when the user returns to the app after backgrounding,
+    // pull fresh device data from any connected biomarker source so the
+    // calendar / weekly summary reflect overnight steps + sleep without
+    // the user having to manually tap Sync in Settings. Throttled to once
+    // per 10 minutes so a quick app-switch doesn't spam HealthKit.
+    let lastForegroundSync = 0;
+    const FOREGROUND_SYNC_THROTTLE_MS = 10 * 60 * 1000;
+    let appStateRef = AppState.currentState;
+    const appStateSub = AppState.addEventListener('change', (next) => {
+      const wentForeground =
+        appStateRef.match(/inactive|background/) && next === 'active';
+      appStateRef = next;
+      if (!wentForeground) return;
+      const now = Date.now();
+      if (now - lastForegroundSync < FOREGROUND_SYNC_THROTTLE_MS) return;
+      lastForegroundSync = now;
+
+      try {
+        const integrationsState = useIntegrationsStore.getState();
+        // Sync only sources that are actually connected — don't fire OS
+        // permission prompts on every foreground for sources the user
+        // hasn't opted into.
+        const connected = integrationsState.integrations.filter((i) => i.connected);
+        for (const intg of connected) {
+          integrationsState
+            .syncAndRoute(intg.source, intg.scopes)
+            ?.catch?.((err: unknown) => {
+              if (__DEV__) console.warn(`[foreground-sync] ${intg.source} failed:`, err);
+            });
+        }
+      } catch (err) {
+        if (__DEV__) console.warn('[foreground-sync] threw:', err);
+      }
+    });
+
     return () => {
       try { endIAP(); } catch {}
       try { unsubReconnect?.(); } catch {}
+      try { appStateSub?.remove(); } catch {}
     };
   }, []);
 

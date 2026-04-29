@@ -159,7 +159,69 @@ export function warmKnowledgeBase(): void {
 }
 
 // ---------------------------------------------------------------------------
-// System prompt
+// Server-side context payload
+// ---------------------------------------------------------------------------
+//
+// What we send to the aimee-chat edge function. All free-form text is
+// pre-summarized client-side — the server NEVER receives raw user input
+// for the system prompt. The full prompt is rebuilt server-side from the
+// hardcoded safety preamble + these summary fields.
+
+interface AimeeServerContext {
+  hasConsent: boolean;
+  simpleMode: boolean;
+  activeProtocolSummary?: string;
+  recentDosesSummary?: string;
+  healthAlertsSummary?: string;
+  healthProfileSummary?: string;
+  currentRoute?: string;
+}
+
+function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
+  const { hasConsent } = sanitizeForLLM(context);
+
+  const protoNames = (context.activeProtocols ?? [])
+    .slice(0, 5)
+    .map((p) => (p as { name?: string; peptideName?: string }).name ?? (p as { peptideName?: string }).peptideName ?? '')
+    .filter(Boolean)
+    .join(', ');
+
+  const recentDoseCount = context.recentDoses?.length ?? 0;
+  const lastDose = context.recentDoses?.[0];
+  const recentDosesSummary = recentDoseCount > 0
+    ? `${recentDoseCount} doses in the last 14 days; most recent ${(lastDose as any)?.peptideName ?? 'unknown'} on ${(lastDose as any)?.date ?? 'unknown date'}`
+    : undefined;
+
+  const alertCount = context.healthAlerts?.length ?? 0;
+  const healthAlertsSummary = alertCount > 0
+    ? `${alertCount} active health alert${alertCount === 1 ? '' : 's'}`
+    : undefined;
+
+  const profile = context.healthProfile;
+  const healthProfileSummary = profile
+    ? [
+        (profile as any).biologicalSex,
+        (profile as any).age ? `age ${(profile as any).age}` : null,
+        (profile as any).pregnant ? 'pregnant' : null,
+        (profile as any).nursing ? 'nursing' : null,
+      ].filter(Boolean).join(', ')
+    : undefined;
+
+  return {
+    hasConsent,
+    simpleMode: context.simpleMode === true,
+    activeProtocolSummary: protoNames || undefined,
+    recentDosesSummary,
+    healthAlertsSummary,
+    healthProfileSummary: healthProfileSummary || undefined,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Local-fallback system prompt (used ONLY when the edge function is down
+// and we fall through to the local intent-detection bot inside this file).
+// Production Aimee always uses the server-side prompt in
+// supabase/functions/aimee-chat/_prompt.ts — keep in lockstep when editing.
 // ---------------------------------------------------------------------------
 
 function buildSystemPrompt(context: EnhancedBotContext): string {
@@ -393,7 +455,12 @@ export async function generateAIResponse(
   }));
   conversationMessages.push({ role: 'user' as const, content: userMessage });
 
-  const systemPrompt = buildSystemPrompt(context);
+  // The full system prompt is now built SERVER-SIDE in the aimee-chat edge
+  // function (see supabase/functions/aimee-chat/_prompt.ts). We only send a
+  // small context object here — never free-form prompt text — so a tampered
+  // client cannot override the safety rules. buildSystemPrompt below is now
+  // used only for the local fallback bot when the edge function is down.
+  const serverContext = buildServerContext(context);
   let rawResponse: string | null = null;
 
   // ── Try Supabase Edge Function first ──
@@ -408,7 +475,7 @@ export async function generateAIResponse(
             'Content-Type': 'application/json',
             'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
           },
-          body: JSON.stringify({ messages: conversationMessages, systemPrompt }),
+          body: JSON.stringify({ messages: conversationMessages, context: serverContext }),
         });
 
         if (res.ok) {
@@ -435,10 +502,14 @@ export async function generateAIResponse(
   // ── Fallback: Direct API call — DEV ONLY to avoid exposing key in production ──
   if (!rawResponse && __DEV__ && XAI_API_KEY) {
     try {
+      // Dev-only direct call (no edge function in DEV without local supabase).
+      // Uses the local-fallback prompt — production always goes through the
+      // edge function with the server-side prompt + safety trailer.
+      const devSystemPrompt = buildSystemPrompt(context);
       const completion = await getClient().chat.completions.create({
         model: MODEL,
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: devSystemPrompt },
           ...conversationMessages as OpenAI.ChatCompletionMessageParam[],
         ],
         max_tokens: 1024,

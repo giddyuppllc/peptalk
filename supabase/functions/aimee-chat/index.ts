@@ -11,6 +11,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { buildAimeeSystemPrompt, SAFETY_TRAILER, type AimeeServerContext } from './_prompt.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 // Default to Grok — matches the other edge functions. If secrets aren't set
@@ -33,7 +34,6 @@ const RATE_LIMITS: Record<string, number> = {
 // Hard limits on incoming payload to prevent "giant context" cost abuse.
 const MAX_MESSAGES = 30;
 const MAX_TOTAL_CHARS = 40_000;   // ~10K tokens — well above normal chat
-const MAX_SYSTEM_PROMPT_CHARS = 8_000;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -102,7 +102,19 @@ Deno.serve(async (req) => {
     }
 
     // 4. Parse + validate request body
-    const { messages, systemPrompt } = await req.json();
+    //
+    // Accept the new `context` shape AND the legacy `systemPrompt` field for
+    // one release cycle (already-deployed TestFlight builds send systemPrompt).
+    // The legacy field is IGNORED for safety — we always build the system
+    // prompt server-side. Old clients lose dynamic context but get a working
+    // bot with the safety preamble intact.
+    const { messages, context: clientContext, systemPrompt: legacyClientPrompt } = await req.json();
+
+    if (legacyClientPrompt && !clientContext) {
+      console.warn(
+        '[aimee-chat] Legacy client sent systemPrompt — ignoring (build > 1.9.0 should send context instead)',
+      );
+    }
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: 'Invalid request: messages required' }), {
@@ -129,16 +141,39 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Clamp client-supplied systemPrompt. Not a hard security boundary (caller's
-    // own account, own cost), but bounds cost-abuse from a giant prompt.
-    const safeSystemPrompt =
-      typeof systemPrompt === 'string'
-        ? systemPrompt.slice(0, MAX_SYSTEM_PROMPT_CHARS)
-        : '';
+    // Build the system prompt SERVER-SIDE. Anything the client sends in
+    // `clientContext` is treated as data — it's coerced into a typed
+    // AimeeServerContext and only the whitelisted fields flow into the
+    // prompt builder. Free-form text never reaches the system role.
+    const safeContext: AimeeServerContext = {
+      tier,
+      hasConsent: clientContext?.hasConsent === true,
+      simpleMode: clientContext?.simpleMode === true,
+      activeProtocolSummary: typeof clientContext?.activeProtocolSummary === 'string'
+        ? clientContext.activeProtocolSummary.slice(0, 500)
+        : undefined,
+      recentDosesSummary: typeof clientContext?.recentDosesSummary === 'string'
+        ? clientContext.recentDosesSummary.slice(0, 500)
+        : undefined,
+      healthAlertsSummary: typeof clientContext?.healthAlertsSummary === 'string'
+        ? clientContext.healthAlertsSummary.slice(0, 500)
+        : undefined,
+      healthProfileSummary: typeof clientContext?.healthProfileSummary === 'string'
+        ? clientContext.healthProfileSummary.slice(0, 500)
+        : undefined,
+      currentRoute: typeof clientContext?.currentRoute === 'string'
+        ? clientContext.currentRoute.slice(0, 100)
+        : undefined,
+    };
+    const serverSystemPrompt = buildAimeeSystemPrompt(safeContext);
 
     // 5. Call OpenAI/Grok — 45s timeout prevents a hung upstream from
     // burning our entire edge-function budget and erroring with a 500
     // (which looks worse to the user than "AI unavailable, try again").
+    //
+    // Message order: [system, ...user/assistant history, SAFETY_TRAILER as user]
+    // The trailer goes LAST so even an adversarial earlier message can't
+    // shadow it — models weight recent context most.
     const openaiResponse = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -148,8 +183,9 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: OPENAI_MODEL,
         messages: [
-          { role: 'system', content: safeSystemPrompt },
+          { role: 'system', content: serverSystemPrompt },
           ...messages,
+          { role: 'user', content: SAFETY_TRAILER },
         ],
         max_tokens: 1024,
         temperature: 0.7,

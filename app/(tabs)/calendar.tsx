@@ -27,6 +27,7 @@ import { WeeklySummaryCard } from '../../src/components/WeeklySummaryCard';
 import { DOSE_LOG_GATE_DISCLAIMER } from '../../src/constants/legal';
 import { checkDoseSafety } from '../../src/services/doseSafety';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import { computeCyclePhase } from '../../src/services/cycleService';
 import { PROTOCOL_TEMPLATES } from '../../src/data/protocols';
 import {
   DoseLogEntry,
@@ -348,6 +349,39 @@ export default function CalendarScreen() {
     [viewYear, viewMonth]
   );
 
+  // ── Cycle prediction overlay ──
+  // For female users with cycle tracking enabled, compute the phase per
+  // visible day so the calendar grid can tint period / fertile / ovulation
+  // cells. Computed once per (lastPeriodStartDate, monthDays) — phase math
+  // is cheap but no point doing it 42 times if we can map it once.
+  const healthProfile = useHealthProfileStore((s) => s.profile);
+  const cycleEnabled =
+    healthProfile?.biologicalSex === 'female' &&
+    healthProfile?.cycle?.trackingEnabled === true &&
+    !!healthProfile?.cycle?.lastPeriodStartDate;
+
+  const cyclePhaseByDate = useMemo(() => {
+    if (!cycleEnabled) return new Map<string, 'menstrual' | 'follicular' | 'ovulatory' | 'luteal'>();
+    const map = new Map<string, 'menstrual' | 'follicular' | 'ovulatory' | 'luteal'>();
+    for (const d of monthDays) {
+      const key = toDateKey(d);
+      const info = computeCyclePhase(
+        healthProfile.cycle?.lastPeriodStartDate,
+        healthProfile.cycle?.typicalCycleLength,
+        healthProfile.cycle?.typicalPeriodLength,
+        d,
+      );
+      if (info) map.set(key, info.phase);
+    }
+    return map;
+  }, [
+    cycleEnabled,
+    monthDays,
+    healthProfile?.cycle?.lastPeriodStartDate,
+    healthProfile?.cycle?.typicalCycleLength,
+    healthProfile?.cycle?.typicalPeriodLength,
+  ]);
+
   const prevMonth = () => {
     if (viewMonth === 0) {
       setViewMonth(11);
@@ -654,11 +688,23 @@ export default function CalendarScreen() {
               const hasJournal = journalDates.has(key);
               const hasWorkout = workoutDates.has(key);
               const hasMeal = mealDates.has(key);
+              const cyclePhase = cyclePhaseByDate.get(key);
+              // Light-blue palette for cycle phase tints. Period = strongest,
+              // ovulation = mid, fertile-window-adjacent = soft. Other days
+              // get nothing so the grid doesn't look noisy.
+              const phaseTint =
+                cyclePhase === 'menstrual'  ? 'rgba(217, 140, 134, 0.18)' :  // soft rose for period
+                cyclePhase === 'ovulatory'  ? 'rgba(127, 179, 216, 0.22)' :  // light blue for ovulation
+                cyclePhase === 'follicular' ? 'rgba(127, 179, 216, 0.10)' :  // very light blue for fertile-side follicular
+                undefined;
 
               return (
                 <TouchableOpacity
                   key={idx}
-                  style={styles.dayCell}
+                  style={[
+                    styles.dayCell,
+                    phaseTint && isCurrentMonth ? { backgroundColor: phaseTint, borderRadius: 10 } : null,
+                  ]}
                   onPress={() => setSelectedDate(key)}
                   onLongPress={() => { setSelectedDate(key); setDaySummaryOpen(true); }}
                   activeOpacity={0.7}
@@ -738,6 +784,24 @@ export default function CalendarScreen() {
               <Text style={[styles.legendText, { color: t.textSecondary }]}>Meal</Text>
             </View>
           </View>
+
+          {/* Cycle-phase legend — only when tracking is on */}
+          {cycleEnabled && (
+            <View style={[styles.legend, { borderTopColor: t.glassBorder, marginTop: 8, paddingTop: 8 }]}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: 'rgba(217, 140, 134, 0.55)' }]} />
+                <Text style={[styles.legendText, { color: t.textSecondary }]}>Period</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: 'rgba(127, 179, 216, 0.7)' }]} />
+                <Text style={[styles.legendText, { color: t.textSecondary }]}>Ovulation</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: 'rgba(127, 179, 216, 0.35)' }]} />
+                <Text style={[styles.legendText, { color: t.textSecondary }]}>Follicular</Text>
+              </View>
+            </View>
+          )}
         </GlassCard>
 
         {/* Selected Day Detail -- Unified Timeline */}

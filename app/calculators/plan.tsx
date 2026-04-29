@@ -34,6 +34,9 @@ import { useOnboardingStore } from '../../src/store/useOnboardingStore';
 import { GOAL_OPTIONS } from '../../src/constants/goals';
 import { GOAL_PEPTIDE_MATRIX, recommendPeptidesForGoal } from '../../src/data/goalPeptideMatrix';
 import { getPeptideById } from '../../src/data/peptides';
+import { getProtocolsByPeptide } from '../../src/data/protocols';
+import { useDoseLogStore } from '../../src/store/useDoseLogStore';
+import { Alert } from 'react-native';
 import type { GoalType, ActivityLevel } from '../../src/types';
 
 const ACTIVITY_OPTIONS: { value: ActivityLevel; label: string }[] = [
@@ -68,6 +71,74 @@ export default function PlanCycleScreen() {
   const setLifestyle = useHealthProfileStore((s) => s.setLifestyle);
   const setPeptideExperience = useHealthProfileStore((s) => s.setPeptideExperience);
   const onboardingProfile = useOnboardingStore((s) => s.profile);
+  const addProtocol = useDoseLogStore((s) => s.addProtocol);
+  const activeProtocols = useDoseLogStore((s) => s.protocols);
+
+  /**
+   * Start a cycle for a recommended peptide. Loads the first protocol
+   * template for that peptide (most common dosing pattern), creates an
+   * ActiveProtocol entry, and routes the user to the calendar so the
+   * cycle is immediately visible. If no template exists we route to the
+   * peptide page so the user can pick one manually.
+   */
+  const startCycle = (peptideId: string, peptideName: string) => {
+    const protocols = getProtocolsByPeptide(peptideId);
+    if (protocols.length === 0) {
+      Alert.alert(
+        'Pick a protocol first',
+        `${peptideName} has multiple research protocols. Open the peptide page to review them and pick the one that matches your provider's plan.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open page', onPress: () => router.push(`/peptide/${peptideId}` as any) },
+        ],
+      );
+      return;
+    }
+
+    // Reject if user already has this peptide active — prevents duplicate
+    // protocols on double-tap or accidental re-start.
+    const alreadyActive = activeProtocols.find(
+      (p) => p.peptideId === peptideId && p.isActive,
+    );
+    if (alreadyActive) {
+      Alert.alert(
+        'Already active',
+        `You're already on a ${peptideName} protocol. Open the calendar to see your current cycle, or stop it before starting fresh.`,
+        [{ text: 'OK' }],
+      );
+      return;
+    }
+
+    const template = protocols[0];
+    // Use titration starter dose if a ladder exists, otherwise use the
+    // mid-point of typicalDose so the user isn't started at the max.
+    const starterDose = template.titrationSchedule?.[0]
+      ? template.titrationSchedule[0].dose
+      : Math.round((template.typicalDose.min + template.typicalDose.max) / 2);
+    const starterUnit = template.titrationSchedule?.[0]?.unit ?? template.typicalDose.unit;
+
+    Alert.alert(
+      `Start ${peptideName} cycle?`,
+      `Protocol: ${template.name}\nStarting dose: ${starterDose} ${starterUnit}\nFrequency: ${template.frequencyLabel}\nDuration: ${template.durationWeeks.min}–${template.durationWeeks.max} weeks\n\nThis is informational, not medical advice. Discuss with your provider before starting.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Start cycle',
+          onPress: () => {
+            addProtocol({
+              peptideId,
+              templateId: template.id,
+              dose: starterDose,
+              unit: starterUnit,
+              route: template.route,
+              frequency: template.frequency,
+            });
+            router.push('/(tabs)/calendar' as any);
+          },
+        },
+      ],
+    );
+  };
 
   // Local goal state (not persisted — chosen per planning session)
   const [selectedGoal, setSelectedGoal] = useState<GoalType | null>(
@@ -268,18 +339,17 @@ export default function PlanCycleScreen() {
             </Text>
             {recommendations.map((rec) => {
               const tierStyle = TIER_COLORS[rec.tier];
+              const peptideName = rec.peptide?.name ?? rec.id;
+              const isAlreadyActive = activeProtocols.some(
+                (p) => p.peptideId === rec.id && p.isActive,
+              );
               return (
-                <AnimatedPress
-                  key={rec.id}
-                  onPress={() => router.push(`/peptide/${rec.id}` as any)}
-                  style={styles.recCardPress}
-                >
-                  <GlassCard style={styles.recCard}>
+                <GlassCard key={rec.id} style={styles.recCardWithSpace}>
+                  {/* Tappable header → peptide detail */}
+                  <AnimatedPress onPress={() => router.push(`/peptide/${rec.id}` as any)}>
                     <View style={styles.recHeader}>
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.recName, { color: t.text }]}>
-                          {rec.peptide?.name ?? rec.id}
-                        </Text>
+                        <Text style={[styles.recName, { color: t.text }]}>{peptideName}</Text>
                         <View style={[styles.tierBadge, { backgroundColor: tierStyle.bg }]}>
                           <Text style={styles.tierBadgeText}>{tierStyle.label}</Text>
                         </View>
@@ -301,8 +371,43 @@ export default function PlanCycleScreen() {
                         )}
                       </View>
                     )}
-                  </GlassCard>
-                </AnimatedPress>
+                  </AnimatedPress>
+
+                  {/* Start-cycle CTA — separate touchable so the tap doesn't bubble to the card */}
+                  <View style={[styles.recActions, { borderTopColor: t.cardBorder }]}>
+                    <TouchableOpacity
+                      onPress={() => startCycle(rec.id, peptideName)}
+                      disabled={isAlreadyActive}
+                      style={[
+                        styles.startCycleBtn,
+                        {
+                          backgroundColor: isAlreadyActive ? `${t.textMuted}30` : accent.deep,
+                          opacity: isAlreadyActive ? 0.7 : 1,
+                        },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled: isAlreadyActive }}
+                    >
+                      <Ionicons
+                        name={isAlreadyActive ? 'checkmark-circle' : 'play'}
+                        size={14}
+                        color="#fff"
+                      />
+                      <Text style={styles.startCycleBtnText}>
+                        {isAlreadyActive ? 'Already active' : 'Start cycle'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => router.push(`/peptide/${rec.id}` as any)}
+                      style={[styles.viewProtocolBtn, { borderColor: t.cardBorder }]}
+                      accessibilityRole="button"
+                    >
+                      <Text style={[styles.viewProtocolBtnText, { color: t.text }]}>
+                        View protocol
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </GlassCard>
               );
             })}
 
@@ -450,6 +555,7 @@ const styles = StyleSheet.create({
   // Recommendations
   recCardPress: { marginBottom: Spacing.sm },
   recCard: { padding: Spacing.md },
+  recCardWithSpace: { padding: Spacing.md, marginBottom: Spacing.sm },
   recHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   recName: { fontSize: FontSizes.lg, fontWeight: '700', marginBottom: 4 },
   tierBadge: {
@@ -468,6 +574,32 @@ const styles = StyleSheet.create({
   recReason: { fontSize: FontSizes.sm, lineHeight: 19, marginTop: 6 },
   recMetaRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.sm },
   recMetaItem: { fontSize: FontSizes.xs, fontWeight: '500' },
+  recActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: Spacing.md,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+  },
+  startCycleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+  },
+  startCycleBtnText: { color: '#fff', fontSize: FontSizes.sm, fontWeight: '700' },
+  viewProtocolBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewProtocolBtnText: { fontSize: FontSizes.sm, fontWeight: '600' },
   showMoreBtn: {
     flexDirection: 'row',
     alignItems: 'center',

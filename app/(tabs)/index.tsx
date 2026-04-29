@@ -30,6 +30,8 @@ import { CategoryGrid } from '../../src/components/CategoryGrid';
 import { PeptideCard } from '../../src/components/PeptideCard';
 import { Disclaimer } from '../../src/components/Disclaimer';
 import { LeaderboardStrip } from '../../src/components/LeaderboardStrip';
+import { StepGoalRing } from '../../src/components/StepGoalRing';
+import { ActiveProtocolBanner } from '../../src/components/ActiveProtocolBanner';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import {
@@ -979,6 +981,18 @@ export default function DashboardScreen() {
         </RNAnimated.View>
 
         {/* ═══════════════════════════════════════════════════════════════
+            DAILY HEALTH SNAPSHOT — step goal ring + active protocol banner
+        ═══════════════════════════════════════════════════════════════ */}
+        <View style={styles.healthSnapshotRow}>
+          <StepGoalRing
+            onPress={() => router.push('/settings/integrations' as any)}
+          />
+          <View style={{ flex: 1 }}>
+            <ActiveProtocolBanner />
+          </View>
+        </View>
+
+        {/* ═══════════════════════════════════════════════════════════════
             GET STARTED (new users only)
         ═══════════════════════════════════════════════════════════════ */}
         {!allSetupComplete && (
@@ -1686,6 +1700,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   section: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: 20,
+  },
+  healthSnapshotRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
     paddingHorizontal: Spacing.lg,
     marginBottom: 20,
   },
