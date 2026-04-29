@@ -285,10 +285,42 @@ export default function RecipeGeneratorScreen() {
           return;
         }
       }
-      // Fallback to hardcoded recipes
-      setRecipes(FALLBACK_RECIPES);
+      // AI was unavailable or returned nothing — surface a fallback that
+      // STILL respects the user's allergens + macros. Filter the canned
+      // recipes against the user's profile so we never propose something
+      // they can't eat. If everything filters out, show an honest message
+      // instead of a misleading recipe.
+      const allergenSet = new Set(allergens.map((a) => a.toLowerCase()));
+      const safe = FALLBACK_RECIPES.filter((r) => {
+        const haystack = (r.name + ' ' + r.ingredients.join(' ')).toLowerCase();
+        return !allergens.some((a) => haystack.includes(a.toLowerCase()));
+      });
+      // Tier the macros toward the user's per-meal target if known.
+      // We don't change the recipe itself — just sort so the closest match
+      // surfaces first.
+      const perMealTarget = targets ? Math.round(targets.calories / 3) : null;
+      const sorted = perMealTarget
+        ? safe.slice().sort((a, b) =>
+            Math.abs(a.macros.calories - perMealTarget) - Math.abs(b.macros.calories - perMealTarget))
+        : safe;
+      if (sorted.length === 0) {
+        Alert.alert(
+          'Aimee unavailable',
+          'AI recipe generation is offline and our offline backups don\'t match your allergens. Try again in a minute, or browse Quick Foods.',
+        );
+        setLoading(false);
+        return;
+      }
+      setRecipes(sorted);
+      void allergenSet; // touch to satisfy lint if we add filtering later
     } catch {
-      setRecipes(FALLBACK_RECIPES);
+      // Even on error, never serve a recipe with the user's allergens.
+      const safe = FALLBACK_RECIPES.filter((r) => {
+        const haystack = (r.name + ' ' + r.ingredients.join(' ')).toLowerCase();
+        const allergList = useHealthProfileStore.getState().profile?.medical?.allergies ?? [];
+        return !allergList.some((a) => haystack.includes(a.toLowerCase()));
+      });
+      setRecipes(safe);
     }
     setLoading(false);
   };

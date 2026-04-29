@@ -174,6 +174,10 @@ interface AimeeServerContext {
   recentDosesSummary?: string;
   healthAlertsSummary?: string;
   healthProfileSummary?: string;
+  /** Last-7-day biometrics rollup — steps avg, sleep avg, HRV avg, RHR avg.
+   *  Lets Aimee answer "how's my recovery been?" with real data instead of
+   *  generic advice. Pre-summarized client-side; server never sees raw rows. */
+  biometricsSummary?: string;
   currentRoute?: string;
 }
 
@@ -207,6 +211,34 @@ function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
       ].filter(Boolean).join(', ')
     : undefined;
 
+  // 7-day biometrics rollup. Pulled here at context-build time so Aimee
+  // can answer "how's my recovery been?" with the user's real numbers
+  // (steps, sleep, HRV, RHR) instead of generic advice.
+  let biometricsSummary: string | undefined;
+  try {
+    const { useBiometricsStore } = require('../store/useBiometricsStore');
+    const store = useBiometricsStore.getState();
+    const today = new Date().toISOString().slice(0, 10);
+    const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
+    const totalSteps = store.sumScopeInRange?.('steps', weekAgo, today) ?? 0;
+    const avgSteps = totalSteps > 0 ? Math.round(totalSteps / 7) : 0;
+    const avgSleepMin = store.avgScopeInRange?.('sleep_minutes', weekAgo, today);
+    const avgHrv = store.avgScopeInRange?.('hrv', weekAgo, today);
+    const avgRhr = store.avgScopeInRange?.('resting_heart_rate', weekAgo, today);
+    const parts: string[] = [];
+    if (avgSteps > 0) parts.push(`~${avgSteps.toLocaleString()} steps/day`);
+    if (avgSleepMin && !isNaN(avgSleepMin)) {
+      const h = Math.floor(avgSleepMin / 60);
+      const m = Math.round(avgSleepMin % 60);
+      parts.push(`avg sleep ${h}h${m > 0 ? ` ${m}m` : ''}`);
+    }
+    if (avgHrv && !isNaN(avgHrv)) parts.push(`avg HRV ${Math.round(avgHrv)}ms`);
+    if (avgRhr && !isNaN(avgRhr)) parts.push(`avg RHR ${Math.round(avgRhr)}bpm`);
+    biometricsSummary = parts.length > 0 ? `Last 7 days: ${parts.join(', ')}` : undefined;
+  } catch {
+    biometricsSummary = undefined;
+  }
+
   return {
     hasConsent,
     simpleMode: context.simpleMode === true,
@@ -214,6 +246,7 @@ function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
     recentDosesSummary,
     healthAlertsSummary,
     healthProfileSummary: healthProfileSummary || undefined,
+    biometricsSummary,
   };
 }
 

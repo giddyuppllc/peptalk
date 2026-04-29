@@ -153,23 +153,59 @@ export default function PlanCycleScreen() {
 
   const recommendations = useMemo(() => {
     if (!selectedGoal) return [];
-    const allergens = profile.medical.allergies ?? [];
-    const conditions = profile.medical.conditions ?? [];
+    const allergens = (profile.medical.allergies ?? []).map((a) => a.toLowerCase());
+    const conditions = (profile.medical.conditions ?? []).map((c) => c.toLowerCase());
+    const isPregnant = profile.medical?.pregnantOrNursing === true;
+
     return recommendPeptidesForGoal(selectedGoal, {
-      // Don't auto-exclude based on conditions/allergens here — surface
-      // a warning per peptide instead so user sees what to discuss with
-      // a provider rather than silently hiding options.
+      // Don't silently hide options. Surface a "review with provider" flag
+      // when the protocol's declared contraindications or caution-conditions
+      // overlap the user's profile — actionable information, not a wall.
       limit: showAllRecommendations ? undefined : 3,
-    }).map((m) => ({
-      ...m,
-      peptide: getPeptideById(m.id),
-      // Crude contraindication flag — checks free-text overlap. Not a
-      // medical filter; just a visual nudge for the user.
-      hasFlag:
-        allergens.some((a) => a.toLowerCase().includes(m.id.toLowerCase())) ||
-        conditions.length > 0, // any condition triggers a review nudge
-    }));
-  }, [selectedGoal, profile.medical.allergies, profile.medical.conditions, showAllRecommendations]);
+    }).map((m) => {
+      const protocols = getProtocolsByPeptide(m.id);
+      const proto = protocols[0];
+      // Real contraindication match: protocol declares them in the
+      // `contraindications` and `cautionConditions` arrays. Match by token.
+      const flagReasons: string[] = [];
+      if (proto) {
+        const cis = (proto.contraindications ?? []).map((s) => s.toLowerCase());
+        const cautions = (proto.cautionConditions ?? []).map((s) => s.toLowerCase());
+        // Pregnancy / nursing
+        if (
+          isPregnant &&
+          (cis.some((c) => c.includes('pregnan') || c.includes('breastfeed') || c.includes('nursing')))
+        ) {
+          flagReasons.push('Contraindicated during pregnancy/nursing');
+        }
+        // Allergens — token-overlap, not substring containment, so "shellfish"
+        // doesn't match "shell" in some unrelated note.
+        for (const a of allergens) {
+          if (!a) continue;
+          if (cis.includes(a) || cautions.includes(a)) {
+            flagReasons.push(`Allergen flag: ${a}`);
+          }
+        }
+        // Conditions — same matcher
+        for (const cond of conditions) {
+          if (!cond) continue;
+          if (cis.includes(cond)) flagReasons.push(`Contraindicated for: ${cond}`);
+          else if (cautions.some((cs) => cs.includes(cond))) flagReasons.push(`Use caution: ${cond}`);
+        }
+      }
+      return {
+        ...m,
+        peptide: getPeptideById(m.id),
+        flagReasons,
+      };
+    });
+  }, [
+    selectedGoal,
+    profile.medical.allergies,
+    profile.medical.conditions,
+    profile.medical?.pregnantOrNursing,
+    showAllRecommendations,
+  ]);
 
   const totalAvailable = selectedGoal ? GOAL_PEPTIDE_MATRIX[selectedGoal]?.length ?? 0 : 0;
 
@@ -369,6 +405,19 @@ export default function PlanCycleScreen() {
                             Store: {rec.peptide.storageTemp}
                           </Text>
                         )}
+                      </View>
+                    )}
+                    {/* Real contraindication flags from the protocol cross-checked
+                        against the user's profile (allergies, conditions, pregnancy). */}
+                    {rec.flagReasons.length > 0 && (
+                      <View style={styles.flagBox}>
+                        <Ionicons name="warning-outline" size={14} color="#B45309" style={{ marginTop: 1 }} />
+                        <View style={{ flex: 1 }}>
+                          {rec.flagReasons.map((reason, i) => (
+                            <Text key={i} style={styles.flagText}>{reason}</Text>
+                          ))}
+                          <Text style={styles.flagHint}>Discuss with a provider before starting.</Text>
+                        </View>
                       </View>
                     )}
                   </AnimatedPress>
@@ -574,6 +623,18 @@ const styles = StyleSheet.create({
   recReason: { fontSize: FontSizes.sm, lineHeight: 19, marginTop: 6 },
   recMetaRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.sm },
   recMetaItem: { fontSize: FontSizes.xs, fontWeight: '500' },
+  flagBox: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: Spacing.sm,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.25)',
+  },
+  flagText: { fontSize: FontSizes.xs, color: '#B45309', fontWeight: '600' },
+  flagHint: { fontSize: FontSizes.xs, color: '#B45309', marginTop: 2, fontStyle: 'italic' },
   recActions: {
     flexDirection: 'row',
     gap: 8,
