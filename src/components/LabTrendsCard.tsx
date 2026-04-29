@@ -11,6 +11,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { GlassCard } from './GlassCard';
+import { Sparkline } from './Sparkline';
 import { useTheme } from '../hooks/useTheme';
 import {
   LAB_MARKERS,
@@ -32,6 +33,8 @@ interface MarkerSummary {
   inRange: boolean;
   /** Did the trend move toward "favorable" given preferHigh? */
   favorable: 'better' | 'worse' | 'neutral';
+  /** Full history (oldest first) for sparkline. */
+  history: number[];
 }
 
 function classifyTrend(current: number, prior?: number): TrendDirection {
@@ -86,6 +89,8 @@ export function LabTrendsCard() {
         trend,
         inRange,
         favorable,
+        // Sparkline expects oldest-first; entries above are newest-first.
+        history: [...sorted].reverse().map((e) => e.value),
       });
     }
     // Most-recently-updated first
@@ -144,6 +149,23 @@ export function LabTrendsCard() {
                 : ''}
             </Text>
           </View>
+
+          {/* Sparkline — only renders with 2+ history points; shows the
+              reference band as a faint horizontal stripe. */}
+          {s.history.length >= 2 && (
+            <View style={{ marginRight: 8 }}>
+              <Sparkline
+                data={s.history}
+                width={64}
+                height={26}
+                color="#3E7CB1"
+                refLow={s.marker.refLow}
+                refHigh={s.marker.refHigh}
+                showLastPoint
+                minPoints={2}
+              />
+            </View>
+          )}
 
           <View style={styles.valueWrap}>
             <Text

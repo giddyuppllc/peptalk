@@ -303,19 +303,66 @@ export const useDoseLogStore = create<DoseLogStore>()(
         set((state) => ({
           protocols: [protocol, ...state.protocols],
         }));
+
+        // Auto-schedule a dose-time reminder. Fire-and-forget so a
+        // notifications failure doesn't block the protocol from being
+        // created. Defaults to 08:00 — Aimee can offer to change it
+        // later, and the user can edit via Profile → Notifications.
+        // No-op when notifications are unavailable (Expo Go, simulator,
+        // permission denied — see notificationService.isAvailable).
+        try {
+          // Lazy require to avoid circular import + keep this store
+          // testable in environments without expo-notifications.
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { scheduleDoseReminder, notificationsAvailable } = require('../services/notificationService');
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { getPeptideById } = require('../data/peptides');
+          if (notificationsAvailable?.()) {
+            const peptideName = getPeptideById?.(input.peptideId)?.name ?? input.peptideId;
+            const reminderTime = '08:00';
+            scheduleDoseReminder?.(input.peptideId, peptideName, reminderTime, input.frequency)
+              ?.catch?.((err: unknown) => {
+                if (typeof __DEV__ !== 'undefined' && (__DEV__ as boolean)) {
+                  console.warn('[useDoseLogStore] scheduleDoseReminder failed:', err);
+                }
+              });
+          }
+        } catch (err) {
+          if (typeof __DEV__ !== 'undefined' && (__DEV__ as boolean)) {
+            console.warn('[useDoseLogStore] dose reminder scheduling threw:', err);
+          }
+        }
       },
 
-      deactivateProtocol: (id) =>
+      deactivateProtocol: (id) => {
+        const proto = get().protocols.find((p) => p.id === id);
         set((state) => ({
           protocols: state.protocols.map((p) =>
-            p.id === id ? { ...p, isActive: false } : p
+            p.id === id ? { ...p, isActive: false } : p,
           ),
-        })),
+        }));
+        if (proto) {
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const { cancelRemindersByTag } = require('../services/notificationService');
+            cancelRemindersByTag?.(`dose-${proto.peptideId}-`)?.catch?.(() => {});
+          } catch {}
+        }
+      },
 
-      deleteProtocol: (id) =>
+      deleteProtocol: (id) => {
+        const proto = get().protocols.find((p) => p.id === id);
         set((state) => ({
           protocols: state.protocols.filter((p) => p.id !== id),
-        })),
+        }));
+        if (proto) {
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const { cancelRemindersByTag } = require('../services/notificationService');
+            cancelRemindersByTag?.(`dose-${proto.peptideId}-`)?.catch?.(() => {});
+          } catch {}
+        }
+      },
 
       // ── Alerts ───────────────────────────────────────────────────────────
 
