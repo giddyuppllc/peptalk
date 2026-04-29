@@ -178,6 +178,9 @@ interface AimeeServerContext {
    *  Lets Aimee answer "how's my recovery been?" with real data instead of
    *  generic advice. Pre-summarized client-side; server never sees raw rows. */
   biometricsSummary?: string;
+  /** Most-recent lab values (HDL, LDL, HbA1c, T, etc.) — semicolon-joined.
+   *  Empty when the user hasn't entered any. */
+  labResultsSummary?: string;
   currentRoute?: string;
 }
 
@@ -239,6 +242,16 @@ function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
     biometricsSummary = undefined;
   }
 
+  // Lab results — recent bloodwork values the user manually entered.
+  // Aimee uses this to answer "is my LDL high?" with the real number.
+  let labResultsSummary: string | undefined;
+  try {
+    const { useLabResultsStore } = require('../store/useLabResultsStore');
+    labResultsSummary = useLabResultsStore.getState().summarizeForAimee?.();
+  } catch {
+    labResultsSummary = undefined;
+  }
+
   return {
     hasConsent,
     simpleMode: context.simpleMode === true,
@@ -247,6 +260,7 @@ function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
     healthAlertsSummary,
     healthProfileSummary: healthProfileSummary || undefined,
     biometricsSummary,
+    labResultsSummary,
   };
 }
 

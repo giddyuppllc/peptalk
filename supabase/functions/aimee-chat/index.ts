@@ -172,6 +172,9 @@ Deno.serve(async (req) => {
       biometricsSummary: typeof clientContext?.biometricsSummary === 'string'
         ? clientContext.biometricsSummary.slice(0, 300)
         : undefined,
+      labResultsSummary: typeof clientContext?.labResultsSummary === 'string'
+        ? clientContext.labResultsSummary.slice(0, 800)
+        : undefined,
       currentRoute: typeof clientContext?.currentRoute === 'string'
         ? clientContext.currentRoute.slice(0, 100)
         : undefined,

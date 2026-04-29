@@ -1448,6 +1448,8 @@ export default function ProfileScreen() {
               <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
               <ProfileRow icon="body-outline" label="Health Profile" onPress={() => router.push('/health-profile')} color={t.text} />
               <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+              <ProfileRow icon="flask-outline" label="Lab Results" onPress={() => router.push('/health-report/labs' as any)} color={t.text} />
+              <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
               <ProfileRow icon="flower-outline" label="Cycle tracking" onPress={() => router.push('/cycle' as any)} color={t.text} />
               <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
               <ProfileRow icon="basket-outline" label="My Pantry" onPress={() => router.push('/pantry' as any)} color={t.text} />

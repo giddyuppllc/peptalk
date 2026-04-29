@@ -36,6 +36,7 @@ import { Colors, Spacing, FontSizes, BorderRadius, Gradients } from '../../src/c
 import { PEPTIDES } from '../../src/data/peptides';
 import { PROTOCOL_TEMPLATES } from '../../src/data/protocols';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
 import type { Peptide } from '../../src/types';
 
@@ -105,6 +106,38 @@ export default function DosingCalculatorScreen() {
     if (!selectedPeptide) return [];
     return PROTOCOL_TEMPLATES.filter((pt) => pt.peptideId === selectedPeptide.id);
   }, [selectedPeptide]);
+
+  // If the user has an ACTIVE PROTOCOL for the selected peptide, figure out
+  // which titration step they're on so the calculator can pre-fill the
+  // right dose for their current week. Beats making them remember "am I
+  // on the 5mg step or 7.5mg step?".
+  const activeProtocols = useDoseLogStore((s) => s.protocols);
+  const activeForSelected = useMemo(() => {
+    if (!selectedPeptide) return null;
+    return activeProtocols.find(
+      (p) => p.isActive && p.peptideId === selectedPeptide.id,
+    );
+  }, [activeProtocols, selectedPeptide]);
+
+  const currentTitrationStep = useMemo(() => {
+    if (!activeForSelected || !activeForSelected.startDate) return null;
+    const template = protocolsForPeptide[0];
+    if (!template?.titrationSchedule) return null;
+    const start = new Date(activeForSelected.startDate + 'T12:00:00');
+    if (isNaN(start.getTime())) return null;
+    const today = new Date();
+    const dayOfCycle = Math.max(
+      1,
+      Math.floor((today.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1,
+    );
+    const weekOfCycle = Math.ceil(dayOfCycle / 7);
+    return (
+      template.titrationSchedule.find(
+        (s) =>
+          weekOfCycle >= s.weekStart && (s.weekEnd == null || weekOfCycle <= s.weekEnd),
+      ) ?? template.titrationSchedule[template.titrationSchedule.length - 1]
+    );
+  }, [activeForSelected, protocolsForPeptide]);
 
   const frequencyOption = FREQUENCY_OPTIONS.find((f) => f.key === frequency)!;
 
@@ -374,6 +407,50 @@ export default function DosingCalculatorScreen() {
         {/* Target Dose */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: t.text }]}>Dose Per Injection</Text>
+
+          {/* Active-protocol auto-step banner — when the user is on a
+              titrated peptide, suggest the dose for their current week. */}
+          {currentTitrationStep && activeForSelected && (
+            <TouchableOpacity
+              onPress={() => {
+                const step = currentTitrationStep;
+                const value = step.unit === doseUnit
+                  ? String(step.dose)
+                  : doseUnit === 'mg'
+                    ? String(step.dose / 1000)
+                    : String(step.dose * 1000);
+                setTargetDose(value);
+                resetResults();
+              }}
+              activeOpacity={0.85}
+              style={{
+                backgroundColor: '#3E7CB118',
+                borderColor: '#3E7CB180',
+                borderWidth: 1,
+                borderRadius: 10,
+                padding: 10,
+                marginBottom: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Use this week's titration step: ${currentTitrationStep.dose} ${currentTitrationStep.unit}`}
+            >
+              <Ionicons name="trending-up" size={16} color="#3E7CB1" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#3E7CB1' }}>
+                  Tap to use your current step
+                </Text>
+                <Text style={{ fontSize: 11, color: '#3E7CB1', marginTop: 1 }}>
+                  Your active protocol is on Week {currentTitrationStep.weekStart}
+                  {currentTitrationStep.weekEnd ? `–${currentTitrationStep.weekEnd}` : '+'} →{' '}
+                  {currentTitrationStep.dose} {currentTitrationStep.unit} {currentTitrationStep.frequencyLabel.toLowerCase()}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+
           {/* Suggested-min-dose pill — surfaces typical research dose so users
               don't have to guess or wait until after Calculate. Tester #14. */}
           {protocolsForPeptide[0]?.typicalDose && (

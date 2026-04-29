@@ -900,11 +900,23 @@ export function calcUnifiedMacros(food: UnifiedFood, grams: number) {
 // Universal weight units (always appended to every food, MFP-style)
 // ---------------------------------------------------------------------------
 
+// Universal weight units appended to every food. Volumetric entries are
+// approximate (water density) — when USDA returns its own per-food cup /
+// tbsp serving with accurate grams, we use that and keep these as fallback
+// so the user always has a familiar measure ("1 cup yogurt") even when
+// the API didn't ship one.
 const UNIVERSAL_WEIGHT_UNITS: ServingOption[] = [
-  { label: '1 gram',     grams: 1,      isUniversal: true },
-  { label: '1 ounce',    grams: 28.35,  isUniversal: true },
-  { label: '1 pound',    grams: 453.6,  isUniversal: true },
-  { label: '1 kilogram', grams: 1000,   isUniversal: true },
+  { label: '1 gram',          grams: 1,      isUniversal: true },
+  { label: '1 ounce',         grams: 28.35,  isUniversal: true },
+  { label: '1 pound',         grams: 453.6,  isUniversal: true },
+  { label: '1 kilogram',      grams: 1000,   isUniversal: true },
+  // Volumetric — approximate, water density. UI labels "(approx)" so the
+  // user knows it's a rough estimate vs. the food-specific servings above.
+  { label: '1 teaspoon (approx)',   grams: 5,    isUniversal: true },
+  { label: '1 tablespoon (approx)', grams: 15,   isUniversal: true },
+  { label: '1 fl oz (approx)',      grams: 30,   isUniversal: true },
+  { label: '1/2 cup (approx)',      grams: 120,  isUniversal: true },
+  { label: '1 cup (approx)',        grams: 240,  isUniversal: true },
 ];
 
 /** Removes old generic units (100g, 1 oz) and appends universal weight units */

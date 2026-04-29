@@ -201,7 +201,13 @@ function PortionPickerModal({
   const currentServing = food.servings[selectedServing];
   // Split servings into food-specific and universal weight units
   const foodServings = food.servings.filter((s) => !s.isUniversal);
-  const weightServings = food.servings.filter((s) => s.isUniversal);
+  // Split universal units into weight (g/oz/lb/kg) vs volume (cup/tbsp/etc.)
+  // so the picker shows them in two clearly-labeled groups instead of
+  // one undifferentiated dump.
+  const isVolumeLabel = (label: string) => /cup|tablespoon|teaspoon|tbsp|tsp|fl oz/i.test(label);
+  const universal = food.servings.filter((s) => s.isUniversal);
+  const weightServings = universal.filter((s) => !isVolumeLabel(s.label));
+  const volumeServings = universal.filter((s) => isVolumeLabel(s.label));
 
   const handleLog = () => {
     if (effectiveGrams <= 0) {
@@ -302,6 +308,29 @@ function PortionPickerModal({
                     >
                       <Text style={[styles.servingListText, active && styles.servingListTextActive]}>{s.label}</Text>
                       <Text style={[styles.servingListGrams, active && styles.servingListTextActive]}>{s.grams < 1 ? s.grams : Math.round(s.grams)}g</Text>
+                      {active && <Ionicons name="checkmark" size={18} color={Colors.almostAquaDeep} />}
+                    </TouchableOpacity>
+                  );
+                })}
+                {/* Volume section — cups, tbsp, tsp, fl oz. Labels say
+                    "approx" so the user knows these are best-guess for any
+                    food that didn't ship a per-food cup serving from USDA. */}
+                {volumeServings.length > 0 && (
+                  <View style={styles.servingSectionHeader}>
+                    <Text style={styles.servingSectionText}>VOLUME (APPROX)</Text>
+                  </View>
+                )}
+                {volumeServings.map((s) => {
+                  const idx = food.servings.indexOf(s);
+                  const active = selectedServing === idx;
+                  return (
+                    <TouchableOpacity
+                      key={`vol-${s.label}-${idx}`}
+                      style={[styles.servingListItem, active && styles.servingListItemActive]}
+                      onPress={() => { setSelectedServing(idx); setServingQty('1'); setShowServingPicker(false); }}
+                    >
+                      <Text style={[styles.servingListText, active && styles.servingListTextActive]}>{s.label}</Text>
+                      <Text style={[styles.servingListGrams, active && styles.servingListTextActive]}>≈{Math.round(s.grams)}g</Text>
                       {active && <Ionicons name="checkmark" size={18} color={Colors.almostAquaDeep} />}
                     </TouchableOpacity>
                   );
