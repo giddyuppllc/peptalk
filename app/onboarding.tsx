@@ -112,6 +112,12 @@ export default function OnboardingScreen() {
   const [heightInches, setHeightInches] = useState('');
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>('moderate');
 
+  // Cycle tracking — only meaningful when biologicalSex is female. Default
+  // off so non-cycling users don't get prompted. Captures last-period date
+  // + opt-in flag; full 12-contraception flow lands in 1.9.0.
+  const [cycleEnabled, setCycleEnabled] = useState(false);
+  const [lastPeriodDate, setLastPeriodDate] = useState('');
+
   // Account
   const [accountFirstName, setAccountFirstName] = useState('');
   const [accountLastName, setAccountLastName] = useState('');
@@ -132,7 +138,7 @@ export default function OnboardingScreen() {
     profile, setGender, setAgeRange, toggleHealthGoal,
     setAcceptedSafety, completeOnboarding,
   } = useOnboardingStore();
-  const { setBodyMetrics, setLifestyle } = useHealthProfileStore();
+  const { setBodyMetrics, setLifestyle, setCycleTracking } = useHealthProfileStore();
 
   // ── Navigation ────────────────────────────────────────────────────────────
 
@@ -190,6 +196,16 @@ export default function OnboardingScreen() {
         setBodyMetrics({ heightInches: feet * 12 + (isNaN(inches) ? 0 : inches) });
       }
       setLifestyle({ activityLevel });
+      // Cycle tracking — only if user opted in AND we have a sex of female.
+      // Skip writing anything when not applicable so we don't pollute the
+      // profile with empty cycle metadata.
+      if (cycleEnabled && profile.gender === 'Female') {
+        const validDate = /^\d{4}-\d{2}-\d{2}$/.test(lastPeriodDate);
+        setCycleTracking({
+          trackingEnabled: true,
+          lastPeriodStartDate: validDate ? lastPeriodDate : undefined,
+        });
+      }
       setStep(3);
       return;
     }
@@ -483,6 +499,53 @@ export default function OnboardingScreen() {
                     </TouchableOpacity>
                   );
                 })}
+
+                {/* Cycle tracking — only shown for female users. Single
+                    opt-in toggle + optional last-period date. The full 12-
+                    contraception step lands in 1.9.0; this captures enough
+                    to get the cycle phase computed for new users. */}
+                {profile.gender === 'Female' && (
+                  <View style={{ marginTop: 24 }}>
+                    <Text style={s.label}>Cycle tracking (optional)</Text>
+                    <TouchableOpacity
+                      style={[s.activityRow, cycleEnabled && { borderColor: ACCENT, backgroundColor: `${HIGHLIGHT}10` }]}
+                      onPress={() => setCycleEnabled((v) => !v)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[s.radio, cycleEnabled && { borderColor: ACCENT }]}>
+                        {cycleEnabled && <View style={[s.radioDot, { backgroundColor: ACCENT }]} />}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.activityLabel, cycleEnabled && { color: ACCENT }]}>
+                          Track my cycle
+                        </Text>
+                        <Text style={s.activityDesc}>
+                          Get phase-aware insights for nutrition, training, and peptide timing
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    {cycleEnabled && (
+                      <>
+                        <Text style={[s.label, { marginTop: 16 }]}>
+                          When did your last period start?
+                        </Text>
+                        <TextInput
+                          style={s.input}
+                          placeholder="YYYY-MM-DD"
+                          placeholderTextColor="#9CA3AF"
+                          value={lastPeriodDate}
+                          onChangeText={setLastPeriodDate}
+                          keyboardType="numbers-and-punctuation"
+                          autoCapitalize="none"
+                        />
+                        <Text style={[s.activityDesc, { marginTop: 6, marginLeft: 0 }]}>
+                          You can update this anytime in your health profile.
+                        </Text>
+                      </>
+                    )}
+                  </View>
+                )}
               </View>
             )}
           />

@@ -28,6 +28,7 @@ import { PaywallGate, useFeatureGate } from '../../src/hooks/useFeatureGate';
 import { LockedFeatureCard } from '../../src/components/LockedFeatureCard';
 import { LockBadge } from '../../src/components/LockBadge';
 import { CoachMark } from '../../src/components/tutorial/CoachMark';
+import { WorkoutReadinessBanner } from '../../src/components/WorkoutReadinessBanner';
 import { PaywallModal } from '../../src/components/PaywallModal';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
 import { useWorkoutTemplateStore } from '../../src/store/useWorkoutTemplateStore';
@@ -444,6 +445,13 @@ export default function WorkoutsScreen() {
           body="Pick one of Jamie's programs, generate a custom workout, or build your own from 451 exercises."
           icon="barbell-outline"
         />
+
+        {/* Readiness-aware suggestion — only renders for high or low
+            readiness states. Hidden in the "hold" middle band. */}
+        <View style={s.section}>
+          <WorkoutReadinessBanner />
+        </View>
+
         {/* Stats */}
         <View style={s.section}>
           <StatsBar />

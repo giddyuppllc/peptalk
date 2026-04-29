@@ -596,8 +596,13 @@ export default function PepTalkScreen() {
           </View>
         )}
 
-        {/* ── Action Buttons ────────────────────────────────── */}
-        {botActions.length > 0 && !isTyping && showPills && (
+        {/* ── Action Buttons ──
+            Render whenever the most-recent bot message exposed actions —
+            previously gated on `showPills` (empty chat) which meant
+            actions never rendered (lastBotMessage is undefined when there
+            are no messages). Now: visible after any bot message that
+            ships with actions, hidden while typing. */}
+        {botActions.length > 0 && !isTyping && (
           <View style={styles.actionBtns}>
             {botActions.map((action, idx) => (
               <AnimatedPress
