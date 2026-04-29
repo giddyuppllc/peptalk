@@ -653,7 +653,7 @@ export default function WorkoutsScreen() {
             <Ionicons name="add-circle-outline" size={28} color={t.textSecondary} />
             <Text style={[s.comingSoonTitle, { color: t.text }]}>More Programs Coming</Text>
             <Text style={[s.comingSoonDesc, { color: t.textSecondary }]}>
-              Jamie is building strength, HIIT, and postpartum recovery programs.
+              Jamie is building HIIT and postpartum recovery programs next.
             </Text>
           </View>
         </View>

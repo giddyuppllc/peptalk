@@ -204,16 +204,44 @@ function MealPlanScreen() {
                 <Text style={[styles.logBtnText, { color: accent.deep }]}>Log all</Text>
               </TouchableOpacity>
             </View>
-            {pd.meals.map((meal, i) => (
-              <View key={i} style={[styles.mealRow, { borderTopColor: t.cardBorder }]}>
-                <Text style={[styles.mealType, { color: accent.deep }]}>{meal.type.toUpperCase()}</Text>
-                <Text style={[styles.mealName, { color: t.text }]}>{meal.name}</Text>
-                <Text style={[styles.mealDesc, { color: t.textSecondary }]}>{meal.description}</Text>
-                <Text style={[styles.mealMacros, { color: t.textSecondary }]}>
-                  {meal.calories}kcal · {meal.proteinGrams}P · {meal.carbsGrams}C · {meal.fatGrams}F
-                </Text>
-              </View>
-            ))}
+            {pd.meals.map((meal, i) => {
+              // Per-meal-type accent so breakfast / lunch / dinner / snacks
+              // are visually distinct without inventing new colors.
+              const mealColor =
+                meal.type === 'breakfast' ? '#E89672' :
+                meal.type === 'lunch'     ? '#6FA891' :
+                meal.type === 'dinner'    ? '#9B86A4' :
+                                            '#3E7CB1'; // snack / fallback
+              return (
+                <View key={i} style={[styles.mealRow, { borderTopColor: t.cardBorder }]}>
+                  <View style={[styles.mealTypePill, { backgroundColor: `${mealColor}18`, borderColor: `${mealColor}55` }]}>
+                    <Text style={[styles.mealTypePillText, { color: mealColor }]}>
+                      {meal.type.charAt(0).toUpperCase() + meal.type.slice(1)}
+                    </Text>
+                  </View>
+                  <Text style={[styles.mealName, { color: t.text }]}>{meal.name}</Text>
+                  <Text style={[styles.mealDesc, { color: t.textSecondary }]}>{meal.description}</Text>
+                  <View style={styles.macroPills}>
+                    <View style={[styles.macroPill, { backgroundColor: 'rgba(0,0,0,0.04)' }]}>
+                      <Text style={[styles.macroPillNum, { color: t.text }]}>{meal.calories}</Text>
+                      <Text style={[styles.macroPillUnit, { color: t.textSecondary }]}>cal</Text>
+                    </View>
+                    <View style={[styles.macroPill, { backgroundColor: 'rgba(111, 168, 145, 0.12)' }]}>
+                      <Text style={[styles.macroPillNum, { color: '#4E836D' }]}>{meal.proteinGrams}g</Text>
+                      <Text style={[styles.macroPillUnit, { color: '#4E836D' }]}>protein</Text>
+                    </View>
+                    <View style={[styles.macroPill, { backgroundColor: 'rgba(127, 179, 216, 0.14)' }]}>
+                      <Text style={[styles.macroPillNum, { color: '#3E7CB1' }]}>{meal.carbsGrams}g</Text>
+                      <Text style={[styles.macroPillUnit, { color: '#3E7CB1' }]}>carbs</Text>
+                    </View>
+                    <View style={[styles.macroPill, { backgroundColor: 'rgba(217, 140, 134, 0.14)' }]}>
+                      <Text style={[styles.macroPillNum, { color: '#B06A66' }]}>{meal.fatGrams}g</Text>
+                      <Text style={[styles.macroPillUnit, { color: '#B06A66' }]}>fat</Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
           </GlassCard>
         ))}
       </ScrollView>
@@ -289,24 +317,50 @@ const styles = StyleSheet.create({
   },
   mealRow: {
     borderTopWidth: 1,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.sm + 2,
+    gap: 4,
   },
-  mealType: {
+  mealTypePill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginBottom: 2,
+  },
+  mealTypePillText: {
     fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: 2,
+    letterSpacing: 0.5,
   },
   mealName: {
     fontSize: FontSizes.md,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   mealDesc: {
     fontSize: FontSizes.sm,
-    marginTop: 2,
+    lineHeight: 18,
   },
-  mealMacros: {
-    fontSize: FontSizes.xs,
+  macroPills: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
     marginTop: 4,
+  },
+  macroPill: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  macroPillNum: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  macroPillUnit: {
+    fontSize: 10,
+    fontWeight: '500',
   },
 });

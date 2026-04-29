@@ -24,6 +24,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
 import { DaySummarySheet } from '../../src/components/DaySummarySheet';
 import { WeeklySummaryCard } from '../../src/components/WeeklySummaryCard';
+import { DoseHeatmap } from '../../src/components/DoseHeatmap';
 import { DOSE_LOG_GATE_DISCLAIMER } from '../../src/constants/legal';
 import { checkDoseSafety } from '../../src/services/doseSafety';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
@@ -624,6 +625,12 @@ export default function CalendarScreen() {
         {/* This-week summary — meals + workouts + doses + check-ins + biometrics */}
         <View style={styles.weeklyWrap}>
           <WeeklySummaryCard />
+        </View>
+
+        {/* Dose consistency — 90-day heatmap. Hides itself for users
+            with no doses + no active protocols. */}
+        <View style={styles.weeklyWrap}>
+          <DoseHeatmap />
         </View>
 
         {/* Health Alerts */}

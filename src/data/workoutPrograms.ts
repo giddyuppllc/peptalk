@@ -1615,6 +1615,171 @@ export const SSD_2: WorkoutProgram = {
   tags: ['summer', 'slim down', 'HIIT', 'pelvic floor', 'nutrition', '8 week', 'fat loss'],
 };
 
+// ===========================================================================
+// MEN'S BUILD — 4-week hypertrophy/strength block
+// Upper/Lower split, 4 days/week. Compound-driven, progressive volume.
+// Targets the "men's strength + size" audience that was missing from the
+// existing curated programs (which lean toward toning / HIIT / female-
+// audience offerings).
+// ===========================================================================
+
+const mb_w1: WorkoutWeek = {
+  weekNumber: 1,
+  days: [
+    day('Upper Strength W1', 'MB-W1/D1', [
+      s('Barbell Bench Press', [8, 8, 8, 8], 'normal', { restSeconds: 90 }),
+      s('Barbell Row', [8, 8, 8, 8], 'normal', { restSeconds: 90 }),
+      s('Overhead Press', [8, 8, 8], 'normal', { restSeconds: 90 }),
+      s('Pull-up', [8, 8, 8], 'normal', { restSeconds: 90 }),
+      s('Dumbbell Bicep Curl', [10, 10, 10], 'super_set'),
+      s('Tricep Pushdown', [10, 10, 10], 'super_set', { restSeconds: 60 }),
+    ]),
+    day('Lower Strength W1', 'MB-W1/D2', [
+      s('Barbell Back Squat', [8, 8, 8, 8], 'normal', { restSeconds: 120 }),
+      s('Romanian Deadlift', [8, 8, 8], 'normal', { restSeconds: 120 }),
+      s('Walking Lunge', [10, 10, 10], 'normal', { restSeconds: 60 }),
+      s('Standing Calf Raise', [12, 12, 12], 'normal', { restSeconds: 45 }),
+      s('Hanging Leg Raise', [10, 10, 10], 'normal', { restSeconds: 45 }),
+    ]),
+    day('Upper Hypertrophy W1', 'MB-W1/D3', [
+      s('Incline Dumbbell Press', [10, 10, 10], 'normal', { restSeconds: 75 }),
+      s('Lat Pulldown', [10, 10, 10], 'normal', { restSeconds: 75 }),
+      s('Lateral Raise', [12, 12, 12], 'super_set'),
+      s('Cable Face Pull', [12, 12, 12], 'super_set', { restSeconds: 60 }),
+      s('Hammer Curl', [10, 10, 10], 'super_set'),
+      s('Overhead Tricep Extension', [10, 10, 10], 'super_set', { restSeconds: 60 }),
+    ]),
+    day('Lower Hypertrophy W1', 'MB-W1/D4', [
+      s('Front Squat', [10, 10, 10], 'normal', { restSeconds: 90 }),
+      s('Leg Press', [12, 12, 12], 'normal', { restSeconds: 75 }),
+      s('Leg Curl Machine', [12, 12, 12], 'super_set'),
+      s('Leg Extension', [12, 12, 12], 'super_set', { restSeconds: 60 }),
+      s('Plank', [1, 1, 1], 'normal', { timeSeconds: 45, restSeconds: 30 }),
+    ]),
+  ],
+};
+
+const mb_w2: WorkoutWeek = {
+  weekNumber: 2,
+  days: [
+    day('Upper Strength W2', 'MB-W2/D1', [
+      s('Barbell Bench Press', [6, 6, 6, 6, 6], 'normal', { restSeconds: 120 }),
+      s('Barbell Row', [6, 6, 6, 6, 6], 'normal', { restSeconds: 120 }),
+      s('Overhead Press', [8, 8, 8], 'normal', { restSeconds: 90 }),
+      s('Pull-up', [8, 8, 8], 'normal', { restSeconds: 90 }),
+      s('Dumbbell Bicep Curl', [10, 10, 10], 'super_set'),
+      s('Tricep Pushdown', [12, 12, 12], 'super_set', { restSeconds: 60 }),
+    ]),
+    day('Lower Strength W2', 'MB-W2/D2', [
+      s('Barbell Back Squat', [6, 6, 6, 6, 6], 'normal', { restSeconds: 120 }),
+      s('Conventional Deadlift', [5, 5, 5], 'normal', { restSeconds: 150 }),
+      s('Walking Lunge', [12, 12, 12], 'normal', { restSeconds: 60 }),
+      s('Standing Calf Raise', [15, 15, 15], 'normal', { restSeconds: 45 }),
+      s('Hanging Leg Raise', [12, 12, 12], 'normal', { restSeconds: 45 }),
+    ]),
+    day('Upper Hypertrophy W2', 'MB-W2/D3', [
+      s('Incline Dumbbell Press', [12, 12, 12], 'normal', { restSeconds: 75 }),
+      s('Lat Pulldown', [12, 12, 12], 'normal', { restSeconds: 75 }),
+      s('Lateral Raise', [15, 15, 15], 'super_set'),
+      s('Cable Face Pull', [15, 15, 15], 'super_set', { restSeconds: 60 }),
+      s('Hammer Curl', [12, 12, 12], 'super_set'),
+      s('Overhead Tricep Extension', [12, 12, 12], 'super_set', { restSeconds: 60 }),
+    ]),
+    day('Lower Hypertrophy W2', 'MB-W2/D4', [
+      s('Front Squat', [10, 10, 10], 'normal', { restSeconds: 90 }),
+      s('Leg Press', [15, 15, 15], 'normal', { restSeconds: 75 }),
+      s('Leg Curl Machine', [15, 15, 15], 'super_set'),
+      s('Leg Extension', [15, 15, 15], 'super_set', { restSeconds: 60 }),
+      s('Plank', [1, 1, 1], 'normal', { timeSeconds: 60, restSeconds: 30 }),
+    ]),
+  ],
+};
+
+const mb_w3: WorkoutWeek = {
+  weekNumber: 3,
+  days: [
+    day('Upper Strength W3', 'MB-W3/D1', [
+      s('Barbell Bench Press', [5, 5, 5, 5, 5], 'normal', { restSeconds: 150 }),
+      s('Barbell Row', [5, 5, 5, 5, 5], 'normal', { restSeconds: 150 }),
+      s('Overhead Press', [6, 6, 6, 6], 'normal', { restSeconds: 120 }),
+      s('Pull-up', [10, 10, 10], 'normal', { restSeconds: 90 }),
+      s('Dumbbell Bicep Curl', [12, 12, 12], 'super_set'),
+      s('Tricep Pushdown', [15, 15, 15], 'super_set', { restSeconds: 60 }),
+    ]),
+    day('Lower Strength W3', 'MB-W3/D2', [
+      s('Barbell Back Squat', [5, 5, 5, 5, 5], 'normal', { restSeconds: 150 }),
+      s('Conventional Deadlift', [5, 5, 5, 5], 'normal', { restSeconds: 180 }),
+      s('Bulgarian Split Squat', [10, 10, 10], 'normal', { restSeconds: 75 }),
+      s('Standing Calf Raise', [15, 15, 15], 'normal', { restSeconds: 45 }),
+      s('Hanging Leg Raise', [12, 12, 12], 'normal', { restSeconds: 45 }),
+    ]),
+    day('Upper Hypertrophy W3', 'MB-W3/D3', [
+      s('Incline Dumbbell Press', [12, 12, 12, 12], 'normal', { restSeconds: 75 }),
+      s('Lat Pulldown', [12, 12, 12, 12], 'normal', { restSeconds: 75 }),
+      s('Lateral Raise', [15, 15, 15], 'super_set'),
+      s('Cable Face Pull', [15, 15, 15], 'super_set', { restSeconds: 60 }),
+      s('Hammer Curl', [12, 12, 12], 'super_set'),
+      s('Overhead Tricep Extension', [12, 12, 12], 'super_set', { restSeconds: 60 }),
+    ]),
+    day('Lower Hypertrophy W3', 'MB-W3/D4', [
+      s('Front Squat', [12, 12, 12], 'normal', { restSeconds: 90 }),
+      s('Leg Press', [15, 15, 15, 15], 'normal', { restSeconds: 75 }),
+      s('Leg Curl Machine', [15, 15, 15], 'super_set'),
+      s('Leg Extension', [15, 15, 15], 'super_set', { restSeconds: 60 }),
+      s('Plank', [1, 1, 1], 'normal', { timeSeconds: 75, restSeconds: 30 }),
+    ]),
+  ],
+};
+
+const mb_w4: WorkoutWeek = {
+  weekNumber: 4,
+  days: [
+    day('Upper Test W4', 'MB-W4/D1', [
+      s('Barbell Bench Press', [3, 3, 3, 3, 1], 'normal', { restSeconds: 180 }),
+      s('Barbell Row', [3, 3, 3, 3, 1], 'normal', { restSeconds: 180 }),
+      s('Overhead Press', [5, 5, 5], 'normal', { restSeconds: 120 }),
+      s('Pull-up', [10, 10, 10], 'normal', { restSeconds: 90 }),
+    ]),
+    day('Lower Test W4', 'MB-W4/D2', [
+      s('Barbell Back Squat', [3, 3, 3, 3, 1], 'normal', { restSeconds: 180 }),
+      s('Conventional Deadlift', [3, 3, 3, 1], 'normal', { restSeconds: 180 }),
+      s('Walking Lunge', [10, 10, 10], 'normal', { restSeconds: 60 }),
+      s('Standing Calf Raise', [12, 12, 12], 'normal', { restSeconds: 45 }),
+    ]),
+    day('Upper Volume W4', 'MB-W4/D3', [
+      s('Incline Dumbbell Press', [12, 12, 12], 'super_set'),
+      s('Lat Pulldown', [12, 12, 12], 'super_set', { restSeconds: 75 }),
+      s('Lateral Raise', [15, 15, 15], 'super_set'),
+      s('Hammer Curl', [12, 12, 12], 'super_set'),
+      s('Overhead Tricep Extension', [12, 12, 12], 'super_set', { restSeconds: 60 }),
+    ]),
+    day('Lower Volume W4', 'MB-W4/D4', [
+      s('Front Squat', [10, 10, 10], 'normal', { restSeconds: 75 }),
+      s('Romanian Deadlift', [10, 10, 10], 'normal', { restSeconds: 75 }),
+      s('Leg Curl Machine', [12, 12, 12], 'super_set'),
+      s('Leg Extension', [12, 12, 12], 'super_set', { restSeconds: 60 }),
+    ]),
+  ],
+};
+
+export const MENS_BUILD: WorkoutProgram = {
+  id: 'mens-build',
+  name: "Men's BUILD",
+  description:
+    'A 4-week upper/lower hypertrophy + strength block built for men aiming ' +
+    'to add lean mass. Compound-driven (squat, deadlift, bench, row, OHP) ' +
+    'with progressive volume across weeks 1–3 and a strength-test deload ' +
+    'in week 4. 4 days per week.',
+  createdBy: 'Jamie Esposito',
+  category: ['strength', 'hypertrophy', 'upper_body'],
+  difficulty: 'intermediate',
+  weeks: [mb_w1, mb_w2, mb_w3, mb_w4],
+  durationWeeks: 4,
+  isPremium: true,
+  imageUrl: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=600&q=80',
+  tags: ['strength', 'hypertrophy', 'mens', 'upper lower split', 'barbell', 'compound'],
+};
+
 /** All available workout programs */
 const _RAW_PROGRAMS: WorkoutProgram[] = [
   CORE_CHALLENGE,
@@ -1628,6 +1793,7 @@ const _RAW_PROGRAMS: WorkoutProgram[] = [
   NUTRITION_BOOTCAMP,
   BODY_RECOMP,
   SSD_2,
+  MENS_BUILD,
 ];
 
 // Lazy Proxy — defers iteration until first access, reducing startup GC pressure

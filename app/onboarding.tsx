@@ -1031,7 +1031,11 @@ const s = StyleSheet.create({
   },
   scrollPadding: {
     paddingHorizontal: 24,
-    paddingBottom: 24,
+    // Bottom padding tall enough to clear the absolute-positioned
+    // footer + safe-area inset on small phones (iPhone SE / mini).
+    // Tester #37: "the screen of off the page" — content was scrolling
+    // under the Continue button.
+    paddingBottom: 140,
   },
   footer: {
     flexDirection: 'row',
