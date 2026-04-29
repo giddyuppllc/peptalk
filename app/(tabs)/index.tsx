@@ -31,6 +31,7 @@ import { PeptideCard } from '../../src/components/PeptideCard';
 import { Disclaimer } from '../../src/components/Disclaimer';
 import { LeaderboardStrip } from '../../src/components/LeaderboardStrip';
 import { StepGoalRing } from '../../src/components/StepGoalRing';
+import { MacroProgressRing } from '../../src/components/MacroProgressRing';
 import { ActiveProtocolBanner } from '../../src/components/ActiveProtocolBanner';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
@@ -981,15 +982,18 @@ export default function DashboardScreen() {
         </RNAnimated.View>
 
         {/* ═══════════════════════════════════════════════════════════════
-            DAILY HEALTH SNAPSHOT — step goal ring + active protocol banner
+            DAILY HEALTH SNAPSHOT — step ring + macro ring + active protocol
         ═══════════════════════════════════════════════════════════════ */}
         <View style={styles.healthSnapshotRow}>
           <StepGoalRing
             onPress={() => router.push('/settings/integrations' as any)}
           />
-          <View style={{ flex: 1 }}>
-            <ActiveProtocolBanner />
-          </View>
+          <MacroProgressRing
+            onPress={() => router.push('/(tabs)/nutrition' as any)}
+          />
+        </View>
+        <View style={styles.protocolBannerWrap}>
+          <ActiveProtocolBanner />
         </View>
 
         {/* ═══════════════════════════════════════════════════════════════
@@ -1706,7 +1710,13 @@ const styles = StyleSheet.create({
   healthSnapshotRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-around',
     gap: 16,
+    paddingHorizontal: Spacing.lg,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  protocolBannerWrap: {
     paddingHorizontal: Spacing.lg,
     marginBottom: 20,
   },

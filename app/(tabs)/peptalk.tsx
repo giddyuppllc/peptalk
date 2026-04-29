@@ -23,6 +23,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { ChatBubble, TypingIndicator } from '../../src/components/ChatBubble';
+import { getAimeeNudges } from '../../src/services/aimeeNudges';
 import { PepTalkCharacter } from '../../src/components/PepTalkCharacter';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { ChatHistoryDrawer } from '../../src/components/ChatHistoryDrawer';
@@ -428,38 +429,27 @@ export default function PepTalkScreen() {
           Ask me about peptides, check interactions, or get personalized insights from your tracking data.
         </Text>
         <View style={styles.emptyChips}>
-          {(() => {
-            const goals = profile.healthGoals ?? [];
-            const defaultChips = [
-              'Tell me about BPC-157',
-              'What helps with sleep?',
-              'Suggest a recovery stack',
-            ];
-            if (goals.length === 0) return defaultChips;
-
-            const goalChips = goals
-              .slice(0, 2)
-              .map(
-                (g: GoalType) =>
-                  `Peptides for ${getGoalLabel(g).toLowerCase()}`,
-              );
-            return [...goalChips, 'Based on my health data'];
-          })().map((prompt) => (
+          {/* Proactive contextual nudges — replaces 3 generic prompts.
+              getAimeeNudges() reads check-in history, active protocols,
+              cycle state, lab values, and goals to surface chips that
+              reference the user's actual situation. Always falls back
+              to a goal/evergreen prompt when no specific context fires. */}
+          {getAimeeNudges().map((nudge) => (
             <AnimatedPress
-              key={prompt}
+              key={nudge.source + nudge.prompt}
               style={styles.starterChip}
-              onPress={() => handleQuickReply(prompt)}
+              onPress={() => handleQuickReply(nudge.prompt)}
               scaleTo={0.97}
             >
               <View style={[styles.starterChipCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
                 <View style={[styles.starterChipIconWrap, { backgroundColor: `${accent.deep}15` }]}>
                   <Ionicons
-                    name="sparkles-outline"
+                    name={nudge.icon}
                     size={14}
                     color={accent.deep}
                   />
                 </View>
-                <Text style={[styles.starterChipText, { color: t.text }]}>{prompt}</Text>
+                <Text style={[styles.starterChipText, { color: t.text }]}>{nudge.prompt}</Text>
                 <Ionicons name="arrow-forward" size={14} color={t.textSecondary} />
               </View>
             </AnimatedPress>
