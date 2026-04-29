@@ -439,6 +439,41 @@ interface ParsedResponse {
   dataAction?: { type: string; data: Record<string, unknown> };
 }
 
+/**
+ * Pretty label + icon for a route — used to render the AI's NAV_ACTION
+ * as a tappable BotAction button alongside the response, matching the
+ * local-bot UX. Routes that aren't mapped fall back to the route as
+ * the label and a generic chevron icon.
+ */
+function describeRoute(route: string): { label: string; icon: string } {
+  const ROUTE_DESCRIPTIONS: Record<string, { label: string; icon: string }> = {
+    '/(tabs)/calendar': { label: 'Open calendar', icon: 'calendar-outline' },
+    '/(tabs)/check-in': { label: 'Daily check-in', icon: 'clipboard-outline' },
+    '/(tabs)/peptalk': { label: 'Open Aimee', icon: 'chatbubbles-outline' },
+    '/(tabs)/my-stacks': { label: 'My stacks', icon: 'flask-outline' },
+    '/(tabs)/workouts': { label: 'Open workouts', icon: 'barbell-outline' },
+    '/(tabs)/nutrition': { label: 'Open nutrition', icon: 'restaurant-outline' },
+    '/(tabs)/profile': { label: 'Profile', icon: 'person-outline' },
+    '/nutrition': { label: 'Nutrition', icon: 'restaurant-outline' },
+    '/workouts': { label: 'Workouts', icon: 'barbell-outline' },
+    '/workouts/exercises': { label: 'Browse exercises', icon: 'list-outline' },
+    '/workouts/library': { label: 'Workout library', icon: 'play-circle-outline' },
+    '/calculators': { label: 'Calculators', icon: 'calculator-outline' },
+    '/calculators/dosing': { label: 'Dosing calculator', icon: 'calculator-outline' },
+    '/calculators/reconstitution': { label: 'Reconstitution', icon: 'flask-outline' },
+    '/calculators/plan': { label: 'Plan a cycle', icon: 'compass-outline' },
+    '/cycle': { label: 'Cycle dashboard', icon: 'flower-outline' },
+    '/journal': { label: 'Journal', icon: 'book-outline' },
+    '/health-profile': { label: 'Health profile', icon: 'body-outline' },
+    '/health-report': { label: 'Health report', icon: 'document-text-outline' },
+    '/health-report/labs': { label: 'Lab results', icon: 'flask-outline' },
+    '/subscription': { label: 'See plans', icon: 'sparkles-outline' },
+    '/pantry': { label: 'My pantry', icon: 'basket-outline' },
+    '/body-map': { label: 'Body map', icon: 'body-outline' },
+  };
+  return ROUTE_DESCRIPTIONS[route] ?? { label: 'Open', icon: 'arrow-forward' };
+}
+
 function parseResponse(raw: string): ParsedResponse {
   let text = raw;
 
@@ -538,6 +573,9 @@ export async function generateAIResponse(
             timestamp: new Date().toISOString(),
             quickReplies: data.upgrade ? ['View subscription plans'] : undefined,
             navAction: data.upgrade ? '/subscription' : undefined,
+            actions: data.upgrade
+              ? [{ label: 'See plans', route: '/subscription', icon: 'sparkles-outline' }]
+              : undefined,
           };
         }
       }
@@ -572,12 +610,23 @@ export async function generateAIResponse(
 
   const { content, quickReplies, navAction, dataAction } = parseResponse(rawResponse);
 
+  // Convert NAV_ACTION into a tappable BotAction so the chat surfaces an
+  // inline button matching the local-bot UX. Without this, NAV_ACTION
+  // lived only on the (rarely-used) navAction field.
+  const actions = navAction
+    ? [(() => {
+        const desc = describeRoute(navAction);
+        return { label: desc.label, route: navAction, icon: desc.icon };
+      })()]
+    : undefined;
+
   return {
     id: uid(),
     role: 'bot',
     content,
     timestamp: new Date().toISOString(),
     quickReplies: quickReplies.length > 0 ? quickReplies : undefined,
+    actions,
     navAction,
     dataAction: dataAction as any,
   };

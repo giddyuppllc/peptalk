@@ -35,6 +35,13 @@ import { useProgressGoalsStore } from '../src/store/useProgressGoalsStore';
 import { trackOnboardingComplete } from '../src/services/analyticsEvents';
 import { AgeRange, Gender, ActivityLevel } from '../src/types';
 import { GOAL_OPTIONS } from '../src/constants/goals';
+import {
+  ContraceptionMethod,
+  CONTRACEPTION_LABELS,
+  CONTRACEPTION_OPTIONS,
+  predictionModeFor,
+} from '../src/types/cycle';
+import { useCycleStore } from '../src/store/useCycleStore';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -112,10 +119,11 @@ export default function OnboardingScreen() {
   const [heightInches, setHeightInches] = useState('');
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>('moderate');
 
-  // Cycle tracking — only meaningful when biologicalSex is female. Default
-  // off so non-cycling users don't get prompted. Captures last-period date
-  // + opt-in flag; full 12-contraception flow lands in 1.9.0.
-  const [cycleEnabled, setCycleEnabled] = useState(false);
+  // Cycle tracking — only meaningful when biologicalSex is female. Captures
+  // contraception method (12 first-class options) + last-period date when
+  // the chosen method's prediction mode benefits from one. Drives the cycle
+  // engine's prediction routing (cyclical / continuous / scheduled / etc.).
+  const [contraceptionMethod, setContraceptionMethod] = useState<ContraceptionMethod | null>(null);
   const [lastPeriodDate, setLastPeriodDate] = useState('');
 
   // Account
@@ -139,6 +147,7 @@ export default function OnboardingScreen() {
     setAcceptedSafety, completeOnboarding,
   } = useOnboardingStore();
   const { setBodyMetrics, setLifestyle, setCycleTracking } = useHealthProfileStore();
+  const setCurrentContraception = useCycleStore((s) => s.setCurrentContraception);
 
   // ── Navigation ────────────────────────────────────────────────────────────
 
@@ -196,15 +205,19 @@ export default function OnboardingScreen() {
         setBodyMetrics({ heightInches: feet * 12 + (isNaN(inches) ? 0 : inches) });
       }
       setLifestyle({ activityLevel });
-      // Cycle tracking — only if user opted in AND we have a sex of female.
-      // Skip writing anything when not applicable so we don't pollute the
-      // profile with empty cycle metadata.
-      if (cycleEnabled && profile.gender === 'Female') {
-        const validDate = /^\d{4}-\d{2}-\d{2}$/.test(lastPeriodDate);
+      // Cycle tracking — only when user picks a method AND is female. The
+      // 12 contraception options drive the prediction mode (cyclical /
+      // continuous / scheduled / pregnancy / returning / irregular) so the
+      // cycle engine knows what to predict and how to interpret data.
+      if (contraceptionMethod && profile.gender === 'Female') {
+        const mode = predictionModeFor(contraceptionMethod);
+        const wantsLastPeriod = mode === 'cyclical' || mode === 'scheduled_cycle';
+        const validDate = wantsLastPeriod && /^\d{4}-\d{2}-\d{2}$/.test(lastPeriodDate);
         setCycleTracking({
           trackingEnabled: true,
           lastPeriodStartDate: validDate ? lastPeriodDate : undefined,
         });
+        setCurrentContraception(contraceptionMethod);
       }
       setStep(3);
       return;
@@ -500,32 +513,43 @@ export default function OnboardingScreen() {
                   );
                 })}
 
-                {/* Cycle tracking — only shown for female users. Single
-                    opt-in toggle + optional last-period date. The full 12-
-                    contraception step lands in 1.9.0; this captures enough
-                    to get the cycle phase computed for new users. */}
+                {/* Cycle tracking — first-class step for female users.
+                    12 contraception options drive prediction mode so the
+                    cycle engine knows what to predict (cyclical / continuous
+                    / scheduled / pregnancy / returning / irregular). Last-
+                    period date only shown when the chosen mode benefits. */}
                 {profile.gender === 'Female' && (
                   <View style={{ marginTop: 24 }}>
-                    <Text style={s.label}>Cycle tracking (optional)</Text>
-                    <TouchableOpacity
-                      style={[s.activityRow, cycleEnabled && { borderColor: ACCENT, backgroundColor: `${HIGHLIGHT}10` }]}
-                      onPress={() => setCycleEnabled((v) => !v)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={[s.radio, cycleEnabled && { borderColor: ACCENT }]}>
-                        {cycleEnabled && <View style={[s.radioDot, { backgroundColor: ACCENT }]} />}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[s.activityLabel, cycleEnabled && { color: ACCENT }]}>
-                          Track my cycle
-                        </Text>
-                        <Text style={s.activityDesc}>
-                          Get phase-aware insights for nutrition, training, and peptide timing
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
+                    <Text style={s.label}>Your cycle situation</Text>
+                    <Text style={s.labelSub}>
+                      Pick what fits today — you can change this anytime.
+                    </Text>
+                    {CONTRACEPTION_OPTIONS.map((method) => {
+                      const active = contraceptionMethod === method;
+                      return (
+                        <TouchableOpacity
+                          key={method}
+                          style={[s.activityRow, active && { borderColor: ACCENT, backgroundColor: `${HIGHLIGHT}10` }]}
+                          onPress={() => setContraceptionMethod(method)}
+                          activeOpacity={0.7}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected: active }}
+                          accessibilityLabel={CONTRACEPTION_LABELS[method]}
+                        >
+                          <View style={[s.radio, active && { borderColor: ACCENT }]}>
+                            {active && <View style={[s.radioDot, { backgroundColor: ACCENT }]} />}
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[s.activityLabel, active && { color: ACCENT }]}>
+                              {CONTRACEPTION_LABELS[method]}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
 
-                    {cycleEnabled && (
+                    {contraceptionMethod &&
+                      ['cyclical', 'scheduled_cycle'].includes(predictionModeFor(contraceptionMethod)) && (
                       <>
                         <Text style={[s.label, { marginTop: 16 }]}>
                           When did your last period start?
@@ -540,7 +564,7 @@ export default function OnboardingScreen() {
                           autoCapitalize="none"
                         />
                         <Text style={[s.activityDesc, { marginTop: 6, marginLeft: 0 }]}>
-                          You can update this anytime in your health profile.
+                          Optional — you can update this anytime in settings.
                         </Text>
                       </>
                     )}
