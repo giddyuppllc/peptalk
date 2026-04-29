@@ -127,6 +127,7 @@ const _RAW_ARTICLES: EducationalArticle[] = [
     title: 'Understanding GLP-1 Receptor Agonists',
     slug: 'understanding-glp1-receptor-agonists',
     category: 'fundamentals',
+    goalTypes: ['weight_loss', 'body_recomp', 'general_wellness'],
     imageUrl: 'https://images.unsplash.com/photo-1559757175-5700dde675bc?w=600&q=80',
     summary: 'How semaglutide, tirzepatide, and other GLP-1 receptor agonists work — their mechanism of action, metabolic effects, and what the clinical evidence shows.',
     sections: [
@@ -201,6 +202,7 @@ const _RAW_ARTICLES: EducationalArticle[] = [
     title: 'Growth Hormone Peptides Explained',
     slug: 'growth-hormone-peptides-explained',
     category: 'fundamentals',
+    goalTypes: ['muscle_gain', 'recovery', 'longevity', 'body_recomp', 'sleep'],
     imageUrl: 'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=600&q=80',
     summary: 'A comprehensive guide to growth hormone secretagogues and releasing peptides — CJC-1295, Ipamorelin, Sermorelin, and GHRP-6, including how they work and how they differ.',
     sections: [

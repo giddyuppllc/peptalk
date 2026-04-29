@@ -16,6 +16,8 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
 import { KNOWLEDGE_TOPICS } from '../../src/data/knowledgeTopics';
 import { EDUCATIONAL_ARTICLES } from '../../src/data/educationalArticles';
+import { GOAL_OPTIONS } from '../../src/constants/goals';
+import type { GoalType } from '../../src/types';
 import { HOW_TO_GUIDES } from '../../src/data/howToGuides';
 import { VIDEOS } from '../../src/data/videos';
 import {
@@ -234,6 +236,10 @@ export default function LearnHubScreen() {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all');
+  // Goal filter — narrows the Deep Dives feed to articles tagged with
+  // the selected goal. 'all' shows everything (no filter). Tagged in
+  // src/data/educationalArticles.ts; untagged articles only appear in 'all'.
+  const [activeGoal, setActiveGoal] = useState<GoalType | 'all'>('all');
 
   // Separate featured topics
   const featuredTopics = useMemo(
@@ -449,12 +455,79 @@ export default function LearnHubScreen() {
                   size={18}
                   color={Colors.rose}
                 />
-                <Text style={styles.sectionTitle}>Deep Dives</Text>
+                <Text style={styles.sectionTitle}>
+                  Deep Dives
+                  {activeGoal !== 'all' && (
+                    <Text style={{ fontSize: 14, color: '#6B7280', fontWeight: '500' }}>
+                      {' '}· {GOAL_OPTIONS.find((g) => g.value === activeGoal)?.label}
+                    </Text>
+                  )}
+                </Text>
               </View>
             </View>
 
+            {/* Goal filter chips — narrows the article list to entries
+                tagged with the selected goal. "All" returns full list. */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.goalChipsRow}
+              style={styles.goalChipsScroll}
+            >
+              <TouchableOpacity
+                onPress={() => setActiveGoal('all')}
+                style={[
+                  styles.goalChip,
+                  activeGoal === 'all' && styles.goalChipActive,
+                ]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: activeGoal === 'all' }}
+              >
+                <Text style={[
+                  styles.goalChipText,
+                  activeGoal === 'all' && styles.goalChipTextActive,
+                ]}>
+                  All
+                </Text>
+              </TouchableOpacity>
+              {GOAL_OPTIONS.map((g) => {
+                const active = activeGoal === g.value;
+                return (
+                  <TouchableOpacity
+                    key={g.value}
+                    onPress={() => setActiveGoal(g.value)}
+                    style={[
+                      styles.goalChip,
+                      active && { backgroundColor: `${g.color}20`, borderColor: g.color },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Ionicons
+                      name={g.icon as any}
+                      size={13}
+                      color={active ? g.color : '#6B7280'}
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text style={[
+                      styles.goalChipText,
+                      active && { color: g.color, fontWeight: '700' },
+                    ]}>
+                      {g.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
             <FlatList
-              data={EDUCATIONAL_ARTICLES}
+              data={
+                activeGoal === 'all'
+                  ? (EDUCATIONAL_ARTICLES as typeof EDUCATIONAL_ARTICLES)
+                  : (EDUCATIONAL_ARTICLES as typeof EDUCATIONAL_ARTICLES).filter((a) =>
+                      (a.goalTypes ?? []).includes(activeGoal as GoalType),
+                    )
+              }
               keyExtractor={(item) => item.id}
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -974,6 +1047,39 @@ const styles = StyleSheet.create({
   horizontalList: {
     paddingHorizontal: 20,
     gap: 14,
+  },
+
+  // ── Goal filter chips (Deep Dives section) ───────────────
+  goalChipsScroll: {
+    marginBottom: 10,
+  },
+  goalChipsRow: {
+    paddingHorizontal: 20,
+    gap: 6,
+    flexDirection: 'row',
+  },
+  goalChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.10)',
+    backgroundColor: 'rgba(0,0,0,0.04)',
+  },
+  goalChipActive: {
+    backgroundColor: 'rgba(62, 124, 177, 0.15)',
+    borderColor: '#3E7CB1',
+  },
+  goalChipText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  goalChipTextActive: {
+    color: '#3E7CB1',
+    fontWeight: '700',
   },
 
   // ── Cards ─────────────────────────────────────────────────

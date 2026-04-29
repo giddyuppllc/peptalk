@@ -34,6 +34,7 @@ import { StepGoalRing } from '../../src/components/StepGoalRing';
 import { MacroProgressRing } from '../../src/components/MacroProgressRing';
 import { ActiveProtocolBanner } from '../../src/components/ActiveProtocolBanner';
 import { TodaysPlanCard } from '../../src/components/TodaysPlanCard';
+import { PantryAlertCard } from '../../src/components/PantryAlertCard';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import {
@@ -1000,6 +1001,11 @@ export default function DashboardScreen() {
         {/* Today's plan — context-aware to-do list. Hides itself when nothing's left. */}
         <View style={styles.protocolBannerWrap}>
           <TodaysPlanCard />
+        </View>
+
+        {/* Pantry expiring-soon alert — hides when nothing's near expiry. */}
+        <View style={styles.protocolBannerWrap}>
+          <PantryAlertCard />
         </View>
 
         {/* ═══════════════════════════════════════════════════════════════

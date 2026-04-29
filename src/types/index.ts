@@ -654,6 +654,12 @@ export interface EducationalArticle {
   sections: { heading: string; content: string }[];
   citations: { text: string; url?: string }[];
   relatedPeptideIds?: string[];
+  /**
+   * Goals this article is most relevant to. Optional — articles without
+   * a goal tag show under "All" and any goal-filtered view that doesn't
+   * narrow further. Lets the Learn tab filter by user goal.
+   */
+  goalTypes?: GoalType[];
   lastUpdated: string;
 }
 
