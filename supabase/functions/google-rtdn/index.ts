@@ -160,22 +160,29 @@ Deno.serve(async (req) => {
       { onConflict: 'platform,external_event_id', ignoreDuplicates: true },
     );
 
+    // Mutate subscriptions only when productId resolves to a known tier.
+    // Defaulting unknown product ids to 'plus' (previous behavior) would
+    // silently mis-tier a user on a typo or future-product replay.
     if (userId && state.expiresAt !== undefined) {
-      const tier = PRODUCT_TO_TIER[productId] ?? 'plus';
-      const stillActive = !['expiration', 'revoked', 'refund'].includes(eventType)
-        && (state.expiresAt === null || new Date(state.expiresAt).getTime() > Date.now());
-      await admin.from('subscriptions').upsert(
-        {
-          user_id: userId,
-          product_id: productId,
-          tier,
-          platform: 'android',
-          expires_at: state.expiresAt,
-          is_active: stillActive,
-          last_validated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,product_id' },
-      );
+      const tier = PRODUCT_TO_TIER[productId];
+      if (!tier) {
+        console.warn('[google-rtdn] unknown productId, skipping subscriptions upsert:', productId);
+      } else {
+        const stillActive = !['expiration', 'revoked', 'refund'].includes(eventType)
+          && (state.expiresAt === null || new Date(state.expiresAt).getTime() > Date.now());
+        await admin.from('subscriptions').upsert(
+          {
+            user_id: userId,
+            product_id: productId,
+            tier,
+            platform: 'android',
+            expires_at: state.expiresAt,
+            is_active: stillActive,
+            last_validated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,product_id' },
+        );
+      }
     }
 
     return new Response('ok', { status: 200 });

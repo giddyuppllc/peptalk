@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -60,10 +60,16 @@ const MOOD_COLORS = ['', '#ef4444', '#f97316', '#eab308', '#10b981', '#22c55e'];
 
 export default function NewJournalEntryScreen() {
   const router = useRouter();
-  const { date: dateParam } = useLocalSearchParams<{ date?: string }>();
+  const { date: dateParam, id: editId } = useLocalSearchParams<{ date?: string; id?: string }>();
+  const isEditing = Boolean(editId);
   const addEntry = useJournalStore((s) => s.addEntry);
+  const updateEntry = useJournalStore((s) => s.updateEntry);
+  const deleteEntry = useJournalStore((s) => s.deleteEntry);
+  const existing = useJournalStore((s) =>
+    editId ? s.entries.find((e) => e.id === editId) : undefined,
+  );
 
-  // Form state
+  // Form state — prefilled from `existing` when editing.
   const [category, setCategory] = useState<JournalCategory>('general');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -73,6 +79,20 @@ export default function NewJournalEntryScreen() {
   const [mood, setMood] = useState<CheckInRating | undefined>(undefined);
   const [showPeptideList, setShowPeptideList] = useState(false);
   const [peptideSearch, setPeptideSearch] = useState('');
+
+  // One-shot prefill when entering edit mode. Don't depend on `existing`
+  // identity changing across renders — only run on mount with the id.
+  const prefilledRef = useRef(false);
+  useEffect(() => {
+    if (!isEditing || !existing || prefilledRef.current) return;
+    prefilledRef.current = true;
+    setCategory(existing.category);
+    setTitle(existing.title);
+    setContent(existing.content);
+    setTags(existing.tags ?? []);
+    setSelectedPeptides(existing.relatedPeptideIds ?? []);
+    setMood(existing.mood);
+  }, [isEditing, existing]);
 
   const canSave = title.trim().length > 0 && content.trim().length > 0;
 
@@ -111,6 +131,21 @@ export default function NewJournalEntryScreen() {
     if (!canSave || savingRef.current) return;
     savingRef.current = true;
 
+    if (isEditing && editId) {
+      // Edit path bypasses the weekly cap and the post-save options menu —
+      // user just wants their changes applied and to go back.
+      updateEntry(editId, {
+        category,
+        title,
+        content,
+        tags,
+        relatedPeptideIds: selectedPeptides.length > 0 ? selectedPeptides : undefined,
+        mood,
+      });
+      router.back();
+      return;
+    }
+
     const result = addEntry({
       date: dateParam || undefined,
       category,
@@ -141,6 +176,25 @@ export default function NewJournalEntryScreen() {
     ]);
   };
 
+  const handleDelete = () => {
+    if (!isEditing || !editId) return;
+    Alert.alert(
+      'Delete entry?',
+      'This will permanently remove this journal entry. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            deleteEntry(editId);
+            router.back();
+          },
+        },
+      ],
+    );
+  };
+
   // Filtered peptide list
   const filteredPeptides = peptideSearch.trim()
     ? PEPTIDES.filter((p) =>
@@ -161,7 +215,7 @@ export default function NewJournalEntryScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="arrow-back" size={24} color={Colors.darkText} />
         </Pressable>
-        <Text style={styles.headerTitle}>New Entry</Text>
+        <Text style={styles.headerTitle}>{isEditing ? 'Edit Entry' : 'New Entry'}</Text>
         <Pressable onPress={() => router.back()}>
           <Text style={styles.cancelText}>Cancel</Text>
         </Pressable>
@@ -391,18 +445,30 @@ export default function NewJournalEntryScreen() {
           })}
         </View>
 
-        {/* Save / Cancel */}
+        {/* Save / Cancel / Delete */}
         <View style={styles.buttonRow}>
           <GradientButton
-            label="Save Entry"
+            label={isEditing ? 'Save Changes' : 'Save Entry'}
             onPress={handleSave}
             disabled={!canSave}
             colors={[activeCatColor, Colors.pepTeal]}
           />
 
           <Pressable style={styles.cancelBtn} onPress={() => router.back()}>
-            <Text style={styles.cancelBtnText}>Discard</Text>
+            <Text style={styles.cancelBtnText}>{isEditing ? 'Cancel' : 'Discard'}</Text>
           </Pressable>
+
+          {isEditing && (
+            <Pressable
+              style={styles.deleteBtn}
+              onPress={handleDelete}
+              accessibilityRole="button"
+              accessibilityLabel="Delete entry"
+            >
+              <Ionicons name="trash-outline" size={16} color="#dc2626" />
+              <Text style={styles.deleteBtnText}>Delete entry</Text>
+            </Pressable>
+          )}
         </View>
 
         <View style={{ height: 40 }} />
@@ -649,5 +715,20 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.md,
     color: Colors.darkTextSecondary,
     fontWeight: '500',
+  },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(220, 38, 38, 0.25)',
+  },
+  deleteBtnText: {
+    fontSize: FontSizes.sm,
+    color: '#dc2626',
+    fontWeight: '600',
   },
 });

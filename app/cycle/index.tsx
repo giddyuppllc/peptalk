@@ -10,7 +10,7 @@
  * accents on female profiles. Soft, not sterile.
  */
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -30,8 +30,10 @@ import { useCycleStore } from '../../src/store/useCycleStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import {
   CONTRACEPTION_LABELS,
+  predictionModeFor,
   type PredictionMode,
 } from '../../src/types/cycle';
+import { rescheduleCycleNotifications } from '../../src/services/cycleNotifications';
 
 function todayKey(): string {
   const d = new Date();
@@ -69,6 +71,26 @@ export default function CycleDashboard() {
     s.getPrediction(tracking?.typicalCycleLength, tracking?.typicalPeriodLength),
   );
   const stats = useCycleStore((s) => s.getStats());
+
+  // Refresh predictive cycle notifications whenever the inputs that drive
+  // predictions change (current contraception, latest period, prediction
+  // result). Mode-aware via predictionModeFor — non-predictive modes will
+  // sweep existing reminders without scheduling new ones.
+  useEffect(() => {
+    if (!tracking?.trackingEnabled) return;
+    const mode = currentContraception
+      ? predictionModeFor(currentContraception.method)
+      : 'cyclical';
+    rescheduleCycleNotifications(mode, prediction).catch(() => {
+      // Notifications are best-effort; failures shouldn't surface to the user.
+    });
+  }, [
+    tracking?.trackingEnabled,
+    currentContraception?.method,
+    prediction?.nextPeriodDate,
+    prediction?.ovulationDate,
+    prediction?.pmsWindow?.start,
+  ]);
 
   // If not set up yet, nudge to setup
   if (!tracking?.trackingEnabled) {

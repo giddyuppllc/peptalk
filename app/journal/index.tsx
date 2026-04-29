@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
+  Alert,
   FlatList,
   Image,
   Pressable,
@@ -235,6 +236,42 @@ export default function JournalFeedScreen() {
     [activeDateRange]
   );
 
+  const deleteEntry = useJournalStore((s) => s.deleteEntry);
+
+  const handleEntryLongPress = useCallback(
+    (entry: JournalEntry) => {
+      Alert.alert(
+        entry.title || 'Journal entry',
+        'What would you like to do with this entry?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Edit',
+            onPress: () => router.push(`/journal/new?id=${entry.id}` as any),
+          },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () =>
+              Alert.alert(
+                'Delete entry?',
+                'This will permanently remove this journal entry. This cannot be undone.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => deleteEntry(entry.id),
+                  },
+                ],
+              ),
+          },
+        ],
+      );
+    },
+    [deleteEntry, router],
+  );
+
   const renderEntry = useCallback(
     ({ item }: { item: JournalEntry }) => {
       const color = CATEGORY_COLORS[item.category] ?? '#6b7280';
@@ -246,52 +283,59 @@ export default function JournalFeedScreen() {
           : item.content;
 
       return (
-        <GlassCard style={styles.entryCard}>
-          {/* Date + Category */}
-          <View style={styles.entryHeader}>
-            <Text style={styles.entryDate}>
-              {item.date}{'  '}{item.time}
-            </Text>
-            <View style={[styles.categoryBadge, { backgroundColor: color + '22' }]}>
-              <Ionicons name={icon} size={12} color={color} style={{ marginRight: 4 }} />
-              <Text style={[styles.categoryBadgeText, { color }]}>{label}</Text>
-            </View>
-          </View>
-
-          {/* Title */}
-          <Text style={styles.entryTitle} numberOfLines={1}>
-            {item.title}
-          </Text>
-
-          {/* Preview */}
-          <Text style={styles.entryPreview} numberOfLines={3}>
-            {preview}
-          </Text>
-
-          {/* Mood indicator */}
-          {item.mood && (
-            <View style={styles.moodRow}>
-              <Ionicons name="happy-outline" size={14} color={Colors.pepTeal} />
-              <Text style={styles.moodText}>
-                Mood: {item.mood}/5
+        <Pressable
+          onPress={() => router.push(`/journal/new?id=${item.id}` as any)}
+          onLongPress={() => handleEntryLongPress(item)}
+          accessibilityRole="button"
+          accessibilityLabel={`${item.title}. Tap to edit, long-press for delete.`}
+        >
+          <GlassCard style={styles.entryCard}>
+            {/* Date + Category */}
+            <View style={styles.entryHeader}>
+              <Text style={styles.entryDate}>
+                {item.date}{'  '}{item.time}
               </Text>
+              <View style={[styles.categoryBadge, { backgroundColor: color + '22' }]}>
+                <Ionicons name={icon} size={12} color={color} style={{ marginRight: 4 }} />
+                <Text style={[styles.categoryBadgeText, { color }]}>{label}</Text>
+              </View>
             </View>
-          )}
 
-          {/* Tags */}
-          {item.tags.length > 0 && (
-            <View style={styles.tagsRow}>
-              {item.tags.map((tag) => (
-                <View key={tag} style={styles.tagChip}>
-                  <Text style={styles.tagChipText}>#{tag}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </GlassCard>
+            {/* Title */}
+            <Text style={styles.entryTitle} numberOfLines={1}>
+              {item.title}
+            </Text>
+
+            {/* Preview */}
+            <Text style={styles.entryPreview} numberOfLines={3}>
+              {preview}
+            </Text>
+
+            {/* Mood indicator */}
+            {item.mood && (
+              <View style={styles.moodRow}>
+                <Ionicons name="happy-outline" size={14} color={Colors.pepTeal} />
+                <Text style={styles.moodText}>
+                  Mood: {item.mood}/5
+                </Text>
+              </View>
+            )}
+
+            {/* Tags */}
+            {item.tags.length > 0 && (
+              <View style={styles.tagsRow}>
+                {item.tags.map((tag) => (
+                  <View key={tag} style={styles.tagChip}>
+                    <Text style={styles.tagChipText}>#{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </GlassCard>
+        </Pressable>
       );
     },
-    []
+    [router, handleEntryLongPress]
   );
 
   const renderEmpty = () => (

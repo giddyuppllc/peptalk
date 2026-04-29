@@ -392,13 +392,17 @@ function nutritionixItemToUnified(item: any, type: 'common' | 'branded'): Unifie
   // Nutritionix gives per-serving data, convert to per-100g
   const scale = servingWeight > 0 ? 100 / servingWeight : 1;
 
-  const servings: ServingOption[] = appendUniversalUnits([
-    {
-      label: `${servingQty} ${servingUnit}`,
-      grams: servingWeight,
-      description: `${servingQty} ${servingUnit}`,
-    },
-  ]);
+  // Branded items (Quest bars, Chick-fil-A nuggets, etc.) should not show
+  // volumetric fallbacks — "1 cup of Quest bar" is nonsense. Keep only the
+  // brand's actual serving plus weight-only universal units.
+  const baseServing: ServingOption = {
+    label: `${servingQty} ${servingUnit}`,
+    grams: servingWeight,
+    description: `${servingQty} ${servingUnit}`,
+  };
+  const servings: ServingOption[] = type === 'branded'
+    ? appendWeightOnlyUnits([baseServing])
+    : appendUniversalUnits([baseServing]);
 
   return {
     id: `nix-${type}-${item.nix_item_id || item.tag_id || item.food_name?.replace(/\s/g, '-')}`,
@@ -928,6 +932,26 @@ function appendUniversalUnits(servings: ServingOption[]): ServingOption[] {
   // Append universal units, skip if label already exists
   const existing = new Set(result.map((s) => s.label.toLowerCase()));
   for (const u of UNIVERSAL_WEIGHT_UNITS) {
+    if (!existing.has(u.label.toLowerCase())) {
+      result.push(u);
+    }
+  }
+  return result;
+}
+
+/**
+ * Branded-food variant: same as appendUniversalUnits but skips volumetric
+ * fallbacks (cup / tbsp / fl oz). For packaged items those are nonsense.
+ */
+function appendWeightOnlyUnits(servings: ServingOption[]): ServingOption[] {
+  const result = servings.filter(
+    (s) => !['100g', '1 oz'].includes(s.label),
+  );
+  const existing = new Set(result.map((s) => s.label.toLowerCase()));
+  for (const u of UNIVERSAL_WEIGHT_UNITS) {
+    // Filter out anything that's volumetric. The "(approx)" suffix is the
+    // marker we already use on those entries.
+    if (u.label.includes('(approx)')) continue;
     if (!existing.has(u.label.toLowerCase())) {
       result.push(u);
     }

@@ -87,7 +87,6 @@ export default function TabsLayout() {
       {/* Hidden tabs — still routable but not in tab bar */}
       <Tabs.Screen name="stack-builder" options={{ href: null }} />
       <Tabs.Screen name="check-in" options={{ href: null }} />
-      <Tabs.Screen name="feed" options={{ href: null }} />
       <Tabs.Screen name="calendar" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>

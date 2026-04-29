@@ -110,21 +110,28 @@ Deno.serve(async (req) => {
 
     // Primary user identification: the appAccountToken the client passed
     // to `purchaseProduct` at purchase time. Apple echoes this on every
-    // subsequent notification for the same subscription. No appAccountToken
-    // means either a pre-appAccountToken purchase (early test builds) or a
-    // client that didn't pass one — fall back to logging the event with a
-    // null user_id so ops can reconcile manually.
+    // subsequent notification for the same subscription.
+    //
+    // Fallback: query subscriptions.original_transaction_id (added in
+    // 20260428_subscription_dedup) — validate-purchase populates this on
+    // the very first purchase, so any notification after that round-trip
+    // can resolve the user even if appAccountToken is missing (early test
+    // builds, or a client that didn't pass one).
+    //
+    // If neither resolves a user, we still log the event with null
+    // user_id (subscription_events.user_id is nullable) so ops can
+    // reconcile when validate-purchase eventually runs.
     let userId: string | null = null;
     if (appAccountToken) {
       userId = appAccountToken;
     } else if (originalTxId) {
-      // Best-effort fallback via original_transaction_id if that column
-      // is ever added to subscriptions. Today receipt_data stores the
-      // full base64 receipt blob, NOT the original transaction id, so
-      // the previous match here was broken and could only match by
-      // coincidence. Leave the query shape as a no-op until we add the
-      // explicit column.
-      void originalTxId;
+      const { data: match } = await admin
+        .from('subscriptions')
+        .select('user_id')
+        .eq('original_transaction_id', originalTxId)
+        .limit(1)
+        .maybeSingle();
+      if (match?.user_id) userId = match.user_id;
     }
 
     const expiresMs = parseInt(txInfo?.expiresDate ?? '0', 10);
@@ -155,22 +162,30 @@ Deno.serve(async (req) => {
       { onConflict: 'platform,external_event_id', ignoreDuplicates: true },
     );
 
-    // 6. Mutate subscriptions row when we can identify the user.
+    // 6. Mutate subscriptions row when we can identify both the user and
+    //    the tier. If the productId isn't in our PRODUCT_TO_TIER map (typo,
+    //    new product not yet shipped, family-share replay), the audit
+    //    event still records the raw payload but we don't write a row
+    //    with a guessed tier — that would silently grant the wrong tier.
     if (userId && productId) {
-      const tier = PRODUCT_TO_TIER[productId] ?? null;
-      const stillActive = !['expiration', 'refund', 'revoked'].includes(eventType);
-      await admin.from('subscriptions').upsert(
-        {
-          user_id: userId,
-          product_id: productId,
-          tier: tier ?? 'plus',
-          platform: 'ios',
-          expires_at: expiresAt,
-          is_active: stillActive,
-          last_validated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,product_id' },
-      );
+      const tier = PRODUCT_TO_TIER[productId];
+      if (!tier) {
+        console.warn('[apple-notifications] unknown productId, skipping subscriptions upsert:', productId);
+      } else {
+        const stillActive = !['expiration', 'refund', 'revoked'].includes(eventType);
+        await admin.from('subscriptions').upsert(
+          {
+            user_id: userId,
+            product_id: productId,
+            tier,
+            platform: 'ios',
+            expires_at: expiresAt,
+            is_active: stillActive,
+            last_validated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,product_id' },
+        );
+      }
     }
 
     return new Response('ok', { status: 200 });

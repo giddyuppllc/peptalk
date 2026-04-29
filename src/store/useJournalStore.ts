@@ -4,6 +4,7 @@ import { JournalCategory, JournalEntry } from '../types';
 import { secureStorage } from '../services/secureStorage';
 import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
 import { useSubscriptionStore } from './useSubscriptionStore';
+import { STORE_LIMITS, capNewestFirst } from '../utils/storeLimits';
 
 const uid = () =>
   `journal-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -106,7 +107,7 @@ export const useJournalStore = create<JournalStore>()(
         };
 
         set({
-          entries: [entry, ...entries],
+          entries: capNewestFirst([entry, ...entries], STORE_LIMITS.JOURNAL_ENTRIES),
           weeklyEntryCount: effectiveCount + 1,
           weekStartDate: currentWeekStart,
         });
@@ -239,7 +240,12 @@ export const useJournalStore = create<JournalStore>()(
           }),
           { orderBy: 'date', ascending: false, limit: 2000 },
         );
-        set({ entries: merged.sort((a, b) => (a.date < b.date ? 1 : -1)) });
+        set({
+          entries: capNewestFirst(
+            merged.sort((a, b) => (a.date < b.date ? 1 : -1)),
+            STORE_LIMITS.JOURNAL_ENTRIES,
+          ),
+        });
       },
     }),
     {

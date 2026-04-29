@@ -454,14 +454,6 @@ function RootLayout() {
             }}
           />
           <Stack.Screen
-            name="research-feed"
-            options={{
-              headerShown: false,
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
-            }}
-          />
-          <Stack.Screen
             name="health-profile"
             options={{
               headerShown: false,
@@ -471,6 +463,13 @@ function RootLayout() {
           />
           <Stack.Screen
             name="learn/index"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="resources"
             options={{
               headerShown: false,
               animation: 'slide_from_right',

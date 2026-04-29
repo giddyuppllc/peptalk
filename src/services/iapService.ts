@@ -16,7 +16,14 @@
 import { Platform } from 'react-native';
 import type { SubscriptionTier } from '../types/fitness';
 
-// Product IDs — must match App Store Connect / Play Console exactly
+// Product IDs — must match App Store Connect / Play Console exactly.
+//
+// Yearly SKUs are kept in the *mapping* (PRODUCT_TO_TIER) so future
+// purchases / receipts that reference them resolve to the right tier
+// without a code change. They are *omitted* from ALL_PRODUCT_IDS until
+// they're actually configured in both stores — calling getProducts with
+// IDs that don't exist server-side fails the whole batch on iOS, which
+// would break monthly purchases too.
 export const PRODUCT_IDS = {
   plusMonthly: 'peptalk_plus_monthly',
   plusYearly: 'peptalk_plus_yearly',
@@ -26,9 +33,17 @@ export const PRODUCT_IDS = {
 
 export type ProductId = (typeof PRODUCT_IDS)[keyof typeof PRODUCT_IDS];
 
-const ALL_PRODUCT_IDS = Object.values(PRODUCT_IDS);
+const ALL_PRODUCT_IDS: string[] = [
+  PRODUCT_IDS.plusMonthly,
+  PRODUCT_IDS.proMonthly,
+  // Yearly products: not yet configured in App Store Connect / Play
+  // Console. Re-add `plusYearly` / `proYearly` here once both stores
+  // have them set up.
+];
 
-// Map product ID → tier so the store knows which features to unlock
+// Map product ID → tier so the store knows which features to unlock.
+// Keep yearly ids mapped so receipt validation still works the day
+// we add yearly back, without a migration.
 export const PRODUCT_TO_TIER: Record<string, SubscriptionTier> = {
   [PRODUCT_IDS.plusMonthly]: 'plus',
   [PRODUCT_IDS.plusYearly]: 'plus',

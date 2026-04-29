@@ -43,14 +43,10 @@ import {
 // Tier data
 // ---------------------------------------------------------------------------
 
-type BillingPeriod = 'monthly' | 'yearly';
-
 interface PricedPlan {
   price: string;
   period: string;
   productId?: ProductId;
-  /** Label like "Save 30%" shown on the yearly option. */
-  savingsLabel?: string;
 }
 
 interface TierInfo {
@@ -61,8 +57,8 @@ interface TierInfo {
   colors: [string, string];
   icon: string;
   badge?: string;
-  /** Per-period pricing. Free tier only populates `monthly`. */
-  pricing: Record<BillingPeriod, PricedPlan | null>;
+  /** Monthly pricing only. Yearly plans not yet launched. */
+  pricing: PricedPlan;
 }
 
 const TIERS: TierInfo[] = [
@@ -81,41 +77,24 @@ const TIERS: TierInfo[] = [
     ],
     colors: ['#9CA3AF', '#6B7280'],
     icon: 'leaf-outline',
-    pricing: {
-      monthly: { price: '$0', period: '' },
-      yearly: { price: '$0', period: '' },
-    },
+    pricing: { price: '$0', period: '' },
   },
   {
     tier: 'plus',
     name: 'PepTalk+',
     description: 'For the serious tracker',
     features: [
-      'Everything in Free',
-      'Peptide Stack Builder + unlimited stacks',
-      'AI peptide explanations + intelligent feedback',
-      'Aimee AI chat (20 msgs/day)',
-      'Voice Log — AI meal parser',
-      'Unlimited meal logging',
-      'Unlimited custom foods & recipes',
-      'Full micronutrient tracking',
-      'Apple Watch & Google Fit sync',
-      'HRV, VO2, weight trends',
-      'Ad-free experience',
+      'Stack Builder — unlimited peptide stacks with interaction & synergy analysis',
+      'Aimee AI — 20 personalized chats/day on dosing, timing, and side effects',
+      'Voice Log — say what you ate, AI parses the macros',
+      'Unlimited meal & food logging + full micronutrient tracking',
+      'Apple Watch + Google Fit sync (HRV, VO2, weight trends)',
+      'Everything in Free, ad-free',
     ],
     colors: ['#E89672', '#F5DAD6'],
     icon: 'pulse-outline',
     badge: 'Most Popular',
-    pricing: {
-      monthly: { price: '$9.99', period: '/mo', productId: PRODUCT_IDS.plusMonthly },
-      // ~25% off annual vs monthly ($9.99 × 12 = $119.88).
-      yearly: {
-        price: '$89.99',
-        period: '/yr',
-        productId: PRODUCT_IDS.plusYearly,
-        savingsLabel: 'Save 25%',
-      },
-    },
+    pricing: { price: '$9.99', period: '/mo', productId: PRODUCT_IDS.plusMonthly },
   },
   {
     tier: 'pro',
@@ -136,16 +115,7 @@ const TIERS: TierInfo[] = [
     colors: ['#7FB3D8', '#3E7CB1'],
     icon: 'star',
     badge: 'Best Value',
-    pricing: {
-      monthly: { price: '$49.99', period: '/mo', productId: PRODUCT_IDS.proMonthly },
-      // ~33% off annual vs monthly ($49.99 × 12 = $599.88).
-      yearly: {
-        price: '$399.99',
-        period: '/yr',
-        productId: PRODUCT_IDS.proYearly,
-        savingsLabel: 'Save 33%',
-      },
-    },
+    pricing: { price: '$49.99', period: '/mo', productId: PRODUCT_IDS.proMonthly },
   },
 ];
 
@@ -175,15 +145,13 @@ function TierCard({
   info,
   isActive,
   highlighted,
-  period,
 }: {
   info: TierInfo;
   isActive: boolean;
   highlighted?: boolean;
-  period: BillingPeriod;
 }) {
   const [purchasing, setPurchasing] = React.useState(false);
-  const plan = info.pricing[period] ?? info.pricing.monthly;
+  const plan = info.pricing;
 
   const handleUpgrade = async () => {
     if (info.tier === 'free' || !plan?.productId) return;
@@ -256,11 +224,6 @@ function TierCard({
             <Text style={styles.tierPrice}>{plan?.price ?? ''}</Text>
             {plan?.period ? (
               <Text style={styles.tierPeriod}>{plan.period}</Text>
-            ) : null}
-            {plan?.savingsLabel && info.tier !== 'free' ? (
-              <View style={styles.savingsPill}>
-                <Text style={styles.savingsPillText}>{plan.savingsLabel}</Text>
-              </View>
             ) : null}
           </View>
         </View>
@@ -353,9 +316,6 @@ export default function SubscriptionScreen() {
   const productId = useSubscriptionStore((s) => s.productId);
   const pendingPurchase = useSubscriptionStore((s) => s.pendingPurchase);
   const [restoring, setRestoring] = React.useState(false);
-  // Default to yearly so the cheaper long-term option is front-and-center.
-  // Users can flip to monthly via the toggle below if they prefer.
-  const [billingPeriod, setBillingPeriod] = React.useState<BillingPeriod>('yearly');
   const { highlight } = useLocalSearchParams<{ highlight?: string }>();
   const highlightedTier = tierForFeature(highlight);
   const hasPaidTier = tier === 'plus' || tier === 'pro';
@@ -411,39 +371,6 @@ export default function SubscriptionScreen() {
           ))}
         </View>
 
-        {/* Billing-period toggle (paid tiers only). */}
-        <View style={styles.billingToggleWrap}>
-          <View style={styles.billingToggle} accessibilityRole="tablist">
-            {(['monthly', 'yearly'] as const).map((p) => (
-              <TouchableOpacity
-                key={p}
-                style={[
-                  styles.billingToggleOption,
-                  billingPeriod === p && styles.billingToggleOptionActive,
-                ]}
-                onPress={() => setBillingPeriod(p)}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: billingPeriod === p }}
-                accessibilityLabel={`${p === 'monthly' ? 'Monthly' : 'Yearly'} pricing`}
-              >
-                <Text
-                  style={[
-                    styles.billingToggleText,
-                    billingPeriod === p && styles.billingToggleTextActive,
-                  ]}
-                >
-                  {p === 'monthly' ? 'Monthly' : 'Yearly'}
-                </Text>
-                {p === 'yearly' && (
-                  <View style={styles.billingToggleBadge}>
-                    <Text style={styles.billingToggleBadgeText}>Best value</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
         {/* Pending-purchase banner (Ask to Buy / SCA / parental consent). */}
         {pendingPurchase && (
           <View style={styles.pendingBanner}>
@@ -462,7 +389,6 @@ export default function SubscriptionScreen() {
               info={info}
               isActive={tier === info.tier}
               highlighted={highlightedTier === info.tier && tier !== info.tier}
-              period={billingPeriod}
             />
           </View>
         ))}

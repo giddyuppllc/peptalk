@@ -7,6 +7,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
 import { syncRecord, deleteRecord, fetchUserRecords } from '../services/syncService';
 import type { MealEntry, MealType, MacroTargets, FoodItem } from '../types/fitness';
+import { STORE_LIMITS, capNewestFirst } from '../utils/storeLimits';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -336,7 +337,7 @@ export const useMealStore = create<MealState & MealActions>()(
       // -----------------------------------------------------------------------
 
       addMeal: (meal) => {
-        set({ meals: [meal, ...get().meals] });
+        set({ meals: capNewestFirst([meal, ...get().meals], STORE_LIMITS.MEALS) });
         syncRecord('meal_entries', {
           id: meal.id,
           date: meal.date,
@@ -741,7 +742,7 @@ export const useMealStore = create<MealState & MealActions>()(
             if (a.date !== b.date) return a.date < b.date ? 1 : -1;
             return a.timestamp < b.timestamp ? 1 : -1;
           });
-          set({ meals: merged });
+          set({ meals: capNewestFirst(merged, STORE_LIMITS.MEALS) });
         } catch (err) {
           if (__DEV__) console.warn('[useMealStore] syncFromServer failed:', err);
         }

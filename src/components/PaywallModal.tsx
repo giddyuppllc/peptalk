@@ -245,13 +245,12 @@ function getRequiredTier(feature: string): SubscriptionTier {
 }
 
 // Tier labels + prices live in ../constants/tierPricing so this modal
-// doesn't drift out of sync with the subscription screen's yearly-default
-// pricing (which the modal eventually routes the user to).
+// doesn't drift out of sync with the subscription screen.
 const TIER_LABELS = TIER_LABEL;
 const TIER_PRICES: Record<SubscriptionTier, string> = {
-  free: tierPriceShort('free', false),
-  plus: tierPriceShort('plus', true),
-  pro: tierPriceShort('pro', true),
+  free: tierPriceShort('free'),
+  plus: tierPriceShort('plus'),
+  pro: tierPriceShort('pro'),
 };
 
 // ---------------------------------------------------------------------------

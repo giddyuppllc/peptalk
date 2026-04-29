@@ -302,33 +302,6 @@ export interface BotContext {
   conversationHistory: ChatMessage[];
 }
 
-// ─── Research Feed / Newsletter ───────────────────────────────────────────────
-
-export type FeedCategory =
-  | 'research'
-  | 'new_peptides'
-  | 'medical'
-  | 'regulatory';
-
-export interface FeedItem {
-  id: string;
-  title: string;
-  summary: string;
-  source: string;
-  url: string;
-  category: FeedCategory;
-  publishedAt: string;
-  fetchedAt: string;
-  relatedPeptideIds?: string[];
-  authors?: string;
-}
-
-export interface DailyDigest {
-  date: string; // YYYY-MM-DD
-  items: FeedItem[];
-  generatedAt: string;
-}
-
 // ─── Dose Logging & Protocol Tracking ─────────────────────────────────────────
 
 export type AdministrationRoute =

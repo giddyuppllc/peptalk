@@ -13,6 +13,7 @@ import { secureStorage } from '../services/secureStorage';
 import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
 import { getPeptideById } from '../data/peptides';
 import { PROTOCOL_TEMPLATES } from '../data/protocols';
+import { STORE_LIMITS, capNewestFirst } from '../utils/storeLimits';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -242,7 +243,7 @@ export const useDoseLogStore = create<DoseLogStore>()(
         };
 
         set((state) => ({
-          doses: [entry, ...state.doses],
+          doses: capNewestFirst([entry, ...state.doses], STORE_LIMITS.DOSES),
         }));
 
         // Sync to Supabase. Column names match the `dose_logs` table from
@@ -446,7 +447,12 @@ export const useDoseLogStore = create<DoseLogStore>()(
           }),
           { orderBy: 'date', ascending: false, limit: 2000 },
         );
-        set({ doses: merged.sort((a, b) => (a.date < b.date ? 1 : -1)) });
+        set({
+          doses: capNewestFirst(
+            merged.sort((a, b) => (a.date < b.date ? 1 : -1)),
+            STORE_LIMITS.DOSES,
+          ),
+        });
       },
     }),
     {

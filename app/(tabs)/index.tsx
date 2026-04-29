@@ -38,6 +38,7 @@ import { PantryAlertCard } from '../../src/components/PantryAlertCard';
 import { DailyInsightCard } from '../../src/components/DailyInsightCard';
 import { ReadinessCard } from '../../src/components/ReadinessCard';
 import { ProfileCompletionCard } from '../../src/components/ProfileCompletionCard';
+import { FreeUpsellCard } from '../../src/components/FreeUpsellCard';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import {
@@ -1025,6 +1026,11 @@ export default function DashboardScreen() {
         {/* Profile completion nudge — hides ≥90% or 0%. */}
         <View style={styles.protocolBannerWrap}>
           <ProfileCompletionCard />
+        </View>
+
+        {/* Plus upsell nudge — free-tier only, rotates daily, dismissible. */}
+        <View style={styles.protocolBannerWrap}>
+          <FreeUpsellCard />
         </View>
 
         {/* ═══════════════════════════════════════════════════════════════
