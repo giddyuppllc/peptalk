@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getPeptideById } from '../../src/data/peptides';
 import { useStackStore } from '../../src/store/useStackStore';
 import { GlassCard } from '../../src/components/GlassCard';
+import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
 import { getCategoryColor } from '../../src/constants/categories';
 import { Disclaimer } from '../../src/components/Disclaimer';
 import { trackPeptideView } from '../../src/services/analyticsEvents';
@@ -698,6 +699,8 @@ export default function PeptideDetailScreen() {
                     <Text style={styles.protocolTiming}>{proto.timing}</Text>
                   )}
                 </View>
+                {/* Render structured week-by-week ladder when populated. */}
+                <TitrationScheduleCard protocol={proto} />
               </View>
             ))}
           </GlassCard>

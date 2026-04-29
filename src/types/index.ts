@@ -367,6 +367,27 @@ export type ProtocolFrequency =
   | 'monthly'
   | 'custom';
 
+/**
+ * One row of a structured titration ladder. Models the common
+ * "Week N: X mg, Z×/week" pattern from peptidedosagescalculator.com /
+ * peptideprotocolportal.com / FDA labels for GLP-1s, GH peptides,
+ * and other titrated compounds.
+ *
+ * `weekStart` is the first week of the step (1-indexed). `weekEnd`
+ * is omitted for the final maintenance step (open-ended).
+ */
+export interface TitrationStep {
+  weekStart: number;
+  weekEnd?: number;             // omit for the maintenance/final step
+  dose: number;
+  unit: DoseUnit;
+  /** How often per week the dose is taken at this step. */
+  frequency: ProtocolFrequency;
+  frequencyLabel: string;        // e.g. "Once weekly", "Daily"
+  /** One-line note for this step — e.g. "GI side-effects most likely here". */
+  note?: string;
+}
+
 export interface ProtocolTemplate {
   id: string;
   peptideId: string;
@@ -383,6 +404,13 @@ export interface ProtocolTemplate {
   contraindications?: string[];  // conditions/situations where this peptide should NOT be used
   cautionConditions?: string[];  // conditions requiring extra monitoring
   source: string;          // "published research" | "common practice"
+  /**
+   * Optional structured week-by-week dose ladder. Populated for peptides
+   * that are titrated up over several weeks (GLP-1s, GH releasers, etc.).
+   * Absence means the protocol is constant-dose — render the typicalDose
+   * range instead of a ladder.
+   */
+  titrationSchedule?: TitrationStep[];
 }
 
 export interface ActiveProtocol {

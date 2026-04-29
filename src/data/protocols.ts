@@ -56,6 +56,13 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     contraindications: ['active cancer', 'pregnancy', 'breastfeeding'],
     cautionConditions: ['autoimmune disease', 'blood clotting disorders'],
     source: 'published research',
+    // Loading-then-maintenance pattern.
+    titrationSchedule: [
+      { weekStart: 1, weekEnd: 4, dose: 5, unit: 'mg', frequency: 'biw', frequencyLabel: '2× / week',
+        note: 'Loading phase — saturates tissue stores. Some users extend to 6 weeks.' },
+      { weekStart: 5, dose: 5, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly',
+        note: 'Maintenance. Some protocols drop to once every 2 weeks for long cycles.' },
+    ],
   },
   {
     id: 'proto-ghkcu-subq',
@@ -168,6 +175,18 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     contraindications: ['personal or family history of medullary thyroid carcinoma', 'MEN 2 syndrome', 'pregnancy', 'breastfeeding', 'pancreatitis history'],
     cautionConditions: ['diabetic retinopathy', 'kidney disease', 'gastroparesis', 'gallbladder disease', 'depression or suicidal ideation'],
     source: 'published research',
+    // 17-week titration ladder per Wegovy / Ozempic FDA labels.
+    // Each step 4 weeks minimum; provider may hold a step longer if
+    // GI side-effects haven't settled.
+    titrationSchedule: [
+      { weekStart: 1, weekEnd: 4, dose: 250, unit: 'mcg', frequency: 'weekly', frequencyLabel: 'Once weekly',
+        note: 'Starter dose. GI side-effects most likely in this window.' },
+      { weekStart: 5, weekEnd: 8, dose: 500, unit: 'mcg', frequency: 'weekly', frequencyLabel: 'Once weekly' },
+      { weekStart: 9, weekEnd: 12, dose: 1000, unit: 'mcg', frequency: 'weekly', frequencyLabel: 'Once weekly' },
+      { weekStart: 13, weekEnd: 16, dose: 1700, unit: 'mcg', frequency: 'weekly', frequencyLabel: 'Once weekly' },
+      { weekStart: 17, dose: 2400, unit: 'mcg', frequency: 'weekly', frequencyLabel: 'Once weekly',
+        note: 'Maintenance / Wegovy max. Ozempic typically caps earlier (1.0–2.0 mg).' },
+    ],
   },
   {
     id: 'proto-tirzepatide',
@@ -190,6 +209,17 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     contraindications: ['personal or family history of medullary thyroid carcinoma', 'MEN 2 syndrome', 'pregnancy', 'breastfeeding', 'pancreatitis history'],
     cautionConditions: ['diabetic retinopathy', 'kidney disease', 'gastroparesis', 'gallbladder disease'],
     source: 'published research',
+    // 21-week titration ladder per Mounjaro / Zepbound FDA labels.
+    titrationSchedule: [
+      { weekStart: 1, weekEnd: 4, dose: 2500, unit: 'mcg', frequency: 'weekly', frequencyLabel: 'Once weekly',
+        note: 'Starter dose. GI side-effects most likely in this window.' },
+      { weekStart: 5, weekEnd: 8, dose: 5000, unit: 'mcg', frequency: 'weekly', frequencyLabel: 'Once weekly' },
+      { weekStart: 9, weekEnd: 12, dose: 7500, unit: 'mcg', frequency: 'weekly', frequencyLabel: 'Once weekly' },
+      { weekStart: 13, weekEnd: 16, dose: 10000, unit: 'mcg', frequency: 'weekly', frequencyLabel: 'Once weekly' },
+      { weekStart: 17, weekEnd: 20, dose: 12500, unit: 'mcg', frequency: 'weekly', frequencyLabel: 'Once weekly' },
+      { weekStart: 21, dose: 15000, unit: 'mcg', frequency: 'weekly', frequencyLabel: 'Once weekly',
+        note: 'Maintenance / max FDA-approved dose.' },
+    ],
   },
   {
     id: 'proto-retatrutide',
@@ -212,6 +242,15 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     contraindications: ['personal or family history of medullary thyroid carcinoma', 'MEN 2 syndrome', 'pregnancy', 'breastfeeding', 'pancreatitis history'],
     cautionConditions: ['diabetes', 'kidney disease', 'gastroparesis', 'liver disease'],
     source: 'published research',
+    // Approximate Phase 2 trial titration. Phase 3 may adjust.
+    titrationSchedule: [
+      { weekStart: 1, weekEnd: 4, dose: 2, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly',
+        note: 'Starter dose. Glucagon arm can amplify GI effects.' },
+      { weekStart: 5, weekEnd: 8, dose: 4, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly' },
+      { weekStart: 9, weekEnd: 16, dose: 8, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly' },
+      { weekStart: 17, dose: 12, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly',
+        note: 'Phase 2 max. Provider may hold at 8mg if response is sufficient.' },
+    ],
   },
 
   // ─── NOOTROPIC ──────────────────────────────────────────────────────────
