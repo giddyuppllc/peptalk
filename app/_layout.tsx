@@ -31,6 +31,7 @@ import { useAuthStore } from '../src/store/useAuthStore';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
 import { syncHealthProfileFromServer } from '../src/store/useHealthProfileStore';
 import { configureNotificationHandler } from '../src/services/notificationService';
+import { useNotificationStore } from '../src/store/useNotificationStore';
 import { initIAP, endIAP } from '../src/services/iapService';
 import { warmKnowledgeBase } from '../src/services/llmService';
 import { useChatStore } from '../src/store/useChatStore';
@@ -173,6 +174,27 @@ function RootLayout() {
     } catch (err) {
       if (__DEV__) console.warn('[boot] configureNotificationHandler threw:', err);
     }
+
+    // First-run notification permission + daily check-in reminder.
+    // Tester feedback: users want a morning nudge so the habit forms even
+    // on days they're not actively dosing. Default-on in preferences,
+    // so we just need to register + schedule once permissions are granted.
+    // This runs every boot but registerForPushNotifications is idempotent —
+    // OS short-circuits if permission already granted.
+    (async () => {
+      try {
+        const { registerForPushNotifications, scheduleDailyCheckInReminder } =
+          await import('../src/services/notificationService');
+        const token = await registerForPushNotifications();
+        if (!token) return; // user denied, or notifications unavailable
+        const prefs = useNotificationStore.getState().preferences;
+        if (prefs.dailyCheckInReminder && prefs.enabled) {
+          await scheduleDailyCheckInReminder(prefs.checkInReminderTime);
+        }
+      } catch (err) {
+        if (__DEV__) console.warn('[boot] notification registration failed:', err);
+      }
+    })();
     useAuthStore
       .getState()
       .restoreSession()

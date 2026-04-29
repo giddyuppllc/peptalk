@@ -35,6 +35,8 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { Colors, Spacing, FontSizes, BorderRadius, Gradients } from '../../src/constants/theme';
 import { PEPTIDES } from '../../src/data/peptides';
 import { PROTOCOL_TEMPLATES } from '../../src/data/protocols';
+import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
 import type { Peptide } from '../../src/types';
 
 type WeightUnit = 'lbs' | 'kg';
@@ -67,7 +69,15 @@ export default function DosingCalculatorScreen() {
   const [targetDose, setTargetDose] = useState('');
   const [doseUnit, setDoseUnit] = useState<DoseUnit>('mcg');
   const [frequency, setFrequency] = useState<Frequency>('daily');
-  const [bodyWeight, setBodyWeight] = useState('');
+  // Pre-populate from health profile so the user doesn't re-type their
+  // weight every time they open the calculator. They can still edit
+  // inline if they're calculating for someone else.
+  const profileWeightLbs = useHealthProfileStore(
+    (s) => s.profile?.bodyMetrics?.weightLbs,
+  );
+  const [bodyWeight, setBodyWeight] = useState(
+    profileWeightLbs ? String(profileWeightLbs) : '',
+  );
   const [weightUnit, setWeightUnit] = useState<WeightUnit>('lbs');
 
   // Results visibility
@@ -242,6 +252,19 @@ export default function DosingCalculatorScreen() {
             </TouchableOpacity>
           </GlassCard>
         </View>
+
+        {/* Titration ladder — shown only for peptides with structured weekly steps
+            (GLP-1 family, TB-500, etc.). Lets the user pick the right step for
+            their week-of-cycle without leaving the calculator. */}
+        {selectedPeptide && protocolsForPeptide[0]?.titrationSchedule && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: t.text }]}>Recommended schedule</Text>
+            <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
+              Standard titration for {selectedPeptide.name}. Tap any step to load that dose.
+            </Text>
+            <TitrationScheduleCard protocol={protocolsForPeptide[0]} />
+          </View>
+        )}
 
         {/* Vial Size */}
         <View style={styles.section}>
