@@ -34,6 +34,10 @@ import {
   type PredictionMode,
 } from '../../src/types/cycle';
 import { rescheduleCycleNotifications } from '../../src/services/cycleNotifications';
+import {
+  computeCyclePrediction,
+  computeCycleStats,
+} from '../../src/services/cyclePredictor';
 
 function todayKey(): string {
   const d = new Date();
@@ -61,16 +65,50 @@ export default function CycleDashboard() {
   const router = useRouter();
   const t = useTheme();
 
-  const currentContraception = useCycleStore((s) => s.getCurrentContraception());
-  const activePeriod = useCycleStore((s) => s.getActivePeriod());
-  const mostRecent = useCycleStore((s) => s.getMostRecentPeriod());
-  const dayLog = useCycleStore((s) => s.getDayLog(todayKey()));
+  // CRITICAL: select stable inputs from the store (arrays + primitive
+  // returns from .find()), then compute derived values via useMemo. The
+  // previous pattern — useCycleStore(s => s.getStats()) — returned a
+  // fresh object every selector call which Zustand's === check treated
+  // as a state change, triggering an infinite render loop and the
+  // "Maximum update depth exceeded" crash on TestFlight.
+  const periods = useCycleStore((s) => s.periods);
+  const contraceptionHistory = useCycleStore((s) => s.contraceptionHistory);
+  const dayLogs = useCycleStore((s) => s.dayLogs);
   const tracking = useHealthProfileStore((s) => s.profile?.cycle);
 
-  const prediction = useCycleStore((s) =>
-    s.getPrediction(tracking?.typicalCycleLength, tracking?.typicalPeriodLength),
+  const currentContraception = useMemo(
+    () => contraceptionHistory.find((h) => !h.endDate),
+    [contraceptionHistory],
   );
-  const stats = useCycleStore((s) => s.getStats());
+  const activePeriod = useMemo(
+    () => periods.find((p) => !p.endDate),
+    [periods],
+  );
+  const mostRecent = useMemo(() => {
+    if (periods.length === 0) return undefined;
+    return [...periods].sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
+  }, [periods]);
+  const dayLog = useMemo(() => {
+    const today = todayKey();
+    return dayLogs.find((d) => d.date === today);
+  }, [dayLogs]);
+
+  const prediction = useMemo(
+    () =>
+      computeCyclePrediction({
+        method: currentContraception?.method ?? 'tracking_natural',
+        periods,
+        fallbackCycleLength: tracking?.typicalCycleLength,
+        fallbackPeriodLength: tracking?.typicalPeriodLength,
+      }),
+    [
+      currentContraception?.method,
+      periods,
+      tracking?.typicalCycleLength,
+      tracking?.typicalPeriodLength,
+    ],
+  );
+  const stats = useMemo(() => computeCycleStats(periods), [periods]);
 
   // Refresh predictive cycle notifications whenever the inputs that drive
   // predictions change (current contraception, latest period, prediction

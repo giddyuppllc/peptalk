@@ -5,7 +5,7 @@
  * have more history to plot meaningfully.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 import { useCycleStore } from '../../src/store/useCycleStore';
+import { computeCycleStats } from '../../src/services/cyclePredictor';
 
 function shortDate(iso: string): string {
   const d = new Date(iso + 'T12:00:00Z');
@@ -36,10 +37,16 @@ function daysBetween(a: string, b: string): number {
 export default function CycleHistoryScreen() {
   const router = useRouter();
   const t = useTheme();
+  // Compute stats via useMemo on the store's stable `periods` array.
+  // Calling s.getStats() in the selector returned a fresh object every
+  // render which caused an infinite re-render loop on Zustand's === check.
   const periods = useCycleStore((s) => s.periods);
-  const stats = useCycleStore((s) => s.getStats());
+  const stats = useMemo(() => computeCycleStats(periods), [periods]);
 
-  const sorted = [...periods].sort((a, b) => b.startDate.localeCompare(a.startDate));
+  const sorted = useMemo(
+    () => [...periods].sort((a, b) => b.startDate.localeCompare(a.startDate)),
+    [periods],
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>

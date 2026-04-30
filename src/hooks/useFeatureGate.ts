@@ -10,6 +10,7 @@ import { router } from 'expo-router';
 import { useSubscriptionStore } from '../store/useSubscriptionStore';
 import { PaywallModal } from '../components/PaywallModal';
 import { trackFeatureGated } from '../services/analyticsEvents';
+import { TIER_FEATURES } from '../types/fitness';
 
 /**
  * Returns true if the current user has access to the given feature.
@@ -26,11 +27,18 @@ export function useTier() {
 }
 
 /**
- * Returns all features available to the current tier.
+ * Returns all features available to the current tier. Subscribes only to
+ * `tier` and resolves the feature list via the constant table — calling
+ * s.getFeatures() in the selector returned a fresh `[]` if tier was ever
+ * missing, which Zustand treated as a state change and re-rendered every
+ * frame.
  */
 export function useAvailableFeatures(): string[] {
-  return useSubscriptionStore((s) => s.getFeatures());
+  const tier = useSubscriptionStore((s) => s.tier);
+  return TIER_FEATURES[tier] ?? EMPTY_FEATURES;
 }
+
+const EMPTY_FEATURES: string[] = [];
 
 /**
  * PaywallGate — renders children if the user has the required feature,

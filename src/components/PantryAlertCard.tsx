@@ -28,14 +28,21 @@ function daysUntil(iso: string): number {
 export function PantryAlertCard() {
   const t = useTheme();
   const router = useRouter();
-  const expiring = usePantryStore((s) => s.getExpiringItems(ALERT_DAYS));
+  // Select the items array directly and filter via useMemo. Calling
+  // s.getExpiringItems(ALERT_DAYS) inline returned a fresh filtered
+  // array every selector call → Zustand's === check failed → infinite
+  // re-render loop on home tab mount.
+  const items = usePantryStore((s) => s.items);
 
-  const sorted = useMemo(() => {
-    if (!expiring || expiring.length === 0) return [];
-    return [...expiring]
-      .sort((a, b) => (a.expiryDate ?? '').localeCompare(b.expiryDate ?? ''))
-      .slice(0, 4);
-  }, [expiring]);
+  const expiring = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() + ALERT_DAYS);
+    const cutoffKey = cutoff.toISOString().slice(0, 10);
+    return items
+      .filter((i) => i.expiryDate && i.expiryDate <= cutoffKey)
+      .sort((a, b) => (a.expiryDate ?? '').localeCompare(b.expiryDate ?? ''));
+  }, [items]);
+  const sorted = useMemo(() => expiring.slice(0, 4), [expiring]);
 
   if (sorted.length === 0) return null;
 

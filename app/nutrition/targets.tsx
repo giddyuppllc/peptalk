@@ -2,7 +2,7 @@
  * Macro Targets settings screen.
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -33,7 +33,13 @@ export default function MacroTargetsScreen() {
   const { targets, setTargets } = useMealStore();
   const setGoalValue = useProgressGoalsStore((s) => s.setGoalValue);
   const profile = useHealthProfileStore((s) => s.profile);
-  const activeProtocols = useDoseLogStore((s) => s.getActiveProtocols());
+  // Select protocols array and filter via useMemo. Inline filter selector
+  // returned a fresh array every render, infinite re-rendering this screen.
+  const protocols = useDoseLogStore((s) => s.protocols);
+  const activeProtocols = useMemo(
+    () => protocols.filter((p) => p.isActive),
+    [protocols],
+  );
   const [cal, setCal] = useState(String(targets.calories));
   const [protein, setProtein] = useState(String(targets.proteinGrams));
   const [carbs, setCarbs] = useState(String(targets.carbsGrams));

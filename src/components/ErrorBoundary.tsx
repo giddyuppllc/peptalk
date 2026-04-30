@@ -1,5 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { captureException } from '../services/telemetry';
 
@@ -39,6 +41,40 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: null, errorInfo: null });
   };
 
+  /**
+   * Copies a single self-contained error report to the clipboard so the
+   * user can paste it into a bug report. Includes app version, platform,
+   * and the *component stack* — which is far more useful than the React
+   * fiber-internal stack, especially in minified production bundles
+   * where JS frames get mangled but component names survive.
+   */
+  handleCopy = async () => {
+    const { error, errorInfo } = this.state;
+    const expoVersion =
+      typeof Constants !== 'undefined'
+        ? `${Constants.expoConfig?.name ?? 'PepTalk'} v${Constants.expoConfig?.version ?? '?'} (${(Constants.expoConfig as any)?.ios?.buildNumber ?? (Constants.expoConfig as any)?.android?.versionCode ?? '?'})`
+        : 'unknown';
+    const lines = [
+      `App: ${expoVersion}`,
+      `Platform: ${Platform.OS} ${Platform.Version}`,
+      `Time: ${new Date().toISOString()}`,
+      '',
+      `Error: ${error?.toString() ?? 'unknown'}`,
+      '',
+      'Component stack:',
+      errorInfo?.componentStack ?? '(none)',
+      '',
+      'JS stack:',
+      error?.stack ?? '(none)',
+    ];
+    try {
+      await Clipboard.setStringAsync(lines.join('\n'));
+    } catch {
+      // Clipboard can fail on some devices — silently ignore, the user
+      // still has the visible error text on screen.
+    }
+  };
+
   render() {
     if (this.state.hasError) {
       return (
@@ -59,33 +95,50 @@ export class ErrorBoundary extends Component<Props, State> {
                 <Text selectable style={styles.errorText}>
                   {this.state.error.toString()}
                 </Text>
-                {this.state.error.stack && (
-                  <>
-                    <Text style={[styles.errorTitle, { marginTop: 12 }]}>Stack trace:</Text>
-                    <Text selectable style={styles.errorText}>
-                      {this.state.error.stack}
-                    </Text>
-                  </>
-                )}
+                {/* Component stack first — survives minification far better
+                    than the JS fiber stack and usually points at the offending
+                    component by display name. */}
                 {this.state.errorInfo?.componentStack && (
                   <>
                     <Text style={[styles.errorTitle, { marginTop: 12 }]}>Component stack:</Text>
                     <Text selectable style={styles.errorText}>
-                      {this.state.errorInfo.componentStack}
+                      {this.state.errorInfo.componentStack.trim()}
+                    </Text>
+                  </>
+                )}
+                {this.state.error.stack && (
+                  <>
+                    <Text style={[styles.errorTitle, { marginTop: 12 }]}>JS stack:</Text>
+                    <Text selectable style={styles.errorText}>
+                      {this.state.error.stack}
                     </Text>
                   </>
                 )}
               </ScrollView>
             )}
 
-            <TouchableOpacity
-              style={styles.button}
-              onPress={this.handleReset}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="refresh-outline" size={18} color="#2D2D2D" />
-              <Text style={styles.buttonText}>Try Again</Text>
-            </TouchableOpacity>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonSecondary]}
+                onPress={this.handleCopy}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Copy error details to clipboard"
+              >
+                <Ionicons name="copy-outline" size={16} color="#2D2D2D" />
+                <Text style={styles.buttonTextSecondary}>Copy details</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={this.handleReset}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Try again"
+              >
+                <Ionicons name="refresh-outline" size={18} color="#2D2D2D" />
+                <Text style={styles.buttonText}>Try Again</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       );
@@ -154,17 +207,29 @@ const styles = StyleSheet.create({
     color: '#dc2626',
     lineHeight: 15,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     backgroundColor: '#e3a7a1',
     paddingVertical: 14,
-    paddingHorizontal: 28,
+    paddingHorizontal: 22,
     borderRadius: 14,
+  },
+  buttonSecondary: {
+    backgroundColor: 'rgba(0,0,0,0.06)',
   },
   buttonText: {
     fontSize: 15,
+    fontWeight: '700',
+    color: '#2D2D2D',
+  },
+  buttonTextSecondary: {
+    fontSize: 14,
     fontWeight: '700',
     color: '#2D2D2D',
   },

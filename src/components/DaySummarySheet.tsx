@@ -5,7 +5,7 @@
  * Displayed when user taps a day on the calendar.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -43,7 +43,14 @@ export function DaySummarySheet({ visible, dateKey, onClose }: DaySummarySheetPr
   const router = useRouter();
   const summary = useDaySummary(dateKey);
   const healthProfile = useHealthProfileStore((s) => s.profile);
-  const biometrics = useBiometricsStore((s) => s.getReadingsForDate(dateKey));
+  // Select readings array and filter via useMemo. Inline .filter() in the
+  // selector returned a fresh array every render → Zustand triggered an
+  // infinite re-render loop here once a day with biometrics opened.
+  const allReadings = useBiometricsStore((s) => s.readings);
+  const biometrics = useMemo(
+    () => allReadings.filter((r) => r.date === dateKey),
+    [allReadings, dateKey],
+  );
 
   const stepsReading = biometrics.find((r) => r.scope === 'steps');
   const hrvReading = biometrics.find((r) => r.scope === 'hrv');

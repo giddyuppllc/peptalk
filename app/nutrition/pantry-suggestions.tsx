@@ -75,8 +75,13 @@ function PantrySuggestionsInner() {
   const consumeQuantity = usePantryStore((s) => s.consumeQuantity);
   const targets = useMealStore((s) => s.targets);
   const addMeal = useMealStore((s) => s.addMeal);
-  const activeProtocols = useDoseLogStore((s) => s.getActiveProtocols());
-  const activeStackPeptides = activeProtocols.map((p) => p.peptideId);
+  // Select protocols array directly and filter via useMemo. Inline filter
+  // returned a fresh array every render → infinite Zustand-driven loop.
+  const protocols = useDoseLogStore((s) => s.protocols);
+  const activeStackPeptides = useMemo(
+    () => protocols.filter((p) => p.isActive).map((p) => p.peptideId),
+    [protocols],
+  );
 
   const [mealType, setMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>(inferMealType());
   const [loading, setLoading] = useState(false);
