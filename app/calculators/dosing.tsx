@@ -38,6 +38,7 @@ import { PROTOCOL_TEMPLATES } from '../../src/data/protocols';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
+import { PeptideGuide } from '../../src/components/PeptideGuide';
 import type { Peptide } from '../../src/types';
 
 type WeightUnit = 'lbs' | 'kg';
@@ -728,40 +729,23 @@ export default function DosingCalculatorScreen() {
           </View>
         )}
 
-        {/* Typical ranges from protocol */}
-        {showResults && protocolsForPeptide.length > 0 && (
+        {/* Full peptide deep-dive — replaces the old "Typical Ranges" card.
+            Renders the protocol, mechanism, recon math, dose-table examples,
+            storage, lifestyle/timing, side effects, contraindications, and
+            references for whatever peptide the user picked. Only shown
+            after the user has run a calculation, so the math up top is the
+            anchor and everything below it is the explanation. */}
+        {showResults && selectedPeptide && (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>Typical Ranges (from research)</Text>
-            {protocolsForPeptide.map((proto) => (
-              <GlassCard key={proto.id} style={styles.protoCard}>
-                <Text style={styles.protoName}>{proto.name}</Text>
-                <View style={styles.protoRow}>
-                  <Text style={[styles.protoLabel, { color: t.textSecondary }]}>Typical Dose</Text>
-                  <Text style={[styles.protoValue, { color: t.text }]}>
-                    {proto.typicalDose.min}–{proto.typicalDose.max} {proto.typicalDose.unit}
-                  </Text>
-                </View>
-                <View style={styles.protoRow}>
-                  <Text style={[styles.protoLabel, { color: t.textSecondary }]}>Frequency</Text>
-                  <Text style={[styles.protoValue, { color: t.text }]}>{proto.frequencyLabel}</Text>
-                </View>
-                <View style={styles.protoRow}>
-                  <Text style={[styles.protoLabel, { color: t.textSecondary }]}>Duration</Text>
-                  <Text style={[styles.protoValue, { color: t.text }]}>
-                    {proto.durationWeeks.min}–{proto.durationWeeks.max} weeks
-                  </Text>
-                </View>
-                {proto.timing && (
-                  <View style={styles.protoRow}>
-                    <Text style={[styles.protoLabel, { color: t.textSecondary }]}>Timing</Text>
-                    <Text style={[styles.protoValue, { color: t.text }]}>{proto.timing}</Text>
-                  </View>
-                )}
-                {proto.reconstitutionNotes && (
-                  <Text style={[styles.protoNote, { color: t.textSecondary }]}>{proto.reconstitutionNotes}</Text>
-                )}
-              </GlassCard>
-            ))}
+            <Text style={[styles.sectionTitle, { color: t.text }]}>About {selectedPeptide.name}</Text>
+            <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
+              Why your numbers above look the way they do — protocol, mechanism, storage, and safety.
+            </Text>
+            <PeptideGuide
+              peptide={selectedPeptide}
+              vial_mg={vialUnit === 'mg' ? vialRaw : vialRaw / 1000}
+              bac_water_ml={waterMl}
+            />
           </View>
         )}
 

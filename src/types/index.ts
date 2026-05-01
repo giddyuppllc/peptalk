@@ -56,6 +56,9 @@ export interface Peptide {
   id: string;
   name: string;
   abbreviation?: string;
+  /** Alternative names / brand names users might search by — feeds the
+   *  search index AND the deep-dive header ("aka X, Y, Z"). */
+  aliases?: string[];
   categories: PeptideCategory[];
   sequenceLength?: number;
   molecularWeight?: string;
@@ -72,6 +75,15 @@ export interface Peptide {
   isoelectricPoint?: number;
   chargeAtPhysiologicalPH?: string;
   approvalStatus?: 'fda_approved' | 'ema_approved' | 'approved_other' | 'phase_3' | 'phase_2' | 'phase_1' | 'preclinical' | 'research_only';
+  /** Coarse compliance tier for plain-English UI badges. Maps loosely to
+   *  approvalStatus but separates "compounded under shortage" from
+   *  "research only" since they're treated very differently legally. */
+  complianceTier?: 'fda_approved' | 'compounded_503a' | 'investigational' | 'research_only' | 'cosmetic' | 'supplement' | 'discontinued';
+  /** Standard vial sizes available for reconstitution-math examples
+   *  (e.g. ["2mg", "5mg", "10mg"]). */
+  vialSizes?: string[];
+  /** Notes about water/buffer compatibility, pH, common solvent. */
+  solubilityNotes?: string;
   approvalDetails?: string;
   clinicalTrialNCT?: string[];
   adverseEffects?: string[];
@@ -83,7 +95,15 @@ export interface Peptide {
   routeOfAdministration?: string[];
   commonBrandNames?: string[];
   doiLinks?: string[];
-  evidenceGrade?: 'established' | 'moderate' | 'preliminary';
+  /** A-E evidence grade per Edward's spec:
+   *   A — FDA-approved human drug data
+   *   B — human clinical studies
+   *   C — animal/preclinical
+   *   D — in-vitro/mechanistic only
+   *   E — anecdotal / insufficient evidence
+   *  Falls back to the older established/moderate/preliminary if the
+   *  letter grade isn't filled in yet. */
+  evidenceGrade?: 'A' | 'B' | 'C' | 'D' | 'E' | 'established' | 'moderate' | 'preliminary';
   structureImageUrl?: string;
   uses?: {
     primaryUses: string[];
