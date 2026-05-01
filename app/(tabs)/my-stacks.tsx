@@ -881,13 +881,20 @@ export default function MyStacksScreen() {
     return counts;
   }, []);
 
-  // Auto-pick featured peptides: highest evidence grade first, stable order
+  // Auto-pick featured peptides: highest evidence grade first, stable order.
+  // Peptide.evidenceGrade allows both the letter scale ('A'..'E') and named
+  // tiers ('established' | 'moderate' | 'preliminary'); both must be in the
+  // ranking table or `order[grade]` returns `undefined` and tsc rejects the
+  // implicit-any. Fallback to 5 (worst) for unknown / missing values.
   const featuredPeptides = useMemo(() => {
-    const order = { established: 0, moderate: 1, preliminary: 2, undefined: 3 };
+    const order: Record<string, number> = {
+      A: 0, B: 1, C: 2, D: 3, E: 4,
+      established: 0, moderate: 1, preliminary: 2,
+    };
     return [...PEPTIDES]
       .sort((a, b) => {
-        const av = order[a.evidenceGrade ?? 'undefined' as keyof typeof order] ?? 3;
-        const bv = order[b.evidenceGrade ?? 'undefined' as keyof typeof order] ?? 3;
+        const av = order[a.evidenceGrade ?? ''] ?? 5;
+        const bv = order[b.evidenceGrade ?? ''] ?? 5;
         if (av !== bv) return av - bv;
         return a.name.localeCompare(b.name);
       })
