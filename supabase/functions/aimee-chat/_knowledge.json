@@ -1,0 +1,629 @@
+{
+  "generatedAt": "2026-05-01T03:17:06.031Z",
+  "peptides": [
+    {
+      "id": "semaglutide",
+      "name": "Semaglutide",
+      "category": "Metabolic",
+      "halfLife": "~7 days",
+      "storage": "2-8°C",
+      "use": "Weight loss, Appetite suppression"
+    },
+    {
+      "id": "tirzepatide",
+      "name": "Tirzepatide",
+      "category": "Metabolic",
+      "halfLife": "~5 days",
+      "storage": "2-8°C",
+      "use": "Weight loss, Dual-action appetite control"
+    },
+    {
+      "id": "retatrutide",
+      "name": "Retatrutide",
+      "category": "Metabolic",
+      "halfLife": "~6 days",
+      "storage": "-20°C"
+    },
+    {
+      "id": "bpc-157",
+      "name": "BPC-157",
+      "category": "Recovery",
+      "halfLife": "<30 minutes (plasma); metabolites detectable ~4 days",
+      "storage": "-20°C",
+      "use": "Injury recovery, Gut healing"
+    },
+    {
+      "id": "tb-500",
+      "name": "TB-500",
+      "category": "Recovery",
+      "halfLife": "~2-3 hours",
+      "storage": "-20°C",
+      "use": "Tissue repair, Flexibility improvement"
+    },
+    {
+      "id": "cjc-1295",
+      "name": "CJC-1295",
+      "category": "Growth Hormone",
+      "halfLife": "~6-8 days (with DAC)",
+      "storage": "-20°C",
+      "use": "Growth hormone optimization, Body composition improvement"
+    },
+    {
+      "id": "ipamorelin",
+      "name": "Ipamorelin",
+      "category": "Growth Hormone",
+      "halfLife": "~2 hours",
+      "storage": "-20°C",
+      "use": "Growth hormone release, Anti-aging"
+    },
+    {
+      "id": "tesamorelin",
+      "name": "Tesamorelin",
+      "category": "Growth Hormone",
+      "halfLife": "~26-38 minutes",
+      "storage": "2-8°C",
+      "use": "Visceral fat reduction, Body fat redistribution"
+    },
+    {
+      "id": "semax",
+      "name": "Semax",
+      "category": "Nootropic",
+      "halfLife": "~2-3 minutes (plasma); prolonged CNS activity",
+      "storage": "-20°C",
+      "use": "Cognitive enhancement, Neuroprotection"
+    },
+    {
+      "id": "selank",
+      "name": "Selank",
+      "category": "Nootropic",
+      "halfLife": "~several minutes (plasma); prolonged CNS effects",
+      "storage": "-20°C",
+      "use": "Anxiety reduction, Cognitive enhancement"
+    },
+    {
+      "id": "thymosin-alpha-1",
+      "name": "Thymosin Alpha-1",
+      "category": "Immune",
+      "halfLife": "~2 hours",
+      "storage": "2-8°C"
+    },
+    {
+      "id": "ll-37",
+      "name": "LL-37",
+      "category": "Immune",
+      "halfLife": "~minutes to hours (tissue-dependent)",
+      "storage": "-20°C",
+      "use": "Antimicrobial defense, Immune modulation"
+    },
+    {
+      "id": "kpv",
+      "name": "KPV",
+      "category": "Anti-inflammatory",
+      "halfLife": "~minutes",
+      "storage": "-20°C",
+      "use": "Gut inflammation reduction, Skin inflammation"
+    },
+    {
+      "id": "mots-c",
+      "name": "MOTS-c",
+      "category": "Mitochondrial",
+      "halfLife": "~4-12 hours (estimated)",
+      "storage": "-20°C",
+      "use": "Exercise mimetic, Metabolic optimization"
+    },
+    {
+      "id": "ss-31",
+      "name": "SS-31",
+      "category": "Mitochondrial",
+      "halfLife": "~4 hours",
+      "storage": "-20°C",
+      "use": "Mitochondrial function optimization, Cellular energy production"
+    },
+    {
+      "id": "nad-plus",
+      "name": "NAD+",
+      "category": "Mitochondrial",
+      "halfLife": "~1-2 hours (plasma)",
+      "storage": "-20°C",
+      "use": "Cellular energy restoration, DNA repair"
+    },
+    {
+      "id": "epithalon",
+      "name": "Epithalon",
+      "category": "Longevity",
+      "halfLife": "~minutes",
+      "storage": "-20°C",
+      "use": "Telomere elongation, Longevity support"
+    },
+    {
+      "id": "dsip",
+      "name": "DSIP",
+      "category": "Sleep",
+      "halfLife": "~7-8 minutes",
+      "storage": "-20°C",
+      "use": "Deep sleep promotion, Stress modulation"
+    },
+    {
+      "id": "ghk-cu",
+      "name": "GHK-Cu",
+      "category": "Cosmetic",
+      "halfLife": "~hours (tissue-dependent)",
+      "storage": "2-8°C",
+      "use": "Skin rejuvenation, Hair regrowth"
+    },
+    {
+      "id": "snap-8",
+      "name": "SNAP-8",
+      "category": "Cosmetic",
+      "halfLife": "Topical (not systemically relevant)",
+      "storage": "2-8°C"
+    }
+  ],
+  "protocols": [
+    {
+      "peptideId": "bpc-157",
+      "name": "BPC-157 Standard SubQ Protocol",
+      "dose": "200-500 mcg",
+      "route": "subcutaneous",
+      "freq": "2x daily (AM + PM)",
+      "cycle": "4-8 weeks",
+      "timing": "Near injury site if applicable, otherwise abdomen",
+      "storage": "Reconstituted solution at 2-8°C. Use within 30 days.",
+      "notes": [
+        "Inject close to the area of concern when possible",
+        "Split dose AM/PM for sustained levels given short half-life"
+      ],
+      "contraindications": [
+        "active cancer",
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "tb-500",
+      "name": "TB-500 Loading + Maintenance Protocol",
+      "dose": "2000-5000 mcg",
+      "route": "subcutaneous",
+      "freq": "2x/week (loading) → 1x/week (maintenance)",
+      "cycle": "4-12 weeks",
+      "timing": "Any site — TB-500 is systemic, not site-specific",
+      "storage": "Reconstituted at 2-8°C, use within 21 days.",
+      "notes": [
+        "Loading phase: 2x/week for first 4-6 weeks",
+        "Maintenance: reduce to 1x/week or every 2 weeks"
+      ],
+      "contraindications": [
+        "active cancer",
+        "pregnancy",
+        "breastfeeding"
+      ],
+      "titration": [
+        {
+          "weeks": "1-4",
+          "dose": "5 mg",
+          "freq": "2× / week"
+        },
+        {
+          "weeks": "5+",
+          "dose": "5 mg",
+          "freq": "Once weekly"
+        }
+      ]
+    },
+    {
+      "peptideId": "ghk-cu",
+      "name": "GHK-Cu SubQ Protocol",
+      "dose": "200-600 mcg",
+      "route": "subcutaneous",
+      "freq": "Once daily",
+      "cycle": "4-12 weeks",
+      "timing": "Abdomen or near target area",
+      "storage": "Store at 2-8°C after reconstitution.",
+      "notes": [
+        "Also available as topical cream for cosmetic applications",
+        "Research shows gene modulation of 4000+ genes"
+      ],
+      "contraindications": [
+        "active cancer",
+        "pregnancy"
+      ]
+    },
+    {
+      "peptideId": "cjc-1295",
+      "name": "CJC-1295 + Ipamorelin Combo Protocol",
+      "dose": "100-300 mcg",
+      "route": "subcutaneous",
+      "freq": "Once daily before bed",
+      "cycle": "8-16 weeks",
+      "timing": "Before bed on an empty stomach (2+ hours after eating) — aligns with natural GH…",
+      "storage": "Refrigerate at 2-8°C. Do not freeze reconstituted.",
+      "notes": [
+        "CJC-1295 (100-300mcg) + Ipamorelin (100-300mcg) injected together",
+        "Take on empty stomach — food (especially carbs/fats) blunts GH release"
+      ],
+      "contraindications": [
+        "active cancer",
+        "pregnancy",
+        "breastfeeding",
+        "pituitary tumors"
+      ]
+    },
+    {
+      "peptideId": "ipamorelin",
+      "name": "Ipamorelin Standalone Protocol",
+      "dose": "200-300 mcg",
+      "route": "subcutaneous",
+      "freq": "2-3x daily",
+      "cycle": "8-12 weeks",
+      "timing": "Fasted — morning, pre-workout, or before bed",
+      "storage": "Store reconstituted at 2-8°C.",
+      "notes": [
+        "Most selective GHRP — does not raise cortisol or prolactin significantly",
+        "Can be dosed 2-3x daily for pulsatile GH release"
+      ],
+      "contraindications": [
+        "active cancer",
+        "pregnancy",
+        "pituitary tumors"
+      ]
+    },
+    {
+      "peptideId": "tesamorelin",
+      "name": "Tesamorelin Protocol",
+      "dose": "1-2 mg",
+      "route": "subcutaneous",
+      "freq": "Once daily",
+      "cycle": "12-26 weeks",
+      "timing": "Morning or before bed, fasted",
+      "storage": "Refrigerate. FDA-approved as Egrifta.",
+      "notes": [
+        "FDA-approved for HIV-associated lipodystrophy (visceral fat)",
+        "Specifically targets visceral adipose tissue"
+      ],
+      "contraindications": [
+        "active cancer",
+        "pregnancy",
+        "breastfeeding",
+        "pituitary tumors"
+      ]
+    },
+    {
+      "peptideId": "semaglutide",
+      "name": "Semaglutide Titration Protocol",
+      "dose": "250-2500 mcg",
+      "route": "subcutaneous",
+      "freq": "Once weekly",
+      "cycle": "16-52 weeks",
+      "timing": "Same day each week, any time of day",
+      "storage": "Refrigerate at 2-8°C. In-use pen: room temp up to 56 days.",
+      "notes": [
+        "FDA-approved: Ozempic (diabetes), Wegovy (weight), Rybelsus (oral)",
+        "MUST titrate slowly: 0.25mg x4 weeks → 0.5mg x4 weeks → 1.0mg → 1.7mg → 2.4mg"
+      ],
+      "contraindications": [
+        "personal or family history of medullary thyroid carcinoma",
+        "MEN 2 syndrome",
+        "pregnancy",
+        "breastfeeding",
+        "pancreatitis history"
+      ],
+      "titration": [
+        {
+          "weeks": "1-4",
+          "dose": "250 mcg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "5-8",
+          "dose": "500 mcg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "9-12",
+          "dose": "1000 mcg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "13-16",
+          "dose": "1700 mcg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "17+",
+          "dose": "2400 mcg",
+          "freq": "Once weekly"
+        }
+      ]
+    },
+    {
+      "peptideId": "tirzepatide",
+      "name": "Tirzepatide Titration Protocol",
+      "dose": "2500-15000 mcg",
+      "route": "subcutaneous",
+      "freq": "Once weekly",
+      "cycle": "20-52 weeks",
+      "timing": "Same day each week",
+      "storage": "Refrigerate at 2-8°C.",
+      "notes": [
+        "FDA-approved: Mounjaro (diabetes), Zepbound (weight)",
+        "Dual GIP/GLP-1 agonist — may show 20-25% total body weight loss"
+      ],
+      "contraindications": [
+        "personal or family history of medullary thyroid carcinoma",
+        "MEN 2 syndrome",
+        "pregnancy",
+        "breastfeeding",
+        "pancreatitis history"
+      ],
+      "titration": [
+        {
+          "weeks": "1-4",
+          "dose": "2500 mcg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "5-8",
+          "dose": "5000 mcg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "9-12",
+          "dose": "7500 mcg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "13-16",
+          "dose": "10000 mcg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "17-20",
+          "dose": "12500 mcg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "21+",
+          "dose": "15000 mcg",
+          "freq": "Once weekly"
+        }
+      ]
+    },
+    {
+      "peptideId": "retatrutide",
+      "name": "Retatrutide Research Protocol",
+      "dose": "1-12 mg",
+      "route": "subcutaneous",
+      "freq": "Once weekly",
+      "cycle": "24-48 weeks",
+      "timing": "Same day each week",
+      "storage": "Store lyophilized at -20°C. Reconstituted at 2-8°C.",
+      "notes": [
+        "Triple agonist: GLP-1 + GIP + Glucagon — most aggressive weight loss peptide",
+        "Phase 2 showed ~24% weight loss at 48 weeks"
+      ],
+      "contraindications": [
+        "personal or family history of medullary thyroid carcinoma",
+        "MEN 2 syndrome",
+        "pregnancy",
+        "breastfeeding",
+        "pancreatitis history"
+      ],
+      "titration": [
+        {
+          "weeks": "1-4",
+          "dose": "2 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "5-8",
+          "dose": "4 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "9-16",
+          "dose": "8 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "17+",
+          "dose": "12 mg",
+          "freq": "Once weekly"
+        }
+      ]
+    },
+    {
+      "peptideId": "semax",
+      "name": "Semax Nasal Protocol",
+      "dose": "200-600 mcg",
+      "route": "nasal",
+      "freq": "2-3x daily",
+      "cycle": "2-4 weeks",
+      "timing": "Morning and early afternoon — avoid evening (stimulating)",
+      "storage": "Nasal spray at 2-8°C. Some formulations room temp.",
+      "notes": [
+        "Approved in Russia/Ukraine for cognitive enhancement and stroke recovery",
+        "Nasal delivery provides rapid onset (minutes)"
+      ],
+      "contraindications": [
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "selank",
+      "name": "Selank Nasal Protocol",
+      "dose": "200-500 mcg",
+      "route": "nasal",
+      "freq": "2-3x daily",
+      "cycle": "2-4 weeks",
+      "timing": "Can be used any time of day — non-sedating anxiolytic",
+      "storage": "Nasal spray at 2-8°C.",
+      "notes": [
+        "Approved in Russia as anxiolytic — no sedation or dependence",
+        "GABA-A modulation without benzodiazepine receptor binding"
+      ],
+      "contraindications": [
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "dsip",
+      "name": "DSIP Sleep Protocol",
+      "dose": "100-300 mcg",
+      "route": "subcutaneous",
+      "freq": "Once daily before bed",
+      "cycle": "2-6 weeks",
+      "timing": "30-60 minutes before sleep",
+      "storage": "Reconstituted at 2-8°C.",
+      "notes": [
+        "Delta Sleep Inducing Peptide — promotes delta wave (deep) sleep",
+        "Does NOT cause sedation like sleeping pills"
+      ],
+      "contraindications": [
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "epithalon",
+      "name": "Epithalon Cycling Protocol",
+      "dose": "5-10 mg",
+      "route": "subcutaneous",
+      "freq": "Daily for 10-20 days per cycle",
+      "cycle": "2-3 weeks",
+      "timing": "Evening preferred — supports melatonin synthesis",
+      "storage": "Lyophilized at -20°C. Reconstituted at 2-8°C.",
+      "notes": [
+        "Developed by Prof. Khavinson — 30+ years of research",
+        "Activates telomerase to extend telomeres"
+      ],
+      "contraindications": [
+        "active cancer",
+        "pregnancy"
+      ]
+    },
+    {
+      "peptideId": "nad-plus",
+      "name": "NAD+ SubQ Protocol",
+      "dose": "50-200 mg",
+      "route": "subcutaneous",
+      "freq": "2-3x/week",
+      "cycle": "4-12 weeks",
+      "timing": "Morning — can be energizing",
+      "storage": "Reconstituted at 2-8°C. Sensitive to light.",
+      "notes": [
+        "NAD+ declines ~50% by age 50",
+        "Supports sirtuin enzymes (SIRT1-7) and PARP DNA repair"
+      ],
+      "contraindications": [
+        "pregnancy"
+      ]
+    },
+    {
+      "peptideId": "thymosin-alpha-1",
+      "name": "Thymosin Alpha-1 Immune Protocol",
+      "dose": "1-1.6 mg",
+      "route": "subcutaneous",
+      "freq": "2x/week",
+      "cycle": "4-26 weeks",
+      "timing": "Morning preferred",
+      "storage": "Store at 2-8°C.",
+      "notes": [
+        "FDA-orphan drug status. Approved in 35+ countries as Zadaxin",
+        "Enhances T-cell, NK cell, and dendritic cell function"
+      ],
+      "contraindications": [
+        "pregnancy",
+        "organ transplant recipients on immunosuppression"
+      ]
+    },
+    {
+      "peptideId": "ll-37",
+      "name": "LL-37 Antimicrobial Protocol",
+      "dose": "50-200 mcg",
+      "route": "subcutaneous",
+      "freq": "Once daily",
+      "cycle": "2-4 weeks",
+      "timing": "Near area of concern or abdomen",
+      "storage": "Reconstituted at 2-8°C. Light-sensitive.",
+      "notes": [
+        "Human cathelicidin — naturally produced antimicrobial peptide",
+        "Disrupts bacterial membranes and biofilms"
+      ],
+      "contraindications": [
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "snap-8",
+      "name": "SNAP-8 Topical Protocol",
+      "dose": "3-10 mg",
+      "route": "topical",
+      "freq": "2x daily to target areas",
+      "cycle": "4-12 weeks",
+      "timing": "AM + PM on clean skin",
+      "storage": "Store topical formulation at room temperature.",
+      "notes": [
+        "Acetyl octapeptide-3 — \"Botox in a bottle\" mechanism",
+        "Inhibits SNARE complex to reduce muscle contraction"
+      ],
+      "contraindications": [
+        "pregnancy"
+      ]
+    },
+    {
+      "peptideId": "ss-31",
+      "name": "SS-31 (Elamipretide) Protocol",
+      "dose": "5-40 mg",
+      "route": "subcutaneous",
+      "freq": "Once daily",
+      "cycle": "4-12 weeks",
+      "timing": "Morning",
+      "storage": "Store at 2-8°C. Protect from light.",
+      "notes": [
+        "Targets inner mitochondrial membrane cardiolipin",
+        "Concentrates 1000-5000x in mitochondria"
+      ],
+      "contraindications": [
+        "pregnancy"
+      ]
+    },
+    {
+      "peptideId": "mots-c",
+      "name": "MOTS-c Protocol",
+      "dose": "5-10 mg",
+      "route": "subcutaneous",
+      "freq": "3-5x/week",
+      "cycle": "4-12 weeks",
+      "timing": "Morning or pre-exercise",
+      "storage": "Store at 2-8°C after reconstitution.",
+      "notes": [
+        "Mitochondrial-derived peptide — exercise mimetic",
+        "Directly activates AMPK pathway"
+      ],
+      "contraindications": [
+        "pregnancy"
+      ]
+    },
+    {
+      "peptideId": "kpv",
+      "name": "KPV Anti-Inflammatory Protocol",
+      "dose": "200-500 mcg",
+      "route": "subcutaneous",
+      "freq": "Once daily (SubQ) or orally",
+      "cycle": "4-8 weeks",
+      "timing": "Morning",
+      "storage": "Store reconstituted at 2-8°C.",
+      "notes": [
+        "Tripeptide fragment of alpha-MSH",
+        "Potent NF-kB inhibitor — master inflammation switch"
+      ],
+      "contraindications": [
+        "pregnancy",
+        "breastfeeding"
+      ]
+    }
+  ]
+}
