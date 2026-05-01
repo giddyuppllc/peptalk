@@ -81,13 +81,13 @@ export default function FoodScannerScreen() {
         </View>
         <View style={styles.locked}>
           <Ionicons name="camera" size={48} color={Colors.darkTextSecondary} />
-          <Text style={styles.lockedTitle}>Pro Feature</Text>
+          <Text style={styles.lockedTitle}>Plus Feature</Text>
           <Text style={styles.lockedText}>
-            AI food scanning with automatic macro calculation is available with PepTalk Pro.
+            Snap a plate — PepTalk identifies every food and logs the macros instantly. Available with PepTalk+.
           </Text>
           <AnimatedPress onPress={() => router.push('/subscription')}>
             <LinearGradient colors={[accent.deep, accent.darker]} style={styles.upgradeBtn}>
-              <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
+              <Text style={styles.upgradeBtnText}>Upgrade to Plus</Text>
             </LinearGradient>
           </AnimatedPress>
         </View>

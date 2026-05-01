@@ -987,7 +987,7 @@ function AddFoodSheet({ visible, mealType, onClose, onPickOption }: AddFoodSheet
     { key: 'search' as const,     icon: 'search-outline' as const,    color: '#E89672', label: 'Search Foods',     sub: 'USDA & common items' },
     { key: 'my_meals' as const,   icon: 'bookmark-outline' as const,  color: '#BADDCB', label: 'My Meals',         sub: 'Recently logged' },
     { key: 'barcode' as const,    icon: 'barcode-outline' as const,   color: '#F4E9A7', label: 'Scan Barcode',     sub: 'Packaged foods' },
-    { key: 'ai_scanner' as const, icon: 'camera-outline' as const,    color: '#e3a7a1', label: 'AI Food Scanner',  sub: 'Photo → macros (Pro)' },
+    { key: 'ai_scanner' as const, icon: 'camera-outline' as const,    color: '#e3a7a1', label: 'Food Scanner',  sub: 'Snap a plate → macros' },
     { key: 'quick' as const,      icon: 'create-outline' as const,    color: '#8faa8b', label: 'Quick Log',        sub: 'Enter macros manually' },
   ];
 
@@ -1169,7 +1169,7 @@ export default function NutritionScreen() {
             onPress={() => router.push('/nutrition/meal-plan' as any)}
             style={styles.backBtn}
             accessibilityRole="button"
-            accessibilityLabel="AI meal plan"
+            accessibilityLabel="Meal plan"
           >
             <Ionicons name="calendar-outline" size={20} color={accent.deep} />
           </TouchableOpacity>
@@ -1177,7 +1177,7 @@ export default function NutritionScreen() {
             onPress={() => router.push('/nutrition/recipe-generator' as any)}
             style={styles.backBtn}
             accessibilityRole="button"
-            accessibilityLabel="AI recipes"
+            accessibilityLabel="Recipes"
           >
             <Ionicons name="sparkles-outline" size={20} color={accent.deep} />
           </TouchableOpacity>

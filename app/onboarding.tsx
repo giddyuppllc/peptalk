@@ -68,11 +68,11 @@ const PLANS: { tier: 'free' | 'plus' | 'pro'; name: string; price: string; badge
   },
   {
     tier: 'plus', name: 'PepTalk+', price: '$9.99/mo', badge: 'POPULAR',
-    features: ['Unlimited Stack Builder + interaction analysis', 'Aimee AI chat (20/day) on dosing & timing', 'Voice meal log + full nutrition tracking', 'Apple Watch + Google Fit sync'],
+    features: ['Unlimited Stack Builder + interaction analysis', 'Aimee chat (20/day) on dosing & timing', 'Food Scanner + voice meal log', 'Apple Watch + Google Fit sync'],
   },
   {
     tier: 'pro', name: 'PepTalk Pro', price: '$49.99/mo', badge: 'BEST VALUE',
-    features: ['Everything in Plus', 'Custom AI workouts', 'Meal plans & recipes', 'Health reports & exports'],
+    features: ['Everything in Plus', 'Custom workout generator', 'Meal plans & recipes', 'Health reports & exports'],
   },
 ];
 

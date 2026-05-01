@@ -434,7 +434,7 @@ export default function LearnHubScreen() {
             <View style={styles.askBannerText}>
               <Text style={styles.askBannerTitle}>Got a question?</Text>
               <Text style={styles.askBannerSubtitle}>
-                Ask Aimee anything — the AI knows all this and more.
+                Ask Aimee anything — she knows all this and more.
               </Text>
             </View>
           </View>

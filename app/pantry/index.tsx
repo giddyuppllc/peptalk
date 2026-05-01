@@ -149,7 +149,7 @@ export default function PantryScreen() {
                   What should I cook tonight?
                 </Text>
                 <Text style={[styles.aiSuggestBody, { color: t.textSecondary }]}>
-                  AI meal ideas using what you have — Pro
+                  Smart meal ideas from what you have — Pro
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={t.textSecondary} />

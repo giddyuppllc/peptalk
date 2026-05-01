@@ -423,6 +423,12 @@ const PLUS_FEATURES: string[] = [
   'weight_trends',
   'calendar_timeline',
   'workout_csv_export',
+  // AI vision food scanner — moved into Plus per Edward's pricing call
+  // ($9.99 zone). Includes both the legacy `meal_scan` key and the newer
+  // `ai_food_scanner` key so existing PaywallGate / feature checks light up
+  // correctly regardless of which name a screen uses.
+  'meal_scan',
+  'ai_food_scanner',
   // Perks
   'ad_free',
 ];
@@ -435,8 +441,6 @@ const PRO_FEATURES: string[] = [
   'aimee_workout_plans',
   'aimee_meal_plans',
   // AI — premium features
-  'meal_scan',                    // AI vision for plates
-  'ai_food_scanner',
   'recipe_generator',
   // Workouts — programs + custom
   'workout_programs',

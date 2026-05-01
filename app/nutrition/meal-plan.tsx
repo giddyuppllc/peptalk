@@ -84,7 +84,7 @@ function MealPlanScreen() {
       const { supabase } = await import('../../src/services/supabase');
       const { data: { session } } = await (supabase as any).auth.getSession();
       if (!session?.access_token) {
-        Alert.alert('Sign in required', 'Please log in to use AI meal plans.');
+        Alert.alert('Sign in required', 'Please log in to generate a meal plan.');
         return;
       }
       const { data, error } = await (supabase as any).functions.invoke('aimee-plan', {
@@ -104,7 +104,7 @@ function MealPlanScreen() {
       });
       if (error) throw error;
       if (!data?.plan || !Array.isArray(data.plan) || data.plan.length === 0) {
-        Alert.alert('No plan generated', 'The AI could not build a plan. Try different inputs.');
+        Alert.alert('No plan generated', 'Couldn\'t build a plan with these inputs — try different goals or allergens.');
         return;
       }
       setPlan(data.plan);
@@ -144,7 +144,7 @@ function MealPlanScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={24} color={t.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: t.text }]}>AI Meal Plan</Text>
+        <Text style={[styles.headerTitle, { color: t.text }]}>Meal Plan</Text>
         <View style={{ width: 40 }} />
       </View>
 

@@ -141,13 +141,13 @@ function PantrySuggestionsInner() {
       if (error) throw error;
       const list = (data?.suggestions ?? []) as Suggestion[];
       if (list.length === 0) {
-        Alert.alert('No suggestions', 'The AI couldn\'t generate meals — try again with more pantry items.');
+        Alert.alert('No suggestions', 'Couldn\'t generate meals — try again with more pantry items.');
       }
       setSuggestions(list);
     } catch (err: any) {
       const msg = err?.message ?? 'Could not fetch suggestions.';
       if (msg.includes('Pro tier')) {
-        Alert.alert('Upgrade required', 'AI meal suggestions are a Pro feature.');
+        Alert.alert('Upgrade required', 'Pantry meal suggestions are a Pro feature.');
       } else {
         Alert.alert('Failed', msg);
       }

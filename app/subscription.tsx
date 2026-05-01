@@ -85,8 +85,9 @@ const TIERS: TierInfo[] = [
     description: 'For the serious tracker',
     features: [
       'Stack Builder — unlimited peptide stacks with interaction & synergy analysis',
-      'Aimee AI — 20 personalized chats/day on dosing, timing, and side effects',
-      'Voice Log — say what you ate, AI parses the macros',
+      'Aimee — 20 personalized chats/day on dosing, timing, and side effects',
+      'Food Scanner — snap a plate, get every food + macros',
+      'Voice Log — say what you ate, get the macros logged',
       'Unlimited meal & food logging + full micronutrient tracking',
       'Apple Watch + Google Fit sync (HRV, VO2, weight trends)',
       'Everything in Free, ad-free',
@@ -99,12 +100,11 @@ const TIERS: TierInfo[] = [
   {
     tier: 'pro',
     name: 'PepTalk Pro',
-    description: 'Full AI coaching + programs',
+    description: 'Full coaching + programs',
     features: [
       'Everything in Plus',
-      'Unlimited Aimee AI',
-      'Meal Scan — AI plate recognition',
-      'AI Recipe Generator',
+      'Unlimited Aimee chat',
+      'Recipe Generator',
       "Jamie's 15 workout programs + videos",
       'Custom Workout Generator + tracker',
       'Weekly Health Reports + PDF export',
@@ -128,7 +128,7 @@ const SOCIAL_PROOF = [
   {
     icon: 'timer-outline' as const,
     title: '15 min/day',
-    body: 'saved on tracking with AI features',
+    body: 'saved on tracking with smart automations',
   },
   {
     icon: 'shield-checkmark-outline' as const,
@@ -270,7 +270,9 @@ function TierCard({
 function tierForFeature(feature: string | undefined): SubscriptionTier | null {
   if (!feature) return null;
   const proOnly = [
-    'meal_scan',
+    // Pro-tier exclusives — kept tight so Plus has the AI vision food
+    // scanner (moved out per pricing call) without giving away the
+    // workout-program library or recipe generator.
     'recipe_generator',
     'workout_programs',
     'workout_videos',

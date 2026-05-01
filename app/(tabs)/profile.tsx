@@ -409,8 +409,8 @@ function UserProfile() {
               </Text>
               <Text style={styles.upgradeRowBody}>
                 {tier === 'free'
-                  ? 'Unlimited tracking, Aimee AI, Voice Log & more'
-                  : 'Workout programs, AI meal scan, health reports & more'}
+                  ? 'Unlimited tracking, Aimee chat, Food Scanner & more'
+                  : 'Workout programs, recipes, health reports & more'}
               </Text>
             </View>
             <Ionicons name="arrow-forward" size={20} color="#fff" />

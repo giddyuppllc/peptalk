@@ -306,7 +306,7 @@ export default function RecipeGeneratorScreen() {
       if (sorted.length === 0) {
         Alert.alert(
           'Aimee unavailable',
-          'AI recipe generation is offline and our offline backups don\'t match your allergens. Try again in a minute, or browse Quick Foods.',
+          'Recipe generation is offline and our offline backups don\'t match your allergens. Try again in a minute, or browse Quick Foods.',
         );
         setLoading(false);
         return;

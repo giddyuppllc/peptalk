@@ -75,7 +75,7 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
 
   // Plus tier features
   aimee_ai_limited: {
-    name: 'Aimee AI Assistant',
+    name: 'Aimee',
     description: 'Chat with Aimee for peptide, nutrition, and workout guidance.',
   },
   health_calendar: {
@@ -106,7 +106,7 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
   // Pro tier features
   aimee_ai_unlimited: {
     name: 'Unlimited Aimee',
-    description: 'Unlimited AI conversations with no message limits.',
+    description: 'Unlimited conversations with Aimee — no message limits.',
   },
   aimee_meal_plans: {
     name: 'Aimee Meal Plans',
@@ -129,8 +129,8 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
     description: 'Exercise demo videos for every movement.',
   },
   ai_meal_plans: {
-    name: 'AI Meal Plans',
-    description: 'AI-generated weekly meal plans tailored to your macros.',
+    name: 'Meal Plans',
+    description: 'Personalized weekly meal plans tailored to your macros.',
   },
   nutrition_planning: {
     name: 'Nutrition Planning',
@@ -141,11 +141,11 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
     description: 'Auto-generated shopping lists from your meal plans.',
   },
   recipe_generator: {
-    name: 'AI Recipes',
+    name: 'Recipes',
     description: 'Get personalized recipes based on your macros and preferences.',
   },
   meal_plan: {
-    name: 'AI Meal Plan',
+    name: 'Meal Plan',
     description: 'Generate a multi-day meal plan tailored to your macros, diet, and allergens.',
   },
   health_reports: {
@@ -167,14 +167,14 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
   // ── New aggressive gating features ───────────────────────────────────────
   voice_log: {
     name: 'Voice Log',
-    description: 'Just say what you ate — our AI parses the phrase and logs every food for you.',
+    description: 'Just say what you ate — PepTalk parses every food and logs the macros for you.',
   },
   meal_scan: {
-    name: 'Meal Scan',
-    description: 'Snap a photo of your plate and let AI vision identify every food with macros.',
+    name: 'Food Scanner',
+    description: 'Snap a photo of your plate and PepTalk identifies every food with macros.',
   },
   ai_food_scanner: {
-    name: 'AI Food Scanner',
+    name: 'Food Scanner',
     description: 'Camera-powered food scanning with instant macro calculation.',
   },
   custom_foods_unlimited: {

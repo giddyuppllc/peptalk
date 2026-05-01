@@ -139,6 +139,21 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
       lastSyncedAt: 0,
 
       hasFeature: (feature) => {
+        // Beta-tester short-circuit: if the signed-in user's email is in
+        // the allowlist, grant access regardless of `tier`. This prevents
+        // a race where syncFromServer hasn't finished yet (or failed
+        // offline) and the local tier is still 'free' — without this,
+        // beta testers would bounce off the paywall on every cold launch
+        // until the sync completed. Lazy-imported to avoid pulling the
+        // auth store into the module graph at boot.
+        try {
+          const { useAuthStore } = require('./useAuthStore');
+          const email = (useAuthStore.getState().user?.email ?? '').toLowerCase();
+          if (email && BETA_TESTER_EMAILS.has(email)) return true;
+        } catch {
+          // If the auth store isn't ready (very early boot), fall through
+          // to the tier check — sync will catch up momentarily.
+        }
         const { tier } = get();
         const features = TIER_FEATURES[tier] ?? [];
         return features.includes(feature);

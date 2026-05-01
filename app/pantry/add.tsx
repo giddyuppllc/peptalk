@@ -147,7 +147,7 @@ export default function AddPantryScreen() {
       if (msg.includes('Pro tier') || msg.includes('Plus or Pro')) {
         Alert.alert(
           'Upgrade required',
-          'Voice / AI pantry entry is a Plus feature. Upgrade to use it — or enter items manually for now.',
+          'Voice pantry entry is a Plus feature. Upgrade to use it — or enter items manually for now.',
         );
       } else {
         Alert.alert('Parse failed', msg);
@@ -385,7 +385,7 @@ export default function AddPantryScreen() {
                     Barcode scanner
                   </Text>
                   <Text style={[styles.helpBody, { color: t.textSecondary, textAlign: 'center' }]}>
-                    Coming in the next update. For now, use Manual or Voice / AI to add items.
+                    Coming in the next update. For now, use Manual or Voice to add items.
                   </Text>
                 </View>
               </GlassCard>

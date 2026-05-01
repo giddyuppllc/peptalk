@@ -350,7 +350,7 @@ export default function TopicDetailScreen() {
                 Want to learn more about {topic.title.toLowerCase()}?
               </Text>
               <Text style={styles.askCardSubtitle}>
-                Get personalized answers from PepTalk AI -- ask anything.
+                Get personalized answers from Aimee — ask anything.
               </Text>
             </View>
             <GradientButton
