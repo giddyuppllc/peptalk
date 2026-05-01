@@ -39,6 +39,7 @@ import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
 import { PeptideGuide } from '../../src/components/PeptideGuide';
+import { ProtocolPlanCard } from '../../src/components/ProtocolPlanCard';
 import type { Peptide } from '../../src/types';
 
 type WeightUnit = 'lbs' | 'kg';
@@ -735,6 +736,23 @@ export default function DosingCalculatorScreen() {
             references for whatever peptide the user picked. Only shown
             after the user has run a calculation, so the math up top is the
             anchor and everything below it is the explanation. */}
+        {/* Cycle plan — goal-aware summary of dose / frequency / cycle
+            length / total vials needed for the selected peptide. Only
+            shown when we have a protocol template to anchor the math. */}
+        {selectedPeptide && protocolsForPeptide.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: t.text }]}>Cycle plan</Text>
+            <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
+              How much you'll need start-to-finish, framed for your goal.
+            </Text>
+            <ProtocolPlanCard
+              peptide={selectedPeptide}
+              protocol={protocolsForPeptide[0]}
+              vialMcg={vialMcg > 0 ? vialMcg : undefined}
+            />
+          </View>
+        )}
+
         {showResults && selectedPeptide && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: t.text }]}>About {selectedPeptide.name}</Text>
