@@ -66,10 +66,15 @@ CRITICAL RULES:
 - Skip any value flagged as "below detection limit" or "INVALID" — don't make up numbers.
 - Output JSON only — no prose, no markdown fences, no commentary.`;
 
-const BETA_TESTER_EMAILS = new Set<string>([
-  'edward@giddyupp.com',
-  'sales@sbbpeptides.com',
-]);
+// Beta-tester allowlist driven by BETA_TESTER_EMAILS Supabase secret
+// (CSV); falls back to hardcoded defaults until set. Edward updates
+// testers via `supabase secrets set` — no redeploy needed.
+const BETA_TESTER_EMAILS = new Set<string>(
+  (Deno.env.get('BETA_TESTER_EMAILS') ?? 'edward@giddyupp.com,sales@sbbpeptides.com')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+);
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {

@@ -88,14 +88,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Check Pro tier — beta-tester allowlist gets Pro access without
-    // a paid subscription. Mirrors the client-side BETA_TESTER_EMAILS in
-    // src/store/useSubscriptionStore.ts so testers see consistent behavior
-    // (UI says Pro; edge functions also honor it).
-    const BETA_TESTER_EMAILS = new Set<string>([
-      'edward@giddyupp.com',
-      'sales@sbbpeptides.com',
-    ]);
+    // 2. Check tier — beta-tester allowlist driven by BETA_TESTER_EMAILS
+    // Supabase secret (CSV) so Edward can add/remove TestFlight testers
+    // without redeploying. Falls back to hardcoded defaults until set.
+    // Note: food scanner is a Plus feature now (moved from Pro in Wave 16).
+    const BETA_TESTER_EMAILS = new Set<string>(
+      (Deno.env.get('BETA_TESTER_EMAILS') ?? 'edward@giddyupp.com,sales@sbbpeptides.com')
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
+    );
     const isBetaTester =
       !!user.email && BETA_TESTER_EMAILS.has(user.email.toLowerCase());
 
@@ -107,9 +109,11 @@ Deno.serve(async (req) => {
 
     const effectiveTier = isBetaTester ? 'pro' : (profile?.subscription_tier ?? 'free');
 
-    if (effectiveTier !== 'pro') {
+    // Food Scanner moved into Plus in Wave 16 — both Plus and Pro are
+    // permitted. Free users still get the upgrade prompt.
+    if (effectiveTier !== 'pro' && effectiveTier !== 'plus') {
       return new Response(JSON.stringify({
-        error: 'Food scanning requires PepTalk Pro subscription',
+        error: 'Food scanning requires PepTalk+ or Pro subscription',
         upgrade: true,
       }), {
         status: 403,

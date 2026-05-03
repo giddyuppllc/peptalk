@@ -139,20 +139,32 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
       lastSyncedAt: 0,
 
       hasFeature: (feature) => {
-        // Beta-tester short-circuit: if the signed-in user's email is in
-        // the allowlist, grant access regardless of `tier`. This prevents
-        // a race where syncFromServer hasn't finished yet (or failed
-        // offline) and the local tier is still 'free' — without this,
-        // beta testers would bounce off the paywall on every cold launch
-        // until the sync completed. Lazy-imported to avoid pulling the
-        // auth store into the module graph at boot.
+        // Beta-tester / preview-build short-circuits, in order:
+        //  1. Preview / development builds: every signed-in user gets
+        //     full feature access. Means TestFlight + dev builds don't
+        //     gate AI features behind paywalls regardless of tester email.
+        //  2. Allowlisted email: belt-and-suspenders for the cold-boot
+        //     race where syncFromServer hasn't promoted the user to Pro
+        //     yet — without this, allowlisted users would bounce off the
+        //     paywall briefly on every cold launch.
+        // Both wrapped in try/catch so a missing module / unready auth
+        // state at very-early boot can't crash the gate; the underlying
+        // tier check still runs.
+        try {
+          const appEnv = (process.env.EXPO_PUBLIC_ENV ?? 'production').toLowerCase();
+          if (appEnv !== 'production') {
+            const { useAuthStore } = require('./useAuthStore');
+            if (useAuthStore.getState().isAuthenticated) return true;
+          }
+        } catch {
+          // Fall through to tier check.
+        }
         try {
           const { useAuthStore } = require('./useAuthStore');
           const email = (useAuthStore.getState().user?.email ?? '').toLowerCase();
           if (email && BETA_TESTER_EMAILS.has(email)) return true;
         } catch {
-          // If the auth store isn't ready (very early boot), fall through
-          // to the tier check — sync will catch up momentarily.
+          // Fall through to tier check.
         }
         const { tier } = get();
         const features = TIER_FEATURES[tier] ?? [];
@@ -275,16 +287,22 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
             }
 
             // Beta-tester bypass: grant Pro locally without hitting the
-            // subscriptions table. Match on EITHER the email allowlist OR a
-            // previously-recorded user id — once a tester has been recognized
-            // on this device, their user id is pinned so email changes don't
-            // silently revoke access.
+            // subscriptions table. Three triggers, in order of preference:
+            //   1. Preview / development builds — every signed-in user gets
+            //      Pro automatically so TestFlight testers don't have to be
+            //      individually allowlisted (the EXPO_PUBLIC_ENV env var
+            //      flips this off for production releases).
+            //   2. Email is in BETA_TESTER_EMAILS (Edward + Jamie hardcoded).
+            //   3. User id was previously matched on this device — pinned so
+            //      email changes don't silently revoke access.
             const email = (user.email ?? '').toLowerCase();
             const userId: string | undefined = user.id;
             const { betaUserIds } = get();
+            const appEnv = (process.env.EXPO_PUBLIC_ENV ?? 'production').toLowerCase();
+            const isNonProductionBuild = appEnv !== 'production';
             const emailMatch = !!email && BETA_TESTER_EMAILS.has(email);
             const idMatch = !!userId && betaUserIds.includes(userId);
-            if (emailMatch || idMatch) {
+            if (isNonProductionBuild || emailMatch || idMatch) {
               if (emailMatch && userId && !betaUserIds.includes(userId)) {
                 set({ betaUserIds: [...betaUserIds, userId] });
               }

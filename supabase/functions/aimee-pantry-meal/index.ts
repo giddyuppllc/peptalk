@@ -129,11 +129,15 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) return json({ error: 'Invalid session' }, 401);
 
-    // Pro gate — beta-tester allowlist mirrors the client BETA_TESTER_EMAILS.
-    const BETA_TESTER_EMAILS = new Set<string>([
-      'edward@giddyupp.com',
-      'sales@sbbpeptides.com',
-    ]);
+    // Pro gate — beta-tester allowlist driven by the BETA_TESTER_EMAILS
+    // Supabase secret (CSV); falls back to hardcoded defaults until set.
+    // Edward updates testers via `supabase secrets set`, no redeploy needed.
+    const BETA_TESTER_EMAILS = new Set<string>(
+      (Deno.env.get('BETA_TESTER_EMAILS') ?? 'edward@giddyupp.com,sales@sbbpeptides.com')
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
+    );
     const isBetaTester =
       !!user.email && BETA_TESTER_EMAILS.has(user.email.toLowerCase());
 
