@@ -67,14 +67,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Check subscription tier — beta-tester allowlist gets Pro access
-    // without a paid sub. Reads the comma-separated BETA_TESTER_EMAILS
-    // Supabase secret first so Edward can add/remove TestFlight testers
-    // with `supabase secrets set BETA_TESTER_EMAILS="..."` without
-    // redeploying. Falls back to the hardcoded defaults so the existing
-    // allowlist keeps working until the secret is set.
+    // 2. Check subscription tier — beta-tester allowlist driven entirely
+    // by the BETA_TESTER_EMAILS Supabase secret (CSV). Set with:
+    //   supabase secrets set BETA_TESTER_EMAILS="email1,email2,..."
+    // No hardcoded defaults — if the secret is unset, only paid users
+    // get through. Add testers to the secret + redeploy isn't needed
+    // (functions read the env on each request).
     const BETA_TESTER_EMAILS = new Set<string>(
-      (Deno.env.get('BETA_TESTER_EMAILS') ?? 'edward@giddyupp.com,sales@sbbpeptides.com')
+      (Deno.env.get('BETA_TESTER_EMAILS') ?? '')
         .split(',')
         .map((s) => s.trim().toLowerCase())
         .filter(Boolean)

@@ -88,12 +88,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Check tier — beta-tester allowlist driven by BETA_TESTER_EMAILS
-    // Supabase secret (CSV) so Edward can add/remove TestFlight testers
-    // without redeploying. Falls back to hardcoded defaults until set.
-    // Note: food scanner is a Plus feature now (moved from Pro in Wave 16).
+    // 2. Check tier — beta-tester allowlist driven entirely by the
+    // BETA_TESTER_EMAILS Supabase secret (CSV). No hardcoded defaults.
+    // Note: food scanner is a Plus feature (moved from Pro in Wave 16).
     const BETA_TESTER_EMAILS = new Set<string>(
-      (Deno.env.get('BETA_TESTER_EMAILS') ?? 'edward@giddyupp.com,sales@sbbpeptides.com')
+      (Deno.env.get('BETA_TESTER_EMAILS') ?? '')
         .split(',')
         .map((s) => s.trim().toLowerCase())
         .filter(Boolean)

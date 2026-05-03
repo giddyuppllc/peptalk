@@ -15,14 +15,22 @@ import { trackUpgradeSucceeded, trackUpgradeFailed } from '../services/analytics
 import { maybeAskForReview } from '../services/reviewPrompt';
 
 /**
- * Hardcoded beta testers auto-granted Pro tier on sign-in.
- * Add emails here (lowercase) so they get full access without going
- * through the App Store purchase flow. Survives reinstalls.
+ * Beta-tester access — TWO triggers:
+ *
+ *   1. EXPO_PUBLIC_ENV !== 'production'  (preview / development builds)
+ *      Every signed-in user is auto-granted Pro on TestFlight builds, no
+ *      email allowlist required. Production builds keep the normal IAP
+ *      flow.
+ *
+ *   2. Server-side BETA_TESTER_EMAILS Supabase secret
+ *      Mirror used by the AI / food-scan / lab-scan edge functions to
+ *      authorize the actual server calls. Set with:
+ *         supabase secrets set BETA_TESTER_EMAILS="email1,email2,..."
+ *
+ * Hardcoded client-side allowlist removed deliberately — it was a
+ * deploy-required maintenance burden and the preview-build bypass
+ * already covers TestFlight. Production builds need a real subscription.
  */
-const BETA_TESTER_EMAILS = new Set<string>([
-  'sales@sbbpeptides.com',  // Jamie Esposito
-  'edward@giddyupp.com',    // Edward
-]);
 
 // ---------------------------------------------------------------------------
 // Types
@@ -139,17 +147,11 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
       lastSyncedAt: 0,
 
       hasFeature: (feature) => {
-        // Beta-tester / preview-build short-circuits, in order:
-        //  1. Preview / development builds: every signed-in user gets
-        //     full feature access. Means TestFlight + dev builds don't
-        //     gate AI features behind paywalls regardless of tester email.
-        //  2. Allowlisted email: belt-and-suspenders for the cold-boot
-        //     race where syncFromServer hasn't promoted the user to Pro
-        //     yet — without this, allowlisted users would bounce off the
-        //     paywall briefly on every cold launch.
-        // Both wrapped in try/catch so a missing module / unready auth
-        // state at very-early boot can't crash the gate; the underlying
-        // tier check still runs.
+        // Preview / development builds: every signed-in user gets full
+        // feature access. Means TestFlight + dev builds don't gate AI
+        // or paid features behind paywalls regardless of tester email.
+        // Production builds (EXPO_PUBLIC_ENV='production') skip this
+        // bypass and gate by tier as normal.
         try {
           const appEnv = (process.env.EXPO_PUBLIC_ENV ?? 'production').toLowerCase();
           if (appEnv !== 'production') {
@@ -157,14 +159,7 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
             if (useAuthStore.getState().isAuthenticated) return true;
           }
         } catch {
-          // Fall through to tier check.
-        }
-        try {
-          const { useAuthStore } = require('./useAuthStore');
-          const email = (useAuthStore.getState().user?.email ?? '').toLowerCase();
-          if (email && BETA_TESTER_EMAILS.has(email)) return true;
-        } catch {
-          // Fall through to tier check.
+          // Auth store not ready or env missing — fall through to tier check.
         }
         const { tier } = get();
         const features = TIER_FEATURES[tier] ?? [];
@@ -286,26 +281,12 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
               return;
             }
 
-            // Beta-tester bypass: grant Pro locally without hitting the
-            // subscriptions table. Three triggers, in order of preference:
-            //   1. Preview / development builds — every signed-in user gets
-            //      Pro automatically so TestFlight testers don't have to be
-            //      individually allowlisted (the EXPO_PUBLIC_ENV env var
-            //      flips this off for production releases).
-            //   2. Email is in BETA_TESTER_EMAILS (Edward + Jamie hardcoded).
-            //   3. User id was previously matched on this device — pinned so
-            //      email changes don't silently revoke access.
-            const email = (user.email ?? '').toLowerCase();
-            const userId: string | undefined = user.id;
-            const { betaUserIds } = get();
+            // Preview / development build bypass: any signed-in user is
+            // auto-granted Pro on TestFlight + dev builds. Production
+            // builds skip this and run the normal subscription flow.
             const appEnv = (process.env.EXPO_PUBLIC_ENV ?? 'production').toLowerCase();
             const isNonProductionBuild = appEnv !== 'production';
-            const emailMatch = !!email && BETA_TESTER_EMAILS.has(email);
-            const idMatch = !!userId && betaUserIds.includes(userId);
-            if (isNonProductionBuild || emailMatch || idMatch) {
-              if (emailMatch && userId && !betaUserIds.includes(userId)) {
-                set({ betaUserIds: [...betaUserIds, userId] });
-              }
+            if (isNonProductionBuild) {
               set({
                 tier: 'pro',
                 productId: 'beta_tester_grant',
