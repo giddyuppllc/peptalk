@@ -16,6 +16,7 @@ import { getPeptideById } from '../../src/data/peptides';
 import { useStackStore } from '../../src/store/useStackStore';
 import { GlassCard } from '../../src/components/GlassCard';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
+import { ProtocolPlanCard } from '../../src/components/ProtocolPlanCard';
 import { KeepItSimpleCard } from '../../src/components/KeepItSimpleCard';
 import { getCategoryColor } from '../../src/constants/categories';
 import { Disclaimer } from '../../src/components/Disclaimer';
@@ -682,6 +683,15 @@ export default function PeptideDetailScreen() {
               </View>
             ))}
           </GlassCard>
+        )}
+
+        {/* Cycle plan — goal-aware summary of dose / frequency / cycle
+            length / total vials needed. Lives above the detailed protocol
+            templates so the user sees the big picture first. */}
+        {protocols.length > 0 && (
+          <View style={styles.section}>
+            <ProtocolPlanCard peptide={peptide} protocol={protocols[0]} />
+          </View>
         )}
 
         {/* NEW: Protocol Templates */}
