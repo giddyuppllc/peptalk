@@ -164,8 +164,18 @@ Deno.serve(async (req) => {
     }
 
     const body = (await req.json()) as SuggestBody;
-    const items = body.pantryItems ?? [];
     const count = Math.min(Math.max(body.count ?? 3, 1), 5);
+
+    // Cap user-supplied collections so a malicious / accidental large
+    // payload can't burn LLM tokens. Numbers chosen to comfortably hold
+    // the longest legitimate use (a heavy stack with a deep pantry)
+    // while bounding total prompt size at ≤ ~2k chars of pantry data.
+    const MAX_PANTRY_ITEMS = 80;
+    const MAX_ALLERGENS = 20;
+    const MAX_STACK_PEPTIDES = 12;
+    const items = (body.pantryItems ?? []).slice(0, MAX_PANTRY_ITEMS);
+    const allergensCapped = (body.allergens ?? []).slice(0, MAX_ALLERGENS);
+    const stackCapped = (body.activeStackPeptides ?? []).slice(0, MAX_STACK_PEPTIDES);
 
     const pantrySummary = items.length === 0
       ? '(user has no pantry items — suggest simple common-household meals)'
@@ -183,7 +193,7 @@ Deno.serve(async (req) => {
 
     // Compose peptide nutrition guidance from the lookup table
     const stackPrompts: string[] = [];
-    for (const pid of body.activeStackPeptides ?? []) {
+    for (const pid of stackCapped) {
       const promptText = PEPTIDE_NUTRITION_PROMPTS[pid.toLowerCase()];
       if (promptText) stackPrompts.push(promptText);
     }
@@ -195,7 +205,7 @@ Deno.serve(async (req) => {
         : '',
       body.mealType ? `\nMeal type: ${body.mealType}.` : '',
       body.dietType ? `\nDiet: ${body.dietType}.` : '',
-      body.allergens?.length ? `\nAllergens to avoid: ${body.allergens.join(', ')}.` : '',
+      allergensCapped.length ? `\nAllergens to avoid: ${allergensCapped.join(', ')}.` : '',
       body.cuisinePreference ? `\nPreferred cuisine: ${body.cuisinePreference}.` : '',
       stackPrompts.length
         ? `\n\nPeptide context (factor these into the meal suggestions):\n${stackPrompts.map((p) => `- ${p}`).join('\n')}`

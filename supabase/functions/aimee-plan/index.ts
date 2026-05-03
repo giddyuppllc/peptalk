@@ -82,8 +82,10 @@ Deno.serve(async (req) => {
     const days = [3, 5, 7].includes(body.days ?? 0) ? body.days! : 5;
     const macros = body.macroTargets;
     const dietType = body.dietType ?? 'balanced';
-    const allergens = body.allergens ?? [];
-    const goals = body.goals ?? [];
+    // Cap user-supplied arrays so a malicious payload can't burn LLM
+    // tokens by inflating the system prompt with thousands of entries.
+    const allergens = (body.allergens ?? []).slice(0, 20);
+    const goals = (body.goals ?? []).slice(0, 8);
 
     const macroLine = macros
       ? `Daily macro target: ${macros.calories}kcal, ${macros.proteinGrams}g protein, ${macros.carbsGrams}g carbs, ${macros.fatGrams}g fat.`

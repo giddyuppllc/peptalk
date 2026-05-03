@@ -81,7 +81,9 @@ Deno.serve(async (req) => {
     const mealType = body.mealType ?? 'lunch';
     const count = Math.min(Math.max(body.count ?? 3, 1), 6);
     const macros = body.macroTargets;
-    const constraints = body.constraints ?? [];
+    // Cap constraints so a malicious payload can't inflate the prompt
+    // (token-burn DoS). 25 covers every legitimate allergy + diet combo.
+    const constraints = (body.constraints ?? []).slice(0, 25);
 
     const macroLine = macros
       ? `Target roughly 1/3 of daily macros per recipe: ~${Math.round(macros.calories / 3)}kcal, ~${Math.round(macros.proteinGrams / 3)}g protein, ~${Math.round(macros.carbsGrams / 3)}g carbs, ~${Math.round(macros.fatGrams / 3)}g fat.`

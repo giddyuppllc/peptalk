@@ -88,9 +88,9 @@ export async function initializeAds(): Promise<void> {
     await mobileAdsModule().initialize();
 
     adsInitialized = true;
-    console.log('[AdService] Mobile Ads SDK initialized successfully');
+    if (__DEV__) console.log('[AdService] Mobile Ads SDK initialized successfully');
   } catch (error) {
-    console.warn('[AdService] Failed to initialize Mobile Ads SDK:', error);
+    if (__DEV__) console.warn('[AdService] Failed to initialize Mobile Ads SDK:', error);
   }
 }
 
