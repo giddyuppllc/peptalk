@@ -143,6 +143,9 @@ interface HealthProfileStore {
   setLifestyle: (lifestyle: Partial<LifestyleProfile>) => void;
   setDevices: (devices: Partial<DeviceConnections>) => void;
   setGoals: (primary: GoalType[], secondary?: GoalType[]) => void;
+  /** Free-text goal expansion + feature-wish feedback. */
+  setGoalNotes: (notes: string) => void;
+  setFeatureWish: (wish: string) => void;
   setPeptideExperience: (
     level: HealthProfile['peptideExperience'],
     current?: string[],
@@ -275,6 +278,24 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
           };
           return { profile: { ...updated, profileCompleteness: calcCompleteness(updated) } };
         }),
+
+      setGoalNotes: (notes) =>
+        set((state) => ({
+          profile: {
+            ...state.profile,
+            goalNotes: notes,
+            lastUpdated: new Date().toISOString(),
+          },
+        })),
+
+      setFeatureWish: (wish) =>
+        set((state) => ({
+          profile: {
+            ...state.profile,
+            featureWish: wish,
+            lastUpdated: new Date().toISOString(),
+          },
+        })),
 
       setPeptideExperience: (level, current, past) =>
         set((state) => ({

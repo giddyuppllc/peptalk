@@ -280,6 +280,51 @@ export default function DosingCalculatorScreen() {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Unit system master switch — flips weight (lbs/kg) and surfaces
+            plain-English explanations. Vial / dose / volume always stay
+            metric since insulin syringes are U-100 mL globally; there's
+            no imperial equivalent that would help here. */}
+        <View style={styles.section}>
+          <View style={[styles.unitMasterRow, { borderColor: t.cardBorder }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.unitMasterLabel, { color: t.text }]}>Units</Text>
+              <Text style={[styles.unitMasterHint, { color: t.textSecondary }]}>
+                {weightUnit === 'lbs'
+                  ? 'Standard — pounds. Vials & doses stay metric.'
+                  : 'Metric — kilograms. Vials & doses already metric.'}
+              </Text>
+            </View>
+            <View style={styles.unitToggle}>
+              <TouchableOpacity
+                style={[
+                  styles.unitToggleBtn,
+                  weightUnit === 'lbs' && { backgroundColor: t.primary },
+                ]}
+                onPress={() => setWeightUnit('lbs')}
+                accessibilityRole="button"
+                accessibilityLabel="Use standard units (pounds)"
+              >
+                <Text style={[styles.unitToggleText, { color: weightUnit === 'lbs' ? '#fff' : t.textSecondary }]}>
+                  Standard
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.unitToggleBtn,
+                  weightUnit === 'kg' && { backgroundColor: t.primary },
+                ]}
+                onPress={() => setWeightUnit('kg')}
+                accessibilityRole="button"
+                accessibilityLabel="Use metric units (kilograms)"
+              >
+                <Text style={[styles.unitToggleText, { color: weightUnit === 'kg' ? '#fff' : t.textSecondary }]}>
+                  Metric
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
         {/* Peptide (optional, for protocol typical-range display) */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: t.text }]}>Peptide (optional)</Text>
@@ -653,33 +698,43 @@ export default function DosingCalculatorScreen() {
           </View>
         )}
 
-        {/* Per-injection results (the actionable stuff) */}
+        {/* Per-injection results — plain-language labels for non-technical
+            users. Each row uses everyday language up top with the
+            technical term as a secondary hint so the math stays
+            verifiable. */}
         {showResults && canCalculate && (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>Per Injection</Text>
+            <Text style={[styles.sectionTitle, { color: t.text }]}>What to do per injection</Text>
+            <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
+              Plain steps for the syringe. Tap "About" below for the science.
+            </Text>
             <GlassCard variant="glow">
               <ResultRow
-                label="Draw to"
-                value={`${roundedUnits} units (U-100)`}
-                hint={`precise: ${syringeUnits.toFixed(2)} units`}
+                label="Pull syringe up to"
+                value={`${roundedUnits} mark${roundedUnits === 1 ? '' : 's'}`}
+                hint={`U-100 syringe · precise: ${syringeUnits.toFixed(2)} units`}
                 highlight
               />
               <ResultRow
-                label="Volume"
+                label="Liquid amount per shot"
                 value={`${volumeToInjectMl.toFixed(3)} mL`}
+                hint="how much fluid goes into the needle"
               />
               <ResultRow
-                label="Ticks on syringe"
-                value={`${ticksToDrawTo.toFixed(1)} ticks (0.1mL each)`}
+                label="Small lines from the bottom"
+                value={`${ticksToDrawTo.toFixed(1)}`}
+                hint="each tick = 0.1 mL on a U-100 syringe"
               />
               <ResultRow
-                label="Actual dose"
+                label="Actual peptide dose"
                 value={formatDose(doseMcg)}
+                hint="how much active peptide is in this shot"
               />
               {bodyWeightKg > 0 && (
                 <ResultRow
                   label="Dose per kg body weight"
                   value={`${(doseMcg / bodyWeightKg).toFixed(2)} mcg/kg`}
+                  hint="useful for protocols that scale by weight"
                 />
               )}
             </GlassCard>
@@ -1081,6 +1136,24 @@ const styles = StyleSheet.create({
   unitToggleText: {
     fontSize: FontSizes.sm,
     fontWeight: '700',
+  },
+  unitMasterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+  },
+  unitMasterLabel: {
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  unitMasterHint: {
+    fontSize: 11,
+    lineHeight: 14,
   },
 
   // Presets

@@ -618,6 +618,10 @@ export interface HealthProfile {
   // Goals
   primaryGoals: GoalType[];
   secondaryGoals: GoalType[];
+  /** Free-text goal expansion captured at onboarding ("anything specific"). */
+  goalNotes?: string;
+  /** What the user said they wished PepTalk had — feedback we read. */
+  featureWish?: string;
 
   // Peptide experience
   peptideExperience: 'none' | 'beginner' | 'intermediate' | 'experienced';

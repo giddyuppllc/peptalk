@@ -118,6 +118,9 @@ export default function OnboardingScreen() {
   const [heightFeet, setHeightFeet] = useState('');
   const [heightInches, setHeightInches] = useState('');
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>('moderate');
+  const [workoutDaysPerWeek, setWorkoutDaysPerWeek] = useState<number | null>(null);
+  const [goalNotes, setGoalNotes] = useState('');
+  const [featureWish, setFeatureWish] = useState('');
 
   // Cycle tracking — only meaningful when biologicalSex is female. Captures
   // contraception method (12 first-class options) + last-period date when
@@ -146,7 +149,13 @@ export default function OnboardingScreen() {
     profile, setGender, setAgeRange, toggleHealthGoal,
     setAcceptedSafety, completeOnboarding,
   } = useOnboardingStore();
-  const { setBodyMetrics, setLifestyle, setCycleTracking } = useHealthProfileStore();
+  const {
+    setBodyMetrics,
+    setLifestyle,
+    setCycleTracking,
+    setGoalNotes: persistGoalNotes,
+    setFeatureWish: persistFeatureWish,
+  } = useHealthProfileStore();
   const setCurrentContraception = useCycleStore((s) => s.setCurrentContraception);
 
   // ── Navigation ────────────────────────────────────────────────────────────
@@ -204,7 +213,12 @@ export default function OnboardingScreen() {
       if (!isNaN(feet) && feet > 0) {
         setBodyMetrics({ heightInches: feet * 12 + (isNaN(inches) ? 0 : inches) });
       }
-      setLifestyle({ activityLevel });
+      setLifestyle({
+        activityLevel,
+        ...(workoutDaysPerWeek != null ? { exerciseFrequency: workoutDaysPerWeek } : {}),
+      });
+      const trimmedGoalNotes = goalNotes.trim();
+      if (trimmedGoalNotes) persistGoalNotes(trimmedGoalNotes);
       // Cycle tracking — only when user picks a method AND is female. The
       // 12 contraception options drive the prediction mode (cyclical /
       // continuous / scheduled / pregnancy / returning / irregular) so the
@@ -251,6 +265,9 @@ export default function OnboardingScreen() {
           setGoalValue('fiber', macros.fiberGrams);
           setGoalValue('water', macros.waterOz);
         }
+
+        const trimmedFeatureWish = featureWish.trim();
+        if (trimmedFeatureWish) persistFeatureWish(trimmedFeatureWish);
 
         completeOnboarding();
         trackOnboardingComplete(0);
@@ -513,6 +530,45 @@ export default function OnboardingScreen() {
                   );
                 })}
 
+                <Text style={s.label}>How many days a week do you work out?</Text>
+                <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                  {[0, 1, 2, 3, 4, 5, 6, 7].map((days) => {
+                    const active = workoutDaysPerWeek === days;
+                    return (
+                      <TouchableOpacity
+                        key={days}
+                        onPress={() => setWorkoutDaysPerWeek(days)}
+                        style={[
+                          s.chip,
+                          active && { backgroundColor: `${HIGHLIGHT}18`, borderColor: HIGHLIGHT },
+                          { minWidth: 44, alignItems: 'center' },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: active }}
+                        accessibilityLabel={`${days} days per week`}
+                      >
+                        <Text style={[s.chipText, active && { color: ACCENT, fontWeight: '700' }]}>
+                          {days === 0 ? 'None' : days === 7 ? 'Daily' : days}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={s.label}>What's your main goal? (optional)</Text>
+                <Text style={s.labelSub}>
+                  In your own words — fat loss for summer, lift heavier, recover from injury, anything.
+                </Text>
+                <TextInput
+                  style={[s.input, { minHeight: 80, textAlignVertical: 'top', paddingTop: 12 }]}
+                  placeholder="e.g. Drop 15 lbs and not lose strength"
+                  placeholderTextColor="#9CA3AF"
+                  value={goalNotes}
+                  onChangeText={setGoalNotes}
+                  multiline
+                  maxLength={300}
+                />
+
                 {/* Cycle tracking — first-class step for female users.
                     12 contraception options drive prediction mode so the
                     cycle engine knows what to predict (cyclical / continuous
@@ -698,6 +754,24 @@ export default function OnboardingScreen() {
                     <Text style={s.trustText}>No ads</Text>
                   </View>
                 </View>
+
+                {/* Feature-wish feedback — final intake question. Reads
+                    by Edward post-signup to drive the roadmap. */}
+                <Text style={[s.label, { marginTop: 20 }]}>
+                  One feature you wish PepTalk had? (optional)
+                </Text>
+                <Text style={s.labelSub}>
+                  We read every answer. This is how the app gets better.
+                </Text>
+                <TextInput
+                  style={[s.input, { minHeight: 70, textAlignVertical: 'top', paddingTop: 12 }]}
+                  placeholder="e.g. A way to log my dad's protocol next to mine"
+                  placeholderTextColor="#9CA3AF"
+                  value={featureWish}
+                  onChangeText={setFeatureWish}
+                  multiline
+                  maxLength={400}
+                />
 
                 {/* Terms agreement */}
                 <View style={s.termsRow}>
