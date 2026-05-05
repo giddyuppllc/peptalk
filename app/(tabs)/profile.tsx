@@ -1471,6 +1471,8 @@ export default function ProfileScreen() {
           <View style={[profileStyles.card, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
             <ProfileRow icon="link-outline" label="Integrations" onPress={() => router.push('/settings/integrations' as any)} color={t.text} />
             <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+            <ProfileRow icon="ban-outline" label="Blocked users" onPress={() => router.push('/community/blocked-users' as any)} color={t.text} />
+            <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
             <ProfileRow icon="lock-closed-outline" label="Privacy" onPress={() => router.push('/settings/privacy' as any)} color={t.text} />
             <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
             <ProfileRow icon="snow-outline" label="Food safety windows" onPress={() => router.push('/settings/food-safety' as any)} color={t.text} />

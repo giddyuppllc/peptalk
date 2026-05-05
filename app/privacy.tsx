@@ -111,6 +111,20 @@ const POLICY_SECTIONS: PolicySection[] = [
     ],
   },
   {
+    title: 'Community / User-Generated Content',
+    icon: 'people-outline',
+    paragraphs: [
+      'PepTalk’s Community feature lets members post, comment, and react. By using Community, you agree:',
+      '•  No objectionable content. Posts and comments containing harassment, hate speech, sexually explicit material, illegal activity, or content that could endanger others’ safety are not allowed and will be removed.',
+      '•  No specific dose recommendations to other users. Talk about your own protocol — prescribing or directing dosing for someone else is not permitted and may be removed under the "unsafe medical advice" reason.',
+      '•  You may flag any post or comment via the Report action. Reports are reviewed within 24 hours; content may be removed automatically when 3 or more distinct members report the same target.',
+      '•  You may block any user, hiding their content globally from your feed. Blocked-user management is available in Settings → Blocked users.',
+      '•  PepTalk reserves the right to remove content, suspend accounts, or limit Community access at our discretion when guidelines are violated.',
+      '•  Anonymous posting hides your handle from other members but does NOT hide your identity from PepTalk admins for moderation purposes.',
+      'For abuse reports outside the in-app flow, contact edward@giddyupp.com.',
+    ],
+  },
+  {
     title: 'Changes to This Policy',
     icon: 'document-text-outline',
     paragraphs: [
