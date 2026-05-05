@@ -23,6 +23,7 @@ import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { OfflineBanner } from '../src/components/OfflineBanner';
 import { CelebrationModal } from '../src/components/CelebrationModal';
+import { WorkoutRewardModal } from '../src/components/WorkoutRewardModal';
 import { PepTalkCharacter } from '../src/components/PepTalkCharacter';
 import { SpotlightTour } from '../src/components/tutorial/SpotlightTour';
 import { UpgradeDeltaWatcher } from '../src/components/tutorial/UpgradeDeltaWatcher';
@@ -414,6 +415,7 @@ function RootLayout() {
         <StatusBar style={t.statusBar} />
         <OfflineBanner />
         <CelebrationModal />
+        <WorkoutRewardModal />
         {/* First-run walkthrough + upgrade delta tours (mounted at root so they survive navigation) */}
         <SpotlightTour />
         <UpgradeDeltaWatcher />
