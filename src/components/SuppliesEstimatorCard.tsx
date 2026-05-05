@@ -32,6 +32,10 @@ import { GlassCard } from './GlassCard';
 import { useTheme } from '../hooks/useTheme';
 import { Spacing, FontSizes } from '../constants/theme';
 import type { ProtocolTemplate, ProtocolFrequency } from '../types';
+import {
+  type ProtocolIntensity,
+  intensityToDoseRangeMcg,
+} from './ProtocolIntensityPicker';
 
 interface SuppliesEstimatorCardProps {
   protocol: ProtocolTemplate;
@@ -42,6 +46,9 @@ interface SuppliesEstimatorCardProps {
   /** BAC water mL per vial, from the calculator. Defaults to 2 mL —
    *  the most common reconstitution volume across our protocol library. */
   bacWaterMl?: number;
+  /** Mild / Standard / Aggressive — shifts the dose range used to count
+   *  total vials needed. Defaults to Standard. */
+  intensity?: ProtocolIntensity;
 }
 
 const FREQUENCY_PER_WEEK: Record<ProtocolFrequency, number> = {
@@ -75,16 +82,15 @@ function fmtRange(range: [number, number], unit: string): string {
   return `${lo}–${hi} ${unit}`;
 }
 
-export function SuppliesEstimatorCard({ protocol, vialMcg, bacWaterMl }: SuppliesEstimatorCardProps) {
+export function SuppliesEstimatorCard({ protocol, vialMcg, bacWaterMl, intensity }: SuppliesEstimatorCardProps) {
   const t = useTheme();
 
   const periods = useMemo<PeriodTotals[]>(() => {
-    const minMcg = protocol.typicalDose.unit === 'mg'
-      ? protocol.typicalDose.min * 1000
-      : protocol.typicalDose.min;
-    const maxMcg = protocol.typicalDose.unit === 'mg'
-      ? protocol.typicalDose.max * 1000
-      : protocol.typicalDose.max;
+    // Range shifts with intensity (Mild/Standard/Aggressive); supplies math
+    // tracks the chosen tier so vial counts don't lie about your supply.
+    const range = intensityToDoseRangeMcg(protocol, intensity ?? 'standard');
+    const minMcg = range.min;
+    const maxMcg = range.max;
     const perWeek = FREQUENCY_PER_WEEK[protocol.frequency] ?? 1;
 
     // Build three planning horizons: 1 week, 2 weeks, and the upper
@@ -115,7 +121,7 @@ export function SuppliesEstimatorCard({ protocol, vialMcg, bacWaterMl }: Supplie
         swabs: doses * 2,
       };
     });
-  }, [protocol, vialMcg, bacWaterMl]);
+  }, [protocol, vialMcg, bacWaterMl, intensity]);
 
   const hasVialMath = periods[0]?.vialsRange != null;
 

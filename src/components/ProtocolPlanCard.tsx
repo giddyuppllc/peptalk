@@ -27,6 +27,10 @@ import { useTheme } from '../hooks/useTheme';
 import { useHealthProfileStore } from '../store/useHealthProfileStore';
 import { Spacing, FontSizes } from '../constants/theme';
 import type { Peptide, ProtocolTemplate, GoalType, ProtocolFrequency } from '../types';
+import {
+  type ProtocolIntensity,
+  intensityToDoseRangeMcg,
+} from './ProtocolIntensityPicker';
 
 interface ProtocolPlanCardProps {
   peptide: Peptide;
@@ -36,6 +40,9 @@ interface ProtocolPlanCardProps {
   vialMcg?: number;
   /** Override the goal pulled from the health profile. */
   goal?: GoalType | null;
+  /** Mild / Standard / Aggressive — shifts the dose range used for the
+   *  cycle math. Defaults to Standard (full typical range) when omitted. */
+  intensity?: ProtocolIntensity;
 }
 
 const FREQUENCY_PER_WEEK: Record<ProtocolFrequency, number> = {
@@ -99,15 +106,20 @@ function formatRange(min: number, max: number): string {
   return `${formatDose(min)}–${formatDose(max)}`;
 }
 
-export function ProtocolPlanCard({ peptide, protocol, vialMcg, goal }: ProtocolPlanCardProps) {
+export function ProtocolPlanCard({ peptide, protocol, vialMcg, goal, intensity }: ProtocolPlanCardProps) {
   const t = useTheme();
   const profileGoal = useHealthProfileStore((s) => s.profile?.primaryGoals?.[0]);
   const effectiveGoal = goal ?? profileGoal ?? null;
 
   const summary = useMemo(() => {
-    const { typicalDose, durationWeeks, frequency } = protocol;
-    const minMcg = typicalDose.unit === 'mg' ? typicalDose.min * 1000 : typicalDose.min;
-    const maxMcg = typicalDose.unit === 'mg' ? typicalDose.max * 1000 : typicalDose.max;
+    const { durationWeeks, frequency } = protocol;
+    // Intensity shifts the dose range — Mild = lower 1/3, Standard = full,
+    // Aggressive = upper 1/3 of the published typical range. Standard is
+    // the default when no intensity is set so existing call sites are
+    // unchanged.
+    const range = intensityToDoseRangeMcg(protocol, intensity ?? 'standard');
+    const minMcg = range.min;
+    const maxMcg = range.max;
     const perWeek = FREQUENCY_PER_WEEK[frequency] ?? 1;
     const totalInjMin = perWeek * durationWeeks.min;
     const totalInjMax = perWeek * durationWeeks.max;
@@ -131,7 +143,7 @@ export function ProtocolPlanCard({ peptide, protocol, vialMcg, goal }: ProtocolP
           ? `${durationWeeks.min} weeks`
           : `${durationWeeks.min}–${durationWeeks.max} weeks`,
     };
-  }, [protocol, vialMcg]);
+  }, [protocol, vialMcg, intensity]);
 
   const guidance = effectiveGoal ? GOAL_CYCLE_GUIDANCE[effectiveGoal] : undefined;
   const topNote = protocol.importantNotes?.[0];

@@ -41,6 +41,13 @@ import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCar
 import { PeptideGuide } from '../../src/components/PeptideGuide';
 import { ProtocolPlanCard } from '../../src/components/ProtocolPlanCard';
 import { SuppliesEstimatorCard } from '../../src/components/SuppliesEstimatorCard';
+import {
+  ProtocolIntensityPicker,
+  intensityToDoseMcg,
+  type ProtocolIntensity,
+} from '../../src/components/ProtocolIntensityPicker';
+import { ReconstitutionGuideCard } from '../../src/components/ReconstitutionGuideCard';
+import { ActivateProtocolButton } from '../../src/components/ActivateProtocolButton';
 import type { Peptide } from '../../src/types';
 
 type WeightUnit = 'lbs' | 'kg';
@@ -83,6 +90,12 @@ export default function DosingCalculatorScreen() {
     profileWeightLbs ? String(profileWeightLbs) : '',
   );
   const [weightUnit, setWeightUnit] = useState<WeightUnit>('lbs');
+
+  // Protocol intensity tier — Mild / Standard / Aggressive. Drives dose
+  // range used by ProtocolPlanCard + SuppliesEstimatorCard. Default is
+  // Standard so existing behavior is unchanged for users who don't
+  // touch the picker.
+  const [intensity, setIntensity] = useState<ProtocolIntensity>('standard');
 
   // Results visibility
   const [showResults, setShowResults] = useState(false);
@@ -288,6 +301,34 @@ export default function DosingCalculatorScreen() {
             </TouchableOpacity>
           </GlassCard>
         </View>
+
+        {/* Protocol intensity — Mild / Standard / Aggressive. Visible the
+            moment a peptide is selected so the user picks their tier
+            before plugging in dose numbers. Standard is pre-selected
+            (matches typical research protocols). */}
+        {selectedPeptide && protocolsForPeptide.length > 0 && (
+          <View style={styles.section}>
+            <ProtocolIntensityPicker
+              protocol={protocolsForPeptide[0]}
+              value={intensity}
+              onChange={(next) => {
+                setIntensity(next);
+                // Auto-fill the target dose with the chosen intensity's
+                // mid-point so the rest of the calculator math reflects
+                // the picked tier without an extra tap.
+                const { mcg, displayUnit } = intensityToDoseMcg(protocolsForPeptide[0], next);
+                if (displayUnit === 'mg') {
+                  setTargetDose(String((mcg / 1000).toFixed(2).replace(/\.?0+$/, '')));
+                  setDoseUnit('mg');
+                } else {
+                  setTargetDose(String(Math.round(mcg)));
+                  setDoseUnit('mcg');
+                }
+                resetResults();
+              }}
+            />
+          </View>
+        )}
 
         {/* Titration ladder — shown only for peptides with structured weekly steps
             (GLP-1 family, TB-500, etc.). Lets the user pick the right step for
@@ -719,6 +760,7 @@ export default function DosingCalculatorScreen() {
               peptide={selectedPeptide}
               protocol={protocolsForPeptide[0]}
               vialMcg={vialMcg > 0 ? vialMcg : undefined}
+              intensity={intensity}
             />
           </View>
         )}
@@ -735,6 +777,27 @@ export default function DosingCalculatorScreen() {
               protocol={protocolsForPeptide[0]}
               vialMcg={vialMcg > 0 ? vialMcg : undefined}
               bacWaterMl={waterMl > 0 ? waterMl : undefined}
+              intensity={intensity}
+            />
+          </View>
+        )}
+
+        {/* Activate protocol — adds the protocol to dose log + schedules
+            dose reminders, vial-expiry alert, cycle-end check-in. Only
+            shown after the user has run a calculation so the activated
+            dose matches what's on screen. */}
+        {showResults && canCalculate && selectedPeptide && protocolsForPeptide.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: t.text }]}>Start tracking</Text>
+            <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
+              Add this protocol to your calendar with reminders for every dose.
+            </Text>
+            <ActivateProtocolButton
+              peptideId={selectedPeptide.id}
+              peptideName={selectedPeptide.name}
+              protocol={protocolsForPeptide[0]}
+              doseMcg={doseMcg}
+              frequency={frequency}
             />
           </View>
         )}
@@ -769,6 +832,24 @@ export default function DosingCalculatorScreen() {
                 value={formatDose(monthlyTotalMcg)}
               />
             </GlassCard>
+          </View>
+        )}
+
+        {/* Reconstitution + sterility guide — procedural steps with
+            "swirl don't shake," alcohol-pad reminders, storage windows.
+            Surfaced as its own card (not buried inside PeptideGuide) so
+            it gets read. */}
+        {selectedPeptide && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: t.text }]}>How to mix safely</Text>
+            <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
+              Sterile technique keeps the peptide active and you safe.
+            </Text>
+            <ReconstitutionGuideCard
+              protocol={protocolsForPeptide[0]}
+              vialMg={vialUnit === 'mg' ? vialRaw : vialRaw / 1000}
+              bacWaterMl={waterMl}
+            />
           </View>
         )}
 
