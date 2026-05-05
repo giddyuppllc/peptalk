@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../hooks/useTheme';
 import { Spacing, FontSizes } from '../../constants/theme';
 import { ReactionRow } from './ReactionRow';
+import { MentionText } from './MentionText';
 import type { CommunityComment } from '../../types/community';
 
 interface CommentItemProps {
@@ -66,7 +67,7 @@ export function CommentItem({ comment, isReply, onReply, onLongPress }: CommentI
           </TouchableOpacity>
         )}
       </View>
-      <Text style={[styles.body, { color: t.text }]}>{comment.body}</Text>
+      <MentionText body={comment.body} style={{ color: t.text, fontSize: FontSizes.sm, lineHeight: 19 }} />
 
       <View style={styles.actionsRow}>
         <ReactionRow commentId={comment.id} initialCount={comment.reactionCount} />

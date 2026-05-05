@@ -29,6 +29,7 @@ import { Spacing, FontSizes } from '../../src/constants/theme';
 import { useCommunityStore } from '../../src/store/useCommunityStore';
 import { ReactionRow } from '../../src/components/community/ReactionRow';
 import { CommentItem } from '../../src/components/community/CommentItem';
+import { MentionText } from '../../src/components/community/MentionText';
 import {
   REPORT_REASON_LABELS,
   type CommunityReportReason,
@@ -216,7 +217,7 @@ export default function PostDetailScreen() {
               </View>
             </View>
             <Text style={[styles.title, { color: t.text }]}>{post.title}</Text>
-            <Text style={[styles.body, { color: t.text }]}>{post.body}</Text>
+            <MentionText body={post.body} style={{ color: t.text, fontSize: FontSizes.sm, lineHeight: 22 }} />
             <View style={{ height: 12 }} />
             <ReactionRow postId={postId} initialCount={post.reactionCount} />
           </GlassCard>

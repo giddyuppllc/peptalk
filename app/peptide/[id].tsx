@@ -20,6 +20,7 @@ import { ProtocolPlanCard } from '../../src/components/ProtocolPlanCard';
 import { SuppliesEstimatorCard } from '../../src/components/SuppliesEstimatorCard';
 import { PeptideTrendCard } from '../../src/components/PeptideTrendCard';
 import { PeptideCyclePhaseCard } from '../../src/components/PeptideCyclePhaseCard';
+import { PeptideLifestyleCard } from '../../src/components/PeptideLifestyleCard';
 import { KeepItSimpleCard } from '../../src/components/KeepItSimpleCard';
 import { getCategoryColor } from '../../src/constants/categories';
 import { Disclaimer } from '../../src/components/Disclaimer';
@@ -716,6 +717,13 @@ export default function PeptideDetailScreen() {
             cycle tracking on AND a category that has guidance content. */}
         <View style={styles.section}>
           <PeptideCyclePhaseCard peptide={peptide} />
+        </View>
+
+        {/* Per-peptide fitness / supplements / lifestyle pairing card.
+            Hides itself when the peptide doesn't have any of those
+            fields populated. */}
+        <View style={styles.section}>
+          <PeptideLifestyleCard peptideId={peptide.id} peptideName={peptide.name} />
         </View>
 
         {/* NEW: Protocol Templates */}

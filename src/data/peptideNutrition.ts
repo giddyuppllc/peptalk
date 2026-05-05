@@ -45,6 +45,22 @@ export interface PeptideNutritionGuidance {
   summary: string;
   /** One-liner for Aimee system prompt injection. */
   prompt: string;
+
+  /** Optional training guidance that pairs with this peptide's mechanism. */
+  fitnessGuidance?: {
+    /** What kind of training to emphasize (e.g. "resistance training", "zone 2 cardio"). */
+    emphasis: string;
+    /** When during the cycle / day to lean into training. */
+    timing?: string;
+    /** Things to avoid or scale back. */
+    cautions?: string[];
+  };
+  /** Specific vitamin / mineral recommendations to support the peptide's
+   *  mechanism — separate from microEmphasis (which tends to be food-form).
+   *  Examples: "B-complex 50mg/day," "Magnesium glycinate 300mg before bed." */
+  vitaminEmphasis?: string[];
+  /** Lifestyle pairings (sleep targets, stress practices, exposure timing). */
+  lifestyleNotes?: string[];
 }
 
 const g = (entry: PeptideNutritionGuidance): [string, PeptideNutritionGuidance] => [
@@ -67,6 +83,22 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
       'On semaglutide, appetite drops sharply and many users under-eat protein — leading to lean-mass loss. Target 1.0–1.2 g protein per lb bodyweight, eat small frequent portions, and prioritize hydration (appetite suppression often suppresses thirst cues too).',
     prompt:
       'Semaglutide users: 1.0–1.2 g/lb protein to preserve lean mass; small frequent meals; extra hydration + electrolytes.',
+    fitnessGuidance: {
+      emphasis: 'Resistance training 3-4x/week, full-body or upper/lower split. Lean mass loss is the #1 risk on GLP-1s — lifting is the only thing that protects it.',
+      timing: 'Morning lift before the dose if possible — appetite is highest in the early window. Skip cardio-heavy days when you\'re already deficit + dehydrated.',
+      cautions: ['Avoid running fasted on dose day (week 1-2 nausea risk)', 'Drop volume 20% during titration weeks until appetite stabilizes'],
+    },
+    vitaminEmphasis: [
+      'B-complex 50mg/day (B12 absorption drops with reduced food intake)',
+      'Electrolyte mix daily (sodium 1-2g, potassium 500mg, magnesium 300-400mg)',
+      'Vitamin D3 2000-4000 IU if you\'re indoors most days',
+      'Iron only if labs indicate — don\'t guess',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h — calorie deficit + GLP-1 = recovery debt accumulates fast',
+      'Walk 8-10k steps to support fat oxidation without burning into protein',
+      'Manage stress (cortisol blocks the body-comp benefits) — 10 min/day breath work / sauna / similar',
+    ],
   }),
   g({
     peptideId: 'tirzepatide',
@@ -81,6 +113,22 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
       'Tirzepatide (dual GIP/GLP-1 agonist) produces stronger appetite suppression than semaglutide. Protein priority is critical — 1.0–1.2 g/lb. Spread intake across 4–5 small meals. Pre-hydrate before meals to reduce nausea.',
     prompt:
       'Tirzepatide users: 1.0–1.2 g/lb protein, small frequent meals, pre-hydrate to reduce nausea.',
+    fitnessGuidance: {
+      emphasis: 'Resistance training 3-4x/week — same lean-mass-preservation logic as semaglutide. Tirzepatide weight loss is faster, so the lifting is even more critical.',
+      timing: 'Train morning when appetite is most workable.',
+      cautions: ['Reduce intensity 20-30% during titration', 'Avoid fasted training in week 1-2 of new doses'],
+    },
+    vitaminEmphasis: [
+      'B-complex 50mg/day (B12 absorption drops with lower food intake)',
+      'Electrolyte mix daily (sodium, potassium, magnesium)',
+      'Vitamin D3 2000-4000 IU',
+      'Creatine monohydrate 5g/day — lean-mass insurance during rapid loss',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h consistently — fast loss compounds recovery debt',
+      'Walking 8-10k steps daily supports fat ox without protein burn',
+      'Stress management non-negotiable; cortisol negates body-comp gains',
+    ],
   }),
   g({
     peptideId: 'retatrutide',
@@ -135,6 +183,22 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
       'Ipamorelin stimulates a natural GH pulse. Carbs and insulin blunt that pulse, so avoid high-glycemic foods for 2 hours before a bedtime dose. Take the dose on an empty stomach and wait ~30 min before eating. Protein supports the recovery side of the GH/IGF-1 axis.',
     prompt:
       'Ipamorelin users: empty-stomach dose, no high-glycemic carbs 2h pre-dose (blunts GH release).',
+    fitnessGuidance: {
+      emphasis: 'Heavy resistance training pairs hand-in-glove with GH pulses. 4-day upper/lower or push/pull/legs splits work well.',
+      timing: 'Train in the late afternoon or early evening — natural cortisol curve is dropping and you can recover into the bedtime GH pulse.',
+      cautions: ['Don\'t train in the 30 minutes after a dose', 'Skip late-evening cardio if it disrupts your dose timing'],
+    },
+    vitaminEmphasis: [
+      'Magnesium glycinate 300-400mg before bed (deeper sleep = better GH)',
+      'Zinc 15-25mg/day (GH synthesis cofactor)',
+      'Vitamin D3 4000 IU + K2 100mcg',
+      'Creatine 5g/day for lean-mass support',
+    ],
+    lifestyleNotes: [
+      'Bedtime within 30 min of dose; pulse depends on deep sleep',
+      'Cool, dark bedroom (65-68°F) — measurably more deep sleep',
+      'No alcohol within 4h of dose — alcohol blunts the GH pulse hard',
+    ],
   }),
   g({
     peptideId: 'cjc-1295',
