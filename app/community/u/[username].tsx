@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,7 @@ import { useTheme } from '../../../src/hooks/useTheme';
 import { Spacing, FontSizes } from '../../../src/constants/theme';
 import { PostCard } from '../../../src/components/community/PostCard';
 import { useCommunityStore } from '../../../src/store/useCommunityStore';
+import { useAuthStore } from '../../../src/store/useAuthStore';
 import type { CommunityPost } from '../../../src/types/community';
 
 export default function CommunityUserProfile() {
@@ -24,10 +25,18 @@ export default function CommunityUserProfile() {
   const handle = String(username ?? '').replace(/^@/, '');
 
   const topics = useCommunityStore((s) => s.topics);
+  const followedUserIds = useCommunityStore((s) => s.followedUserIds);
+  const followUser = useCommunityStore((s) => s.followUser);
+  const unfollowUser = useCommunityStore((s) => s.unfollowUser);
+  const myUserId = useAuthStore((s) => s.user?.id);
 
   const [profile, setProfile] = useState<{ id: string; username?: string; displayName?: string; avatarUrl?: string } | null>(null);
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [following, setFollowing] = useState(false);
+
+  const isFollowing = profile ? followedUserIds.includes(profile.id) : false;
+  const isSelf = profile?.id === myUserId;
 
   useEffect(() => {
     let cancelled = false;
@@ -128,6 +137,38 @@ export default function CommunityUserProfile() {
               <Text style={[styles.postCount, { color: t.textSecondary }]}>
                 {posts.length} public post{posts.length === 1 ? '' : 's'}
               </Text>
+              {!isSelf && (
+                <TouchableOpacity
+                  disabled={following}
+                  style={[
+                    styles.followBtn,
+                    {
+                      backgroundColor: isFollowing ? 'transparent' : t.primary,
+                      borderColor: isFollowing ? t.cardBorder : t.primary,
+                      opacity: following ? 0.6 : 1,
+                    },
+                  ]}
+                  onPress={async () => {
+                    setFollowing(true);
+                    const res = isFollowing
+                      ? await unfollowUser(profile.id)
+                      : await followUser(profile.id);
+                    setFollowing(false);
+                    if (!res.ok) Alert.alert('Failed', (res as any).error ?? '');
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={isFollowing ? 'Unfollow' : 'Follow'}
+                >
+                  <Text
+                    style={[
+                      styles.followText,
+                      { color: isFollowing ? t.text : '#fff' },
+                    ]}
+                  >
+                    {isFollowing ? 'Following' : 'Follow'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </GlassCard>
           }
           renderItem={({ item }) => (
@@ -183,5 +224,13 @@ const styles = StyleSheet.create({
   displayName: { fontSize: FontSizes.lg, fontWeight: '800' },
   handle: { fontSize: FontSizes.xs, fontWeight: '600' },
   postCount: { fontSize: 11, marginTop: 4 },
+  followBtn: {
+    marginTop: 12,
+    paddingHorizontal: 22,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1.5,
+  },
+  followText: { fontSize: FontSizes.xs, fontWeight: '700' },
   empty: { padding: 30, fontSize: FontSizes.sm, textAlign: 'center' },
 });

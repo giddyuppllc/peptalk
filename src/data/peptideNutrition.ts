@@ -244,6 +244,23 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
       'BPC-157 accelerates soft-tissue and GI healing. No macro shift needed, but collagen synthesis benefits from glycine (bone broth, gelatin) and cofactors (vitamin C, zinc, copper). For gut-healing protocols, pair with meal timing (taken ~20 min before eating).',
     prompt:
       'BPC-157 users: collagen/glycine emphasis (bone broth, gelatin), vitamin C + zinc cofactors.',
+    fitnessGuidance: {
+      emphasis: 'Train near (but not into) pain. Tissue-repair protocols accelerate when the area is loaded sub-maximally — full-rest delays remodeling.',
+      timing: 'Inject near the injured site if practical. Time training 1-2 hours after the injection so peptide tissue concentration is highest.',
+      cautions: ['Avoid maximal effort during weeks 1-2', 'Don\'t mask pain — BPC accelerates healing, doesn\'t numb damage'],
+    },
+    vitaminEmphasis: [
+      'Vitamin C 1000mg/day (collagen synthesis cofactor)',
+      'Zinc 15-25mg/day',
+      'Copper 1-2mg (always paired with zinc)',
+      'Glycine 5g/day (collagen amino acid)',
+      'Magnesium glycinate 300mg before bed',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h — deep-sleep windows are when tissue remodeling actually happens',
+      'Hydration 0.7 oz/lb minimum — connective tissue is 70% water',
+      'Avoid NSAIDs unless absolutely needed — they blunt the inflammatory signaling BPC-157 modulates',
+    ],
   }),
   g({
     peptideId: 'tb-500',
@@ -254,6 +271,22 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
     summary:
       'TB-500 promotes tissue regeneration and angiogenesis. Same cofactor emphasis as BPC-157 — glycine + vitamin C + zinc. Adequate protein (0.8–1.0 g/lb) supports repair.',
     prompt: 'TB-500 users: collagen + vitamin C cofactors for tissue repair.',
+    fitnessGuidance: {
+      emphasis: 'Sub-maximal loading on the injured area — same as BPC-157. TB-500 is systemic, so site-of-injection doesn\'t matter the way it does for BPC.',
+      timing: 'Loading phase: 2x/week for 4-6 weeks lets blood supply remodel. Maintenance: 1x/week.',
+      cautions: ['Don\'t return to full intensity until pain-free under load', 'Hide cardio inflammatory spikes if recovery is the goal'],
+    },
+    vitaminEmphasis: [
+      'Vitamin C 1000mg/day',
+      'Zinc 15-25mg/day + copper 1-2mg',
+      'Glycine 5g/day or 1 tbsp gelatin',
+      'Vitamin D3 4000 IU + K2 100mcg',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h — angiogenesis (new blood vessel growth) follows deep-sleep cycles',
+      'Cold exposure on rest days may compound the angiogenesis benefit',
+      'Avoid alcohol during loading phase — blunts the regenerative signal',
+    ],
   }),
 
   // ── Metabolic / mitochondrial ─────────────────────────────────────────────
@@ -265,6 +298,22 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
     summary:
       'MOTS-c is a mitochondrial peptide — improves insulin sensitivity and glucose uptake. Time your higher-carb meals around workouts for best effect. Dose in the morning (energy expenditure pulse).',
     prompt: 'MOTS-c users: time carbs around workouts, morning dose.',
+    fitnessGuidance: {
+      emphasis: 'Zone-2 cardio (60-70% max HR) 3-4x/week stacks beautifully — both grow mitochondrial density. 30-45 min steady-state, not intervals.',
+      timing: 'Train 30-60 min after the morning dose; insulin sensitivity is at its sharpest.',
+      cautions: ['Skip late-night carbs on dose day to avoid blunting the AMPK signal', 'Don\'t over-restrict carbs — MOTS-c needs glucose to do its thing'],
+    },
+    vitaminEmphasis: [
+      'B-complex 50mg/day (mitochondrial cofactor — B1, B2, B3 especially)',
+      'Magnesium glycinate 300mg/day (>300 enzymatic mitochondrial reactions)',
+      'CoQ10 100-200mg with a fatty meal',
+      'Alpha-lipoic acid 300-600mg/day (mitochondrial antioxidant)',
+    ],
+    lifestyleNotes: [
+      'Cold exposure 1-3x/week (60-90s cold shower) supports mito biogenesis',
+      'Heat / sauna 20 min 3-4x/week — same mechanism, opposite direction',
+      'Time-restricted eating (12-14h fast) compounds the AMPK signaling',
+    ],
   }),
   g({
     peptideId: 'aod-9604',

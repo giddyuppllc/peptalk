@@ -46,23 +46,36 @@ Deno.serve(async (req) => {
 
     if (q.length < 2) return json({ posts: [] });
 
-    // Sanitize: ILIKE injection isn't a thing (parameterized) but
-    // strip wildcard chars so users can't do `% ` searches that scan
-    // every row.
-    const escaped = q.replace(/[%_\\]/g, '');
-
+    // Build a websearch-style tsquery so users can do "tirzepatide
+    // nausea" without quotes and have both words AND-matched. Postgres
+    // websearch_to_tsquery handles user-supplied input safely — strips
+    // operators, no injection.
     let query = supabase
       .from('community_posts')
       .select('id, user_id, topic_slug, title, body, reaction_count, comment_count, is_anonymous, created_at')
       .eq('is_deleted', false)
-      .or(`title.ilike.%${escaped}%,body.ilike.%${escaped}%`)
-      .order('created_at', { ascending: false })
+      .textSearch('fts', q, { type: 'websearch', config: 'english' })
       .limit(30);
 
     if (topicSlug) query = query.eq('topic_slug', topicSlug);
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      // FTS query parse error — fall back to plain ILIKE so the user
+      // gets results from a malformed query (e.g. just punctuation)
+      // instead of an error toast.
+      const escaped = q.replace(/[%_\\]/g, '');
+      let fb = supabase
+        .from('community_posts')
+        .select('id, user_id, topic_slug, title, body, reaction_count, comment_count, is_anonymous, created_at')
+        .eq('is_deleted', false)
+        .or(`title.ilike.%${escaped}%,body.ilike.%${escaped}%`)
+        .order('created_at', { ascending: false })
+        .limit(30);
+      if (topicSlug) fb = fb.eq('topic_slug', topicSlug);
+      const { data: fbData } = await fb;
+      return json({ posts: fbData ?? [] });
+    }
 
     return json({ posts: data ?? [] });
   } catch (err) {

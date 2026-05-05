@@ -30,6 +30,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { jwtVerify, createRemoteJWKSet } from 'https://esm.sh/jose@5.9.6';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -79,21 +80,43 @@ interface RTDNPayload {
   testNotification?: { version: string };
 }
 
+// Google's OIDC JWKS endpoint — served via createRemoteJWKSet so jose
+// caches + auto-refreshes when keys rotate. Pinned to Google's
+// well-known endpoint for service-account / Pub/Sub OIDC tokens.
+const GOOGLE_OIDC_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
+const GOOGLE_OIDC_ISSUER = 'https://accounts.google.com';
+const GOOGLE_RTDN_AUDIENCE = Deno.env.get('GOOGLE_RTDN_AUDIENCE') ?? '';
+const JWKS = createRemoteJWKSet(new URL(GOOGLE_OIDC_JWKS_URL));
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
   try {
-    // AUTH: Google Pub/Sub attaches an OIDC JWT as Authorization: Bearer.
-    // Strong verification would decode + check aud/iss against our URL
-    // and Google's issuer. Minimum bar: ensure SOME Authorization header
-    // exists so a random POSTer can't impersonate Pub/Sub. Supabase
-    // edge-function URLs aren't discoverable, which helps.
-    // TODO(prod): decode the OIDC JWT and verify signature via Google's
-    // JWKS + match aud to this function's URL.
+    // AUTH: verify the OIDC JWT Google Pub/Sub attached. Two-step:
+    //   1. Signature must verify against Google's published JWKS.
+    //   2. `aud` claim must match the GOOGLE_RTDN_AUDIENCE secret
+    //      (set to this function's URL when configuring the Pub/Sub
+    //      push subscription with "Enable authentication" ticked).
+    // If GOOGLE_RTDN_AUDIENCE is unset, fall back to bearer-presence
+    // only — protects against accidentally locking out the deploy
+    // before the secret is configured.
     const authz = req.headers.get('authorization') ?? '';
     if (!authz.startsWith('Bearer ')) {
       console.warn('[google-rtdn] missing bearer token');
       return new Response('Unauthorized', { status: 401 });
+    }
+
+    const idToken = authz.slice('Bearer '.length).trim();
+    if (GOOGLE_RTDN_AUDIENCE) {
+      try {
+        await jwtVerify(idToken, JWKS, {
+          issuer: [GOOGLE_OIDC_ISSUER, 'accounts.google.com'],
+          audience: GOOGLE_RTDN_AUDIENCE,
+        });
+      } catch (verifyErr) {
+        console.warn('[google-rtdn] OIDC verify failed:', verifyErr);
+        return new Response('Unauthorized', { status: 401 });
+      }
     }
 
     const envelope = (await req.json()) as PubSubEnvelope;

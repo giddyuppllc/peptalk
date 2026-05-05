@@ -358,6 +358,17 @@ function RootLayout() {
         ?.catch?.((err: unknown) => {
           if (__DEV__) console.warn('[foreground-sync] subscription failed:', err);
         });
+
+      // Fire local banners for any community notifications (replies,
+      // mentions, etc.) that arrived while backgrounded. Replaces the
+      // need for real Expo push delivery in v1.
+      import('../src/services/communityNotificationDelivery')
+        .then(({ deliverPendingCommunityNotifications }) =>
+          deliverPendingCommunityNotifications(),
+        )
+        .catch((err: unknown) => {
+          if (__DEV__) console.warn('[foreground-sync] community delivery failed:', err);
+        });
     });
 
     return () => {

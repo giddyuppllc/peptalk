@@ -28,6 +28,9 @@ interface CommunityState {
   /** User-blocked ids — hides their content client-side without a
    *  server round-trip. */
   blockedUserIds: string[];
+  /** Users this account follows. Hydrated once on community-screen
+   *  mount, kept in sync by toggleFollow. */
+  followedUserIds: string[];
   unreadNotificationCount: number;
 
   loadingFeed: boolean;
@@ -36,9 +39,10 @@ interface CommunityState {
 
   // ── Reads ──
   hydrateTopics: () => Promise<void>;
-  hydrateFeed: (opts?: { topicSlug?: string | null; sort?: 'new' | 'top_today' | 'top_week' | 'top_all' }) => Promise<void>;
+  hydrateFeed: (opts?: { topicSlug?: string | null; sort?: 'new' | 'top_today' | 'top_week' | 'top_all'; followingOnly?: boolean }) => Promise<void>;
   hydratePostDetail: (postId: string) => Promise<void>;
   hydrateBlockedUsers: () => Promise<void>;
+  hydrateFollowedUsers: () => Promise<void>;
   hydrateUnreadCount: () => Promise<void>;
 
   // ── Writes ──
@@ -52,6 +56,8 @@ interface CommunityState {
     Promise<{ ok: true } | { ok: false; error: string }>;
   blockUser: (userId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   unblockUser: (userId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  followUser: (userId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  unfollowUser: (userId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   setUsername: (input: { username: string; displayName?: string }) =>
     Promise<{ ok: true } | { ok: false; error: string }>;
   suggestTopic: (input: { name: string; description?: string }) =>
@@ -141,6 +147,7 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
   posts: [],
   postDetails: {},
   blockedUserIds: [],
+  followedUserIds: [],
   unreadNotificationCount: 0,
   loadingFeed: false,
   loadingTopics: false,
@@ -195,6 +202,16 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
         .eq('is_deleted', false);
 
       if (topicSlug) q = q.eq('topic_slug', topicSlug);
+
+      if (opts?.followingOnly) {
+        const followed = get().followedUserIds;
+        if (followed.length === 0) {
+          // No follows yet — return empty rather than the global feed.
+          set({ posts: [] });
+          return;
+        }
+        q = q.in('user_id', followed);
+      }
 
       if (sort === 'new') {
         q = q.order('created_at', { ascending: false });
@@ -316,6 +333,22 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
     }
   },
 
+  hydrateFollowedUsers: async () => {
+    try {
+      const supabase = await getSupa();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('community_follows')
+        .select('followed_id')
+        .eq('follower_id', user.id);
+      if (error) throw error;
+      set({ followedUserIds: (data ?? []).map((r: any) => r.followed_id) });
+    } catch (err) {
+      if (__DEV__) console.warn('[community] hydrateFollowedUsers:', err);
+    }
+  },
+
   hydrateUnreadCount: async () => {
     try {
       const supabase = await getSupa();
@@ -410,6 +443,26 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
     }
   },
 
+  followUser: async (userId) => {
+    try {
+      await authedFetch('community-follow', { followedId: userId, action: 'follow' });
+      set({ followedUserIds: Array.from(new Set([...get().followedUserIds, userId])) });
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err?.message ?? 'Failed' };
+    }
+  },
+
+  unfollowUser: async (userId) => {
+    try {
+      await authedFetch('community-follow', { followedId: userId, action: 'unfollow' });
+      set({ followedUserIds: get().followedUserIds.filter((id) => id !== userId) });
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err?.message ?? 'Failed' };
+    }
+  },
+
   setUsername: async (input) => {
     try {
       const res = await authedFetch<any>('community-set-username', input);
@@ -457,6 +510,7 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
     posts: [],
     postDetails: {},
     blockedUserIds: [],
+    followedUserIds: [],
     unreadNotificationCount: 0,
   }),
 }));

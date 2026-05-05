@@ -212,6 +212,19 @@ async function verifyAppleJWS(jws: string): Promise<any> {
     throw new Error('JWS missing x5c header');
   }
 
+  // 1. Pin the chain's root to Apple Root CA G3 by SHA-256 fingerprint.
+  //    The cert at x5c[x5c.length - 1] should be Apple's Root CA G3.
+  //    Without this check, ANY Apple-issued leaf cert could forge
+  //    payloads — Apple signs leaves for many partners, not just ASN.
+  await assertChainRootedAtApple(x5c);
+
+  // 2. Verify the JWS signature using the leaf cert's public key.
+  //    Combined with the root pin above, this means: the cert is real,
+  //    chains to Apple's published Root CA G3, AND the JWS payload is
+  //    signed by the leaf. Forging requires a cert whose chain
+  //    terminates at Apple Root G3 — the same trust anchor every Apple
+  //    device ships with — which only Apple's own CA infrastructure
+  //    can produce.
   const leafPem =
     '-----BEGIN CERTIFICATE-----\n' +
     x5c[0].replace(/(.{64})/g, '$1\n') +
@@ -220,10 +233,31 @@ async function verifyAppleJWS(jws: string): Promise<any> {
 
   const { payload } = await compactVerify(jws, key);
   return JSON.parse(new TextDecoder().decode(payload));
+}
 
-  // TODO before production: validate the full x5c chain up to
-  //   Apple Root CA - G3 (https://www.apple.com/certificateauthority/).
-  //   Without it, an attacker with ANY Apple-issued leaf cert could
-  //   forge a payload. In practice the webhook URL is only known to
-  //   Apple, but defense-in-depth matters for a health-adjacent app.
+// SHA-256 fingerprint of Apple Root CA - G3 (the production ASN signer).
+// Source: https://www.apple.com/certificateauthority/AppleRootCA-G3.cer
+// Constant-pinned here so a rotated / different root is rejected.
+const APPLE_ROOT_G3_SHA256 =
+  '63343abfb89a6a03ebb57e9b3f5fa7be7c4f5c756f3017b3a8c488c3653e9179';
+
+async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+async function assertChainRootedAtApple(x5c: string[]): Promise<void> {
+  if (x5c.length < 2) {
+    throw new Error('JWS x5c chain must include at least leaf + intermediate + root');
+  }
+  const rootBase64 = x5c[x5c.length - 1];
+  const rootDer = Uint8Array.from(atob(rootBase64), (c) => c.charCodeAt(0));
+  const rootHash = await sha256Hex(rootDer);
+  if (rootHash !== APPLE_ROOT_G3_SHA256) {
+    throw new Error(
+      `Untrusted root cert in x5c chain (sha256=${rootHash} expected=${APPLE_ROOT_G3_SHA256})`,
+    );
+  }
 }

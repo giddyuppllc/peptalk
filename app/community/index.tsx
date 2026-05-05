@@ -59,20 +59,23 @@ export default function CommunityFeedScreen() {
   const hydrateTopics = useCommunityStore((s) => s.hydrateTopics);
   const hydrateFeed = useCommunityStore((s) => s.hydrateFeed);
   const hydrateBlockedUsers = useCommunityStore((s) => s.hydrateBlockedUsers);
+  const hydrateFollowedUsers = useCommunityStore((s) => s.hydrateFollowedUsers);
   const reportContent = useCommunityStore((s) => s.reportContent);
   const blockUser = useCommunityStore((s) => s.blockUser);
 
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const [sort, setSort] = useState<SortMode>('new');
+  const [feedMode, setFeedMode] = useState<'all' | 'following'>('all');
 
   useEffect(() => {
     hydrateTopics();
     hydrateBlockedUsers();
-  }, [hydrateTopics, hydrateBlockedUsers]);
+    hydrateFollowedUsers();
+  }, [hydrateTopics, hydrateBlockedUsers, hydrateFollowedUsers]);
 
   useEffect(() => {
-    hydrateFeed({ topicSlug: activeSlug, sort });
-  }, [hydrateFeed, activeSlug, sort]);
+    hydrateFeed({ topicSlug: activeSlug, sort, followingOnly: feedMode === 'following' });
+  }, [hydrateFeed, activeSlug, sort, feedMode]);
 
   const filterChips = useMemo(
     () => [
@@ -198,8 +201,29 @@ export default function CommunityFeedScreen() {
         )}
       </View>
 
-      {/* Sort selector */}
+      {/* Feed mode (All / Following) + sort */}
       <View style={styles.sortRow}>
+        <TouchableOpacity onPress={() => setFeedMode('all')} style={styles.sortBtn}>
+          <Text
+            style={[
+              styles.sortText,
+              { color: feedMode === 'all' ? t.primary : t.textSecondary, fontWeight: feedMode === 'all' ? '700' : '500' },
+            ]}
+          >
+            All
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setFeedMode('following')} style={styles.sortBtn}>
+          <Text
+            style={[
+              styles.sortText,
+              { color: feedMode === 'following' ? t.primary : t.textSecondary, fontWeight: feedMode === 'following' ? '700' : '500' },
+            ]}
+          >
+            Following
+          </Text>
+        </TouchableOpacity>
+        <View style={{ width: 1, height: 14, backgroundColor: t.cardBorder, marginHorizontal: 6 }} />
         {SORT_OPTIONS.map((opt) => {
           const active = sort === opt.mode;
           return (
