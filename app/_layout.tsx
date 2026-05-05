@@ -476,6 +476,13 @@ function RootLayout() {
             }}
           />
           <Stack.Screen
+            name="community/index"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
             name="learn/article/[slug]"
             options={{
               headerShown: false,

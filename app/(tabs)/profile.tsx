@@ -1459,6 +1459,8 @@ export default function ProfileScreen() {
               <ProfileRow icon="document-text-outline" label="Health Report" onPress={() => router.push('/health-report' as any)} color={t.text} />
               <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
               <ProfileRow icon="library-outline" label="Sources & references" onPress={() => router.push('/resources' as any)} color={t.text} />
+              <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+              <ProfileRow icon="people-outline" label="Community" onPress={() => router.push('/community' as any)} color={t.text} />
             </View>
           </View>
         )}
