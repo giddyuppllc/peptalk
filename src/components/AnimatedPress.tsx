@@ -12,6 +12,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { tapLight } from '../utils/haptics';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -47,6 +48,7 @@ export function AnimatedPress({
   accessibilityHint,
   accessibilityState,
 }: AnimatedPressProps) {
+  const reduceMotion = useReduceMotion();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -54,6 +56,7 @@ export function AnimatedPress({
   }));
 
   const handlePressIn = () => {
+    if (reduceMotion) return;
     scale.value = withSpring(scaleTo, {
       damping: 15,
       stiffness: 300,
@@ -61,6 +64,7 @@ export function AnimatedPress({
   };
 
   const handlePressOut = () => {
+    if (reduceMotion) return;
     scale.value = withSpring(1, {
       damping: 15,
       stiffness: 300,
@@ -84,7 +88,7 @@ export function AnimatedPress({
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
-      accessibilityState={accessibilityState}
+      accessibilityState={{ disabled, ...(accessibilityState ?? {}) }}
     >
       {children}
     </AnimatedPressable>

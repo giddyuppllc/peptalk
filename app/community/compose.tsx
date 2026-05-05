@@ -6,7 +6,7 @@
  * the title + body + topic-picker form.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Switch,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -27,6 +29,9 @@ import { GradientButton } from '../../src/components/GradientButton';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Spacing, FontSizes } from '../../src/constants/theme';
 import { useCommunityStore } from '../../src/store/useCommunityStore';
+import { pickAndUploadCommunityImage } from '../../src/services/communityImageUpload';
+
+const MAX_IMAGES = 4;
 
 const TITLE_MIN = 3, TITLE_MAX = 140;
 const BODY_MIN = 1, BODY_MAX = 8000;
@@ -44,6 +49,27 @@ export default function ComposePostScreen() {
   const [topicSlug, setTopicSlug] = useState<string | null>(null);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleAddImage = async () => {
+    if (imageUrls.length >= MAX_IMAGES || uploadingImage) return;
+    setUploadingImage(true);
+    try {
+      const result = await pickAndUploadCommunityImage('post');
+      if (result?.publicUrl) {
+        setImageUrls((prev) => [...prev, result.publicUrl]);
+      }
+    } catch (err: any) {
+      Alert.alert('Upload failed', err?.message ?? 'Could not upload image.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleRemoveImage = (url: string) => {
+    setImageUrls((prev) => prev.filter((u) => u !== url));
+  };
 
   useEffect(() => {
     if (topics.length === 0) hydrateTopics();
@@ -65,6 +91,7 @@ export default function ComposePostScreen() {
       title: title.trim(),
       body: body.trim(),
       isAnonymous,
+      imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
     });
     setSubmitting(false);
 
@@ -167,6 +194,56 @@ export default function ComposePostScreen() {
             {body.length}/{BODY_MAX}
           </Text>
 
+          {/* Image attachments — up to 4 R2-hosted images per post.
+              Pickers preserve aspect ratio, max 5MB each (enforced
+              server-side). */}
+          <Text style={[styles.label, { color: t.textSecondary }]}>
+            Photos {imageUrls.length > 0 ? `(${imageUrls.length}/${MAX_IMAGES})` : '(optional)'}
+          </Text>
+          <View style={styles.imagesRow}>
+            {imageUrls.map((url) => (
+              <View key={url} style={styles.imageWrap}>
+                <Image source={{ uri: url }} style={styles.imageThumb} />
+                <TouchableOpacity
+                  onPress={() => handleRemoveImage(url)}
+                  style={styles.imageRemove}
+                  accessibilityRole="button"
+                  accessibilityLabel="Remove image"
+                  hitSlop={8}
+                >
+                  <Ionicons name="close" size={14} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ))}
+            {imageUrls.length < MAX_IMAGES && (
+              <TouchableOpacity
+                onPress={handleAddImage}
+                disabled={uploadingImage}
+                style={[
+                  styles.imageAdd,
+                  {
+                    borderColor: t.cardBorder,
+                    backgroundColor: t.glass,
+                    opacity: uploadingImage ? 0.5 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={uploadingImage ? 'Uploading photo' : 'Add a photo'}
+              >
+                {uploadingImage ? (
+                  <ActivityIndicator size="small" color={t.textSecondary} />
+                ) : (
+                  <>
+                    <Ionicons name="image-outline" size={20} color={t.textSecondary} />
+                    <Text style={[styles.imageAddText, { color: t.textSecondary }]}>
+                      Add photo
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+
           <View style={[styles.anonRow, { borderColor: t.cardBorder }]}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.anonTitle, { color: t.text }]}>Post anonymously</Text>
@@ -264,4 +341,40 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   guidelineText: { flex: 1, fontSize: 11, lineHeight: 16 },
+  imagesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 4,
+  },
+  imageWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  imageThumb: { width: '100%', height: '100%' },
+  imageRemove: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageAdd: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  imageAddText: { fontSize: 11, fontWeight: '600' },
 });

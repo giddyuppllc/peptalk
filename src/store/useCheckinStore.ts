@@ -35,6 +35,7 @@ interface CheckInInput {
   respiratoryRate?: number;
   activeCalories?: number;
   sleepStages?: SleepStageData;
+  bodyMeasurements?: import('../types').BodyMeasurements;
   notes?: string;
   emotionTags?: EmotionTag[];
   overallFeeling?: string;
@@ -82,6 +83,7 @@ export const useCheckinStore = create<CheckinStore>()(
           respiratoryRate: entry.respiratoryRate,
           activeCalories: entry.activeCalories,
           sleepStages: entry.sleepStages,
+          bodyMeasurements: entry.bodyMeasurements,
           notes: entry.notes?.trim() || undefined,
           emotionTags: entry.emotionTags?.length ? entry.emotionTags : undefined,
           overallFeeling: entry.overallFeeling?.trim() || undefined,

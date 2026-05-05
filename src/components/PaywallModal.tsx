@@ -304,7 +304,12 @@ export function PaywallModal({ visible, feature, onDismiss }: PaywallModalProps)
       onRequestClose={handleDismiss}
     >
       <View style={styles.overlay}>
-        <View style={styles.modal}>
+        <View
+          style={styles.modal}
+          accessibilityViewIsModal
+          accessibilityRole="alert"
+          accessibilityLabel={`${meta.name} requires ${TIER_LABELS[requiredTier]}`}
+        >
           {/* Lock icon */}
           <View style={styles.iconWrap}>
             <LinearGradient

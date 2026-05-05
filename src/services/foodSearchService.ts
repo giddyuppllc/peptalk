@@ -531,8 +531,24 @@ async function searchCalorieNinjas(query: string): Promise<UnifiedFood[]> {
 // ---------------------------------------------------------------------------
 
 function searchLocal(query: string): UnifiedFood[] {
-  const q = query.toLowerCase();
-  return COMMON_FOODS.filter((f) => f.name.toLowerCase().includes(q)).map(builtinToUnified);
+  // Token-AND matching: split the query on whitespace and require EVERY
+  // non-empty token to appear somewhere in the food name. This makes
+  // "grilled chicken breast" find "chicken, breast (grilled)" and
+  // "breast chicken grilled" — order doesn't matter.
+  //
+  // Previous implementation used a single substring `includes` check
+  // which failed any time the user's word order didn't exactly match
+  // the canonical food name (TestFlight feedback item #6).
+  const tokens = query
+    .toLowerCase()
+    .split(/\s+/)
+    .map((tok) => tok.replace(/[^a-z0-9]/g, ''))
+    .filter((tok) => tok.length > 0);
+  if (tokens.length === 0) return [];
+  return COMMON_FOODS.filter((f) => {
+    const hay = f.name.toLowerCase();
+    return tokens.every((tok) => hay.includes(tok));
+  }).map(builtinToUnified);
 }
 
 function restaurantToUnified(food: RestaurantFood): UnifiedFood {

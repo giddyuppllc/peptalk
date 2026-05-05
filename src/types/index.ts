@@ -219,6 +219,26 @@ export interface SleepStageData {
   qualityScore?: number; // 0-100 weighted composite
 }
 
+/**
+ * Optional body measurements (in inches) — empowers users on bulking
+ * peptides to track muscle growth alongside daily wellness check-ins.
+ * Each field is independent so users can track only what they care
+ * about (most lifters track arms + chest + waist; some add thighs/calves).
+ */
+export interface BodyMeasurements {
+  chestIn?: number;
+  leftArmIn?: number;
+  rightArmIn?: number;
+  waistIn?: number;
+  hipsIn?: number;
+  leftThighIn?: number;
+  rightThighIn?: number;
+  leftCalfIn?: number;
+  rightCalfIn?: number;
+  /** Body fat % from caliper / scale / DEXA. */
+  bodyFatPct?: number;
+}
+
 export interface CheckInEntry {
   id: string;
   date: string; // YYYY-MM-DD (local date)
@@ -239,6 +259,7 @@ export interface CheckInEntry {
   respiratoryRate?: number;   // Breaths per minute
   activeCalories?: number;    // Active energy burned (kcal)
   sleepStages?: SleepStageData; // Sleep stage breakdown
+  bodyMeasurements?: BodyMeasurements;
   notes?: string;
   emotionTags?: EmotionTag[];
   overallFeeling?: string;

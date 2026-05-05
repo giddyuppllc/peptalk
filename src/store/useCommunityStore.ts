@@ -46,9 +46,9 @@ interface CommunityState {
   hydrateUnreadCount: () => Promise<void>;
 
   // ── Writes ──
-  createPost: (input: { topicSlug: string; title: string; body: string; isAnonymous: boolean }) =>
+  createPost: (input: { topicSlug: string; title: string; body: string; isAnonymous: boolean; imageUrls?: string[] }) =>
     Promise<{ ok: true; postId: string } | { ok: false; error: string; needsUsername?: boolean; upgrade?: boolean }>;
-  createComment: (input: { postId: string; parentCommentId?: string | null; body: string; isAnonymous: boolean }) =>
+  createComment: (input: { postId: string; parentCommentId?: string | null; body: string; isAnonymous: boolean; imageUrls?: string[] }) =>
     Promise<{ ok: true; commentId: string } | { ok: false; error: string; needsUsername?: boolean; upgrade?: boolean }>;
   toggleReaction: (target: { postId?: string; commentId?: string; kind: CommunityReactionKind }, presentlyReacted: boolean) =>
     Promise<{ ok: true } | { ok: false; error: string }>;
@@ -116,6 +116,7 @@ function rowToPost(r: any): CommunityPost {
     commentCount: r.comment_count ?? 0,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    imageUrls: Array.isArray(r.image_urls) ? r.image_urls : [],
     author,
   };
 }
@@ -138,6 +139,7 @@ function rowToComment(r: any): CommunityComment {
     isDeleted: !!r.is_deleted,
     reactionCount: r.reaction_count ?? 0,
     createdAt: r.created_at,
+    imageUrls: Array.isArray(r.image_urls) ? r.image_urls : [],
     author,
   };
 }
@@ -196,7 +198,7 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
         .from('community_posts')
         .select(`
           id, user_id, topic_slug, title, body, reaction_count, comment_count,
-          is_deleted, is_anonymous, created_at, updated_at,
+          is_deleted, is_anonymous, image_urls, created_at, updated_at,
           profiles:user_id ( id, username, display_name, avatar_url )
         `)
         .eq('is_deleted', false);
@@ -260,7 +262,7 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
         .from('community_posts')
         .select(`
           id, user_id, topic_slug, title, body, reaction_count, comment_count,
-          is_deleted, is_anonymous, created_at, updated_at,
+          is_deleted, is_anonymous, image_urls, created_at, updated_at,
           profiles:user_id ( id, username, display_name, avatar_url )
         `)
         .eq('id', postId)
@@ -283,7 +285,7 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
         .from('community_comments')
         .select(`
           id, post_id, user_id, parent_comment_id, body, reaction_count,
-          is_deleted, is_anonymous, created_at,
+          is_deleted, is_anonymous, image_urls, created_at,
           profiles:user_id ( id, username, display_name, avatar_url )
         `)
         .eq('post_id', postId)

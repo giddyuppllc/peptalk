@@ -19,6 +19,8 @@ import {
   Alert,
   ActivityIndicator,
   Switch,
+  Image,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -218,6 +220,18 @@ export default function PostDetailScreen() {
             </View>
             <Text style={[styles.title, { color: t.text }]}>{post.title}</Text>
             <MentionText body={post.body} style={{ color: t.text, fontSize: FontSizes.sm, lineHeight: 22 }} />
+            {post.imageUrls && post.imageUrls.length > 0 && (
+              <View style={styles.postImagesRow}>
+                {post.imageUrls.map((url) => (
+                  <Image
+                    key={url}
+                    source={{ uri: url }}
+                    style={styles.postImage}
+                    resizeMode="cover"
+                  />
+                ))}
+              </View>
+            )}
             <View style={{ height: 12 }} />
             <ReactionRow postId={postId} initialCount={post.reactionCount} />
           </GlassCard>
@@ -333,6 +347,17 @@ const styles = StyleSheet.create({
   time: { fontSize: 11, marginTop: 2 },
   title: { fontSize: FontSizes.lg, fontWeight: '800', lineHeight: 24 },
   body: { fontSize: FontSizes.sm, lineHeight: 22 },
+  postImagesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 12,
+  },
+  postImage: {
+    width: (Dimensions.get('window').width - Spacing.md * 2 - Spacing.lg * 2 - 6) / 2,
+    aspectRatio: 1,
+    borderRadius: 10,
+  },
   commentsHeader: {
     fontSize: FontSizes.sm,
     fontWeight: '700',

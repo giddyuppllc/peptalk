@@ -221,6 +221,21 @@ export default function CheckInScreen() {
   const [sleepStagesData, setSleepStagesData] = useState<import('../../src/types').SleepStageData | undefined>();
   const [notes, setNotes] = useState('');
 
+  // Body measurements for muscle-growth tracking. All optional, all in
+  // inches. Stored as strings while the form is open so blank fields
+  // round-trip cleanly.
+  const [chestIn, setChestIn] = useState('');
+  const [leftArmIn, setLeftArmIn] = useState('');
+  const [rightArmIn, setRightArmIn] = useState('');
+  const [waistIn, setWaistIn] = useState('');
+  const [hipsIn, setHipsIn] = useState('');
+  const [leftThighIn, setLeftThighIn] = useState('');
+  const [rightThighIn, setRightThighIn] = useState('');
+  const [leftCalfIn, setLeftCalfIn] = useState('');
+  const [rightCalfIn, setRightCalfIn] = useState('');
+  const [bodyFatPct, setBodyFatPct] = useState('');
+  const [showBodyMeasurements, setShowBodyMeasurements] = useState(false);
+
   // ── Health sync state ────────────────────────────────────────────────────
   const [healthSyncing, setHealthSyncing] = useState(false);
   const [healthSynced, setHealthSynced] = useState(false);
@@ -278,6 +293,21 @@ export default function CheckInScreen() {
 
     if (existingEntry.peptideEffects?.length) {
       setPeptideEffects(existingEntry.peptideEffects);
+    }
+
+    const m = existingEntry.bodyMeasurements;
+    if (m) {
+      setChestIn(m.chestIn != null ? String(m.chestIn) : '');
+      setLeftArmIn(m.leftArmIn != null ? String(m.leftArmIn) : '');
+      setRightArmIn(m.rightArmIn != null ? String(m.rightArmIn) : '');
+      setWaistIn(m.waistIn != null ? String(m.waistIn) : '');
+      setHipsIn(m.hipsIn != null ? String(m.hipsIn) : '');
+      setLeftThighIn(m.leftThighIn != null ? String(m.leftThighIn) : '');
+      setRightThighIn(m.rightThighIn != null ? String(m.rightThighIn) : '');
+      setLeftCalfIn(m.leftCalfIn != null ? String(m.leftCalfIn) : '');
+      setRightCalfIn(m.rightCalfIn != null ? String(m.rightCalfIn) : '');
+      setBodyFatPct(m.bodyFatPct != null ? String(m.bodyFatPct) : '');
+      setShowBodyMeasurements(true);
     }
   }, [existingEntry]);
 
@@ -421,6 +451,23 @@ export default function CheckInScreen() {
       overallFeeling,
       peptideEffects: peptideEffects.filter((pe) => pe.effect.trim().length > 0),
       sideEffectTags,
+      bodyMeasurements: (() => {
+        const m = {
+          chestIn: toNumber(chestIn),
+          leftArmIn: toNumber(leftArmIn),
+          rightArmIn: toNumber(rightArmIn),
+          waistIn: toNumber(waistIn),
+          hipsIn: toNumber(hipsIn),
+          leftThighIn: toNumber(leftThighIn),
+          rightThighIn: toNumber(rightThighIn),
+          leftCalfIn: toNumber(leftCalfIn),
+          rightCalfIn: toNumber(rightCalfIn),
+          bodyFatPct: toNumber(bodyFatPct),
+        };
+        // Drop the entry entirely if no measurement was filled in — keeps
+        // the entry shape clean rather than persisting a row of undefineds.
+        return Object.values(m).some((v) => v != null) ? m : undefined;
+      })(),
     });
 
     trackCheckInSaved(entry.date, Boolean(entry.notes));
@@ -693,6 +740,64 @@ export default function CheckInScreen() {
                 </View>
               ))}
             </View>
+
+            {/* Body measurements — optional muscle-growth tracking. Hidden
+                behind a toggle so daily check-ins stay quick for users who
+                don't track them. Once expanded the value persists across
+                sessions if any field is filled in. */}
+            <TouchableOpacity
+              onPress={() => setShowBodyMeasurements((v) => !v)}
+              style={[
+                styles.measureToggle,
+                { borderColor: t.cardBorder, backgroundColor: showBodyMeasurements ? `${ACCENT}10` : 'transparent' },
+              ]}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={showBodyMeasurements ? 'Hide body measurements' : 'Show body measurements'}
+            >
+              <Ionicons
+                name="body-outline"
+                size={16}
+                color={showBodyMeasurements ? ACCENT : t.textSecondary}
+              />
+              <Text style={[styles.measureToggleText, { color: showBodyMeasurements ? ACCENT : t.text }]}>
+                Body measurements{showBodyMeasurements ? '' : ' (track muscle growth)'}
+              </Text>
+              <Ionicons
+                name={showBodyMeasurements ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={t.textSecondary}
+              />
+            </TouchableOpacity>
+
+            {showBodyMeasurements && (
+              <View style={styles.measureGrid}>
+                {[
+                  { label: 'Chest (in)', value: chestIn, setter: setChestIn },
+                  { label: 'Waist (in)', value: waistIn, setter: setWaistIn },
+                  { label: 'Hips (in)', value: hipsIn, setter: setHipsIn },
+                  { label: 'L Arm (in)', value: leftArmIn, setter: setLeftArmIn },
+                  { label: 'R Arm (in)', value: rightArmIn, setter: setRightArmIn },
+                  { label: 'L Thigh (in)', value: leftThighIn, setter: setLeftThighIn },
+                  { label: 'R Thigh (in)', value: rightThighIn, setter: setRightThighIn },
+                  { label: 'L Calf (in)', value: leftCalfIn, setter: setLeftCalfIn },
+                  { label: 'R Calf (in)', value: rightCalfIn, setter: setRightCalfIn },
+                  { label: 'Body fat %', value: bodyFatPct, setter: setBodyFatPct },
+                ].map((m) => (
+                  <View key={m.label} style={styles.measureCell}>
+                    <Text style={[styles.metricLabel, { color: t.textSecondary }]}>{m.label}</Text>
+                    <TextInput
+                      style={[styles.metricField, { backgroundColor: t.inputBg, color: t.text, borderColor: t.inputBorder }]}
+                      value={m.value}
+                      onChangeText={m.setter}
+                      keyboardType="numeric"
+                      placeholder="--"
+                      placeholderTextColor={t.placeholder}
+                    />
+                  </View>
+                ))}
+              </View>
+            )}
           </>
         )}
 
@@ -1237,6 +1342,24 @@ const styles = StyleSheet.create({
   metricInput: {
     flex: 1,
   },
+  measureToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 12,
+  },
+  measureToggleText: { flex: 1, fontSize: 13, fontWeight: '600' },
+  measureGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 8,
+  },
+  measureCell: { width: '47%' },
   metricLabel: {
     fontSize: 11,
     color: '#6B7280',

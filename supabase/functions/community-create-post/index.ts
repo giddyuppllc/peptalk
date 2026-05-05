@@ -84,6 +84,19 @@ Deno.serve(async (req) => {
     const topicSlug = String(body?.topicSlug ?? '').trim();
     const isAnonymous = !!body?.isAnonymous;
 
+    // Image attachments — already R2-public URLs minted by
+    // community-upload-image. We re-validate the host to make sure the
+    // client isn't sneaking arbitrary URLs into the body.
+    const R2_PUBLIC_BASE = (Deno.env.get('R2_PUBLIC_BASE') ?? '').replace(/\/$/, '');
+    const rawImageUrls = Array.isArray(body?.imageUrls) ? body.imageUrls : [];
+    const imageUrls: string[] = [];
+    for (const u of rawImageUrls) {
+      if (typeof u !== 'string') continue;
+      if (R2_PUBLIC_BASE && !u.startsWith(R2_PUBLIC_BASE + '/')) continue;
+      imageUrls.push(u);
+      if (imageUrls.length >= 4) break;
+    }
+
     if (title.length < TITLE_MIN || title.length > TITLE_MAX) {
       return json({ error: `Title must be ${TITLE_MIN}-${TITLE_MAX} characters.` }, 400);
     }
@@ -141,6 +154,7 @@ Deno.serve(async (req) => {
         title,
         body: postBody,
         is_anonymous: isAnonymous,
+        image_urls: imageUrls,
       })
       .select('id, created_at')
       .single();

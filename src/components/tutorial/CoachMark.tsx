@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
 import { useTutorialStore } from '../../store/useTutorialStore';
 import { useTheme } from '../../hooks/useTheme';
+import { useReduceMotion } from '../../hooks/useReduceMotion';
 
 interface CoachMarkProps {
   id: string;
@@ -29,6 +30,7 @@ interface CoachMarkProps {
 
 export function CoachMark({ id, title, body, icon = 'bulb-outline' }: CoachMarkProps) {
   const t = useTheme();
+  const reduceMotion = useReduceMotion();
   const hasSeen = useTutorialStore((state) => state.seenCoachMarks[id]);
   const markSeen = useTutorialStore((state) => state.markCoachMarkSeen);
 
@@ -36,9 +38,11 @@ export function CoachMark({ id, title, body, icon = 'bulb-outline' }: CoachMarkP
 
   return (
     <Animated.View
-      entering={FadeInDown.duration(400).springify()}
-      exiting={FadeOut.duration(200)}
+      entering={reduceMotion ? undefined : FadeInDown.duration(400).springify()}
+      exiting={reduceMotion ? undefined : FadeOut.duration(200)}
       style={[styles.wrapper, { backgroundColor: `${t.primary}12`, borderColor: `${t.primary}40` }]}
+      accessibilityRole="alert"
+      accessibilityLabel={`${title}. ${body}`}
     >
       <View style={[styles.iconWrap, { backgroundColor: `${t.primary}22` }]}>
         <Ionicons name={icon} size={16} color={t.primary} />
@@ -51,6 +55,8 @@ export function CoachMark({ id, title, body, icon = 'bulb-outline' }: CoachMarkP
         onPress={() => markSeen(id)}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         style={styles.closeBtn}
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss tip"
       >
         <Ionicons name="close" size={16} color={t.textSecondary} />
       </TouchableOpacity>

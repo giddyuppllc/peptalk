@@ -512,10 +512,24 @@ export const useMealStore = create<MealState & MealActions>()(
       },
 
       searchCachedFoods: (query) => {
-        const q = query.toLowerCase();
-        return get().foodCache.filter(
-          (f) => f.searchKey.includes(q) || f.name.toLowerCase().includes(q) || (f.brand && f.brand.toLowerCase().includes(q)),
-        );
+        // Token-AND match — every whitespace-split token must appear in
+        // searchKey OR name OR brand. Previously this was a single
+        // `includes` check, so "grilled chicken breast" wouldn't find
+        // a cached entry named "chicken breast (grilled)".
+        const tokens = query
+          .toLowerCase()
+          .split(/\s+/)
+          .map((tok) => tok.replace(/[^a-z0-9]/g, ''))
+          .filter((tok) => tok.length > 0);
+        if (tokens.length === 0) return [];
+        return get().foodCache.filter((f) => {
+          const haystacks = [
+            f.searchKey ?? '',
+            f.name?.toLowerCase() ?? '',
+            f.brand?.toLowerCase() ?? '',
+          ];
+          return tokens.every((tok) => haystacks.some((h) => h.includes(tok)));
+        });
       },
 
       clearFoodCache: () => set({ foodCache: [] }),
