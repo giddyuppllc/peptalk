@@ -19,6 +19,7 @@ import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCar
 import { ProtocolPlanCard } from '../../src/components/ProtocolPlanCard';
 import { SuppliesEstimatorCard } from '../../src/components/SuppliesEstimatorCard';
 import { PeptideTrendCard } from '../../src/components/PeptideTrendCard';
+import { PeptideCyclePhaseCard } from '../../src/components/PeptideCyclePhaseCard';
 import { KeepItSimpleCard } from '../../src/components/KeepItSimpleCard';
 import { getCategoryColor } from '../../src/constants/categories';
 import { Disclaimer } from '../../src/components/Disclaimer';
@@ -709,6 +710,12 @@ export default function PeptideDetailScreen() {
             there's something meaningful to read. */}
         <View style={styles.section}>
           <PeptideTrendCard peptideId={peptide.id} peptideName={peptide.name} />
+        </View>
+
+        {/* Cycle-phase × peptide guidance — only renders for users with
+            cycle tracking on AND a category that has guidance content. */}
+        <View style={styles.section}>
+          <PeptideCyclePhaseCard peptide={peptide} />
         </View>
 
         {/* NEW: Protocol Templates */}
