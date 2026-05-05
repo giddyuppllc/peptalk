@@ -951,6 +951,630 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
       'Sleep 7-9h',
     ],
   }),
+
+  // ── Metabolic / fat-loss niche ────────────────────────────────────────────
+  g({
+    peptideId: '5-amino-1mq',
+    displayName: '5-Amino-1MQ',
+    adjustments: ['higher_protein'],
+    proteinGPerLbRange: [0.9, 1.1],
+    foodsEmphasize: ['lean protein', 'leafy greens', 'berries'],
+    foodsAvoid: ['ultra-processed foods', 'excess sugar'],
+    summary:
+      '5-Amino-1MQ inhibits NNMT, which boosts NAD+ levels and supports fat loss + muscle preservation. Pair with adequate protein and a clean diet — works best in a mild deficit.',
+    prompt: '5-Amino-1MQ users: clean diet, adequate protein, mild deficit.',
+    fitnessGuidance: {
+      emphasis: 'Resistance training 3-4x/week + zone-2 cardio. Supports lean mass during cut, so lift heavy.',
+      timing: 'Morning oral dose. Train any time of day.',
+      cautions: ['Don\'t pair with aggressive deficit — body composition focus, not crash weight loss'],
+    },
+    vitaminEmphasis: [
+      'B-complex 50mg/day (NAD+ precursor support)',
+      'Magnesium glycinate 300-400mg/day',
+      'Creatine 5g/day',
+      'Omega-3 EPA+DHA 2g/day',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h',
+      'Time-restricted eating (12-14h fast) compounds the NAD+ effect',
+      'Limit alcohol',
+    ],
+  }),
+  g({
+    peptideId: 'adipotide',
+    displayName: 'Adipotide (FTPP)',
+    adjustments: ['hydration_plus'],
+    hydrationMultiplier: 1.4,
+    foodsEmphasize: ['lean protein', 'leafy greens', 'whole grains'],
+    foodsAvoid: ['alcohol (kidney stress)', 'excess sodium'],
+    summary:
+      'Adipotide targets adipose-tissue blood vessels. Aggressive fat-loss peptide with kidney-stress risk — hydrate aggressively. Limit cycles to 4 weeks max.',
+    prompt: 'Adipotide users: aggressive hydration, monitor kidney function, short cycles only.',
+    fitnessGuidance: {
+      emphasis: 'Light to moderate training only — kidney workload is already elevated.',
+      timing: 'Morning dose; train later in the day.',
+      cautions: ['Skip heavy lifting / HIIT during cycle', 'Get baseline kidney panel before starting', 'Hard 4-week cycle limit'],
+    },
+    vitaminEmphasis: [
+      'Electrolyte mix daily',
+      'Magnesium glycinate 400mg/day',
+      'CoQ10 100-200mg/day',
+    ],
+    lifestyleNotes: [
+      'Hydration 1.0+ oz/lb during cycle (much higher than typical)',
+      'Get bloodwork before, during, and after cycle (BUN, creatinine, eGFR)',
+      'No alcohol during cycle',
+    ],
+  }),
+
+  // ── Cognitive additions ──────────────────────────────────────────────────
+  g({
+    peptideId: 'pinealon',
+    displayName: 'Pinealon',
+    adjustments: ['none'],
+    foodsEmphasize: ['omega-3 rich fish', 'leafy greens', 'berries'],
+    summary:
+      'Pinealon is a tripeptide bioregulator targeting brain function and circadian rhythms. Pairs naturally with sleep optimization and antioxidant-rich diet.',
+    prompt: 'Pinealon users: omega-3 + antioxidant-rich diet, sleep optimization.',
+    fitnessGuidance: {
+      emphasis: 'No specific training emphasis — supports recovery rather than performance.',
+      timing: 'Bedtime dose synergizes with melatonin pathway.',
+      cautions: ['No documented training cautions'],
+    },
+    vitaminEmphasis: [
+      'Magnesium glycinate 300-400mg before bed',
+      'Omega-3 EPA+DHA 2g/day',
+      'Vitamin D3 4000 IU + K2',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h with consistent schedule',
+      'Limit blue light 2h before bedtime dose',
+      'Morning sun exposure within 60min of waking',
+    ],
+  }),
+  g({
+    peptideId: 'cerebrolysin',
+    displayName: 'Cerebrolysin',
+    adjustments: ['none'],
+    foodsEmphasize: ['omega-3 rich fish', 'eggs', 'leafy greens', 'liver'],
+    summary:
+      'Cerebrolysin is a porcine-derived neuropeptide blend used for cognitive recovery (stroke, TBI, dementia). Best used in supervised 10-20 day courses with cofactors that support neurogenesis.',
+    prompt: 'Cerebrolysin users: omega-3, choline, B-vitamins; medical supervision recommended.',
+    fitnessGuidance: {
+      emphasis: 'Light cognitive engagement during course (puzzles, learning) leverages BDNF upregulation. Avoid HIIT — competing recovery demand.',
+      timing: 'Morning IV/SQ during course.',
+      cautions: ['Use with medical supervision', 'Watch for transient injection-site reactions'],
+    },
+    vitaminEmphasis: [
+      'Choline (alpha-GPC 600mg or CDP-choline 500mg/day)',
+      'Omega-3 EPA+DHA 3g/day',
+      'B-complex 50mg/day',
+      'Vitamin D3 4000 IU + K2',
+    ],
+    lifestyleNotes: [
+      'Sleep 8h+ during course — neurogenesis is sleep-gated',
+      'Pair with skill learning (instrument, language)',
+      'Limit alcohol during course',
+    ],
+  }),
+  g({
+    peptideId: 'noopept',
+    displayName: 'Noopept',
+    adjustments: ['none'],
+    foodsEmphasize: ['choline-rich foods (eggs, liver)', 'omega-3 fish'],
+    summary:
+      'Noopept (technically a peptide-like nootropic) supports BDNF/NGF expression. Pair with choline to avoid headache side effect.',
+    prompt: 'Noopept users: choline supplementation prevents headaches.',
+    fitnessGuidance: {
+      emphasis: 'Pair with skill learning sessions (motor, cognitive). Heavy lifts unaffected.',
+      timing: 'Morning sublingual dose for daytime focus.',
+      cautions: ['Choline depletion → headaches', 'Tolerance builds; cycle 5 days on / 2 off'],
+    },
+    vitaminEmphasis: [
+      'Alpha-GPC 300-600mg/day OR CDP-choline 250-500mg/day',
+      'Omega-3 EPA+DHA 2g/day',
+      'B-complex 50mg/day',
+      'Magnesium glycinate 300mg/day',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h',
+      'Hydrate well — many users report dehydration on Noopept',
+      'Stack with caffeine + L-theanine for clean focus window',
+    ],
+  }),
+
+  // ── Immune / longevity / thymic ──────────────────────────────────────────
+  g({
+    peptideId: 'thymosin-alpha-1',
+    displayName: 'Thymosin Alpha-1',
+    adjustments: ['none'],
+    microEmphasis: ['vitamin D', 'zinc', 'selenium'],
+    foodsEmphasize: ['vitamin D-rich foods', 'colorful vegetables', 'oysters', 'Brazil nuts'],
+    summary:
+      'Thymosin Alpha-1 modulates immune function (T-cell maturation). Pair with foundational immune-support nutrients (vitamin D, zinc, selenium).',
+    prompt: 'TA-1 users: vitamin D + zinc + selenium for immune cofactor support.',
+    fitnessGuidance: {
+      emphasis: 'Moderate training only during acute immune protocols. Don\'t add training stress when fighting infection.',
+      timing: 'EOD or 2x/week protocols are most common.',
+      cautions: ['Avoid HIIT during active infection course', 'Watch for transient fatigue'],
+    },
+    vitaminEmphasis: [
+      'Vitamin D3 5000 IU + K2 100mcg (target 60-80 ng/mL)',
+      'Zinc 25mg + copper 2mg',
+      'Selenium 100-200mcg/day (1-2 Brazil nuts)',
+      'Vitamin C 1000-2000mg/day',
+    ],
+    lifestyleNotes: [
+      'Sleep 8h+ — immune function tracks sleep duration',
+      'Stress management — chronic stress suppresses T-cells',
+      'Limit alcohol — kills T-cells directly',
+    ],
+  }),
+  g({
+    peptideId: 'thymalin',
+    displayName: 'Thymalin',
+    adjustments: ['none'],
+    microEmphasis: ['vitamin D', 'zinc', 'selenium'],
+    foodsEmphasize: ['vitamin D-rich foods', 'oysters', 'Brazil nuts', 'leafy greens'],
+    summary:
+      'Thymalin is a thymic peptide complex used in longevity / immune-aging protocols. Same cofactor emphasis as TA-1 — vitamin D, zinc, selenium.',
+    prompt: 'Thymalin users: D + zinc + selenium for thymic support.',
+    fitnessGuidance: {
+      emphasis: 'Moderate training. Pairs well with zone-2 cardio for parasympathetic support.',
+      timing: 'EOD or 10-day course typical.',
+      cautions: ['Avoid intensive training during acute course'],
+    },
+    vitaminEmphasis: [
+      'Vitamin D3 5000 IU + K2',
+      'Zinc 25mg + copper 2mg',
+      'Selenium 100-200mcg/day',
+      'CoQ10 100mg/day',
+    ],
+    lifestyleNotes: [
+      'Sleep 8h+',
+      'Limit alcohol',
+      'Stress management',
+    ],
+  }),
+  g({
+    peptideId: 'humanin',
+    displayName: 'Humanin',
+    adjustments: ['none'],
+    foodsEmphasize: ['fatty fish', 'leafy greens', 'colorful vegetables'],
+    summary:
+      'Humanin is a mitochondrial-derived peptide tied to longevity and metabolic resilience. Pair with antioxidant-rich diet and mitochondrial cofactors.',
+    prompt: 'Humanin users: antioxidant-rich diet, mito cofactors.',
+    fitnessGuidance: {
+      emphasis: 'Zone-2 cardio 3-4x/week — mitochondrial density compounds the humanin signal.',
+      timing: 'Morning dose; train within 2h.',
+      cautions: ['Limited human data — start low'],
+    },
+    vitaminEmphasis: [
+      'CoQ10 200mg with fatty meal',
+      'Alpha-lipoic acid 300-600mg/day',
+      'Magnesium glycinate 400mg/day',
+      'NAD+ precursors (NMN 500mg or NR 300mg)',
+    ],
+    lifestyleNotes: [
+      'Time-restricted eating',
+      'Cold exposure 2-3x/week',
+      'Sleep 7-9h',
+    ],
+  }),
+  g({
+    peptideId: 'foxo4-dri',
+    displayName: 'FOXO4-DRI',
+    adjustments: ['none'],
+    foodsEmphasize: ['polyphenol-rich foods', 'berries', 'dark chocolate', 'olive oil', 'green tea'],
+    summary:
+      'FOXO4-DRI is a senolytic — selectively kills senescent ("zombie") cells. Pair with polyphenol-rich diet (which has overlapping senolytic properties).',
+    prompt: 'FOXO4-DRI users: polyphenol-rich diet, hydration during course.',
+    fitnessGuidance: {
+      emphasis: 'Light to moderate training during course; senescent-cell apoptosis creates transient inflammation.',
+      timing: 'Hit-and-run protocol — 3-day course, then 2-3 month gap.',
+      cautions: ['Watch for flu-like symptoms during clearance', 'Cycle, don\'t use chronically'],
+    },
+    vitaminEmphasis: [
+      'Quercetin 500-1000mg/day (synergistic senolytic)',
+      'Vitamin C 1000mg/day',
+      'Resveratrol 250-500mg/day',
+      'Curcumin 500-1000mg/day',
+    ],
+    lifestyleNotes: [
+      'Hydrate aggressively during course',
+      'Sleep 8h+ during clearance',
+      'Limit alcohol — already-elevated inflammation burden',
+    ],
+  }),
+
+  // ── Hormonal / reproductive ──────────────────────────────────────────────
+  g({
+    peptideId: 'hcg',
+    displayName: 'hCG',
+    adjustments: ['higher_protein'],
+    proteinGPerLbRange: [1.0, 1.2],
+    microEmphasis: ['zinc', 'vitamin D', 'magnesium', 'boron'],
+    foodsEmphasize: ['oysters', 'red meat', 'eggs', 'liver', 'leafy greens'],
+    foodsAvoid: ['excess alcohol (T-suppressing)'],
+    summary:
+      'hCG mimics LH to drive testicular T production. Use in TRT contexts to preserve testicular size/function. Pair with foundational T-support nutrients.',
+    prompt: 'hCG users: zinc + D + magnesium for T-support cofactors.',
+    fitnessGuidance: {
+      emphasis: 'Heavy compound lifts 3-4x/week — leverages the T pulse.',
+      timing: 'EOD injection (M/W/F typical).',
+      cautions: ['Watch for estrogen elevation', 'Get bloodwork (T, E2, prolactin)'],
+    },
+    vitaminEmphasis: [
+      'Zinc 25mg + copper 2mg',
+      'Vitamin D3 5000 IU + K2',
+      'Magnesium glycinate 400mg/day',
+      'Boron 6-10mg/day',
+    ],
+    lifestyleNotes: [
+      'Sleep 8h+ — T production is sleep-gated',
+      'Stress management — cortisol antagonizes T',
+      'Limit alcohol',
+    ],
+  }),
+  g({
+    peptideId: 'hmg',
+    displayName: 'hMG (Menotropin)',
+    adjustments: ['higher_protein'],
+    proteinGPerLbRange: [1.0, 1.2],
+    microEmphasis: ['zinc', 'vitamin D', 'magnesium', 'CoQ10'],
+    foodsEmphasize: ['oysters', 'red meat', 'eggs', 'leafy greens', 'fatty fish'],
+    summary:
+      'hMG (menotropin) provides both LH and FSH activity — used for fertility restoration after long-term TRT or for AAS recovery. Foundational T + sperm-quality nutrients critical.',
+    prompt: 'hMG users: zinc + D + CoQ10 + omega-3 for sperm quality.',
+    fitnessGuidance: {
+      emphasis: 'Heavy lifts 3-4x/week. Avoid sauna/hot baths (testicular heat suppresses sperm).',
+      timing: 'EOD typical.',
+      cautions: ['Get bloodwork + sperm analysis', 'Avoid heat exposure to testicles during course'],
+    },
+    vitaminEmphasis: [
+      'Zinc 25mg + copper 2mg',
+      'CoQ10 200mg/day (sperm quality)',
+      'Vitamin D3 5000 IU + K2',
+      'Omega-3 EPA+DHA 3g/day',
+      'Selenium 100-200mcg',
+    ],
+    lifestyleNotes: [
+      'Sleep 8h+',
+      'Avoid hot tubs / saunas during course',
+      'No alcohol — kills sperm production',
+    ],
+  }),
+  g({
+    peptideId: 'oxytocin',
+    displayName: 'Oxytocin',
+    adjustments: ['none'],
+    foodsEmphasize: ['magnesium-rich foods', 'fatty fish', 'leafy greens'],
+    summary:
+      'Oxytocin supports social bonding, stress reduction, and sexual function. No macro shift needed; pair with stress-management practices for compounded effect.',
+    prompt: 'Oxytocin users: magnesium emphasis, stress-management practices.',
+    fitnessGuidance: {
+      emphasis: 'Pairs well with partner-based or group fitness (yoga, dance, team sports).',
+      timing: 'Sublingual or intranasal dose 30-60min before social/intimate activity.',
+      cautions: ['Tolerance builds — don\'t use daily long-term'],
+    },
+    vitaminEmphasis: [
+      'Magnesium glycinate 300-400mg/day',
+      'L-theanine 200mg/day',
+      'Omega-3 EPA+DHA 2g/day',
+    ],
+    lifestyleNotes: [
+      'Pair with breathwork/meditation',
+      'Physical touch (hugs, partner contact) compounds endogenous OT',
+      'Sleep 7-9h',
+    ],
+  }),
+
+  // ── Sleep / circadian ────────────────────────────────────────────────────
+  g({
+    peptideId: 'dsip',
+    displayName: 'DSIP',
+    adjustments: ['none'],
+    foodsAvoid: ['caffeine after noon', 'heavy meals 2h pre-sleep'],
+    summary:
+      'DSIP (Delta Sleep-Inducing Peptide) supports deep-sleep architecture. No macro shift, but classic sleep-hygiene practices compound the effect.',
+    prompt: 'DSIP users: rigorous sleep hygiene, no caffeine after noon, dose 30min pre-bed.',
+    fitnessGuidance: {
+      emphasis: 'Pair with evening exercise that promotes melatonin (mild cardio, yoga). Avoid intense lifts within 3h of dose.',
+      timing: 'Bedtime dose.',
+      cautions: ['Tolerance builds — cycle 5 days on / 2 off'],
+    },
+    vitaminEmphasis: [
+      'Magnesium glycinate 400mg before bed',
+      'Glycine 3-5g pre-bed',
+      'L-theanine 200mg pre-bed',
+      'Apigenin 50mg pre-bed (chamomile-derived)',
+    ],
+    lifestyleNotes: [
+      'Cool dark bedroom (65-68°F)',
+      'Limit blue light 2h before bed',
+      'No alcohol within 4h of bed',
+      'Consistent bedtime ±30min',
+    ],
+  }),
+
+  // ── Pigmentation / appetite (MT family) ──────────────────────────────────
+  g({
+    peptideId: 'melanotan-1',
+    displayName: 'Melanotan-1 (Afamelanotide)',
+    adjustments: ['hydration_plus'],
+    hydrationMultiplier: 1.15,
+    foodsEmphasize: ['antioxidant-rich produce', 'colorful vegetables'],
+    summary:
+      'MT-1 promotes melanogenesis (tanning) without significant appetite suppression. Use UV exposure carefully during loading — protection still essential.',
+    prompt: 'MT-1 users: gradual UV exposure, antioxidant diet, hydration.',
+    fitnessGuidance: {
+      emphasis: 'Outdoor training during loading phase to drive melanocyte activation. Sunscreen on lips, eyes, scars.',
+      timing: 'Daily loading dose, then 1-2x/week maintenance.',
+      cautions: ['Don\'t use UV exposure as a shortcut — burn risk is real', 'Dermatology check before starting'],
+    },
+    vitaminEmphasis: [
+      'Vitamin C 1000-2000mg/day',
+      'Vitamin E 200 IU/day with food',
+      'Astaxanthin 4-12mg/day (skin photoprotection)',
+      'Omega-3 EPA+DHA 2g/day',
+    ],
+    lifestyleNotes: [
+      'Hydration 0.7 oz/lb',
+      'Annual skin-cancer check non-negotiable',
+      'Spot-check moles weekly during loading',
+    ],
+  }),
+  g({
+    peptideId: 'melanotan-2',
+    displayName: 'Melanotan-2',
+    adjustments: ['hydration_plus'],
+    hydrationMultiplier: 1.15,
+    foodsAvoid: ['heavy meals 1h pre-dose (nausea)'],
+    summary:
+      'MT-2 promotes both tanning and appetite suppression / sexual function. Strong nausea risk in early days — start low, dose at night.',
+    prompt: 'MT-2 users: low-and-slow dosing, evening dose, hydrate well.',
+    fitnessGuidance: {
+      emphasis: 'Outdoor training during loading; resistance + cardio mix.',
+      timing: 'Bedtime dose minimizes nausea.',
+      cautions: ['Strong nausea in first week', 'Watch BP', 'Skin-cancer screening before + during'],
+    },
+    vitaminEmphasis: [
+      'Vitamin C 1000-2000mg/day',
+      'Vitamin E 200 IU/day',
+      'Astaxanthin 4-12mg/day',
+      'Magnesium glycinate 300mg/day',
+    ],
+    lifestyleNotes: [
+      'Hydration 0.7 oz/lb',
+      'Spot-check moles weekly',
+      'Annual derm check',
+      'Limit alcohol during loading',
+    ],
+  }),
+
+  // ── Misc / specialized ───────────────────────────────────────────────────
+  g({
+    peptideId: 'vip',
+    displayName: 'VIP (Vasoactive Intestinal Peptide)',
+    adjustments: ['none'],
+    foodsEmphasize: ['anti-inflammatory whole foods', 'omega-3 rich fish', 'fermented foods'],
+    foodsAvoid: ['mold-contaminated foods', 'inflammatory ultra-processed foods'],
+    summary:
+      'VIP is used in CIRS (chronic inflammatory response syndrome) protocols, especially for mold-illness recovery. Strict environmental cleanup is the precondition.',
+    prompt: 'VIP users: mold-free environment, anti-inflammatory diet, gut-health emphasis.',
+    fitnessGuidance: {
+      emphasis: 'Light to moderate training only during CIRS recovery. Don\'t add training stress to an inflamed system.',
+      timing: 'Intranasal 4x/day typical.',
+      cautions: ['Don\'t start until environmental mold exposure is resolved', 'Get baseline VCS + bloodwork'],
+    },
+    vitaminEmphasis: [
+      'Omega-3 EPA+DHA 3g/day',
+      'Vitamin D3 5000 IU + K2',
+      'Magnesium glycinate 400mg/day',
+      'Glutathione 250-500mg/day',
+    ],
+    lifestyleNotes: [
+      'Mold remediation in living space first',
+      'HEPA air filtration',
+      'Sleep 8h+',
+      'Stress management essential',
+    ],
+  }),
+  g({
+    peptideId: 'ara-290',
+    displayName: 'ARA-290 (Cibinetide)',
+    adjustments: ['none'],
+    foodsEmphasize: ['anti-inflammatory whole foods', 'omega-3 rich fish', 'colorful vegetables'],
+    summary:
+      'ARA-290 is a non-erythropoietic EPO analog targeting inflammation and neuropathic pain. Pair with anti-inflammatory diet for compounded effect.',
+    prompt: 'ARA-290 users: anti-inflammatory diet, omega-3, magnesium emphasis.',
+    fitnessGuidance: {
+      emphasis: 'Light to moderate training. Helps neuropathy patients tolerate gentle movement.',
+      timing: 'Daily injection, often 28-day courses.',
+      cautions: ['Watch for transient injection-site reactions'],
+    },
+    vitaminEmphasis: [
+      'Omega-3 EPA+DHA 3g/day',
+      'Magnesium glycinate 400mg/day',
+      'B-complex 50mg/day (especially B1, B6, B12)',
+      'Alpha-lipoic acid 600mg/day',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h',
+      'Limit alcohol',
+      'Stress management',
+    ],
+  }),
+  g({
+    peptideId: 'dermorphin',
+    displayName: 'Dermorphin',
+    adjustments: ['none'],
+    summary:
+      'Dermorphin is a potent opioid-receptor agonist isolated from frog skin. Significant abuse and dependence risk — strictly research-only context.',
+    prompt: 'Dermorphin: research only — significant safety risks.',
+    fitnessGuidance: {
+      emphasis: 'Not appropriate for performance use.',
+      cautions: ['High dependence risk', 'Respiratory suppression risk', 'Research / academic context only'],
+    },
+    vitaminEmphasis: [],
+    lifestyleNotes: [
+      'Strictly research-only',
+      'Significant abuse risk',
+    ],
+  }),
+  g({
+    peptideId: 'pnc-27',
+    displayName: 'PNC-27',
+    adjustments: ['none'],
+    foodsEmphasize: ['anti-inflammatory whole foods', 'cruciferous vegetables', 'colorful produce'],
+    summary:
+      'PNC-27 is an investigational anticancer peptide that selectively targets tumor cells. Strictly investigational — use only under oncology supervision.',
+    prompt: 'PNC-27 users: oncology supervision required, anti-inflammatory diet support.',
+    fitnessGuidance: {
+      emphasis: 'Movement appropriate to oncology context — light walking, gentle yoga.',
+      cautions: ['Investigational only', 'Oncology supervision required'],
+    },
+    vitaminEmphasis: [
+      'Vitamin D3 5000 IU + K2',
+      'Omega-3 EPA+DHA 3g/day',
+      'Curcumin 500-1000mg/day',
+      'Vitamin C 1000-2000mg/day',
+    ],
+    lifestyleNotes: [
+      'Sleep 8h+',
+      'Stress management',
+      'Coordinate all supplements with oncology team',
+    ],
+  }),
+  g({
+    peptideId: 'aicar',
+    displayName: 'AICAR',
+    adjustments: ['carb_timing_prep'],
+    foodsEmphasize: ['complex carbs around training', 'lean protein'],
+    summary:
+      'AICAR activates AMPK — drives endurance adaptation and fat oxidation. Time carbs around training for substrate availability. Note: WADA-banned in competitive sports.',
+    prompt: 'AICAR users: carbs around training, AMPK pathway support.',
+    fitnessGuidance: {
+      emphasis: 'Zone-2 + endurance work compounds the AMPK signal — pair with cardio focus.',
+      timing: 'Pre-training dose.',
+      cautions: ['WADA-banned — no competitive use', 'Watch for hypoglycemia in fasted state'],
+    },
+    vitaminEmphasis: [
+      'B-complex 50mg/day',
+      'CoQ10 100-200mg with fatty meal',
+      'Magnesium glycinate 400mg/day',
+      'Beetroot extract 500mg pre-cardio',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h',
+      'Time-restricted eating compounds AMPK',
+      'Limit alcohol',
+    ],
+  }),
+  g({
+    peptideId: 'slu-pp-332',
+    displayName: 'SLU-PP-332',
+    adjustments: ['carb_timing_prep'],
+    foodsEmphasize: ['complex carbs', 'lean protein', 'leafy greens'],
+    summary:
+      'SLU-PP-332 is an ERR (estrogen-related receptor) agonist with mitochondrial / endurance effects in early research. Investigational — pair with mitochondrial cofactors.',
+    prompt: 'SLU-PP-332 users: mito cofactors, carb-timing for endurance synergy.',
+    fitnessGuidance: {
+      emphasis: 'Endurance / zone-2 cardio is the intended synergy.',
+      timing: 'Morning dose; train within 2h.',
+      cautions: ['Investigational — limited human data', 'Don\'t use as performance shortcut'],
+    },
+    vitaminEmphasis: [
+      'CoQ10 200mg with fatty meal',
+      'B-complex 50mg/day',
+      'Magnesium glycinate 400mg/day',
+      'Alpha-lipoic acid 600mg/day',
+    ],
+    lifestyleNotes: [
+      'Time-restricted eating',
+      'Cold exposure 2x/week',
+      'Sleep 7-9h',
+    ],
+  }),
+  g({
+    peptideId: 'snap-8',
+    displayName: 'SNAP-8',
+    adjustments: ['none'],
+    foodsEmphasize: ['hydrating foods', 'collagen-rich foods'],
+    summary:
+      'SNAP-8 is a topical peptide for expression-line softening (botox-like mechanism). Topical only; pair with hydration + collagen-supportive nutrients.',
+    prompt: 'SNAP-8: topical use, collagen + hydration support.',
+    fitnessGuidance: {
+      emphasis: 'No fitness implications — topical cosmetic peptide.',
+      cautions: ['Don\'t use on broken skin', 'Combine with sunscreen daily'],
+    },
+    vitaminEmphasis: [
+      'Vitamin C 1000mg/day',
+      'Glycine 5g/day or 1 tbsp gelatin',
+      'Hyaluronic acid 100-200mg/day',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h — collagen synthesis is sleep-gated',
+      'Hydration 0.7 oz/lb',
+      'Daily SPF',
+    ],
+  }),
+  g({
+    peptideId: 'somatropin',
+    displayName: 'Somatropin (rHGH)',
+    adjustments: ['lower_carb_pm', 'higher_protein'],
+    proteinGPerLbRange: [1.0, 1.3],
+    foodsEmphasize: ['lean protein every meal', 'leafy greens', 'fatty fish'],
+    foodsAvoid: ['simple sugars 2h pre-bed dose'],
+    summary:
+      'Somatropin is direct recombinant HGH. Strong anabolic + lipolytic; pair with high protein + carb timing. Significant side-effect profile — medical supervision essential.',
+    prompt: 'Somatropin users: high protein, carb timing, medical supervision.',
+    fitnessGuidance: {
+      emphasis: 'Heavy resistance training 4-5x/week directs the anabolic signal toward muscle.',
+      timing: 'Bedtime dose mimics natural pulse. Train morning or afternoon.',
+      cautions: ['Carpal tunnel risk on high doses', 'Insulin resistance risk', 'Get bloodwork (IGF-1, A1c, fasting glucose) before + during'],
+    },
+    vitaminEmphasis: [
+      'Magnesium glycinate 400mg before bed',
+      'Vitamin D3 4000 IU + K2',
+      'Creatine 5g/day',
+      'Omega-3 EPA+DHA 3g/day',
+    ],
+    lifestyleNotes: [
+      'Sleep 8h+ — anabolic recovery is sleep-dependent',
+      'Hydration 0.7-1.0 oz/lb (water retention is part of the experience)',
+      'Get IGF-1 every 8-12 weeks during use',
+      'Limit alcohol',
+    ],
+  }),
+  g({
+    peptideId: 'follistatin-344',
+    displayName: 'Follistatin-344',
+    adjustments: ['higher_protein'],
+    proteinGPerLbRange: [1.1, 1.4],
+    foodsEmphasize: ['lean protein every meal', 'whole grains', 'leafy greens'],
+    summary:
+      'Follistatin-344 inhibits myostatin to remove the upper-limit brake on muscle growth. Pair with high protein + heavy training to leverage the signal. Investigational; cardiac and tendon-injury risks reported.',
+    prompt: 'Follistatin users: heavy lifting, very high protein (1.1-1.4 g/lb), conservative loading.',
+    fitnessGuidance: {
+      emphasis: 'Heavy compound lifts 4-5x/week. Tendons may not adapt as fast as muscle — scale load slowly.',
+      timing: 'Daily injection cycles 10-30 days typical.',
+      cautions: ['Tendon-injury risk (tissue ratio mismatch)', 'Cardiac hypertrophy risk', 'Limit cycles to 30 days max', 'Long off-cycles between'],
+    },
+    vitaminEmphasis: [
+      'Creatine 5g/day',
+      'Collagen 15-20g/day (tendon support)',
+      'Vitamin C 1000mg/day',
+      'Magnesium glycinate 400mg/day',
+      'Omega-3 EPA+DHA 3g/day',
+    ],
+    lifestyleNotes: [
+      'Sleep 8h+',
+      'Don\'t outrun tendon adaptation — scale weights slowly even when muscle says yes',
+      'Bloodwork before/during/after cycle (CK, troponin, ECG baseline)',
+      'No alcohol during cycle',
+    ],
+  }),
 ]);
 
 /**
