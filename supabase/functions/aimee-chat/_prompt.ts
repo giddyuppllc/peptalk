@@ -24,6 +24,16 @@ export interface AimeeServerContext {
   biometricsSummary?: string;
   /** Most-recent lab values entered by user (HDL, LDL, HbA1c, etc.). */
   labResultsSummary?: string;
+  /** Last-7-day workout activity rollup (sessions, avg duration, last name). */
+  workoutSummary?: string;
+  /** Last-7-day nutrition rollup (avg cal/protein, target hit %). */
+  nutritionSummary?: string;
+  /** Body composition delta over ~4 weeks (e.g. "Weight -3.4 lbs"). */
+  bodyTrendSummary?: string;
+  /** User's free-text "main goal in their own words" from onboarding. */
+  selfStatedGoal?: string;
+  /** Workout days per week from onboarding (0-7). */
+  workoutDaysPerWeek?: number;
   /** Current screen path so Aimee can suggest contextual nav actions. */
   currentRoute?: string;
 }
@@ -85,6 +95,27 @@ APP NAVIGATION (Pro tier only):
 DATA ACTIONS (Pro tier only):
 - If a user wants to log something, include: ---DATA_ACTION--- {"type": "checkin"|"dose"|"meal"|"workout"|"reminder", "data": {...}}
 - The user will see a confirmation prompt before any data is saved — you are SUGGESTING, not auto-saving.
+
+USING THE USER CONTEXT BLOCK:
+- The "USER CONTEXT" block at the bottom of this prompt has real data
+  about THIS user — their stated goal, their training cadence, their
+  weekly biometric / workout / nutrition rollups, and any body-comp
+  trend. Use it to ground recommendations in their actual life.
+- Examples of grounded responses:
+  * If they ask "should I do a heavy session today?" and Workouts shows
+    5 sessions in 7 days + avg HRV is below baseline → suggest a
+    recovery day.
+  * If they ask "what should I eat?" and Nutrition shows ~70% of cal
+    target hit → suggest higher-density options.
+  * If they ask "is this peptide working?" and Body trend shows -3 lbs
+    over 4 weeks → cite that delta directly, frame as "tracking with
+    expected — many factors drive this."
+- Never invent context. If a field is missing, say so ("I don't have
+  enough data on your sleep yet") and suggest connecting HealthKit /
+  logging more.
+- Frame their stated goal back to them when relevant ("You told us
+  your goal is 'lose 15 lbs without losing strength' — these recipes
+  fit that.").
 
 UPSELL BEHAVIOR:
 - If the user is on Free and asks about features that require Plus or Pro (full workouts, AI meal plans, advanced tracking, the stack builder), briefly answer then mention: "With PepTalk+, I could help build a full plan." Include ---NAV_ACTION--- /subscription
@@ -158,7 +189,12 @@ export function buildAimeeSystemPrompt(context: AimeeServerContext): string {
   if (context.recentDosesSummary) summaryBlocks.push(`Recent doses: ${context.recentDosesSummary}`);
   if (context.healthAlertsSummary) summaryBlocks.push(`Health alerts: ${context.healthAlertsSummary}`);
   if (context.healthProfileSummary) summaryBlocks.push(`Profile: ${context.healthProfileSummary}`);
+  if (context.selfStatedGoal) summaryBlocks.push(`User's stated main goal: "${context.selfStatedGoal}"`);
+  if (typeof context.workoutDaysPerWeek === 'number') summaryBlocks.push(`Trains ${context.workoutDaysPerWeek} day${context.workoutDaysPerWeek === 1 ? '' : 's'}/week`);
   if (context.biometricsSummary) summaryBlocks.push(`Biometrics (real device data): ${context.biometricsSummary}`);
+  if (context.workoutSummary) summaryBlocks.push(`Workouts: ${context.workoutSummary}`);
+  if (context.nutritionSummary) summaryBlocks.push(`Nutrition: ${context.nutritionSummary}`);
+  if (context.bodyTrendSummary) summaryBlocks.push(`Body trend: ${context.bodyTrendSummary}`);
   if (context.labResultsSummary) summaryBlocks.push(`Recent lab values: ${context.labResultsSummary}`);
   if (context.currentRoute) summaryBlocks.push(`Currently viewing: ${context.currentRoute}`);
   const userContextBlock = summaryBlocks.length

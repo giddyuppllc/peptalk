@@ -181,6 +181,21 @@ interface AimeeServerContext {
   /** Most-recent lab values (HDL, LDL, HbA1c, T, etc.) — semicolon-joined.
    *  Empty when the user hasn't entered any. */
   labResultsSummary?: string;
+  /** Recent workout activity — sessions in last 7 days, avg duration,
+   *  most-used split. Lets Aimee answer "should I rest?" / "build me a
+   *  push day" with their actual training context. */
+  workoutSummary?: string;
+  /** Recent nutrition rollup — avg daily calories + protein vs targets,
+   *  hit-rate. */
+  nutritionSummary?: string;
+  /** Body-composition delta over the last 4 weeks (weight, body fat).
+   *  Empty when no readings exist yet. */
+  bodyTrendSummary?: string;
+  /** Onboarding free-text: user's "main goal in their own words" + their
+   *  workout-days-per-week answer. Captured at signup so Aimee can ground
+   *  recommendations in stated intent. */
+  selfStatedGoal?: string;
+  workoutDaysPerWeek?: number;
   currentRoute?: string;
 }
 
@@ -252,6 +267,103 @@ function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
     labResultsSummary = undefined;
   }
 
+  // 7-day workout summary — sessions count, avg duration, last name.
+  // Powers Aimee's "should I rest" / "build me a push day" answers.
+  let workoutSummary: string | undefined;
+  try {
+    const { useWorkoutStore } = require('../store/useWorkoutStore');
+    const wStore = useWorkoutStore.getState();
+    const since = new Date(Date.now() - 7 * 86_400_000);
+    const recent = (wStore.logs ?? []).filter(
+      (l: any) => new Date(l.completedAt ?? l.startedAt).getTime() >= since.getTime(),
+    );
+    if (recent.length > 0) {
+      const avgDuration = Math.round(
+        recent.reduce((acc: number, l: any) => acc + (l.durationMinutes ?? 0), 0) / recent.length,
+      );
+      const lastName = (recent[0] as any).workoutName ?? 'workout';
+      workoutSummary = `${recent.length} session${recent.length === 1 ? '' : 's'} in last 7 days, avg ${avgDuration} min, most recent: ${lastName}`;
+    }
+  } catch {
+    workoutSummary = undefined;
+  }
+
+  // 7-day nutrition rollup — avg daily calories, protein, target hit.
+  let nutritionSummary: string | undefined;
+  try {
+    const { useMealStore } = require('../store/useMealStore');
+    const mStore = useMealStore.getState();
+    const meals = (mStore.meals ?? []).filter((m: any) => {
+      const d = new Date(m.date ?? m.timestamp ?? Date.now());
+      return Date.now() - d.getTime() <= 7 * 86_400_000;
+    });
+    if (meals.length > 0) {
+      const totalCal = meals.reduce((acc: number, m: any) => {
+        const fromQuick = m.quickLog?.calories ?? 0;
+        const fromFoods = (m.foods ?? []).reduce(
+          (a: number, f: any) => a + (f.calories ?? 0),
+          0,
+        );
+        return acc + fromQuick + fromFoods;
+      }, 0);
+      const totalPro = meals.reduce((acc: number, m: any) => {
+        const fromQuick = m.quickLog?.proteinGrams ?? 0;
+        const fromFoods = (m.foods ?? []).reduce(
+          (a: number, f: any) => a + (f.proteinGrams ?? 0),
+          0,
+        );
+        return acc + fromQuick + fromFoods;
+      }, 0);
+      const avgCal = Math.round(totalCal / 7);
+      const avgPro = Math.round(totalPro / 7);
+      const targets = mStore.targets ?? {};
+      const hits: string[] = [];
+      if (avgCal > 0) hits.push(`~${avgCal} cal/day`);
+      if (avgPro > 0) hits.push(`~${avgPro}g protein/day`);
+      if (targets.calories && avgCal > 0) {
+        const pct = Math.round((avgCal / targets.calories) * 100);
+        hits.push(`${pct}% of cal target`);
+      }
+      nutritionSummary = hits.length > 0 ? `Last 7 days: ${hits.join(', ')}` : undefined;
+    }
+  } catch {
+    nutritionSummary = undefined;
+  }
+
+  // 4-week body-comp delta — weight + body fat trend.
+  let bodyTrendSummary: string | undefined;
+  try {
+    const { useBiometricsStore } = require('../store/useBiometricsStore');
+    const store = useBiometricsStore.getState();
+    const weights = (store.readings ?? [])
+      .filter((r: any) => r.scope === 'weight')
+      .sort((a: any, b: any) => a.date.localeCompare(b.date));
+    const fourWeeksAgo = new Date(Date.now() - 28 * 86_400_000).toISOString().slice(0, 10);
+    const start = weights.find((r: any) => r.date >= fourWeeksAgo);
+    const end = weights[weights.length - 1];
+    if (start && end && start !== end) {
+      const delta = end.value - start.value;
+      const sign = delta > 0 ? '+' : '';
+      bodyTrendSummary = `Weight ${sign}${delta.toFixed(1)} ${end.unit} over ~4 weeks`;
+    }
+  } catch {
+    bodyTrendSummary = undefined;
+  }
+
+  // Free-text onboarding answers — "main goal" + workout-days-per-week.
+  // The free-text "in your own words" goal is more useful to Aimee than
+  // the chip-selected GoalType array.
+  let selfStatedGoal: string | undefined;
+  let workoutDaysPerWeek: number | undefined;
+  try {
+    const { useHealthProfileStore } = require('../store/useHealthProfileStore');
+    const hp = useHealthProfileStore.getState().profile;
+    selfStatedGoal = hp?.goalNotes?.trim() || undefined;
+    workoutDaysPerWeek = hp?.lifestyle?.exerciseFrequency;
+  } catch {
+    /* ignore */
+  }
+
   return {
     hasConsent,
     simpleMode: context.simpleMode === true,
@@ -261,6 +373,11 @@ function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
     healthProfileSummary: healthProfileSummary || undefined,
     biometricsSummary,
     labResultsSummary,
+    workoutSummary,
+    nutritionSummary,
+    bodyTrendSummary,
+    selfStatedGoal,
+    workoutDaysPerWeek,
   };
 }
 
