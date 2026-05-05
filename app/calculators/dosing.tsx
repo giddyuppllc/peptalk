@@ -693,53 +693,22 @@ export default function DosingCalculatorScreen() {
           </View>
         )}
 
-        {/* Supply math */}
-        {showResults && canCalculate && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>Your Supply</Text>
-            <GlassCard>
-              <ResultRow
-                label="Doses per vial"
-                value={dosesPerVial.toFixed(1)}
-                highlight
-              />
-              <ResultRow
-                label="Days each vial lasts"
-                value={`${daysPerVial.toFixed(0)} days`}
-              />
-              <ResultRow
-                label={`Vials per month (${vialRaw}${vialUnit} vials)`}
-                value={String(vialsPerMonth)}
-              />
-              <ResultRow
-                label="Injections per week"
-                value={
-                  injectionsPerWeek % 1 === 0
-                    ? String(injectionsPerWeek)
-                    : injectionsPerWeek.toFixed(1)
-                }
-              />
-              <ResultRow
-                label="Weekly total"
-                value={formatDose(weeklyTotalMcg)}
-              />
-              <ResultRow
-                label="Monthly total (est.)"
-                value={formatDose(monthlyTotalMcg)}
-              />
-            </GlassCard>
-          </View>
-        )}
+        {/* ─── Post-Calculate display order ─────────────────────────
+            Per Injection (action) → Syringe visual (how) → Cycle plan
+            (full cycle picture) → Supplies estimator (what to buy) →
+            Per-vial economics (doses/days per vial — quick numbers
+            kept in case the user is comparing vial sizes) → About this
+            peptide (deep dive) → Safety. The previous "Your Supply"
+            card duplicated the Supplies estimator's vial counts — those
+            specific cells now live there; the trimmed Per-vial card
+            keeps the math the estimator doesn't show (days per vial,
+            doses per vial, weekly/monthly totals).
+            ─────────────────────────────────────────────────────────── */}
 
-        {/* Full peptide deep-dive — replaces the old "Typical Ranges" card.
-            Renders the protocol, mechanism, recon math, dose-table examples,
-            storage, lifestyle/timing, side effects, contraindications, and
-            references for whatever peptide the user picked. Only shown
-            after the user has run a calculation, so the math up top is the
-            anchor and everything below it is the explanation. */}
-        {/* Cycle plan — goal-aware summary of dose / frequency / cycle
-            length / total vials needed for the selected peptide. Only
-            shown when we have a protocol template to anchor the math. */}
+        {/* Cycle plan — full-cycle math, goal-aware. Only renders when
+            a protocol template exists. Independent of the Calculate
+            button — shows the moment a peptide is selected so users
+            see the protocol shape before plugging in numbers. */}
         {selectedPeptide && protocolsForPeptide.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: t.text }]}>Cycle plan</Text>
@@ -754,9 +723,8 @@ export default function DosingCalculatorScreen() {
           </View>
         )}
 
-        {/* Supplies estimator — shopping list at 1 wk / 2 wks / full cycle.
-            Mirrors the practical "Supplies Needed" table users expect
-            from a dosing reference page. */}
+        {/* Supplies estimator — concrete shopping list at 1 wk / 2 wks
+            / full cycle. */}
         {selectedPeptide && protocolsForPeptide.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: t.text }]}>Supplies</Text>
@@ -771,6 +739,42 @@ export default function DosingCalculatorScreen() {
           </View>
         )}
 
+        {/* Per-vial economics — only the numbers Supplies estimator
+            DOESN'T show. Doses per vial + days per vial + weekly /
+            monthly totals are the math users compare when sizing up
+            different vial options. Vial count + injections per week
+            already live in the cards above. */}
+        {showResults && canCalculate && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: t.text }]}>Per-vial economics</Text>
+            <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
+              Math for comparing vial sizes side-by-side.
+            </Text>
+            <GlassCard>
+              <ResultRow
+                label="Doses per vial"
+                value={dosesPerVial.toFixed(1)}
+                highlight
+              />
+              <ResultRow
+                label="Days each vial lasts"
+                value={`${daysPerVial.toFixed(0)} days`}
+              />
+              <ResultRow
+                label="Weekly total"
+                value={formatDose(weeklyTotalMcg)}
+              />
+              <ResultRow
+                label="Monthly total (est.)"
+                value={formatDose(monthlyTotalMcg)}
+              />
+            </GlassCard>
+          </View>
+        )}
+
+        {/* Full peptide deep-dive — protocol templates, mechanism, recon
+            math, dose-table examples, storage, lifestyle/timing, side
+            effects, contraindications, references, disclaimer. */}
         {showResults && selectedPeptide && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: t.text }]}>About {selectedPeptide.name}</Text>
