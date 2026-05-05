@@ -27,6 +27,11 @@ import * as ImagePicker from 'expo-image-picker';
 import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import {
+  interpretLatestLabs,
+  isLabInterpretError,
+  type LabInterpretation,
+} from '../../src/services/labAnalysisService';
+import {
   LAB_MARKERS,
   LAB_CATEGORY_LABELS,
   useLabResultsStore,
@@ -56,6 +61,44 @@ export default function LabsScreen() {
   const [expandedCategory, setExpandedCategory] = useState<LabCategory | null>('lipid');
   const [scanning, setScanning] = useState(false);
   const tier = useSubscriptionStore((s) => s.tier);
+
+  // Deep AI interpretation state — request, cached markdown, error.
+  const [interpreting, setInterpreting] = useState(false);
+  const [interpretation, setInterpretation] = useState<LabInterpretation | null>(null);
+
+  const handleInterpretLabs = async () => {
+    if (interpreting) return;
+    if (allResults.length === 0) {
+      Alert.alert(
+        'Nothing to interpret',
+        'Log at least one lab value first — Aimee\'s interpretation reads what you\'ve saved.',
+      );
+      return;
+    }
+    setInterpreting(true);
+    try {
+      const res = await interpretLatestLabs();
+      if (isLabInterpretError(res)) {
+        if (res.upgrade) {
+          Alert.alert(
+            'Pro feature',
+            res.error,
+            [
+              { text: 'OK', style: 'cancel' },
+              { text: 'See plans', onPress: () => router.push('/subscription' as any) },
+            ],
+          );
+        } else {
+          Alert.alert('Could not interpret', res.error);
+        }
+        setInterpretation(null);
+      } else {
+        setInterpretation(res);
+      }
+    } finally {
+      setInterpreting(false);
+    }
+  };
 
   /**
    * Photo upload → Grok Vision → pre-filled lab values.
@@ -310,6 +353,57 @@ export default function LabsScreen() {
           <Text style={styles.saveBtnText}>Save Lab Values</Text>
         </TouchableOpacity>
 
+        {/* Aimee deep interpretation — Pro tier. Reads the user's saved
+            labs + active peptide stack + demographic profile and returns
+            a structured markdown report (patterns, peptide implications,
+            follow-up suggestions). */}
+        {allResults.length > 0 && (
+          <TouchableOpacity
+            onPress={handleInterpretLabs}
+            disabled={interpreting}
+            style={[
+              styles.interpretBtn,
+              {
+                backgroundColor: interpreting ? t.textMuted : '#9b6cd9',
+                opacity: interpreting ? 0.7 : 1,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Get an AI interpretation of your lab panel"
+          >
+            {interpreting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Ionicons name="sparkles-outline" size={18} color="#fff" />
+            )}
+            <Text style={styles.interpretBtnText}>
+              {interpreting ? 'Aimee is reading your labs…' : 'Get AI interpretation'}
+            </Text>
+            {tier !== 'pro' && !interpreting && (
+              <View style={styles.proBadge}>
+                <Text style={styles.proBadgeText}>PRO</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {interpretation && (
+          <GlassCard style={styles.interpretCard}>
+            <View style={styles.interpretHeader}>
+              <Ionicons name="sparkles" size={16} color="#9b6cd9" />
+              <Text style={[styles.interpretTitle, { color: t.text }]}>
+                Aimee's interpretation
+              </Text>
+              <Text style={[styles.interpretMeta, { color: t.textSecondary }]}>
+                {new Date(interpretation.generatedAt).toLocaleString()}
+              </Text>
+            </View>
+            <Text style={[styles.interpretBody, { color: t.text }]}>
+              {interpretation.markdown}
+            </Text>
+          </GlassCard>
+        )}
+
         {/* History */}
         {allResults.length > 0 && (
           <View style={styles.historySection}>
@@ -443,6 +537,26 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
   },
   saveBtnText: { color: '#fff', fontSize: FontSizes.md, fontWeight: '700' },
+  interpretBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: BorderRadius.md,
+    marginTop: 12,
+  },
+  interpretBtnText: { color: '#fff', fontSize: FontSizes.md, fontWeight: '700' },
+  interpretCard: { marginTop: 16, padding: 14 },
+  interpretHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  interpretTitle: { flex: 1, fontSize: FontSizes.sm, fontWeight: '700' },
+  interpretMeta: { fontSize: 11 },
+  interpretBody: { fontSize: FontSizes.sm, lineHeight: 22 },
   historySection: { marginTop: Spacing.xl },
   historyTitle: {
     fontSize: 11,

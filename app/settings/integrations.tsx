@@ -290,6 +290,31 @@ export default function IntegrationsSettingsScreen() {
           </View>
         )}
 
+        {Platform.OS === 'ios' && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              onPress={() => router.push('/settings/healthkit-debug' as any)}
+              accessibilityRole="button"
+              accessibilityLabel="Run HealthKit debug helper"
+            >
+              <GlassCard style={styles.integrationCard}>
+                <View style={styles.integrationRow}>
+                  <View style={[styles.sourceIconWrap, { backgroundColor: 'rgba(0,0,0,0.04)' }]}>
+                    <Ionicons name="bug-outline" size={20} color={t.textSecondary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.sourceName, { color: t.text }]}>HealthKit debug</Text>
+                    <Text style={[styles.sourceSub, { color: t.textSecondary }]}>
+                      Probe each scope individually if data isn't showing up.
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={t.textSecondary} />
+                </View>
+              </GlassCard>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.section}>
           <Text style={[styles.footer, { color: t.textSecondary }]}>
             More integrations are planned: Dexcom, FreeStyle Libre, Garmin, Withings,

@@ -29,6 +29,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Spacing, FontSizes } from '../../src/constants/theme';
 import { useCommunityStore } from '../../src/store/useCommunityStore';
+import { useAuthStore } from '../../src/store/useAuthStore';
 import { ReactionRow } from '../../src/components/community/ReactionRow';
 import { CommentItem } from '../../src/components/community/CommentItem';
 import { MentionText } from '../../src/components/community/MentionText';
@@ -49,11 +50,21 @@ export default function PostDetailScreen() {
   const createComment = useCommunityStore((s) => s.createComment);
   const reportContent = useCommunityStore((s) => s.reportContent);
   const blockUser = useCommunityStore((s) => s.blockUser);
+  const editPost = useCommunityStore((s) => s.editPost);
+  const deletePost = useCommunityStore((s) => s.deletePost);
+  const editComment = useCommunityStore((s) => s.editComment);
+  const deleteComment = useCommunityStore((s) => s.deleteComment);
+  const currentUserId = useAuthStore((s) => s.user?.id);
 
   const [commentDraft, setCommentDraft] = useState('');
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
   const [commentAnonymous, setCommentAnonymous] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [editingPost, setEditingPost] = useState(false);
+  const [editPostTitle, setEditPostTitle] = useState('');
+  const [editPostBody, setEditPostBody] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editCommentBody, setEditCommentBody] = useState('');
 
   useEffect(() => {
     if (!postId) return;
@@ -98,13 +109,75 @@ export default function PostDetailScreen() {
     Alert.alert('Could not comment', res.error);
   };
 
-  const showActions = (target: { postId?: string; commentId?: string; userId: string }) => {
-    Alert.alert('Actions', 'What would you like to do?', [
+  const beginEditPost = () => {
+    if (!post) return;
+    setEditPostTitle(post.title);
+    setEditPostBody(post.body);
+    setEditingPost(true);
+  };
+
+  const beginEditComment = (commentId: string) => {
+    const c = comments.find((x) => x.id === commentId);
+    if (!c) return;
+    setEditingCommentId(commentId);
+    setEditCommentBody(c.body);
+  };
+
+  const confirmDeletePost = () => {
+    Alert.alert('Delete post?', 'This will hide your post from the feed. This can\'t be undone.', [
+      { text: 'Cancel', style: 'cancel' },
       {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          const res = await deletePost(postId);
+          if (!res.ok) Alert.alert('Delete failed', res.error);
+          else router.back();
+        },
+      },
+    ]);
+  };
+
+  const confirmDeleteComment = (commentId: string) => {
+    Alert.alert('Delete comment?', 'This will hide your comment. This can\'t be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          const res = await deleteComment(commentId);
+          if (!res.ok) Alert.alert('Delete failed', res.error);
+        },
+      },
+    ]);
+  };
+
+  const showActions = (target: { postId?: string; commentId?: string; userId: string }) => {
+    const isOwn = !!currentUserId && target.userId === currentUserId;
+    const buttons: Array<{ text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }> = [];
+
+    if (isOwn) {
+      buttons.push({
+        text: 'Edit',
+        onPress: () => {
+          if (target.postId) beginEditPost();
+          else if (target.commentId) beginEditComment(target.commentId);
+        },
+      });
+      buttons.push({
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          if (target.postId) confirmDeletePost();
+          else if (target.commentId) confirmDeleteComment(target.commentId);
+        },
+      });
+    } else {
+      buttons.push({
         text: 'Report',
         onPress: () => promptReport(target),
-      },
-      {
+      });
+      buttons.push({
         text: 'Block user',
         style: 'destructive',
         onPress: () =>
@@ -123,9 +196,45 @@ export default function PostDetailScreen() {
               },
             },
           ]),
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+      });
+    }
+    buttons.push({ text: 'Cancel', style: 'cancel' });
+    Alert.alert('Actions', 'What would you like to do?', buttons);
+  };
+
+  const submitEditPost = async () => {
+    if (!editPostTitle.trim() || !editPostBody.trim()) {
+      Alert.alert('Missing fields', 'Title and body cannot be empty.');
+      return;
+    }
+    const res = await editPost({
+      postId,
+      title: editPostTitle.trim(),
+      body: editPostBody.trim(),
+    });
+    if (!res.ok) {
+      Alert.alert('Edit failed', res.error);
+      return;
+    }
+    setEditingPost(false);
+  };
+
+  const submitEditComment = async () => {
+    if (!editingCommentId) return;
+    if (!editCommentBody.trim()) {
+      Alert.alert('Empty comment', 'Comment cannot be empty.');
+      return;
+    }
+    const res = await editComment({
+      commentId: editingCommentId,
+      body: editCommentBody.trim(),
+    });
+    if (!res.ok) {
+      Alert.alert('Edit failed', res.error);
+      return;
+    }
+    setEditingCommentId(null);
+    setEditCommentBody('');
   };
 
   const promptReport = (target: { postId?: string; commentId?: string }) => {
@@ -220,6 +329,11 @@ export default function PostDetailScreen() {
             </View>
             <Text style={[styles.title, { color: t.text }]}>{post.title}</Text>
             <MentionText body={post.body} style={{ color: t.text, fontSize: FontSizes.sm, lineHeight: 22 }} />
+            {post.lastEditedAt && (
+              <Text style={[styles.editedTag, { color: t.textSecondary }]}>
+                edited {new Date(post.lastEditedAt).toLocaleString()}
+              </Text>
+            )}
             {post.imageUrls && post.imageUrls.length > 0 && (
               <View style={styles.postImagesRow}>
                 {post.imageUrls.map((url) => (
@@ -308,6 +422,89 @@ export default function PostDetailScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Edit-post modal — opens from "Actions → Edit" on the user's own post. */}
+      {editingPost && (
+        <View style={styles.editModalOverlay}>
+          <View style={[styles.editModalCard, { backgroundColor: t.card }]}>
+            <Text style={[styles.editModalTitle, { color: t.text }]}>Edit post</Text>
+            <TextInput
+              value={editPostTitle}
+              onChangeText={setEditPostTitle}
+              placeholder="Title"
+              placeholderTextColor={t.textSecondary}
+              style={[styles.editModalInput, { backgroundColor: t.glass, color: t.text }]}
+              maxLength={140}
+            />
+            <TextInput
+              value={editPostBody}
+              onChangeText={setEditPostBody}
+              placeholder="Body"
+              placeholderTextColor={t.textSecondary}
+              multiline
+              style={[styles.editModalInput, { backgroundColor: t.glass, color: t.text, minHeight: 140, textAlignVertical: 'top' }]}
+              maxLength={8000}
+            />
+            <View style={styles.editModalButtons}>
+              <TouchableOpacity
+                style={[styles.editModalBtn, { backgroundColor: t.glass }]}
+                onPress={() => setEditingPost(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel edit"
+              >
+                <Text style={[styles.editModalBtnText, { color: t.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.editModalBtn, { backgroundColor: t.primary }]}
+                onPress={submitEditPost}
+                accessibilityRole="button"
+                accessibilityLabel="Save edits"
+              >
+                <Text style={[styles.editModalBtnText, { color: '#fff' }]}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Edit-comment modal */}
+      {editingCommentId && (
+        <View style={styles.editModalOverlay}>
+          <View style={[styles.editModalCard, { backgroundColor: t.card }]}>
+            <Text style={[styles.editModalTitle, { color: t.text }]}>Edit comment</Text>
+            <TextInput
+              value={editCommentBody}
+              onChangeText={setEditCommentBody}
+              placeholder="Comment"
+              placeholderTextColor={t.textSecondary}
+              multiline
+              style={[styles.editModalInput, { backgroundColor: t.glass, color: t.text, minHeight: 120, textAlignVertical: 'top' }]}
+              maxLength={4000}
+            />
+            <View style={styles.editModalButtons}>
+              <TouchableOpacity
+                style={[styles.editModalBtn, { backgroundColor: t.glass }]}
+                onPress={() => {
+                  setEditingCommentId(null);
+                  setEditCommentBody('');
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel comment edit"
+              >
+                <Text style={[styles.editModalBtnText, { color: t.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.editModalBtn, { backgroundColor: t.primary }]}
+                onPress={submitEditComment}
+                accessibilityRole="button"
+                accessibilityLabel="Save comment edits"
+              >
+                <Text style={[styles.editModalBtnText, { color: '#fff' }]}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -347,6 +544,48 @@ const styles = StyleSheet.create({
   time: { fontSize: 11, marginTop: 2 },
   title: { fontSize: FontSizes.lg, fontWeight: '800', lineHeight: 24 },
   body: { fontSize: FontSizes.sm, lineHeight: 22 },
+  editedTag: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginTop: 6,
+  },
+  editModalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+  editModalCard: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: Spacing.lg,
+    gap: 10,
+  },
+  editModalTitle: {
+    fontSize: FontSizes.md,
+    fontWeight: '800',
+  },
+  editModalInput: {
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: FontSizes.sm,
+  },
+  editModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 6,
+  },
+  editModalBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  editModalBtnText: { fontSize: FontSizes.sm, fontWeight: '700' },
   postImagesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -68,6 +68,11 @@ export function CommentItem({ comment, isReply, onReply, onLongPress }: CommentI
         )}
       </View>
       <MentionText body={comment.body} style={{ color: t.text, fontSize: FontSizes.sm, lineHeight: 19 }} />
+      {comment.lastEditedAt && (
+        <Text style={{ fontSize: 10, fontStyle: 'italic', color: t.textSecondary, marginTop: 2 }}>
+          edited
+        </Text>
+      )}
 
       <View style={styles.actionsRow}>
         <ReactionRow commentId={comment.id} initialCount={comment.reactionCount} />

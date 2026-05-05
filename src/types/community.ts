@@ -72,6 +72,8 @@ export interface CommunityPost {
   commentCount: number;
   createdAt: string;
   updatedAt: string;
+  /** ISO timestamp of the most recent edit (null/undefined when never edited). */
+  lastEditedAt?: string;
   /** Public R2 URLs for post attachments (max 4). */
   imageUrls?: string[];
   /** Hydrated by the read query when joining profiles. */
@@ -89,6 +91,7 @@ export interface CommunityComment {
   isDeleted: boolean;
   reactionCount: number;
   createdAt: string;
+  lastEditedAt?: string;
   imageUrls?: string[];
   author?: CommunityAuthor;
   myReactions?: CommunityReactionKind[];

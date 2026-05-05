@@ -50,6 +50,14 @@ interface CommunityState {
     Promise<{ ok: true; postId: string } | { ok: false; error: string; needsUsername?: boolean; upgrade?: boolean }>;
   createComment: (input: { postId: string; parentCommentId?: string | null; body: string; isAnonymous: boolean; imageUrls?: string[] }) =>
     Promise<{ ok: true; commentId: string } | { ok: false; error: string; needsUsername?: boolean; upgrade?: boolean }>;
+  editPost: (input: { postId: string; title?: string; body?: string; imageUrls?: string[] }) =>
+    Promise<{ ok: true } | { ok: false; error: string }>;
+  deletePost: (postId: string) =>
+    Promise<{ ok: true } | { ok: false; error: string }>;
+  editComment: (input: { commentId: string; body?: string; imageUrls?: string[] }) =>
+    Promise<{ ok: true } | { ok: false; error: string }>;
+  deleteComment: (commentId: string) =>
+    Promise<{ ok: true } | { ok: false; error: string }>;
   toggleReaction: (target: { postId?: string; commentId?: string; kind: CommunityReactionKind }, presentlyReacted: boolean) =>
     Promise<{ ok: true } | { ok: false; error: string }>;
   reportContent: (input: { postId?: string; commentId?: string; reason: CommunityReportReason; notes?: string }) =>
@@ -116,6 +124,7 @@ function rowToPost(r: any): CommunityPost {
     commentCount: r.comment_count ?? 0,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    lastEditedAt: r.last_edited_at ?? undefined,
     imageUrls: Array.isArray(r.image_urls) ? r.image_urls : [],
     author,
   };
@@ -139,6 +148,7 @@ function rowToComment(r: any): CommunityComment {
     isDeleted: !!r.is_deleted,
     reactionCount: r.reaction_count ?? 0,
     createdAt: r.created_at,
+    lastEditedAt: r.last_edited_at ?? undefined,
     imageUrls: Array.isArray(r.image_urls) ? r.image_urls : [],
     author,
   };
@@ -198,7 +208,7 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
         .from('community_posts')
         .select(`
           id, user_id, topic_slug, title, body, reaction_count, comment_count,
-          is_deleted, is_anonymous, image_urls, created_at, updated_at,
+          is_deleted, is_anonymous, image_urls, last_edited_at, created_at, updated_at,
           profiles:user_id ( id, username, display_name, avatar_url )
         `)
         .eq('is_deleted', false);
@@ -262,7 +272,7 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
         .from('community_posts')
         .select(`
           id, user_id, topic_slug, title, body, reaction_count, comment_count,
-          is_deleted, is_anonymous, image_urls, created_at, updated_at,
+          is_deleted, is_anonymous, image_urls, last_edited_at, created_at, updated_at,
           profiles:user_id ( id, username, display_name, avatar_url )
         `)
         .eq('id', postId)
@@ -285,7 +295,7 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
         .from('community_comments')
         .select(`
           id, post_id, user_id, parent_comment_id, body, reaction_count,
-          is_deleted, is_anonymous, image_urls, created_at,
+          is_deleted, is_anonymous, image_urls, last_edited_at, created_at,
           profiles:user_id ( id, username, display_name, avatar_url )
         `)
         .eq('post_id', postId)
@@ -398,6 +408,76 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
       return { ok: true, commentId: res.commentId };
     } catch (err: any) {
       return { ok: false, error: err?.message ?? 'Failed to comment' };
+    }
+  },
+
+  editPost: async (input) => {
+    try {
+      const res = await authedFetch<any>('community-edit-post', input);
+      if (res?.error) return { ok: false, error: res.error };
+      // Refresh detail + feed so the edit is reflected immediately.
+      get().hydratePostDetail(input.postId).catch(() => {});
+      get().hydrateFeed().catch(() => {});
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err?.message ?? 'Failed to edit' };
+    }
+  },
+
+  deletePost: async (postId) => {
+    try {
+      const res = await authedFetch<any>('community-delete-post', { postId });
+      if (res?.error) return { ok: false, error: res.error };
+      // Optimistic local remove — the soft-delete on the server means
+      // hydrateFeed would also drop it on next pull, but updating here
+      // makes the UX feel instant.
+      set({ posts: get().posts.filter((p) => p.id !== postId) });
+      const detail = get().postDetails[postId];
+      if (detail) {
+        const next = { ...get().postDetails };
+        delete next[postId];
+        set({ postDetails: next });
+      }
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err?.message ?? 'Failed to delete' };
+    }
+  },
+
+  editComment: async (input) => {
+    try {
+      const res = await authedFetch<any>('community-edit-comment', input);
+      if (res?.error) return { ok: false, error: res.error };
+      // Edit shows up the next time we re-hydrate the post detail —
+      // find the parent post and re-hydrate it.
+      const details = get().postDetails;
+      for (const [postId, detail] of Object.entries(details)) {
+        if (detail?.comments?.some((c) => c.id === input.commentId)) {
+          get().hydratePostDetail(postId).catch(() => {});
+          break;
+        }
+      }
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err?.message ?? 'Failed to edit comment' };
+    }
+  },
+
+  deleteComment: async (commentId) => {
+    try {
+      const res = await authedFetch<any>('community-delete-comment', { commentId });
+      if (res?.error) return { ok: false, error: res.error };
+      // Re-hydrate whichever post owns this comment.
+      const details = get().postDetails;
+      for (const [postId, detail] of Object.entries(details)) {
+        if (detail?.comments?.some((c) => c.id === commentId)) {
+          get().hydratePostDetail(postId).catch(() => {});
+          break;
+        }
+      }
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err?.message ?? 'Failed to delete comment' };
     }
   },
 
