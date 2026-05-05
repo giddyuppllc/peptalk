@@ -29,6 +29,11 @@ export interface BiometricReading {
   source: BiomarkerSource;
   /** Last-write timestamp — useful for "synced 12 min ago" UI. */
   updatedAt: string;
+  /** Peptide IDs of any active protocol on the day this reading covers.
+   *  Stamped at write-time so a "your weight while on retatrutide" trend
+   *  query is a simple filter — no protocol-history join needed. Empty
+   *  for readings outside any active protocol window. */
+  activePeptideIds?: string[];
 }
 
 /** Scopes we cache here. Subset of BiomarkerScope — only daily-summable ones. */
@@ -69,6 +74,10 @@ interface BiometricsActions {
   sumScopeInRange: (scope: BiometricScope, startDate: string, endDate: string) => number;
   /** Average of `value` across a date range, e.g. avg HRV. */
   avgScopeInRange: (scope: BiometricScope, startDate: string, endDate: string) => number | null;
+  /** All readings stamped with a given peptide id — for "weight while on
+   *  retatrutide" trend cards. Filter is on the materialized
+   *  activePeptideIds array, not a runtime protocol-history join. */
+  getReadingsWhileOnPeptide: (peptideId: string, scope?: BiometricScope) => BiometricReading[];
   clearAll: () => void;
 }
 
@@ -78,20 +87,45 @@ export const useBiometricsStore = create<BiometricsState & BiometricsActions>()(
       readings: [],
 
       upsertReading: (reading) => {
+        // Stamp active-peptide context if not provided. This lets a
+        // "your weight while on reta" query filter on the activePeptideIds
+        // array directly without joining protocol-history at read-time.
+        // Lazy-loaded to avoid a static circular dep with useDoseLogStore.
+        let stamped = reading;
+        if (!reading.activePeptideIds) {
+          try {
+            const { useDoseLogStore } = require('./useDoseLogStore');
+            const protocols = useDoseLogStore.getState().protocols ?? [];
+            const activeOnDate = protocols
+              .filter((p: any) => {
+                if (!p.isActive) return false;
+                if (p.startDate && reading.date < p.startDate) return false;
+                if (p.endDate && reading.date > p.endDate) return false;
+                return true;
+              })
+              .map((p: any) => p.peptideId)
+              .filter(Boolean);
+            stamped = { ...reading, activePeptideIds: activeOnDate };
+          } catch {
+            // Dose store not ready (very early boot) — write reading
+            // without tagging. Future readings will tag correctly.
+          }
+        }
+
         const existing = get().readings.find(
-          (r) => r.date === reading.date && r.scope === reading.scope,
+          (r) => r.date === stamped.date && r.scope === stamped.scope,
         );
         if (existing) {
           const existingPriority = SOURCE_PRIORITY[existing.source] ?? 0;
-          const incomingPriority = SOURCE_PRIORITY[reading.source] ?? 0;
+          const incomingPriority = SOURCE_PRIORITY[stamped.source] ?? 0;
           if (existingPriority > incomingPriority) return false;
           set({
             readings: get().readings.map((r) =>
-              r.date === reading.date && r.scope === reading.scope ? reading : r,
+              r.date === stamped.date && r.scope === stamped.scope ? stamped : r,
             ),
           });
         } else {
-          set({ readings: [reading, ...get().readings] });
+          set({ readings: [stamped, ...get().readings] });
         }
         return true;
       },
@@ -130,6 +164,13 @@ export const useBiometricsStore = create<BiometricsState & BiometricsActions>()(
         const sum = matches.reduce((acc, r) => acc + r.value, 0);
         return sum / matches.length;
       },
+
+      getReadingsWhileOnPeptide: (peptideId, scope) =>
+        get().readings.filter(
+          (r) =>
+            r.activePeptideIds?.includes(peptideId) &&
+            (!scope || r.scope === scope),
+        ),
 
       clearAll: () => set({ readings: [] }),
     }),

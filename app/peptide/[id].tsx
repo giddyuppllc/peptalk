@@ -18,6 +18,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
 import { ProtocolPlanCard } from '../../src/components/ProtocolPlanCard';
 import { SuppliesEstimatorCard } from '../../src/components/SuppliesEstimatorCard';
+import { PeptideTrendCard } from '../../src/components/PeptideTrendCard';
 import { KeepItSimpleCard } from '../../src/components/KeepItSimpleCard';
 import { getCategoryColor } from '../../src/constants/categories';
 import { Disclaimer } from '../../src/components/Disclaimer';
@@ -701,6 +702,14 @@ export default function PeptideDetailScreen() {
             <SuppliesEstimatorCard protocol={protocols[0]} />
           </View>
         )}
+
+        {/* User's tagged-biometric trends while on this peptide. Hides
+            itself when there's no tagged data. Hides the empty state
+            on every peptide page so the surface only shows up when
+            there's something meaningful to read. */}
+        <View style={styles.section}>
+          <PeptideTrendCard peptideId={peptide.id} peptideName={peptide.name} />
+        </View>
 
         {/* NEW: Protocol Templates */}
         {protocols.length > 0 && (
