@@ -143,6 +143,23 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
       'Retatrutide (triple GLP-1/GIP/glucagon agonist) produces the strongest appetite suppression of the current class. Protein target 1.0–1.2 g/lb is non-negotiable to avoid muscle loss during rapid weight loss. Prioritize whole-food protein at every meal.',
     prompt:
       'Retatrutide users: strict 1.0–1.2 g/lb protein, hydration critical, small meals spread out.',
+    fitnessGuidance: {
+      emphasis: 'Resistance training 3-4x/week is mandatory — strongest GLP-1 in the class means fastest weight loss, which means highest lean-mass risk. Lift heavy.',
+      timing: 'Train morning before food when nausea is lowest. Skip cardio on dose day if energy is poor.',
+      cautions: ['Reduce volume 25-30% during titration', 'Never train fasted in week 1-2 of a new dose'],
+    },
+    vitaminEmphasis: [
+      'B-complex 50mg/day (especially B12)',
+      'Electrolyte mix daily (sodium 1-2g, potassium 500mg, magnesium 300-400mg)',
+      'Vitamin D3 4000 IU + K2 100mcg',
+      'Creatine 5g/day — non-negotiable lean-mass insurance',
+    ],
+    lifestyleNotes: [
+      'Sleep 8h+ — fastest weight-loss class means biggest recovery debt',
+      'Walk 8-10k steps daily for fat-ox without protein burn',
+      'Limit alcohol (already-fragile electrolyte balance)',
+      'Stress management essential — cortisol drives the rebound on these peptides',
+    ],
   }),
   g({
     peptideId: 'liraglutide',
@@ -156,6 +173,21 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
     summary:
       'Liraglutide (shorter-acting GLP-1) has milder appetite suppression than once-weekly agents. Protein 0.9–1.1 g/lb, focus on balanced meals.',
     prompt: 'Liraglutide users: 0.9–1.1 g/lb protein, balanced meals.',
+    fitnessGuidance: {
+      emphasis: 'Resistance training 3x/week as the lean-mass anchor. Cardio 2-3x/week for cardiometabolic benefit.',
+      timing: 'Daily injection means more flexible training timing — train when energy is highest.',
+      cautions: ['Watch for nausea on training days', 'Pre-workout meal 60-90 min before lifting'],
+    },
+    vitaminEmphasis: [
+      'B-complex 50mg/day',
+      'Electrolyte mix daily',
+      'Vitamin D3 2000-4000 IU',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h consistently',
+      'Walk 7-10k steps daily',
+      'Daily injection rhythm pairs well with stable meal/sleep schedule',
+    ],
   }),
   g({
     peptideId: 'cagrilintide',
@@ -169,6 +201,21 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
     summary:
       'Cagrilintide (amylin analog) slows gastric emptying. Pair protein with fiber to avoid post-meal blood-sugar spikes. Same protein priority as other cutting peptides.',
     prompt: 'Cagrilintide users: protein + fiber combos, slow-digesting meals.',
+    fitnessGuidance: {
+      emphasis: 'Resistance training 3-4x/week. Often stacked with semaglutide/tirzepatide — same lifting priorities apply.',
+      timing: 'Pre-meal injection means the post-meal training window is when satiety is strongest — light cardio works better than heavy lifts here.',
+      cautions: ['Slow gastric emptying = avoid heavy meals 2-3h pre-training', 'Hydrate aggressively before training'],
+    },
+    vitaminEmphasis: [
+      'Electrolyte mix daily',
+      'Magnesium glycinate 300-400mg/day',
+      'Fiber 30-40g/day from food',
+    ],
+    lifestyleNotes: [
+      'Eat earlier in the day — late meals digest slowly on amylin agonists',
+      'Sleep 7-9h to support recovery during deficit',
+      'Track water intake — slowed gastric emptying masks thirst',
+    ],
   }),
 
   // ── GH secretagogues — pre-sleep low-carb ────────────────────────────────
@@ -210,6 +257,24 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
     summary:
       'CJC-1295 (especially paired with ipamorelin) shares the same "empty stomach + no pre-sleep carbs" rule. Protein priority 1.0–1.2 g/lb to support the recovery pulse.',
     prompt: 'CJC-1295 users: empty-stomach dose, low-carb evening dose, protein-forward diet.',
+    fitnessGuidance: {
+      emphasis: 'Heavy resistance training 4x/week — CJC + ipamorelin amplifies natural GH pulses, and lifting is the trigger that converts that to muscle.',
+      timing: 'Late afternoon training (4-6pm) hits naturally lower cortisol and lets you ride into the bedtime GH pulse.',
+      cautions: ['No training within 30min of dose', 'Avoid late-night cardio that disrupts sleep'],
+    },
+    vitaminEmphasis: [
+      'Magnesium glycinate 400mg before bed',
+      'Zinc 25mg/day + copper 1-2mg',
+      'Vitamin D3 4000 IU + K2 100mcg',
+      'Creatine 5g/day',
+      'Glycine 3-5g pre-bed for deeper sleep',
+    ],
+    lifestyleNotes: [
+      'Bedtime within 30min of evening dose',
+      'Cool dark bedroom (65-68°F)',
+      'No alcohol within 4h of dose — alcohol kills the GH pulse',
+      'Last meal 2-3h before bedtime dose for cleanest pulse',
+    ],
   }),
   g({
     peptideId: 'tesamorelin',
@@ -221,6 +286,22 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
     summary:
       'Tesamorelin reduces visceral fat via GHRH analog action. Fast 2 hours before and 30 min after the dose for best effect. Balanced protein intake (1.0–1.1 g/lb) supports lean-mass preservation.',
     prompt: 'Tesamorelin users: 2h fast pre-dose + 30min post, protein-forward diet.',
+    fitnessGuidance: {
+      emphasis: 'Zone-2 cardio + resistance training combo — Tesamorelin\'s visceral-fat target compounds with both. 3 lifts + 3 cardio sessions per week.',
+      timing: 'Train morning (post-dose, post-fast). Visceral lipolysis is most active in the morning fasted window.',
+      cautions: ['Don\'t train fasted longer than 2h post-dose', 'Watch for joint stiffness — increase warm-up time'],
+    },
+    vitaminEmphasis: [
+      'Magnesium glycinate 300-400mg/day',
+      'Vitamin D3 4000 IU + K2',
+      'Omega-3 2-3g EPA+DHA daily',
+      'Creatine 5g/day',
+    ],
+    lifestyleNotes: [
+      'Bedtime dose pairs best with consistent 10-11pm sleep schedule',
+      'Last meal 2h pre-dose for clean GHRH pulse',
+      'Limit alcohol — reduces both visceral-fat reduction and the GH pulse',
+    ],
   }),
   g({
     peptideId: 'sermorelin',
@@ -231,6 +312,21 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
     summary:
       'Sermorelin has the shortest half-life in the GHRH class. Take on empty stomach, pre-sleep; avoid sugary foods 2h before. No special macro shift otherwise.',
     prompt: 'Sermorelin users: empty stomach pre-sleep dose, no sugar 2h before.',
+    fitnessGuidance: {
+      emphasis: 'Resistance training 3-4x/week supports the natural GH amplification. Mild peptide so don\'t expect aggressive body-comp effects without lifting.',
+      timing: 'Late afternoon training works well for cortisol/GH crossover. Bedtime dose then.',
+      cautions: ['Skip late-evening cardio that pushes bedtime past 10pm'],
+    },
+    vitaminEmphasis: [
+      'Magnesium glycinate 300mg before bed',
+      'Zinc 15mg/day',
+      'Vitamin D3 2000-4000 IU',
+    ],
+    lifestyleNotes: [
+      'Bedtime within 30min of dose',
+      'Last meal 2h before dose',
+      'No alcohol within 4h of dose',
+    ],
   }),
 
   // ── Healing / repair peptides ─────────────────────────────────────────────
@@ -324,6 +420,21 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
     summary:
       'AOD-9604 is a GH fragment that promotes lipolysis without affecting blood sugar. Protein priority + hydration. No special timing beyond empty-stomach dose.',
     prompt: 'AOD-9604 users: protein + hydration, empty-stomach dose.',
+    fitnessGuidance: {
+      emphasis: 'Fasted morning cardio compounds the lipolytic effect. Add 2-3 resistance sessions to maintain lean mass.',
+      timing: 'Morning fasted dose + 30min walk or zone-2 cardio is the classic protocol.',
+      cautions: ['Don\'t go to failure on empty stomach', 'Eat a protein-forward breakfast 30-60min after the cardio'],
+    },
+    vitaminEmphasis: [
+      'L-carnitine 1-2g/day for fatty-acid transport',
+      'B-complex 50mg/day',
+      'Caffeine 100-200mg pre-cardio for synergistic lipolysis',
+    ],
+    lifestyleNotes: [
+      'Morning sun exposure 10min within an hour of waking',
+      'Hydration 0.7 oz/lb minimum',
+      'Sleep 7-9h — fat ox tracks deep-sleep quality',
+    ],
   }),
 
   // ── Growth / IGF ──────────────────────────────────────────────────────────
@@ -338,6 +449,22 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
       'IGF-1 LR3 increases nutrient partitioning toward muscle. Time carbs around the dose to fuel the anabolic window. Protein priority 1.0–1.3 g/lb. Watch blood sugar — can cause hypoglycemia if dosed without food.',
     prompt:
       'IGF-1 LR3 users: post-workout dose with carbs + protein; protein target 1.0–1.3 g/lb.',
+    fitnessGuidance: {
+      emphasis: 'Heavy resistance training 4-5x/week — IGF-1 LR3 is highly anabolic; you need the stimulus to direct it toward muscle vs other tissues.',
+      timing: 'Post-workout dose into a high-carb high-protein meal hits the anabolic window perfectly.',
+      cautions: ['Never dose fasted (hypoglycemia risk)', 'Watch for site-specific tissue growth at injection sites — rotate', 'Cardiac hypertrophy risk on long cycles — keep cycles ≤6 weeks'],
+    },
+    vitaminEmphasis: [
+      'Creatine 5g/day',
+      'Beta-alanine 3-5g/day',
+      'Vitamin D3 4000 IU + K2',
+      'Omega-3 3g EPA+DHA daily',
+    ],
+    lifestyleNotes: [
+      'Sleep 8-9h — anabolic recovery is sleep-dependent',
+      'Limit cardio to 2x/week during cycle (don\'t outrun the anabolic signal)',
+      'Get a basic blood panel before and after each cycle (IGF-1, fasting glucose, A1c)',
+    ],
   }),
 
   // ── Cognitive / longevity ─────────────────────────────────────────────────
@@ -348,6 +475,21 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
     summary:
       'Selank is a neuropeptide with anxiolytic effects. No specific nutrition shift required.',
     prompt: 'Selank users: no specific nutrition change.',
+    fitnessGuidance: {
+      emphasis: 'Pairs well with mind-body modalities — yoga, mobility, zone-2 cardio. Heavy lifts still fine but the anxiolytic effect doesn\'t add to PR pursuit.',
+      timing: 'Use intranasal dose 30min before stressful events (presentations, anxious lifts, important meetings).',
+      cautions: ['No documented training cautions'],
+    },
+    vitaminEmphasis: [
+      'Magnesium glycinate 300-400mg/day',
+      'L-theanine 100-200mg/day',
+      'Omega-3 EPA+DHA 2g/day',
+    ],
+    lifestyleNotes: [
+      'Pair with breathwork or meditation for compounded anxiolytic effect',
+      'Sleep hygiene non-negotiable — Selank doesn\'t fix poor sleep',
+      'Limit caffeine to mornings during high-stress weeks',
+    ],
   }),
   g({
     peptideId: 'semax',
@@ -356,6 +498,22 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
     summary:
       'Semax is a cognitive-focus peptide. No macro shift, but adequate omega-3s and B vitamins support the underlying neurotransmitter pathways.',
     prompt: 'Semax users: omega-3 + B-vitamin emphasis, no macro shift required.',
+    fitnessGuidance: {
+      emphasis: 'Mind-body training (climbing, martial arts, complex movement) leverages the focus enhancement.',
+      timing: 'Dose 30-60min before deep-work sessions or technical training.',
+      cautions: ['Don\'t use Semax to mask poor sleep — focus borrowing is real but unsustainable'],
+    },
+    vitaminEmphasis: [
+      'Omega-3 EPA+DHA 2-3g/day',
+      'B-complex 50mg/day (especially B6, B12, folate)',
+      'Phosphatidylcholine 500-1000mg/day',
+      'Lion\'s mane 1g/day (cognitive synergy)',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h — Semax amplifies, doesn\'t replace, recovery',
+      'Time-block deep work to leverage the focus window (~3-4h post-dose)',
+      'Limit alcohol — blunts BDNF expression that Semax upregulates',
+    ],
   }),
   g({
     peptideId: 'epithalon',
@@ -365,6 +523,433 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
     summary:
       'Epithalon is a telomerase-activating peptide used for longevity. Antioxidant-rich diet + micronutrients (zinc, selenium, D) support the longevity axis.',
     prompt: 'Epithalon users: antioxidant-rich diet, zinc + selenium + vitamin D.',
+    fitnessGuidance: {
+      emphasis: 'Zone-2 cardio + light resistance training. Avoid high-intensity training stress during the 10-20 day course — Epithalon\'s longevity signal is hampered by chronic inflammation.',
+      timing: 'Train morning. Bedtime dose pairs with melatonin upregulation.',
+      cautions: ['Skip cold plunges during course (excessive hormetic stress competes for the same pathway)', 'No alcohol during course'],
+    },
+    vitaminEmphasis: [
+      'Vitamin D3 4000 IU + K2 100mcg',
+      'Zinc 15-25mg + copper 1-2mg',
+      'Selenium 100-200mcg/day',
+      'NAD+ precursors (NMN 500mg or NR 300mg) — pairs with longevity axis',
+      'Resveratrol 250-500mg/day with a fatty meal',
+    ],
+    lifestyleNotes: [
+      'Bedtime dose synergizes with natural melatonin pulse',
+      'Sleep 8h+ during the course — pineal-axis signaling depends on it',
+      'Limit blue light 2h before bedtime dose',
+      'Antioxidant-rich diet (berries, leafy greens, colored vegetables)',
+    ],
+  }),
+
+  // ── New: GLP-1 family additions ───────────────────────────────────────────
+  g({
+    peptideId: 'mazdutide',
+    displayName: 'Mazdutide',
+    adjustments: ['higher_protein', 'hydration_plus', 'electrolyte_plus'],
+    proteinGPerLbRange: [1.0, 1.2],
+    hydrationMultiplier: 1.3,
+    microEmphasis: ['B12', 'sodium', 'potassium', 'magnesium'],
+    foodsEmphasize: ['lean protein', 'eggs', 'fish', 'leafy greens'],
+    foodsAvoid: ['ultra-processed sugars', 'fried foods'],
+    summary:
+      'Mazdutide (GLP-1/glucagon dual agonist) drives both appetite suppression and resting metabolism. Same protein priority as semaglutide. Glucagon side increases hepatic glucose output — pair with consistent meal timing.',
+    prompt: 'Mazdutide users: 1.0-1.2 g/lb protein, hydration + electrolytes, consistent meal timing.',
+    fitnessGuidance: {
+      emphasis: 'Resistance training 3-4x/week is the lean-mass anchor. Glucagon side means more flexibility with cardio than semaglutide.',
+      timing: 'Train morning when nausea is lowest. Pre-workout meal of protein + slow carb 60-90min out.',
+      cautions: ['Reduce volume during titration', 'Watch for heart-rate elevation on glucagon side'],
+    },
+    vitaminEmphasis: [
+      'B-complex 50mg/day',
+      'Electrolyte mix daily',
+      'Vitamin D3 4000 IU',
+      'Creatine 5g/day',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h consistently',
+      'Walk 8-10k steps daily',
+      'Limit alcohol — already-elevated resting metabolism is hard on the liver',
+    ],
+  }),
+  g({
+    peptideId: 'survodutide',
+    displayName: 'Survodutide',
+    adjustments: ['higher_protein', 'hydration_plus', 'electrolyte_plus'],
+    proteinGPerLbRange: [1.0, 1.2],
+    hydrationMultiplier: 1.3,
+    microEmphasis: ['B12', 'sodium', 'potassium', 'magnesium'],
+    foodsEmphasize: ['lean protein', 'fish', 'Greek yogurt', 'leafy greens'],
+    foodsAvoid: ['ultra-processed sugars', 'large single-sitting meals'],
+    summary:
+      'Survodutide (GLP-1/glucagon dual agonist) targets both fat oxidation and appetite. Same protein-first approach as the GLP-1 class. Pair with consistent training to direct the metabolic boost toward lean tissue.',
+    prompt: 'Survodutide users: protein priority, hydration + electrolytes, daily lifting.',
+    fitnessGuidance: {
+      emphasis: 'Resistance training 3-4x/week + zone-2 cardio. Glucagon side rewards aerobic conditioning.',
+      timing: 'Morning training when energy is highest.',
+      cautions: ['Reduce volume during titration', 'Pre-hydrate before training'],
+    },
+    vitaminEmphasis: [
+      'B-complex 50mg/day',
+      'Electrolyte mix daily',
+      'Vitamin D3 4000 IU',
+      'Creatine 5g/day',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h',
+      'Walk 8-10k steps daily',
+      'Limit alcohol',
+    ],
+  }),
+
+  // ── GH secretagogue additions ────────────────────────────────────────────
+  g({
+    peptideId: 'ghrp-2',
+    displayName: 'GHRP-2',
+    adjustments: ['lower_carb_pm', 'higher_protein'],
+    proteinGPerLbRange: [1.0, 1.2],
+    foodsEmphasize: ['protein-rich breakfast', 'leafy greens'],
+    foodsAvoid: ['sugar 2h before bedtime dose'],
+    summary:
+      'GHRP-2 stimulates GH release with mild appetite stimulation (less than GHRP-6). Empty-stomach dose; avoid carbs/insulin 2h pre-dose.',
+    prompt: 'GHRP-2 users: empty-stomach dose, no carbs 2h pre-dose, protein-forward diet.',
+    fitnessGuidance: {
+      emphasis: 'Heavy resistance training 4x/week. Appetite stimulation makes hitting protein targets easier.',
+      timing: 'Late afternoon training; bedtime dose.',
+      cautions: ['Cortisol/prolactin bump is mild but can interfere with sleep if dosed too late'],
+    },
+    vitaminEmphasis: [
+      'Magnesium glycinate 400mg before bed',
+      'Zinc 25mg/day',
+      'Vitamin D3 4000 IU',
+      'Creatine 5g/day',
+    ],
+    lifestyleNotes: [
+      'Bedtime within 30min of dose',
+      'No alcohol within 4h',
+      'Last meal 2-3h pre-dose',
+    ],
+  }),
+  g({
+    peptideId: 'ghrp-6',
+    displayName: 'GHRP-6',
+    adjustments: ['lower_carb_pm', 'higher_protein'],
+    proteinGPerLbRange: [1.0, 1.3],
+    foodsEmphasize: ['protein-dense meals', 'fiber'],
+    foodsAvoid: ['simple sugars 2h pre-dose', 'processed snacks (appetite makes them tempting)'],
+    summary:
+      'GHRP-6 has the strongest appetite stimulation in the class — useful for bulking, dangerous for cutting. Protein priority + structured meal plan keep the hunger from derailing goals.',
+    prompt: 'GHRP-6 users: structured meals, high protein, expect strong hunger.',
+    fitnessGuidance: {
+      emphasis: 'Heavy resistance training 4-5x/week — pair the hunger with high-volume training to drive lean mass.',
+      timing: 'Late afternoon training; bedtime dose; first meal 30-60min post-dose.',
+      cautions: ['Cortisol/prolactin elevation', 'Avoid for cutting cycles — fights against deficit'],
+    },
+    vitaminEmphasis: [
+      'Magnesium glycinate 400mg before bed',
+      'Zinc 25mg/day',
+      'Vitamin D3 4000 IU',
+      'Creatine 5g/day',
+    ],
+    lifestyleNotes: [
+      'Pre-plan post-dose meals to avoid junk-food spirals',
+      'Sleep 8h+ to support the calorie surplus',
+    ],
+  }),
+  g({
+    peptideId: 'hexarelin',
+    displayName: 'Hexarelin',
+    adjustments: ['lower_carb_pm', 'higher_protein'],
+    proteinGPerLbRange: [1.0, 1.2],
+    foodsAvoid: ['sugar 2h pre-dose'],
+    summary:
+      'Hexarelin is the strongest GHRP — also the highest cortisol/prolactin elevation. Limit cycles to 4-6 weeks. Empty stomach + no pre-dose carbs critical.',
+    prompt: 'Hexarelin users: empty stomach, short cycles only, monitor cortisol/prolactin.',
+    fitnessGuidance: {
+      emphasis: 'Heavy compound lifts 3-4x/week. Skip excess cardio — cortisol is already elevated.',
+      timing: 'Single late-evening dose. Train earlier in day.',
+      cautions: ['Limit cycles to 4-6 weeks', 'Take 8-12 weeks off between cycles', 'Watch for water retention'],
+    },
+    vitaminEmphasis: [
+      'Magnesium glycinate 400mg before bed',
+      'Phosphatidylserine 200-400mg/day (cortisol management)',
+      'Vitamin C 1g/day',
+      'Vitamin D3 4000 IU',
+    ],
+    lifestyleNotes: [
+      'Stress management is non-negotiable on Hexarelin (high cortisol risk)',
+      'Sleep 8h+ minimum',
+      'No alcohol during cycle',
+    ],
+  }),
+  g({
+    peptideId: 'hgh-fragment-176-191',
+    displayName: 'HGH Fragment 176-191',
+    adjustments: ['hydration_plus'],
+    proteinGPerLbRange: [0.9, 1.1],
+    hydrationMultiplier: 1.15,
+    foodsEmphasize: ['lean protein', 'leafy greens'],
+    foodsAvoid: ['simple carbs around dose'],
+    summary:
+      'HGH fragment 176-191 is GH\'s lipolytic fragment — promotes fat loss without IGF-1 effects. Empty-stomach dosing maximizes the lipolytic window.',
+    prompt: 'HGH frag 176-191 users: empty stomach, fasted-cardio synergy, protein priority.',
+    fitnessGuidance: {
+      emphasis: 'Fasted morning cardio compounds the lipolytic effect (similar to AOD-9604). Add resistance for lean mass.',
+      timing: '2-3 morning doses spaced 4-6h, ideally before fasted activity.',
+      cautions: ['Don\'t train to failure on empty stomach', 'Eat protein within 60min post-cardio'],
+    },
+    vitaminEmphasis: [
+      'L-carnitine 1-2g/day',
+      'Caffeine 100-200mg pre-cardio',
+      'B-complex 50mg/day',
+      'Magnesium 300mg/day',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h',
+      'Morning sun exposure within 60min of waking',
+      'Hydration 0.7 oz/lb minimum',
+    ],
+  }),
+
+  // ── Healing peptide additions ────────────────────────────────────────────
+  g({
+    peptideId: 'kpv',
+    displayName: 'KPV',
+    adjustments: ['collagen_emphasis'],
+    microEmphasis: ['vitamin C', 'zinc', 'glycine'],
+    foodsEmphasize: ['anti-inflammatory foods', 'omega-3 rich fish', 'leafy greens', 'turmeric'],
+    foodsAvoid: ['inflammatory ultra-processed foods', 'excess seed oils'],
+    summary:
+      'KPV is α-MSH\'s anti-inflammatory tripeptide. Pairs hand-in-glove with anti-inflammatory diet (omega-3, polyphenols, low refined sugar). Great for gut + skin protocols.',
+    prompt: 'KPV users: anti-inflammatory diet (omega-3, polyphenols, low sugar).',
+    fitnessGuidance: {
+      emphasis: 'Use during recovery weeks or when inflammation is the limiting factor. Train to feel, not numbers.',
+      timing: 'Bedtime dose for skin/gut protocols.',
+      cautions: ['Don\'t mask training-induced soreness with KPV — hides over-training signal'],
+    },
+    vitaminEmphasis: [
+      'Vitamin C 1000mg/day',
+      'Zinc 15-25mg + copper 1-2mg',
+      'Omega-3 EPA+DHA 2-3g/day',
+      'Curcumin 500-1000mg/day with black pepper',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h',
+      'Stress management — chronic stress drives the inflammation KPV is fighting',
+      'Limit alcohol during course',
+    ],
+  }),
+  g({
+    peptideId: 'll-37',
+    displayName: 'LL-37',
+    adjustments: ['none'],
+    microEmphasis: ['vitamin D', 'zinc'],
+    foodsEmphasize: ['vitamin D-rich foods', 'fatty fish', 'leafy greens'],
+    summary:
+      'LL-37 is a host-defense peptide. Vitamin D drives natural cathelicidin (LL-37) expression, so adequate D status amplifies the effect. Used in chronic infection / biofilm protocols.',
+    prompt: 'LL-37 users: vitamin D status optimization, zinc sufficiency, anti-inflammatory diet.',
+    fitnessGuidance: {
+      emphasis: 'Light to moderate training only during active infection / biofilm protocol. Don\'t add training stress when immune system is already engaged.',
+      timing: 'Dose timing flexible — protocol-driven.',
+      cautions: ['Avoid HIIT during course', 'Watch for transient fatigue — normal'],
+    },
+    vitaminEmphasis: [
+      'Vitamin D3 5000 IU + K2 100mcg (target 60-80 ng/mL)',
+      'Zinc 25mg + copper 2mg',
+      'Vitamin C 1000-2000mg/day',
+      'Omega-3 2-3g EPA+DHA',
+    ],
+    lifestyleNotes: [
+      'Sun exposure for endogenous D production',
+      'Sleep 8h+ during course',
+      'Address gut health (most LL-37 protocols are gut-related)',
+    ],
+  }),
+  g({
+    peptideId: 'ghk-cu',
+    displayName: 'GHK-Cu',
+    adjustments: ['collagen_emphasis'],
+    microEmphasis: ['vitamin C', 'zinc', 'copper', 'glycine'],
+    foodsEmphasize: ['bone broth', 'collagen protein', 'liver', 'oysters'],
+    summary:
+      'GHK-Cu is a copper-peptide that drives collagen, elastin, and tissue regeneration. Pair with vitamin C and glycine. Topical and injectable both benefit.',
+    prompt: 'GHK-Cu users: collagen + vitamin C + glycine. Excellent for skin/hair protocols.',
+    fitnessGuidance: {
+      emphasis: 'Resistance training supports the collagen-synthesis signal. Avoid excessive cardio that competes for the regeneration window.',
+      timing: 'Evening dose; topical applications post-shower.',
+      cautions: ['Sun-protect treated skin', 'Avoid retinol same day as topical GHK-Cu'],
+    },
+    vitaminEmphasis: [
+      'Vitamin C 1000-2000mg/day',
+      'Glycine 5-10g/day',
+      'Zinc 15mg + copper from food (not extra supplement — GHK-Cu provides)',
+      'Vitamin A 5000 IU/day',
+    ],
+    lifestyleNotes: [
+      'Sleep 7-9h — collagen synthesis happens during deep sleep',
+      'Hydration 0.7 oz/lb minimum',
+      'Avoid smoking — destroys the collagen GHK-Cu builds',
+    ],
+  }),
+
+  // ── Cognitive / longevity additions ──────────────────────────────────────
+  g({
+    peptideId: 'dihexa',
+    displayName: 'Dihexa',
+    adjustments: ['none'],
+    foodsEmphasize: ['choline-rich foods (eggs, liver)', 'omega-3 rich fish'],
+    summary:
+      'Dihexa is a potent neurogenic peptide (HGF agonist). Pair with adequate choline intake to support the neurotransmitter pathways it modulates.',
+    prompt: 'Dihexa users: choline + omega-3 emphasis.',
+    fitnessGuidance: {
+      emphasis: 'Pair with skill acquisition or learning — Dihexa amplifies BDNF, training new motor patterns leverages the effect.',
+      timing: 'Morning dose for daytime cognitive work.',
+      cautions: ['Limited human data — start low and slow'],
+    },
+    vitaminEmphasis: [
+      'Choline (alpha-GPC 300-600mg/day or CDP-choline 250-500mg)',
+      'Omega-3 EPA+DHA 2-3g/day',
+      'B-complex 50mg/day',
+      'Phosphatidylserine 100-200mg/day',
+    ],
+    lifestyleNotes: [
+      'Active learning during dose window (instrument, language, complex skill)',
+      'Sleep 7-9h — memory consolidation depends on it',
+      'Limit alcohol — antagonizes BDNF',
+    ],
+  }),
+  g({
+    peptideId: 'nad-plus',
+    displayName: 'NAD+',
+    adjustments: ['none'],
+    microEmphasis: ['niacin', 'tryptophan'],
+    foodsEmphasize: ['liver', 'tuna', 'salmon', 'mushrooms'],
+    summary:
+      'NAD+ supports mitochondrial function and longevity pathways. Adequate niacin/tryptophan in diet supports endogenous synthesis even when supplementing.',
+    prompt: 'NAD+ users: niacin + tryptophan-rich diet, time-restricted eating compounds the longevity signal.',
+    fitnessGuidance: {
+      emphasis: 'Zone-2 cardio 3-4x/week stacks beautifully — both pathways grow mitochondrial density.',
+      timing: 'Morning IV/SQ dose. Train within 2h for compounded effect.',
+      cautions: ['Flushing (especially with niacin form)', 'Don\'t use to mask poor sleep'],
+    },
+    vitaminEmphasis: [
+      'B-complex 50mg/day',
+      'CoQ10 100-200mg with fatty meal',
+      'Magnesium glycinate 300-400mg/day',
+      'Resveratrol 250-500mg/day with fat',
+    ],
+    lifestyleNotes: [
+      'Time-restricted eating (12-14h fast) compounds the AMPK/sirtuin signal',
+      'Cold exposure 2-3x/week',
+      'Sleep 7-9h',
+    ],
+  }),
+  g({
+    peptideId: 'ss-31',
+    displayName: 'SS-31 (Elamipretide)',
+    adjustments: ['none'],
+    foodsEmphasize: ['antioxidant-rich produce', 'omega-3 rich fish'],
+    summary:
+      'SS-31 (Elamipretide) targets the inner mitochondrial membrane, reducing oxidative damage. Pair with antioxidant diet and avoid pro-oxidant insults (alcohol, smoking, ultra-processed foods).',
+    prompt: 'SS-31 users: antioxidant-rich diet, avoid pro-oxidant insults.',
+    fitnessGuidance: {
+      emphasis: 'Zone-2 + resistance training. SS-31 protects mito from training stress, allowing slightly higher volume.',
+      timing: 'Morning dose.',
+      cautions: ['Don\'t use to outrun overtraining', 'Recovery still required'],
+    },
+    vitaminEmphasis: [
+      'CoQ10 200mg with fatty meal',
+      'Alpha-lipoic acid 300-600mg/day',
+      'Omega-3 EPA+DHA 2-3g/day',
+      'Vitamin E 200-400 IU/day with food',
+    ],
+    lifestyleNotes: [
+      'Limit alcohol',
+      'Cold exposure 2-3x/week',
+      'Sleep 7-9h',
+    ],
+  }),
+
+  // ── Sexual / reproductive ────────────────────────────────────────────────
+  g({
+    peptideId: 'pt-141',
+    displayName: 'PT-141 (Bremelanotide)',
+    adjustments: ['none'],
+    foodsAvoid: ['heavy meals 2h pre-dose (slows absorption + amplifies nausea)'],
+    summary:
+      'PT-141 (Bremelanotide) is a melanocortin receptor agonist used for sexual function. Avoid heavy meals 2 hours before dose to reduce nausea side effect.',
+    prompt: 'PT-141 users: empty-ish stomach 2h pre-dose, hydrate well.',
+    fitnessGuidance: {
+      emphasis: 'No specific training synergy.',
+      timing: 'Dose 1-2h before intended use.',
+      cautions: ['Nausea is the dose-limiting side effect', 'Watch BP — can elevate'],
+    },
+    vitaminEmphasis: [
+      'Magnesium glycinate 300mg/day (BP support)',
+      'L-citrulline 3-6g/day (synergistic with MC4R agonism)',
+    ],
+    lifestyleNotes: [
+      'Hydrate well pre-dose',
+      'Avoid alcohol within 4h pre-dose',
+    ],
+  }),
+  g({
+    peptideId: 'kisspeptin-10',
+    displayName: 'Kisspeptin-10',
+    adjustments: ['higher_protein'],
+    proteinGPerLbRange: [0.9, 1.1],
+    microEmphasis: ['zinc', 'vitamin D', 'magnesium'],
+    foodsEmphasize: ['oysters', 'red meat', 'eggs', 'leafy greens'],
+    summary:
+      'Kisspeptin-10 stimulates GnRH/LH/FSH axis. Pair with foundational T-support nutrients (zinc, D, magnesium). Adequate protein supports the upstream hormonal cascade.',
+    prompt: 'Kisspeptin users: zinc + D + magnesium, protein-forward diet.',
+    fitnessGuidance: {
+      emphasis: 'Heavy compound lifts 3-4x/week — leverages the natural T pulse.',
+      timing: 'Morning training. Daily or EOD dose.',
+      cautions: ['Don\'t over-do volume — cortisol antagonizes the LH pulse'],
+    },
+    vitaminEmphasis: [
+      'Zinc 25mg + copper 2mg',
+      'Vitamin D3 5000 IU + K2',
+      'Magnesium glycinate 400mg/day',
+      'Boron 3-6mg/day',
+    ],
+    lifestyleNotes: [
+      'Sleep 8h+ — LH pulses are sleep-dependent',
+      'Stress management essential',
+      'Limit alcohol — kills the LH pulse',
+    ],
+  }),
+
+  // ── Antioxidant / utility ────────────────────────────────────────────────
+  g({
+    peptideId: 'glutathione',
+    displayName: 'Glutathione',
+    adjustments: ['none'],
+    microEmphasis: ['sulfur', 'selenium', 'vitamin C'],
+    foodsEmphasize: ['cruciferous vegetables', 'garlic', 'onions', 'avocado', 'whey protein'],
+    foodsAvoid: ['alcohol (depletes GSH)', 'ultra-processed foods'],
+    summary:
+      'Glutathione is the body\'s master antioxidant. Pair with sulfur-rich foods and cofactors (NAC, glycine, vitamin C). Liposomal/IV/SQ all work — oral is poorly absorbed.',
+    prompt: 'Glutathione users: sulfur-rich diet (crucifers, alliums), NAC + glycine cofactors.',
+    fitnessGuidance: {
+      emphasis: 'Use post-heavy-training to support recovery. Light to moderate training otherwise.',
+      timing: 'Morning or post-workout.',
+      cautions: ['Sulfur smell post-IV is normal'],
+    },
+    vitaminEmphasis: [
+      'NAC 600-1200mg/day',
+      'Glycine 5g/day',
+      'Vitamin C 1000-2000mg/day',
+      'Selenium 100-200mcg/day',
+      'Alpha-lipoic acid 300-600mg/day',
+    ],
+    lifestyleNotes: [
+      'Cruciferous vegetables daily (sulforaphane drives endogenous GSH)',
+      'Limit alcohol',
+      'Sleep 7-9h',
+    ],
   }),
 ]);
 

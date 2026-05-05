@@ -7,6 +7,27 @@
  *
  * All syncs are fire-and-forget with error logging — the app works offline,
  * cloud sync is best-effort.
+ *
+ * ─── Multi-device conflict policy: Last-Writer-Wins ────────────────────────
+ *
+ * We use last-writer-wins (LWW) on row id via `upsert({...}, {onConflict:'id'})`.
+ * Whichever device's write hits Postgres last clobbers the row. No CRDT, no
+ * vector clocks, no merge of subfields. Trade-offs:
+ *
+ *   Pro: simple, predictable, works offline → online with no conflict UI.
+ *   Con: if two devices edit the SAME row at nearly the same time, the
+ *        later write wins entirely — sub-field-level merging is lost.
+ *
+ * Why this is fine for v1: the practical conflict surface is tiny. Users
+ * almost never edit the same meal entry / dose log / journal post on two
+ * devices in the same minute. The two-device "drift" failure mode is more
+ * about MISSING entries (offline writes that never made it up) than
+ * conflicting writes — and missing-entry recovery already happens via
+ * syncFromServer's id-keyed merge (server-wins on id collision).
+ *
+ * If we later need true concurrent-edit safety (collaborative posts,
+ * shared protocols), we can layer a `version` integer + optimistic-
+ * concurrency check on top of this without changing the schema.
  */
 
 import { supabase } from './supabase';

@@ -296,6 +296,44 @@ export const healthKitAdapter: BiomarkerAdapter = {
     await pullScalar('wrist_temperature', 'getWristTemperatureSamples', '°F');
     await pullScalar('respiratory_rate', 'getRespiratoryRateSamples', 'br/min');
 
+    // ── Workouts → emit per-workout active-energy + duration scalars ───
+    // We don't yet have a first-class Workout shape in SyncResult, so each
+    // HealthKit workout gets normalized into two scalars (kcal burned and
+    // duration in minutes). Downstream stores can still pull useful signal
+    // from this even before the workout type lands.
+    if (scopeSet.has('workouts')) {
+      const workouts = await getSamples<any>('getSamples', {
+        startDate,
+        endDate: now.toISOString(),
+        type: 'Workout',
+      });
+      for (const w of workouts) {
+        const ts = w.endDate ?? w.startDate ?? new Date().toISOString();
+        const start = w.startDate ? new Date(w.startDate).getTime() : 0;
+        const end = w.endDate ? new Date(w.endDate).getTime() : 0;
+        const minutes = end > start ? Math.round((end - start) / 60000) : 0;
+        const kcal = Number(w.calories ?? w.activeEnergyBurned ?? 0);
+        if (kcal > 0) {
+          scalars.push({
+            scope: 'active_energy',
+            value: kcal,
+            unit: 'kcal',
+            timestamp: ts,
+            source: 'apple_health',
+          });
+        }
+        if (minutes > 0) {
+          scalars.push({
+            scope: 'workouts' as BiomarkerScope,
+            value: minutes,
+            unit: 'min',
+            timestamp: ts,
+            source: 'apple_health',
+          });
+        }
+      }
+    }
+
     // ── Blood pressure (range) ──────────────────────────────────────────
     if (scopeSet.has('blood_pressure')) {
       const bp = await getSamples<any>('getBloodPressureSamples', { startDate });

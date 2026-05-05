@@ -14,7 +14,7 @@
  * Math matches peptidedosages.com.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -48,6 +48,8 @@ import {
 } from '../../src/components/ProtocolIntensityPicker';
 import { ReconstitutionGuideCard } from '../../src/components/ReconstitutionGuideCard';
 import { ActivateProtocolButton } from '../../src/components/ActivateProtocolButton';
+import { CollapsibleSection, type CollapsibleSectionRef } from '../../src/components/CollapsibleSection';
+import { CalculatorSectionTabs, type CalculatorTab } from '../../src/components/CalculatorSectionTabs';
 import type { Peptide } from '../../src/types';
 
 type WeightUnit = 'lbs' | 'kg';
@@ -99,6 +101,35 @@ export default function DosingCalculatorScreen() {
 
   // Results visibility
   const [showResults, setShowResults] = useState(false);
+
+  // Carousel-style section navigation. Each post-results section
+  // registers its onLayout y so tab-tap can scroll to it. Active tab
+  // tracks the most recently focused section.
+  const scrollRef = useRef<ScrollView>(null);
+  const sectionYsRef = useRef<Record<string, number>>({});
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const sectionRefs = useRef<Record<string, CollapsibleSectionRef | null>>({});
+
+  const recordSectionY = useCallback((id: string, y: number) => {
+    sectionYsRef.current[id] = y;
+  }, []);
+
+  const handleTabSelect = useCallback((id: string) => {
+    setActiveTabId(id);
+    sectionRefs.current[id]?.expand();
+    const y = sectionYsRef.current[id];
+    if (typeof y === 'number') {
+      // Offset so the section title sits below the tab strip + a bit of breathing room.
+      scrollRef.current?.scrollTo({ y: Math.max(0, y - 8), animated: true });
+    }
+  }, []);
+
+  const setSectionRef = useCallback(
+    (id: string) => (r: CollapsibleSectionRef | null) => {
+      sectionRefs.current[id] = r;
+    },
+    [],
+  );
 
   // Reset results whenever an input changes
   const resetResults = useCallback(() => setShowResults(false), []);
@@ -265,6 +296,28 @@ export default function DosingCalculatorScreen() {
     }
   }
 
+  // Tabs are derived from what will actually render in the post-results
+  // area. We hide the strip until the user has Calculated; once visible,
+  // entries appear/disappear based on whether a peptide is selected and
+  // a protocol template exists for it.
+  const calcTabs = useMemo<CalculatorTab[]>(() => {
+    if (!showResults || !canCalculate) return [];
+    const list: CalculatorTab[] = [
+      { id: 'action', label: 'Per injection', icon: 'medkit-outline' },
+    ];
+    if (selectedPeptide && protocolsForPeptide.length > 0) {
+      list.push({ id: 'cycle', label: 'Cycle plan', icon: 'calendar-outline' });
+      list.push({ id: 'supplies', label: 'Supplies', icon: 'cube-outline' });
+      list.push({ id: 'activate', label: 'Activate', icon: 'play-circle-outline' });
+    }
+    list.push({ id: 'pervial', label: 'Per-vial', icon: 'flask-outline' });
+    if (selectedPeptide) {
+      list.push({ id: 'mixing', label: 'Mixing', icon: 'water-outline' });
+      list.push({ id: 'about', label: 'About', icon: 'information-circle-outline' });
+    }
+    return list;
+  }, [showResults, canCalculate, selectedPeptide, protocolsForPeptide]);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
       <View style={styles.header}>
@@ -276,6 +329,7 @@ export default function DosingCalculatorScreen() {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
@@ -698,16 +752,36 @@ export default function DosingCalculatorScreen() {
           </View>
         )}
 
+        {/* Section tabs — horizontal swipeable nav for the post-results
+            cards. Renders only after Calculate so the pre-input flow
+            isn't cluttered. Tap a tab → expand + scroll-to that
+            section. */}
+        {calcTabs.length > 0 && (
+          <View style={{ marginBottom: Spacing.md }}>
+            <CalculatorSectionTabs
+              tabs={calcTabs}
+              activeId={activeTabId}
+              onSelect={handleTabSelect}
+            />
+          </View>
+        )}
+
         {/* Per-injection results — plain-language labels for non-technical
             users. Each row uses everyday language up top with the
             technical term as a secondary hint so the math stays
             verifiable. */}
         {showResults && canCalculate && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>What to do per injection</Text>
-            <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
-              Plain steps for the syringe. Tap "About" below for the science.
-            </Text>
+          <View
+            style={styles.section}
+            onLayout={(e) => recordSectionY('action', e.nativeEvent.layout.y)}
+          >
+            <CollapsibleSection
+              id="action"
+              title="What to do per injection"
+              hint='Plain steps for the syringe. Tap "About" below for the science.'
+              icon="medkit-outline"
+              ref={setSectionRef('action')}
+            >
             <GlassCard variant="glow">
               <ResultRow
                 label="Pull syringe up to"
@@ -738,6 +812,7 @@ export default function DosingCalculatorScreen() {
                 />
               )}
             </GlassCard>
+            </CollapsibleSection>
           </View>
         )}
 
@@ -806,34 +881,48 @@ export default function DosingCalculatorScreen() {
             button — shows the moment a peptide is selected so users
             see the protocol shape before plugging in numbers. */}
         {selectedPeptide && protocolsForPeptide.length > 0 && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>Cycle plan</Text>
-            <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
-              How much you'll need start-to-finish, framed for your goal.
-            </Text>
-            <ProtocolPlanCard
-              peptide={selectedPeptide}
-              protocol={protocolsForPeptide[0]}
-              vialMcg={vialMcg > 0 ? vialMcg : undefined}
-              intensity={intensity}
-            />
+          <View
+            style={styles.section}
+            onLayout={(e) => recordSectionY('cycle', e.nativeEvent.layout.y)}
+          >
+            <CollapsibleSection
+              id="cycle"
+              title="Cycle plan"
+              hint="How much you'll need start-to-finish, framed for your goal."
+              icon="calendar-outline"
+              ref={setSectionRef('cycle')}
+            >
+              <ProtocolPlanCard
+                peptide={selectedPeptide}
+                protocol={protocolsForPeptide[0]}
+                vialMcg={vialMcg > 0 ? vialMcg : undefined}
+                intensity={intensity}
+              />
+            </CollapsibleSection>
           </View>
         )}
 
         {/* Supplies estimator — concrete shopping list at 1 wk / 2 wks
             / full cycle. */}
         {selectedPeptide && protocolsForPeptide.length > 0 && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>Supplies</Text>
-            <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
-              Vials, syringes, and BAC water for each planning horizon.
-            </Text>
-            <SuppliesEstimatorCard
-              protocol={protocolsForPeptide[0]}
-              vialMcg={vialMcg > 0 ? vialMcg : undefined}
-              bacWaterMl={waterMl > 0 ? waterMl : undefined}
-              intensity={intensity}
-            />
+          <View
+            style={styles.section}
+            onLayout={(e) => recordSectionY('supplies', e.nativeEvent.layout.y)}
+          >
+            <CollapsibleSection
+              id="supplies"
+              title="Supplies"
+              hint="Vials, syringes, and BAC water for each planning horizon."
+              icon="cube-outline"
+              ref={setSectionRef('supplies')}
+            >
+              <SuppliesEstimatorCard
+                protocol={protocolsForPeptide[0]}
+                vialMcg={vialMcg > 0 ? vialMcg : undefined}
+                bacWaterMl={waterMl > 0 ? waterMl : undefined}
+                intensity={intensity}
+              />
+            </CollapsibleSection>
           </View>
         )}
 
@@ -842,18 +931,25 @@ export default function DosingCalculatorScreen() {
             shown after the user has run a calculation so the activated
             dose matches what's on screen. */}
         {showResults && canCalculate && selectedPeptide && protocolsForPeptide.length > 0 && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>Start tracking</Text>
-            <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
-              Add this protocol to your calendar with reminders for every dose.
-            </Text>
-            <ActivateProtocolButton
-              peptideId={selectedPeptide.id}
-              peptideName={selectedPeptide.name}
-              protocol={protocolsForPeptide[0]}
-              doseMcg={doseMcg}
-              frequency={frequency}
-            />
+          <View
+            style={styles.section}
+            onLayout={(e) => recordSectionY('activate', e.nativeEvent.layout.y)}
+          >
+            <CollapsibleSection
+              id="activate"
+              title="Start tracking"
+              hint="Add this protocol to your calendar with reminders for every dose."
+              icon="play-circle-outline"
+              ref={setSectionRef('activate')}
+            >
+              <ActivateProtocolButton
+                peptideId={selectedPeptide.id}
+                peptideName={selectedPeptide.name}
+                protocol={protocolsForPeptide[0]}
+                doseMcg={doseMcg}
+                frequency={frequency}
+              />
+            </CollapsibleSection>
           </View>
         )}
 
@@ -863,30 +959,37 @@ export default function DosingCalculatorScreen() {
             different vial options. Vial count + injections per week
             already live in the cards above. */}
         {showResults && canCalculate && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>Per-vial economics</Text>
-            <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
-              Math for comparing vial sizes side-by-side.
-            </Text>
-            <GlassCard>
-              <ResultRow
-                label="Doses per vial"
-                value={dosesPerVial.toFixed(1)}
-                highlight
-              />
-              <ResultRow
-                label="Days each vial lasts"
-                value={`${daysPerVial.toFixed(0)} days`}
-              />
-              <ResultRow
-                label="Weekly total"
-                value={formatDose(weeklyTotalMcg)}
-              />
-              <ResultRow
-                label="Monthly total (est.)"
-                value={formatDose(monthlyTotalMcg)}
-              />
-            </GlassCard>
+          <View
+            style={styles.section}
+            onLayout={(e) => recordSectionY('pervial', e.nativeEvent.layout.y)}
+          >
+            <CollapsibleSection
+              id="pervial"
+              title="Per-vial economics"
+              hint="Math for comparing vial sizes side-by-side."
+              icon="flask-outline"
+              ref={setSectionRef('pervial')}
+            >
+              <GlassCard>
+                <ResultRow
+                  label="Doses per vial"
+                  value={dosesPerVial.toFixed(1)}
+                  highlight
+                />
+                <ResultRow
+                  label="Days each vial lasts"
+                  value={`${daysPerVial.toFixed(0)} days`}
+                />
+                <ResultRow
+                  label="Weekly total"
+                  value={formatDose(weeklyTotalMcg)}
+                />
+                <ResultRow
+                  label="Monthly total (est.)"
+                  value={formatDose(monthlyTotalMcg)}
+                />
+              </GlassCard>
+            </CollapsibleSection>
           </View>
         )}
 
@@ -895,16 +998,23 @@ export default function DosingCalculatorScreen() {
             Surfaced as its own card (not buried inside PeptideGuide) so
             it gets read. */}
         {selectedPeptide && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>How to mix safely</Text>
-            <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
-              Sterile technique keeps the peptide active and you safe.
-            </Text>
-            <ReconstitutionGuideCard
-              protocol={protocolsForPeptide[0]}
-              vialMg={vialUnit === 'mg' ? vialRaw : vialRaw / 1000}
-              bacWaterMl={waterMl}
-            />
+          <View
+            style={styles.section}
+            onLayout={(e) => recordSectionY('mixing', e.nativeEvent.layout.y)}
+          >
+            <CollapsibleSection
+              id="mixing"
+              title="How to mix safely"
+              hint="Sterile technique keeps the peptide active and you safe."
+              icon="water-outline"
+              ref={setSectionRef('mixing')}
+            >
+              <ReconstitutionGuideCard
+                protocol={protocolsForPeptide[0]}
+                vialMg={vialUnit === 'mg' ? vialRaw : vialRaw / 1000}
+                bacWaterMl={waterMl}
+              />
+            </CollapsibleSection>
           </View>
         )}
 
@@ -912,16 +1022,24 @@ export default function DosingCalculatorScreen() {
             math, dose-table examples, storage, lifestyle/timing, side
             effects, contraindications, references, disclaimer. */}
         {showResults && selectedPeptide && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: t.text }]}>About {selectedPeptide.name}</Text>
-            <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
-              Why your numbers above look the way they do — protocol, mechanism, storage, and safety.
-            </Text>
-            <PeptideGuide
-              peptide={selectedPeptide}
-              vial_mg={vialUnit === 'mg' ? vialRaw : vialRaw / 1000}
-              bac_water_ml={waterMl}
-            />
+          <View
+            style={styles.section}
+            onLayout={(e) => recordSectionY('about', e.nativeEvent.layout.y)}
+          >
+            <CollapsibleSection
+              id="about"
+              title={`About ${selectedPeptide.name}`}
+              hint="Why your numbers above look the way they do — protocol, mechanism, storage, and safety."
+              icon="information-circle-outline"
+              ref={setSectionRef('about')}
+              defaultExpanded={false}
+            >
+              <PeptideGuide
+                peptide={selectedPeptide}
+                vial_mg={vialUnit === 'mg' ? vialRaw : vialRaw / 1000}
+                bac_water_ml={waterMl}
+              />
+            </CollapsibleSection>
           </View>
         )}
 
