@@ -17,6 +17,7 @@ import { useStackStore } from '../../src/store/useStackStore';
 import { GlassCard } from '../../src/components/GlassCard';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
 import { ProtocolPlanCard } from '../../src/components/ProtocolPlanCard';
+import { SuppliesEstimatorCard } from '../../src/components/SuppliesEstimatorCard';
 import { KeepItSimpleCard } from '../../src/components/KeepItSimpleCard';
 import { getCategoryColor } from '../../src/constants/categories';
 import { Disclaimer } from '../../src/components/Disclaimer';
@@ -691,6 +692,13 @@ export default function PeptideDetailScreen() {
         {protocols.length > 0 && (
           <View style={styles.section}>
             <ProtocolPlanCard peptide={peptide} protocol={protocols[0]} />
+          </View>
+        )}
+
+        {/* Supplies estimator — concrete shopping list per planning horizon. */}
+        {protocols.length > 0 && (
+          <View style={styles.section}>
+            <SuppliesEstimatorCard protocol={protocols[0]} />
           </View>
         )}
 

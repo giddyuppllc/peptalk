@@ -40,6 +40,7 @@ import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
 import { PeptideGuide } from '../../src/components/PeptideGuide';
 import { ProtocolPlanCard } from '../../src/components/ProtocolPlanCard';
+import { SuppliesEstimatorCard } from '../../src/components/SuppliesEstimatorCard';
 import type { Peptide } from '../../src/types';
 
 type WeightUnit = 'lbs' | 'kg';
@@ -749,6 +750,23 @@ export default function DosingCalculatorScreen() {
               peptide={selectedPeptide}
               protocol={protocolsForPeptide[0]}
               vialMcg={vialMcg > 0 ? vialMcg : undefined}
+            />
+          </View>
+        )}
+
+        {/* Supplies estimator — shopping list at 1 wk / 2 wks / full cycle.
+            Mirrors the practical "Supplies Needed" table users expect
+            from a dosing reference page. */}
+        {selectedPeptide && protocolsForPeptide.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: t.text }]}>Supplies</Text>
+            <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
+              Vials, syringes, and BAC water for each planning horizon.
+            </Text>
+            <SuppliesEstimatorCard
+              protocol={protocolsForPeptide[0]}
+              vialMcg={vialMcg > 0 ? vialMcg : undefined}
+              bacWaterMl={waterMl > 0 ? waterMl : undefined}
             />
           </View>
         )}
