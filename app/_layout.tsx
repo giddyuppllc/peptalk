@@ -343,6 +343,20 @@ function RootLayout() {
       } catch (err) {
         if (__DEV__) console.warn('[foreground-sync] threw:', err);
       }
+
+      // Refresh the subscription tier on foreground — closes the
+      // PaywallGate-after-IAP loophole where the user completes a
+      // purchase, the validatePurchase call resolves while the app is
+      // backgrounded (Apple's purchase sheet briefly suspends RN), and
+      // they return to the original gated screen still showing the
+      // paywall. Bypass the throttle here since this is a different
+      // signal than HealthKit sync.
+      useSubscriptionStore
+        .getState()
+        .syncFromServer()
+        ?.catch?.((err: unknown) => {
+          if (__DEV__) console.warn('[foreground-sync] subscription failed:', err);
+        });
     });
 
     return () => {
@@ -528,6 +542,13 @@ function RootLayout() {
           />
           <Stack.Screen
             name="admin/community-queue"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="settings/notifications"
             options={{
               headerShown: false,
               animation: 'slide_from_right',

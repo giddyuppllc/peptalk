@@ -1481,7 +1481,10 @@ export default function ProfileScreen() {
               icon="notifications-outline"
               label={notificationsAvailable() ? 'Notifications' : 'Notifications · Off'}
               onPress={() => {
-                if (notificationsAvailable()) return;
+                if (notificationsAvailable()) {
+                  router.push('/settings/notifications' as any);
+                  return;
+                }
                 Alert.alert(
                   'Notifications currently off',
                   "Push notifications are disabled in this build while we sort out a native compatibility issue. In-app banners still show for urgent items like expiring meal preps. We'll re-enable push in a later update.",

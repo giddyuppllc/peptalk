@@ -167,7 +167,7 @@ export default function OnboardingScreen() {
 
   const canContinue = useMemo(() => {
     if (step === 0) return true; // Welcome — always can continue
-    if (step === 1) return Boolean(profile.gender && selectedAge >= 13 && profile.healthGoals.length > 0);
+    if (step === 1) return Boolean(profile.gender && selectedAge >= 18 && profile.healthGoals.length > 0);
     if (step === 2) return true; // Health basics is optional
     if (step === 3) {
       return (
@@ -424,10 +424,10 @@ export default function OnboardingScreen() {
                   keyboardType="number-pad"
                   maxLength={3}
                   accessibilityLabel="Age"
-                  accessibilityHint="Enter your age between 13 and 100"
+                  accessibilityHint="Enter your age between 18 and 100"
                 />
-                {selectedAge > 0 && selectedAge < 13 && (
-                  <Text style={s.inlineHint}>You must be 13 or older to use PepTalk.</Text>
+                {selectedAge > 0 && selectedAge < 18 && (
+                  <Text style={s.inlineHint}>You must be 18 or older to use PepTalk.</Text>
                 )}
 
                 {/* Goals */}
