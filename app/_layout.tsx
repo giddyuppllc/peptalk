@@ -388,6 +388,14 @@ function RootLayout() {
       usePantryStore.getState().syncFromServer()?.catch?.(() => {});
       useCycleStore.getState().syncFromServer()?.catch?.(() => {});
       useIntegrationsStore.getState().syncFromServer()?.catch?.(() => {});
+      // Health profile + chat — also need to rehydrate on auth flip so a
+      // fresh signup or device-switch picks up server state. Previously
+      // only ran at boot, leaving signup users with empty health profiles
+      // until the next cold launch.
+      syncHealthProfileFromServer()?.catch?.((err: unknown) => {
+        if (__DEV__) console.warn('[auth] syncHealthProfileFromServer failed:', err);
+      });
+      useChatStore.getState().flushPendingSyncs()?.catch?.(() => {});
     }
     wasAuthenticatedRef.current = isAuthenticated;
   }, [isAuthenticated, authHydrated]);
