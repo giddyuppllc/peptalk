@@ -70,6 +70,13 @@ const _RAW_PEPTIDES: Peptide[] = [
     sequenceLength: 39,
     halfLife: '~6 days',
     storageTemp: '-20°C',
+    uses: {
+      primaryUses: ['Significant weight loss', 'Body recomposition', 'Metabolic syndrome', 'Hepatic fat reduction'],
+      commonGoals: ['Substantial weight reduction', 'Visceral fat loss', 'Diabetes prevention', 'NASH management'],
+      whatPeopleReport: 'Users in research contexts commonly report rapid early appetite suppression with a stronger satiety response than dual GLP-1/GIP agonists, plus noticeable thermogenic effects from glucagon receptor activation (warmth, modest heart-rate elevation). Weight loss often outpaces tirzepatide on a week-by-week basis. GI side effects (nausea, transient constipation) are most common during titration weeks.',
+      popularWith: ['High-BMI weight management', 'Metabolic disease research', 'Body recomposition', 'Type 2 diabetes adjacency'],
+      pairsWith: ['cagrilintide', 'aod-9604', 'mots-c', '5-amino-1mq'],
+    },
   },
   {
     id: 'cagrilintide',
@@ -87,6 +94,13 @@ const _RAW_PEPTIDES: Peptide[] = [
     sequenceLength: 37,
     halfLife: '~7 days',
     storageTemp: '2-8°C',
+    uses: {
+      primaryUses: ['Weight loss', 'Appetite regulation', 'Combined GLP-1 stacking', 'Glycemic control'],
+      commonGoals: ['Sustained satiety', 'Body recomposition', 'GLP-1 plateau breakthrough'],
+      whatPeopleReport: 'Users typically pair cagrilintide with semaglutide (CagriSema combo) and report stronger satiety and slower meal-to-meal hunger return than semaglutide alone. As an amylin agonist it works on a different pathway than GLP-1s, so users often describe a "smoother" appetite curve when combined. Weekly dosing keeps logistics simple.',
+      popularWith: ['GLP-1 stack users', 'Plateau breakers', 'Long-term weight management'],
+      pairsWith: ['semaglutide', 'tirzepatide', 'aod-9604'],
+    },
   },
   {
     id: 'mazdutide',
@@ -103,6 +117,13 @@ const _RAW_PEPTIDES: Peptide[] = [
     molecularWeight: '~4200 Da',
     halfLife: '~5-7 days',
     storageTemp: '-20°C',
+    uses: {
+      primaryUses: ['Weight loss', 'Glycemic control', 'Hepatic fat reduction', 'Metabolic syndrome'],
+      commonGoals: ['Body weight reduction', 'HbA1c improvement', 'NAFLD / NASH support'],
+      whatPeopleReport: 'Users report appetite suppression similar to semaglutide with an added thermogenic kick from glucagon receptor activation (warmth, slight resting energy bump). Liver-fat improvements are commonly cited in users with elevated ALT or fatty liver markers. GI side effects taper after the titration period.',
+      popularWith: ['Metabolic syndrome research', 'Body recomposition', 'Liver health'],
+      pairsWith: ['cagrilintide', 'aod-9604', 'mots-c'],
+    },
   },
   {
     id: 'survodutide',
@@ -119,6 +140,13 @@ const _RAW_PEPTIDES: Peptide[] = [
     molecularWeight: '~4300 Da',
     halfLife: '~5-6 days',
     storageTemp: '-20°C',
+    uses: {
+      primaryUses: ['Weight loss', 'NASH / liver fat reduction', 'Metabolic disease research', 'Appetite suppression'],
+      commonGoals: ['Substantial weight reduction', 'Liver health', 'Visceral fat loss'],
+      whatPeopleReport: 'Users describe survodutide\'s effect profile as similar to mazdutide — strong appetite suppression with thermogenic effects from glucagon receptor activity. Reductions in fasted glucose and improvements in liver enzyme panels are commonly mentioned. Boehringer Ingelheim\'s Phase 3 NASH program is the headline research context.',
+      popularWith: ['NASH research', 'High-BMI weight management', 'Liver health-focused users'],
+      pairsWith: ['cagrilintide', 'aod-9604'],
+    },
   },
   {
     id: 'aod-9604',
