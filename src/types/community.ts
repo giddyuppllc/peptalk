@@ -74,6 +74,9 @@ export interface CommunityPost {
   updatedAt: string;
   /** ISO timestamp of the most recent edit (null/undefined when never edited). */
   lastEditedAt?: string;
+  /** AI moderation state — only relevant when imageUrls is non-empty.
+   *  'approved' is the default for text-only posts. */
+  moderationStatus?: 'pending' | 'approved' | 'flagged';
   /** Public R2 URLs for post attachments (max 4). */
   imageUrls?: string[];
   /** Hydrated by the read query when joining profiles. */
@@ -92,6 +95,7 @@ export interface CommunityComment {
   reactionCount: number;
   createdAt: string;
   lastEditedAt?: string;
+  moderationStatus?: 'pending' | 'approved' | 'flagged';
   imageUrls?: string[];
   author?: CommunityAuthor;
   myReactions?: CommunityReactionKind[];

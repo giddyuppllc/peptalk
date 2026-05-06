@@ -334,6 +334,14 @@ export default function PostDetailScreen() {
                 edited {new Date(post.lastEditedAt).toLocaleString()}
               </Text>
             )}
+            {post.moderationStatus === 'pending' && currentUserId === post.userId && (
+              <View style={styles.modPendingBadge}>
+                <Ionicons name="hourglass-outline" size={12} color="#9b6cd9" />
+                <Text style={styles.modPendingText}>
+                  Image review pending — visible to others once approved
+                </Text>
+              </View>
+            )}
             {post.imageUrls && post.imageUrls.length > 0 && (
               <View style={styles.postImagesRow}>
                 {post.imageUrls.map((url) => (
@@ -548,6 +556,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontStyle: 'italic',
     marginTop: 6,
+  },
+  modPendingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(155,108,217,0.10)',
+    borderRadius: 8,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  modPendingText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#9b6cd9',
   },
   editModalOverlay: {
     position: 'absolute',

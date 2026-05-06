@@ -35,6 +35,7 @@ import { MacroProgressRing } from '../../src/components/MacroProgressRing';
 import { ActiveProtocolBanner } from '../../src/components/ActiveProtocolBanner';
 import { TodaysPlanCard } from '../../src/components/TodaysPlanCard';
 import { IntelligenceHeatMap } from '../../src/components/IntelligenceHeatMap';
+import { ReferralPromptBanner } from '../../src/components/ReferralPromptBanner';
 import { PantryAlertCard } from '../../src/components/PantryAlertCard';
 import { DailyInsightCard } from '../../src/components/DailyInsightCard';
 import { ReadinessCard } from '../../src/components/ReadinessCard';
@@ -1038,6 +1039,9 @@ export default function DashboardScreen() {
         <View style={styles.protocolBannerWrap}>
           <IntelligenceHeatMap weeks={12} />
         </View>
+
+        {/* Referral code nudge — auto-hides once redeemed or dismissed. */}
+        <ReferralPromptBanner />
 
         {/* ═══════════════════════════════════════════════════════════════
             GET STARTED (new users only)
