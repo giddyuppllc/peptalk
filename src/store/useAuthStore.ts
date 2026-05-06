@@ -303,6 +303,15 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       logout: async () => {
+        // Drop the device's push-token row BEFORE signOut — otherwise
+        // a shared device keeps receiving pushes addressed to the
+        // signed-out user. Best-effort; if it fails the cron-prune
+        // path on DeviceNotRegistered eventually catches it.
+        try {
+          const { clearPushToken } = await import('../services/pushTokenSync');
+          await clearPushToken();
+        } catch {}
+
         // Attempt server-side signOut first. On a health-sensitive app
         // running on a shared device, a failed signOut isn't a reason to
         // leave local data intact — we still wipe below. But we DO want

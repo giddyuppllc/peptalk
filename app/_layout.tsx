@@ -360,14 +360,26 @@ function RootLayout() {
         });
 
       // Fire local banners for any community notifications (replies,
-      // mentions, etc.) that arrived while backgrounded. Replaces the
-      // need for real Expo push delivery in v1.
+      // mentions, etc.) that arrived while backgrounded. Stays as the
+      // belt-and-suspenders fallback even with real push wired up —
+      // covers the edge case where push was missed (no permission yet,
+      // expired token between sync windows, etc.).
       import('../src/services/communityNotificationDelivery')
         .then(({ deliverPendingCommunityNotifications }) =>
           deliverPendingCommunityNotifications(),
         )
         .catch((err: unknown) => {
           if (__DEV__) console.warn('[foreground-sync] community delivery failed:', err);
+        });
+
+      // Refresh / register the Expo push token so community-push-fanout
+      // can deliver real pushes when the app is backgrounded. Cheap
+      // upsert; bumps last_seen_at on the existing row when nothing
+      // changed.
+      import('../src/services/pushTokenSync')
+        .then(({ syncPushToken }) => syncPushToken())
+        .catch((err: unknown) => {
+          if (__DEV__) console.warn('[foreground-sync] push-token sync failed:', err);
         });
     });
 
@@ -407,6 +419,12 @@ function RootLayout() {
         if (__DEV__) console.warn('[auth] syncHealthProfileFromServer failed:', err);
       });
       useChatStore.getState().flushPendingSyncs()?.catch?.(() => {});
+
+      // Register the device's Expo push token so server-side fanout
+      // can deliver pushes for community replies / mentions / reactions.
+      import('../src/services/pushTokenSync')
+        .then(({ syncPushToken }) => syncPushToken())
+        .catch(() => {});
     }
     wasAuthenticatedRef.current = isAuthenticated;
   }, [isAuthenticated, authHydrated]);
