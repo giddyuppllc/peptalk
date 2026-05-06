@@ -1,9 +1,10 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { selectionTick } from '../../src/utils/haptics';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
+import { ProfileShortcutFab } from '../../src/components/ProfileShortcutFab';
 
 type TabIconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -53,43 +54,47 @@ export default function TabsLayout() {
   const t = useTheme();
   const accent = useSectionAccent();
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: accent.deep,
-        tabBarInactiveTintColor: t.textSecondary,
-        tabBarStyle: [styles.tabBar, {
-          backgroundColor: t.tabBar,
-          borderTopColor: t.glassBorder,
-        }],
-        tabBarLabelStyle: styles.tabBarLabel,
-      }}
-    >
-      {TAB_CONFIG.map((tab) => (
-        <Tabs.Screen
-          key={tab.name}
-          name={tab.name}
-          options={{
-            title: tab.title,
-            tabBarIcon: ({ focused, color, size }) => (
-              <Ionicons
-                name={focused ? tab.activeIcon : tab.icon}
-                size={size}
-                color={color}
-              />
-            ),
-          }}
-          listeners={{
-            tabPress: () => selectionTick(),
-          }}
-        />
-      ))}
-      {/* Hidden tabs — still routable but not in tab bar */}
-      <Tabs.Screen name="stack-builder" options={{ href: null }} />
-      <Tabs.Screen name="check-in" options={{ href: null }} />
-      <Tabs.Screen name="calendar" options={{ href: null }} />
-      <Tabs.Screen name="profile" options={{ href: null }} />
-    </Tabs>
+    <View style={{ flex: 1 }}>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: accent.deep,
+          tabBarInactiveTintColor: t.textSecondary,
+          tabBarStyle: [styles.tabBar, {
+            backgroundColor: t.tabBar,
+            borderTopColor: t.glassBorder,
+          }],
+          tabBarLabelStyle: styles.tabBarLabel,
+        }}
+      >
+        {TAB_CONFIG.map((tab) => (
+          <Tabs.Screen
+            key={tab.name}
+            name={tab.name}
+            options={{
+              title: tab.title,
+              tabBarIcon: ({ focused, color, size }) => (
+                <Ionicons
+                  name={focused ? tab.activeIcon : tab.icon}
+                  size={size}
+                  color={color}
+                />
+              ),
+            }}
+            listeners={{
+              tabPress: () => selectionTick(),
+            }}
+          />
+        ))}
+        {/* Hidden tabs — still routable but not in tab bar */}
+        <Tabs.Screen name="stack-builder" options={{ href: null }} />
+        <Tabs.Screen name="check-in" options={{ href: null }} />
+        <Tabs.Screen name="calendar" options={{ href: null }} />
+        <Tabs.Screen name="profile" options={{ href: null }} />
+      </Tabs>
+      {/* Top-right profile shortcut overlay — visible on all non-Home tabs. */}
+      <ProfileShortcutFab />
+    </View>
   );
 }
 

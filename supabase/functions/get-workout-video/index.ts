@@ -33,9 +33,19 @@ import manifest from './manifest.json' with { type: 'json' };
 // any key that isn't in this map, even for authenticated Pro users —
 // otherwise a tampered client could ask us to sign arbitrary R2 paths
 // (e.g. `../private/*`) and use Pro tier as a bucket-wide URL minter.
-const ALLOWED_KEYS = new Map<string, string>();
-for (const v of manifest as Array<{ slug: string; objectKey: string }>) {
-  if (v.slug && v.objectKey) ALLOWED_KEYS.set(v.slug, v.objectKey);
+//
+// Optional .vtt caption files live alongside the video — when the
+// manifest entry has captionKey set (or the .mp4 was processed by
+// transcribe-workout-video and its sibling .vtt landed in R2), we
+// also sign a GET URL for the captions and return both.
+interface ManifestEntry {
+  slug: string;
+  objectKey: string;
+  captionKey?: string;
+}
+const ALLOWED_KEYS = new Map<string, ManifestEntry>();
+for (const v of manifest as ManifestEntry[]) {
+  if (v.slug && v.objectKey) ALLOWED_KEYS.set(v.slug, v);
 }
 
 const SIGN_TTL_SEC = 6 * 60 * 60; // 6 hours
@@ -121,19 +131,33 @@ Deno.serve(async (req: Request) => {
   if (!slug || typeof slug !== 'string') {
     return json({ error: 'slug required' }, 400);
   }
-  const objectKey = ALLOWED_KEYS.get(slug);
-  if (!objectKey) {
+  const entry = ALLOWED_KEYS.get(slug);
+  if (!entry) {
     return json({ error: 'Unknown video slug' }, 404);
   }
 
-  // 4. Sign
+  // 4. Sign — main video URL + optional captions URL.
   try {
-    const command = new GetObjectCommand({
-      Bucket: Deno.env.get('R2_BUCKET') ?? 'peptalktraining',
-      Key: objectKey,
-    });
-    const url = await getSignedUrl(s3(), command, { expiresIn: SIGN_TTL_SEC });
-    return json({ url, expiresInSec: SIGN_TTL_SEC });
+    const bucket = Deno.env.get('R2_BUCKET') ?? 'peptalktraining';
+    const url = await getSignedUrl(
+      s3(),
+      new GetObjectCommand({ Bucket: bucket, Key: entry.objectKey }),
+      { expiresIn: SIGN_TTL_SEC },
+    );
+    let captionUrl: string | undefined;
+    if (entry.captionKey) {
+      try {
+        captionUrl = await getSignedUrl(
+          s3(),
+          new GetObjectCommand({ Bucket: bucket, Key: entry.captionKey }),
+          { expiresIn: SIGN_TTL_SEC },
+        );
+      } catch (err) {
+        // Captions failure shouldn't kill video playback.
+        console.warn('[get-workout-video] caption sign failed:', err);
+      }
+    }
+    return json({ url, captionUrl, expiresInSec: SIGN_TTL_SEC });
   } catch (err) {
     console.error('[get-workout-video] sign failed:', err);
     return json({ error: 'Failed to sign URL' }, 500);

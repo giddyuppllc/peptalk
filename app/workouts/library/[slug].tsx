@@ -28,23 +28,29 @@ export default function LibraryPlayerScreen() {
   const exercise = video?.exerciseId ? EXERCISES.find((e) => e.id === video.exerciseId) : null;
 
   const [url, setUrl] = useState<string | null>(null);
+  const [captionUrl, setCaptionUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!video) return;
     setUrl(null);
+    setCaptionUrl(null);
     setError(null);
     resolveVideoUrl(video.slug).then((res) => {
-      if (res.ok) setUrl(res.url);
-      else setError(
-        res.reason === 'not_pro'
-          ? 'Workout videos require PepTalk Pro.'
-          : res.reason === 'not_signed_in'
-            ? 'Sign in to play workout videos.'
-            : res.reason === 'not_found'
-              ? 'This video is no longer available.'
-              : 'Network error — try again.'
-      );
+      if (res.ok) {
+        setUrl(res.url);
+        setCaptionUrl(res.captionUrl ?? null);
+      } else {
+        setError(
+          res.reason === 'not_pro'
+            ? 'Workout videos require PepTalk Pro.'
+            : res.reason === 'not_signed_in'
+              ? 'Sign in to play workout videos.'
+              : res.reason === 'not_found'
+                ? 'This video is no longer available.'
+                : 'Network error — try again.'
+        );
+      }
     });
   }, [video?.slug]);
 
@@ -98,6 +104,12 @@ export default function LibraryPlayerScreen() {
             shouldPlay
           />
         )}
+        {captionUrl && (
+          <View style={s.ccBadge}>
+            <Ionicons name="text" size={12} color="#fff" />
+            <Text style={s.ccBadgeText}>CC</Text>
+          </View>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
@@ -138,4 +150,17 @@ const s = StyleSheet.create({
   errorTitle: { fontSize: 18, fontWeight: '700', marginTop: 12 },
   backBtn: { marginTop: 20, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 999 },
   backBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  ccBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+  },
+  ccBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
 });

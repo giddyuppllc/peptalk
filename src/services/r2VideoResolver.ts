@@ -19,6 +19,10 @@ import { getVideoBySlug } from '../data/workoutVideos';
 
 interface CachedUrl {
   url: string;
+  /** Optional WebVTT captions URL — present when the video has been
+   *  transcribed via transcribe-workout-video and the manifest entry
+   *  has captionKey set. */
+  captionUrl?: string;
   /** Epoch ms when this signed URL stops being valid. */
   expiresAt: number;
 }
@@ -29,7 +33,7 @@ const cache = new Map<string, CachedUrl>();
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
 export type VideoResolveResult =
-  | { ok: true; url: string }
+  | { ok: true; url: string; captionUrl?: string }
   | { ok: false; reason: 'not_pro' | 'not_signed_in' | 'not_found' | 'network' };
 
 export async function resolveVideoUrl(slug: string): Promise<VideoResolveResult> {
@@ -41,7 +45,7 @@ export async function resolveVideoUrl(slug: string): Promise<VideoResolveResult>
   // 2. Cache hit?
   const cached = cache.get(slug);
   if (cached && cached.expiresAt - Date.now() > REFRESH_BUFFER_MS) {
-    return { ok: true, url: cached.url };
+    return { ok: true, url: cached.url, captionUrl: cached.captionUrl };
   }
 
   // 3. Auth — must be signed in to call the function.
@@ -69,8 +73,9 @@ export async function resolveVideoUrl(slug: string): Promise<VideoResolveResult>
       return { ok: false, reason: 'not_found' };
     }
     const ttlMs = (data.expiresInSec ?? 6 * 60 * 60) * 1000;
-    cache.set(slug, { url: data.url, expiresAt: Date.now() + ttlMs });
-    return { ok: true, url: data.url };
+    const captionUrl = typeof data.captionUrl === 'string' ? data.captionUrl : undefined;
+    cache.set(slug, { url: data.url, captionUrl, expiresAt: Date.now() + ttlMs });
+    return { ok: true, url: data.url, captionUrl };
   } catch {
     return { ok: false, reason: 'network' };
   }
