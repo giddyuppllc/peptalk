@@ -80,7 +80,7 @@ function getArticleCategoryColor(category: ArticleCategory): string {
     case 'testing':
       return '#f0d68a';
     case 'regulation':
-      return '#F4E9A7';
+      return '#F4ECC2';
     case 'delivery':
       return '#06b6d4';
     default:
@@ -99,7 +99,7 @@ function getGuideCategoryColor(category: GuideCategory): string {
     case 'dosing':
       return '#f0d68a';
     case 'testing':
-      return '#F4E9A7';
+      return '#F4ECC2';
     case 'general':
       return '#6B7280';
     default:

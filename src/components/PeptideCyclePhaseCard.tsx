@@ -29,7 +29,7 @@ interface PeptideCyclePhaseCardProps {
 
 const PHASE_COLORS: Record<CyclePhase, string> = {
   menstrual:  '#E89672',
-  follicular: '#F2C7A9',
+  follicular: '#F0CFB1',
   ovulatory:  '#C76B45',
   luteal:     '#E8C9BD',
 };

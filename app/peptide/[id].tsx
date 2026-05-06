@@ -41,10 +41,10 @@ function getApprovalColor(status: string): string {
     case 'fda_approved': return '#22c55e';
     case 'ema_approved': return '#7ABED0';
     case 'approved_other': return '#06b6d4';
-    case 'phase_3': return '#CADEE5';
+    case 'phase_3': return '#D8E3E7';
     case 'phase_2': return '#f97316';
     case 'phase_1': return '#ef4444';
-    case 'preclinical': return '#BADDCB';
+    case 'preclinical': return '#A4D9D1';
     default: return '#6b7280';
   }
 }
@@ -65,7 +65,7 @@ function getApprovalLabel(status: string): string {
 function getEvidenceColor(grade: string): string {
   switch (grade) {
     case 'established': return '#22c55e';
-    case 'moderate': return '#CADEE5';
+    case 'moderate': return '#D8E3E7';
     case 'preliminary': return '#f97316';
     default: return '#6b7280';
   }
@@ -614,7 +614,7 @@ export default function PeptideDetailScreen() {
                 <Text style={styles.safetySubtitle}>Serious Adverse Effects</Text>
                 {safetyProfile.seriousAdverseEffects.map((e, i) => (
                   <View key={i} style={styles.bulletRow}>
-                    <Text style={[styles.bulletDot, { color: '#CADEE5' }]}>•</Text>
+                    <Text style={[styles.bulletDot, { color: '#D8E3E7' }]}>•</Text>
                     <Text style={styles.bulletText}>{e}</Text>
                   </View>
                 ))}
@@ -865,7 +865,7 @@ export default function PeptideDetailScreen() {
             }
             activeOpacity={0.8}
           >
-            <Ionicons name="chatbubble-outline" size={18} color="#BADDCB" />
+            <Ionicons name="chatbubble-outline" size={18} color="#A4D9D1" />
             <Text style={styles.quickActionText}>Ask Aimee</Text>
           </TouchableOpacity>
         </View>
@@ -926,11 +926,11 @@ export default function PeptideDetailScreen() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const PEACH = '#7ABED0';
-const PEACH_SOFT = '#F5DAD6';
+const PEACH_SOFT = '#F2D8D5';
 const TEXT = '#2D2D2D';
 const TEXT_SECONDARY = '#6B7280';
 const TEXT_MUTED = '#9CA3AF';
-const BG = '#EDE6D6'; // Cloud Dancer
+const BG = '#F0EEE9'; // Cloud Dancer
 const SURFACE = '#FAF5EF';
 const CARD_BORDER = 'rgba(0,0,0,0.06)';
 const DIVIDER = 'rgba(0,0,0,0.06)';

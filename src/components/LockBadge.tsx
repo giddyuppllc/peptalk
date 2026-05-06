@@ -22,7 +22,7 @@ interface LockBadgeProps {
 }
 
 const TIER_COLORS: Record<LockTier, readonly [string, string]> = {
-  plus: ['#E89672', '#F5DAD6'] as const,
+  plus: ['#E89672', '#F2D8D5'] as const,
   pro: ['#7FB3D8', '#3E7CB1'] as const,
 };
 

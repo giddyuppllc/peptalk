@@ -553,7 +553,7 @@ export default function CheckInScreen() {
 
   // ── Step-by-step flow ─────────────────────────────────────────────────────
   const ACCENT = '#E89672'; // Home peach — matches FAB "Daily Log" color
-  const ACCENT_LIGHT = '#F2C7A9';
+  const ACCENT_LIGHT = '#F0CFB1';
 
   const STEPS = [
     { key: 'mood', title: 'How are you feeling?', subtitle: 'Rate your overall mood right now' },
@@ -920,7 +920,7 @@ export default function CheckInScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EDE6D6',
+    backgroundColor: '#F0EEE9',
   },
   content: {
     paddingHorizontal: 20,

@@ -21,7 +21,7 @@ function getCategoryColor(category: GuideCategory): string {
     case 'injection':      return '#e3a7a1';
     case 'storage':        return '#c7d7e6';
     case 'dosing':         return '#f0d68a';
-    case 'testing':        return '#F4E9A7';
+    case 'testing':        return '#F4ECC2';
     case 'general':        return '#6B7280';
     default:               return '#6B7280';
   }
@@ -175,7 +175,7 @@ export default function GuideDetailScreen() {
         {guide.warnings && guide.warnings.length > 0 && (
           <View style={styles.warningBox}>
             <View style={styles.warningHeader}>
-              <Ionicons name="warning" size={20} color="#F4E9A7" />
+              <Ionicons name="warning" size={20} color="#F4ECC2" />
               <Text style={styles.warningTitle}>Safety Warnings</Text>
             </View>
             {guide.warnings.map((warning, index) => (
@@ -228,7 +228,7 @@ export default function GuideDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EDE6D6',
+    backgroundColor: '#F0EEE9',
   },
   scrollView: {
     flex: 1,
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
   warningTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#F4E9A7',
+    color: '#F4ECC2',
   },
   warningRow: {
     flexDirection: 'row',
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
   warningBullet: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#F4E9A7',
+    color: '#F4ECC2',
     width: 16,
     textAlign: 'center',
   },

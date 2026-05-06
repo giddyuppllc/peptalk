@@ -116,7 +116,7 @@ function RecipeCard({ recipe, onLog, mealType }: { recipe: GeneratedRecipe; onLo
             </Text>
           </View>
           <View style={[styles.macroPill, { backgroundColor: 'rgba(245, 158, 11, 0.12)' }]}>
-            <Text style={[styles.macroPillText, { color: '#F4E9A7' }]}>
+            <Text style={[styles.macroPillText, { color: '#F4ECC2' }]}>
               {recipe.macros.fat}g fat
             </Text>
           </View>

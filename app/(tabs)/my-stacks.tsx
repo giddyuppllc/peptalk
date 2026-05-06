@@ -112,7 +112,7 @@ function getEvidenceBadge(level: string): { label: string; color: string } {
     case 'established':
       return { label: 'Established', color: '#22c55e' };
     case 'moderate':
-      return { label: 'Moderate', color: '#CADEE5' };
+      return { label: 'Moderate', color: '#D8E3E7' };
     case 'preliminary':
       return { label: 'Preliminary', color: '#f97316' };
     default:
@@ -1211,7 +1211,7 @@ export default function MyStacksScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EDE6D6',
+    backgroundColor: '#F0EEE9',
   },
   scrollView: {
     flex: 1,

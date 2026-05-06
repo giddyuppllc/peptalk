@@ -51,14 +51,14 @@ const VALUE_PROPS: ValueProp[] = [
   },
   {
     icon: 'mic-outline',
-    accent: '#BADDCB',
+    accent: '#A4D9D1',
     title: 'Log meals by voice',
     body: 'Say what you ate — Aimee parses macros and adds it to your day.',
     highlight: 'voice_log',
   },
   {
     icon: 'pulse-outline',
-    accent: '#F4E9A7',
+    accent: '#F4ECC2',
     title: 'Sync your wearable',
     body: 'Apple Watch + Google Fit: HRV, VO₂, sleep, weight all in one place.',
     highlight: 'health_sync',

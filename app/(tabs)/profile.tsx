@@ -116,7 +116,7 @@ const TIER_CONFIG: Record<string, { label: string; colors: { dark: [string, stri
   free: { label: 'Free', colors: { dark: ['rgba(0,0,0,0.08)', 'rgba(0,0,0,0.04)'], light: ['#d1d5db', '#6B7280'] }, icon: 'person-outline' },
   starter: { label: 'Starter', colors: { dark: ['#E89672', '#E89672'], light: ['#E89672', '#E89672'] }, icon: 'rocket-outline' },
   pro: { label: 'Pro', colors: { dark: [Colors.rose, Colors.roseDark], light: [Colors.rose, Colors.roseDark] }, icon: 'star' },
-  elite: { label: 'Elite', colors: { dark: ['#BADDCB', '#EC4899'], light: ['#BADDCB', '#EC4899'] }, icon: 'diamond' },
+  elite: { label: 'Elite', colors: { dark: ['#A4D9D1', '#EC4899'], light: ['#A4D9D1', '#EC4899'] }, icon: 'diamond' },
 };
 
 function TierBadge({ tier }: { tier: string }) {
@@ -391,7 +391,7 @@ function UserProfile() {
           style={styles.upgradeRowWrap}
         >
           <LinearGradient
-            colors={tier === 'free' ? ['#E89672', '#F5DAD6'] : ['#7FB3D8', '#3E7CB1']}
+            colors={tier === 'free' ? ['#E89672', '#F2D8D5'] : ['#7FB3D8', '#3E7CB1']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.upgradeRowGradient}
@@ -767,7 +767,7 @@ function QuickLinksSection() {
   const links = [
     { icon: 'document-text-outline' as const, label: 'Share Health Report', route: '/health-report' as const, color: '#E89672', desc: 'Generate and share with your provider' },
     { icon: 'download-outline' as const, label: 'Export My Data', route: '/health-report' as const, color: Colors.pepTeal, desc: 'Download your wellness journal' },
-    { icon: 'book-outline' as const, label: 'My Journal', route: '/journal' as const, color: '#F4E9A7', desc: 'View and manage journal entries' },
+    { icon: 'book-outline' as const, label: 'My Journal', route: '/journal' as const, color: '#F4ECC2', desc: 'View and manage journal entries' },
   ];
 
   return (
@@ -1025,7 +1025,7 @@ function NotificationSettings() {
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
             <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(245, 158, 11, 0.12)' }]}>
-              <Ionicons name="barbell-outline" size={18} color="#F4E9A7" />
+              <Ionicons name="barbell-outline" size={18} color="#F4ECC2" />
             </View>
             <View style={styles.settingTextContainer}>
               <Text style={[styles.settingTitle, { color: t.text }]}>Workout Reminders</Text>
@@ -1040,7 +1040,7 @@ function NotificationSettings() {
             disabled={!notifEnabled}
             trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(245, 158, 11, 0.4)' }}
             thumbColor={
-              preferences.workoutReminderEnabled && notifEnabled ? '#F4E9A7' : '#6B7280'
+              preferences.workoutReminderEnabled && notifEnabled ? '#F4ECC2' : '#6B7280'
             }
           />
         </View>
@@ -1747,7 +1747,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#EDE6D6',
+    backgroundColor: '#F0EEE9',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -2111,7 +2111,7 @@ const notifStyles = StyleSheet.create({
     color: '#6B7280',
   },
   dayChipTextActive: {
-    color: '#F4E9A7',
+    color: '#F4ECC2',
   },
   mealList: {
     paddingHorizontal: 4,

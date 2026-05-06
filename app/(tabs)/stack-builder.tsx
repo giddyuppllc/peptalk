@@ -55,7 +55,7 @@ function getInteractionColor(type: string): string {
     case 'contraindicated':
       return '#ef4444';
     default:
-      return '#CADEE5';
+      return '#D8E3E7';
   }
 }
 
@@ -190,7 +190,7 @@ export default function StackBuilderScreen() {
 
   const BLUE = '#7ABED0';
   const BLUE_DARK = '#5A9BB0';
-  const BLUE_LIGHT = '#CADEE5';
+  const BLUE_LIGHT = '#D8E3E7';
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>

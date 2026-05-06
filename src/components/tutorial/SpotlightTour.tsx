@@ -248,7 +248,7 @@ function TooltipCard({ step, stepIndex, totalSteps, onNext, onSkip, isLast }: To
 
       {/* Icon + title */}
       <View style={styles.titleRow}>
-        <LinearGradient colors={['#E89672', '#F5DAD6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.iconCircle}>
+        <LinearGradient colors={['#E89672', '#F2D8D5']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.iconCircle}>
           <Ionicons name={step.icon as any} size={18} color="#fff" />
         </LinearGradient>
         <Text style={styles.title} numberOfLines={2}>
@@ -276,7 +276,7 @@ function TooltipCard({ step, stepIndex, totalSteps, onNext, onSkip, isLast }: To
         </View>
         <TouchableOpacity onPress={onNext} activeOpacity={0.85}>
           <LinearGradient
-            colors={['#E89672', '#F5DAD6']}
+            colors={['#E89672', '#F2D8D5']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.nextBtn}

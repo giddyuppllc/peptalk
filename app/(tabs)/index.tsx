@@ -98,8 +98,8 @@ const QUICK_ACTIONS = [
   { id: 'checkin', icon: 'heart-outline' as const, label: 'Check In', route: '/(tabs)/check-in', colors: ['#e3a7a1', '#c98a84'] as [string, string] },
   { id: 'dose', icon: 'flask-outline' as const, label: 'Log Dose', route: '/(tabs)/calendar', colors: ['#E89672', '#C76B45'] as [string, string] },
   { id: 'workout', icon: 'barbell-outline' as const, label: 'Workout', route: '/workouts', colors: ['#E89672', '#C76B45'] as [string, string] },
-  { id: 'nutrition', icon: 'nutrition-outline' as const, label: 'Nutrition', route: '/nutrition', colors: ['#F4E9A7', '#E8A05A'] as [string, string] },
-  { id: 'peptalk', icon: 'chatbubble-outline' as const, label: 'Ask Aimee', route: '/(tabs)/peptalk', colors: ['#BADDCB', '#B8913D'] as [string, string] },
+  { id: 'nutrition', icon: 'nutrition-outline' as const, label: 'Nutrition', route: '/nutrition', colors: ['#F4ECC2', '#E8A05A'] as [string, string] },
+  { id: 'peptalk', icon: 'chatbubble-outline' as const, label: 'Ask Aimee', route: '/(tabs)/peptalk', colors: ['#A4D9D1', '#B8913D'] as [string, string] },
   { id: 'journal', icon: 'book-outline' as const, label: 'Journal', route: '/journal', colors: ['#06b6d4', '#0891b2'] as [string, string] },
   { id: 'bodymap', icon: 'body-outline' as const, label: 'Body Map', route: '/body-map', colors: ['#22c55e', '#16a34a'] as [string, string] },
 ];
@@ -599,7 +599,7 @@ export default function DashboardScreen() {
         title: (meal.mealType ?? 'Meal').charAt(0).toUpperCase() + (meal.mealType ?? 'meal').slice(1),
         subtitle: `${totalCal} cal`,
         icon: 'nutrition-outline',
-        color: '#F4E9A7',
+        color: '#F4ECC2',
         type: 'meal',
       });
     });
@@ -1134,10 +1134,10 @@ export default function DashboardScreen() {
                   </Text>
                   {/* Activity dots */}
                   <View style={styles.weekDots}>
-                    {activity?.meals && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#F4E9A7' }]} />}
+                    {activity?.meals && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#F4ECC2' }]} />}
                     {activity?.workouts && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#E89672' }]} />}
                     {activity?.checkins && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#e3a7a1' }]} />}
-                    {activity?.doses && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#BADDCB' }]} />}
+                    {activity?.doses && <View style={[styles.weekDot, { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : '#A4D9D1' }]} />}
                   </View>
                 </TouchableOpacity>
               );
@@ -1167,8 +1167,8 @@ export default function DashboardScreen() {
                 {/* Summary badges row */}
                 <View style={styles.daySummaryRow}>
                   {selectedDayMeals.length > 0 && (
-                    <View style={[styles.daySummaryBadge, { backgroundColor: '#F4E9A715' }]}>
-                      <Ionicons name="nutrition" size={14} color="#F4E9A7" />
+                    <View style={[styles.daySummaryBadge, { backgroundColor: '#F4ECC215' }]}>
+                      <Ionicons name="nutrition" size={14} color="#F4ECC2" />
                       <Text style={[styles.daySummaryValue, { color: t.text }]}>{Math.round(selectedDayMealCals)}</Text>
                       <Text style={[styles.daySummaryUnit, { color: t.textSecondary }]}>cal</Text>
                     </View>

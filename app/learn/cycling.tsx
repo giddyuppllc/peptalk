@@ -58,7 +58,7 @@ const CYCLE_GUIDES: CycleGuide[] = [
   {
     peptideClass: 'Nootropics',
     icon: 'bulb-outline',
-    color: '#BADDCB',
+    color: '#A4D9D1',
     onPeriod: '10-20 days on',
     offPeriod: '10-20 days off',
     reason: 'BDNF and neurotransmitter receptor systems adapt to exogenous stimulation. Cycling prevents tolerance and preserves cognitive benefit.',
@@ -76,7 +76,7 @@ const CYCLE_GUIDES: CycleGuide[] = [
   {
     peptideClass: 'Metabolic / Fat Loss',
     icon: 'flame-outline',
-    color: '#F4E9A7',
+    color: '#F4ECC2',
     onPeriod: '8-12 weeks',
     offPeriod: '4-8 weeks off',
     reason: 'Metabolic peptides can shift baseline metabolic rate. Cycling prevents metabolic adaptation and allows hormonal systems to re-equilibrate.',
@@ -137,7 +137,7 @@ export default function CyclingEducationScreen() {
             </View>
           </View>
           <View style={styles.scienceRow}>
-            <View style={[styles.scienceDot, { backgroundColor: '#F4E9A7' }]} />
+            <View style={[styles.scienceDot, { backgroundColor: '#F4ECC2' }]} />
             <View style={styles.scienceContent}>
               <Text style={styles.scienceLabel}>Tachyphylaxis</Text>
               <Text style={styles.scienceText}>

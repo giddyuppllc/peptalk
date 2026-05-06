@@ -10,7 +10,7 @@ interface SynergyScoreProps {
 const getScoreColor = (score: number): string => {
   if (score >= 8) return '#22c55e';
   if (score >= 6) return '#b9cbb6';
-  if (score >= 4) return '#F4E9A7';
+  if (score >= 4) return '#F4ECC2';
   return '#ef4444';
 };
 

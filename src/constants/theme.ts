@@ -113,13 +113,13 @@ export const Colors = {
 } as const;
 
 export const Gradients = {
-  primary: ['#E89672', '#F2C7A9'] as const,              // Peach Dust Deep → Peach Dust
-  character: ['#E89672', '#F4E9A7'] as const,            // Peach Dust Deep → Lemon Icing
+  primary: ['#E89672', '#F0CFB1'] as const,              // Peach Dust Deep → Peach Dust
+  character: ['#E89672', '#F4ECC2'] as const,            // Peach Dust Deep → Lemon Icing
   card: ['rgba(232,150,114,0.12)', 'rgba(243,217,216,0.06)'] as const,
-  accent: ['#E89672', '#F4E9A7'] as const,               // Peach Dust Deep → Lemon Icing
-  warm: ['#E89672', '#F5DAD6'] as const,                 // Peach Dust Deep → Raindrops on Roses
-  male: ['#7FB3C2', '#CADEE5'] as const,                 // Ice Melt Deep → Ice Melt
-  maleAccent: ['#7FB3C2', '#BADDCB'] as const,           // Ice Melt Deep → Almost Aqua
+  accent: ['#E89672', '#F4ECC2'] as const,               // Peach Dust Deep → Lemon Icing
+  warm: ['#E89672', '#F2D8D5'] as const,                 // Peach Dust Deep → Raindrops on Roses
+  male: ['#7FB3C2', '#D8E3E7'] as const,                 // Ice Melt Deep → Ice Melt
+  maleAccent: ['#7FB3C2', '#A4D9D1'] as const,           // Ice Melt Deep → Almost Aqua
 };
 
 export const CategoryColors: Record<string, string> = {

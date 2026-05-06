@@ -21,27 +21,27 @@ export interface SectionColors {
 
 export const SECTION_PALETTE: Record<AppSection, SectionColors> = {
   home: {
-    pastel: '#F2C7A9',
+    pastel: '#F0CFB1',
     deep: '#E89672',
     darker: '#C76B45',
   },
   nutrition: {
-    pastel: '#BADDCB',
+    pastel: '#A4D9D1',
     deep: '#6FA891',
     darker: '#4E836D',
   },
   aimee: {
-    pastel: '#D4CBD2',
+    pastel: '#DBC6D8',
     deep: '#9B86A4',
     darker: '#75627D',
   },
   workouts: {
-    pastel: '#F5DAD6',
+    pastel: '#F2D8D5',
     deep: '#D98C86',
     darker: '#B06A66',
   },
   peptides: {
-    pastel: '#CADEE5',
+    pastel: '#D8E3E7',
     deep: '#7ABED0',
     darker: '#5A9BB0',
   },
@@ -49,7 +49,7 @@ export const SECTION_PALETTE: Record<AppSection, SectionColors> = {
 
 /** Male-specific override for Home only. */
 export const MALE_HOME: SectionColors = {
-  pastel: '#CADEE5',
+  pastel: '#D8E3E7',
   deep: '#7FB3C2',
   darker: '#5C92A3',
 };

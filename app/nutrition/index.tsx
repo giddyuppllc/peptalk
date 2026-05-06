@@ -985,8 +985,8 @@ function AddFoodSheet({ visible, mealType, onClose, onPickOption }: AddFoodSheet
 
   const options = [
     { key: 'search' as const,     icon: 'search-outline' as const,    color: '#E89672', label: 'Search Foods',     sub: 'USDA & common items' },
-    { key: 'my_meals' as const,   icon: 'bookmark-outline' as const,  color: '#BADDCB', label: 'My Meals',         sub: 'Recently logged' },
-    { key: 'barcode' as const,    icon: 'barcode-outline' as const,   color: '#F4E9A7', label: 'Scan Barcode',     sub: 'Packaged foods' },
+    { key: 'my_meals' as const,   icon: 'bookmark-outline' as const,  color: '#A4D9D1', label: 'My Meals',         sub: 'Recently logged' },
+    { key: 'barcode' as const,    icon: 'barcode-outline' as const,   color: '#F4ECC2', label: 'Scan Barcode',     sub: 'Packaged foods' },
     { key: 'ai_scanner' as const, icon: 'camera-outline' as const,    color: '#e3a7a1', label: 'Food Scanner',  sub: 'Snap a plate → macros' },
     { key: 'quick' as const,      icon: 'create-outline' as const,    color: '#8faa8b', label: 'Quick Log',        sub: 'Enter macros manually' },
   ];
@@ -1332,7 +1332,7 @@ export default function NutritionScreen() {
             <View style={[styles.summaryDivider, { backgroundColor: t.cardBorder }]} />
 
             <MacroBar label="Protein" current={selectedProgress.totals.proteinGrams} target={targets.proteinGrams} color="#E89672" unit="g" />
-            <MacroBar label="Carbs"   current={selectedProgress.totals.carbsGrams}   target={targets.carbsGrams}   color="#BADDCB" unit="g" />
+            <MacroBar label="Carbs"   current={selectedProgress.totals.carbsGrams}   target={targets.carbsGrams}   color="#A4D9D1" unit="g" />
             <MacroBar label="Fat"     current={selectedProgress.totals.fatGrams}     target={targets.fatGrams}     color="#e3a7a1" unit="g" />
             <MacroBar label="Fiber"   current={selectedProgress.totals.fiberGrams}   target={targets.fiberGrams ?? 25} color="#8faa8b" unit="g" />
           </View>

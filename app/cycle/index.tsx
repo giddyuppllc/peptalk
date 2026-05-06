@@ -56,7 +56,7 @@ const WHEEL_RADIUS = (WHEEL_SIZE - WHEEL_STROKE) / 2;
 
 const PHASE_COLORS = {
   menstrual:  '#E89672',
-  follicular: '#F2C7A9',
+  follicular: '#F0CFB1',
   ovulatory:  '#C76B45',
   luteal:     '#E8C9BD',
 };

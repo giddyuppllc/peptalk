@@ -37,7 +37,7 @@ export function PeptideDisclaimerModal() {
         <View style={[styles.card, { backgroundColor: t.bg }]}>
           {/* Icon */}
           <LinearGradient
-            colors={['#E89672', '#F5DAD6']}
+            colors={['#E89672', '#F2D8D5']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.iconCircle}
@@ -98,7 +98,7 @@ export function PeptideDisclaimerModal() {
             activeOpacity={0.85}
           >
             <LinearGradient
-              colors={checked ? ['#E89672', '#F5DAD6'] : ['#D1D5DB', '#D1D5DB']}
+              colors={checked ? ['#E89672', '#F2D8D5'] : ['#D1D5DB', '#D1D5DB']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.continueBtn}

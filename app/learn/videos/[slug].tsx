@@ -215,7 +215,7 @@ export default function VideoPlayerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EDE6D6',
+    backgroundColor: '#F0EEE9',
   },
   scrollView: {
     flex: 1,

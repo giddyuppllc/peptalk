@@ -140,9 +140,9 @@ const JOURNAL_CATEGORY_COLORS: Record<JournalCategory, string> = {
   protocol_notes: '#E89672',
   side_effects: '#ef4444',
   mood: '#10b981',
-  progress: '#BADDCB',
+  progress: '#A4D9D1',
   research: '#06b6d4',
-  questions: '#F4E9A7',
+  questions: '#F4ECC2',
   goals: '#ec4899',
   general: '#6b7280',
 };
@@ -919,7 +919,7 @@ export default function CalendarScreen() {
                     {selectedDayCheckin.weightLbs ? (
                       <LinearGradient colors={['rgba(245,158,11,0.15)', 'rgba(245,158,11,0.05)']} style={styles.checkinBadge}>
                         <Text style={[styles.checkinBadgeLabel, { color: t.textSecondary }]}>Weight</Text>
-                        <Text style={[styles.checkinBadgeValue, { color: '#F4E9A7' }]}>{selectedDayCheckin.weightLbs} lbs</Text>
+                        <Text style={[styles.checkinBadgeValue, { color: '#F4ECC2' }]}>{selectedDayCheckin.weightLbs} lbs</Text>
                       </LinearGradient>
                     ) : null}
                     {selectedDayCheckin.restingHeartRate ? (
@@ -937,7 +937,7 @@ export default function CalendarScreen() {
                     {selectedDayCheckin.hrvMs ? (
                       <LinearGradient colors={['rgba(139,92,246,0.15)', 'rgba(139,92,246,0.05)']} style={styles.checkinBadge}>
                         <Text style={[styles.checkinBadgeLabel, { color: t.textSecondary }]}>HRV</Text>
-                        <Text style={[styles.checkinBadgeValue, { color: '#BADDCB' }]}>{Math.round(selectedDayCheckin.hrvMs)} ms</Text>
+                        <Text style={[styles.checkinBadgeValue, { color: '#A4D9D1' }]}>{Math.round(selectedDayCheckin.hrvMs)} ms</Text>
                       </LinearGradient>
                     ) : null}
                   </View>
@@ -1010,7 +1010,7 @@ export default function CalendarScreen() {
                           </View>
                           {wlog.rating && (
                             <View style={styles.workoutMetaItem}>
-                              <Ionicons name="star" size={14} color="#F4E9A7" />
+                              <Ionicons name="star" size={14} color="#F4ECC2" />
                               <Text style={[styles.workoutMetaText, { color: t.textSecondary }]}>{wlog.rating}/5</Text>
                             </View>
                           )}
@@ -1035,10 +1035,10 @@ export default function CalendarScreen() {
                       activeOpacity={0.8}
                       onPress={() => router.push('/nutrition')}
                     >
-                      <GlassCard variant="glow" glowColor="#F4E9A7" style={styles.eventCard}>
+                      <GlassCard variant="glow" glowColor="#F4ECC2" style={styles.eventCard}>
                         <View style={styles.eventCardHeader}>
                           <View style={[styles.eventIconWrap, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-                            <Ionicons name="nutrition" size={20} color="#F4E9A7" />
+                            <Ionicons name="nutrition" size={20} color="#F4ECC2" />
                           </View>
                           <View style={styles.eventCardHeaderText}>
                             <Text style={[styles.eventCardTitle, { color: t.text }]}>
@@ -1109,10 +1109,10 @@ export default function CalendarScreen() {
             {selectedDayJournal.length > 0 && (
               <View style={styles.timelineSection}>
                 {selectedDayJournal.map((entry) => (
-                  <GlassCard key={entry.id} variant="glow" glowColor="#BADDCB" style={styles.eventCard}>
+                  <GlassCard key={entry.id} variant="glow" glowColor="#A4D9D1" style={styles.eventCard}>
                     <View style={styles.eventCardHeader}>
                       <View style={[styles.eventIconWrap, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
-                        <Ionicons name="journal" size={20} color="#BADDCB" />
+                        <Ionicons name="journal" size={20} color="#A4D9D1" />
                       </View>
                       <View style={styles.eventCardHeaderText}>
                         <Text style={[styles.eventCardTitle, { color: t.text }]}>{entry.title}</Text>
@@ -1545,9 +1545,9 @@ const styles = StyleSheet.create({
   dot: { width: 5, height: 5, borderRadius: 2.5 },
   dotDose: { backgroundColor: Colors.rose },
   dotCheckin: { backgroundColor: '#22c55e' },
-  dotJournal: { backgroundColor: '#BADDCB' },
+  dotJournal: { backgroundColor: '#A4D9D1' },
   dotWorkout: { backgroundColor: Colors.pepTeal },
-  dotMeal: { backgroundColor: '#F4E9A7' },
+  dotMeal: { backgroundColor: '#F4ECC2' },
 
   // Legend
   legend: {
@@ -1675,7 +1675,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3, paddingHorizontal: 8,
     borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.2)',
   },
-  journalTagText: { fontSize: FontSizes.xs, color: '#F4E9A7', fontWeight: '600' },
+  journalTagText: { fontSize: FontSizes.xs, color: '#F4ECC2', fontWeight: '600' },
   journalTagMore: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary, alignSelf: 'center' },
 
   // Side effects

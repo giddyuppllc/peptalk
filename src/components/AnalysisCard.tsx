@@ -21,7 +21,7 @@ const InteractionCard: React.FC<{ interaction: PeptideInteraction }> = ({
       ? '#22c55e'
       : interaction.interactionType === 'competitive' || interaction.interactionType === 'contraindicated'
         ? '#ef4444'
-        : '#F4E9A7';
+        : '#F4ECC2';
 
   return (
     <GlassCard style={styles.interactionCard}>

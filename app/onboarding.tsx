@@ -318,8 +318,8 @@ export default function OnboardingScreen() {
           <View style={s.welcomeFeatures}>
             {[
               { icon: 'nutrition-outline', title: 'Eat', desc: 'Track meals & macros', color: '#E89672', bg: '#E8967218' },
-              { icon: 'barbell-outline', title: 'Train', desc: 'Log workouts & progress', color: '#BADDCB', bg: '#F4E9A720' },
-              { icon: 'flask-outline', title: 'Learn', desc: 'Peptide education & dosing', color: '#E8948E', bg: '#F5DAD618' },
+              { icon: 'barbell-outline', title: 'Train', desc: 'Log workouts & progress', color: '#A4D9D1', bg: '#F4ECC220' },
+              { icon: 'flask-outline', title: 'Learn', desc: 'Peptide education & dosing', color: '#E8948E', bg: '#F2D8D518' },
               { icon: 'heart-outline', title: 'Track', desc: 'Health, sleep & recovery', color: '#8FAA8B', bg: '#A9C4A618' },
             ].map((f, i) => (
               <Animated.View
@@ -923,7 +923,7 @@ const s = StyleSheet.create({
   blackBtn: {
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#EDE6D6',
+    backgroundColor: '#F0EEE9',
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,

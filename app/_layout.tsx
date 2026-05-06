@@ -672,14 +672,6 @@ function RootLayout() {
             }}
           />
           <Stack.Screen
-            name="health-connect-setup"
-            options={{
-              headerShown: false,
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
-            }}
-          />
-          <Stack.Screen
             name="terms"
             options={{
               headerShown: false,
@@ -946,7 +938,7 @@ function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EDE6D6',
+    backgroundColor: '#F0EEE9',
   },
   splash: {
     ...StyleSheet.absoluteFillObject,

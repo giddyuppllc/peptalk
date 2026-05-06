@@ -30,9 +30,9 @@ const CATEGORY_COLORS: Record<JournalCategory, string> = {
   protocol_notes: '#E89672',
   side_effects: '#ef4444',
   mood: '#10b981',
-  progress: '#BADDCB',
+  progress: '#A4D9D1',
   research: '#06b6d4',
-  questions: '#F4E9A7',
+  questions: '#F4ECC2',
   goals: '#ec4899',
   general: '#6b7280',
 };

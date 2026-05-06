@@ -520,7 +520,7 @@ function AverageItem({ label, value }: { label: string; value: string }) {
     numVal >= 4
       ? '#22c55e'
       : numVal >= 3
-        ? '#F4E9A7'
+        ? '#F4ECC2'
         : '#ef4444';
 
   return (
@@ -539,7 +539,7 @@ function AverageItem({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#EDE6D6',
+    backgroundColor: '#F0EEE9',
   },
 
   // Header

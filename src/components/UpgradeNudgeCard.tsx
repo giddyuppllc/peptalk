@@ -69,7 +69,7 @@ function UpgradeNudgeCardImpl() {
   const nudge = NUDGES[dayIdx];
 
   const colors: readonly [string, string] =
-    nudge.tier === 'pro' ? (['#7FB3D8', '#3E7CB1'] as const) : (['#E89672', '#F5DAD6'] as const);
+    nudge.tier === 'pro' ? (['#7FB3D8', '#3E7CB1'] as const) : (['#E89672', '#F2D8D5'] as const);
 
   return (
     <TouchableOpacity

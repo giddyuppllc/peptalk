@@ -2,7 +2,7 @@
  * useTheme — returns the resolved color palette based on gender.
  *
  * Pantone Cloud Dancer palette, split by temperature:
- *   - Both: Cloud Dancer (#EDE6D6) cream background
+ *   - Both: Cloud Dancer (#F0EEE9) cream background
  *   - Women (warm): Peach Dust, Raindrops on Roses, Orchid Tint, Lemon Icing
  *   - Men (cool):   Ice Melt, Almost Aqua, Nimbus Cloud, Lemon Icing (shared)
  *

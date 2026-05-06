@@ -53,7 +53,7 @@ function LogItem({ log }: { log: WorkoutLog }) {
           </View>
           {log.rating && (
             <View style={styles.logMetaItem}>
-              <Ionicons name="star" size={12} color="#F4E9A7" />
+              <Ionicons name="star" size={12} color="#F4ECC2" />
               <Text style={styles.logMetaText}>{log.rating}/5</Text>
             </View>
           )}

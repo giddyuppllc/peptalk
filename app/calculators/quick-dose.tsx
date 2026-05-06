@@ -207,9 +207,9 @@ export default function QuickDoseScreen() {
             </GlassCard>
 
             {/* Reconstitution */}
-            <GlassCard variant="glow" glowColor="#BADDCB" style={styles.section}>
+            <GlassCard variant="glow" glowColor="#A4D9D1" style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="water" size={20} color="#BADDCB" />
+                <Ionicons name="water" size={20} color="#A4D9D1" />
                 <Text style={styles.sectionTitle}>How to Reconstitute</Text>
               </View>
               <View style={styles.stepList}>
@@ -386,12 +386,12 @@ export default function QuickDoseScreen() {
             {protocol.contraindications && protocol.contraindications.length > 0 && (
               <GlassCard variant="accent" style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <Ionicons name="warning" size={20} color="#F4E9A7" />
+                  <Ionicons name="warning" size={20} color="#F4ECC2" />
                   <Text style={styles.sectionTitle}>Watch For</Text>
                 </View>
                 {protocol.contraindications.map((c: string, i: number) => (
                   <View key={i} style={styles.warningRow}>
-                    <Ionicons name="alert-circle-outline" size={14} color="#F4E9A7" />
+                    <Ionicons name="alert-circle-outline" size={14} color="#F4ECC2" />
                     <Text style={styles.warningText}>{c}</Text>
                   </View>
                 ))}
@@ -410,7 +410,7 @@ export default function QuickDoseScreen() {
               onPress={() => router.push('/(tabs)/peptalk' as any)}
               style={styles.askAimeeBtn}
             >
-              <LinearGradient colors={['#BADDCB', '#B8913D']} style={styles.askAimeeBtnGradient}>
+              <LinearGradient colors={['#A4D9D1', '#B8913D']} style={styles.askAimeeBtnGradient}>
                 <Ionicons name="chatbubble" size={16} color="#fff" />
                 <Text style={styles.askAimeeBtnText}>Ask Aimee</Text>
               </LinearGradient>
