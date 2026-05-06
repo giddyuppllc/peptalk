@@ -30,6 +30,7 @@ import { LockBadge } from '../../src/components/LockBadge';
 import { CoachMark } from '../../src/components/tutorial/CoachMark';
 import { WorkoutReadinessBanner } from '../../src/components/WorkoutReadinessBanner';
 import { PaywallModal } from '../../src/components/PaywallModal';
+import { MaxYourStackCard } from '../../src/components/MaxYourStackCard';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
 import { useWorkoutTemplateStore } from '../../src/store/useWorkoutTemplateStore';
 import { getExerciseById } from '../../src/data/exercises';
@@ -445,6 +446,12 @@ export default function WorkoutsScreen() {
           body="Pick one of Jamie's programs, generate a custom workout, or build your own from 451 exercises."
           icon="barbell-outline"
         />
+
+        {/* Coming-soon tease — sits at the top so it's the first thing
+            users see when they land on the fitness side. The actual
+            programs/library/generator below remain accessible per their
+            existing tier gates. */}
+        <MaxYourStackCard />
 
         {/* Readiness-aware suggestion — only renders for high or low
             readiness states. Hidden in the "hold" middle band. */}

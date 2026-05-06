@@ -50,6 +50,7 @@ import { ReconstitutionGuideCard } from '../../src/components/ReconstitutionGuid
 import { ActivateProtocolButton } from '../../src/components/ActivateProtocolButton';
 import { CollapsibleSection, type CollapsibleSectionRef } from '../../src/components/CollapsibleSection';
 import { CalculatorSectionTabs, type CalculatorTab } from '../../src/components/CalculatorSectionTabs';
+import { mlToTsp, mlToFlOz } from '../../src/utils/unitConversions';
 import type { Peptide } from '../../src/types';
 
 type WeightUnit = 'lbs' | 'kg';
@@ -508,6 +509,7 @@ export default function DosingCalculatorScreen() {
           <Text style={[styles.sectionTitle, { color: t.text }]}>BAC Water Volume</Text>
           <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
             How much bacteriostatic water you add to the vial.
+            {waterMl > 0 ? ` ${waterMl.toFixed(1)} mL ≈ ${mlToTsp(waterMl).toFixed(2)} tsp / ${mlToFlOz(waterMl).toFixed(2)} fl oz.` : ''}
           </Text>
           <GlassCard>
             <View style={styles.row}>
@@ -792,7 +794,7 @@ export default function DosingCalculatorScreen() {
               <ResultRow
                 label="Liquid amount per shot"
                 value={`${volumeToInjectMl.toFixed(3)} mL`}
-                hint="how much fluid goes into the needle"
+                hint={`≈${mlToTsp(volumeToInjectMl).toFixed(3)} tsp · how much fluid goes into the needle`}
               />
               <ResultRow
                 label="Small lines from the bottom"

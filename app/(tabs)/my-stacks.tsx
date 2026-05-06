@@ -29,6 +29,7 @@ import {
   calculateReconstitution,
   suggestBacWaterForRoundUnits,
 } from '../../src/services/doseCalculator';
+import { mlToTsp } from '../../src/utils/unitConversions';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
 
 // ─── Category meta-groups (for the educational browsing grid) ─────────────
@@ -410,6 +411,9 @@ function CalculatorTab() {
           <View style={{ flex: 1 }}>
             <Text style={[calcStyles.bacBannerTitle, { color: t.text }]}>
               Add {effectiveBacMl.toFixed(1)} ml of BAC water
+              <Text style={[calcStyles.bacBannerTitle, { color: t.textSecondary, fontWeight: '500' }]}>
+                {`  (≈${mlToTsp(effectiveBacMl).toFixed(2)} tsp)`}
+              </Text>
             </Text>
             <Text style={[calcStyles.bacBannerSub, { color: t.textSecondary }]}>
               to your {numericVialMg}mg vial for {Math.round(result.syringeUnits)} units per dose

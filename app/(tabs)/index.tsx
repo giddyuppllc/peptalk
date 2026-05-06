@@ -34,6 +34,7 @@ import { StepGoalRing } from '../../src/components/StepGoalRing';
 import { MacroProgressRing } from '../../src/components/MacroProgressRing';
 import { ActiveProtocolBanner } from '../../src/components/ActiveProtocolBanner';
 import { TodaysPlanCard } from '../../src/components/TodaysPlanCard';
+import { IntelligenceHeatMap } from '../../src/components/IntelligenceHeatMap';
 import { PantryAlertCard } from '../../src/components/PantryAlertCard';
 import { DailyInsightCard } from '../../src/components/DailyInsightCard';
 import { ReadinessCard } from '../../src/components/ReadinessCard';
@@ -1031,6 +1032,11 @@ export default function DashboardScreen() {
         {/* Plus upsell nudge — free-tier only, rotates daily, dismissible. */}
         <View style={styles.protocolBannerWrap}>
           <FreeUpsellCard />
+        </View>
+
+        {/* Intelligence heat map — 12-week activity consistency view. */}
+        <View style={styles.protocolBannerWrap}>
+          <IntelligenceHeatMap weeks={12} />
         </View>
 
         {/* ═══════════════════════════════════════════════════════════════
