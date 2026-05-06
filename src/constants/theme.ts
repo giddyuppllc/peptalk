@@ -3,31 +3,33 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const Colors = {
-  // ── Pantone pastel palette (new) ────────────────────────────────────
-  /** 11-4201 Cloud Dancer — shared cream background */
-  cloudDancer: '#EDE6D6',
-  /** 11-0515 Lemon Icing — shared warm highlight */
-  lemonIcing: '#F4E9A7',
-  /** 12-1107 Peach Dust — female pastel primary */
-  peachDust: '#F2C7A9',
+  // ── Pantone TCX pastel palette (approved) ───────────────────────────
+  // Hex values match the official Pantone TCX standards (sRGB approximation).
+  // Cloud Dancer is the canvas; the other 7 layer on for accents + CTAs.
+  /** PANTONE 11-4201 TCX Cloud Dancer — shared cream background */
+  cloudDancer: '#F0EEE9',
+  /** PANTONE 11-0515 TCX Lemon Icing — shared warm highlight */
+  lemonIcing: '#F4ECC2',
+  /** PANTONE 13-1407 TCX Peach Dust — female pastel primary */
+  peachDust: '#F0CFB1',
   /** Derived deeper peach for CTAs on white/cream bgs */
   peachDustDeep: '#E89672',
   /** Derived darker peach for strong contrast text */
   peachDustDarker: '#C76B45',
-  /** 11-1400 Raindrops on Roses — female blush secondary */
-  raindropsOnRoses: '#F5DAD6',
-  /** 13-3802 Orchid Tint — female soft lavender accent */
-  orchidTint: '#D4CBD2',
-  /** 13-4306 Ice Melt — male pastel primary */
-  iceMelt: '#CADEE5',
+  /** PANTONE 12-2904 TCX Raindrops on Roses — female blush secondary */
+  raindropsOnRoses: '#F2D8D5',
+  /** PANTONE 13-3405 TCX Orchid Tint — female soft lavender accent */
+  orchidTint: '#DBC6D8',
+  /** PANTONE 13-4302 TCX Ice Melt — male pastel primary */
+  iceMelt: '#D8E3E7',
   /** Derived deeper Ice Melt for male CTAs */
   iceMeltDeep: '#7FB3C2',
   /** Derived darker Ice Melt for strong contrast text */
   iceMeltDarker: '#5C92A3',
-  /** 13-6006 Almost Aqua — male mint secondary */
-  almostAqua: '#BADDCB',
-  /** 13-4108 Nimbus Cloud — male soft gray accent */
-  nimbusCloud: '#D0D3D4',
+  /** PANTONE 12-5409 TCX Almost Aqua — male mint secondary */
+  almostAqua: '#A4D9D1',
+  /** PANTONE 14-4504 TCX Nimbus Cloud — male soft gray accent */
+  nimbusCloud: '#D5D6D2',
 
   // ── Section accent derived shades (for useSectionAccent) ────────────
   /** Raindrops on Roses deep — Nutrition CTAs */
@@ -66,14 +68,14 @@ export const Colors = {
   powderLight: '#e0eaf3',
 
   // Base colors (Cloud Dancer cream now)
-  darkBg: '#EDE6D6',
+  darkBg: '#F0EEE9',
   darkCard: '#FFFFFF',
   darkCardBorder: 'rgba(0,0,0,0.08)',
   darkText: '#2D2D2D',
   darkTextSecondary: '#6B7280',
 
   // Light mode (same as base — no dark mode)
-  lightBg: '#EDE6D6',
+  lightBg: '#F0EEE9',
   lightCard: '#FFFFFF',
   lightCardBorder: 'rgba(0,0,0,0.06)',
   lightText: '#2D2D2D',
@@ -95,10 +97,10 @@ export const Colors = {
   // that import them. Values now point at the new Pantone palette.
   pepBlue: '#7FB3C2',         // Ice Melt Deep (male primary)
   pepBlueDark: '#5C92A3',     // Ice Melt Darker
-  pepBlueLight: '#CADEE5',    // Ice Melt
+  pepBlueLight: '#D8E3E7',    // Ice Melt
   pepTeal: '#E89672',         // Peach Dust Deep (female primary)
-  pepTealLight: '#F2C7A9',    // Peach Dust
-  pepCyan: '#F4E9A7',         // Lemon Icing (shared highlight)
+  pepTealLight: '#F0CFB1',    // Peach Dust
+  pepCyan: '#F4ECC2',         // Lemon Icing (shared highlight)
 
   // Glow
   glowBlue: 'rgba(127, 179, 194, 0.25)',   // Ice Melt Deep

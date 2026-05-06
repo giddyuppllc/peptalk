@@ -1471,6 +1471,8 @@ export default function ProfileScreen() {
           <View style={[profileStyles.card, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
             <ProfileRow icon="link-outline" label="Integrations" onPress={() => router.push('/settings/integrations' as any)} color={t.text} />
             <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+            <ProfileRow icon="gift-outline" label="Referral code" onPress={() => router.push('/settings/referral' as any)} color={t.text} />
+            <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
             <ProfileRow icon="ban-outline" label="Blocked users" onPress={() => router.push('/community/blocked-users' as any)} color={t.text} />
             <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
             <ProfileRow icon="lock-closed-outline" label="Privacy" onPress={() => router.push('/settings/privacy' as any)} color={t.text} />

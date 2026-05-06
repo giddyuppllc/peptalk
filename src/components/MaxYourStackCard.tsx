@@ -57,6 +57,7 @@ export function MaxYourStackCard({ compact = false }: MaxYourStackCardProps) {
     'Custom fitness programming tuned to the peptides in your stack',
     'Nutrition that flexes with your cycle phase, training load, and dose week',
     'Re-plans weekly from your check-ins, doses, soreness, and sleep',
+    '6-month early-access lock at $39.95 (one-time) — half off launch price',
   ];
 
   return (
@@ -80,6 +81,15 @@ export function MaxYourStackCard({ compact = false }: MaxYourStackCardProps) {
         <Text style={styles.subtitle}>
           Custom fitness + nutrition programming, tuned to the peptides you're on.
         </Text>
+
+        {/* Early-access offer pill — $39.95 one-time, 6 months locked. */}
+        <View style={styles.offerStrip}>
+          <View style={styles.offerLabelWrap}>
+            <Text style={styles.offerLabel}>EARLY ACCESS</Text>
+          </View>
+          <Text style={styles.offerPrice}>$39.95</Text>
+          <Text style={styles.offerPeriod}>locks 6 months · save 50%</Text>
+        </View>
 
         {!compact && (
           <View style={styles.promiseList}>
@@ -109,7 +119,7 @@ export function MaxYourStackCard({ compact = false }: MaxYourStackCardProps) {
             color={onWaitlist ? '#fff' : '#3E7CB1'}
           />
           <Text style={[styles.ctaText, { color: onWaitlist ? '#fff' : '#3E7CB1' }]}>
-            {onWaitlist ? "You're in — we'll ping you" : 'Get early access'}
+            {onWaitlist ? "You're in — we'll ping you" : 'Reserve at $39.95'}
           </Text>
         </TouchableOpacity>
       </LinearGradient>
@@ -207,6 +217,39 @@ const styles = StyleSheet.create({
   ctaText: {
     fontSize: FontSizes.sm,
     fontWeight: '700',
+  },
+  offerStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    marginTop: 4,
+  },
+  offerLabelWrap: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: '#fff',
+  },
+  offerLabel: {
+    color: '#3E7CB1',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  offerPrice: {
+    color: '#fff',
+    fontSize: FontSizes.lg,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  offerPeriod: {
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 11,
+    fontWeight: '600',
   },
 });
 

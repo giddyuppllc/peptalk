@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1f2a36"
+      "backgroundColor": "#F0EEE9"
     },
     "ios": {
       "supportsTablet": true,
@@ -146,7 +146,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1f2a36"
+        "backgroundColor": "#F0EEE9"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.peptalkapp.peptalk",

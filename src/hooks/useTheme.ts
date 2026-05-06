@@ -81,24 +81,24 @@ export interface ThemeColors {
 // ═══════════════════════════════════════════════════════════════════════════
 
 // Shared
-const CLOUD_DANCER = '#EDE6D6';       // 11-4201 — main bg
-const LEMON_ICING = '#F4E9A7';        // 11-0515 — shared warm highlight
+const CLOUD_DANCER = '#F0EEE9';       // 11-4201 TCX — main bg
+const LEMON_ICING = '#F4ECC2';        // 11-0515 TCX — shared warm highlight
 
 // Female (warm)
-const PEACH_DUST = '#F2C7A9';         // 12-1107 — female surface/pastel
+const PEACH_DUST = '#F0CFB1';         // 13-1407 TCX — female surface/pastel
 const PEACH_DUST_DEEP = '#E89672';    // Derived darker for CTAs
 const PEACH_DUST_DARKER = '#C76B45';  // Derived darker still, strong contrast
-const RAINDROPS_ON_ROSES = '#F5DAD6'; // 11-1400 — female blush secondary
-const ORCHID_TINT = '#D4CBD2';        // 13-3802 — female soft lavender accent
+const RAINDROPS_ON_ROSES = '#F2D8D5'; // 12-2904 TCX — female blush secondary
+const ORCHID_TINT = '#DBC6D8';        // 13-3405 TCX — female soft lavender accent
 const CREAM_WARM = '#FAF5EF';         // Warmer Cloud Dancer for female surface band
 const BORDER_WARM = '#EAE4DC';        // Soft beige border
 
 // Male (cool)
-const ICE_MELT = '#CADEE5';           // 13-4306 — male pastel blue
+const ICE_MELT = '#D8E3E7';           // 13-4302 TCX — male pastel blue
 const ICE_MELT_DEEP = '#7FB3C2';      // Derived darker for CTAs
 const ICE_MELT_DARKER = '#5C92A3';    // Derived darker still
-const ALMOST_AQUA = '#BADDCB';        // 13-6006 — male mint secondary
-const NIMBUS_CLOUD = '#D0D3D4';       // 13-4108 — male soft gray accent
+const ALMOST_AQUA = '#A4D9D1';        // 12-5409 TCX — male mint secondary
+const NIMBUS_CLOUD = '#D5D6D2';       // 14-4504 TCX — male soft gray accent
 const CREAM_COOL = '#F3F5F2';         // Cooler Cloud Dancer for male surface band
 const BORDER_COOL = '#E0E4E1';        // Soft gray border
 

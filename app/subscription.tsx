@@ -82,7 +82,7 @@ const TIERS: TierInfo[] = [
   {
     tier: 'plus',
     name: 'PepTalk+',
-    description: 'For the serious tracker',
+    description: 'Early access to the upgraded version',
     features: [
       'Stack Builder — unlimited peptide stacks with interaction & synergy analysis',
       'Aimee — 20 personalized chats/day on dosing, timing, and side effects',
@@ -90,11 +90,12 @@ const TIERS: TierInfo[] = [
       'Voice Log — say what you ate, get the macros logged',
       'Unlimited meal & food logging + full micronutrient tracking',
       'Apple Watch + Google Fit sync (HRV, VO2, weight trends)',
+      'First in line for new features as they ship',
       'Everything in Free, ad-free',
     ],
-    colors: ['#E89672', '#F5DAD6'],
+    colors: ['#E89672', '#F2D8D5'],
     icon: 'pulse-outline',
-    badge: 'Most Popular',
+    badge: 'EARLY ACCESS',
     pricing: { price: '$9.99', period: '/mo', productId: PRODUCT_IDS.plusMonthly },
   },
   {
