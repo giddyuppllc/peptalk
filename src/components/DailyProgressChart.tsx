@@ -432,10 +432,12 @@ const s = StyleSheet.create({
   donutSub: { fontSize: 10, color: '#6B7280', fontWeight: '600', marginTop: -2 },
 
   // Mini rings
-  ringScroll: { paddingLeft: 16, paddingRight: 24, gap: 10 },
+  // Extra paddingRight so the trailing macro card (Fat) clears the
+  // floating + Log FAB which sits at the bottom-right corner.
+  ringScroll: { paddingLeft: 16, paddingRight: 96, gap: 10 },
   miniCard: {
     alignItems: 'center', paddingVertical: 6, paddingHorizontal: 4,
-    borderRadius: BorderRadius.md, borderWidth: 1.5, borderColor: 'transparent', width: 80,
+    borderRadius: BorderRadius.md, borderWidth: 1.5, borderColor: 'transparent', width: 76,
   },
   miniCenter: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
   miniPercent: { fontSize: 12, fontWeight: '800' },

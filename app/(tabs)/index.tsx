@@ -41,7 +41,7 @@ import { DailyInsightCard } from '../../src/components/DailyInsightCard';
 import { ReadinessCard } from '../../src/components/ReadinessCard';
 import { ProfileCompletionCard } from '../../src/components/ProfileCompletionCard';
 import { FreeUpsellCard } from '../../src/components/FreeUpsellCard';
-import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
+import { Colors, FontSizes, Spacing, BorderRadius, Gradients } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import {
   isHealthDataAvailable,
@@ -1375,19 +1375,28 @@ export default function DashboardScreen() {
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={[t.primary, t.secondary]}
+                colors={Gradients.premium}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.maxStackCTA}
               >
-                <Text style={styles.maxStackCTALabel}>UNLOCK EVERYTHING</Text>
-                <Text style={styles.maxStackCTATitle}>Maximize Your Stack</Text>
+                <Text style={styles.maxStackCTALabel} numberOfLines={1} adjustsFontSizeToFit>
+                  UNLOCK EVERYTHING
+                </Text>
+                <Text
+                  style={styles.maxStackCTATitle}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                >
+                  Maximize Your Stack
+                </Text>
                 <Text style={styles.maxStackCTASub}>
                   Custom workouts, meal plans, and peptide coaching — built for your goals.
                 </Text>
                 <View style={styles.maxStackCTABtn}>
                   <Text style={styles.maxStackCTABtnText}>Explore Plans</Text>
-                  <Ionicons name="arrow-forward" size={16} color={t.primary} />
+                  <Ionicons name="arrow-forward" size={16} color="#3E7CB1" />
                 </View>
               </LinearGradient>
             </TouchableOpacity>

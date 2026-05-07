@@ -68,8 +68,12 @@ function UpgradeNudgeCardImpl() {
   const dayIdx = Math.floor(Date.now() / 86400000) % NUDGES.length;
   const nudge = NUDGES[dayIdx];
 
+  // Pro: deep medical-blue gradient. Plus: muted orchid → ice melt
+  // (was peach → rose, retired because it dominated the home page).
   const colors: readonly [string, string] =
-    nudge.tier === 'pro' ? (['#7FB3D8', '#3E7CB1'] as const) : (['#E89672', '#F2D8D5'] as const);
+    nudge.tier === 'pro'
+      ? (['#3E7CB1', '#7FB3C2'] as const)
+      : (['#9B86A4', '#7FB3C2'] as const);
 
   return (
     <TouchableOpacity
@@ -93,13 +97,17 @@ function UpgradeNudgeCardImpl() {
 
         <View style={{ flex: 1 }}>
           <View style={styles.titleRow}>
-            <Text style={styles.title}>{nudge.title}</Text>
+            <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+              {nudge.title}
+            </Text>
             <View style={styles.tierPill}>
               <Ionicons name="lock-closed" size={9} color="#fff" />
               <Text style={styles.tierPillText}>{nudge.tier === 'pro' ? 'PRO' : 'PLUS'}</Text>
             </View>
           </View>
-          <Text style={styles.body}>{nudge.body}</Text>
+          <Text style={styles.body} numberOfLines={2} ellipsizeMode="tail">
+            {nudge.body}
+          </Text>
           <View style={styles.ctaRow}>
             <Text style={styles.ctaText}>Try it free for 7 days</Text>
             <Ionicons name="arrow-forward" size={12} color="#fff" />
@@ -116,8 +124,8 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     borderRadius: 18,
     overflow: 'hidden',
-    shadowColor: '#E89672',
-    shadowOpacity: 0.22,
+    shadowColor: '#3E7CB1',
+    shadowOpacity: 0.18,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
   },
@@ -166,6 +174,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Playfair-Black',
     color: '#fff',
     letterSpacing: -0.2,
+    flexShrink: 1,
   },
   tierPill: {
     flexDirection: 'row',

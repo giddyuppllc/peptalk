@@ -112,14 +112,29 @@ export const Colors = {
   glassBlueBorder: 'rgba(232, 150, 114, 0.20)',
 } as const;
 
+// Luxe palette: lead with cool tones (Ice Melt + Orchid Tint) for the
+// primary surfaces; reserve Peach Dust for specific "warm" callouts so
+// the app doesn't read as peachy-orange end-to-end.
 export const Gradients = {
-  primary: ['#E89672', '#F0CFB1'] as const,              // Peach Dust Deep → Peach Dust
-  character: ['#E89672', '#F4ECC2'] as const,            // Peach Dust Deep → Lemon Icing
-  card: ['rgba(232,150,114,0.12)', 'rgba(243,217,216,0.06)'] as const,
-  accent: ['#E89672', '#F4ECC2'] as const,               // Peach Dust Deep → Lemon Icing
-  warm: ['#E89672', '#F2D8D5'] as const,                 // Peach Dust Deep → Raindrops on Roses
+  /** App-wide hero gradient: Ice Melt deep → Orchid Tint. Sophisticated,
+   *  pale-blue-into-lavender; works on both genders. */
+  primary: ['#7FB3C2', '#DBC6D8'] as const,
+  /** Character / mascot gradient — kept warm because the mascot reads
+   *  female-coded. Orchid → Lemon for a softer, less-orange handoff. */
+  character: ['#9B86A4', '#F4ECC2'] as const,
+  card: ['rgba(127,179,194,0.10)', 'rgba(219,198,216,0.06)'] as const,
+  /** Generic accent — Ice Melt deep into Almost Aqua. */
+  accent: ['#7FB3C2', '#A4D9D1'] as const,
+  /** Warm gradient — kept for women's variant + peach callouts Jamie
+   *  likes. Used sparingly. */
+  warm: ['#E89672', '#F2D8D5'] as const,
   male: ['#7FB3C2', '#D8E3E7'] as const,                 // Ice Melt Deep → Ice Melt
   maleAccent: ['#7FB3C2', '#A4D9D1'] as const,           // Ice Melt Deep → Almost Aqua
+  /** Premium / Pro upgrade gradient — deeper blue tones to feel
+   *  medical-luxe rather than candy-peach. */
+  premium: ['#3E7CB1', '#7FB3C2'] as const,              // Pro Blue Deep → Ice Melt Deep
+  /** Soft luxe — Orchid Tint into Raindrops on Roses; muted feminine. */
+  luxe: ['#9B86A4', '#F2D8D5'] as const,
 };
 
 export const CategoryColors: Record<string, string> = {

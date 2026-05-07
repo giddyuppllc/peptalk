@@ -89,10 +89,23 @@ function LeaderboardStripImpl() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Ionicons name="trophy" size={13} color="#3E7CB1" />
-          <Text style={[styles.headerTitle, { color: t.text }]}>Community</Text>
+          <Text
+            style={[styles.headerTitle, { color: t.text }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            Community
+          </Text>
         </View>
-        <Text style={[styles.rankInline, { color: t.textSecondary }]}>
-          #{myRank} · <Text style={{ color: t.primary, fontFamily: 'DMSans-Bold' }}>{(myEntry?.weeklyXP ?? 0).toLocaleString()} XP</Text>
+        <Text
+          style={[styles.rankInline, { color: t.textSecondary }]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          #{myRank} ·{' '}
+          <Text style={{ color: t.primary, fontFamily: 'DMSans-Bold' }}>
+            {(myEntry?.weeklyXP ?? 0).toLocaleString()} XP
+          </Text>
         </Text>
       </View>
 
@@ -188,6 +201,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
     paddingHorizontal: 14,
     paddingTop: 10,
     paddingBottom: 8,
@@ -196,6 +210,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 1,
   },
   headerTitle: {
     fontSize: 13,
