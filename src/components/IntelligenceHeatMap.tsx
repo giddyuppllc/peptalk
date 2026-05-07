@@ -52,7 +52,7 @@ function toDateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-export function IntelligenceHeatMap({ weeks = 12, onDayPress }: HeatMapProps) {
+function IntelligenceHeatMapInner({ weeks = 12, onDayPress }: HeatMapProps) {
   const t = useTheme();
   const accent = useSectionAccent();
 
@@ -155,11 +155,15 @@ export function IntelligenceHeatMap({ weeks = 12, onDayPress }: HeatMapProps) {
   return (
     <View style={styles.wrap}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: t.text }]}>Intelligence heat map</Text>
+        <Text style={[styles.title, { color: t.text }]}>Consistency map</Text>
         <Text style={[styles.subtitle, { color: t.textSecondary }]}>
-          {totalScored.active} of last {totalScored.totalDays} days active
+          {totalScored.active}/{totalScored.totalDays} days active
         </Text>
       </View>
+      <Text style={[styles.explainer, { color: t.textSecondary }]}>
+        Each square is a day in the last {Math.round(totalScored.totalDays / 7)} weeks. Darker = more
+        pillars used (check-in, dose, workout, meal, journal). Streaks pop visually.
+      </Text>
 
       <View style={styles.body}>
         {/* Day-of-week labels */}
@@ -248,6 +252,11 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 11,
   },
+  explainer: {
+    fontSize: 11,
+    lineHeight: 16,
+    marginBottom: 10,
+  },
   body: {
     flexDirection: 'row',
     gap: 6,
@@ -291,5 +300,9 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
   },
 });
+
+// Memoize so home re-renders don't recompute the 84-cell grid + 5-store
+// score map. Only re-renders when weeks or onDayPress change.
+export const IntelligenceHeatMap = React.memo(IntelligenceHeatMapInner);
 
 export default IntelligenceHeatMap;

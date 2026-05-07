@@ -34,7 +34,7 @@ import { StepGoalRing } from '../../src/components/StepGoalRing';
 import { MacroProgressRing } from '../../src/components/MacroProgressRing';
 import { ActiveProtocolBanner } from '../../src/components/ActiveProtocolBanner';
 import { TodaysPlanCard } from '../../src/components/TodaysPlanCard';
-import { IntelligenceHeatMap } from '../../src/components/IntelligenceHeatMap';
+import { PerformanceTeaserCard } from '../../src/components/PerformanceTeaserCard';
 import { ReferralPromptBanner } from '../../src/components/ReferralPromptBanner';
 import { PantryAlertCard } from '../../src/components/PantryAlertCard';
 import { DailyInsightCard } from '../../src/components/DailyInsightCard';
@@ -1035,9 +1035,10 @@ export default function DashboardScreen() {
           <FreeUpsellCard />
         </View>
 
-        {/* Intelligence heat map — 12-week activity consistency view. */}
+        {/* Performance teaser — single-tap to /performance for the bubble
+            grid + detailed breakdowns. Replaces the inline heat map. */}
         <View style={styles.protocolBannerWrap}>
-          <IntelligenceHeatMap weeks={12} />
+          <PerformanceTeaserCard />
         </View>
 
         {/* Referral code nudge — auto-hides once redeemed or dismissed. */}
