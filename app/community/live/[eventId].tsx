@@ -1,0 +1,389 @@
+/**
+ * Live event chat screen — real-time text chat hosted by an admin.
+ *
+ * Flow:
+ *   - Mount → store.subscribeToEvent(eventId) opens the Realtime channel
+ *   - User types a message → sendMessage() → community-live-send-message
+ *     edge function → DB insert → Realtime push → list updates
+ *   - Host taps "End event" (admin only) → community-live-end → status
+ *     flips, banner disappears app-wide
+ *
+ * Tier gate: handled in the edge function. The screen still loads for
+ * non-Plus users so they can see scrolling history (read-only); the
+ * composer hides itself if they aren't allowed to write.
+ */
+
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../../src/hooks/useTheme';
+import { Spacing, FontSizes, BorderRadius } from '../../../src/constants/theme';
+import { useLiveEventStore, type LiveMessage } from '../../../src/store/useLiveEventStore';
+import { useAuthStore } from '../../../src/store/useAuthStore';
+import { useTier } from '../../../src/hooks/useFeatureGate';
+
+export default function LiveEventChatScreen() {
+  const router = useRouter();
+  const t = useTheme();
+  const { eventId: rawEventId } = useLocalSearchParams<{ eventId: string }>();
+  const eventId = String(rawEventId ?? '');
+
+  const active = useLiveEventStore((s) => s.active);
+  const messages = useLiveEventStore((s) => s.messages);
+  const subscribe = useLiveEventStore((s) => s.subscribeToEvent);
+  const unsubscribe = useLiveEventStore((s) => s.unsubscribe);
+  const hydrate = useLiveEventStore((s) => s.hydrateActive);
+  const pushLocalMessage = useLiveEventStore((s) => s.pushLocalMessage);
+
+  const currentUserId = useAuthStore((s) => s.user?.id);
+  const tier = useTier();
+
+  const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
+  const listRef = useRef<FlatList>(null);
+
+  useEffect(() => {
+    // Hydrate (in case user opened this URL directly without seeing the banner)
+    if (!active || active.id !== eventId) {
+      hydrate();
+    }
+    if (eventId) {
+      subscribe(eventId);
+    }
+    return () => unsubscribe();
+  }, [eventId, active?.id, hydrate, subscribe, unsubscribe]);
+
+  // Auto-scroll to newest message on every new arrival.
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const id = setTimeout(() => {
+      listRef.current?.scrollToEnd({ animated: true });
+    }, 50);
+    return () => clearTimeout(id);
+  }, [messages.length]);
+
+  const isHost = !!currentUserId && active?.hostUserId === currentUserId;
+  const required = active?.requiredTier ?? 'plus';
+  const tierAllowed =
+    isHost ||
+    required === 'free' ||
+    (required === 'plus' && (tier === 'plus' || tier === 'pro')) ||
+    (required === 'pro' && tier === 'pro');
+
+  const isLive = active?.status === 'live' && active.id === eventId;
+
+  const sendMessage = async () => {
+    const body = draft.trim();
+    if (!body || sending) return;
+    setSending(true);
+    try {
+      const { supabase } = await import('../../../src/services/supabase');
+      const { data, error } = await supabase.functions.invoke('community-live-send-message', {
+        body: { eventId, body },
+      });
+      if (error) {
+        Alert.alert('Could not send', error.message ?? 'Please try again.');
+        return;
+      }
+      const payload = data as { error?: string; messageId?: string; createdAt?: string };
+      if (payload?.error) {
+        Alert.alert('Could not send', payload.error);
+        return;
+      }
+      // Optimistic local push so the UI feels instant — Realtime will
+      // ignore the duplicate when its INSERT echo arrives.
+      if (payload?.messageId && currentUserId) {
+        pushLocalMessage({
+          id: payload.messageId,
+          eventId,
+          userId: currentUserId,
+          body,
+          isHost,
+          createdAt: payload.createdAt ?? new Date().toISOString(),
+        });
+      }
+      setDraft('');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const endEvent = async () => {
+    Alert.alert('End live event?', 'This closes the chat for everyone. Transcript stays viewable.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'End event',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const { supabase } = await import('../../../src/services/supabase');
+            const { error } = await supabase.functions.invoke('community-live-end', {
+              body: { eventId },
+            });
+            if (error) {
+              Alert.alert('Could not end', error.message ?? 'Try again.');
+              return;
+            }
+            router.back();
+          } catch (err: any) {
+            Alert.alert('Could not end', err?.message ?? 'Try again.');
+          }
+        },
+      },
+    ]);
+  };
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
+      <View style={[styles.header, { borderBottomColor: t.cardBorder }]}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Leave live chat"
+        >
+          <Ionicons name="chevron-back" size={24} color={t.text} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <View style={styles.titleRow}>
+            {isLive && <View style={styles.liveDot} />}
+            <Text style={[styles.title, { color: t.text }]} numberOfLines={1}>
+              {active?.title ?? 'Live event'}
+            </Text>
+          </View>
+          {active?.hostName && (
+            <Text style={[styles.host, { color: t.textSecondary }]}>
+              Hosted by {active.hostName}
+            </Text>
+          )}
+        </View>
+        {isHost && isLive && (
+          <TouchableOpacity
+            onPress={endEvent}
+            style={styles.endBtn}
+            accessibilityRole="button"
+            accessibilityLabel="End live event"
+          >
+            <Text style={styles.endBtnText}>End</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {!active && (
+        <View style={styles.center}>
+          <ActivityIndicator color={t.textSecondary} />
+        </View>
+      )}
+
+      {active && (
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <FlatList
+            ref={listRef}
+            data={messages}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.list}
+            renderItem={({ item }) => <MessageRow message={item} myUserId={currentUserId} />}
+            ListEmptyComponent={
+              <View style={styles.emptyWrap}>
+                <Ionicons name="chatbubbles-outline" size={32} color={t.textSecondary} />
+                <Text style={[styles.emptyText, { color: t.textSecondary }]}>
+                  {isLive ? 'Be the first to say something.' : 'This event has ended.'}
+                </Text>
+              </View>
+            }
+          />
+
+          {!isLive && (
+            <View style={[styles.endedBanner, { backgroundColor: t.glass }]}>
+              <Ionicons name="lock-closed-outline" size={14} color={t.textSecondary} />
+              <Text style={[styles.endedText, { color: t.textSecondary }]}>
+                The host ended this event. You're seeing the transcript.
+              </Text>
+            </View>
+          )}
+
+          {isLive && tierAllowed && (
+            <View style={[styles.composer, { borderTopColor: t.cardBorder, backgroundColor: t.bg }]}>
+              <TextInput
+                value={draft}
+                onChangeText={setDraft}
+                placeholder="Say something…"
+                placeholderTextColor={t.textSecondary}
+                multiline
+                maxLength={1000}
+                style={[styles.composerInput, { color: t.text, backgroundColor: t.glass }]}
+              />
+              <TouchableOpacity
+                onPress={sendMessage}
+                disabled={!draft.trim() || sending}
+                style={[
+                  styles.sendBtn,
+                  { backgroundColor: t.primary, opacity: !draft.trim() || sending ? 0.5 : 1 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Send message"
+              >
+                {sending ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="arrow-up" size={18} color="#fff" />
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {isLive && !tierAllowed && (
+            <TouchableOpacity
+              onPress={() => router.push('/subscription' as any)}
+              style={styles.upgradeBar}
+            >
+              <Ionicons name="lock-closed" size={14} color="#fff" />
+              <Text style={styles.upgradeText}>
+                Joining the live chat requires PepTalk{required === 'pro' ? ' Pro' : '+'}
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color="#fff" />
+            </TouchableOpacity>
+          )}
+        </KeyboardAvoidingView>
+      )}
+    </SafeAreaView>
+  );
+}
+
+function MessageRow({ message, myUserId }: { message: LiveMessage; myUserId?: string }) {
+  const t = useTheme();
+  const isMine = message.userId === myUserId;
+  const time = new Date(message.createdAt).toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  return (
+    <View style={[styles.msgRow, isMine && styles.msgRowMine]}>
+      <View
+        style={[
+          styles.msgBubble,
+          {
+            backgroundColor: isMine ? t.primary : t.glass,
+            borderColor: t.cardBorder,
+          },
+          message.isHost && styles.msgBubbleHost,
+        ]}
+      >
+        {!isMine && (
+          <Text style={[styles.msgAuthor, { color: message.isHost ? '#3E7CB1' : t.textSecondary }]}>
+            {message.authorName ?? (message.isHost ? 'Host' : 'Member')}
+            {message.isHost && '  · HOST'}
+          </Text>
+        )}
+        <Text style={[styles.msgBody, { color: isMine ? '#fff' : t.text }]}>{message.body}</Text>
+        <Text style={[styles.msgTime, { color: isMine ? 'rgba(255,255,255,0.7)' : t.textSecondary }]}>
+          {time}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    gap: 8,
+  },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#ef4444',
+  },
+  title: { fontSize: FontSizes.md, fontWeight: '800' },
+  host: { fontSize: 11, marginTop: 2 },
+  endBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#ef4444',
+  },
+  endBtnText: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  list: { padding: Spacing.md, gap: 8 },
+  emptyWrap: { alignItems: 'center', paddingTop: 60, gap: 10 },
+  emptyText: { fontSize: FontSizes.sm },
+  msgRow: { flexDirection: 'row' },
+  msgRowMine: { justifyContent: 'flex-end' },
+  msgBubble: {
+    maxWidth: '78%',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  msgBubbleHost: { borderColor: '#3E7CB1', borderWidth: 1.5 },
+  msgAuthor: { fontSize: 10, fontWeight: '700', marginBottom: 2, letterSpacing: 0.4 },
+  msgBody: { fontSize: 14, lineHeight: 19 },
+  msgTime: { fontSize: 9, marginTop: 4, textAlign: 'right' },
+  composer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+    padding: 10,
+    borderTopWidth: 1,
+  },
+  composerInput: {
+    flex: 1,
+    minHeight: 40,
+    maxHeight: 120,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+    fontSize: FontSizes.sm,
+  },
+  sendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  endedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    margin: 12,
+    borderRadius: 10,
+  },
+  endedText: { fontSize: 11 },
+  upgradeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: '#3E7CB1',
+  },
+  upgradeText: { color: '#fff', fontSize: FontSizes.sm, fontWeight: '700', flex: 1 },
+});

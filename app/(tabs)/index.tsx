@@ -36,6 +36,7 @@ import { ActiveProtocolBanner } from '../../src/components/ActiveProtocolBanner'
 import { TodaysPlanCard } from '../../src/components/TodaysPlanCard';
 import { PerformanceTeaserCard } from '../../src/components/PerformanceTeaserCard';
 import { ReferralPromptBanner } from '../../src/components/ReferralPromptBanner';
+import { LiveEventBanner } from '../../src/components/LiveEventBanner';
 import { PantryAlertCard } from '../../src/components/PantryAlertCard';
 import { DailyInsightCard } from '../../src/components/DailyInsightCard';
 import { ReadinessCard } from '../../src/components/ReadinessCard';
@@ -1014,6 +1015,10 @@ export default function DashboardScreen() {
         <View style={styles.protocolBannerWrap}>
           <DailyInsightCard />
         </View>
+
+        {/* Live event banner — pulses red when an admin is hosting an
+            active live chat. Tier-gated visibility (Plus+ by default). */}
+        <LiveEventBanner />
 
         {/* Today's plan — context-aware to-do list. Hides itself when nothing's left. */}
         <View style={styles.protocolBannerWrap}>
