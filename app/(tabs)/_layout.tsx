@@ -1,9 +1,11 @@
+import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet } from 'react-native';
 import { selectionTick } from '../../src/utils/haptics';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
+import { AimeeDnaIcon } from '../../src/components/AimeeDnaIcon';
 
 type TabIconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -71,13 +73,18 @@ export default function TabsLayout() {
           name={tab.name}
           options={{
             title: tab.title,
-            tabBarIcon: ({ focused, color, size }) => (
-              <Ionicons
-                name={focused ? tab.activeIcon : tab.icon}
-                size={size}
-                color={color}
-              />
-            ),
+            tabBarIcon: ({ focused, color, size }) =>
+              tab.name === 'peptalk' ? (
+                // Custom DNA helix glyph for Aimee — glassy translucent
+                // blue, swaps the chat-bubble Ionicon.
+                <AimeeDnaIcon size={size + 2} color={color} active={focused} />
+              ) : (
+                <Ionicons
+                  name={focused ? tab.activeIcon : tab.icon}
+                  size={size}
+                  color={color}
+                />
+              ),
           }}
           listeners={{
             tabPress: () => selectionTick(),

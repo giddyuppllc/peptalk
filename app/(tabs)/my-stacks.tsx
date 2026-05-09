@@ -17,6 +17,7 @@ import { useStackStore } from '../../src/store/useStackStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { getPeptideById } from '../../src/data/peptides';
 import { PEPTIDES } from '../../src/data/peptides';
+import { PROTOCOL_TEMPLATES } from '../../src/data/protocols';
 import { GlassCard } from '../../src/components/GlassCard';
 import { CoachMark } from '../../src/components/tutorial/CoachMark';
 import { getCategoryColor } from '../../src/constants/categories';
@@ -361,6 +362,71 @@ function CalculatorTab() {
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* Typical research dose range bubble — shows the documented
+          min/max for the selected peptide so users have a credible
+          starting point. Tap "Min" or "Max" to load that value into
+          the desired-dose field. Hidden when no peptide is selected
+          or no protocol exists. */}
+      {(() => {
+        if (!selectedPeptide) return null;
+        const proto = PROTOCOL_TEMPLATES.find((pt) => pt.peptideId === selectedPeptide.id);
+        if (!proto?.typicalDose) return null;
+        const { min, max, unit } = proto.typicalDose;
+        return (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              padding: 12,
+              borderRadius: 14,
+              backgroundColor: `${accent.deep}10`,
+              borderWidth: 1,
+              borderColor: `${accent.deep}30`,
+              marginBottom: 12,
+            }}
+          >
+            <Ionicons name="flask-outline" size={16} color={accent.deep} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 0.6, color: t.textSecondary }}>
+                TYPICAL RESEARCH RANGE
+              </Text>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: t.text, marginTop: 2 }}>
+                {min}–{max} {unit}
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              <TouchableOpacity
+                onPress={() => setDoseMcg(String(unit === 'mg' ? min * 1000 : min))}
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 999,
+                  backgroundColor: accent.deep,
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Use minimum dose ${min} ${unit}`}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 11, letterSpacing: 0.4 }}>Min</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setDoseMcg(String(unit === 'mg' ? max * 1000 : max))}
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 999,
+                  backgroundColor: accent.deep,
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Use maximum dose ${max} ${unit}`}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 11, letterSpacing: 0.4 }}>Max</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        );
+      })()}
 
       {/* Desired dose */}
       <Text style={[calcStyles.fieldLabel, { color: t.textSecondary }]}>DESIRED DOSE</Text>

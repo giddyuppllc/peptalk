@@ -596,39 +596,64 @@ export default function DosingCalculatorScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Suggested-min-dose pill — surfaces typical research dose so users
-              don't have to guess or wait until after Calculate. Tester #14. */}
+          {/* Typical research dose range — bubble with min/max + tap-to-fill.
+              Surfaces the documented range so users have a credible
+              anchor before plugging numbers, and one-tap shortcuts to
+              load either end. */}
           {protocolsForPeptide[0]?.typicalDose && (
-            <TouchableOpacity
-              onPress={() => {
-                const proto = protocolsForPeptide[0]!;
-                const min = proto.typicalDose!.min;
-                const unit = proto.typicalDose!.unit;
-                // Convert if the user has the opposite unit selected
-                const value = unit === doseUnit
-                  ? String(min)
-                  : doseUnit === 'mg'
-                    ? String(min / 1000)
-                    : String(min * 1000);
-                setTargetDose(value);
-                resetResults();
-              }}
-              activeOpacity={0.7}
+            <View
               style={{
-                alignSelf: 'flex-start',
-                paddingHorizontal: 10,
-                paddingVertical: 5,
-                borderRadius: 999,
-                backgroundColor: `${t.primary}18`,
-                marginBottom: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                paddingVertical: 10,
+                paddingHorizontal: 12,
+                borderRadius: 14,
+                backgroundColor: `${t.primary}10`,
+                borderWidth: 1,
+                borderColor: `${t.primary}30`,
+                marginBottom: 10,
               }}
-              accessibilityRole="button"
-              accessibilityLabel={`Use suggested minimum dose ${protocolsForPeptide[0].typicalDose.min} ${protocolsForPeptide[0].typicalDose.unit}`}
             >
-              <Text style={{ fontSize: 12, color: t.primary, fontWeight: '600' }}>
-                Use suggested min: {protocolsForPeptide[0].typicalDose.min}{protocolsForPeptide[0].typicalDose.unit}
-              </Text>
-            </TouchableOpacity>
+              <Ionicons name="flask-outline" size={16} color={t.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 0.6, color: t.textSecondary }}>
+                  TYPICAL RESEARCH RANGE
+                </Text>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: t.text, marginTop: 2 }}>
+                  {protocolsForPeptide[0].typicalDose.min}–{protocolsForPeptide[0].typicalDose.max} {protocolsForPeptide[0].typicalDose.unit}
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                {(['min', 'max'] as const).map((edge) => (
+                  <TouchableOpacity
+                    key={edge}
+                    onPress={() => {
+                      const proto = protocolsForPeptide[0]!;
+                      const v = edge === 'min' ? proto.typicalDose!.min : proto.typicalDose!.max;
+                      const unit = proto.typicalDose!.unit;
+                      const value = unit === doseUnit
+                        ? String(v)
+                        : doseUnit === 'mg' ? String(v / 1000) : String(v * 1000);
+                      setTargetDose(value);
+                      resetResults();
+                    }}
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
+                      borderRadius: 999,
+                      backgroundColor: t.primary,
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Use ${edge} dose ${edge === 'min' ? protocolsForPeptide[0].typicalDose.min : protocolsForPeptide[0].typicalDose.max} ${protocolsForPeptide[0].typicalDose.unit}`}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 11, letterSpacing: 0.4 }}>
+                      {edge === 'min' ? 'Min' : 'Max'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
           )}
           <GlassCard>
             <View style={styles.row}>
