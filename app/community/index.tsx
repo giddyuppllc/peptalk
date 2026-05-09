@@ -67,11 +67,20 @@ export default function CommunityFeedScreen() {
   const [sort, setSort] = useState<SortMode>('new');
   const [feedMode, setFeedMode] = useState<'all' | 'following'>('all');
 
+  const subscribeFeedRealtime = useCommunityStore((s) => s.subscribeFeedRealtime);
+  const unsubscribeFeedRealtime = useCommunityStore((s) => s.unsubscribeFeedRealtime);
+
   useEffect(() => {
     hydrateTopics();
     hydrateBlockedUsers();
     hydrateFollowedUsers();
-  }, [hydrateTopics, hydrateBlockedUsers, hydrateFollowedUsers]);
+    // Open the live feed channel so new posts + counter updates appear
+    // without manual pull-to-refresh.
+    subscribeFeedRealtime();
+    return () => {
+      unsubscribeFeedRealtime();
+    };
+  }, [hydrateTopics, hydrateBlockedUsers, hydrateFollowedUsers, subscribeFeedRealtime, unsubscribeFeedRealtime]);
 
   useEffect(() => {
     hydrateFeed({ topicSlug: activeSlug, sort, followingOnly: feedMode === 'following' });

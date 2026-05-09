@@ -35,6 +35,8 @@ export interface LiveMessage {
   userId: string;
   body: string;
   isHost: boolean;
+  isDeleted?: boolean;
+  lastEditedAt?: string | null;
   createdAt: string;
   authorName?: string;
 }
@@ -75,6 +77,8 @@ function rowToMessage(r: any): LiveMessage {
     userId: r.user_id,
     body: r.body,
     isHost: !!r.is_host,
+    isDeleted: !!r.is_deleted,
+    lastEditedAt: r.last_edited_at ?? null,
     createdAt: r.created_at,
     authorName: r.profiles?.display_name?.trim() || r.profiles?.username?.trim() || undefined,
   };
@@ -145,9 +149,32 @@ export const useLiveEventStore = create<LiveEventState>((set, get) => ({
           },
           (payload: any) => {
             const msg = rowToMessage(payload.new);
-            // Skip duplicates from our optimistic local push.
             if (get().messages.some((m) => m.id === msg.id)) return;
             set({ messages: [...get().messages, msg] });
+          },
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'community_live_messages',
+            filter: `event_id=eq.${eventId}`,
+          },
+          (payload: any) => {
+            const updated = rowToMessage(payload.new);
+            set({
+              messages: get().messages.map((m) =>
+                m.id === updated.id
+                  ? {
+                      ...m,
+                      body: updated.body,
+                      isDeleted: updated.isDeleted,
+                      lastEditedAt: updated.lastEditedAt,
+                    }
+                  : m,
+              ),
+            });
           },
         )
         .on(

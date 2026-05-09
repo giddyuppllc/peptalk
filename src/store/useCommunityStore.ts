@@ -40,6 +40,12 @@ interface CommunityState {
   // ── Reads ──
   hydrateTopics: () => Promise<void>;
   hydrateFeed: (opts?: { topicSlug?: string | null; sort?: 'new' | 'top_today' | 'top_week' | 'top_all'; followingOnly?: boolean }) => Promise<void>;
+  /** Open a Realtime subscription on community_posts so new posts +
+   *  count updates appear without manual refresh. Idempotent — safe
+   *  to call from multiple mount points. */
+  subscribeFeedRealtime: () => Promise<void>;
+  /** Close the feed Realtime channel (e.g. on sign-out). */
+  unsubscribeFeedRealtime: () => void;
   hydratePostDetail: (postId: string) => Promise<void>;
   hydrateBlockedUsers: () => Promise<void>;
   hydrateFollowedUsers: () => Promise<void>;
@@ -589,12 +595,87 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
     }
   },
 
-  clearAll: () => set({
-    topics: [],
-    posts: [],
-    postDetails: {},
-    blockedUserIds: [],
-    followedUserIds: [],
-    unreadNotificationCount: 0,
-  }),
+  subscribeFeedRealtime: async () => {
+    const w = get() as any;
+    if (w._feedChannel) return;  // already subscribed
+    try {
+      const supabase = await getSupa();
+      const channel = supabase
+        .channel('community-feed-realtime')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'community_posts' },
+          () => {
+            // New post landed somewhere — refresh the visible feed.
+            // Cheap because hydrateFeed already de-dupes server-side.
+            get().hydrateFeed().catch(() => {});
+          },
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'community_posts' },
+          (payload: any) => {
+            // Counter / soft-delete updates: patch the in-memory post so
+            // the feed reaction/comment counts increment live without a
+            // full hydrate.
+            const r = payload?.new;
+            if (!r?.id) return;
+            const existing = get().posts.find((p) => p.id === r.id);
+            if (!existing) return;
+            const next = get().posts.map((p) =>
+              p.id === r.id
+                ? {
+                    ...p,
+                    reactionCount: r.reaction_count ?? p.reactionCount,
+                    commentCount: r.comment_count ?? p.commentCount,
+                    isDeleted: !!r.is_deleted,
+                  }
+                : p,
+            );
+            set({ posts: next });
+          },
+        )
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'community_comments' },
+          (payload: any) => {
+            // If we're viewing the parent post detail, append the new
+            // comment to that thread without a hydrate.
+            const r = payload?.new;
+            if (!r?.post_id) return;
+            const detail = get().postDetails[r.post_id];
+            if (!detail) return;
+            const exists = detail.comments?.some((c) => c.id === r.id);
+            if (exists) return;
+            // Best-effort hydrate of the single thread to pull the
+            // joined profile data we'd otherwise miss.
+            get().hydratePostDetail(r.post_id).catch(() => {});
+          },
+        )
+        .subscribe();
+      (get() as any)._feedChannel = channel;
+    } catch (err) {
+      if (__DEV__) console.warn('[community] realtime subscribe failed:', err);
+    }
+  },
+
+  unsubscribeFeedRealtime: () => {
+    const w = get() as any;
+    if (w._feedChannel) {
+      try { w._feedChannel.unsubscribe(); } catch {}
+      w._feedChannel = null;
+    }
+  },
+
+  clearAll: () => {
+    get().unsubscribeFeedRealtime();
+    set({
+      topics: [],
+      posts: [],
+      postDetails: {},
+      blockedUserIds: [],
+      followedUserIds: [],
+      unreadNotificationCount: 0,
+    });
+  },
 }));

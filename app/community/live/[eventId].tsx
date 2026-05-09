@@ -53,6 +53,8 @@ export default function LiveEventChatScreen() {
 
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingDraft, setEditingDraft] = useState('');
   const listRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -118,6 +120,83 @@ export default function LiveEventChatScreen() {
       setDraft('');
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleMessageLongPress = (msg: LiveMessage) => {
+    const isOwn = msg.userId === currentUserId;
+    const canManage = isOwn || isHost;
+    if (!canManage) return;
+    if (active?.status !== 'live') return;  // transcript frozen
+
+    Alert.alert('Message', undefined, [
+      {
+        text: 'Edit',
+        onPress: () => {
+          setEditingId(msg.id);
+          setEditingDraft(msg.body);
+        },
+      },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => confirmDelete(msg.id),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const confirmDelete = (messageId: string) => {
+    Alert.alert('Delete message?', 'This message will be hidden from the chat.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const { supabase } = await import('../../../src/services/supabase');
+            const { data, error } = await supabase.functions.invoke('community-live-delete-message', {
+              body: { messageId },
+            });
+            if (error) {
+              Alert.alert('Could not delete', error.message ?? 'Try again.');
+              return;
+            }
+            const payload = data as { error?: string };
+            if (payload?.error) Alert.alert('Could not delete', payload.error);
+          } catch (err: any) {
+            Alert.alert('Could not delete', err?.message ?? 'Try again.');
+          }
+        },
+      },
+    ]);
+  };
+
+  const submitEdit = async () => {
+    if (!editingId || !editingDraft.trim()) {
+      setEditingId(null);
+      setEditingDraft('');
+      return;
+    }
+    try {
+      const { supabase } = await import('../../../src/services/supabase');
+      const { data, error } = await supabase.functions.invoke('community-live-edit-message', {
+        body: { messageId: editingId, body: editingDraft.trim() },
+      });
+      if (error) {
+        Alert.alert('Could not edit', error.message ?? 'Try again.');
+        return;
+      }
+      const payload = data as { error?: string };
+      if (payload?.error) {
+        Alert.alert('Could not edit', payload.error);
+        return;
+      }
+    } catch (err: any) {
+      Alert.alert('Could not edit', err?.message ?? 'Try again.');
+    } finally {
+      setEditingId(null);
+      setEditingDraft('');
     }
   };
 
@@ -195,10 +274,16 @@ export default function LiveEventChatScreen() {
         >
           <FlatList
             ref={listRef}
-            data={messages}
+            data={messages.filter((m) => !m.isDeleted)}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
-            renderItem={({ item }) => <MessageRow message={item} myUserId={currentUserId} />}
+            renderItem={({ item }) => (
+              <MessageRow
+                message={item}
+                myUserId={currentUserId}
+                onLongPress={() => handleMessageLongPress(item)}
+              />
+            )}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <Ionicons name="chatbubbles-outline" size={32} color={t.textSecondary} />
@@ -262,11 +347,62 @@ export default function LiveEventChatScreen() {
           )}
         </KeyboardAvoidingView>
       )}
+
+      {/* Edit-message overlay — slide-up sheet that lets the author /
+          host fix a typo in a live message. */}
+      {editingId && (
+        <View style={styles.editOverlay}>
+          <View style={[styles.editSheet, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
+            <Text style={[styles.editTitle, { color: t.text }]}>Edit message</Text>
+            <TextInput
+              value={editingDraft}
+              onChangeText={setEditingDraft}
+              multiline
+              maxLength={1000}
+              autoFocus
+              style={[styles.editInput, { backgroundColor: t.glass, color: t.text }]}
+            />
+            <View style={styles.editButtons}>
+              <TouchableOpacity
+                onPress={() => {
+                  setEditingId(null);
+                  setEditingDraft('');
+                }}
+                style={[styles.editBtn, { backgroundColor: t.glass }]}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel edit"
+              >
+                <Text style={[styles.editBtnText, { color: t.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={submitEdit}
+                disabled={!editingDraft.trim()}
+                style={[
+                  styles.editBtn,
+                  { backgroundColor: t.primary, opacity: editingDraft.trim() ? 1 : 0.5 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Save edit"
+              >
+                <Text style={[styles.editBtnText, { color: '#fff' }]}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
 
-function MessageRow({ message, myUserId }: { message: LiveMessage; myUserId?: string }) {
+function MessageRow({
+  message,
+  myUserId,
+  onLongPress,
+}: {
+  message: LiveMessage;
+  myUserId?: string;
+  onLongPress?: () => void;
+}) {
   const t = useTheme();
   const isMine = message.userId === myUserId;
   const time = new Date(message.createdAt).toLocaleTimeString([], {
@@ -274,7 +410,14 @@ function MessageRow({ message, myUserId }: { message: LiveMessage; myUserId?: st
     minute: '2-digit',
   });
   return (
-    <View style={[styles.msgRow, isMine && styles.msgRowMine]}>
+    <TouchableOpacity
+      activeOpacity={0.95}
+      onLongPress={onLongPress}
+      delayLongPress={350}
+      style={[styles.msgRow, isMine && styles.msgRowMine]}
+      accessibilityRole="button"
+      accessibilityLabel={`Message from ${message.authorName ?? 'member'}: ${message.body}${message.lastEditedAt ? ' (edited)' : ''}`}
+    >
       <View
         style={[
           styles.msgBubble,
@@ -292,11 +435,18 @@ function MessageRow({ message, myUserId }: { message: LiveMessage; myUserId?: st
           </Text>
         )}
         <Text style={[styles.msgBody, { color: isMine ? '#fff' : t.text }]}>{message.body}</Text>
-        <Text style={[styles.msgTime, { color: isMine ? 'rgba(255,255,255,0.7)' : t.textSecondary }]}>
-          {time}
-        </Text>
+        <View style={styles.msgFootRow}>
+          {message.lastEditedAt && (
+            <Text style={[styles.msgEdited, { color: isMine ? 'rgba(255,255,255,0.7)' : t.textSecondary }]}>
+              edited ·
+            </Text>
+          )}
+          <Text style={[styles.msgTime, { color: isMine ? 'rgba(255,255,255,0.7)' : t.textSecondary }]}>
+            {time}
+          </Text>
+        </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -343,7 +493,9 @@ const styles = StyleSheet.create({
   msgBubbleHost: { borderColor: '#3E7CB1', borderWidth: 1.5 },
   msgAuthor: { fontSize: 10, fontWeight: '700', marginBottom: 2, letterSpacing: 0.4 },
   msgBody: { fontSize: 14, lineHeight: 19 },
-  msgTime: { fontSize: 9, marginTop: 4, textAlign: 'right' },
+  msgFootRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 4, marginTop: 4 },
+  msgEdited: { fontSize: 9, fontStyle: 'italic' },
+  msgTime: { fontSize: 9, textAlign: 'right' },
   composer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -386,4 +538,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#3E7CB1',
   },
   upgradeText: { color: '#fff', fontSize: FontSizes.sm, fontWeight: '700', flex: 1 },
+
+  editOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+  editSheet: {
+    padding: 16,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderTopWidth: 1,
+    gap: 12,
+  },
+  editTitle: { fontSize: FontSizes.md, fontWeight: '800' },
+  editInput: {
+    minHeight: 120,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: FontSizes.sm,
+    textAlignVertical: 'top',
+  },
+  editButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
+  editBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
+  editBtnText: { fontSize: FontSizes.sm, fontWeight: '700' },
 });

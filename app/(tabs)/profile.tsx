@@ -43,6 +43,7 @@ import {
   Gradients,
 } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
+import { useIsAdmin } from '../../src/hooks/useIsAdmin';
 import { useThemeStore } from '../../src/store/useThemeStore';
 import { getTestProfile } from '../../src/constants/testProfiles';
 import { sendFeedback } from '../../src/services/feedback';
@@ -1376,6 +1377,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const themeMode = useThemeStore((s) => s.mode);
   const setThemeMode = useThemeStore((s) => s.setMode);
+  const isAdmin = useIsAdmin();
 
   const handleDelete = () => {
     Alert.alert(
@@ -1461,6 +1463,35 @@ export default function ProfileScreen() {
               <ProfileRow icon="library-outline" label="Sources & references" onPress={() => router.push('/resources' as any)} color={t.text} />
               <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
               <ProfileRow icon="people-outline" label="Community" onPress={() => router.push('/community' as any)} color={t.text} />
+            </View>
+          </View>
+        )}
+
+        {/* ── Admin Section (visible only to admin emails) ── */}
+        {isAdmin && (
+          <View style={profileStyles.section}>
+            <Text style={[profileStyles.sectionTitle, { color: t.textSecondary }]}>ADMIN</Text>
+            <View style={[profileStyles.card, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
+              <ProfileRow
+                icon="radio-outline"
+                label="Start a live event"
+                onPress={() => router.push('/admin/start-live' as any)}
+                color={t.text}
+              />
+              <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+              <ProfileRow
+                icon="shield-checkmark-outline"
+                label="Moderation queue"
+                onPress={() => router.push('/admin/community-queue' as any)}
+                color={t.text}
+              />
+              <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+              <ProfileRow
+                icon="film-outline"
+                label="Workout video tagger"
+                onPress={() => router.push('/admin/video-tagger' as any)}
+                color={t.text}
+              />
             </View>
           </View>
         )}

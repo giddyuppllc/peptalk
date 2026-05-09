@@ -45,8 +45,8 @@ const KIND_COPY: Record<string, { title: string; body: (actor: string) => string
     body: (actor) => `${actor} mentioned you in a comment.`,
   },
   moderation_action: {
-    title: 'Moderation action',
-    body: () => 'A post or comment of yours was reviewed.',
+    title: 'Content was hidden',
+    body: () => 'Tap to see why a post or comment of yours was hidden.',
   },
 };
 
@@ -121,12 +121,21 @@ export async function deliverPendingCommunityNotifications(): Promise<void> {
         row.actor?.username?.trim() ||
         'Someone';
 
+      // Moderation rows carry a freeform reason in row.body. Surface it
+      // verbatim instead of the generic copy template so the user knows
+      // exactly which category their content tripped (sexual_explicit,
+      // spam_offtopic, etc.).
+      const bodyText =
+        row.kind === 'moderation_action' && row.body
+          ? row.body
+          : copy.body(actor);
+
       try {
         await Notifications.scheduleNotificationAsync({
           identifier: `community-${row.id}`,
           content: {
             title: copy.title,
-            body: copy.body(actor),
+            body: bodyText,
             sound: 'default',
             data: {
               kind: row.kind,

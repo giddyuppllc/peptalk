@@ -214,6 +214,13 @@ Deno.serve(async (req) => {
     }
 
     if (flagged) {
+      // Look up the author so we can notify them their content was hidden.
+      const { data: row } = await admin
+        .from(table)
+        .select('user_id')
+        .eq('id', targetId)
+        .maybeSingle();
+
       // Soft-delete + mark flagged so it disappears from the feed.
       await admin
         .from(table)
@@ -222,6 +229,26 @@ Deno.serve(async (req) => {
           moderation_status: 'flagged',
         })
         .eq('id', targetId);
+
+      // Drop a notification into the author's feed so they know their
+      // post / comment was hidden + why. Re-uses the existing
+      // moderation_action notification kind that the local-poll +
+      // push-fanout pipelines already understand.
+      if (row?.user_id) {
+        try {
+          await admin.from('community_notifications').insert({
+            user_id: row.user_id,
+            actor_id: null,
+            kind: 'moderation_action',
+            post_id: targetType === 'post' ? targetId : null,
+            comment_id: targetType === 'comment' ? targetId : null,
+            body: flagReason || `Content was flagged: ${allCategories.join(', ')}`,
+          });
+        } catch (notifyErr) {
+          console.warn('[moderate] notify failed:', notifyErr);
+        }
+      }
+
       return jsonResp({
         ok: true,
         flagged: true,

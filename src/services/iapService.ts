@@ -286,7 +286,13 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 export async function purchaseProduct(
   productId: ProductId,
-  options?: { appAccountToken?: string | null },
+  options?: {
+    appAccountToken?: string | null;
+    /** Apple App Store Connect Offer Code identifier — when provided,
+     *  StoreKit applies the discount Apple has linked to that code.
+     *  Passed through from a redeemed referral_codes.apple_offer_code. */
+    appleOfferCode?: string | null;
+  },
 ): Promise<void> {
   if (!isAvailable()) {
     throw new Error('In-App Purchases not available on this platform.');
@@ -297,12 +303,23 @@ export async function purchaseProduct(
 
   const rawToken = options?.appAccountToken ?? null;
   const appAccountToken = rawToken && UUID_RE.test(rawToken) ? rawToken : undefined;
+  const appleOfferCode = options?.appleOfferCode?.trim() || undefined;
 
   if (Platform.OS === 'ios') {
     await IAP.requestSubscription({
       sku: productId,
       ...(appAccountToken ? { appAccountToken } : {}),
-    });
+      // The Apple offer code is applied via StoreKit's withOffer
+      // identifier mechanism. react-native-iap exposes it as
+      // `withOffer` (older) or via `discountIdentifier` (newer). We
+      // pass both shapes so the call works across versions.
+      ...(appleOfferCode
+        ? {
+            withOffer: { identifier: appleOfferCode, keyIdentifier: '', nonce: '', signature: '', timestamp: 0 },
+            discountIdentifier: appleOfferCode,
+          }
+        : {}),
+    } as any);
     return;
   }
 

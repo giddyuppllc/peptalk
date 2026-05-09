@@ -23,6 +23,7 @@ import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { OfflineBanner } from '../src/components/OfflineBanner';
 import { CelebrationModal } from '../src/components/CelebrationModal';
+import { ProfileShortcutFab } from '../src/components/ProfileShortcutFab';
 import { WorkoutRewardModal } from '../src/components/WorkoutRewardModal';
 import { PepTalkCharacter } from '../src/components/PepTalkCharacter';
 import { SpotlightTour } from '../src/components/tutorial/SpotlightTour';
@@ -928,6 +929,10 @@ function RootLayout() {
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
         </Stack>
+        {/* Profile shortcut overlay — sits OUTSIDE the Stack so it's
+            visible above whichever screen is rendered. The component
+            itself decides via usePathname whether to render. */}
+        <ProfileShortcutFab />
       </View>
     </SafeAreaProvider>
     </GluestackUIProvider>

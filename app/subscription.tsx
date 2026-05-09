@@ -171,10 +171,34 @@ function TierCard({
       // pulling the auth store into the module graph at boot.
       const { useAuthStore } = await import('../src/store/useAuthStore');
       const appAccountToken = useAuthStore.getState().user?.id ?? null;
+
+      // If the user previously redeemed a referral code, look up the
+      // associated Apple Offer Code (set on the referral_codes row at
+      // catalog time) and pass it to StoreKit so Apple applies the
+      // configured discount on this purchase. Best-effort — failure
+      // here just means full-price; we don't block the purchase.
+      let appleOfferCode: string | null = null;
+      if (Platform.OS === 'ios' && appAccountToken) {
+        try {
+          const { supabase } = await import('../src/services/supabase');
+          const { data } = await (supabase as any)
+            .from('referral_redemptions')
+            .select('attribution_state, code:code_id ( apple_offer_code )')
+            .eq('user_id', appAccountToken)
+            .maybeSingle();
+          // Only apply the offer code if this redemption hasn't been
+          // attributed yet — discounts are intended for first paid month,
+          // not every renewal.
+          if (data?.attribution_state === 'pending') {
+            appleOfferCode = data.code?.apple_offer_code ?? null;
+          }
+        } catch { /* ignore */ }
+      }
+
       // Triggers native purchase sheet. Validation happens in the
       // purchaseUpdatedListener registered in _layout.tsx, which emits
       // the upgrade_succeeded event on actual server-side validation.
-      await purchaseProduct(plan.productId, { appAccountToken });
+      await purchaseProduct(plan.productId, { appAccountToken, appleOfferCode });
     } catch (err: any) {
       const msg = err?.message ?? 'Purchase could not be completed.';
       const cancelled =
