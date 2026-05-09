@@ -402,11 +402,29 @@ export interface TitrationStep {
   note?: string;
 }
 
+/**
+ * How the per-injection dose is determined for this protocol:
+ *   - 'flat'             — typicalDose is the absolute range (e.g. "200-500 mcg")
+ *   - 'weight_based'     — typicalDose is the absolute range for an "average"
+ *                          subject; dosePerKg is the actual research-supported
+ *                          per-kg range. Calculator should multiply by user weight.
+ *   - 'titration_ladder' — uses titrationSchedule, not typicalDose
+ */
+export type DosingMode = 'flat' | 'weight_based' | 'titration_ladder';
+
 export interface ProtocolTemplate {
   id: string;
   peptideId: string;
   name: string;
   typicalDose: { min: number; max: number; unit: DoseUnit };
+  /**
+   * Set when peptide is conventionally dosed in mcg/kg or mg/kg.
+   * Calculator uses this — multiplied by user body weight — to compute
+   * a personalized range, falling back to typicalDose when missing.
+   */
+  dosePerKg?: { min: number; max: number; unit: DoseUnit };
+  /** Defaults to 'flat' when missing. */
+  dosingMode?: DosingMode;
   route: AdministrationRoute;
   frequency: ProtocolFrequency;
   frequencyLabel: string;

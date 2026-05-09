@@ -597,64 +597,95 @@ export default function DosingCalculatorScreen() {
           )}
 
           {/* Typical research dose range — bubble with min/max + tap-to-fill.
-              Surfaces the documented range so users have a credible
-              anchor before plugging numbers, and one-tap shortcuts to
-              load either end. */}
-          {protocolsForPeptide[0]?.typicalDose && (
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 8,
-                paddingVertical: 10,
-                paddingHorizontal: 12,
-                borderRadius: 14,
-                backgroundColor: `${t.primary}10`,
-                borderWidth: 1,
-                borderColor: `${t.primary}30`,
-                marginBottom: 10,
-              }}
-            >
-              <Ionicons name="flask-outline" size={16} color={t.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 0.6, color: t.textSecondary }}>
-                  TYPICAL RESEARCH RANGE
-                </Text>
-                <Text style={{ fontSize: 15, fontWeight: '800', color: t.text, marginTop: 2 }}>
-                  {protocolsForPeptide[0].typicalDose.min}–{protocolsForPeptide[0].typicalDose.max} {protocolsForPeptide[0].typicalDose.unit}
-                </Text>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                {(['min', 'max'] as const).map((edge) => (
-                  <TouchableOpacity
-                    key={edge}
-                    onPress={() => {
-                      const proto = protocolsForPeptide[0]!;
-                      const v = edge === 'min' ? proto.typicalDose!.min : proto.typicalDose!.max;
-                      const unit = proto.typicalDose!.unit;
-                      const value = unit === doseUnit
-                        ? String(v)
-                        : doseUnit === 'mg' ? String(v / 1000) : String(v * 1000);
-                      setTargetDose(value);
-                      resetResults();
-                    }}
-                    style={{
-                      paddingHorizontal: 10,
-                      paddingVertical: 5,
-                      borderRadius: 999,
-                      backgroundColor: t.primary,
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Use ${edge} dose ${edge === 'min' ? protocolsForPeptide[0].typicalDose.min : protocolsForPeptide[0].typicalDose.max} ${protocolsForPeptide[0].typicalDose.unit}`}
-                  >
-                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 11, letterSpacing: 0.4 }}>
-                      {edge === 'min' ? 'Min' : 'Max'}
+              When the protocol is weight_based AND user has a body weight,
+              compute the personalized range live (mcg/kg × kg). Otherwise
+              fall back to the published flat range. */}
+          {protocolsForPeptide[0]?.typicalDose && (() => {
+            const proto = protocolsForPeptide[0]!;
+            const isWeightBased = proto.dosingMode === 'weight_based' && !!proto.dosePerKg && bodyWeightKg > 0;
+
+            // Compute the displayed min/max + the unit they're shown in.
+            // Weight-based ranges multiply per-kg by user kg, ROUND for
+            // readability (no one wants to see 412.7 mcg as a target).
+            const range = isWeightBased
+              ? {
+                  min: Math.round(proto.dosePerKg!.min * bodyWeightKg),
+                  max: Math.round(proto.dosePerKg!.max * bodyWeightKg),
+                  unit: proto.dosePerKg!.unit,
+                }
+              : {
+                  min: proto.typicalDose.min,
+                  max: proto.typicalDose.max,
+                  unit: proto.typicalDose.unit,
+                };
+
+            return (
+              <View
+                style={{
+                  paddingVertical: 12,
+                  paddingHorizontal: 12,
+                  borderRadius: 14,
+                  backgroundColor: `${t.primary}10`,
+                  borderWidth: 1,
+                  borderColor: `${t.primary}30`,
+                  marginBottom: 10,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="flask-outline" size={16} color={t.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 0.6, color: t.textSecondary }}>
+                      {isWeightBased ? 'YOUR WEIGHT-BASED RANGE' : 'TYPICAL RESEARCH RANGE'}
                     </Text>
-                  </TouchableOpacity>
-                ))}
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: t.text, marginTop: 2 }}>
+                      {range.min}–{range.max} {range.unit}
+                      {isWeightBased && proto.frequencyLabel ? ` · ${proto.frequencyLabel.toLowerCase()}` : ''}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    {(['min', 'max'] as const).map((edge) => (
+                      <TouchableOpacity
+                        key={edge}
+                        onPress={() => {
+                          const v = edge === 'min' ? range.min : range.max;
+                          const value = range.unit === doseUnit
+                            ? String(v)
+                            : doseUnit === 'mg' ? String(v / 1000) : String(v * 1000);
+                          setTargetDose(value);
+                          resetResults();
+                        }}
+                        style={{
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: 999,
+                          backgroundColor: t.primary,
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Use ${edge} dose ${edge === 'min' ? range.min : range.max} ${range.unit}`}
+                      >
+                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 11, letterSpacing: 0.4 }}>
+                          {edge === 'min' ? 'Min' : 'Max'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Sub-line: explain the weight math, or prompt for weight
+                    when missing for a peptide that's actually weight-sensitive. */}
+                {isWeightBased && (
+                  <Text style={{ fontSize: 11, color: t.textSecondary, marginTop: 6, lineHeight: 14 }}>
+                    {proto.dosePerKg!.min}–{proto.dosePerKg!.max} {proto.dosePerKg!.unit}/kg · scaled to {bodyWeightKg.toFixed(0)} kg
+                  </Text>
+                )}
+                {proto.dosingMode === 'weight_based' && bodyWeightKg <= 0 && (
+                  <Text style={{ fontSize: 11, color: t.textSecondary, marginTop: 6, lineHeight: 14, fontStyle: 'italic' }}>
+                    Add your weight below for a range scaled to your body — this peptide is conventionally dosed in {proto.dosePerKg?.unit ?? 'mcg'}/kg.
+                  </Text>
+                )}
               </View>
-            </View>
-          )}
+            );
+          })()}
           <GlassCard>
             <View style={styles.row}>
               <TextInput

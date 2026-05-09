@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useStackStore } from '../../src/store/useStackStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
+import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { getPeptideById } from '../../src/data/peptides';
 import { PEPTIDES } from '../../src/data/peptides';
 import { PROTOCOL_TEMPLATES } from '../../src/data/protocols';
@@ -363,22 +364,36 @@ function CalculatorTab() {
         ))}
       </View>
 
-      {/* Typical research dose range bubble — shows the documented
-          min/max for the selected peptide so users have a credible
-          starting point. Tap "Min" or "Max" to load that value into
-          the desired-dose field. Hidden when no peptide is selected
-          or no protocol exists. */}
+      {/* Typical research dose range — weight-scaled when the protocol
+          is weight_based AND the user has a body weight on file.
+          Otherwise falls back to the published flat range. */}
       {(() => {
         if (!selectedPeptide) return null;
         const proto = PROTOCOL_TEMPLATES.find((pt) => pt.peptideId === selectedPeptide.id);
         if (!proto?.typicalDose) return null;
-        const { min, max, unit } = proto.typicalDose;
+
+        const profileLbs = useHealthProfileStore.getState().profile?.bodyMetrics?.weightLbs ?? 0;
+        const userKg = profileLbs > 0 ? profileLbs * 0.4536 : 0;
+        const isWeightBased = proto.dosingMode === 'weight_based' && !!proto.dosePerKg && userKg > 0;
+
+        const range = isWeightBased
+          ? {
+              min: Math.round(proto.dosePerKg!.min * userKg),
+              max: Math.round(proto.dosePerKg!.max * userKg),
+              unit: proto.dosePerKg!.unit,
+            }
+          : {
+              min: proto.typicalDose.min,
+              max: proto.typicalDose.max,
+              unit: proto.typicalDose.unit,
+            };
+
+        // Calc state stores doseMcg, so convert mg → mcg when needed.
+        const toMcg = (v: number) => (range.unit === 'mg' ? v * 1000 : v);
+
         return (
           <View
             style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 10,
               padding: 12,
               borderRadius: 14,
               backgroundColor: `${accent.deep}10`,
@@ -387,43 +402,55 @@ function CalculatorTab() {
               marginBottom: 12,
             }}
           >
-            <Ionicons name="flask-outline" size={16} color={accent.deep} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 0.6, color: t.textSecondary }}>
-                TYPICAL RESEARCH RANGE
-              </Text>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: t.text, marginTop: 2 }}>
-                {min}–{max} {unit}
-              </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Ionicons name="flask-outline" size={16} color={accent.deep} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 0.6, color: t.textSecondary }}>
+                  {isWeightBased ? 'YOUR WEIGHT-BASED RANGE' : 'TYPICAL RESEARCH RANGE'}
+                </Text>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: t.text, marginTop: 2 }}>
+                  {range.min}–{range.max} {range.unit}
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                <TouchableOpacity
+                  onPress={() => setDoseMcg(String(toMcg(range.min)))}
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 999,
+                    backgroundColor: accent.deep,
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Use minimum dose ${range.min} ${range.unit}`}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 11, letterSpacing: 0.4 }}>Min</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setDoseMcg(String(toMcg(range.max)))}
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 999,
+                    backgroundColor: accent.deep,
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Use maximum dose ${range.max} ${range.unit}`}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 11, letterSpacing: 0.4 }}>Max</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={{ flexDirection: 'row', gap: 6 }}>
-              <TouchableOpacity
-                onPress={() => setDoseMcg(String(unit === 'mg' ? min * 1000 : min))}
-                style={{
-                  paddingHorizontal: 10,
-                  paddingVertical: 5,
-                  borderRadius: 999,
-                  backgroundColor: accent.deep,
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`Use minimum dose ${min} ${unit}`}
-              >
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 11, letterSpacing: 0.4 }}>Min</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setDoseMcg(String(unit === 'mg' ? max * 1000 : max))}
-                style={{
-                  paddingHorizontal: 10,
-                  paddingVertical: 5,
-                  borderRadius: 999,
-                  backgroundColor: accent.deep,
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`Use maximum dose ${max} ${unit}`}
-              >
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 11, letterSpacing: 0.4 }}>Max</Text>
-              </TouchableOpacity>
-            </View>
+            {isWeightBased && (
+              <Text style={{ fontSize: 11, color: t.textSecondary, marginTop: 6, lineHeight: 14 }}>
+                {proto.dosePerKg!.min}–{proto.dosePerKg!.max} {proto.dosePerKg!.unit}/kg · scaled to {userKg.toFixed(0)} kg
+              </Text>
+            )}
+            {proto.dosingMode === 'weight_based' && userKg <= 0 && (
+              <Text style={{ fontSize: 11, color: t.textSecondary, marginTop: 6, lineHeight: 14, fontStyle: 'italic' }}>
+                Add your weight in Profile → Body Metrics for a range scaled to you. This peptide is dosed in {proto.dosePerKg?.unit ?? 'mcg'}/kg.
+              </Text>
+            )}
           </View>
         );
       })()}
