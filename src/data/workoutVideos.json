@@ -5,7 +5,16 @@
     "title": "IMG_3681",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "plank-289",
+      "category": "strength",
+      "title": "Bodyweight Plank Hold",
+      "confidence": 1,
+      "reasoning": "The subject is in a straight-arm high plank position on the floor with no equipment, matching the standard plank exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:24:40.664Z"
+    }
   },
   {
     "slug": "img-3690",
@@ -13,7 +22,16 @@
     "title": "IMG_3690",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-dumbbell-lateral-raises",
+      "category": "strength",
+      "title": "Seated Dumbbell Lateral Raises",
+      "confidence": 0.95,
+      "reasoning": "Woman seated on bench holding dumbbells with arms abducted laterally at shoulder height matches seated dumbbell lateral raises.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:24:51.941Z"
+    }
   },
   {
     "slug": "img-3691",
@@ -21,7 +39,16 @@
     "title": "IMG_3691",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-dumbbell-shoulder-press",
+      "category": "strength",
+      "title": "Seated Dumbbell Shoulder Press",
+      "confidence": 0.95,
+      "reasoning": "Person seated on bench with dumbbells held overhead at full arm extension, matching the top position of seated dumbbell shoulder press.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:24:59.271Z"
+    }
   },
   {
     "slug": "img-3692",
@@ -29,7 +56,16 @@
     "title": "IMG_3692",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-dumbbell-shoulder-press",
+      "category": "strength",
+      "title": "Seated Dumbbell Shoulder Press",
+      "confidence": 0.95,
+      "reasoning": "Woman seated on bench with one arm fully extended overhead holding a dumbbell, matching the top position of a seated dumbbell shoulder press.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:25:18.551Z"
+    }
   },
   {
     "slug": "img-3693",
@@ -37,7 +73,16 @@
     "title": "IMG_3693",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-dumbbell-bicep-curls",
+      "category": "strength",
+      "title": "Seated Dumbbell Bicep Curls",
+      "confidence": 0.9,
+      "reasoning": "Subject seated on flat bench holding dumbbells at shoulder height with bent elbows matches top position of seated dumbbell bicep curls; no backrest rules out shoulder press.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:25:49.441Z"
+    }
   },
   {
     "slug": "img-3694",
@@ -45,7 +90,16 @@
     "title": "IMG_3694",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "incline-dumbbell-bicep-curls",
+      "category": "strength",
+      "title": "Incline Dumbbell Bicep Curls",
+      "confidence": 0.95,
+      "reasoning": "Subject seated on incline bench holding dumbbells at contracted bicep curl position with elbows tucked.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:26:11.910Z"
+    }
   },
   {
     "slug": "img-3697",
@@ -53,7 +107,16 @@
     "title": "IMG_3697",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-single-arm-dumbbell-arnold-press",
+      "category": "strength",
+      "title": "Seated Single Arm Dumbbell Arnold Press",
+      "confidence": 0.85,
+      "reasoning": "Woman seated on flat bench holding hex dumbbell overhead with right arm fully extended, matching top of rep for seated single-arm dumbbell Arnold or shoulder press.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:26:42.119Z"
+    }
   },
   {
     "slug": "img-3698",
@@ -61,7 +124,16 @@
     "title": "IMG_3698",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-dumbbell-bicep-curls",
+      "category": "muscle_gain",
+      "title": "Seated Dumbbell Bicep Curls",
+      "confidence": 0.9,
+      "reasoning": "Woman seated on bench holding dumbbells at sides in starting position for bicep curls.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:26:52.042Z"
+    }
   },
   {
     "slug": "img-3699",
@@ -69,7 +141,16 @@
     "title": "IMG_3699",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "single-arm-dumbbell-bent-over-row",
+      "category": "strength",
+      "title": "Single Arm Bent Over Row",
+      "confidence": 0.95,
+      "reasoning": "Woman bent at hips with left hand on bench supporting torso while right hand holds dumbbell extended down, matching single-arm dumbbell bent-over row start position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:27:09.474Z"
+    }
   },
   {
     "slug": "img-3700",
@@ -77,7 +158,16 @@
     "title": "IMG_3700",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "elbows-to-knees-sit-up-291",
+      "category": "toning",
+      "title": "Elbows to Knees Sit Up",
+      "confidence": 0.85,
+      "reasoning": "Seated on bench with hands clasped behind head and elbows wide out matches the standard starting or reset position for elbows-to-knees sit-ups.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:27:52.184Z"
+    }
   },
   {
     "slug": "img-3701",
@@ -85,7 +175,16 @@
     "title": "IMG_3701",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "single-arm-overhead-dumbbell-tricep-extentions",
+      "category": "strength",
+      "title": "Seated Single Arm Overhead Tricep Extension",
+      "confidence": 0.95,
+      "reasoning": "Woman seated on bench holding dumbbell overhead with one arm in tricep extension position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:28:02.713Z"
+    }
   },
   {
     "slug": "img-3703",
@@ -93,7 +192,16 @@
     "title": "IMG_3703",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-overhead-tricep-extensions",
+      "category": "strength",
+      "title": "Seated Dumbbell Overhead Tricep Extension",
+      "confidence": 0.95,
+      "reasoning": "Woman seated on bench holding single dumbbell overhead with both hands and straight arms, classic overhead tricep extension position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:28:11.427Z"
+    }
   },
   {
     "slug": "img-3704",
@@ -101,7 +209,16 @@
     "title": "IMG_3704",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-dumbbell-bicep-curls",
+      "category": "muscle_gain",
+      "title": "Seated Dumbbell Bicep Curl",
+      "confidence": 0.85,
+      "reasoning": "Subject seated on bench with dumbbell gripped in right hand hanging straight down between spread legs, matching start position of seated dumbbell bicep curl.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:28:25.270Z"
+    }
   },
   {
     "slug": "img-3705",
@@ -109,7 +226,16 @@
     "title": "IMG_3705",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-single-arm-dumbbell-curl-with-block-adduction",
+      "category": "toning",
+      "title": "Seated Single Arm Bicep Curl Adduction",
+      "confidence": 0.85,
+      "reasoning": "Woman seated on bench with knees wide apart for adduction and right arm in top position of single-arm dumbbell bicep curl.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:29:15.590Z"
+    }
   },
   {
     "slug": "img-3706",
@@ -117,7 +243,16 @@
     "title": "IMG_3706",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "bench-glute-raises",
+      "category": "strength",
+      "title": "Bench Glute Raises",
+      "confidence": 0.95,
+      "reasoning": "Subject is supine on bench with hips elevated and feet planted on bench pad, matching bench glute raises position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:29:25.125Z"
+    }
   },
   {
     "slug": "img-3707",
@@ -125,7 +260,16 @@
     "title": "IMG_3707",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-pullover",
+      "category": "strength",
+      "title": "Dumbbell Pullover",
+      "confidence": 0.95,
+      "reasoning": "Supine on bench with dumbbells extended overhead behind head matches dumbbell pullover bottom position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:29:35.407Z"
+    }
   },
   {
     "slug": "img-3708",
@@ -133,7 +277,16 @@
     "title": "IMG_3708",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "bench-supported-y",
+      "category": "strength",
+      "title": "Bench Supported Y Raise",
+      "confidence": 0.85,
+      "reasoning": "Prone position on incline bench with single-arm dumbbell extended forward matches bench-supported Y raise for rear delts and upper back.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:29:43.468Z"
+    }
   },
   {
     "slug": "img-3709",
@@ -141,7 +294,16 @@
     "title": "IMG_3709",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-skull-crusher",
+      "category": "strength",
+      "title": "Dumbbell Skull Crusher",
+      "confidence": 0.9,
+      "reasoning": "Supine position on bench with single arm extended overhead holding dumbbell matches starting position of dumbbell skull crusher.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:30:29.264Z"
+    }
   },
   {
     "slug": "img-3710",
@@ -149,7 +311,16 @@
     "title": "IMG_3710",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-dumbbell-bicep-curls",
+      "category": "strength",
+      "title": "Seated Dumbbell Bicep Curls",
+      "confidence": 0.95,
+      "reasoning": "Person seated on bench holding dumbbells with elbows bent at mid-curl position, matching seated dumbbell bicep curls.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:30:43.115Z"
+    }
   },
   {
     "slug": "img-3711",
@@ -157,7 +328,16 @@
     "title": "IMG_3711",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-dumbbell-bicep-curls",
+      "category": "strength",
+      "title": "Seated Dumbbell Bicep Curls",
+      "confidence": 0.95,
+      "reasoning": "Subject seated on bench holding dumbbells at sides with palms forward, classic starting position for seated dumbbell bicep curls.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:30:56.908Z"
+    }
   },
   {
     "slug": "img-3712",
@@ -165,7 +345,16 @@
     "title": "IMG_3712",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "incline-push-up-348",
+      "category": "strength",
+      "title": "Incline Push-Up",
+      "confidence": 0.95,
+      "reasoning": "Body in straight plank with hands elevated on bench and feet on floor matches incline push-up top position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:31:08.892Z"
+    }
   },
   {
     "slug": "img-3714",
@@ -173,7 +362,16 @@
     "title": "IMG_3714",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "bench-low-leg-lifts-with-glute-raise",
+      "category": "toning",
+      "title": "Bench Low Leg Lifts",
+      "confidence": 0.85,
+      "reasoning": "Subject seated upright on adjustable bench gripping sides, legs extended low with one foot touching floor, characteristic of bench-supported low leg lifts.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:31:42.129Z"
+    }
   },
   {
     "slug": "img-3716",
@@ -181,7 +379,16 @@
     "title": "IMG_3716",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "bulgarian-split-squat-glute-focused",
+      "category": "strength",
+      "title": "Glute Focused Bulgarian Split Squat",
+      "confidence": 0.85,
+      "reasoning": "Pose shows rear foot elevated on bench, front leg planted, torso upright holding dumbbell, matching top position of Bulgarian split squat.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:32:27.473Z"
+    }
   },
   {
     "slug": "img-3717",
@@ -189,7 +396,16 @@
     "title": "IMG_3717",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-bulgarian-rdl-into-body-weight-pistol-squat",
+      "category": "strength",
+      "title": "Dumbbell Bulgarian RDL",
+      "confidence": 0.9,
+      "reasoning": "Hinged torso with straight back, dumbbell hanging in one hand, and rear foot elevated on incline bench matches Bulgarian single-leg RDL position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:33:08.771Z"
+    }
   },
   {
     "slug": "img-3857",
@@ -197,7 +413,16 @@
     "title": "IMG_3857",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "standing-dumbbell-alternating-bicep-curl",
+      "category": "strength",
+      "title": "Standing Dumbbell Alternating Bicep Curl",
+      "confidence": 0.95,
+      "reasoning": "Woman standing holding dumbbell at peak of single-arm bicep curl with supinated grip.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:33:18.497Z"
+    }
   },
   {
     "slug": "img-3859",
@@ -205,7 +430,16 @@
     "title": "IMG_3859",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "single-arm-dumbbell-row-323",
+      "category": "strength",
+      "title": "Single Arm Dumbbell Row",
+      "confidence": 0.95,
+      "reasoning": "Woman in bent-over hinge holding dumbbell in one hand with opposite hand likely supporting on knee, classic single-arm dumbbell row start position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:33:37.036Z"
+    }
   },
   {
     "slug": "img-3863",
@@ -213,7 +447,16 @@
     "title": "IMG_3863",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "single-arm-dumbbell-bent-over-row",
+      "category": "strength",
+      "title": "Single Arm Dumbbell Bent Over Row",
+      "confidence": 0.95,
+      "reasoning": "Woman in hip-hinge position holding one dumbbell with arm extended down matches single-arm dumbbell bent-over row start.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:33:50.429Z"
+    }
   },
   {
     "slug": "img-3864",
@@ -221,7 +464,16 @@
     "title": "IMG_3864",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-overhead-tricep-extensions",
+      "category": "strength",
+      "title": "Dumbbell Overhead Tricep Extension",
+      "confidence": 0.95,
+      "reasoning": "Woman standing with arms fully extended overhead gripping a single dumbbell with both hands matches the lockout position of dumbbell overhead tricep extensions.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:34:05.209Z"
+    }
   },
   {
     "slug": "img-3865",
@@ -229,7 +481,16 @@
     "title": "IMG_3865",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-overhead-tricep-extensions",
+      "category": "strength",
+      "title": "Dumbbell Overhead Tricep Extension",
+      "confidence": 0.85,
+      "reasoning": "Woman standing holding single dumbbell overhead with both hands fully extended, matching lockout position of dumbbell overhead tricep extensions.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:34:29.532Z"
+    }
   },
   {
     "slug": "img-3866",
@@ -237,7 +498,16 @@
     "title": "IMG_3866",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-upright-row-412",
+      "category": "strength",
+      "title": "Dumbbell Upright Row",
+      "confidence": 0.95,
+      "reasoning": "Woman standing with dumbbells pulled to upper chest, elbows flared high and out, matching top position of dumbbell upright row.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:34:53.180Z"
+    }
   },
   {
     "slug": "img-3867",
@@ -245,7 +515,16 @@
     "title": "IMG_3867",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-pullover",
+      "category": "strength",
+      "title": "Dumbbell Pullover",
+      "confidence": 0.95,
+      "reasoning": "Woman lying supine on bench holding single dumbbell overhead with both hands in starting position of dumbbell pullover.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:35:04.040Z"
+    }
   },
   {
     "slug": "img-3868",
@@ -253,7 +532,16 @@
     "title": "IMG_3868",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-pullover",
+      "category": "strength",
+      "title": "Incline Dumbbell Pullover",
+      "confidence": 0.95,
+      "reasoning": "Person lying supine on incline bench holding dumbbell overhead matches dumbbell pullover position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:35:19.317Z"
+    }
   },
   {
     "slug": "img-3869",
@@ -261,7 +549,16 @@
     "title": "IMG_3869",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-pullover",
+      "category": "strength",
+      "title": "Dumbbell Pullover",
+      "confidence": 0.95,
+      "reasoning": "Subject is supine on an incline bench holding a single dumbbell overhead with both hands in the starting position of a pullover.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:35:30.625Z"
+    }
   },
   {
     "slug": "img-3870",
@@ -269,7 +566,16 @@
     "title": "IMG_3870",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-pullover",
+      "category": "strength",
+      "title": "Dumbbell Pullover",
+      "confidence": 0.9,
+      "reasoning": "Woman lying supine on incline bench holding single dumbbell overhead matches dumbbell pullover starting position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:35:44.497Z"
+    }
   },
   {
     "slug": "img-3872",
@@ -277,7 +583,16 @@
     "title": "IMG_3872",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "strength",
+      "title": "Prone Single Leg Hip Extension",
+      "confidence": 0.35,
+      "reasoning": "Prone position on bench with one straight leg lifted indicates a glute/hamstring hip extension exercise, but no exact match in the library.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:36:32.028Z"
+    }
   },
   {
     "slug": "img-3873",
@@ -285,7 +600,16 @@
     "title": "IMG_3873",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "single-arm-dumbbell-row-323",
+      "category": "strength",
+      "title": "Single Arm Dumbbell Row",
+      "confidence": 0.95,
+      "reasoning": "Woman in classic one-knee-on-bench position holding dumbbell with arm extended down, matching single-arm dumbbell row.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:36:46.438Z"
+    }
   },
   {
     "slug": "img-3874",
@@ -293,7 +617,16 @@
     "title": "IMG_3874",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "standing-single-leg-dumbbell-rdl",
+      "category": "strength",
+      "title": "Standing Single Leg Dumbbell RDL",
+      "confidence": 0.95,
+      "reasoning": "Performer in hinged forward position holding dumbbell with one leg extended back, matching single-leg RDL form.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:36:57.687Z"
+    }
   },
   {
     "slug": "img-3875",
@@ -301,7 +634,16 @@
     "title": "IMG_3875",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "bulgarian-split-squat-glute-focused",
+      "category": "strength",
+      "title": "Bulgarian Split Squat",
+      "confidence": 0.9,
+      "reasoning": "Subject in lowered position with rear foot elevated on bench and holding dumbbell, classic Bulgarian split squat setup.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:37:35.743Z"
+    }
   },
   {
     "slug": "img-3877",
@@ -309,7 +651,16 @@
     "title": "IMG_3877",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-hip-thrusts",
+      "category": "strength",
+      "title": "Barbell Hip Thrust",
+      "confidence": 0.95,
+      "reasoning": "Woman lies supine with shoulders on bench, barbell loaded across hips, feet flat in standard hip thrust bottom position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:37:48.845Z"
+    }
   },
   {
     "slug": "img-3878",
@@ -317,7 +668,16 @@
     "title": "IMG_3878",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-hip-thrusts",
+      "category": "strength",
+      "title": "Barbell Hip Thrust",
+      "confidence": 0.98,
+      "reasoning": "Upper back against bench, barbell across hips, elevated position with feet flat indicates barbell hip thrust.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:38:01.260Z"
+    }
   },
   {
     "slug": "img-3879",
@@ -325,7 +685,16 @@
     "title": "IMG_3879",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-hip-thrusts",
+      "category": "strength",
+      "title": "Barbell Hip Thrust",
+      "confidence": 0.95,
+      "reasoning": "Person has shoulders on bench, barbell across hips, feet flat with knees bent in classic hip thrust position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:38:09.816Z"
+    }
   },
   {
     "slug": "img-3880",
@@ -333,7 +702,16 @@
     "title": "IMG_3880",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-narrow-stance-hip-thrust",
+      "category": "strength",
+      "title": "Barbell Narrow Stance Hip Thrust",
+      "confidence": 0.95,
+      "reasoning": "Subject is supine with shoulders elevated on bench, barbell loaded across hips, feet flat in narrow stance at bottom of hip thrust.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:38:19.608Z"
+    }
   },
   {
     "slug": "img-3881",
@@ -341,7 +719,16 @@
     "title": "IMG_3881",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "elevated-hip-sl-raises-w-kb-hold-317",
+      "category": "pilates",
+      "title": "Elevated Hip Single Leg Raises",
+      "confidence": 0.9,
+      "reasoning": "Woman reclined on bench holding dumbbell at chest with one straight leg extended matches elevated hip single-leg raises with weight hold.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:38:50.857Z"
+    }
   },
   {
     "slug": "img-3882",
@@ -349,7 +736,16 @@
     "title": "IMG_3882",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "standing-single-leg-dumbbell-rdl",
+      "category": "strength",
+      "title": "Standing Single Leg Dumbbell RDL",
+      "confidence": 0.9,
+      "reasoning": "Woman holding dumbbell with right leg extended back behind her in single-leg hinge position next to bench.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:39:01.943Z"
+    }
   },
   {
     "slug": "img-3883",
@@ -357,7 +753,16 @@
     "title": "IMG_3883",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "medicine-ball-burpees",
+      "category": "endurance",
+      "title": "Medicine Ball Burpees",
+      "confidence": 0.75,
+      "reasoning": "Subject standing and grasping medicine ball from rack matches the starting position or setup for medicine ball burpees, the only standing med ball exercise in library.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:39:43.593Z"
+    }
   },
   {
     "slug": "img-3884",
@@ -365,7 +770,16 @@
     "title": "IMG_3884",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "kettlebell-rdl",
+      "category": "strength",
+      "title": "Kettlebell RDL",
+      "confidence": 0.95,
+      "reasoning": "Person is in hinged hip position holding kettlebell with straight arms, matching kettlebell RDL bottom phase.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:39:55.652Z"
+    }
   },
   {
     "slug": "img-3886",
@@ -373,7 +787,16 @@
     "title": "IMG_3886",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-deadlift",
+      "category": "strength",
+      "title": "Barbell Deadlift",
+      "confidence": 1,
+      "reasoning": "Athlete in conventional deadlift starting position gripping barbell on floor with hips hinged and back flat.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:40:04.312Z"
+    }
   },
   {
     "slug": "img-3887",
@@ -389,7 +812,16 @@
     "title": "IMG_3888",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-deadlift",
+      "category": "strength",
+      "title": "Barbell Deadlift",
+      "confidence": 0.9,
+      "reasoning": "Woman in standard deadlift setup gripping loaded barbell on floor with hips hinged, back flat, and shins vertical.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:41:44.001Z"
+    }
   },
   {
     "slug": "img-3889",
@@ -397,7 +829,16 @@
     "title": "IMG_3889",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "kettlebell-swings",
+      "category": "strength",
+      "title": "Kettlebell Swings",
+      "confidence": 0.85,
+      "reasoning": "Woman standing with slight knee bend holding kettlebell between legs at thigh level, classic starting or bottom position for kettlebell swings.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:42:01.772Z"
+    }
   },
   {
     "slug": "img-3890",
@@ -405,7 +846,16 @@
     "title": "IMG_3890",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "kettlebell-swings",
+      "category": "strength",
+      "title": "Kettlebell Swings",
+      "confidence": 0.95,
+      "reasoning": "Woman in athletic stance holding kettlebell low between legs at bottom of swing position with hinged hips and bent knees.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:42:10.812Z"
+    }
   },
   {
     "slug": "img-3900",
@@ -413,7 +863,16 @@
     "title": "IMG_3900",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-goodmorning-367",
+      "category": "strength",
+      "title": "Barbell Good Morning",
+      "confidence": 0.9,
+      "reasoning": "Person grips barbell on upper back in squat rack with torso hinged forward and hips pushed back, matching barbell good morning form.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:42:34.296Z"
+    }
   },
   {
     "slug": "img-3901",
@@ -421,7 +880,16 @@
     "title": "IMG_3901",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-squat",
+      "category": "strength",
+      "title": "Barbell Squat",
+      "confidence": 0.95,
+      "reasoning": "Person stands in squat rack holding loaded barbell on upper back in standard back squat starting position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:42:53.015Z"
+    }
   },
   {
     "slug": "img-3903",
@@ -429,7 +897,16 @@
     "title": "IMG_3903",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-squat",
+      "category": "strength",
+      "title": "Barbell Squat",
+      "confidence": 0.95,
+      "reasoning": "Woman unracked barbell on upper back in squat rack with squat stance.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:43:03.706Z"
+    }
   },
   {
     "slug": "img-3904",
@@ -437,7 +914,16 @@
     "title": "IMG_3904",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-squat",
+      "category": "strength",
+      "title": "Barbell Squat",
+      "confidence": 1,
+      "reasoning": "Person is standing in squat rack with barbell loaded on upper back in starting squat position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:43:12.341Z"
+    }
   },
   {
     "slug": "img-3907",
@@ -445,7 +931,16 @@
     "title": "IMG_3907",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "standing-dumbbell-alternating-bicep-curl",
+      "category": "toning",
+      "title": "Standing Alternating Dumbbell Bicep Curl",
+      "confidence": 0.85,
+      "reasoning": "Woman standing holding one dumbbell curled to chest height in right hand, classic mid-rep position for alternating standing dumbbell bicep curl.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:43:54.423Z"
+    }
   },
   {
     "slug": "img-3908",
@@ -453,7 +948,16 @@
     "title": "IMG_3908",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "strength",
+      "title": "Barbell Romanian Deadlift",
+      "confidence": 0.95,
+      "reasoning": "Body in hip hinge with barbell held low at thighs matches RDL bottom position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:44:18.675Z"
+    }
   },
   {
     "slug": "img-3909",
@@ -461,7 +965,16 @@
     "title": "IMG_3909",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "strength",
+      "title": "Dumbbell Box Step Ups",
+      "confidence": 0.9,
+      "reasoning": "Woman holding dumbbells at sides next to plyo box in starting position for dumbbell step-ups.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:44:29.997Z"
+    }
   },
   {
     "slug": "img-3912",
@@ -469,7 +982,16 @@
     "title": "IMG_3912",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "strength",
+      "title": "Landmine Squat",
+      "confidence": 0.95,
+      "reasoning": "Person in deep squat holding loaded landmine barbell pivoted at base, matching landmine squat position and equipment.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:44:39.787Z"
+    }
   },
   {
     "slug": "img-3913",
@@ -477,7 +999,16 @@
     "title": "IMG_3913",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "bent-over-cable-bar-row",
+      "category": "strength",
+      "title": "Bent Over Cable Bar Row",
+      "confidence": 0.85,
+      "reasoning": "Performer is standing in front of a rack pulling a cable bar attachment horizontally to the torso with slight hip hinge, characteristic of a bent-over cable bar row.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:45:18.946Z"
+    }
   },
   {
     "slug": "img-4315",
@@ -485,7 +1016,16 @@
     "title": "IMG_4315",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": null,
+      "title": "No exercise visible",
+      "confidence": 0,
+      "reasoning": "Frame shows empty home interior with no person or fitness equipment visible.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:45:24.983Z"
+    }
   },
   {
     "slug": "img-4609",
@@ -493,7 +1033,16 @@
     "title": "IMG_4609",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "tricep-rope-pulldown",
+      "category": "strength",
+      "title": "Tricep Rope Pulldown",
+      "confidence": 0.9,
+      "reasoning": "Person seated holding cable rope from high pulley at chest height with elbows flared out, matching tricep rope pulldown position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:45:43.415Z"
+    }
   },
   {
     "slug": "img-4610",
@@ -501,7 +1050,16 @@
     "title": "IMG_4610",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "narrow-grip-seated-cable-row",
+      "category": "strength",
+      "title": "Narrow Grip Seated Cable Row",
+      "confidence": 0.9,
+      "reasoning": "Person seated on bench performing horizontal cable pull with both hands using low pulley attachment, matching seated cable row setup.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:46:10.444Z"
+    }
   },
   {
     "slug": "img-4611",
@@ -509,7 +1067,16 @@
     "title": "IMG_4611",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "narrow-grip-seated-cable-row",
+      "category": "strength",
+      "title": "Narrow Grip Seated Cable Row",
+      "confidence": 0.92,
+      "reasoning": "Subject seated on bench gripping cable rope handle with arms extended horizontally, matching starting position of narrow-grip seated cable row.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:46:59.268Z"
+    }
   },
   {
     "slug": "img-4613",
@@ -517,7 +1084,16 @@
     "title": "IMG_4613",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "narrow-grip-seated-cable-row",
+      "category": "strength",
+      "title": "Narrow Grip Seated Cable Row",
+      "confidence": 0.95,
+      "reasoning": "Seated woman pulling narrow-grip cable handle to torso matches narrow grip seated cable row.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:47:13.247Z"
+    }
   },
   {
     "slug": "img-4616",
@@ -525,7 +1101,16 @@
     "title": "IMG_4616",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "pallof-cable-press",
+      "category": "strength",
+      "title": "Pallof Cable Press",
+      "confidence": 0.95,
+      "reasoning": "Woman performing anti-rotation press with cable rope attachment from high pulley, matching Pallof cable press body position and equipment.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:47:21.177Z"
+    }
   },
   {
     "slug": "img-4617",
@@ -533,7 +1118,16 @@
     "title": "IMG_4617",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-oblique-rotations",
+      "category": "strength",
+      "title": "Cable Oblique Rotations",
+      "confidence": 0.85,
+      "reasoning": "Sideways stance to high cable pulley with rope attachment pulled across body matches oblique rotation exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:47:51.098Z"
+    }
   },
   {
     "slug": "img-4618",
@@ -541,7 +1135,16 @@
     "title": "IMG_4618",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "kneeling-cable-rope-pull",
+      "category": "strength",
+      "title": "Kneeling Cable Rope Pull",
+      "confidence": 0.95,
+      "reasoning": "Person is kneeling with one leg back, gripping and pulling a thick rope from a high cable pulley, matching the kneeling cable rope pull exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:48:06.781Z"
+    }
   },
   {
     "slug": "img-4619",
@@ -549,7 +1152,16 @@
     "title": "IMG_4619",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "tricep-rope-pulldown",
+      "category": "strength",
+      "title": "Tricep Rope Pulldown",
+      "confidence": 0.95,
+      "reasoning": "Woman stands facing high cable pulley gripping rope ends with both hands extended forward in classic tricep rope pulldown starting position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:49:01.324Z"
+    }
   },
   {
     "slug": "img-4621",
@@ -557,7 +1169,16 @@
     "title": "IMG_4621",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-bar-bicep-curl",
+      "category": "strength",
+      "title": "Cable Bar Bicep Curl",
+      "confidence": 0.9,
+      "reasoning": "Woman standing facing high cable pulley holding straight bar with underhand grip at chest level indicates cable bar bicep curl starting or mid-rep position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:49:16.992Z"
+    }
   },
   {
     "slug": "img-4622",
@@ -565,7 +1186,16 @@
     "title": "IMG_4622",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "pallof-cable-press",
+      "category": "strength",
+      "title": "Pallof Cable Press",
+      "confidence": 0.95,
+      "reasoning": "Woman stands perpendicular to high cable pulley holding bar at chest height with arms extended, matching Pallof press anti-rotation position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:49:40.718Z"
+    }
   },
   {
     "slug": "img-4623",
@@ -573,7 +1203,16 @@
     "title": "IMG_4623",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-overhead-tricep-extensions",
+      "category": "strength",
+      "title": "Cable Overhead Tricep Extension",
+      "confidence": 0.85,
+      "reasoning": "Woman standing gripping short cable bar overhead from high pulley in exact starting position for cable overhead tricep extensions.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:50:09.156Z"
+    }
   },
   {
     "slug": "img-4624",
@@ -581,7 +1220,16 @@
     "title": "IMG_4624",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "pallof-cable-press",
+      "category": "strength",
+      "title": "Cable Pallof Press",
+      "confidence": 0.95,
+      "reasoning": "Woman standing perpendicular to high cable pulley holding handle at chest height in classic Pallof press starting position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:50:19.471Z"
+    }
   },
   {
     "slug": "img-4625",
@@ -589,7 +1237,16 @@
     "title": "IMG_4625",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "facepull",
+      "category": "strength",
+      "title": "Cable Face Pull",
+      "confidence": 0.95,
+      "reasoning": "Woman stands holding rope attachment from high cable pulley at chest height with elbows flared outward, matching the completion position of a face pull.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:51:04.708Z"
+    }
   },
   {
     "slug": "img-4628",
@@ -597,7 +1254,16 @@
     "title": "IMG_4628",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "single-arm-cable-over-head-lat-pulldown",
+      "category": "strength",
+      "title": "Single Arm Overhead Cable Lat Pulldown",
+      "confidence": 0.85,
+      "reasoning": "Subject in split lunge stance gripping high cable handle with arm fully extended overhead, consistent with starting position of single-arm overhead lat pulldown.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:51:55.285Z"
+    }
   },
   {
     "slug": "img-4629",
@@ -605,7 +1271,16 @@
     "title": "IMG_4629",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "kneeling-cable-overhead-tricep-extensions",
+      "category": "strength",
+      "title": "Kneeling Cable Overhead Tricep Extension",
+      "confidence": 0.9,
+      "reasoning": "Person is kneeling on the floor holding a single cable handle extended overhead from a high pulley, matching the starting position of kneeling cable overhead tricep extensions.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:52:06.286Z"
+    }
   },
   {
     "slug": "img-4630",
@@ -613,7 +1288,16 @@
     "title": "IMG_4630",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-isometric-squat-with-rope-pull",
+      "category": "strength",
+      "title": "Cable Isometric Squat Hold",
+      "confidence": 0.85,
+      "reasoning": "Person in deep squat holding overhead cable handles isometrically, matching cable isometric squat description.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:52:29.911Z"
+    }
   },
   {
     "slug": "img-4632",
@@ -621,7 +1305,16 @@
     "title": "IMG_4632",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-cable-lat-pull-down",
+      "category": "strength",
+      "title": "Seated Cable Lat Pulldown",
+      "confidence": 0.95,
+      "reasoning": "Person seated on lat pulldown machine gripping wide straight bar overhead in starting position with thigh pad visible.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:52:53.133Z"
+    }
   },
   {
     "slug": "img-4633",
@@ -629,7 +1322,16 @@
     "title": "IMG_4633",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-cable-lat-pull-down",
+      "category": "strength",
+      "title": "Seated Cable Lat Pulldown",
+      "confidence": 0.95,
+      "reasoning": "Woman seated facing cable machine, pulling straight bar from high pulley down to chest with narrow supinated grip, matching seated lat pulldown.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:53:16.898Z"
+    }
   },
   {
     "slug": "img-4634",
@@ -637,7 +1339,16 @@
     "title": "IMG_4634",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-cable-lat-pull-down",
+      "category": "strength",
+      "title": "Seated Cable Lat Pulldown",
+      "confidence": 0.9,
+      "reasoning": "Subject is seated on a cable machine holding a straight bar overhead with arms extended, matching the starting position of a seated cable lat pulldown.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:53:47.249Z"
+    }
   },
   {
     "slug": "img-4638",
@@ -645,7 +1356,16 @@
     "title": "IMG_4638",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "straight-arm-pulldown",
+      "category": "strength",
+      "title": "Straight Arm Pulldown",
+      "confidence": 0.95,
+      "reasoning": "Person holding curved bar overhead from high cable pulley in starting position of straight-arm pulldown.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:54:03.116Z"
+    }
   },
   {
     "slug": "img-4639",
@@ -653,7 +1373,16 @@
     "title": "IMG_4639",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-deadlift",
+      "category": "strength",
+      "title": "Barbell Deadlift",
+      "confidence": 0.85,
+      "reasoning": "Subject standing upright gripping a loaded barbell at thigh level with straight arms and neutral spine, characteristic of deadlift lockout or RDL start position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:54:41.026Z"
+    }
   },
   {
     "slug": "img-4640",
@@ -661,7 +1390,16 @@
     "title": "IMG_4640",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-squat",
+      "category": "strength",
+      "title": "Barbell Squat",
+      "confidence": 1,
+      "reasoning": "Woman in bottom position of barbell back squat with bar racked on power rack.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:54:47.914Z"
+    }
   },
   {
     "slug": "img-4641",
@@ -669,7 +1407,16 @@
     "title": "IMG_4641",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-deadlift",
+      "category": "strength",
+      "title": "Barbell Deadlift",
+      "confidence": 0.95,
+      "reasoning": "Woman in standard deadlift starting position gripping loaded barbell on the floor.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:55:00.067Z"
+    }
   },
   {
     "slug": "img-4642",
@@ -677,7 +1424,16 @@
     "title": "IMG_4642",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-reverse-lunge",
+      "category": "strength",
+      "title": "Barbell Reverse Lunge",
+      "confidence": 0.95,
+      "reasoning": "Woman in low reverse lunge position holding barbell across upper back with plates loaded.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:55:08.845Z"
+    }
   },
   {
     "slug": "img-4643",
@@ -685,7 +1441,16 @@
     "title": "IMG_4643",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "box-step-ups",
+      "category": "strength",
+      "title": "Box Step Ups",
+      "confidence": 0.9,
+      "reasoning": "Woman positioned with one foot on a short bench in starting stance for box step-ups, no other equipment in use.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:55:18.092Z"
+    }
   },
   {
     "slug": "img-4644",
@@ -693,7 +1458,16 @@
     "title": "IMG_4644",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-squat",
+      "category": "strength",
+      "title": "Kettlebell Goblet Squat",
+      "confidence": 0.85,
+      "reasoning": "Deep squat position with kettlebell held goblet-style at chest closely matches dumbbell squat.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:56:00.229Z"
+    }
   },
   {
     "slug": "img-4645",
@@ -701,7 +1475,16 @@
     "title": "IMG_4645",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-rdl",
+      "category": "strength",
+      "title": "Dumbbell Romanian Deadlift",
+      "confidence": 0.85,
+      "reasoning": "Woman standing on weight plate holding dumbbells at sides with slight knee bend matches starting position for dumbbell RDL.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:56:14.767Z"
+    }
   },
   {
     "slug": "img-4646",
@@ -725,7 +1508,16 @@
     "title": "IMG_4648",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "bulgarian-split-squat-glute-focused",
+      "category": "strength",
+      "title": "Dumbbell Bulgarian Split Squat",
+      "confidence": 0.9,
+      "reasoning": "Person in deep lunge with rear foot elevated on disc, holding dumbbells at sides, matching Bulgarian split squat bottom position focused on glutes.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:58:51.193Z"
+    }
   },
   {
     "slug": "img-4650",
@@ -733,7 +1525,16 @@
     "title": "IMG_4650",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "bodyweight-squat",
+      "category": "strength",
+      "title": "Bodyweight Squat",
+      "confidence": 0.95,
+      "reasoning": "Person is in deep squat position with hands clasped at chest, no equipment, matching bodyweight squat.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T03:58:59.448Z"
+    }
   },
   {
     "slug": "img-4651",
@@ -749,7 +1550,16 @@
     "title": "IMG_4652",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "ball-straight-leg-bridge",
+      "category": "strength",
+      "title": "Ball Straight Leg Bridge",
+      "confidence": 0.92,
+      "reasoning": "Supine position with one straight leg foot planted on stability ball and arms outstretched matches ball straight leg bridge setup.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:00:51.948Z"
+    }
   },
   {
     "slug": "img-4653",
@@ -757,7 +1567,16 @@
     "title": "IMG_4653",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "lower-leg-lifts-with-block-feet-holds",
+      "category": "pilates",
+      "title": "Lower Leg Lifts Block Squeeze",
+      "confidence": 0.85,
+      "reasoning": "Supine body position with one straight leg elevated perpendicularly while squeezing a large ball between feet closely matches lower leg lifts with block feet holds exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:01:36.349Z"
+    }
   },
   {
     "slug": "img-4654",
@@ -773,7 +1592,16 @@
     "title": "IMG_4655",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "sb-plank",
+      "category": "strength",
+      "title": "Stability Ball Plank",
+      "confidence": 0.9,
+      "reasoning": "Woman in prone plank position with torso draped over a large stability ball, hands on floor, legs extended back.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:02:47.665Z"
+    }
   },
   {
     "slug": "img-4656",
@@ -781,7 +1609,16 @@
     "title": "IMG_4656",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "sb-plank",
+      "category": "strength",
+      "title": "Stability Ball Plank",
+      "confidence": 0.95,
+      "reasoning": "Person in straight plank position with feet elevated on stability ball and hands on floor.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:03:03.861Z"
+    }
   },
   {
     "slug": "img-4657",
@@ -789,7 +1626,16 @@
     "title": "IMG_4657",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "smith-machine-squat-387",
+      "category": "strength",
+      "title": "Smith Machine Squat",
+      "confidence": 0.95,
+      "reasoning": "Person is in bottom squat position under Smith machine bar with standard foot stance.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:03:12.382Z"
+    }
   },
   {
     "slug": "img-4658",
@@ -797,7 +1643,16 @@
     "title": "IMG_4658",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "smith-machine-squat-387",
+      "category": "strength",
+      "title": "Smith Machine Squat",
+      "confidence": 0.95,
+      "reasoning": "Person is in deep squat position under loaded Smith machine bar on upper back with standard foot stance.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:03:28.010Z"
+    }
   },
   {
     "slug": "img-4659",
@@ -805,7 +1660,16 @@
     "title": "IMG_4659",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "smith-machine-squat-387",
+      "category": "strength",
+      "title": "Smith Machine Squat",
+      "confidence": 0.95,
+      "reasoning": "Woman in squat position gripping Smith machine bar across upper back with knees bent.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:03:41.113Z"
+    }
   },
   {
     "slug": "img-4660",
@@ -813,7 +1677,16 @@
     "title": "IMG_4660",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "smith-machine-squat-387",
+      "category": "strength",
+      "title": "Smith Machine Squat",
+      "confidence": 1,
+      "reasoning": "The subject is in a deep squat position gripping the barbell on a Smith machine with weight plates loaded.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:03:52.872Z"
+    }
   },
   {
     "slug": "img-4661",
@@ -821,7 +1694,16 @@
     "title": "IMG_4661",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "smith-machine-stationary-lunge",
+      "category": "strength",
+      "title": "Smith Machine Stationary Lunge",
+      "confidence": 0.9,
+      "reasoning": "Person gripping Smith machine bar on upper back in split-stance position typical of stationary lunge.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:04:17.749Z"
+    }
   },
   {
     "slug": "img-4663",
@@ -829,7 +1711,16 @@
     "title": "IMG_4663",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "smith-machine-narrow-rdl",
+      "category": "strength",
+      "title": "Smith Machine Narrow RDL",
+      "confidence": 0.95,
+      "reasoning": "Athlete in hip hinge position with narrow stance gripping low on loaded Smith machine bar, classic narrow RDL form.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:04:31.677Z"
+    }
   },
   {
     "slug": "img-4664",
@@ -837,7 +1728,16 @@
     "title": "IMG_4664",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "smith-machine-rdl",
+      "category": "strength",
+      "title": "Smith Machine Romanian Deadlift",
+      "confidence": 0.95,
+      "reasoning": "Athlete in hip-hinge position gripping low bar on Smith machine with plates loaded, matching RDL bottom position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:04:47.206Z"
+    }
   },
   {
     "slug": "img-4666",
@@ -845,7 +1745,16 @@
     "title": "IMG_4666",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "smith-machine-narrow-rdl",
+      "category": "strength",
+      "title": "Smith Machine Narrow RDL",
+      "confidence": 0.9,
+      "reasoning": "Athlete is in hip-hinge position gripping low Smith machine bar with narrow foot stance, matching narrow RDL bottom position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:05:09.719Z"
+    }
   },
   {
     "slug": "img-4667",
@@ -853,7 +1762,16 @@
     "title": "IMG_4667",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "strength",
+      "title": "Smith Machine Squat",
+      "confidence": 0.95,
+      "reasoning": "Woman standing upright gripping Smith machine bar behind shoulders in standard squat setup position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:05:20.102Z"
+    }
   },
   {
     "slug": "img-4668",
@@ -861,7 +1779,16 @@
     "title": "IMG_4668",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "smith-machine-rdl",
+      "category": "strength",
+      "title": "Smith Machine RDL",
+      "confidence": 0.9,
+      "reasoning": "Hip-hinge position with straight legs, hands gripping low Smith machine bar, and horizontal torso matches lowered phase of Smith machine RDL.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:06:09.180Z"
+    }
   },
   {
     "slug": "img-4669",
@@ -869,7 +1796,16 @@
     "title": "IMG_4669",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "leg-lowers-296",
+      "category": "toning",
+      "title": "Lying Leg Lowers",
+      "confidence": 0.75,
+      "reasoning": "Supine position on floor gripping overhead Smith machine bar with straight legs raised vertically matches top of leg lowers or straight leg raises.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:07:04.300Z"
+    }
   },
   {
     "slug": "img-4670",
@@ -877,7 +1813,16 @@
     "title": "IMG_4670",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "smith-machine-body-weight-prone-grip-row-321",
+      "category": "strength",
+      "title": "Smith Machine Prone Grip Row",
+      "confidence": 0.85,
+      "reasoning": "Seated position facing low-racked Smith machine bar gripped with hands forward matches bodyweight prone grip row setup.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:07:56.727Z"
+    }
   },
   {
     "slug": "img-4671",
@@ -885,7 +1830,16 @@
     "title": "IMG_4671",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "smith-machine-stationary-lunge",
+      "category": "strength",
+      "title": "Smith Machine Stationary Lunge",
+      "confidence": 0.95,
+      "reasoning": "Person in staggered lunge stance under loaded Smith machine bar on upper back, classic stationary lunge position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:08:06.423Z"
+    }
   },
   {
     "slug": "img-4775",
@@ -893,7 +1847,16 @@
     "title": "IMG_4775",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "chest-supported-incline-row",
+      "category": "strength",
+      "title": "Chest Supported Incline Row",
+      "confidence": 0.95,
+      "reasoning": "Person is bent over a chest pad gripping handles in the stretched position of a supported row machine.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:08:23.875Z"
+    }
   },
   {
     "slug": "img-4777",
@@ -901,7 +1864,16 @@
     "title": "IMG_4777",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-cable-lat-pull-down",
+      "category": "strength",
+      "title": "Seated Cable Lat Pulldown",
+      "confidence": 0.95,
+      "reasoning": "Woman seated at high-pulley cable machine pulling handles down in lat pulldown position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:08:42.707Z"
+    }
   },
   {
     "slug": "img-4779",
@@ -917,7 +1889,16 @@
     "title": "IMG_4782",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "standing-calf-raise-machine",
+      "category": "strength",
+      "title": "Standing Calf Raise Machine",
+      "confidence": 0.95,
+      "reasoning": "The subject is gripping overhead handles on a standing calf raise machine with feet positioned on the platform, typical setup for the exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:09:57.077Z"
+    }
   },
   {
     "slug": "img-4783",
@@ -925,7 +1906,16 @@
     "title": "IMG_4783",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "tricep-dips-machine",
+      "category": "strength",
+      "title": "Machine Tricep Dips",
+      "confidence": 0.95,
+      "reasoning": "Woman gripping parallel handles of a dip machine in the top position with arms extended and feet on the platform.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:10:08.865Z"
+    }
   },
   {
     "slug": "img-4784",
@@ -933,7 +1923,16 @@
     "title": "IMG_4784",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "prone-hamstring-machine",
+      "category": "strength",
+      "title": "Prone Hamstring Curl",
+      "confidence": 0.95,
+      "reasoning": "Person lying prone on Cybex machine with legs extended backward matches prone hamstring curl starting position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:10:17.885Z"
+    }
   },
   {
     "slug": "img-4785",
@@ -941,7 +1940,16 @@
     "title": "IMG_4785",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "prone-hamstring-machine",
+      "category": "strength",
+      "title": "Prone Hamstring Curl Machine",
+      "confidence": 0.95,
+      "reasoning": "Person lying prone on hamstring curl machine with ankle pads in extended leg position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:10:31.668Z"
+    }
   },
   {
     "slug": "img-4787",
@@ -949,7 +1957,16 @@
     "title": "IMG_4787",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "leg-curl-machine-glute-emphasis",
+      "category": "strength",
+      "title": "Prone Leg Curl Glute Emphasis",
+      "confidence": 0.9,
+      "reasoning": "Person lying prone on leg curl machine performing straight-leg hip extension targeting glutes.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:11:06.635Z"
+    }
   },
   {
     "slug": "img-4788",
@@ -957,7 +1974,16 @@
     "title": "IMG_4788",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "machine-leg-extension-393",
+      "category": "strength",
+      "title": "Machine Leg Extension",
+      "confidence": 1,
+      "reasoning": "Clearly seated on Hammer Strength leg extension machine in starting position with legs bent and feet on pad.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:11:10.753Z"
+    }
   },
   {
     "slug": "img-4789",
@@ -965,7 +1991,16 @@
     "title": "IMG_4789",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "machine-leg-extension-393",
+      "category": "strength",
+      "title": "Machine Leg Extension",
+      "confidence": 1,
+      "reasoning": "Person is seated on a Hammer Strength leg extension machine with legs under the pad in starting position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:11:17.448Z"
+    }
   },
   {
     "slug": "img-4793",
@@ -973,7 +2008,16 @@
     "title": "IMG_4793",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "machine-seated-abduction",
+      "category": "toning",
+      "title": "Machine Seated Hip Abduction",
+      "confidence": 0.95,
+      "reasoning": "Clear view of seated hip abduction machine with user positioned to press knees outward against pads, matching machine-seated-abduction.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:11:51.260Z"
+    }
   },
   {
     "slug": "img-4794",
@@ -981,7 +2025,16 @@
     "title": "IMG_4794",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "machine-seated-abduction",
+      "category": "toning",
+      "title": "Seated Hip Abduction Machine",
+      "confidence": 0.98,
+      "reasoning": "Machine clearly labeled HIP ABDUCTION with user seated pushing leg outward against pad.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:12:03.402Z"
+    }
   },
   {
     "slug": "img-4797",
@@ -989,7 +2042,16 @@
     "title": "IMG_4797",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "machine-seated-abduction",
+      "category": "strength",
+      "title": "Seated Machine Hip Abduction",
+      "confidence": 1,
+      "reasoning": "The machine is clearly a seated hip abduction machine with visible labels and standard positioning.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:12:13.522Z"
+    }
   },
   {
     "slug": "img-4798",
@@ -997,7 +2059,16 @@
     "title": "IMG_4798",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "machine-seated-abduction",
+      "category": "toning",
+      "title": "Seated Hip Abduction Machine",
+      "confidence": 0.95,
+      "reasoning": "Machine clearly labeled 'HIP ABDUCTION' with matching seated position and leg pads.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:12:24.099Z"
+    }
   },
   {
     "slug": "img-4799",
@@ -1005,7 +2076,16 @@
     "title": "IMG_4799",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "hack-squat-machine-389",
+      "category": "strength",
+      "title": "Hack Squat Machine",
+      "confidence": 1,
+      "reasoning": "Person is in bottom position on hack squat machine with shoulders under pads and feet on platform.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:12:28.857Z"
+    }
   },
   {
     "slug": "img-4800",
@@ -1013,7 +2093,16 @@
     "title": "IMG_4800",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "hack-squat-machine-389",
+      "category": "strength",
+      "title": "Hack Squat Machine",
+      "confidence": 0.95,
+      "reasoning": "The subject is on a hack squat machine with back against the pad, feet on the platform, and knees bent in a squatting position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:12:40.296Z"
+    }
   },
   {
     "slug": "img-4801",
@@ -1021,7 +2110,16 @@
     "title": "IMG_4801",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "hack-squat-machine-389",
+      "category": "strength",
+      "title": "Hack Squat Machine",
+      "confidence": 1,
+      "reasoning": "The subject is in a lowered position on a hack squat machine with back against the pad and feet on the platform.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:12:44.788Z"
+    }
   },
   {
     "slug": "img-4803",
@@ -1029,7 +2127,16 @@
     "title": "IMG_4803",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "hack-squat-machine-389",
+      "category": "strength",
+      "title": "Hack Squat Machine",
+      "confidence": 0.95,
+      "reasoning": "Distinctive hack squat machine with shoulder pads gripped, feet on angled platform, and bent knees in squat position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:12:59.976Z"
+    }
   },
   {
     "slug": "img-4804",
@@ -1037,7 +2144,16 @@
     "title": "IMG_4804",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "decline-leg-press",
+      "category": "strength",
+      "title": "Decline Leg Press",
+      "confidence": 0.95,
+      "reasoning": "Person is performing a leg press on a decline machine with feet on the platform and knees bent mid-rep.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:13:08.872Z"
+    }
   },
   {
     "slug": "img-4805",
@@ -1045,7 +2161,16 @@
     "title": "IMG_4805",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "strength",
+      "title": "Machine Leg Press",
+      "confidence": 0.95,
+      "reasoning": "Woman lying supine on leg press machine with feet on platform and legs extended mid-rep.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:13:24.156Z"
+    }
   },
   {
     "slug": "img-4806",
@@ -1053,7 +2178,16 @@
     "title": "IMG_4806",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "decline-leg-press",
+      "category": "strength",
+      "title": "Decline Leg Press",
+      "confidence": 0.95,
+      "reasoning": "Person lying supine on angled leg press machine with feet on platform and legs extended.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:13:35.844Z"
+    }
   },
   {
     "slug": "img-4807",
@@ -1061,7 +2195,16 @@
     "title": "IMG_4807",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "decline-leg-single-leg-press-high-stance",
+      "category": "strength",
+      "title": "Decline Single Leg Press",
+      "confidence": 0.95,
+      "reasoning": "Woman performing single-leg press on decline leg press machine with foot in high stance position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:13:48.780Z"
+    }
   },
   {
     "slug": "img-4808",
@@ -1069,7 +2212,16 @@
     "title": "IMG_4808",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "decline-leg-press",
+      "category": "strength",
+      "title": "Decline Leg Press",
+      "confidence": 0.95,
+      "reasoning": "Person lies on angled bench pushing weighted platform with feet in standard leg press position on decline machine.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:13:56.331Z"
+    }
   },
   {
     "slug": "img-4809",
@@ -1077,7 +2229,16 @@
     "title": "IMG_4809",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "decline-leg-single-leg-press-high-stance",
+      "category": "strength",
+      "title": "Decline Single Leg High Press",
+      "confidence": 0.95,
+      "reasoning": "Woman on decline leg press machine performing single-leg press with foot high on platform.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:14:03.088Z"
+    }
   },
   {
     "slug": "img-4810",
@@ -1085,7 +2246,16 @@
     "title": "IMG_4810",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "prone-hamstring-machine",
+      "category": "strength",
+      "title": "Prone Hamstring Machine Curl",
+      "confidence": 0.95,
+      "reasoning": "Person lying prone on hamstring curl machine with legs extended in starting position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:14:14.683Z"
+    }
   },
   {
     "slug": "img-4812",
@@ -1093,7 +2263,16 @@
     "title": "IMG_4812",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "prone-hamstring-machine",
+      "category": "strength",
+      "title": "Prone Hamstring Curl Machine",
+      "confidence": 0.95,
+      "reasoning": "Person is lying prone on a leg curl machine with legs extended, matching the prone hamstring curl position and equipment.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:14:27.830Z"
+    }
   },
   {
     "slug": "img-4813",
@@ -1101,7 +2280,16 @@
     "title": "IMG_4813",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "decline-leg-single-leg-press-high-stance",
+      "category": "strength",
+      "title": "Decline Single Leg Leg Press",
+      "confidence": 0.92,
+      "reasoning": "Supine position on plate-loaded leg press machine with one foot planted on platform and the other leg extended straight indicates a single-leg high-stance variation.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:15:00.145Z"
+    }
   },
   {
     "slug": "img-4816",
@@ -1109,7 +2297,16 @@
     "title": "IMG_4816",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "leg-press",
+      "category": "strength",
+      "title": "Leg Press",
+      "confidence": 0.95,
+      "reasoning": "Subject is seated on a leg press machine with feet positioned on the platform, knees bent in typical starting or bottom position of the exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:15:15.346Z"
+    }
   },
   {
     "slug": "img-5776-1",
@@ -1117,7 +2314,16 @@
     "title": "IMG_5776-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "pilates-lower-leg-lifts-309",
+      "category": "pilates",
+      "title": "Pilates Lower Leg Lifts",
+      "confidence": 0.85,
+      "reasoning": "Woman lying supine on mat with one straight leg raised vertically and the other extended low matches Pilates lower leg lifts position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:15:37.865Z"
+    }
   },
   {
     "slug": "img-5776-10",
@@ -1125,7 +2331,16 @@
     "title": "IMG_5776-10",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "side-plank-292",
+      "category": "pilates",
+      "title": "Side Plank",
+      "confidence": 1,
+      "reasoning": "Clear side plank position with forearm support, straight body line, and raised top arm on a yoga mat.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:15:45.533Z"
+    }
   },
   {
     "slug": "img-5776-2",
@@ -1133,7 +2348,16 @@
     "title": "IMG_5776-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "pilates-lower-leg-lifts-309",
+      "category": "pilates",
+      "title": "Pilates Lower Leg Lifts",
+      "confidence": 0.75,
+      "reasoning": "Supine position on mat with straight legs raised vertically and arms extended forward matches Pilates lower leg lifts pose.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:16:11.593Z"
+    }
   },
   {
     "slug": "img-5776-3",
@@ -1141,7 +2365,16 @@
     "title": "IMG_5776-3",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "plank-289",
+      "category": "strength",
+      "title": "Single Leg Plank",
+      "confidence": 0.8,
+      "reasoning": "Body in high plank on hands and toes with one straight leg lifted high backward identifies a single-leg plank variation.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:17:00.795Z"
+    }
   },
   {
     "slug": "img-5776-4",
@@ -1149,7 +2382,16 @@
     "title": "IMG_5776-4",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "strength",
+      "title": "Quadruped Glute Kickback",
+      "confidence": 0.3,
+      "reasoning": "Body position shows quadruped stance with one rear leg extended high, typical of donkey kicks or glute kickbacks, but no exact bodyweight match in library.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:17:36.567Z"
+    }
   },
   {
     "slug": "img-5776-5",
@@ -1157,7 +2399,16 @@
     "title": "IMG_5776-5",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "toe-touches-299",
+      "category": "toning",
+      "title": "Toe Touches",
+      "confidence": 0.85,
+      "reasoning": "Supine position with straight legs raised vertically, torso crunched, and arm extended upward matches the peak of toe touches exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:18:11.975Z"
+    }
   },
   {
     "slug": "img-5776-6",
@@ -1165,7 +2416,16 @@
     "title": "IMG_5776-6",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "banded-donkey-kicks",
+      "category": "toning",
+      "title": "Banded Donkey Kicks",
+      "confidence": 0.75,
+      "reasoning": "Quadruped starting position on mat with elevated hips and glutes emphasized matches banded donkey kicks preparation, despite no visible band.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:19:10.217Z"
+    }
   },
   {
     "slug": "img-5776-7",
@@ -1173,7 +2433,16 @@
     "title": "IMG_5776-7",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "plank-289",
+      "category": "strength",
+      "title": "Forearm Plank Hold",
+      "confidence": 1,
+      "reasoning": "The subject is in a straight-arm plank position on forearms with body aligned on a yoga mat, matching the standard plank exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:19:25.747Z"
+    }
   },
   {
     "slug": "img-5776-8",
@@ -1181,7 +2450,16 @@
     "title": "IMG_5776-8",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "leg-lowers-296",
+      "category": "pilates",
+      "title": "Leg Lowers",
+      "confidence": 0.85,
+      "reasoning": "Supine body position on mat with both legs extended vertically matches the peak hold or starting position of leg lowers.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:19:52.048Z"
+    }
   },
   {
     "slug": "img-5776-9",
@@ -1189,7 +2467,16 @@
     "title": "IMG_5776-9",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "side-plank-292",
+      "category": "strength",
+      "title": "Side Plank",
+      "confidence": 1,
+      "reasoning": "The person is performing a classic side plank with forearm support, straight body alignment, and top arm raised.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:20:00.451Z"
+    }
   },
   {
     "slug": "img-5776",
@@ -1197,7 +2484,16 @@
     "title": "IMG_5776",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "leg-lowers-296",
+      "category": "toning",
+      "title": "Leg Lowers",
+      "confidence": 0.9,
+      "reasoning": "Supine body position on mat with straight legs raised vertically matches the peak or starting position of leg lowers.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:20:21.911Z"
+    }
   },
   {
     "slug": "img-5778-1",
@@ -1205,7 +2501,16 @@
     "title": "IMG_5778-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "pilates",
+      "title": "Tabletop Quadruped Hold",
+      "confidence": 0.35,
+      "reasoning": "Position is standard quadruped/tabletop used in multiple pilates/core exercises like bird dog or knee taps, but no specific movement, equipment, or variation distinguishes it.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:20:56.996Z"
+    }
   },
   {
     "slug": "img-5778-2",
@@ -1213,7 +2518,16 @@
     "title": "IMG_5778-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "banded-glute-kicks",
+      "category": "toning",
+      "title": "Banded Glute Kicks",
+      "confidence": 0.85,
+      "reasoning": "Quadruped stance with one straight leg extended rearward matches the banded glute kicks position, even if band not visible in frame.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:21:47.941Z"
+    }
   },
   {
     "slug": "img-5778-3",
@@ -1221,7 +2535,16 @@
     "title": "IMG_5778-3",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "plank-289",
+      "category": "strength",
+      "title": "High Plank Hold",
+      "confidence": 1,
+      "reasoning": "The subject is in a straight-arm plank position on a yoga mat with no equipment, matching the standard plank exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:22:00.736Z"
+    }
   },
   {
     "slug": "img-5778",
@@ -1229,7 +2552,16 @@
     "title": "IMG_5778",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "superman",
+      "category": "strength",
+      "title": "Superman Back Extension",
+      "confidence": 0.75,
+      "reasoning": "Person lying prone on floor mat matches starting position for superman or floor back extension exercise with no equipment visible.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:22:21.518Z"
+    }
   },
   {
     "slug": "img-5778",
@@ -1237,7 +2569,16 @@
     "title": "IMG_5778",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "yoga",
+      "title": "Downward Facing Dog",
+      "confidence": 0.85,
+      "reasoning": "Person in classic inverted V pike position on mat resembling downward dog yoga pose with straight legs and hands on floor.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:22:43.976Z"
+    }
   },
   {
     "slug": "img-5779-1",
@@ -1245,7 +2586,16 @@
     "title": "IMG_5779-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "elevated-hip-bent-knee-raises-310",
+      "category": "pilates",
+      "title": "Elevated Hip Bent Knee Raises",
+      "confidence": 0.75,
+      "reasoning": "Supine body position with yoga block elevating hips and straight legs raised vertically closely matches elevated hip leg raise exercise, likely mid-rep with slight knee bend.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:23:21.877Z"
+    }
   },
   {
     "slug": "img-5779-1",
@@ -1253,7 +2603,16 @@
     "title": "IMG_5779-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "sb-alt-dead-bug-312",
+      "category": "pilates",
+      "title": "Stability Ball Alternating Dead Bug",
+      "confidence": 0.9,
+      "reasoning": "Person lies supine holding stability ball overhead with legs extended upward in classic alternating dead bug position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:23:37.857Z"
+    }
   },
   {
     "slug": "img-5779-2",
@@ -1261,7 +2620,16 @@
     "title": "IMG_5779-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "medicine-ball-dead-bugs",
+      "category": "pilates",
+      "title": "Medicine Ball Dead Bugs",
+      "confidence": 0.8,
+      "reasoning": "Supine body position holding large textured ball above chest with legs extended upward closely matches medicine ball dead bugs.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:24:21.776Z"
+    }
   },
   {
     "slug": "img-5779-2",
@@ -1269,7 +2637,16 @@
     "title": "IMG_5779-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "stability-bird-dog-318",
+      "category": "pilates",
+      "title": "Stability Ball Bird Dog",
+      "confidence": 0.7,
+      "reasoning": "Quadruped position with hands placed on a pink stability ball matches the setup for a stability bird dog exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:25:02.661Z"
+    }
   },
   {
     "slug": "img-5779-3",
@@ -1293,7 +2670,16 @@
     "title": "IMG_5779",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "medicine-ball-dead-bugs",
+      "category": "pilates",
+      "title": "Medicine Ball Dead Bugs",
+      "confidence": 0.85,
+      "reasoning": "Supine position holding medicine ball overhead with legs extended upward matches medicine ball dead bugs exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:27:21.443Z"
+    }
   },
   {
     "slug": "img-5779",
@@ -1301,7 +2687,16 @@
     "title": "IMG_5779",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "bent-knee-raise-with-yoga-block-adduction",
+      "category": "pilates",
+      "title": "Bent Knee Raise Yoga Block Adduction",
+      "confidence": 0.85,
+      "reasoning": "Supine position with legs raised vertically and ball squeezed between thighs matches adduction-focused bent knee raises using a block or similar tool.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:28:06.106Z"
+    }
   },
   {
     "slug": "img-5781-1",
@@ -1309,7 +2704,16 @@
     "title": "IMG_5781-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "toe-touches-299",
+      "category": "pilates",
+      "title": "Toe Touches",
+      "confidence": 0.85,
+      "reasoning": "Person is supine on mat with upper body crunched up, arms extended forward toward straight elevated legs, matching toe touches exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:28:45.745Z"
+    }
   },
   {
     "slug": "img-5781-2",
@@ -1317,7 +2721,16 @@
     "title": "IMG_5781-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "table-top-knee-taps-305",
+      "category": "pilates",
+      "title": "Table Top Knee Taps",
+      "confidence": 0.75,
+      "reasoning": "Woman lying supine on mat in tabletop leg position (knees bent 90 degrees, shins parallel to floor) typical for table top knee taps exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:29:23.801Z"
+    }
   },
   {
     "slug": "img-5781-3",
@@ -1325,7 +2738,16 @@
     "title": "IMG_5781-3",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "pilates",
+      "title": "Supine Crunch Leg Raise",
+      "confidence": 0.35,
+      "reasoning": "Person in supine crunch with straight legs raised vertically matches pilates-style core work but no precise library match.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:30:25.024Z"
+    }
   },
   {
     "slug": "img-5781",
@@ -1333,7 +2755,16 @@
     "title": "IMG_5781",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "leg-lowers-296",
+      "category": "pilates",
+      "title": "Lying Leg Lowers",
+      "confidence": 0.7,
+      "reasoning": "Supine position with straight legs raised to vertical, hands cradling head supported by yoga block, matches the starting position of leg lowers.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:31:15.162Z"
+    }
   },
   {
     "slug": "img-5781",
@@ -1341,7 +2772,16 @@
     "title": "IMG_5781",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "sb-plank",
+      "category": "endurance",
+      "title": "Stability Ball Plank",
+      "confidence": 0.75,
+      "reasoning": "Kneeling position with hands on stability ball and straight torso matches stability ball plank modification.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:31:50.081Z"
+    }
   },
   {
     "slug": "img-5782-1",
@@ -1349,7 +2789,16 @@
     "title": "IMG_5782-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "pilates",
+      "title": "Quadruped Table Top Hold",
+      "confidence": 0.35,
+      "reasoning": "Static quadruped position matches starting pose for many pilates/core exercises like table top knee taps or bird dog, but no movement, extension, or active equipment use visible to identify specific e",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:32:49.607Z"
+    }
   },
   {
     "slug": "img-5782",
@@ -1373,7 +2822,16 @@
     "title": "IMG_5783-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "table-top-alternating-towel-arm-slides",
+      "category": "pilates",
+      "title": "Table Top Towel Arm Slides",
+      "confidence": 0.9,
+      "reasoning": "Quadruped position with hands on towels on mat indicates table top alternating towel arm slides for core stability.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:35:09.763Z"
+    }
   },
   {
     "slug": "img-5783-2",
@@ -1381,7 +2839,16 @@
     "title": "IMG_5783-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "towel-pike",
+      "category": "pilates",
+      "title": "Towel Pike",
+      "confidence": 0.85,
+      "reasoning": "High plank position with towel slider under foot matches starting position of towel pike exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:35:51.495Z"
+    }
   },
   {
     "slug": "img-5783",
@@ -1389,7 +2856,16 @@
     "title": "IMG_5783",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "banded-donkey-kicks",
+      "category": "strength",
+      "title": "Banded Donkey Kicks",
+      "confidence": 0.85,
+      "reasoning": "Quadruped stance with one leg extended posteriorly matches donkey kick position typical for glute activation.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:36:16.414Z"
+    }
   },
   {
     "slug": "img-5784-1",
@@ -1397,7 +2873,16 @@
     "title": "IMG_5784-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "bent-knee-raises-with-block-between-feet",
+      "category": "pilates",
+      "title": "Bent Knee Raises with Block",
+      "confidence": 0.95,
+      "reasoning": "Supine position with bent knees raised and block between feet matches exactly.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:36:28.274Z"
+    }
   },
   {
     "slug": "img-5784",
@@ -1405,7 +2890,16 @@
     "title": "IMG_5784",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "pilates-lower-leg-lifts-309",
+      "category": "pilates",
+      "title": "Pilates Lower Leg Lifts",
+      "confidence": 0.75,
+      "reasoning": "Supine on mat with one straight leg raised vertically and one bent leg raised matches typical pilates lower leg lifts position mid-rep.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:37:03.253Z"
+    }
   },
   {
     "slug": "img-5784",
@@ -1413,7 +2907,16 @@
     "title": "IMG_5784",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "table-top-knee-taps-with-block-adduction",
+      "category": "pilates",
+      "title": "Table Top Knee Taps Adduction",
+      "confidence": 0.85,
+      "reasoning": "Supine table top leg position with crunch and nearby pink block matches table top knee taps with block adduction.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:37:48.849Z"
+    }
   },
   {
     "slug": "img-5785-1",
@@ -1421,7 +2924,16 @@
     "title": "IMG_5785-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "table-top-knee-taps-with-block-adduction",
+      "category": "pilates",
+      "title": "Table Top Knee Taps Adduction",
+      "confidence": 0.85,
+      "reasoning": "Quadruped table top position with pink block adjacent to knee closely matches the setup for table top knee taps with block adduction.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:38:22.722Z"
+    }
   },
   {
     "slug": "img-5785",
@@ -1437,7 +2949,16 @@
     "title": "IMG_5785",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "leg-lowers-296",
+      "category": "pilates",
+      "title": "Leg Lowers",
+      "confidence": 0.95,
+      "reasoning": "Supine position on mat with straight legs raised vertically matches the starting position of leg lowers exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:40:21.160Z"
+    }
   },
   {
     "slug": "img-5786-1",
@@ -1445,7 +2966,16 @@
     "title": "IMG_5786-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "supported-hip-dead-bug",
+      "category": "pilates",
+      "title": "Supported Hip Dead Bug",
+      "confidence": 0.9,
+      "reasoning": "Supine position with yoga block under hips, kettlebell held overhead, and leg extended matches supported hip dead bug exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:40:34.988Z"
+    }
   },
   {
     "slug": "img-5786",
@@ -1461,7 +2991,16 @@
     "title": "IMG_5787",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "stability-bird-dog-318",
+      "category": "pilates",
+      "title": "Stability Bird Dog",
+      "confidence": 0.9,
+      "reasoning": "Quadruped stance with opposite arm extended forward and leg kicked back, knee on stability pad matches stability bird dog exactly.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:42:13.550Z"
+    }
   },
   {
     "slug": "img-5788-1",
@@ -1469,7 +3008,16 @@
     "title": "IMG_5788-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-deadlift",
+      "category": "strength",
+      "title": "Barbell Deadlift",
+      "confidence": 0.95,
+      "reasoning": "Athlete in hip-hinged position gripping loaded barbell on floor, matching conventional deadlift starting position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:42:44.943Z"
+    }
   },
   {
     "slug": "img-5788",
@@ -1477,7 +3025,16 @@
     "title": "IMG_5788",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "strength",
+      "title": "Hack Squat Machine",
+      "confidence": 0.95,
+      "reasoning": "Woman standing upright on plate-loaded hack squat machine platform gripping the bar handles, typical top position of hack squat.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:43:05.630Z"
+    }
   },
   {
     "slug": "img-5789",
@@ -1485,7 +3042,16 @@
     "title": "IMG_5789",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "standing-single-leg-dumbbell-rdl",
+      "category": "strength",
+      "title": "Standing Single Leg RDL",
+      "confidence": 0.85,
+      "reasoning": "Torso hinged forward parallel to floor, balancing on one leg with opposite leg extended straight back matches single-leg RDL body position exactly.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:43:56.285Z"
+    }
   },
   {
     "slug": "img-5790",
@@ -1493,7 +3059,16 @@
     "title": "IMG_5790",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-rdl-379",
+      "category": "strength",
+      "title": "Barbell Romanian Deadlift",
+      "confidence": 0.85,
+      "reasoning": "Woman in hip-hinge position with knees slightly bent, holding loaded barbell straight-armed in front at mid-shin level on a gym platform.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:44:36.236Z"
+    }
   },
   {
     "slug": "img-5791",
@@ -1501,7 +3076,16 @@
     "title": "IMG_5791",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-rdl-379",
+      "category": "strength",
+      "title": "Barbell Romanian Deadlift",
+      "confidence": 0.92,
+      "reasoning": "Woman in hip-hinge position holding barbell with straight arms on deadlift platform, classic RDL setup.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:45:13.408Z"
+    }
   },
   {
     "slug": "img-6179",
@@ -1509,7 +3093,16 @@
     "title": "IMG_6179",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "standing-dumbbell-frontal-raises",
+      "category": "strength",
+      "title": "Standing Dumbbell Frontal Raises",
+      "confidence": 0.9,
+      "reasoning": "Woman stands holding dumbbells with arms extended forward at shoulder height, classic position for standing dumbbell frontal raises.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:45:32.674Z"
+    }
   },
   {
     "slug": "img-6180",
@@ -1517,7 +3110,16 @@
     "title": "IMG_6180",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-rdl",
+      "category": "strength",
+      "title": "Dumbbell Romanian Deadlift",
+      "confidence": 0.9,
+      "reasoning": "Woman in hip-hinge position with dumbbells hanging at sides matches dumbbell RDL starting or mid-rep posture.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:45:49.974Z"
+    }
   },
   {
     "slug": "img-6181-1",
@@ -1525,7 +3127,16 @@
     "title": "IMG_6181-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "standing-single-leg-dumbbell-rdl",
+      "category": "strength",
+      "title": "Standing Single Leg Dumbbell RDL",
+      "confidence": 0.95,
+      "reasoning": "Performer in staggered stance with rear leg extended back, torso hinged forward holding dumbbells, matching single-leg RDL form.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:45:58.886Z"
+    }
   },
   {
     "slug": "img-6181-2",
@@ -1533,7 +3144,16 @@
     "title": "IMG_6181-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-lateral-raise",
+      "category": "toning",
+      "title": "Dumbbell Lateral Raise",
+      "confidence": 0.95,
+      "reasoning": "Woman standing with dumbbells held at shoulder height with arms abducted laterally, matching dumbbell lateral raise position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:46:17.531Z"
+    }
   },
   {
     "slug": "img-6181-3",
@@ -1541,7 +3161,16 @@
     "title": "IMG_6181-3",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "single-arm-kneeling-cable-row",
+      "category": "strength",
+      "title": "Single Arm Kneeling Cable Row",
+      "confidence": 0.9,
+      "reasoning": "Body position matches kneeling single-arm cable row with torso hinged forward, one knee down, rear leg extended for stability, and hand pulling cable handle.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:47:10.401Z"
+    }
   },
   {
     "slug": "img-6181-4",
@@ -1549,7 +3178,16 @@
     "title": "IMG_6181-4",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": null,
+      "title": "",
+      "confidence": 0.3,
+      "reasoning": "Subject standing upright holding dumbbells at sides is starting position for multiple exercises like bicep curls, squats, or RDLs, too ambiguous to identify specifically.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:47:50.303Z"
+    }
   },
   {
     "slug": "img-6181",
@@ -1557,7 +3195,16 @@
     "title": "IMG_6181",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "standing-single-leg-dumbbell-rdl",
+      "category": "strength",
+      "title": "Standing Single Leg Dumbbell RDL",
+      "confidence": 0.95,
+      "reasoning": "Woman holding dumbbells, hinged forward on one leg with the other extended back, matching single-leg RDL position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:47:57.298Z"
+    }
   },
   {
     "slug": "img-6182",
@@ -1565,7 +3212,16 @@
     "title": "IMG_6182",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "bodyweight-squat",
+      "category": "strength",
+      "title": "Bodyweight Squat",
+      "confidence": 0.85,
+      "reasoning": "Deep squat position with arms behind head on floor with no equipment matches bodyweight squat.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:48:22.474Z"
+    }
   },
   {
     "slug": "img-6183-1",
@@ -1573,7 +3229,16 @@
     "title": "IMG_6183-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-lateral-raise",
+      "category": "toning",
+      "title": "Dumbbell Lateral Raise",
+      "confidence": 0.95,
+      "reasoning": "Woman standing holding dumbbells with arms extended laterally at shoulder height, matching the peak position of a dumbbell lateral raise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:48:30.384Z"
+    }
   },
   {
     "slug": "img-6183-2",
@@ -1581,7 +3246,16 @@
     "title": "IMG_6183-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "standing-dumbbell-alternating-hammer-curl",
+      "category": "muscle_gain",
+      "title": "Standing Dumbbell Hammer Curl",
+      "confidence": 0.7,
+      "reasoning": "Woman standing upright holding hex dumbbells at sides with apparent neutral grip, matching starting position for standing dumbbell alternating hammer curls.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:49:29.493Z"
+    }
   },
   {
     "slug": "img-6183-3",
@@ -1589,7 +3263,16 @@
     "title": "IMG_6183-3",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "standing-dumbbell-curl-and-press",
+      "category": "strength",
+      "title": "Standing Dumbbell Curl and Press",
+      "confidence": 0.85,
+      "reasoning": "Woman standing upright holding dumbbells at shoulder height with arms raised matches the overhead press phase of a standing dumbbell curl and press.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:50:03.422Z"
+    }
   },
   {
     "slug": "img-6183",
@@ -1597,7 +3280,16 @@
     "title": "IMG_6183",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "single-leg-reverse-lunges-366",
+      "category": "strength",
+      "title": "Single Leg Reverse Lunge",
+      "confidence": 0.75,
+      "reasoning": "Subject is in classic reverse lunge position with front knee bent and back leg extended, holding a medicine ball at chest height.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:50:38.545Z"
+    }
   },
   {
     "slug": "img-6183",
@@ -1605,7 +3297,16 @@
     "title": "IMG_6183",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-lateral-raise",
+      "category": "strength",
+      "title": "Dumbbell Lateral Raise",
+      "confidence": 0.95,
+      "reasoning": "Woman standing with arms abducted holding dumbbells at shoulder height indicates standing dumbbell lateral raises.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:50:48.567Z"
+    }
   },
   {
     "slug": "img-6184-1",
@@ -1613,7 +3314,16 @@
     "title": "IMG_6184-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-lateral-raise",
+      "category": "strength",
+      "title": "Dumbbell Lateral Raise",
+      "confidence": 0.85,
+      "reasoning": "Woman standing with dumbbells held at shoulder height arms extended laterally, matching the top position of dumbbell lateral raises.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:51:22.206Z"
+    }
   },
   {
     "slug": "img-6184",
@@ -1621,7 +3331,16 @@
     "title": "IMG_6184",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-lateral-raise",
+      "category": "strength",
+      "title": "Dumbbell Lateral Raise",
+      "confidence": 0.95,
+      "reasoning": "Standing woman holding dumbbells with arms extended laterally at shoulder height and motion blur indicates lateral raise exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:51:32.263Z"
+    }
   },
   {
     "slug": "img-6185",
@@ -1629,7 +3348,16 @@
     "title": "IMG_6185",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "renegade-row",
+      "category": "strength",
+      "title": "Renegade Row",
+      "confidence": 0.85,
+      "reasoning": "Athlete in lowered high plank holding dumbbells under shoulders matches renegade row starting or reset position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:52:17.442Z"
+    }
   },
   {
     "slug": "img-6185",
@@ -1637,7 +3365,16 @@
     "title": "IMG_6185",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "strength",
+      "title": "Ab Wheel Rollout",
+      "confidence": 0.3,
+      "reasoning": "Position matches ab wheel rollout extended plank but no exact match in library.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:52:33.927Z"
+    }
   },
   {
     "slug": "img-6186-1",
@@ -1645,7 +3382,16 @@
     "title": "IMG_6186-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "standing-dumbbell-windmill",
+      "category": "strength",
+      "title": "Standing Dumbbell Windmill",
+      "confidence": 0.95,
+      "reasoning": "Pose matches standing dumbbell windmill with arm extended overhead, torso side-bent, and one leg extended back.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:52:42.874Z"
+    }
   },
   {
     "slug": "img-6186",
@@ -1653,7 +3399,16 @@
     "title": "IMG_6186",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "single-arm-dumbbell-bent-over-row",
+      "category": "strength",
+      "title": "Single Arm Bent Over Row",
+      "confidence": 0.92,
+      "reasoning": "Woman hinged at hips with straight back, one dumbbell hanging in right hand, left hand on thigh for support, classic single-arm dumbbell bent-over row position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:53:13.661Z"
+    }
   },
   {
     "slug": "img-6187-1",
@@ -1661,7 +3416,16 @@
     "title": "IMG_6187-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "jump-rope",
+      "category": "endurance",
+      "title": "Jump Rope",
+      "confidence": 1,
+      "reasoning": "Woman standing holding green jump rope handles with rope visible between feet, clearly jump rope exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:53:20.970Z"
+    }
   },
   {
     "slug": "img-6187",
@@ -1669,7 +3433,16 @@
     "title": "IMG_6187",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "banded-standing-glute-kicks",
+      "category": "toning",
+      "title": "Banded Standing Glute Kicks",
+      "confidence": 0.85,
+      "reasoning": "Woman standing on one leg with green band anchored at ankle pulling opposite leg back in glute kickback position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:53:33.908Z"
+    }
   },
   {
     "slug": "img-6188",
@@ -1677,7 +3450,16 @@
     "title": "IMG_6188",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "bent-over-cable-bar-row",
+      "category": "strength",
+      "title": "Bent Over Cable Bar Row",
+      "confidence": 0.85,
+      "reasoning": "Athlete is bent at hips with flat back, holding single-arm cable handle extended forward from low pulley, matching bent-over cable row starting position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:54:18.133Z"
+    }
   },
   {
     "slug": "img-6189",
@@ -1685,7 +3467,16 @@
     "title": "IMG_6189",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "kneeling-cable-rope-pull",
+      "category": "strength",
+      "title": "Kneeling Cable Rope Pull",
+      "confidence": 0.85,
+      "reasoning": "Woman kneeling in front of cable machine holding rope attachment with both hands and straight arms extended forward matches the starting or mid-position of this exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:55:08.261Z"
+    }
   },
   {
     "slug": "img-6190",
@@ -1709,7 +3500,16 @@
     "title": "IMG_6192",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "tricep-rope-pulldown",
+      "category": "toning",
+      "title": "Tricep Rope Pulldown",
+      "confidence": 0.9,
+      "reasoning": "Performer stands facing high cable pulley gripping rope attachment with arms extended forward at chest height, matching mid-rep tricep rope pulldown.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:58:07.387Z"
+    }
   },
   {
     "slug": "img-6193",
@@ -1717,7 +3517,16 @@
     "title": "IMG_6193",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-isometric-squat-with-rope-pull",
+      "category": "strength",
+      "title": "Isometric Squat Cable Rope Pull",
+      "confidence": 0.95,
+      "reasoning": "Woman in deep squat holding and pulling cable rope attachment matches cable isometric squat with rope pull exactly.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:58:19.665Z"
+    }
   },
   {
     "slug": "img-6194",
@@ -1725,7 +3534,16 @@
     "title": "IMG_6194",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-isometric-squat-with-rope-pull",
+      "category": "strength",
+      "title": "Cable Isometric Squat Rope Pull",
+      "confidence": 0.95,
+      "reasoning": "Person in low squat holding cable rope attachment at chest level matches isometric squat with rope pull exactly.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:58:34.944Z"
+    }
   },
   {
     "slug": "img-6195",
@@ -1733,7 +3551,16 @@
     "title": "IMG_6195",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "bent-over-cable-rope-row",
+      "category": "strength",
+      "title": "Bent Over Cable Rope Row",
+      "confidence": 0.95,
+      "reasoning": "Woman is hinged at hips holding cable rope attachment in bent-over rowing position with straight back.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T04:58:47.381Z"
+    }
   },
   {
     "slug": "img-6196",
@@ -1757,7 +3584,16 @@
     "title": "IMG_6198",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-single-arm-tricep-push-down",
+      "category": "toning",
+      "title": "Single Arm Cable Tricep Pushdown",
+      "confidence": 0.9,
+      "reasoning": "Woman standing holding rope attachment from high cable pulley with one arm extended straight, matching end position of single-arm tricep pushdown.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:01:22.610Z"
+    }
   },
   {
     "slug": "img-6199",
@@ -1773,7 +3609,16 @@
     "title": "IMG_6201",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "pallof-cable-press",
+      "category": "strength",
+      "title": "Pallof Cable Press",
+      "confidence": 0.95,
+      "reasoning": "Woman stands sideways to cable machine holding single handle at chest height with arm extended, classic Pallof press anti-rotation setup.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:02:45.023Z"
+    }
   },
   {
     "slug": "img-6202",
@@ -1781,7 +3626,16 @@
     "title": "IMG_6202",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-bar-bicep-curl",
+      "category": "strength",
+      "title": "Cable Bar Bicep Curl",
+      "confidence": 0.9,
+      "reasoning": "Woman standing upright holding straight bar from low cable pulley in starting position for bicep curls.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:03:08.838Z"
+    }
   },
   {
     "slug": "img-6203",
@@ -1789,7 +3643,16 @@
     "title": "IMG_6203",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-rope-hammer-curls",
+      "category": "muscle_gain",
+      "title": "Cable Rope Hammer Curls",
+      "confidence": 0.7,
+      "reasoning": "Upright standing posture with one arm bent holding cable attachment at waist level matches mid-rep single-arm cable hammer curl.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:04:01.632Z"
+    }
   },
   {
     "slug": "img-6204",
@@ -1797,7 +3660,16 @@
     "title": "IMG_6204",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "strength",
+      "title": "Resistance Band Pull Apart",
+      "confidence": 0.3,
+      "reasoning": "Woman standing with arms extended sideways holding a taut resistance band matches band pull-apart for rear delts and upper back, but no exact ID in library.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:04:40.156Z"
+    }
   },
   {
     "slug": "img-6205",
@@ -1805,7 +3677,16 @@
     "title": "IMG_6205",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "tricep-rope-pulldown",
+      "category": "strength",
+      "title": "Tricep Rope Pulldown",
+      "confidence": 0.95,
+      "reasoning": "Woman stands at cable machine gripping rope attachment at chest height with elbows tucked in, matching tricep rope pulldown starting position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:04:53.500Z"
+    }
   },
   {
     "slug": "img-6206",
@@ -1813,7 +3694,16 @@
     "title": "IMG_6206",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "pallof-cable-press",
+      "category": "strength",
+      "title": "Pallof Cable Press",
+      "confidence": 0.9,
+      "reasoning": "Woman stands wide perpendicular to cable machine holding rope handle at chest in classic anti-rotation Pallof press position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:05:32.555Z"
+    }
   },
   {
     "slug": "img-6207",
@@ -1821,7 +3711,16 @@
     "title": "IMG_6207",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "pallof-cable-press",
+      "category": "strength",
+      "title": "Cable Pallof Press",
+      "confidence": 0.95,
+      "reasoning": "Split stance with straight arm extended holding cable handle perpendicular to anchor point matches Pallof press anti-rotation position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:06:04.564Z"
+    }
   },
   {
     "slug": "img-6208",
@@ -1829,7 +3728,16 @@
     "title": "IMG_6208",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "straight-arm-pulldown",
+      "category": "strength",
+      "title": "Straight Arm Pulldown",
+      "confidence": 0.85,
+      "reasoning": "Person standing at cable crossover machine with arms fully extended overhead gripping high pulley handles, classic starting position for straight-arm pulldown.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:06:23.383Z"
+    }
   },
   {
     "slug": "img-6209-1",
@@ -1837,7 +3745,16 @@
     "title": "IMG_6209-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "strength",
+      "title": "Machine Leg Press",
+      "confidence": 0.95,
+      "reasoning": "Woman seated on leg press machine with feet on platform and knees bent mid-rep.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:06:58.465Z"
+    }
   },
   {
     "slug": "img-6209-1",
@@ -1845,7 +3762,16 @@
     "title": "IMG_6209-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "single-leg-leg-press-machine",
+      "category": "strength",
+      "title": "Single Leg Leg Press",
+      "confidence": 0.9,
+      "reasoning": "Woman seated on leg press machine pressing with one foot high on platform while other leg extended.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:07:20.159Z"
+    }
   },
   {
     "slug": "img-6209-2",
@@ -1853,7 +3779,16 @@
     "title": "IMG_6209-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "leg-press",
+      "category": "strength",
+      "title": "Machine Leg Press",
+      "confidence": 0.98,
+      "reasoning": "The subject is seated on a leg press machine with both legs extended against the platform in the locked-out position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:07:37.097Z"
+    }
   },
   {
     "slug": "img-6209-2",
@@ -1861,7 +3796,16 @@
     "title": "IMG_6209-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "single-leg-leg-press-machine",
+      "category": "strength",
+      "title": "Single Leg Leg Press",
+      "confidence": 0.95,
+      "reasoning": "The subject is seated on a Cybex leg press machine with one leg extended pushing the platform while the other is bent, indicating a single-leg leg press.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:07:58.577Z"
+    }
   },
   {
     "slug": "img-6209",
@@ -1869,7 +3813,16 @@
     "title": "IMG_6209",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "single-leg-leg-press-machine",
+      "category": "strength",
+      "title": "Single Leg Leg Press",
+      "confidence": 0.95,
+      "reasoning": "Woman seated in Cybex leg press machine performing single-leg press with foot high on platform.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:08:21.000Z"
+    }
   },
   {
     "slug": "img-6209",
@@ -1877,7 +3830,16 @@
     "title": "IMG_6209",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "single-leg-leg-press-machine",
+      "category": "strength",
+      "title": "Single Leg Leg Press",
+      "confidence": 0.95,
+      "reasoning": "Subject is seated on a leg press machine with one leg fully extended against the platform, indicating a single-leg leg press variation.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:08:35.962Z"
+    }
   },
   {
     "slug": "img-6210",
@@ -1885,7 +3847,16 @@
     "title": "IMG_6210",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "machine-leg-extension-393",
+      "category": "strength",
+      "title": "Machine Leg Extension",
+      "confidence": 1,
+      "reasoning": "The subject is seated on a labeled leg extension machine with both legs fully extended against the pad.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:08:41.705Z"
+    }
   },
   {
     "slug": "img-6211-1",
@@ -1893,7 +3864,16 @@
     "title": "IMG_6211-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "shoulder-press-machine",
+      "category": "strength",
+      "title": "Seated Machine Shoulder Press",
+      "confidence": 0.95,
+      "reasoning": "Woman seated on plate-loaded shoulder press machine gripping handles at extension in mid-press position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:08:53.797Z"
+    }
   },
   {
     "slug": "img-6211",
@@ -1901,7 +3881,16 @@
     "title": "IMG_6211",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "machine-chest-press-349",
+      "category": "strength",
+      "title": "Machine Chest Press",
+      "confidence": 0.95,
+      "reasoning": "Woman seated on chest press machine gripping handles with arms extended forward in pressed position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:09:03.383Z"
+    }
   },
   {
     "slug": "img-6212",
@@ -1909,7 +3898,16 @@
     "title": "IMG_6212",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "machine-tricep-push-down",
+      "category": "strength",
+      "title": "Machine Tricep Pushdown",
+      "confidence": 0.9,
+      "reasoning": "The machine is clearly labeled 'TRICEPS EXTENSION' with plate-loaded stack, matching the closest library entry for machine tricep push down based on seated pushing motion.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:09:26.600Z"
+    }
   },
   {
     "slug": "img-6213",
@@ -1917,7 +3915,16 @@
     "title": "IMG_6213",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-squat",
+      "category": "strength",
+      "title": "Barbell Squat",
+      "confidence": 0.95,
+      "reasoning": "Woman stands facing loaded barbell in squat rack power cage in standard back squat starting position on gym platform.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:09:54.684Z"
+    }
   },
   {
     "slug": "img-6214-1",
@@ -1925,7 +3932,16 @@
     "title": "IMG_6214-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "chest-press-machine",
+      "category": "strength",
+      "title": "Chest Press Machine",
+      "confidence": 0.95,
+      "reasoning": "Woman seated on chest press machine gripping handles in pressing position with loaded plates visible.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:10:04.660Z"
+    }
   },
   {
     "slug": "img-6214",
@@ -1933,7 +3949,16 @@
     "title": "IMG_6214",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "leg-press",
+      "category": "strength",
+      "title": "Machine Leg Press",
+      "confidence": 0.95,
+      "reasoning": "Woman seated on plate-loaded leg press machine with legs extended at top of rep, matching standard leg press.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:10:16.129Z"
+    }
   },
   {
     "slug": "img-6215",
@@ -1941,7 +3966,16 @@
     "title": "IMG_6215",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-chest-press",
+      "category": "strength",
+      "title": "Barbell Chest Press",
+      "confidence": 1,
+      "reasoning": "Person lying supine on flat bench holding barbell extended above chest in classic bench press position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:10:30.880Z"
+    }
   },
   {
     "slug": "img-6216",
@@ -1949,7 +3983,16 @@
     "title": "IMG_6216",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-pullover",
+      "category": "strength",
+      "title": "Dumbbell Pullover",
+      "confidence": 0.85,
+      "reasoning": "Supine on flat bench with dumbbell held overhead arm extended matches dumbbell pullover starting position, legs elevated likely for core stability.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:10:54.548Z"
+    }
   },
   {
     "slug": "img-6217",
@@ -1957,7 +4000,16 @@
     "title": "IMG_6217",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-fly",
+      "category": "toning",
+      "title": "Dumbbell Chest Fly",
+      "confidence": 0.95,
+      "reasoning": "Woman lying supine on flat bench with dumbbells held wide at sides in bottom position of chest fly.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:11:33.162Z"
+    }
   },
   {
     "slug": "img-6218-1",
@@ -1965,7 +4017,16 @@
     "title": "IMG_6218-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "strength",
+      "title": "Machine Hip Thrust",
+      "confidence": 0.3,
+      "reasoning": "Person positioned at plate-loaded hip thrust/glute drive machine in starting stance, but no exact match in library.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:12:04.526Z"
+    }
   },
   {
     "slug": "img-6218",
@@ -1973,7 +4034,16 @@
     "title": "IMG_6218",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-donkey-kickback",
+      "category": "strength",
+      "title": "Cable Donkey Kickback",
+      "confidence": 0.9,
+      "reasoning": "Woman gripping handles on cable machine with ankle pad, performing single-leg backward kick targeting glutes.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:12:16.951Z"
+    }
   },
   {
     "slug": "img-6219-1",
@@ -1981,7 +4051,16 @@
     "title": "IMG_6219-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "hanging-knee-raises",
+      "category": "strength",
+      "title": "Hanging Knee Raises",
+      "confidence": 0.95,
+      "reasoning": "The woman is gripping handles on a Captain's Chair machine with knees bent and raised at 90 degrees, matching the raised position of hanging knee raises.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:12:42.980Z"
+    }
   },
   {
     "slug": "img-6219",
@@ -1997,7 +4076,16 @@
     "title": "IMG_6220",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "strength",
+      "title": "Standing Machine Glute Kickback",
+      "confidence": 0.35,
+      "reasoning": "Body position and machine match a standing glute kickback/hip extension, but no exact machine version in the exercise library.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:14:10.738Z"
+    }
   },
   {
     "slug": "img-6221-1",
@@ -2005,7 +4093,16 @@
     "title": "IMG_6221-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-abduction-straight-leg",
+      "category": "toning",
+      "title": "Cable Straight Leg Abduction",
+      "confidence": 0.95,
+      "reasoning": "Person performing standing cable hip abduction with straight leg and ankle strap visible.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:14:21.096Z"
+    }
   },
   {
     "slug": "img-6221-2",
@@ -2013,7 +4110,16 @@
     "title": "IMG_6221-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-kickback",
+      "category": "strength",
+      "title": "Cable Glute Kickback",
+      "confidence": 0.95,
+      "reasoning": "Ankle strap on cable machine with leg extended straight back matches cable kickback position exactly.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:14:34.974Z"
+    }
   },
   {
     "slug": "img-6221",
@@ -2021,7 +4127,16 @@
     "title": "IMG_6221",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "standing-single-leg-dumbbell-rdl",
+      "category": "strength",
+      "title": "Standing Single Leg RDL",
+      "confidence": 0.85,
+      "reasoning": "Pose shows single-leg stance with torso hinged forward, back leg extended high, and hand holding cable handle forward, characteristic of standing single-leg RDL despite cable instead of dumbbell.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:15:23.482Z"
+    }
   },
   {
     "slug": "img-6222",
@@ -2029,7 +4144,16 @@
     "title": "IMG_6222",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-donkey-kickback",
+      "category": "strength",
+      "title": "Cable Donkey Kickback",
+      "confidence": 0.95,
+      "reasoning": "Woman standing with ankle strap on cable machine performing posterior leg kickback for glutes.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:15:37.244Z"
+    }
   },
   {
     "slug": "img-6222",
@@ -2037,7 +4161,16 @@
     "title": "IMG_6222",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-kickback",
+      "category": "strength",
+      "title": "Cable Glute Kickback",
+      "confidence": 0.95,
+      "reasoning": "Woman standing with cable ankle strap performing posterior leg kickback targeting glutes.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:16:12.887Z"
+    }
   },
   {
     "slug": "img-6223",
@@ -2045,7 +4178,16 @@
     "title": "IMG_6223",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-donkey-kickback",
+      "category": "strength",
+      "title": "Cable Donkey Kickback",
+      "confidence": 0.95,
+      "reasoning": "Woman performing single-leg posterior kickback with ankle strap attached to low cable pulley, leaning forward for stability.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:16:25.876Z"
+    }
   },
   {
     "slug": "img-6224",
@@ -2061,7 +4203,16 @@
     "title": "IMG_6225",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "leg-press-narrow-high-stance-glute-focus",
+      "category": "strength",
+      "title": "Narrow High Stance Leg Press",
+      "confidence": 0.9,
+      "reasoning": "Person standing on leg press platform in narrow high foot position gripping handles, matching glute-focused leg press variation.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:17:50.305Z"
+    }
   },
   {
     "slug": "img-6226",
@@ -2069,7 +4220,16 @@
     "title": "IMG_6226",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "strength",
+      "title": "Barbell Romanian Deadlift",
+      "confidence": 0.9,
+      "reasoning": "Athlete in deep hip hinge with straight legs gripping loaded barbell in power rack, matching RDL bottom position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:18:29.246Z"
+    }
   },
   {
     "slug": "img-6227",
@@ -2077,7 +4237,16 @@
     "title": "IMG_6227",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "barbell-hip-thrusts",
+      "category": "strength",
+      "title": "Barbell Hip Thrusts",
+      "confidence": 0.9,
+      "reasoning": "Person is lying supine on floor under Smith machine with bar across hips, hands gripping it, feet flat, matching hip thrust starting position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:19:06.701Z"
+    }
   },
   {
     "slug": "img-6228-1",
@@ -2085,7 +4254,16 @@
     "title": "IMG_6228-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "single-arm-dumbbell-row-323",
+      "category": "strength",
+      "title": "Single Arm Dumbbell Row",
+      "confidence": 0.9,
+      "reasoning": "Woman bent over with one hand on inclined bench supporting torso while holding dumbbell in other hand in position for single-arm row.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:19:25.056Z"
+    }
   },
   {
     "slug": "img-6228-2",
@@ -2093,7 +4271,16 @@
     "title": "IMG_6228-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "bench-supported-y",
+      "category": "strength",
+      "title": "Bench Supported Y Raise",
+      "confidence": 0.9,
+      "reasoning": "Prone position on inclined bench with arms extended forward holding a dumbbell matches bench supported Y raise for rear delts and upper back.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:19:48.305Z"
+    }
   },
   {
     "slug": "img-6228-3",
@@ -2101,7 +4288,16 @@
     "title": "IMG_6228-3",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "chest-supported-incline-row",
+      "category": "strength",
+      "title": "Chest Supported Incline Row",
+      "confidence": 0.95,
+      "reasoning": "Person is chest-down on an incline bench holding a dumbbell in extended arm position typical for chest-supported incline row.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:19:59.248Z"
+    }
   },
   {
     "slug": "img-6228",
@@ -2109,7 +4305,16 @@
     "title": "IMG_6228",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "chest-supported-incline-row",
+      "category": "strength",
+      "title": "Chest Supported Incline Row",
+      "confidence": 0.95,
+      "reasoning": "Woman lying prone on adjustable incline bench with one arm extended holding dumbbell downward, matching start of chest-supported incline row.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:20:11.179Z"
+    }
   },
   {
     "slug": "img-6228",
@@ -2125,7 +4330,16 @@
     "title": "IMG_6229-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-low-to-high-woodchops",
+      "category": "strength",
+      "title": "Cable Low-to-High Woodchop",
+      "confidence": 0.85,
+      "reasoning": "Standing with contralateral low cable handle gripped low matches the starting position for cable low-to-high woodchops, confirmed by gym cable machine setup.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:22:10.214Z"
+    }
   },
   {
     "slug": "img-6229-2",
@@ -2133,7 +4347,16 @@
     "title": "IMG_6229-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "cable-low-to-high-woodchops",
+      "category": "strength",
+      "title": "Cable Low to High Woodchop",
+      "confidence": 0.95,
+      "reasoning": "Woman holding cable handle with arm extended across body in low-to-high pull position, torso rotated, opposite leg extended back for balance.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:22:22.123Z"
+    }
   },
   {
     "slug": "img-6229",
@@ -2141,7 +4364,16 @@
     "title": "IMG_6229",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "bent-over-cable-rope-row",
+      "category": "strength",
+      "title": "Bent Over Cable Rope Row",
+      "confidence": 0.9,
+      "reasoning": "Woman in bent-over position holding cable rope handle with one hand for support on thigh, matching single-arm row setup.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:22:50.697Z"
+    }
   },
   {
     "slug": "img-6230",
@@ -2149,7 +4381,16 @@
     "title": "IMG_6230",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "pallof-cable-press",
+      "category": "strength",
+      "title": "Pallof Cable Press",
+      "confidence": 1,
+      "reasoning": "Woman stands sideways to cable machine holding rope attachment with both hands extended forward in anti-rotation press position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:23:05.358Z"
+    }
   },
   {
     "slug": "img-6231-1",
@@ -2157,7 +4398,16 @@
     "title": "IMG_6231-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "band-shuffle",
+      "category": "strength",
+      "title": "Banded Side Shuffle",
+      "confidence": 0.85,
+      "reasoning": "Woman in wide stance with resistance band around thighs above knees and hands clasped at chest, matching starting position for band shuffles.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:23:41.086Z"
+    }
   },
   {
     "slug": "img-6231-2",
@@ -2165,7 +4415,16 @@
     "title": "IMG_6231-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "band-shuffle",
+      "category": "toning",
+      "title": "Band Shuffle",
+      "confidence": 0.85,
+      "reasoning": "Athletic stance with resistance band around thighs matches starting position for band shuffles or lateral walks.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:24:10.087Z"
+    }
   },
   {
     "slug": "img-6231",
@@ -2173,7 +4432,16 @@
     "title": "IMG_6231",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "hip-bridges-optional-423",
+      "category": "strength",
+      "title": "Hip Bridges",
+      "confidence": 0.85,
+      "reasoning": "Supine position with knees bent and feet flat on floor matches the exact starting pose for hip bridges or glute bridges.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:24:38.494Z"
+    }
   },
   {
     "slug": "img-6232-1",
@@ -2181,7 +4449,16 @@
     "title": "IMG_6232-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "banded-donkey-kicks",
+      "category": "strength",
+      "title": "Banded Donkey Kicks",
+      "confidence": 0.95,
+      "reasoning": "Quadruped position with one leg extended straight back and resistance band on thigh matches banded donkey kicks precisely.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:24:52.424Z"
+    }
   },
   {
     "slug": "img-6232-1",
@@ -2189,7 +4466,16 @@
     "title": "IMG_6232-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "lower-leg-windmill",
+      "category": "pilates",
+      "title": "Lower Leg Windmill",
+      "confidence": 0.85,
+      "reasoning": "Side-lying position with bottom knee bent and top leg extended matches lower leg windmill setup perfectly.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:25:39.075Z"
+    }
   },
   {
     "slug": "img-6232-2",
@@ -2197,7 +4483,16 @@
     "title": "IMG_6232-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "strength",
+      "title": "High Plank Leg Lift",
+      "confidence": 0.3,
+      "reasoning": "Subject in high plank position with one straight leg extended posteriorly, resembling a glute or core stability move, but no exact match in exercise library.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:26:18.633Z"
+    }
   },
   {
     "slug": "img-6232",
@@ -2205,7 +4500,16 @@
     "title": "IMG_6232",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "banded-donkey-kicks",
+      "category": "strength",
+      "title": "Banded Donkey Kicks",
+      "confidence": 0.95,
+      "reasoning": "Quadruped position with resistance band around thighs and one leg extended straight back matches banded donkey kicks precisely.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:26:31.720Z"
+    }
   },
   {
     "slug": "img-6232",
@@ -2213,7 +4517,16 @@
     "title": "IMG_6232",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "banded-donkey-kicks",
+      "category": "strength",
+      "title": "Banded Donkey Kicks",
+      "confidence": 0.95,
+      "reasoning": "Person in quadruped position with one leg extended back and resistance band on thigh matches banded donkey kicks precisely.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:26:41.374Z"
+    }
   },
   {
     "slug": "img-6233-1",
@@ -2221,7 +4534,16 @@
     "title": "IMG_6233-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "toning",
+      "title": "Quadruped Donkey Glute Kick",
+      "confidence": 0.3,
+      "reasoning": "Body position resembles a donkey kick or glute kickback in quadruped stance, but no equipment is visible to match any specific banded or cabled exercise in the library.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:27:26.598Z"
+    }
   },
   {
     "slug": "img-6233-2",
@@ -2229,7 +4551,16 @@
     "title": "IMG_6233-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "superman",
+      "category": "strength",
+      "title": "Superman Back Extension",
+      "confidence": 1,
+      "reasoning": "Person is lying prone on floor with arms and legs fully extended, matching the Superman exercise exactly.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:27:33.042Z"
+    }
   },
   {
     "slug": "img-6233-3",
@@ -2237,7 +4568,16 @@
     "title": "IMG_6233-3",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "shoulder-floor-push-up",
+      "category": "strength",
+      "title": "Shoulder Floor Push Up",
+      "confidence": 0.85,
+      "reasoning": "Body positioned in high pike with hands and feet on floor, hips elevated, matching the top position of a pike or shoulder push-up.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:28:30.554Z"
+    }
   },
   {
     "slug": "img-6233-4",
@@ -2245,7 +4585,16 @@
     "title": "IMG_6233-4",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "plank-289",
+      "category": "strength",
+      "title": "Standard Plank Hold",
+      "confidence": 1,
+      "reasoning": "The person is in a straight high plank position on hands and toes with no equipment, matching the classic plank exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:28:36.452Z"
+    }
   },
   {
     "slug": "img-6233-5",
@@ -2253,7 +4602,16 @@
     "title": "IMG_6233-5",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "superman",
+      "category": "strength",
+      "title": "Superman Back Extension",
+      "confidence": 0.95,
+      "reasoning": "Person is lying prone on floor with arms and legs extended, classic Superman pose for back extension.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:28:44.382Z"
+    }
   },
   {
     "slug": "img-6233-6",
@@ -2261,7 +4619,16 @@
     "title": "IMG_6233-6",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "plank-289",
+      "category": "strength",
+      "title": "Standard Plank Hold",
+      "confidence": 1,
+      "reasoning": "The subject is in a straight-arm high plank position on the floor with no equipment, matching the plank exercise exactly.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:28:51.602Z"
+    }
   },
   {
     "slug": "img-6233",
@@ -2269,7 +4636,16 @@
     "title": "IMG_6233",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "superman",
+      "category": "strength",
+      "title": "Superman Back Extension",
+      "confidence": 0.9,
+      "reasoning": "Prone position with arms extended forward on floor matches Superman exercise start.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:29:05.480Z"
+    }
   },
   {
     "slug": "img-6234-1",
@@ -2277,7 +4653,16 @@
     "title": "IMG_6234-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "wall-sit-with-parallel-isometric-arm-hold",
+      "category": "strength",
+      "title": "Wall Sit with Arm Hold",
+      "confidence": 0.95,
+      "reasoning": "Person in classic wall sit position with back against wall, thighs parallel to floor, and arms extended forward isometrically.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:29:13.694Z"
+    }
   },
   {
     "slug": "img-6234-2",
@@ -2285,7 +4670,16 @@
     "title": "IMG_6234-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-dumbbell-lateral-raises",
+      "category": "toning",
+      "title": "Seated Dumbbell Lateral Raises",
+      "confidence": 0.95,
+      "reasoning": "Woman seated on floor against wall holding dumbbells at shoulder height with arms extended laterally and block squeezed between knees.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:29:34.499Z"
+    }
   },
   {
     "slug": "img-6234",
@@ -2301,7 +4695,16 @@
     "title": "IMG_6234",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "wall-sit-with-parallel-isometric-arm-hold",
+      "category": "endurance",
+      "title": "Wall Sit with Arm Hold",
+      "confidence": 0.95,
+      "reasoning": "Person is in classic wall sit position with back against wall, knees bent 90 degrees, and arms extended parallel isometrically.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:30:46.994Z"
+    }
   },
   {
     "slug": "img-6809-1",
@@ -2309,7 +4712,16 @@
     "title": "IMG_6809-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-dumbbell-lateral-raises",
+      "category": "strength",
+      "title": "Seated Dumbbell Lateral Raises",
+      "confidence": 0.95,
+      "reasoning": "Woman seated on adjustable bench holding dumbbells at shoulder height with arms extended laterally, classic lateral raise position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:30:55.909Z"
+    }
   },
   {
     "slug": "img-6809-2",
@@ -2317,7 +4729,16 @@
     "title": "IMG_6809-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-dumbbell-shoulder-press",
+      "category": "strength",
+      "title": "Seated Dumbbell Shoulder Press",
+      "confidence": 0.95,
+      "reasoning": "Woman seated on bench with dumbbells fully extended overhead matches top position of seated dumbbell shoulder press.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:31:09.339Z"
+    }
   },
   {
     "slug": "img-6809-3",
@@ -2325,7 +4746,16 @@
     "title": "IMG_6809-3",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-dumbbell-lateral-raises",
+      "category": "strength",
+      "title": "Seated Dumbbell Lateral Raise",
+      "confidence": 0.95,
+      "reasoning": "Woman seated on incline bench holding dumbbell with arm extended laterally matches seated dumbbell lateral raise position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:31:20.726Z"
+    }
   },
   {
     "slug": "img-6809-4",
@@ -2333,7 +4763,16 @@
     "title": "IMG_6809-4",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-single-arm-dumbbell-curl-with-block-adduction",
+      "category": "strength",
+      "title": "Seated Single Arm Dumbbell Curl Adduction",
+      "confidence": 0.95,
+      "reasoning": "Woman seated on bench holding dumbbell in right hand at bicep curl position with block between thighs for adduction matches exactly.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:31:35.107Z"
+    }
   },
   {
     "slug": "img-6809",
@@ -2341,7 +4780,16 @@
     "title": "IMG_6809",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "seated-dumbbell-shoulder-press-with-adduction",
+      "category": "strength",
+      "title": "Seated Dumbbell Shoulder Press Adduction",
+      "confidence": 0.95,
+      "reasoning": "Seated on incline bench holding dumbbells overhead at lockout with pad squeezed between knees precisely matches the exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:31:49.805Z"
+    }
   },
   {
     "slug": "img-6810",
@@ -2349,7 +4797,16 @@
     "title": "IMG_6810",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "renegade-row",
+      "category": "strength",
+      "title": "Renegade Row",
+      "confidence": 0.95,
+      "reasoning": "Athlete in high plank holding dumbbells on floor, exact starting position for renegade row.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:32:16.957Z"
+    }
   },
   {
     "slug": "img-6812-1",
@@ -2357,7 +4814,16 @@
     "title": "IMG_6812-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "standing-plate-alternating-frontal-and-lateral-raises",
+      "category": "muscle_gain",
+      "title": "Standing Plate Lateral Raises",
+      "confidence": 0.85,
+      "reasoning": "Woman standing on gym floor holding small orange plate extended at shoulder height laterally with straight arm.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:32:44.122Z"
+    }
   },
   {
     "slug": "img-6812-2",
@@ -2365,7 +4831,16 @@
     "title": "IMG_6812-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "standing-plate-lateral-raises",
+      "category": "strength",
+      "title": "Standing Plate Lateral Raises",
+      "confidence": 0.95,
+      "reasoning": "Woman stands holding orange weight plates with arms extended laterally at shoulder height, matching the peak position of standing plate lateral raises.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:32:55.417Z"
+    }
   },
   {
     "slug": "img-6812-3",
@@ -2373,7 +4848,16 @@
     "title": "IMG_6812-3",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-rdl",
+      "category": "strength",
+      "title": "Dumbbell Romanian Deadlift",
+      "confidence": 0.95,
+      "reasoning": "Body in hinged position holding dumbbells near floor with straight back matches bottom of dumbbell RDL.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:33:05.771Z"
+    }
   },
   {
     "slug": "img-6812",
@@ -2397,7 +4881,16 @@
     "title": "IMG_6813",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "plank-with-kettlebell-unilateral-slide",
+      "category": "endurance",
+      "title": "Kettlebell Plank Unilateral Slide",
+      "confidence": 0.85,
+      "reasoning": "Woman in high plank gripping single kettlebell on floor directly under chest, matching setup for plank with kettlebell unilateral slide.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:35:50.869Z"
+    }
   },
   {
     "slug": "img-6814-1",
@@ -2405,7 +4898,16 @@
     "title": "IMG_6814-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "dumbbell-pullover",
+      "category": "strength",
+      "title": "Dumbbell Pullover",
+      "confidence": 0.95,
+      "reasoning": "Woman lying supine on floor holding single dumbbell extended above chest matches dumbbell pullover starting position.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:36:15.011Z"
+    }
   },
   {
     "slug": "img-6814",
@@ -2413,7 +4915,16 @@
     "title": "IMG_6814",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "kb-alternating-low-leg-raises",
+      "category": "toning",
+      "title": "KB Alternating Low Leg Raises",
+      "confidence": 0.85,
+      "reasoning": "Supine body position holding kettlebell overhead with one straight leg raised high and opposite foot planted matches kb-alternating-low-leg-raises mid-rep.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:36:47.285Z"
+    }
   },
   {
     "slug": "img-6815",
@@ -2421,7 +4932,16 @@
     "title": "IMG_6815",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "deadbug-extensions-optional-424",
+      "category": "strength",
+      "title": "Deadbug Extensions",
+      "confidence": 0.9,
+      "reasoning": "Supine position with kettlebell held overhead and legs extended vertically matches the starting position of deadbug extensions.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:37:23.724Z"
+    }
   },
   {
     "slug": "img-6816-1",
@@ -2429,7 +4949,16 @@
     "title": "IMG_6816-1",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": null,
+      "category": "pilates",
+      "title": "Side Lying Block Leg Hold",
+      "confidence": 0.35,
+      "reasoning": "Person is side-lying with yoga block under elevated top leg, typical of pilates hip abduction isometric, but no exact library match.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:37:56.116Z"
+    }
   },
   {
     "slug": "img-6816-2",
@@ -2437,7 +4966,16 @@
     "title": "IMG_6816-2",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "lower-leg-lifts-with-block-feet-holds",
+      "category": "pilates",
+      "title": "Lower Leg Lifts with Block",
+      "confidence": 0.95,
+      "reasoning": "Person lying supine holding yoga block with feet while lifting one straight leg matches lower leg lifts with block feet holds.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:38:06.234Z"
+    }
   },
   {
     "slug": "img-6816-3",
@@ -2445,7 +4983,16 @@
     "title": "IMG_6816-3",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "lower-leg-lifts-with-block-feet-holds",
+      "category": "pilates",
+      "title": "Lower Leg Lifts with Block",
+      "confidence": 0.9,
+      "reasoning": "Supine position with legs raised, one bent knee pressing into a held block matches lower leg lifts with block between feet.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:38:18.519Z"
+    }
   },
   {
     "slug": "img-6816-4",
@@ -2461,7 +5008,16 @@
     "title": "IMG_6816-5",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "lying-crunch-with-adduction",
+      "category": "pilates",
+      "title": "Lying Crunch with Adduction",
+      "confidence": 0.92,
+      "reasoning": "Woman lying supine with yoga block squeezed between bent knees in crunch position indicates adduction-focused core crunch.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:39:31.138Z"
+    }
   },
   {
     "slug": "img-6816",
@@ -2469,7 +5025,16 @@
     "title": "IMG_6816",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "bent-knee-raise-with-yoga-block-adduction",
+      "category": "pilates",
+      "title": "Bent Knee Raise Yoga Block Adduction",
+      "confidence": 0.85,
+      "reasoning": "Supine position with yoga block squeezed between bent knees matches the setup for this adduction-focused exercise.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:40:07.789Z"
+    }
   },
   {
     "slug": "img-7287",
@@ -2477,7 +5042,16 @@
     "title": "IMG_7287",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "hyperextensions",
+      "category": "strength",
+      "title": "Bench Hyperextensions",
+      "confidence": 0.95,
+      "reasoning": "Person in classic hyperextension position on decline bench with torso flexed forward and feet secured on pads.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:40:28.158Z"
+    }
   },
   {
     "slug": "img-9654",
@@ -2485,6 +5059,15 @@
     "title": "IMG_9654",
     "exerciseId": null,
     "category": null,
-    "needsReview": true
+    "needsReview": true,
+    "aiSuggested": {
+      "exerciseId": "banded-donkey-kicks",
+      "category": "toning",
+      "title": "Banded Donkey Kicks",
+      "confidence": 0.75,
+      "reasoning": "Quadruped position with right leg extended back matches donkey kicks despite no visible band.",
+      "model": "grok-4-1-fast-reasoning",
+      "taggedAt": "2026-05-12T05:41:20.564Z"
+    }
   }
 ]

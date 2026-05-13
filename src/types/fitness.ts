@@ -431,6 +431,9 @@ const PLUS_FEATURES: string[] = [
   'ai_food_scanner',
   // Perks
   'ad_free',
+  // Community live group chat — paying members can post & ask questions
+  // during admin-hosted events. Free users keep read-only transcript access.
+  'community_live_chat',
 ];
 
 const PRO_FEATURES: string[] = [

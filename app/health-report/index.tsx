@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
+  Alert,
   Pressable,
   ScrollView,
   Share,
@@ -10,6 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { GlassCard } from '../../src/components/GlassCard';
 import { useOnboardingStore } from '../../src/store/useOnboardingStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
@@ -46,6 +49,7 @@ const formatDate = (d: Date) =>
 
 export default function HealthReportScreen() {
   const router = useRouter();
+  const [exporting, setExporting] = useState(false);
 
   // Stores
   const onboardingProfile = useOnboardingStore((s) => s.profile);
@@ -244,8 +248,8 @@ export default function HealthReportScreen() {
     rangeEnd,
   ]);
 
-  // Share
-  const handleShare = async () => {
+  // Share as plain text (kept as a fallback / quick copy path)
+  const handleShareText = async () => {
     try {
       await Share.share({
         message: reportText,
@@ -253,6 +257,147 @@ export default function HealthReportScreen() {
       });
     } catch {
       // User cancelled or error — no action needed
+    }
+  };
+
+  // Build a print-friendly HTML version of the report. Mirrors the
+  // text version's section structure so anything visible on-screen ends
+  // up in the PDF. Inline styles keep the document self-contained so
+  // the print engine renders it identically across iOS / Android.
+  const buildReportHtml = (): string => {
+    const escape = (s: string) =>
+      s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+
+    const li = (item: string) => `<li>${escape(item)}</li>`;
+    const section = (title: string, body: string) => `
+      <section style="margin-top:24px">
+        <h2 style="font-size:14px;letter-spacing:1.2px;color:#7ABED0;text-transform:uppercase;border-bottom:1px solid #EAE4DC;padding-bottom:6px;margin:0 0 12px 0">
+          ${escape(title)}
+        </h2>
+        <div style="font-size:13px;line-height:1.6;color:#2D2D2D">${body}</div>
+      </section>`;
+
+    const demographicsBody = [
+      onboardingProfile.gender && `<div><strong>Gender:</strong> ${escape(onboardingProfile.gender)}</div>`,
+      onboardingProfile.ageRange && `<div><strong>Age Range:</strong> ${escape(onboardingProfile.ageRange)}</div>`,
+      healthProfile.biologicalSex && `<div><strong>Biological Sex:</strong> ${escape(healthProfile.biologicalSex)}</div>`,
+      healthProfile.dateOfBirth && `<div><strong>Date of Birth:</strong> ${escape(healthProfile.dateOfBirth)}</div>`,
+      healthProfile.bodyMetrics?.weightLbs && `<div><strong>Weight:</strong> ${healthProfile.bodyMetrics.weightLbs} lbs</div>`,
+      healthProfile.bodyMetrics?.heightInches && `<div><strong>Height:</strong> ${healthProfile.bodyMetrics.heightInches} in</div>`,
+      healthProfile.bodyMetrics?.bodyFatPercent != null && `<div><strong>Body Fat:</strong> ${healthProfile.bodyMetrics.bodyFatPercent}%</div>`,
+    ].filter(Boolean).join('') || '<em>Not provided</em>';
+
+    const goalsBody = healthGoals.length
+      ? `<ul style="margin:0;padding-left:18px">${healthGoals.map(li).join('')}</ul>`
+      : '<em>No goals set</em>';
+
+    const med = healthProfile.medical;
+    const medicalBody = `
+      <div style="margin-bottom:6px"><strong>Conditions:</strong> ${med.conditions.length ? escape(med.conditions.join(', ')) : 'None reported'}</div>
+      <div style="margin-bottom:6px"><strong>Medications:</strong> ${med.medications.length ? escape(med.medications.join(', ')) : 'None reported'}</div>
+      <div style="margin-bottom:6px"><strong>Allergies:</strong> ${med.allergies.length ? escape(med.allergies.join(', ')) : 'None reported'}</div>
+      <div><strong>Provider Supervision:</strong> ${med.hasProviderSupervision ? 'Yes' : 'No'}</div>
+    `;
+
+    const protocolsBody = activeProtocols.length
+      ? `<ul style="margin:0;padding-left:18px">${
+          activeProtocols
+            .map((p) => {
+              const peptide = getPeptideById(p.peptideId);
+              const name = peptide?.name || p.peptideId;
+              return li(`${name}: ${p.dose} ${p.unit} ${p.route} (${p.frequency}) since ${p.startDate}`);
+            })
+            .join('')
+        }</ul>`
+      : '<em>No active protocols</em>';
+
+    const checkinsBody = checkinAverages
+      ? `
+          <div style="margin-bottom:6px"><em>Based on ${checkinAverages.count} check-in(s)</em></div>
+          <table style="width:100%;border-collapse:collapse">
+            <tbody>
+              <tr><td style="padding:4px 0"><strong>Mood</strong></td><td style="text-align:right">${checkinAverages.mood} / 5</td></tr>
+              <tr><td style="padding:4px 0"><strong>Energy</strong></td><td style="text-align:right">${checkinAverages.energy} / 5</td></tr>
+              <tr><td style="padding:4px 0"><strong>Stress</strong></td><td style="text-align:right">${checkinAverages.stress} / 5</td></tr>
+              <tr><td style="padding:4px 0"><strong>Sleep</strong></td><td style="text-align:right">${checkinAverages.sleep} / 5</td></tr>
+              <tr><td style="padding:4px 0"><strong>Recovery</strong></td><td style="text-align:right">${checkinAverages.recovery} / 5</td></tr>
+              <tr><td style="padding:4px 0"><strong>Appetite</strong></td><td style="text-align:right">${checkinAverages.appetite} / 5</td></tr>
+            </tbody>
+          </table>`
+      : '<em>No check-ins in this period</em>';
+
+    const journalBody = journalSummary.total
+      ? `
+          <div style="margin-bottom:6px">Total entries: <strong>${journalSummary.total}</strong></div>
+          <ul style="margin:0;padding-left:18px">
+            ${Object.entries(journalSummary.byCategory)
+              .map(([cat, count]) => {
+                const label = cat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+                return li(`${label}: ${count}`);
+              })
+              .join('')}
+          </ul>`
+      : '<em>No journal entries in this period</em>';
+
+    return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>PepTalk Health Report</title>
+  <style>
+    @page { margin: 24px 28px; }
+    body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; color: #2D2D2D; background: #FFFFFF; }
+    h1 { font-size: 24px; letter-spacing: -0.5px; margin: 0; color: #2D2D2D; }
+    .meta { color: #6B7280; font-size: 12px; margin-top: 4px; }
+    .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #EAE4DC; font-size: 10px; color: #9CA3AF; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>PepTalk Health Report</h1>
+    <div class="meta">${escape(rangeStart)} &ndash; ${escape(rangeEnd)} &middot; Generated ${escape(formatDate(now))}</div>
+  </header>
+  ${section('Demographics', demographicsBody)}
+  ${section('Health Goals', goalsBody)}
+  ${section('Medical History', medicalBody)}
+  ${section('Active Protocols', protocolsBody)}
+  ${section('Check-in Averages (Last 14 Days)', checkinsBody)}
+  ${section('Journal Summary (Last 14 Days)', journalBody)}
+  <div class="footer">
+    Generated by PepTalk. This report is informational only and does not constitute medical advice.
+    Always consult a licensed healthcare provider before starting or changing any peptide protocol.
+  </div>
+</body>
+</html>`;
+  };
+
+  // Generate the PDF and hand it to the system share sheet so the user
+  // can email it, AirDrop it to their doctor, save to Files, etc.
+  const handleExportPdf = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const html = buildReportHtml();
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Share PepTalk Health Report',
+          UTI: 'com.adobe.pdf',
+        });
+      } else {
+        // Sharing unavailable (rare on a real device) — fall back to text share.
+        await handleShareText();
+      }
+    } catch (err: any) {
+      Alert.alert('Export failed', err?.message ?? 'Could not generate PDF. Try again.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -497,10 +642,30 @@ export default function HealthReportScreen() {
           </Text>
         </View>
 
-        {/* Share button */}
-        <Pressable style={styles.shareBtn} onPress={handleShare}>
-          <Ionicons name="share-outline" size={20} color="#2D2D2D" />
-          <Text style={styles.shareBtnText}>Share Report</Text>
+        {/* Export buttons — PDF is primary (what users send to their
+            doctor); plain-text share is the lightweight backup that
+            works in any messaging app. */}
+        <Pressable
+          style={[styles.shareBtn, exporting && { opacity: 0.6 }]}
+          onPress={handleExportPdf}
+          disabled={exporting}
+          accessibilityRole="button"
+          accessibilityLabel={exporting ? 'Generating PDF' : 'Export report as PDF'}
+        >
+          <Ionicons name="document-text-outline" size={20} color="#2D2D2D" />
+          <Text style={styles.shareBtnText}>
+            {exporting ? 'Generating PDF…' : 'Export as PDF'}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={[styles.shareBtn, { marginTop: 10, backgroundColor: 'transparent', borderWidth: 1, borderColor: '#EAE4DC' }]}
+          onPress={handleShareText}
+          accessibilityRole="button"
+          accessibilityLabel="Share report as plain text"
+        >
+          <Ionicons name="share-outline" size={18} color="#6B7280" />
+          <Text style={[styles.shareBtnText, { color: '#6B7280' }]}>Share as text</Text>
         </Pressable>
 
         <View style={{ height: 48 }} />

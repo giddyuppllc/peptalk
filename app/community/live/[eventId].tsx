@@ -33,7 +33,10 @@ import { useTheme } from '../../../src/hooks/useTheme';
 import { Spacing, FontSizes, BorderRadius } from '../../../src/constants/theme';
 import { useLiveEventStore, type LiveMessage } from '../../../src/store/useLiveEventStore';
 import { useAuthStore } from '../../../src/store/useAuthStore';
+import { useCommunityStore } from '../../../src/store/useCommunityStore';
+import { useOnboardingStore } from '../../../src/store/useOnboardingStore';
 import { useTier } from '../../../src/hooks/useFeatureGate';
+import { LiveChatDisclaimerModal } from '../../../src/components/LiveChatDisclaimerModal';
 
 export default function LiveEventChatScreen() {
   const router = useRouter();
@@ -47,9 +50,13 @@ export default function LiveEventChatScreen() {
   const unsubscribe = useLiveEventStore((s) => s.unsubscribe);
   const hydrate = useLiveEventStore((s) => s.hydrateActive);
   const pushLocalMessage = useLiveEventStore((s) => s.pushLocalMessage);
+  const reportLiveMessage = useCommunityStore((s) => s.reportLiveMessage);
 
   const currentUserId = useAuthStore((s) => s.user?.id);
   const tier = useTier();
+  const acceptedChatDisclaimer = useOnboardingStore(
+    (s) => s.acceptedLiveChatDisclaimer,
+  );
 
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -90,6 +97,13 @@ export default function LiveEventChatScreen() {
   const sendMessage = async () => {
     const body = draft.trim();
     if (!body || sending) return;
+    // Disclaimer guard — defense in depth. The modal blocks the screen
+    // for first-time visitors, but if it ever gets dismissed without
+    // acceptance (e.g. orientation change race), keep posting locked.
+    if (!acceptedChatDisclaimer) {
+      Alert.alert('Please accept the chat disclaimer first.');
+      return;
+    }
     setSending(true);
     try {
       const { supabase } = await import('../../../src/services/supabase');
@@ -126,23 +140,63 @@ export default function LiveEventChatScreen() {
   const handleMessageLongPress = (msg: LiveMessage) => {
     const isOwn = msg.userId === currentUserId;
     const canManage = isOwn || isHost;
-    if (!canManage) return;
-    if (active?.status !== 'live') return;  // transcript frozen
+    // Owner / host get edit + delete (existing behavior). Everyone else
+    // sees Report — Apple Guideline 1.2 requires a report path on every
+    // UGC surface. Both menus only render while the event is still live;
+    // once a transcript freezes, post-hoc moderation goes through admins.
+    if (active?.status !== 'live') return;
+
+    if (canManage) {
+      Alert.alert('Message', undefined, [
+        {
+          text: 'Edit',
+          onPress: () => {
+            setEditingId(msg.id);
+            setEditingDraft(msg.body);
+          },
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => confirmDelete(msg.id),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+      return;
+    }
 
     Alert.alert('Message', undefined, [
       {
-        text: 'Edit',
-        onPress: () => {
-          setEditingId(msg.id);
-          setEditingDraft(msg.body);
-        },
-      },
-      {
-        text: 'Delete',
+        text: 'Report',
         style: 'destructive',
-        onPress: () => confirmDelete(msg.id),
+        onPress: () => promptReport(msg.id),
       },
       { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const promptReport = (messageId: string) => {
+    const reasons: Array<{ key: 'spam' | 'harassment' | 'unsafe_medical_advice' | 'misinformation' | 'off_topic' | 'other'; label: string }> = [
+      { key: 'spam',                  label: 'Spam' },
+      { key: 'harassment',            label: 'Harassment' },
+      { key: 'unsafe_medical_advice', label: 'Unsafe medical advice' },
+      { key: 'misinformation',        label: 'Misinformation' },
+      { key: 'off_topic',             label: 'Off-topic' },
+      { key: 'other',                 label: 'Other' },
+    ];
+    Alert.alert('Report message', 'Why are you reporting this?', [
+      ...reasons.map((r) => ({
+        text: r.label,
+        onPress: async () => {
+          const res = await reportLiveMessage({ messageId, reason: r.key });
+          if (!res.ok) {
+            Alert.alert('Could not report', res.error ?? 'Try again.');
+          } else {
+            Alert.alert('Reported', 'Thanks — moderators review every report.');
+          }
+        },
+      })),
+      { text: 'Cancel', style: 'cancel' as const },
     ]);
   };
 
@@ -390,6 +444,11 @@ export default function LiveEventChatScreen() {
           </View>
         </View>
       )}
+
+      {/* First-entry medical disclaimer. Auto-shows when not yet accepted;
+          stays mounted (zero-cost when accepted) so a fresh user can't
+          slip past it via a deep-link from the lobby or push notification. */}
+      <LiveChatDisclaimerModal />
     </SafeAreaView>
   );
 }

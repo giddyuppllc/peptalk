@@ -47,6 +47,18 @@ export interface WorkoutVideo {
   matchConfidence?: number;
   /** True until Jamie reviews and approves. Hidden from library when true. */
   needsReview?: boolean;
+  /** First-pass AI tagging result. Non-destructive — the tagger UI uses
+   *  this as a pre-selected default that Jamie confirms or overrides.
+   *  Populated by scripts/ai-tag-videos.mjs. */
+  aiSuggested?: {
+    exerciseId: string | null;
+    category: WorkoutVideoCategory | null;
+    title: string;
+    confidence: number;
+    reasoning: string;
+    model: string;
+    taggedAt: string;
+  };
 }
 
 export const WORKOUT_VIDEOS: WorkoutVideo[] = rawManifest as WorkoutVideo[];

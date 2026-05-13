@@ -157,14 +157,24 @@ export default function CommunityFeedScreen() {
           <Ionicons name="chevron-back" size={24} color={t.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: t.text }]}>Community</Text>
-        <TouchableOpacity
-          style={styles.iconBtn}
-          onPress={() => router.push('/community/search' as any)}
-          accessibilityRole="button"
-          accessibilityLabel="Search"
-        >
-          <Ionicons name="search-outline" size={20} color={t.text} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row' }}>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => router.push('/community/live' as any)}
+            accessibilityRole="button"
+            accessibilityLabel="Live events"
+          >
+            <Ionicons name="radio-outline" size={20} color={t.text} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => router.push('/community/search' as any)}
+            accessibilityRole="button"
+            accessibilityLabel="Search"
+          >
+            <Ionicons name="search-outline" size={20} color={t.text} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Topic chip strip */}

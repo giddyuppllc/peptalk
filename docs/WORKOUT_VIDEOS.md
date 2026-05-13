@@ -1,5 +1,73 @@
 # Workout Video Library — Deploy + Tagging Guide
 
+## Status as of v1.9.8 (May 2026)
+
+- **Videos in R2:** 311 uploaded
+- **Tagged with `exerciseId`:** **0 / 311**
+- **Programs that depend on tagged videos:** Pro-tier coaching programs
+  (CORE_CHALLENGE, BOOTY_CHALLENGE, LEAN_AND_MEAN, etc.) currently render
+  exercises with **"Video coming soon" placeholders** because no
+  exercise has a linked video yet.
+- **Net impact:** Pro paywall used to claim "Jamie's 15 workout programs
+  + videos." Until tagging is done, the Pro tier shows program schedules
+  (sets, reps, rest) but no form-demo videos. The paywall copy was
+  softened in v1.9.8 to drop the explicit "videos" claim until tagging
+  catches up.
+
+**To unblock the Pro tier video promise — fastest path:**
+
+1. **Edward runs the AI auto-tagger** (`scripts/ai-tag-videos.mjs`) once
+   from his laptop. ~30 minutes, ~$3 in API calls. Writes an
+   `aiSuggested` block into every untagged video record. **Non-destructive**
+   — `exerciseId` stays null; the suggestion is just a default for Jamie.
+2. **Edward commits + ships a new build** so Jamie sees the AI suggestions
+   in TestFlight (the manifest is shipped, not server-side).
+3. **Jamie opens Profile → Admin → Video Tagger** in TestFlight.
+   Each video now shows the AI's guess with a colored confidence pill
+   (green ≥ 80%, amber 50–80%, red < 50%). The form is pre-filled.
+   - Confident, correct → tap **Save & Next**. One tap per video.
+   - Wrong → fix the exercise / category / title, then Save & Next.
+   - Low confidence — likely a transition frame or unusual angle —
+     just enter it manually.
+4. **Jamie exports** (top-right icon → "Export updated manifest")
+   when done. JSON goes to clipboard, she sends it to Edward.
+5. **Edward overwrites `src/data/workoutVideos.json`**, commits, builds
+   one more time. Now `exerciseId` is set on every video, `needsReview`
+   is false, the library renders real form videos in Pro programs.
+
+Estimated time: ~30 min script + 3-4 hours of Jamie tapping through 311
+videos (vs ~20 hours from scratch).
+
+## Running the AI auto-tagger
+
+```bash
+# One-time: install ffmpeg if you don't have it
+brew install ffmpeg            # macOS
+winget install --id Gyan.FFmpeg # Windows
+
+# Make sure supabase/.env.production has these set:
+#   R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET
+#   OPENAI_API_KEY (works for xAI/Grok or OpenAI)
+#   OPENAI_BASE_URL (defaults to https://api.x.ai/v1)
+
+# Try 5 first to confirm the pipeline works
+node scripts/ai-tag-videos.mjs --limit 5
+
+# Then run for real
+node scripts/ai-tag-videos.mjs
+
+# If you tweak the prompt and want to redo everything:
+node scripts/ai-tag-videos.mjs --redo
+
+# Test a single video by slug
+node scripts/ai-tag-videos.mjs --slug img-3681
+```
+
+The script is resumable — re-running skips any video that already has an
+`aiSuggested` field, so it's safe to Ctrl+C and restart.
+
+---
+
 The PepTalk workout library streams from a Cloudflare R2 bucket
 (`peptalktraining`, account `d18e4522521d2b87f6e511c830d5ad03`) via
 short-lived signed URLs minted by the `get-workout-video` Supabase

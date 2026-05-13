@@ -882,7 +882,7 @@ export default function DashboardScreen() {
         >
           <View style={[styles.heroCard, { borderColor: 'transparent' }]}>
           <LinearGradient
-            colors={[t.primaryLight, t.primaryLight, t.surface]}
+            colors={[t.orchid, t.orchidDeep, t.orchid]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.heroGradient}

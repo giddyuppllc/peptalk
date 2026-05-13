@@ -16,6 +16,14 @@
 
 import { Source } from '../types/sources';
 
+/** Returns every catalogued source where the given peptide id appears in
+ *  the source's peptideIds list. Empty array if none — callers should
+ *  treat that as "no curated sources yet" and hide the section, not as
+ *  an error. */
+export function getSourcesByPeptide(peptideId: string): Source[] {
+  return SOURCES.filter((s) => s.peptideIds?.includes(peptideId) ?? false);
+}
+
 export const SOURCES: Source[] = [
   // ─── GLP-1 family ──────────────────────────────────────────────────────────
   {

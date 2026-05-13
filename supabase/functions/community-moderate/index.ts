@@ -72,15 +72,25 @@ Deno.serve(async (req) => {
       const reportId = String(body?.reportId ?? '');
       if (!reportId) return json({ error: 'reportId required' }, 400);
       const { data: report } = await admin
-        .from('community_reports').select('post_id, comment_id').eq('id', reportId).maybeSingle();
+        .from('community_reports').select('post_id, comment_id, reason').eq('id', reportId).maybeSingle();
       if (!report) return json({ error: 'Report not found' }, 404);
 
+      // Look up the author up-front so we can both soft-delete and notify.
+      // We do this before the delete because soft-delete + RLS could mask
+      // the row from later SELECTs depending on policy ordering.
+      let authorId: string | null = null;
       if (report.post_id) {
+        const { data: row } = await admin
+          .from('community_posts').select('user_id').eq('id', report.post_id).maybeSingle();
+        authorId = row?.user_id ?? null;
         await admin.from('community_posts')
           .update({ is_deleted: true, updated_at: nowIso })
           .eq('id', report.post_id);
       }
       if (report.comment_id) {
+        const { data: row } = await admin
+          .from('community_comments').select('user_id').eq('id', report.comment_id).maybeSingle();
+        authorId = row?.user_id ?? null;
         await admin.from('community_comments')
           .update({ is_deleted: true })
           .eq('id', report.comment_id);
@@ -95,6 +105,27 @@ Deno.serve(async (req) => {
         await admin.from('community_reports')
           .update({ status: 'actioned', resolved_at: nowIso, resolved_by: user.id })
           .eq('comment_id', report.comment_id).eq('status', 'pending');
+      }
+
+      // Notify the author so the post doesn't just silently vanish from
+      // their feed. Reuses the same moderation_action kind the AI vision
+      // pipeline writes — push-fanout + the in-app notification screen
+      // already render this kind with a "Content was hidden" copy.
+      if (authorId) {
+        try {
+          await admin.from('community_notifications').insert({
+            user_id: authorId,
+            actor_id: null,
+            kind: 'moderation_action',
+            post_id: report.post_id ?? null,
+            comment_id: report.comment_id ?? null,
+            body: report.reason
+              ? `Reported by community: ${report.reason}`
+              : 'A post or comment of yours was removed by a moderator.',
+          });
+        } catch (notifyErr) {
+          console.warn('[community-moderate] notify failed:', notifyErr);
+        }
       }
       return json({ ok: true });
     }

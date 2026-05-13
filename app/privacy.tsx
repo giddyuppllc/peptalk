@@ -121,6 +121,7 @@ const POLICY_SECTIONS: PolicySection[] = [
       '•  You may block any user, hiding their content globally from your feed. Blocked-user management is available in Settings → Blocked users.',
       '•  PepTalk reserves the right to remove content, suspend accounts, or limit Community access at our discretion when guidelines are violated.',
       '•  Anonymous posting hides your handle from other members but does NOT hide your identity from PepTalk admins for moderation purposes.',
+      '•  Images you upload to Community posts, comments, or live chat are stored on Cloudflare R2 (US region) and automatically screened by a third-party AI vision moderation service (xAI Grok Vision) before they become visible to other members. The screening sends only the image bytes — no profile information — and PepTalk does not retain the vision provider’s analysis beyond a moderation-log row used to defend against abuse.',
       'For abuse reports outside the in-app flow, contact edward@giddyupp.com.',
     ],
   },

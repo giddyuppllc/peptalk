@@ -1,11 +1,12 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { selectionTick } from '../../src/utils/haptics';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { AimeeDnaIcon } from '../../src/components/AimeeDnaIcon';
+import { ProfileShortcutFab } from '../../src/components/ProfileShortcutFab';
 
 type TabIconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -55,6 +56,7 @@ export default function TabsLayout() {
   const t = useTheme();
   const accent = useSectionAccent();
   return (
+    <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -97,6 +99,10 @@ export default function TabsLayout() {
       <Tabs.Screen name="calendar" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
+    {/* Top-right shortcut menu — hidden on Home; gives one-tap access to
+        Profile, Calendar, Check-in, Community from any other tab. */}
+    <ProfileShortcutFab />
+    </View>
   );
 }
 

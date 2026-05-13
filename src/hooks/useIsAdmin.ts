@@ -14,6 +14,7 @@ import { useAuthStore } from '../store/useAuthStore';
 
 const ADMIN_EMAILS_LOWER: string[] = [
   'edward@giddyupp.com',
+  'jamieespositofit@gmail.com',
 ];
 
 export function useIsAdmin(): boolean {

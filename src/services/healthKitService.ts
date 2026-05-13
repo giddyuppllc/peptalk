@@ -24,21 +24,23 @@ import { Platform } from 'react-native';
 // Dynamic module loading
 // ---------------------------------------------------------------------------
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const HKModule: any = null;
-
-// NOTE: @kingstinct/react-native-healthkit requires a native (EAS) build.
-// It uses react-native-nitro-modules which crashes Metro in Expo Go.
-// The require is commented out for Expo Go compatibility.
-// When building with EAS (development/production), uncomment below:
-//
-// try {
-//   if (Platform.OS === 'ios') {
-//     HKModule = require('@kingstinct/react-native-healthkit');
-//   }
-// } catch {
-//   // Native module not available — graceful fallback
-// }
+// @kingstinct/react-native-healthkit requires a native build (EAS).
+// In Expo Go it can't load — react-native-nitro-modules isn't in that runtime.
+// We use a try/require so the import is silently skipped when the module isn't
+// present (Expo Go, Android, web), and active when the user runs a real
+// development client or production build.
+let HKModule: any = null;
+try {
+  if (Platform.OS === 'ios') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    HKModule = require('@kingstinct/react-native-healthkit');
+  }
+} catch {
+  // Native module not available — graceful fallback. Every read function
+  // checks `HKModule !== null` before touching it, so this returns null
+  // everywhere downstream and nothing crashes.
+  HKModule = null;
+}
 
 // ---------------------------------------------------------------------------
 // Availability check

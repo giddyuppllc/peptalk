@@ -90,6 +90,7 @@ const TIERS: TierInfo[] = [
       'Voice Log — say what you ate, get the macros logged',
       'Unlimited meal & food logging + full micronutrient tracking',
       'Apple Watch + Google Fit sync (HRV, VO2, weight trends)',
+      'Live community group chat — ask the team during events',
       'First in line for new features as they ship',
       'Everything in Free, ad-free',
     ],
@@ -105,13 +106,12 @@ const TIERS: TierInfo[] = [
     features: [
       'Everything in Plus',
       'Unlimited Aimee chat',
-      'Recipe Generator',
-      "Jamie's 15 workout programs + videos",
+      'Recipe Generator — personalized to your goals + allergens',
+      'Multi-week training programs — progressive sets, reps, and rest',
       'Custom Workout Generator + tracker',
-      'Weekly Health Reports + PDF export',
-      'Premium research feed',
-      'Aimee Health Scheduler',
-      'Early access to new features',
+      'Weekly Health Reports — PDF export to share with your provider',
+      'Searchable research source library — every claim cited',
+      'Early access to new features as they ship',
     ],
     colors: ['#7FB3D8', '#3E7CB1'],
     icon: 'star',
@@ -270,15 +270,20 @@ function TierCard({
         ))}
       </View>
 
-      {/* CTA */}
+      {/* CTA — Apple Guideline 3.1.2(a) requires the auto-renew price,
+          billing period, and cancellation pathway to be visible BEFORE
+          the user taps Subscribe. This line carries all three. */}
       {!isActive && info.tier !== 'free' && (
         <View style={styles.tierCta}>
-          <Text style={styles.trialText}>✨ Start with a 7-day free trial</Text>
+          <Text style={styles.renewDisclosure}>
+            {plan?.price}{plan?.period} · auto-renews monthly until cancelled.
+            Cancel anytime in your Apple ID Subscriptions.
+          </Text>
           <GradientButton
-            label={purchasing ? 'Processing…' : `Upgrade to ${info.name}`}
+            label={purchasing ? 'Processing…' : `Subscribe to ${info.name}`}
             onPress={handleUpgrade}
             colors={info.colors}
-            accessibilityLabel={`Upgrade to ${info.name} for ${plan?.price}${plan?.period ?? ''}`}
+            accessibilityLabel={`Subscribe to ${info.name} for ${plan?.price}${plan?.period ?? ''}, auto-renews monthly`}
             accessibilityState={{ disabled: purchasing, busy: purchasing }}
           />
         </View>
@@ -478,12 +483,33 @@ export default function SubscriptionScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Footer */}
+        {/* Footer — Apple 3.1.2(a) requires Terms + Privacy to be
+            tappable from the paywall itself, not buried in app settings. */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Subscriptions auto-renew unless cancelled 24 hours before the
-            renewal date. You can manage subscriptions in your device settings.
+            Subscriptions auto-renew unless cancelled at least 24 hours before
+            the renewal date. Payment is charged to your Apple ID account at
+            confirmation. Manage or cancel in your Apple ID Subscriptions.
           </Text>
+          <View style={styles.legalLinks}>
+            <TouchableOpacity
+              onPress={() => router.push('/terms' as any)}
+              accessibilityRole="link"
+              accessibilityLabel="Open Terms of Service"
+              hitSlop={6}
+            >
+              <Text style={styles.legalLink}>Terms of Service</Text>
+            </TouchableOpacity>
+            <Text style={styles.legalDivider}>·</Text>
+            <TouchableOpacity
+              onPress={() => router.push('/privacy' as any)}
+              accessibilityRole="link"
+              accessibilityLabel="Open Privacy Policy"
+              hitSlop={6}
+            >
+              <Text style={styles.legalLink}>Privacy Policy</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -644,6 +670,13 @@ const styles = StyleSheet.create({
     color: Colors.pepTeal,
     textAlign: 'center',
   },
+  renewDisclosure: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontFamily: 'DMSans-Regular',
+    color: '#6B7280',
+    textAlign: 'center',
+  },
 
   // Social proof
   socialProofRow: {
@@ -697,6 +730,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
+  legalLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 10,
+  },
+  legalLink: {
+    fontSize: FontSizes.xs,
+    color: '#3E7CB1',
+    textDecorationLine: 'underline',
+    fontWeight: '600',
+  },
+  legalDivider: { color: '#9CA3AF', fontSize: FontSizes.xs },
   restoreBtn: {
     alignSelf: 'center',
     paddingVertical: Spacing.sm,

@@ -18,12 +18,17 @@ import type { SubscriptionTier } from '../types/fitness';
 
 // Product IDs — must match App Store Connect / Play Console exactly.
 //
-// Yearly SKUs are kept in the *mapping* (PRODUCT_TO_TIER) so future
-// purchases / receipts that reference them resolve to the right tier
-// without a code change. They are *omitted* from ALL_PRODUCT_IDS until
-// they're actually configured in both stores — calling getProducts with
-// IDs that don't exist server-side fails the whole batch on iOS, which
-// would break monthly purchases too.
+// **Pricing policy:** monthly subscriptions only. Yearly plans are NOT
+// part of the PepTalk product offering — decision made by Edward,
+// 2026-05-09. No plans to ship yearly.
+//
+// The yearly ids remain in the PRODUCT_TO_TIER map purely as defensive
+// resolution: if any legacy sandbox / TestFlight receipt for a yearly
+// purchase ever surfaces (refunds, edge cases), it resolves to the
+// right tier without crashing. They are omitted from ALL_PRODUCT_IDS
+// so getProducts() never asks the store about a SKU that doesn't exist
+// (iOS fails the whole batch if a single id is unknown, which would
+// also break the working monthly SKUs).
 export const PRODUCT_IDS = {
   plusMonthly: 'peptalk_plus_monthly',
   plusYearly: 'peptalk_plus_yearly',
@@ -36,9 +41,7 @@ export type ProductId = (typeof PRODUCT_IDS)[keyof typeof PRODUCT_IDS];
 const ALL_PRODUCT_IDS: string[] = [
   PRODUCT_IDS.plusMonthly,
   PRODUCT_IDS.proMonthly,
-  // Yearly products: not yet configured in App Store Connect / Play
-  // Console. Re-add `plusYearly` / `proYearly` here once both stores
-  // have them set up.
+  // Monthly-only for v1.9.x — see header comment.
 ];
 
 // Map product ID → tier so the store knows which features to unlock.

@@ -118,7 +118,7 @@ export const useLiveEventStore = create<LiveEventState>((set, get) => ({
       const { data: msgs } = await (supabase as any)
         .from('community_live_messages')
         .select(`
-          id, event_id, user_id, body, is_host, created_at,
+          id, event_id, user_id, body, is_host, is_deleted, last_edited_at, created_at,
           profiles:user_id ( username, display_name )
         `)
         .eq('event_id', event.id)

@@ -50,7 +50,13 @@ import { useAuthStore } from '../../src/store/useAuthStore';
 // function. The server still enforces — this is just to stop the screen
 // from rendering the manifest of every R2 object key to a curious user
 // who deep-links here. Kept lowercase for case-insensitive comparison.
-const TAGGER_ADMIN_EMAILS = new Set(['edward@giddyupp.com']);
+//
+// Keep in lockstep with the ADMIN_EMAILS Supabase secret. When you add
+// or remove an admin, update both here AND the secret.
+const TAGGER_ADMIN_EMAILS = new Set([
+  'edward@giddyupp.com',
+  'jamieespositofit@gmail.com',
+]);
 
 export default function VideoTaggerScreen() {
   const router = useRouter();
@@ -90,12 +96,16 @@ export default function VideoTaggerScreen() {
   const [resolveError, setResolveError] = useState<string | null>(null);
   const videoRef = useRef<Video>(null);
 
-  // Reset form when current video changes
+  // Reset form when current video changes. If the script (scripts/ai-tag-videos.mjs)
+  // populated an aiSuggested block and the human hasn't already set a real value,
+  // pre-fill the form from the suggestion. This is the whole point of the AI pass:
+  // Jamie taps "Save & Next" to accept, or overrides any field she disagrees with.
   React.useEffect(() => {
     if (!current) return;
-    setTitle(current.title);
-    setExerciseId(current.exerciseId);
-    setCategory(current.category);
+    const sug = current.aiSuggested;
+    setTitle(current.title?.trim() || sug?.title || '');
+    setExerciseId(current.exerciseId ?? sug?.exerciseId ?? null);
+    setCategory(current.category ?? sug?.category ?? null);
     setSearch('');
     setVideoUrl(null);
     setResolveError(null);
@@ -246,6 +256,47 @@ export default function VideoTaggerScreen() {
           </View>
         </View>
 
+        {/* AI suggestion banner — visible whenever scripts/ai-tag-videos.mjs
+            populated an aiSuggested block. Form below is already pre-filled
+            from this; Jamie just hits "Save & Next" to accept or edits the
+            fields she disagrees with. */}
+        {current.aiSuggested && (() => {
+          const sug = current.aiSuggested;
+          const conf = Math.max(0, Math.min(1, sug.confidence || 0));
+          const confColor = conf >= 0.8 ? '#16a34a' : conf >= 0.5 ? '#d97706' : '#dc2626';
+          const sugEx = sug.exerciseId
+            ? EXERCISES.find((e) => e.id === sug.exerciseId)
+            : null;
+          return (
+            <View
+              style={[
+                styles.aiBanner,
+                {
+                  backgroundColor: `${confColor}10`,
+                  borderColor: `${confColor}55`,
+                },
+              ]}
+              accessibilityLabel={`AI suggestion: ${sugEx?.name ?? 'unknown'}, ${Math.round(conf * 100)} percent confidence`}
+            >
+              <View style={styles.aiBannerRow}>
+                <Ionicons name="sparkles-outline" size={14} color={confColor} />
+                <Text style={[styles.aiBannerTitle, { color: confColor }]}>
+                  AI suggestion · {Math.round(conf * 100)}%
+                </Text>
+              </View>
+              <Text style={[styles.aiBannerExercise, { color: t.text }]} numberOfLines={2}>
+                {sugEx?.name ?? '(no confident match)'}
+                {sug.category ? ` · ${CATEGORY_LABELS[sug.category]}` : ''}
+              </Text>
+              {sug.reasoning ? (
+                <Text style={[styles.aiBannerReasoning, { color: t.textSecondary }]} numberOfLines={3}>
+                  {sug.reasoning}
+                </Text>
+              ) : null}
+            </View>
+          );
+        })()}
+
         {/* Title */}
         <View style={styles.formGroup}>
           <Text style={[styles.label, { color: t.textSecondary }]}>Title</Text>
@@ -383,6 +434,20 @@ const styles = StyleSheet.create({
   filenameRow: { paddingHorizontal: 16, paddingTop: 14 },
   pill: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   pillText: { fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace' }), fontSize: 11 },
+
+  aiBanner: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 4,
+  },
+  aiBannerRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  aiBannerTitle: { fontSize: 11, fontWeight: '800', letterSpacing: 0.4, textTransform: 'uppercase' },
+  aiBannerExercise: { fontSize: 14, fontWeight: '700' },
+  aiBannerReasoning: { fontSize: 11, lineHeight: 16, fontStyle: 'italic' },
 
   formGroup: { paddingTop: 18, paddingHorizontal: 16 },
   label: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 },

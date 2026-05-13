@@ -19,6 +19,10 @@ interface OnboardingStore {
   /** Whether the user has accepted the peptide research/education disclaimer */
   acceptedPeptideDisclaimer: boolean;
   setAcceptedPeptideDisclaimer: (accepted: boolean) => void;
+  /** Whether the user has accepted the live community chat disclaimer.
+   *  Shown the first time they enter any /community/live/[eventId] room. */
+  acceptedLiveChatDisclaimer: boolean;
+  setAcceptedLiveChatDisclaimer: (accepted: boolean) => void;
   setGender: (gender: Gender) => void;
   setAgeRange: (ageRange: AgeRange) => void;
   setEthnicity: (ethnicity: Ethnicity) => void;
@@ -55,6 +59,9 @@ export const useOnboardingStore = create<OnboardingStore>()(
       acceptedPeptideDisclaimer: false,
       setAcceptedPeptideDisclaimer: (acceptedPeptideDisclaimer) =>
         set({ acceptedPeptideDisclaimer }),
+      acceptedLiveChatDisclaimer: false,
+      setAcceptedLiveChatDisclaimer: (acceptedLiveChatDisclaimer) =>
+        set({ acceptedLiveChatDisclaimer }),
 
       setGender: (gender) =>
         set((state) => ({ profile: { ...state.profile, gender } })),
@@ -105,6 +112,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
         profile: state.profile,
         isComplete: state.isComplete,
         acceptedPeptideDisclaimer: state.acceptedPeptideDisclaimer,
+        acceptedLiveChatDisclaimer: state.acceptedLiveChatDisclaimer,
       }),
       onRehydrateStorage: () => (state) => {
         const safeProfile = {
@@ -117,6 +125,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
           profile: safeProfile,
           isComplete: state?.isComplete ?? false,
           acceptedPeptideDisclaimer: state?.acceptedPeptideDisclaimer ?? false,
+          acceptedLiveChatDisclaimer: state?.acceptedLiveChatDisclaimer ?? false,
           hasHydrated: true,
         });
       },

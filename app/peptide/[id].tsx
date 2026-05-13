@@ -17,6 +17,7 @@ import { useStackStore } from '../../src/store/useStackStore';
 import { GlassCard } from '../../src/components/GlassCard';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
 import { ProtocolPlanCard } from '../../src/components/ProtocolPlanCard';
+import { intensityToDoseRangeMcg } from '../../src/components/ProtocolIntensityPicker';
 import { SuppliesEstimatorCard } from '../../src/components/SuppliesEstimatorCard';
 import { PeptideTrendCard } from '../../src/components/PeptideTrendCard';
 import { PeptideCyclePhaseCard } from '../../src/components/PeptideCyclePhaseCard';
@@ -26,6 +27,7 @@ import { getCategoryColor } from '../../src/constants/categories';
 import { Disclaimer } from '../../src/components/Disclaimer';
 import { trackPeptideView } from '../../src/services/analyticsEvents';
 import { getProtocolsByPeptide } from '../../src/data/protocols';
+import { getSourcesByPeptide } from '../../src/data/sources';
 import { getTrialsByPeptideId } from '../../src/data/clinicalTrials';
 import { getSafetyProfileByPeptideId } from '../../src/data/safetyProfiles';
 import { getCuratedStacksByPeptideId } from '../../src/data/curatedStacks';
@@ -117,6 +119,7 @@ export default function PeptideDetailScreen() {
   const safetyProfile = useMemo(() => getSafetyProfileByPeptideId(peptide.id), [peptide.id]);
   const clinicalTrials = useMemo(() => getTrialsByPeptideId(peptide.id), [peptide.id]);
   const protocols = useMemo(() => getProtocolsByPeptide(peptide.id), [peptide.id]);
+  const curatedSources = useMemo(() => getSourcesByPeptide(peptide.id), [peptide.id]);
   const relatedStacks = useMemo(() => getCuratedStacksByPeptideId(peptide.id), [peptide.id]);
   const nutritionGuidance = useMemo(() => getPeptideNutrition(peptide.id), [peptide.id]);
   const relatedVideos = useMemo(() => getVideosByPeptideId(peptide.id), [peptide.id]);
@@ -148,13 +151,14 @@ export default function PeptideDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Spacer for transparent header */}
+        {/* Breathing room above the title — SafeAreaView handles the
+            status-bar / dynamic-island inset; this is just visual padding. */}
         <View style={styles.headerSpacer} />
 
         {/* Name and Abbreviation */}
@@ -689,6 +693,54 @@ export default function PeptideDetailScreen() {
           </GlassCard>
         )}
 
+        {/* Quick dose reference — at-a-glance Beginner / Advanced ranges
+            derived from the protocol's published research range. Tap a
+            pill to open the calculator pre-pointed at that intensity. */}
+        {protocols.length > 0 && (
+          <BeginnerAdvancedDoseCard
+            peptideId={peptide.id}
+            protocol={protocols[0]}
+            onPick={(intensity) =>
+              router.push({
+                pathname: '/calculators/dosing',
+                params: { peptideId: peptide.id, intensity },
+              } as any)
+            }
+          />
+        )}
+
+        {/* Empty state — when a peptide has no catalogued protocol.
+            For these compounds, the published human data is limited
+            (often preclinical / animal / early-trial only), so we
+            intentionally don't surface a dose range. The research
+            summary and mechanism cards above carry the educational
+            content; this card explains why there's no calculator. */}
+        {protocols.length === 0 && (
+          <GlassCard style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="information-circle-outline" size={18} color="#7ABED0" />
+              <Text style={styles.sectionTitle}>Dosing reference</Text>
+            </View>
+            <Text style={{ fontSize: 14, lineHeight: 20, color: '#2D2D2D' }}>
+              {peptide.name} doesn't have a published human-trial dosing
+              protocol in our catalog. Most of what's known comes from
+              preclinical or limited early-phase research, so we
+              intentionally keep the calculator out rather than guess at
+              numbers.
+            </Text>
+            <Text style={{ fontSize: 14, lineHeight: 20, color: '#2D2D2D', marginTop: 10 }}>
+              The research summary and mechanism notes above cover what
+              the compound is being studied for. If you're considering
+              its use, work directly with a licensed clinician — that's
+              the only safe path for research-grade compounds.
+            </Text>
+            <Text style={{ fontSize: 12, lineHeight: 18, color: '#6B7280', marginTop: 10, fontStyle: 'italic' }}>
+              PepTalk is an educational + tracking tool. We don't
+              prescribe, recommend, or supply peptides.
+            </Text>
+          </GlassCard>
+        )}
+
         {/* Cycle plan — goal-aware summary of dose / frequency / cycle
             length / total vials needed. Lives above the detailed protocol
             templates so the user sees the big picture first. */}
@@ -870,6 +922,58 @@ export default function PeptideDetailScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Curated cited sources — pulled from the central SOURCES
+            catalog (src/data/sources.ts). When entries exist, this
+            replaces the legacy PubMed Links list because the structured
+            sources carry title, journal, year, and quote — much more
+            useful than a bare URL. Tapping "See all" deep-links to the
+            Resources screen pre-filtered to this peptide. */}
+        {curatedSources.length > 0 && (
+          <GlassCard style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="library-outline" size={18} color="#7ABED0" />
+              <Text style={styles.sectionTitle}>Sources & References</Text>
+            </View>
+            {curatedSources.slice(0, 3).map((src) => (
+              <TouchableOpacity
+                key={src.id}
+                style={styles.pubmedLink}
+                onPress={() => src.url && handlePubMedLink(src.url)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`${src.title}, ${src.year}`}
+              >
+                <Ionicons name="open-outline" size={14} color="#7ABED0" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.pubmedLinkText} numberOfLines={2}>
+                    {src.title} ({src.year})
+                  </Text>
+                  {src.journal && (
+                    <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }} numberOfLines={1}>
+                      {src.journal}
+                      {src.pubmedId ? ` · ${src.pubmedId}` : ''}
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+            {curatedSources.length > 3 && (
+              <TouchableOpacity
+                style={styles.pubmedLink}
+                onPress={() => router.push(`/resources?peptide=${peptide.id}` as any)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`See all ${curatedSources.length} sources for ${peptide.name}`}
+              >
+                <Ionicons name="arrow-forward" size={14} color="#7ABED0" />
+                <Text style={[styles.pubmedLinkText, { color: '#7ABED0', fontWeight: '700' }]}>
+                  See all {curatedSources.length} sources
+                </Text>
+              </TouchableOpacity>
+            )}
+          </GlassCard>
+        )}
+
         {/* PubMed Links */}
         {peptide.pubmedLinks && peptide.pubmedLinks.length > 0 && (
           <GlassCard style={styles.section}>
@@ -920,6 +1024,104 @@ export default function PeptideDetailScreen() {
   );
 }
 
+// ─── Beginner / Advanced quick-dose card ────────────────────────────────────
+// Derives two range pills from the peptide's protocol research bounds.
+// Beginner = lower-third (matches `intensityToDoseRangeMcg('mild')`);
+// Advanced = upper-third (`intensityToDoseRangeMcg('aggressive')`). Tapping
+// a pill deep-links into /calculators/dosing pre-pointed at that intensity.
+
+function formatDoseMcg(value: number): string {
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(value >= 10000 ? 1 : 2)} mg`;
+  }
+  return `${Math.round(value)} mcg`;
+}
+
+function BeginnerAdvancedDoseCard({
+  peptideId: _peptideId,
+  protocol,
+  onPick,
+}: {
+  peptideId: string;
+  protocol: ReturnType<typeof getProtocolsByPeptide>[number];
+  onPick: (intensity: 'mild' | 'aggressive') => void;
+}) {
+  const beginner = intensityToDoseRangeMcg(protocol, 'mild');
+  const advanced = intensityToDoseRangeMcg(protocol, 'aggressive');
+
+  return (
+    <GlassCard style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Ionicons name="speedometer-outline" size={18} color="#7ABED0" />
+        <Text style={styles.sectionTitle}>Quick dose reference</Text>
+      </View>
+      <View style={dosePillStyles.row}>
+        <TouchableOpacity
+          onPress={() => onPick('mild')}
+          activeOpacity={0.85}
+          style={[dosePillStyles.pill, { borderColor: '#6FA89155', backgroundColor: '#6FA8910D' }]}
+          accessibilityRole="button"
+          accessibilityLabel={`Beginner dose ${formatDoseMcg(beginner.min)} to ${formatDoseMcg(beginner.max)}`}
+        >
+          <View style={dosePillStyles.pillTopRow}>
+            <Ionicons name="leaf-outline" size={14} color="#6FA891" />
+            <Text style={[dosePillStyles.pillLabel, { color: '#3F6E5A' }]}>Beginner</Text>
+          </View>
+          <Text style={dosePillStyles.pillRange}>
+            {formatDoseMcg(beginner.min)} – {formatDoseMcg(beginner.max)}
+          </Text>
+          <Text style={dosePillStyles.pillHint}>Cautious start</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => onPick('aggressive')}
+          activeOpacity={0.85}
+          style={[dosePillStyles.pill, { borderColor: '#B4530955', backgroundColor: '#B453090D' }]}
+          accessibilityRole="button"
+          accessibilityLabel={`Advanced dose ${formatDoseMcg(advanced.min)} to ${formatDoseMcg(advanced.max)}`}
+        >
+          <View style={dosePillStyles.pillTopRow}>
+            <Ionicons name="flash-outline" size={14} color="#B45309" />
+            <Text style={[dosePillStyles.pillLabel, { color: '#7A3A05' }]}>Advanced</Text>
+          </View>
+          <Text style={dosePillStyles.pillRange}>
+            {formatDoseMcg(advanced.min)} – {formatDoseMcg(advanced.max)}
+          </Text>
+          <Text style={dosePillStyles.pillHint}>Experienced users</Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={dosePillStyles.footnote}>
+        Educational reference only — not medical advice. Ranges stay inside the
+        protocol's published research bounds. Always consult a licensed
+        healthcare provider before starting or changing any peptide protocol.
+      </Text>
+    </GlassCard>
+  );
+}
+
+const dosePillStyles = StyleSheet.create({
+  row: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  pill: {
+    flex: 1,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    gap: 4,
+  },
+  pillTopRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  pillLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.4 },
+  pillRange: { fontSize: 16, fontWeight: '800', marginTop: 2, color: '#2D2D2D' },
+  pillHint: { fontSize: 11, color: '#6B7280' },
+  footnote: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    color: '#6B7280',
+    marginTop: 10,
+    lineHeight: 15,
+  },
+});
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Light-theme restyle — matches the rest of the app (white bg, peach accents,
 // Playfair titles, DM Sans body). Replaces the legacy dark palette.
@@ -948,7 +1150,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   headerSpacer: {
-    height: 48,
+    height: 16,
   },
 
   // ── Not Found ───────────────────────────────────────────────

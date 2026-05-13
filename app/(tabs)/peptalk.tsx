@@ -25,6 +25,7 @@ import Animated, {
 import { ChatBubble, TypingIndicator } from '../../src/components/ChatBubble';
 import { getAimeeNudges } from '../../src/services/aimeeNudges';
 import { PepTalkCharacter } from '../../src/components/PepTalkCharacter';
+import { AimeeDnaIcon } from '../../src/components/AimeeDnaIcon';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { ChatHistoryDrawer } from '../../src/components/ChatHistoryDrawer';
 import { CoachMark } from '../../src/components/tutorial/CoachMark';
@@ -410,14 +411,14 @@ export default function PepTalkScreen() {
   const renderEmpty = useCallback(
     () => (
       <View style={styles.emptyContainer}>
-        <View style={[styles.emptyAvatarRing, { borderColor: `${accent.deep}30` }]}>
+        <View style={[styles.emptyAvatarRing, { borderColor: '#3E7CB130' }]}>
           <LinearGradient
-            colors={[`${accent.deep}18`, `${accent.pastel}10`]}
+            colors={['#3E7CB118', '#7FB3D810']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.emptyAvatarInner}
           >
-            <PepTalkCharacter size={88} variant="full" animated />
+            <AimeeDnaIcon size={88} active />
           </LinearGradient>
         </View>
         <Text style={[styles.emptyTitle, { color: t.text }]}>Hi, I'm Aimee</Text>
@@ -483,12 +484,12 @@ export default function PepTalkScreen() {
           </TouchableOpacity>
 
           <View style={styles.headerLeft}>
-            <View style={[styles.headerAvatar, { borderColor: `${accent.deep}40` }]}>
+            <View style={[styles.headerAvatar, { borderColor: '#3E7CB140' }]}>
               <LinearGradient
-                colors={[`${accent.deep}20`, `${accent.pastel}12`]}
+                colors={['#3E7CB120', '#7FB3D812']}
                 style={styles.headerAvatarInner}
               >
-                <PepTalkCharacter size={28} variant="mini" />
+                <AimeeDnaIcon size={28} active />
               </LinearGradient>
             </View>
             <View>

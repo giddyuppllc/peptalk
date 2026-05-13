@@ -14,7 +14,7 @@
  * Math matches peptidedosages.com.
  */
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -26,7 +26,7 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from '../../src/components/GlassCard';
@@ -72,6 +72,10 @@ const WATER_PRESETS = [1, 2, 3, 5];
 export default function DosingCalculatorScreen() {
   const router = useRouter();
   const t = useTheme();
+  // Optional deep-link params from peptide detail page Beginner/Advanced
+  // pills: pre-select the peptide and the intensity tier so the user lands
+  // straight on the dose they tapped.
+  const params = useLocalSearchParams<{ peptideId?: string; intensity?: string }>();
 
   // Inputs
   const [selectedPeptide, setSelectedPeptide] = useState<Peptide | null>(null);
@@ -154,6 +158,42 @@ export default function DosingCalculatorScreen() {
     if (!selectedPeptide) return [];
     return PROTOCOL_TEMPLATES.filter((pt) => pt.peptideId === selectedPeptide.id);
   }, [selectedPeptide]);
+
+  // One-shot deep-link handler. Pre-selects the peptide + intensity from
+  // route params and auto-fills the target dose from the chosen tier so
+  // taps from the peptide-detail Beginner/Advanced pills land on the
+  // calculator already pointed at the right number.
+  const appliedDeepLinkRef = useRef(false);
+  useEffect(() => {
+    if (appliedDeepLinkRef.current) return;
+    const pid = typeof params.peptideId === 'string' ? params.peptideId : undefined;
+    const intent = typeof params.intensity === 'string' ? params.intensity : undefined;
+    if (!pid && !intent) return;
+    if (pid && !selectedPeptide) {
+      const found = PEPTIDES.find((p) => p.id === pid);
+      if (found) setSelectedPeptide(found);
+    }
+    if (intent === 'mild' || intent === 'standard' || intent === 'aggressive') {
+      setIntensity(intent);
+      // Resolve the matching protocol via the same filter the screen uses
+      // and seed targetDose with that intensity's midpoint dose.
+      const targetPid = pid ?? selectedPeptide?.id;
+      const proto = targetPid
+        ? PROTOCOL_TEMPLATES.find((pt) => pt.peptideId === targetPid)
+        : undefined;
+      if (proto) {
+        const { mcg, displayUnit } = intensityToDoseMcg(proto, intent);
+        // The protocol's display unit can technically be IU/ml in the
+        // shared DoseUnit type, but the calculator only supports mcg/mg.
+        // Default to mcg for any non-mg unit so the input is always valid.
+        const localUnit: DoseUnit = displayUnit === 'mg' ? 'mg' : 'mcg';
+        const value = localUnit === 'mg' ? mcg / 1000 : mcg;
+        setTargetDose(String(Number(value.toFixed(2))));
+        setDoseUnit(localUnit);
+      }
+    }
+    appliedDeepLinkRef.current = true;
+  }, [params.peptideId, params.intensity, selectedPeptide]);
 
   // If the user has an ACTIVE PROTOCOL for the selected peptide, figure out
   // which titration step they're on so the calculator can pre-fill the

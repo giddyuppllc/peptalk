@@ -70,8 +70,10 @@ export interface ThemeColors {
   // ── New Pantone pastel tokens ─────────────────────────────────────────
   /** Soft warm highlight — Lemon Icing on both genders */
   accentSoft: string;
-  /** Soft lavender accent — Orchid Tint (female) or Nimbus Cloud (male) */
+  /** Soft lavender accent — Orchid Tint (shared across genders) */
   orchid: string;
+  /** Deeper lavender — used as the mid-stop on greeting gradients */
+  orchidDeep: string;
   /** Secondary soft accent — Raindrops on Roses (female) or Almost Aqua (male) */
   blush: string;
 }
@@ -90,6 +92,7 @@ const PEACH_DUST_DEEP = '#E89672';    // Derived darker for CTAs
 const PEACH_DUST_DARKER = '#C76B45';  // Derived darker still, strong contrast
 const RAINDROPS_ON_ROSES = '#F2D8D5'; // 12-2904 TCX — female blush secondary
 const ORCHID_TINT = '#DBC6D8';        // 13-3405 TCX — female soft lavender accent
+const ORCHID_DEEP = '#9B86A4';        // Derived deeper orchid for ombré mid-stops
 const CREAM_WARM = '#FAF5EF';         // Warmer Cloud Dancer for female surface band
 const BORDER_WARM = '#EAE4DC';        // Soft beige border
 
@@ -115,6 +118,7 @@ const femaleAccents = {
   ctaGradient: [PEACH_DUST_DEEP, PEACH_DUST] as const,
   accentSoft: LEMON_ICING,
   orchid: ORCHID_TINT,
+  orchidDeep: ORCHID_DEEP,
   blush: RAINDROPS_ON_ROSES,
 };
 
@@ -128,7 +132,10 @@ const maleAccents = {
   tabActive: ICE_MELT_DEEP,
   ctaGradient: [ICE_MELT_DEEP, ICE_MELT] as const,
   accentSoft: LEMON_ICING,
-  orchid: NIMBUS_CLOUD,         // Male uses pale gray as the "orchid slot"
+  // Orchid is now shared — the "Good afternoon" greeting on home renders
+  // a lavender ombré on every profile, not gendered. (Per Edward 2026-05-09.)
+  orchid: ORCHID_TINT,
+  orchidDeep: ORCHID_DEEP,
   blush: ALMOST_AQUA,           // Male uses mint as the "blush slot"
 };
 

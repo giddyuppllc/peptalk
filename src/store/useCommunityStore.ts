@@ -66,6 +66,11 @@ interface CommunityState {
     Promise<{ ok: true } | { ok: false; error: string }>;
   toggleReaction: (target: { postId?: string; commentId?: string; kind: CommunityReactionKind }, presentlyReacted: boolean) =>
     Promise<{ ok: true } | { ok: false; error: string }>;
+  /** Report a live-chat message — separate edge function from the
+   *  post/comment reportContent because live messages are stored in a
+   *  different table with a different lifecycle. */
+  reportLiveMessage: (input: { messageId: string; reason: CommunityReportReason }) =>
+    Promise<{ ok: boolean; error?: string }>;
   reportContent: (input: { postId?: string; commentId?: string; reason: CommunityReportReason; notes?: string }) =>
     Promise<{ ok: true } | { ok: false; error: string }>;
   blockUser: (userId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
@@ -511,6 +516,16 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
     }
   },
 
+  reportLiveMessage: async (input) => {
+    try {
+      const res = await authedFetch<any>('community-live-report-message', input);
+      if (res?.error) return { ok: false, error: res.error };
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err?.message ?? 'Failed' };
+    }
+  },
+
   blockUser: async (userId) => {
     try {
       await authedFetch('community-block', { blockedId: userId, action: 'block' });
@@ -650,6 +665,36 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
             // Best-effort hydrate of the single thread to pull the
             // joined profile data we'd otherwise miss.
             get().hydratePostDetail(r.post_id).catch(() => {});
+          },
+        )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'community_comments' },
+          (payload: any) => {
+            // Comment edit / soft-delete / reaction-count update. Patch
+            // the in-memory comment for the parent post detail thread so
+            // viewers see edits + retractions without a refresh.
+            const r = payload?.new;
+            if (!r?.post_id || !r?.id) return;
+            const detail = get().postDetails[r.post_id];
+            if (!detail?.comments) return;
+            const next = detail.comments.map((c) =>
+              c.id === r.id
+                ? {
+                    ...c,
+                    body: r.body ?? c.body,
+                    isDeleted: !!r.is_deleted,
+                    reactionCount: r.reaction_count ?? c.reactionCount,
+                    lastEditedAt: r.last_edited_at ?? c.lastEditedAt,
+                  }
+                : c,
+            );
+            set({
+              postDetails: {
+                ...get().postDetails,
+                [r.post_id]: { ...detail, comments: next },
+              },
+            });
           },
         )
         .subscribe();
