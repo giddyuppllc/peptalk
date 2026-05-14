@@ -57,7 +57,7 @@ export function ProfileShortcutFab() {
   // see this. The tabs route paths all start with /(tabs) or are top-level
   // names like /my-stacks, /peptalk, /nutrition, /workouts (because
   // (tabs) is a route group expo-router strips from URLs).
-  const tabRoots = ['/my-stacks', '/peptalk', '/nutrition', '/workouts'];
+  const tabRoots = ['/my-stacks', '/peptalk', '/community', '/nutrition', '/workouts'];
   const onTabRoot = tabRoots.some((p) => pathname === p || pathname === `${p}/`);
   if (!onTabRoot) return null;
 

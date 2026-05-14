@@ -1400,33 +1400,67 @@ export default function ProfileScreen() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'This will permanently delete your account and ALL data from our servers. This cannot be undone. You will be signed out immediately.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete Account',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // All server + local teardown lives behind this single
-              // store action so a future change (additional cleanup,
-              // analytics event, etc.) has one place to update.
-              await useAuthStore.getState().deleteAccount();
-              Alert.alert('Account Deleted', 'Your account and all data have been permanently removed.');
-            } catch (err: any) {
-              if (__DEV__) console.warn('[profile] delete account failed:', err);
-              Alert.alert(
-                'Deletion Failed',
-                err?.message ?? "We couldn't delete your account right now. Please try again or contact support.",
-              );
-            }
+    // Subscription warning is shown FIRST when the user has an active
+    // Plus/Pro subscription, because deleting the PepTalk account doesn't
+    // automatically cancel the Apple/Google subscription — the user
+    // would keep getting charged until they manually cancel in iOS
+    // Settings. We want to surface that clearly so we don't end up with
+    // a refund-request support ticket.
+    const tier = useSubscriptionStore.getState().tier;
+    const hasActiveSubscription = tier === 'plus' || tier === 'pro';
+
+    const runDestructiveConfirm = () => {
+      Alert.alert(
+        'Delete Account',
+        'This will permanently delete your account and ALL data from our servers. This cannot be undone. You will be signed out immediately.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete Account',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                // All server + local teardown lives behind this single
+                // store action so a future change (additional cleanup,
+                // analytics event, etc.) has one place to update.
+                await useAuthStore.getState().deleteAccount();
+                Alert.alert('Account Deleted', 'Your account and all data have been permanently removed.');
+              } catch (err: any) {
+                if (__DEV__) console.warn('[profile] delete account failed:', err);
+                Alert.alert(
+                  'Deletion Failed',
+                  err?.message ?? "We couldn't delete your account right now. Please try again or contact support.",
+                );
+              }
+            },
           },
-        },
-      ],
-    );
+        ],
+      );
+    };
+
+    if (hasActiveSubscription) {
+      Alert.alert(
+        'Subscription still active',
+        `Your ${tier === 'pro' ? 'PepTalk Pro' : 'PepTalk+'} subscription will keep renewing through your Apple ID unless you cancel it FIRST.\n\nDeleting your PepTalk account does NOT cancel your Apple subscription — Apple owns billing.\n\nWe recommend you tap "Manage subscription" first to cancel through Apple, then come back to delete the account.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Manage subscription first',
+            onPress: () => router.push('/subscription' as any),
+          },
+          {
+            text: 'Delete account anyway',
+            style: 'destructive',
+            onPress: runDestructiveConfirm,
+          },
+        ],
+      );
+      return;
+    }
+
+    runDestructiveConfirm();
   };
+
 
   return (
     <SafeAreaView style={[profileStyles.container, { backgroundColor: t.bg }]} edges={['top']}>
