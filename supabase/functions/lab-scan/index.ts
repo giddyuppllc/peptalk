@@ -252,7 +252,12 @@ async function checkRateLimit(
       );
     return { allowed: true, limit, count: count + 1 };
   } catch (err) {
-    console.warn(`[${functionName}] rate-limit check failed, allowing:`, err);
-    return { allowed: true, limit, count: 0 };
+    // Fail CLOSED. If we can't reach ai_usage_log we cannot enforce the
+    // per-user cap, and the function fans out to the LLM/vision provider —
+    // unlimited spam quickly translates to real money. Better to return
+    // a 503 to the caller and let them retry once the DB recovers than
+    // to leave the cost door wide open.
+    console.error(`[${functionName}] rate-limit check failed; failing closed:`, err);
+    return { allowed: false, limit, count: 0, retryAfter: 60, failedClosed: true };
   }
 }

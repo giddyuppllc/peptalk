@@ -59,9 +59,11 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const title = String(body?.title ?? '').trim();
     const description = body?.description ? String(body.description).trim() : null;
-    const requiredTier = body?.requiredTier === 'free' || body?.requiredTier === 'pro'
-      ? body.requiredTier
-      : 'plus';
+    // Live chat is paying-members-only per product policy (Edward, 2026-05-14).
+    // The admin start-live form removed the 'free' option; the server-side
+    // accept-list also rejects 'free' so a hand-crafted request can't open
+    // an event up to free users. Anything but 'pro' defaults to 'plus'.
+    const requiredTier = body?.requiredTier === 'pro' ? 'pro' : 'plus';
 
     if (title.length < TITLE_MIN || title.length > TITLE_MAX) {
       return jsonResp({ error: `Title must be ${TITLE_MIN}-${TITLE_MAX} characters.` }, 400);
