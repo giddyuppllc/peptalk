@@ -10,13 +10,13 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { GlassCard } from '../../../src/components/GlassCard';
-import { useTheme } from '../../../src/hooks/useTheme';
-import { Spacing, FontSizes } from '../../../src/constants/theme';
-import { PostCard } from '../../../src/components/community/PostCard';
-import { useCommunityStore } from '../../../src/store/useCommunityStore';
-import { useAuthStore } from '../../../src/store/useAuthStore';
-import type { CommunityPost } from '../../../src/types/community';
+import { GlassCard } from '../../../../src/components/GlassCard';
+import { useTheme } from '../../../../src/hooks/useTheme';
+import { Spacing, FontSizes } from '../../../../src/constants/theme';
+import { PostCard } from '../../../../src/components/community/PostCard';
+import { useCommunityStore } from '../../../../src/store/useCommunityStore';
+import { useAuthStore } from '../../../../src/store/useAuthStore';
+import type { CommunityPost } from '../../../../src/types/community';
 
 export default function CommunityUserProfile() {
   const t = useTheme();
@@ -42,7 +42,7 @@ export default function CommunityUserProfile() {
     let cancelled = false;
     (async () => {
       try {
-        const { supabase } = await import('../../../src/services/supabase');
+        const { supabase } = await import('../../../../src/services/supabase');
         const { data: profileRow } = await (supabase as any)
           .from('profiles')
           .select('id, username, display_name, avatar_url')

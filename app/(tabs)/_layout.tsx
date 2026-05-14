@@ -1,7 +1,8 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { selectionTick } from '../../src/utils/haptics';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
@@ -19,6 +20,11 @@ interface TabConfig {
 
 // Tab order — Jamie wants peptides before nutrition (peps come first since the
 // app is peptide-led). Aimee anchors the center.
+//
+// 6 tabs is at the upper end of what fits comfortably on iPhone SE-class
+// screens. Tab font is dropped to 9.5 + label margin tightened in the
+// styles below to give each tab ~62px on a 375px-wide screen without
+// clipping. On Pro / Pro Max the layout breathes more.
 const TAB_CONFIG: TabConfig[] = [
   {
     name: 'index',
@@ -39,6 +45,12 @@ const TAB_CONFIG: TabConfig[] = [
     activeIcon: 'chatbubbles',
   },
   {
+    name: 'community',
+    title: 'Community',
+    icon: 'people-outline',
+    activeIcon: 'people',
+  },
+  {
     name: 'nutrition',
     title: 'Nutrition',
     icon: 'nutrition-outline',
@@ -55,6 +67,13 @@ const TAB_CONFIG: TabConfig[] = [
 export default function TabsLayout() {
   const t = useTheme();
   const accent = useSectionAccent();
+  const insets = useSafeAreaInsets();
+  // Modern iPhones (X+) have a 34px home-indicator inset. iOS Pre-X
+  // returns 0 here. Build the tab bar to clear the indicator with breathing
+  // room — content area 50px + insets.bottom + a tiny floor of 10 so old
+  // hardware still has touch targets that meet HIG.
+  const tabContent = 50;
+  const tabBarHeight = tabContent + Math.max(insets.bottom, 10);
   return (
     <View style={{ flex: 1 }}>
     <Tabs
@@ -62,11 +81,18 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: accent.deep,
         tabBarInactiveTintColor: t.textSecondary,
-        tabBarStyle: [styles.tabBar, {
-          backgroundColor: t.tabBar,
-          borderTopColor: t.glassBorder,
-        }],
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            backgroundColor: t.tabBar,
+            borderTopColor: t.glassBorder,
+            height: tabBarHeight,
+            paddingBottom: Math.max(insets.bottom, 6),
+          },
+        ],
         tabBarLabelStyle: styles.tabBarLabel,
+        // Slightly smaller icons so 6 tabs fit comfortably on iPhone SE width.
+        tabBarItemStyle: { paddingTop: 4 },
       }}
     >
       {TAB_CONFIG.map((tab) => (
@@ -111,15 +137,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0EEE9',
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.06)',
-    paddingBottom: 6,
-    paddingTop: 8,
-    height: 65,
+    // height + paddingBottom are computed dynamically from safe-area
+    // insets in the component; the floor here only matters if insets
+    // aren't yet resolved on first frame.
+    paddingTop: 6,
     elevation: 0,
   },
+  // Smaller label so all 6 tabs fit horizontally on iPhone SE-class widths
+  // without label truncation. Pro / Pro Max have more breathing room.
   tabBarLabel: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
     marginTop: 2,
   },
 });

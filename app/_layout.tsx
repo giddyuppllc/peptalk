@@ -529,57 +529,14 @@ function RootLayout() {
               animation: 'slide_from_right',
             }}
           />
-          <Stack.Screen
-            name="community/index"
-            options={{
-              headerShown: false,
-              animation: 'slide_from_right',
-            }}
-          />
-          <Stack.Screen
-            name="community/compose"
-            options={{
-              headerShown: false,
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
-            }}
-          />
-          <Stack.Screen
-            name="community/[id]"
-            options={{
-              headerShown: false,
-              animation: 'slide_from_right',
-            }}
-          />
-          <Stack.Screen
-            name="community/setup-username"
-            options={{
-              headerShown: false,
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
-            }}
-          />
-          <Stack.Screen
-            name="community/search"
-            options={{
-              headerShown: false,
-              animation: 'slide_from_right',
-            }}
-          />
-          <Stack.Screen
-            name="community/blocked-users"
-            options={{
-              headerShown: false,
-              animation: 'slide_from_right',
-            }}
-          />
-          <Stack.Screen
-            name="community/u/[username]"
-            options={{
-              headerShown: false,
-              animation: 'slide_from_right',
-            }}
-          />
+          {/* Community routes — moved into the (tabs)/community/ group
+              2026-05-14 so Community can be a real tab. The (tabs)
+              layout + community/_layout.tsx (Stack) handle navigation;
+              the previously-registered Stack.Screen entries here for
+              community/index, community/compose, community/[id],
+              community/setup-username, community/search,
+              community/blocked-users, community/u/[username] were
+              removed in the same commit. */}
           <Stack.Screen
             name="admin/community-queue"
             options={{

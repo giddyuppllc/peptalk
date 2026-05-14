@@ -24,12 +24,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { GlassCard } from '../../src/components/GlassCard';
-import { GradientButton } from '../../src/components/GradientButton';
-import { useTheme } from '../../src/hooks/useTheme';
-import { Spacing, FontSizes } from '../../src/constants/theme';
-import { useCommunityStore } from '../../src/store/useCommunityStore';
-import { pickAndUploadCommunityImage } from '../../src/services/communityImageUpload';
+import { GlassCard } from '../../../src/components/GlassCard';
+import { GradientButton } from '../../../src/components/GradientButton';
+import { useTheme } from '../../../src/hooks/useTheme';
+import { Spacing, FontSizes } from '../../../src/constants/theme';
+import { useCommunityStore } from '../../../src/store/useCommunityStore';
+import { pickAndUploadCommunityImage } from '../../../src/services/communityImageUpload';
 
 const MAX_IMAGES = 4;
 

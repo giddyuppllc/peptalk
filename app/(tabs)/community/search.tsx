@@ -17,11 +17,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../src/hooks/useTheme';
-import { Spacing, FontSizes } from '../../src/constants/theme';
-import { useCommunityStore } from '../../src/store/useCommunityStore';
-import { PostCard } from '../../src/components/community/PostCard';
-import type { CommunityPost } from '../../src/types/community';
+import { useTheme } from '../../../src/hooks/useTheme';
+import { Spacing, FontSizes } from '../../../src/constants/theme';
+import { useCommunityStore } from '../../../src/store/useCommunityStore';
+import { PostCard } from '../../../src/components/community/PostCard';
+import type { CommunityPost } from '../../../src/types/community';
 
 export default function CommunitySearchScreen() {
   const t = useTheme();

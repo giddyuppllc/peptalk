@@ -1149,8 +1149,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 40,
   },
+  // Native Stack header is `headerTransparent: true` for this route
+  // (see app/_layout.tsx peptide/[id] options). The back chevron floats
+  // on top of the scroll content. SafeAreaView clears the status-bar
+  // inset; this spacer clears the chevron itself (~44px iOS header bar
+  // height + a small breathing buffer).
   headerSpacer: {
-    height: 16,
+    height: 52,
   },
 
   // ── Not Found ───────────────────────────────────────────────

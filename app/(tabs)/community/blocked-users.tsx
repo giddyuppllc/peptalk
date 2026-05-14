@@ -10,10 +10,10 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { GlassCard } from '../../src/components/GlassCard';
-import { useTheme } from '../../src/hooks/useTheme';
-import { Spacing, FontSizes } from '../../src/constants/theme';
-import { useCommunityStore } from '../../src/store/useCommunityStore';
+import { GlassCard } from '../../../src/components/GlassCard';
+import { useTheme } from '../../../src/hooks/useTheme';
+import { Spacing, FontSizes } from '../../../src/constants/theme';
+import { useCommunityStore } from '../../../src/store/useCommunityStore';
 
 export default function BlockedUsersScreen() {
   const t = useTheme();
@@ -34,7 +34,7 @@ export default function BlockedUsersScreen() {
     (async () => {
       if (blockedUserIds.length === 0) return;
       try {
-        const { supabase } = await import('../../src/services/supabase');
+        const { supabase } = await import('../../../src/services/supabase');
         const { data } = await (supabase as any)
           .from('profiles')
           .select('id, username, display_name')

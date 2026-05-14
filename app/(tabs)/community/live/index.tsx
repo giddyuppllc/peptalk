@@ -21,8 +21,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../../src/hooks/useTheme';
-import { Spacing, FontSizes, BorderRadius } from '../../../src/constants/theme';
+import { useTheme } from '../../../../src/hooks/useTheme';
+import { Spacing, FontSizes, BorderRadius } from '../../../../src/constants/theme';
+import { useTier } from '../../../../src/hooks/useFeatureGate';
 
 interface EventRow {
   id: string;
@@ -39,13 +40,15 @@ interface EventRow {
 export default function LiveEventListScreen() {
   const router = useRouter();
   const t = useTheme();
+  const tier = useTier();
+  const isPaying = tier === 'plus' || tier === 'pro';
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = async () => {
     try {
-      const { supabase } = await import('../../../src/services/supabase');
+      const { supabase } = await import('../../../../src/services/supabase');
       const { data } = await (supabase as any)
         .from('community_live_events')
         .select(`
@@ -72,6 +75,43 @@ export default function LiveEventListScreen() {
     setRefreshing(true);
     load();
   };
+
+  // Free users hit a paywall on the entire Live surface (lobby + transcripts).
+  // Live chat is a Plus+ feature per product policy (Edward, 2026-05-14).
+  if (!isPaying) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
+            <Ionicons name="chevron-back" size={24} color={t.text} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: t.text }]}>Live events</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.paywallWrap}>
+          <View style={[styles.paywallIcon, { backgroundColor: `${t.primary}18` }]}>
+            <Ionicons name="radio" size={32} color={t.primary} />
+          </View>
+          <Text style={[styles.paywallTitle, { color: t.text }]}>
+            Live chat is a Plus member benefit
+          </Text>
+          <Text style={[styles.paywallBody, { color: t.textSecondary }]}>
+            Join admin-hosted live events to ask questions in real time,
+            chat with the PepTalk team, and learn alongside other members.
+            Available to PepTalk+ and Pro subscribers.
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.push('/subscription' as any)}
+            style={[styles.paywallCta, { backgroundColor: t.primary }]}
+            accessibilityRole="button"
+            accessibilityLabel="See subscription plans"
+          >
+            <Text style={styles.paywallCtaText}>See plans</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
@@ -202,4 +242,35 @@ const styles = StyleSheet.create({
   rowTitle: { flex: 1, fontSize: FontSizes.md, fontWeight: '800' },
   rowMeta: { fontSize: 11 },
   rowDesc: { fontSize: FontSizes.sm, lineHeight: 19, marginTop: 2 },
+
+  // Free-tier paywall upsell
+  paywallWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.lg,
+    gap: 14,
+  },
+  paywallIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  paywallTitle: { fontSize: 20, fontWeight: '800', textAlign: 'center' },
+  paywallBody: {
+    fontSize: FontSizes.sm,
+    lineHeight: 20,
+    textAlign: 'center',
+    maxWidth: 300,
+  },
+  paywallCta: {
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderRadius: 999,
+    marginTop: 12,
+  },
+  paywallCtaText: { color: '#fff', fontSize: FontSizes.sm, fontWeight: '800', letterSpacing: 0.4 },
 });

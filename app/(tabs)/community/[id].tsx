@@ -25,18 +25,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { GlassCard } from '../../src/components/GlassCard';
-import { useTheme } from '../../src/hooks/useTheme';
-import { Spacing, FontSizes } from '../../src/constants/theme';
-import { useCommunityStore } from '../../src/store/useCommunityStore';
-import { useAuthStore } from '../../src/store/useAuthStore';
-import { ReactionRow } from '../../src/components/community/ReactionRow';
-import { CommentItem } from '../../src/components/community/CommentItem';
-import { MentionText } from '../../src/components/community/MentionText';
+import { GlassCard } from '../../../src/components/GlassCard';
+import { useTheme } from '../../../src/hooks/useTheme';
+import { Spacing, FontSizes } from '../../../src/constants/theme';
+import { useCommunityStore } from '../../../src/store/useCommunityStore';
+import { useAuthStore } from '../../../src/store/useAuthStore';
+import { ReactionRow } from '../../../src/components/community/ReactionRow';
+import { CommentItem } from '../../../src/components/community/CommentItem';
+import { MentionText } from '../../../src/components/community/MentionText';
 import {
   REPORT_REASON_LABELS,
   type CommunityReportReason,
-} from '../../src/types/community';
+} from '../../../src/types/community';
 
 export default function PostDetailScreen() {
   const t = useTheme();

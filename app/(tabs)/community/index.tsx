@@ -25,16 +25,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { GlassCard } from '../../src/components/GlassCard';
-import { useTheme } from '../../src/hooks/useTheme';
-import { Spacing, FontSizes } from '../../src/constants/theme';
-import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
-import { useCommunityStore } from '../../src/store/useCommunityStore';
-import { PostCard } from '../../src/components/community/PostCard';
+import { GlassCard } from '../../../src/components/GlassCard';
+import { useTheme } from '../../../src/hooks/useTheme';
+import { Spacing, FontSizes } from '../../../src/constants/theme';
+import { useSubscriptionStore } from '../../../src/store/useSubscriptionStore';
+import { useCommunityStore } from '../../../src/store/useCommunityStore';
+import { PostCard } from '../../../src/components/community/PostCard';
 import {
   REPORT_REASON_LABELS,
   type CommunityReportReason,
-} from '../../src/types/community';
+} from '../../../src/types/community';
 
 type SortMode = 'new' | 'top_today' | 'top_week' | 'top_all';
 

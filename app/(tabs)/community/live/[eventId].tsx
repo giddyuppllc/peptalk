@@ -29,14 +29,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../../src/hooks/useTheme';
-import { Spacing, FontSizes, BorderRadius } from '../../../src/constants/theme';
-import { useLiveEventStore, type LiveMessage } from '../../../src/store/useLiveEventStore';
-import { useAuthStore } from '../../../src/store/useAuthStore';
-import { useCommunityStore } from '../../../src/store/useCommunityStore';
-import { useOnboardingStore } from '../../../src/store/useOnboardingStore';
-import { useTier } from '../../../src/hooks/useFeatureGate';
-import { LiveChatDisclaimerModal } from '../../../src/components/LiveChatDisclaimerModal';
+import { useTheme } from '../../../../src/hooks/useTheme';
+import { Spacing, FontSizes, BorderRadius } from '../../../../src/constants/theme';
+import { useLiveEventStore, type LiveMessage } from '../../../../src/store/useLiveEventStore';
+import { useAuthStore } from '../../../../src/store/useAuthStore';
+import { useCommunityStore } from '../../../../src/store/useCommunityStore';
+import { useOnboardingStore } from '../../../../src/store/useOnboardingStore';
+import { useTier } from '../../../../src/hooks/useFeatureGate';
+import { LiveChatDisclaimerModal } from '../../../../src/components/LiveChatDisclaimerModal';
 
 export default function LiveEventChatScreen() {
   const router = useRouter();
@@ -106,7 +106,7 @@ export default function LiveEventChatScreen() {
     }
     setSending(true);
     try {
-      const { supabase } = await import('../../../src/services/supabase');
+      const { supabase } = await import('../../../../src/services/supabase');
       const { data, error } = await supabase.functions.invoke('community-live-send-message', {
         body: { eventId, body },
       });
@@ -208,7 +208,7 @@ export default function LiveEventChatScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            const { supabase } = await import('../../../src/services/supabase');
+            const { supabase } = await import('../../../../src/services/supabase');
             const { data, error } = await supabase.functions.invoke('community-live-delete-message', {
               body: { messageId },
             });
@@ -233,7 +233,7 @@ export default function LiveEventChatScreen() {
       return;
     }
     try {
-      const { supabase } = await import('../../../src/services/supabase');
+      const { supabase } = await import('../../../../src/services/supabase');
       const { data, error } = await supabase.functions.invoke('community-live-edit-message', {
         body: { messageId: editingId, body: editingDraft.trim() },
       });
@@ -262,7 +262,7 @@ export default function LiveEventChatScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            const { supabase } = await import('../../../src/services/supabase');
+            const { supabase } = await import('../../../../src/services/supabase');
             const { error } = await supabase.functions.invoke('community-live-end', {
               body: { eventId },
             });
@@ -278,6 +278,48 @@ export default function LiveEventChatScreen() {
       },
     ]);
   };
+
+  // Plus+ paywall — live chat is a paying-members-only feature
+  // (Edward, 2026-05-14). Free users hitting this route (via push, deep
+  // link, lobby link) see an upsell instead of the transcript. The host
+  // bypasses this even at lower tiers (they're hosting the event).
+  if (!isHost && tier !== 'plus' && tier !== 'pro') {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
+        <View style={[styles.header, { borderBottomColor: t.cardBorder }]}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Leave"
+          >
+            <Ionicons name="chevron-back" size={24} color={t.text} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }} />
+        </View>
+        <View style={{ flex: 1, padding: Spacing.lg, alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+          <View style={{ width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: `${t.primary}18` }}>
+            <Ionicons name="radio" size={32} color={t.primary} />
+          </View>
+          <Text style={{ fontSize: 20, fontWeight: '800', textAlign: 'center', color: t.text }}>
+            Live chat is for paying members
+          </Text>
+          <Text style={{ fontSize: FontSizes.sm, lineHeight: 20, textAlign: 'center', maxWidth: 300, color: t.textSecondary }}>
+            Join admin-hosted live events to ask questions in real time and
+            chat with the PepTalk team. Available to PepTalk+ and Pro members.
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.push('/subscription' as any)}
+            style={{ paddingVertical: 12, paddingHorizontal: 28, borderRadius: 999, marginTop: 12, backgroundColor: t.primary }}
+            accessibilityRole="button"
+            accessibilityLabel="See subscription plans"
+          >
+            <Text style={{ color: '#fff', fontSize: FontSizes.sm, fontWeight: '800', letterSpacing: 0.4 }}>See plans</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
