@@ -337,7 +337,7 @@ export async function purchaseProduct(
     const android = products?.[0];
     offerToken = android?.subscriptionOfferDetails?.[0]?.offerToken ?? '';
     if (__DEV__ && !offerToken) {
-      console.warn('[iapService] No subscriptionOfferDetails for', productId);
+      if (__DEV__) console.warn('[iapService] No subscriptionOfferDetails for', productId);
     }
   } catch (err) {
     if (__DEV__) console.warn('[iapService] Failed to fetch offers, falling back:', err);

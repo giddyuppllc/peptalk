@@ -324,13 +324,13 @@ export const useDoseLogStore = create<DoseLogStore>()(
             scheduleDoseReminder?.(input.peptideId, peptideName, reminderTime, input.frequency)
               ?.catch?.((err: unknown) => {
                 if (typeof __DEV__ !== 'undefined' && (__DEV__ as boolean)) {
-                  console.warn('[useDoseLogStore] scheduleDoseReminder failed:', err);
+                  if (__DEV__) console.warn('[useDoseLogStore] scheduleDoseReminder failed:', err);
                 }
               });
           }
         } catch (err) {
           if (typeof __DEV__ !== 'undefined' && (__DEV__ as boolean)) {
-            console.warn('[useDoseLogStore] dose reminder scheduling threw:', err);
+            if (__DEV__) console.warn('[useDoseLogStore] dose reminder scheduling threw:', err);
           }
         }
       },

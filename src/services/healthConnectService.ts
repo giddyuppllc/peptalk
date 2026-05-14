@@ -81,7 +81,7 @@ export async function requestHealthConnectPermissions(): Promise<boolean> {
 
     return false;
   } catch (error) {
-    console.warn('[HealthConnect] Permission request failed:', error);
+    if (__DEV__) console.warn('[HealthConnect] Permission request failed:', error);
     return false;
   }
 }
@@ -114,7 +114,7 @@ export async function fetchTodaySteps(): Promise<number | null> {
 
     return null;
   } catch (error) {
-    console.warn('[HealthConnect] Failed to fetch steps:', error);
+    if (__DEV__) console.warn('[HealthConnect] Failed to fetch steps:', error);
     return null;
   }
 }
@@ -145,7 +145,7 @@ export async function fetchLatestWeight(): Promise<number | null> {
 
     return null;
   } catch (error) {
-    console.warn('[HealthConnect] Failed to fetch weight:', error);
+    if (__DEV__) console.warn('[HealthConnect] Failed to fetch weight:', error);
     return null;
   }
 }
@@ -175,7 +175,7 @@ export async function fetchLatestHeartRate(): Promise<number | null> {
 
     return null;
   } catch (error) {
-    console.warn('[HealthConnect] Failed to fetch heart rate:', error);
+    if (__DEV__) console.warn('[HealthConnect] Failed to fetch heart rate:', error);
     return null;
   }
 }
@@ -233,7 +233,7 @@ export async function fetchLastNightSleep(): Promise<number | null> {
 
     return null;
   } catch (error) {
-    console.warn('[HealthConnect] Failed to fetch sleep data:', error);
+    if (__DEV__) console.warn('[HealthConnect] Failed to fetch sleep data:', error);
     return null;
   }
 }
@@ -340,7 +340,7 @@ export async function fetchCycleData(): Promise<CycleData | null> {
 
     return { currentFlow, lastPeriodStart, cycleDay, phase, contraceptiveType: null };
   } catch (error) {
-    console.warn('[HealthConnect] Failed to fetch cycle data:', error);
+    if (__DEV__) console.warn('[HealthConnect] Failed to fetch cycle data:', error);
     return null;
   }
 }

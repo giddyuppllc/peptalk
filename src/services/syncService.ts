@@ -84,12 +84,12 @@ export async function syncRecord(
       .upsert({ ...record, user_id: userId }, { onConflict: 'id' });
 
     if (error) {
-      console.warn(`[sync] ${table} upsert failed:`, error.message);
+      if (__DEV__) console.warn(`[sync] ${table} upsert failed:`, error.message);
       return false;
     }
     return true;
   } catch (e) {
-    console.warn(`[sync] ${table} sync error:`, e);
+    if (__DEV__) console.warn(`[sync] ${table} sync error:`, e);
     return false;
   }
 }
@@ -111,7 +111,7 @@ export async function insertRecord(
 
     if (error) console.warn(`[sync] ${table} insert failed:`, error.message);
   } catch (e) {
-    console.warn(`[sync] ${table} sync error:`, e);
+    if (__DEV__) console.warn(`[sync] ${table} sync error:`, e);
   }
 }
 
@@ -134,7 +134,7 @@ export async function deleteRecord(
 
     if (error) console.warn(`[sync] ${table} delete failed:`, error.message);
   } catch (e) {
-    console.warn(`[sync] ${table} sync error:`, e);
+    if (__DEV__) console.warn(`[sync] ${table} sync error:`, e);
   }
 }
 
@@ -169,13 +169,13 @@ export async function fetchUserRecords<T = Record<string, unknown>>(
     const { data, error } = await query;
 
     if (error) {
-      console.warn(`[sync] ${table} fetch failed:`, error.message);
+      if (__DEV__) console.warn(`[sync] ${table} fetch failed:`, error.message);
       return [];
     }
 
     return (data ?? []) as T[];
   } catch (e) {
-    console.warn(`[sync] ${table} fetch error:`, e);
+    if (__DEV__) console.warn(`[sync] ${table} fetch error:`, e);
     return [];
   }
 }
@@ -207,7 +207,7 @@ export async function syncHealthProfile(
 
     if (error) console.warn('[sync] health_profiles upsert failed:', error.message);
   } catch (e) {
-    console.warn('[sync] health_profiles sync error:', e);
+    if (__DEV__) console.warn('[sync] health_profiles sync error:', e);
   }
 }
 
@@ -230,7 +230,7 @@ export async function batchSync(
 
     if (error) console.warn(`[sync] ${table} batch failed:`, error.message);
   } catch (e) {
-    console.warn(`[sync] ${table} batch error:`, e);
+    if (__DEV__) console.warn(`[sync] ${table} batch error:`, e);
   }
 }
 
@@ -272,7 +272,7 @@ export async function hydrateFromServer<Row, Entry extends { id: string }>(
   } catch (e) {
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
       // eslint-disable-next-line no-console
-      console.warn(`[sync] ${table} hydrate failed:`, e);
+      if (__DEV__) console.warn(`[sync] ${table} hydrate failed:`, e);
     }
     return localEntries;
   }
@@ -291,6 +291,6 @@ export async function syncSubscriptionTier(tier: string): Promise<void> {
       .update({ subscription_tier: tier, is_pro: tier === 'pro' })
       .eq('id', userId);
   } catch (e) {
-    console.warn('[sync] tier sync error:', e);
+    if (__DEV__) console.warn('[sync] tier sync error:', e);
   }
 }

@@ -96,7 +96,7 @@ export async function requestHealthKitPermissions(): Promise<boolean> {
 
     return true;
   } catch (error) {
-    console.warn('[HealthKit] Permission request failed:', error);
+    if (__DEV__) console.warn('[HealthKit] Permission request failed:', error);
     return false;
   }
 }
@@ -121,7 +121,7 @@ export async function fetchTodaySteps(): Promise<number | null> {
 
     return samples?.sumQuantity?.doubleValue ?? null;
   } catch (error) {
-    console.warn('[HealthKit] Failed to fetch steps:', error);
+    if (__DEV__) console.warn('[HealthKit] Failed to fetch steps:', error);
     return null;
   }
 }
@@ -145,7 +145,7 @@ export async function fetchLatestWeight(): Promise<number | null> {
 
     return null;
   } catch (error) {
-    console.warn('[HealthKit] Failed to fetch weight:', error);
+    if (__DEV__) console.warn('[HealthKit] Failed to fetch weight:', error);
     return null;
   }
 }
@@ -167,7 +167,7 @@ export async function fetchLatestHeartRate(): Promise<number | null> {
 
     return null;
   } catch (error) {
-    console.warn('[HealthKit] Failed to fetch heart rate:', error);
+    if (__DEV__) console.warn('[HealthKit] Failed to fetch heart rate:', error);
     return null;
   }
 }
@@ -206,7 +206,7 @@ export async function fetchLastNightSleep(): Promise<number | null> {
     if (totalMinutes === 0) return null;
     return Math.round((totalMinutes / 60) * 10) / 10;
   } catch (error) {
-    console.warn('[HealthKit] Failed to fetch sleep data:', error);
+    if (__DEV__) console.warn('[HealthKit] Failed to fetch sleep data:', error);
     return null;
   }
 }
@@ -312,7 +312,7 @@ export async function fetchSleepStages(): Promise<SleepStages | null> {
       qualityScore,
     };
   } catch (error) {
-    console.warn('[HealthKit] Failed to fetch sleep stages:', error);
+    if (__DEV__) console.warn('[HealthKit] Failed to fetch sleep stages:', error);
     return null;
   }
 }
@@ -339,7 +339,7 @@ export async function fetchLatestHRV(): Promise<number | null> {
 
     return null;
   } catch (error) {
-    console.warn('[HealthKit] Failed to fetch HRV:', error);
+    if (__DEV__) console.warn('[HealthKit] Failed to fetch HRV:', error);
     return null;
   }
 }
@@ -365,7 +365,7 @@ export async function fetchLatestVO2Max(): Promise<number | null> {
 
     return null;
   } catch (error) {
-    console.warn('[HealthKit] Failed to fetch VO2 max:', error);
+    if (__DEV__) console.warn('[HealthKit] Failed to fetch VO2 max:', error);
     return null;
   }
 }
@@ -392,7 +392,7 @@ export async function fetchLatestSpO2(): Promise<number | null> {
 
     return null;
   } catch (error) {
-    console.warn('[HealthKit] Failed to fetch SpO2:', error);
+    if (__DEV__) console.warn('[HealthKit] Failed to fetch SpO2:', error);
     return null;
   }
 }
@@ -418,7 +418,7 @@ export async function fetchLatestRespiratoryRate(): Promise<number | null> {
 
     return null;
   } catch (error) {
-    console.warn('[HealthKit] Failed to fetch respiratory rate:', error);
+    if (__DEV__) console.warn('[HealthKit] Failed to fetch respiratory rate:', error);
     return null;
   }
 }
@@ -445,7 +445,7 @@ export async function fetchLatestRestingHeartRate(): Promise<number | null> {
 
     return null;
   } catch (error) {
-    console.warn('[HealthKit] Failed to fetch resting heart rate:', error);
+    if (__DEV__) console.warn('[HealthKit] Failed to fetch resting heart rate:', error);
     return null;
   }
 }
@@ -472,7 +472,7 @@ export async function fetchTodayActiveEnergy(): Promise<number | null> {
       ? Math.round(samples.sumQuantity.doubleValue)
       : null;
   } catch (error) {
-    console.warn('[HealthKit] Failed to fetch active energy:', error);
+    if (__DEV__) console.warn('[HealthKit] Failed to fetch active energy:', error);
     return null;
   }
 }
@@ -521,7 +521,7 @@ export function enableBackgroundObservers(onUpdate: HealthDataCallback): () => v
         observerSubscriptions.push(subscription);
       }
     } catch (error) {
-      console.warn(`[HealthKit] Failed to observe ${type}:`, error);
+      if (__DEV__) console.warn(`[HealthKit] Failed to observe ${type}:`, error);
     }
   }
 
@@ -724,7 +724,7 @@ export async function fetchCycleData(): Promise<CycleData | null> {
 
     return { currentFlow, lastPeriodStart, cycleDay, phase, contraceptiveType, cervicalMucus, ovulationResult };
   } catch (error) {
-    console.warn('[HealthKit] Failed to fetch cycle data:', error);
+    if (__DEV__) console.warn('[HealthKit] Failed to fetch cycle data:', error);
     return null;
   }
 }

@@ -105,6 +105,19 @@ Deno.serve(async (req) => {
     // so users can't reset their counter by deleting their own chat history.
     const rateLimit = await checkRateLimit(supabase, user.id, 'aimee-chat', limit);
     if (!rateLimit.allowed) {
+      // Distinguish a real cap-hit from a transient infrastructure failure:
+      // - cap-hit → 429 with the daily-limit copy + upgrade nudge
+      // - failed-closed → 503 with "temporarily unavailable" so users
+      //   retry once the DB recovers instead of thinking they hit the cap.
+      if (rateLimit.failedClosed) {
+        return new Response(JSON.stringify({
+          error: 'Aimee is temporarily unavailable — please try again in a minute.',
+          retryAfter: rateLimit.retryAfter,
+        }), {
+          status: 503,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       return new Response(JSON.stringify({
         error: `Daily message limit reached (${rateLimit.limit}/day)${tier === 'plus' ? '. Upgrade to Pro for more.' : '. Resets tomorrow.'}`,
         upgrade: tier === 'plus',
@@ -259,7 +272,7 @@ async function checkRateLimit(
   userId: string,
   functionName: string,
   limit: number,
-): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number }> {
+): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number; failedClosed?: boolean }> {
   const today = new Date().toISOString().slice(0, 10);
   try {
     const { data: existing } = await supabase
@@ -291,7 +304,12 @@ async function checkRateLimit(
       );
     return { allowed: true, limit, count: count + 1 };
   } catch (err) {
-    console.warn(`[${functionName}] rate-limit check failed, allowing:`, err);
-    return { allowed: true, limit, count: 0 };
+    // Fail CLOSED. If we can't reach ai_usage_log we cannot enforce the
+    // per-user cap, and the function fans out to the LLM provider —
+    // unlimited spam quickly translates to real money. Better to return
+    // a transient error to the caller and let them retry once the DB
+    // recovers than to leave the cost door wide open.
+    console.error(`[${functionName}] rate-limit check failed; failing closed:`, err);
+    return { allowed: false, limit, count: 0, retryAfter: 60, failedClosed: true };
   }
 }

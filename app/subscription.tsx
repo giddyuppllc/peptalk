@@ -120,21 +120,25 @@ const TIERS: TierInfo[] = [
   },
 ];
 
+// Honest, verifiable claims only — Apple 5.6 (Developer Code of Conduct)
+// prohibits misleading metadata. Numbers below are pulled from the actual
+// shipped data and architecture, so anything a reviewer cross-checks is
+// real.
 const SOCIAL_PROOF = [
   {
-    icon: 'people' as const,
-    title: '10,000+',
-    body: 'peptide researchers tracking with PepTalk',
+    icon: 'flask-outline' as const,
+    title: '55+ peptides',
+    body: 'cited research library, fully offline',
   },
   {
-    icon: 'timer-outline' as const,
-    title: '15 min/day',
-    body: 'saved on tracking with smart automations',
+    icon: 'lock-closed-outline' as const,
+    title: 'Private by default',
+    body: 'health data encrypted on-device',
   },
   {
     icon: 'shield-checkmark-outline' as const,
-    title: '7-day trial',
-    body: 'try anything risk-free, cancel anytime',
+    title: 'Cancel anytime',
+    body: 'manage your subscription from your Apple ID at any time',
   },
 ];
 
@@ -664,17 +668,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tierCta: { marginTop: 14, gap: 8 },
-  trialText: {
-    fontSize: 12,
-    fontFamily: 'DMSans-SemiBold',
-    color: Colors.pepTeal,
-    textAlign: 'center',
-  },
+  // Auto-renew disclosure font bumped to 13/lh18 for Apple 3.1.2 prominence.
+  // Color #4B5563 (Gray-600) gives ~7:1 contrast on white surface — well
+  // above WCAG AA 4.5:1, well above what reviewers expect for "clear and prominent."
   renewDisclosure: {
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 13,
+    lineHeight: 18,
     fontFamily: 'DMSans-Regular',
-    color: '#6B7280',
+    color: '#4B5563',
     textAlign: 'center',
   },
 

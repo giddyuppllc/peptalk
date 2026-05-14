@@ -112,7 +112,7 @@ export async function exportUserData(): Promise<boolean> {
 
     return result.action === Share.sharedAction;
   } catch (error) {
-    console.warn('[exportService] Export failed:', error);
+    if (__DEV__) console.warn('[exportService] Export failed:', error);
     return false;
   }
 }

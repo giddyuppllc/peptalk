@@ -201,9 +201,14 @@ export default function ComposePostScreen() {
             Photos {imageUrls.length > 0 ? `(${imageUrls.length}/${MAX_IMAGES})` : '(optional)'}
           </Text>
           <View style={styles.imagesRow}>
-            {imageUrls.map((url) => (
+            {imageUrls.map((url, idx) => (
               <View key={url} style={styles.imageWrap}>
-                <Image source={{ uri: url }} style={styles.imageThumb} />
+                <Image
+                  source={{ uri: url }}
+                  style={styles.imageThumb}
+                  accessibilityRole="image"
+                  accessibilityLabel={`Attached image ${idx + 1} of ${imageUrls.length}`}
+                />
                 <TouchableOpacity
                   onPress={() => handleRemoveImage(url)}
                   style={styles.imageRemove}

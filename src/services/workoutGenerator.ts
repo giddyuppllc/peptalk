@@ -221,7 +221,7 @@ export function generateWorkout(
   }
 
   if (__DEV__ && warnings.length > 0) {
-    console.warn('[workoutGenerator] Generation warnings:', warnings);
+    if (__DEV__) console.warn('[workoutGenerator] Generation warnings:', warnings);
   }
 
   return {

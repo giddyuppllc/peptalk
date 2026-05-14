@@ -1532,7 +1532,7 @@ export default function ProfileScreen() {
               onPress={() => {
                 useTutorialStore.getState().resetTour();
                 useTutorialStore.getState().startTour();
-                router.push('/(tabs)/' as any);
+                router.push('/(tabs)' as any);
               }}
               color={t.text}
             />

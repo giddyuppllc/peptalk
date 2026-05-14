@@ -181,7 +181,7 @@ export const useAuthStore = create<AuthStore>()(
           set({ user: appUser, isAuthenticated: true, isLoading: false });
           trackLoginSucceeded();
         } catch (error: any) {
-          console.error('[useAuthStore] Login failed:', error);
+          if (__DEV__) console.error('[useAuthStore] Login failed:', error);
           set({ isLoading: false });
           trackLoginFailed(error?.message ?? 'unknown');
           throw error;
@@ -259,7 +259,7 @@ export const useAuthStore = create<AuthStore>()(
           set({ user: appUser, isAuthenticated: true, isLoading: false });
           trackSignupCompleted();
         } catch (error: any) {
-          console.error('[useAuthStore] Signup failed:', error);
+          if (__DEV__) console.error('[useAuthStore] Signup failed:', error);
           set({ isLoading: false });
           trackSignupFailed(error?.message ?? 'unknown');
           throw error;

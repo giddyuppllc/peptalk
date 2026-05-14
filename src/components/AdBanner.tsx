@@ -70,7 +70,7 @@ export default function AdBanner({ style }: AdBannerProps) {
           setAdFailed(false);
         }}
         onAdFailedToLoad={(error: any) => {
-          console.warn('[AdBanner] Ad failed to load:', error?.message);
+          if (__DEV__) console.warn('[AdBanner] Ad failed to load:', error?.message);
           setAdFailed(true);
           setAdLoaded(false);
         }}

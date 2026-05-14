@@ -831,34 +831,12 @@ function RootLayout() {
             name="nutrition/food-scanner"
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
-          <Stack.Screen
-            name="workouts/my-workouts"
-            options={{ headerShown: false, animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="workouts/build-workout"
-            options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
-          />
-          <Stack.Screen
-            name="workouts/generated-tracker"
-            options={{ headerShown: false, animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="nutrition/voice-log"
-            options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
-          />
-          <Stack.Screen
-            name="nutrition/meal-scan"
-            options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
-          />
-          <Stack.Screen
-            name="nutrition/copy-previous-meal"
-            options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
-          />
-          <Stack.Screen
-            name="nutrition/create-food"
-            options={{ headerShown: false, animation: 'slide_from_right' }}
-          />
+          {/* Nutrition meal-plan — unique to this block. The other five
+              nutrition routes (voice-log, meal-scan, create-food,
+              copy-previous-meal) and three workouts routes (my-workouts,
+              build-workout, generated-tracker) were duplicated here and
+              earlier in the file; removed the duplicates 2026-05-09 because
+              expo-router undefined-behaves on duplicate names. */}
           <Stack.Screen
             name="nutrition/meal-plan"
             options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}

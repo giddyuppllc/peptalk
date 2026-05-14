@@ -104,7 +104,7 @@ export const useStackStore = create<StackStore>()(
           const analysis = await analyzeStack(currentStack);
           set({ currentAnalysis: analysis, isAnalyzing: false });
         } catch (error) {
-          console.error('[useStackStore] Analysis failed:', error);
+          if (__DEV__) console.error('[useStackStore] Analysis failed:', error);
           set({ isAnalyzing: false });
         }
       },

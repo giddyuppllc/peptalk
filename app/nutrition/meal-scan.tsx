@@ -67,7 +67,9 @@ async function detectFoodsFromPhoto(photoUri: string): Promise<string[]> {
     // Empty array: vision ran but saw nothing recognizable
     return [];
   } catch (err) {
-    console.warn('[meal-scan] vision detection failed:', err);
+    if (__DEV__) {
+      console.warn('[meal-scan] vision detection failed:', err);
+    }
     // Return empty instead of fake foods so user knows detection failed
     return [];
   }

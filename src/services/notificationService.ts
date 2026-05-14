@@ -76,7 +76,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
   if (Device && !Device.isDevice) {
     if (__DEV__) {
-      console.warn('[notificationService] Push notifications require a physical device.');
+      if (__DEV__) console.warn('[notificationService] Push notifications require a physical device.');
     }
     return null;
   }
@@ -101,7 +101,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
   if (finalStatus !== 'granted') {
     if (__DEV__) {
-      console.warn('[notificationService] Notification permission not granted.');
+      if (__DEV__) console.warn('[notificationService] Notification permission not granted.');
     }
     return null;
   }

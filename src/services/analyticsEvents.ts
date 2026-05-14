@@ -58,7 +58,7 @@ export const sendAnalyticsEvent = async (
       body: JSON.stringify(payload),
     });
   } catch (error) {
-    console.warn('[Analytics] Failed to send event', error);
+    if (__DEV__) console.warn('[Analytics] Failed to send event', error);
   }
 };
 
