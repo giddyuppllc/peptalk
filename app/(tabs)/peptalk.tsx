@@ -23,6 +23,8 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { ChatBubble, TypingIndicator } from '../../src/components/ChatBubble';
+import { AimeePendingActionCard } from '../../src/components/AimeePendingActionCard';
+import { AimeeToolResultCard } from '../../src/components/AimeeToolResultCard';
 import { getAimeeNudges } from '../../src/services/aimeeNudges';
 import { PepTalkCharacter } from '../../src/components/PepTalkCharacter';
 import { AimeeDnaIcon } from '../../src/components/AimeeDnaIcon';
@@ -37,7 +39,11 @@ import { useStackStore } from '../../src/store/useStackStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { generateLocalBotResponse } from '../../src/services/peptalkBot';
-import { generateAIResponse, isAIAvailable } from '../../src/services/llmService';
+import {
+  generateAIResponse,
+  generateAIResponseStream,
+  isAIAvailable,
+} from '../../src/services/llmService';
 import { canSendToCloud } from '../../src/services/privacyGuard';
 import { generateCorrelationInsights, buildCorrelationSummaryForBot } from '../../src/services/watchCorrelationService';
 import { getPeptideById } from '../../src/data/peptides';
@@ -122,6 +128,7 @@ export default function PepTalkScreen() {
   const messages = useChatStore((s) => s.messages);
   const isTyping = useChatStore((s) => s.isTyping);
   const addMessage = useChatStore((s) => s.addMessage);
+  const updateMessage = useChatStore((s) => s.updateMessage);
   const setTyping = useChatStore((s) => s.setTyping);
   const profile = useOnboardingStore((s) => s.profile);
   const checkIns = useCheckinStore((s) => s.entries);
@@ -221,6 +228,126 @@ export default function PepTalkScreen() {
     [addMessage, addJournalEntry],
   );
 
+  /**
+   * Stream an Aimee response from the new Claude-backed endpoint.
+   *
+   * Flow:
+   *   1. Insert an empty assistant bubble immediately (so the typing
+   *      indicator gives way to a real bubble that fills with text).
+   *   2. Iterate SSE events, patching the bubble with each delta.
+   *   3. Tool calls and pending actions land on the bubble as structured
+   *      `toolResults` / `pendingActions` so the renderer can show cards.
+   *
+   * Returns `true` on a successful stream (regardless of model output); the
+   * caller can use that to decide whether to fall back to the legacy
+   * non-streaming path or the local bot.
+   */
+  const streamAimeeResponse = useCallback(
+    async (text: string, context: EnhancedBotContext): Promise<boolean> => {
+      const placeholderId = `bot-stream-${Date.now()}`;
+      const placeholder: ChatMessage = {
+        id: placeholderId,
+        role: 'bot',
+        content: '',
+        timestamp: new Date().toISOString(),
+        streaming: true,
+      };
+      addMessage(placeholder);
+
+      let accumulated = '';
+      const toolResults: NonNullable<ChatMessage['toolResults']> = [];
+      const pendingActions: NonNullable<ChatMessage['pendingActions']> = [];
+      let sawAnyEvent = false;
+      let stillStreaming = true;
+
+      try {
+        for await (const ev of generateAIResponseStream(text, context)) {
+          sawAnyEvent = true;
+          if (ev.type === 'text_delta' && ev.text) {
+            accumulated += ev.text;
+            updateMessage(placeholderId, { content: accumulated });
+          } else if (ev.type === 'tool_result' && ev.tool && ev.output) {
+            const isPending =
+              typeof (ev.output as any)?.pending_action_id === 'string' &&
+              (ev.output as any)?.requires_confirm === true;
+            toolResults.push({
+              tool: ev.tool,
+              output: ev.output as Record<string, unknown>,
+              isPending,
+            });
+            updateMessage(placeholderId, { toolResults: [...toolResults] });
+          } else if (
+            ev.type === 'pending_action' &&
+            ev.id &&
+            ev.tool &&
+            ev.preview
+          ) {
+            pendingActions.push({
+              id: ev.id,
+              tool: ev.tool,
+              preview: ev.preview as Record<string, unknown>,
+              status: 'pending',
+            });
+            updateMessage(placeholderId, {
+              pendingActions: [...pendingActions],
+            });
+          } else if (ev.type === 'done') {
+            stillStreaming = false;
+            updateMessage(placeholderId, { streaming: false });
+          } else if (ev.type === 'error') {
+            // Don't surface the placeholder as an error — drop a friendly
+            // line so it doesn't render as an empty bubble. The caller
+            // fallback path will not run because sawAnyEvent is true.
+            if (!accumulated) {
+              updateMessage(placeholderId, {
+                content:
+                  ev.message ?? 'I had trouble responding. Please try again.',
+                streaming: false,
+              });
+            } else {
+              updateMessage(placeholderId, { streaming: false });
+            }
+            stillStreaming = false;
+            return true;
+          } else if (ev.type === 'denied') {
+            const upgrade = ev.upgrade === true;
+            updateMessage(placeholderId, {
+              content: ev.message ?? 'Aimee requires an upgrade.',
+              streaming: false,
+              quickReplies: upgrade ? ['View subscription plans'] : undefined,
+              navAction: upgrade ? '/subscription' : undefined,
+              actions: upgrade
+                ? [
+                    {
+                      label: 'See plans',
+                      route: '/subscription',
+                      icon: 'sparkles-outline',
+                    },
+                  ]
+                : undefined,
+            });
+            return true;
+          }
+        }
+      } catch (err) {
+        if (__DEV__) console.warn('[aimee] stream iterator threw:', err);
+        if (!sawAnyEvent) return false;
+      }
+
+      if (stillStreaming) {
+        // Iterator closed without a 'done' event — finalize anyway.
+        updateMessage(placeholderId, { streaming: false });
+      }
+      // If the model didn't emit any text or actions, treat as a failed run
+      // so the local fallback runs.
+      if (!sawAnyEvent || (accumulated.trim().length === 0 && toolResults.length === 0)) {
+        return false;
+      }
+      return true;
+    },
+    [addMessage, updateMessage],
+  );
+
   // Handle pre-filled message: auto-send it if chat is empty
   useEffect(() => {
     if (prefillMessage && !messageHandled.current && messages.length === 0) {
@@ -245,21 +372,36 @@ export default function PepTalkScreen() {
         }
       };
       if (useAI) {
+        // Prefer streaming Claude path. On failure or empty stream, fall
+        // through to the legacy non-streaming endpoint, then local.
+        setTyping(false);
         withTimeout(
-          generateAIResponse(prefillMessage, context),
+          streamAimeeResponse(prefillMessage, context),
           AIMEE_RESPONSE_TIMEOUT_MS,
-          'aimee prefill response',
+          'aimee prefill stream',
         )
-          .then((aiResponse) => {
-            if (aiResponse) {
-              handleBotResponse(aiResponse);
-              setTyping(false);
-            } else {
-              setTimeout(localFallback, 400 + Math.random() * 600);
+          .then(async (streamed) => {
+            if (streamed) return;
+            setTyping(true);
+            try {
+              const aiResponse = await withTimeout(
+                generateAIResponse(prefillMessage, context),
+                AIMEE_RESPONSE_TIMEOUT_MS,
+                'aimee prefill response',
+              );
+              if (aiResponse) {
+                handleBotResponse(aiResponse);
+                setTyping(false);
+              } else {
+                setTimeout(localFallback, 400 + Math.random() * 600);
+              }
+            } catch (err) {
+              if (__DEV__) console.warn('[aimee] prefill legacy failed:', err);
+              localFallback();
             }
           })
           .catch((err) => {
-            if (__DEV__) console.warn('[aimee] prefill AI failed/timed out:', err);
+            if (__DEV__) console.warn('[aimee] prefill stream failed/timed out:', err);
             localFallback();
           });
       } else {
@@ -273,6 +415,8 @@ export default function PepTalkScreen() {
     setTyping,
     buildContext,
     useAI,
+    streamAimeeResponse,
+    handleBotResponse,
   ]);
 
   // Scroll to bottom when messages change
@@ -302,9 +446,27 @@ export default function PepTalkScreen() {
     const context = buildContext();
 
     if (useAI) {
-      // Try Grok AI first, fall back to local bot. Wrapped so a throw
-      // OR a hang from generateAIResponse (network failure, edge fn stall,
-      // malformed JSON) doesn't strand the typing indicator forever.
+      // 1. Try the streaming Claude-backed endpoint first.
+      //
+      // The streaming helper returns true when SSE produced at least one
+      // event AND something useful (text or tool call) landed on the
+      // bubble. The placeholder bubble is inserted by the helper, so
+      // setTyping is flipped off before the stream starts to avoid
+      // double indicators.
+      setTyping(false);
+      try {
+        const streamed = await withTimeout(
+          streamAimeeResponse(text, context),
+          AIMEE_RESPONSE_TIMEOUT_MS,
+          'aimee stream',
+        );
+        if (streamed) return;
+      } catch (err) {
+        if (__DEV__) console.warn('[aimee] stream failed/timed out:', err);
+      }
+
+      // 2. Fall back to the legacy non-streaming endpoint (Grok-backed).
+      setTyping(true);
       try {
         const aiResponse = await withTimeout(
           generateAIResponse(text, context),
@@ -318,19 +480,16 @@ export default function PepTalkScreen() {
         }
       } catch (err) {
         if (__DEV__) console.warn('[aimee] generateAIResponse failed/timed out:', err);
-        // fall through to local fallback
       }
     }
 
-    // Local fallback (no API key, no consent, API failure, timeout, thrown error)
+    // 3. Local fallback (no API key, no consent, API failure, timeout, thrown error)
     setTimeout(() => {
       try {
         const botResponse = generateLocalBotResponse(text, context);
         handleBotResponse(botResponse);
       } catch (err) {
         if (__DEV__) console.warn('[aimee] local fallback threw:', err);
-        // Last-resort: a hand-written apology message so the user is never
-        // left staring at a frozen typing indicator.
         handleBotResponse({
           id: `bot-${Date.now()}`,
           role: 'bot',
@@ -341,7 +500,15 @@ export default function PepTalkScreen() {
         setTyping(false);
       }
     }, 400 + Math.random() * 600);
-  }, [inputText, addMessage, handleBotResponse, setTyping, buildContext, useAI]);
+  }, [
+    inputText,
+    addMessage,
+    handleBotResponse,
+    setTyping,
+    buildContext,
+    useAI,
+    streamAimeeResponse,
+  ]);
 
   const handleQuickReply = useCallback(
     async (reply: string) => {
@@ -360,6 +527,19 @@ export default function PepTalkScreen() {
       const context = buildContext();
 
       if (useAI) {
+        setTyping(false);
+        try {
+          const streamed = await withTimeout(
+            streamAimeeResponse(reply, context),
+            AIMEE_RESPONSE_TIMEOUT_MS,
+            'aimee quick-reply stream',
+          );
+          if (streamed) return;
+        } catch (err) {
+          if (__DEV__) console.warn('[aimee] quick-reply stream failed/timed out:', err);
+        }
+
+        setTyping(true);
         try {
           const aiResponse = await withTimeout(
             generateAIResponse(reply, context),
@@ -394,7 +574,7 @@ export default function PepTalkScreen() {
         }
       }, 400 + Math.random() * 600);
     },
-    [addMessage, setTyping, buildContext, useAI, handleBotResponse],
+    [addMessage, setTyping, buildContext, useAI, handleBotResponse, streamAimeeResponse],
   );
 
   // Get quick replies from the last bot message
@@ -404,7 +584,31 @@ export default function PepTalkScreen() {
   const lastBotHasJournal = !!lastBotMessage?.journalEntry;
 
   const renderMessage = useCallback(
-    ({ item }: { item: ChatMessage }) => <ChatBubble message={item} />,
+    ({ item }: { item: ChatMessage }) => {
+      // Tool results + pending actions live BELOW the bubble so the chat
+      // thread reads top-to-bottom: text → cards → next message.
+      const hasCards =
+        (item.toolResults && item.toolResults.length > 0) ||
+        (item.pendingActions && item.pendingActions.length > 0);
+      if (!hasCards) {
+        return <ChatBubble message={item} />;
+      }
+      return (
+        <View>
+          <ChatBubble message={item} />
+          <View style={{ marginLeft: 48, marginRight: 16 }}>
+            {(item.toolResults ?? [])
+              .filter((r) => !r.isPending)
+              .map((r, i) => (
+                <AimeeToolResultCard key={`tr-${item.id}-${i}`} result={r} />
+              ))}
+            {(item.pendingActions ?? []).map((a) => (
+              <AimeePendingActionCard key={`pa-${a.id}`} action={a} />
+            ))}
+          </View>
+        </View>
+      );
+    },
     [],
   );
 

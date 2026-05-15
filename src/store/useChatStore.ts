@@ -59,6 +59,10 @@ interface ChatStore {
 
   // Message operations (act on active chat)
   addMessage: (message: ChatMessage) => void;
+  /** Patch an existing message in-place. Used for streaming updates where the
+   *  initial empty assistant bubble gets text/tool results filled in as the
+   *  SSE stream arrives. The patch is shallow-merged. */
+  updateMessage: (id: string, patch: Partial<ChatMessage>) => void;
   setTyping: (typing: boolean) => void;
   clearChat: () => void;
 
@@ -218,6 +222,31 @@ export const useChatStore = create<ChatStore>()(
           // network might have just come back.
           void get().flushPendingSyncs();
         })();
+      },
+
+      updateMessage: (id, patch) => {
+        // Streaming updates land here repeatedly per token. We intentionally
+        // skip cloud sync on update — only the final assistant message gets
+        // synced on the streaming endpoint's server side (chat_messages
+        // insert is done by the edge function). Local mirror only.
+        set((state) => {
+          const activeChatId = state.activeChatId;
+          if (!activeChatId) return state;
+          const nextChats = state.chats.map((c) => {
+            if (c.id !== activeChatId) return c;
+            const idx = c.messages.findIndex((m) => m.id === id);
+            if (idx < 0) return c;
+            const merged: ChatMessage = { ...c.messages[idx], ...patch };
+            const nextMessages = [...c.messages];
+            nextMessages[idx] = merged;
+            return { ...c, messages: nextMessages };
+          });
+          return {
+            ...state,
+            chats: nextChats,
+            messages: activeMessages(nextChats, activeChatId),
+          };
+        });
       },
 
       setTyping: (isTyping) => set({ isTyping }),

@@ -921,3 +921,258 @@ Include: weekly workout schedule, meal plan framework, and any protocol/suppleme
 export function isAIAvailable(): boolean {
   return SUPABASE_URL.length > 0 || XAI_API_KEY.length > 0;
 }
+
+// ---------------------------------------------------------------------------
+// Streaming API (Claude / aimee-chat-stream)
+// ---------------------------------------------------------------------------
+//
+// The new aimee-chat-stream edge function returns SSE. We parse events
+// incrementally and yield them so the UI can render text as it arrives,
+// surface tool-call cards inline, and trigger pending-action confirm modals.
+//
+// Wire format (one event per `data: ` line):
+//   {"type":"text_delta","text":"..."}
+//   {"type":"tool_use_start","name":"...","id":"..."}
+//   {"type":"tool_use","name":"...","input":{...},"id":"..."}
+//   {"type":"tool_result","tool_use_id":"...","tool":"...","output":{...}}
+//   {"type":"pending_action","id":"...","tool":"...","preview":{...}}
+//   {"type":"done","usage":{...},"cost_microcents":1234,"pending_actions":[...]}
+//   {"type":"error","message":"..."}
+//
+// Falls back automatically to the non-streaming aimee-chat endpoint when:
+//   - no Supabase URL configured
+//   - no auth session
+//   - streaming fetch isn't supported in this RN runtime (older Hermes)
+//   - the stream HTTP call fails with 4xx other than 429/403 (those still
+//     surface their JSON error body to the user)
+
+export interface AimeeStreamEvent {
+  type:
+    | 'text_delta'
+    | 'tool_use_start'
+    | 'tool_use'
+    | 'tool_result'
+    | 'pending_action'
+    | 'warning'
+    | 'done'
+    | 'error'
+    | 'denied';
+  text?: string;
+  name?: string;
+  id?: string;
+  input?: Record<string, unknown>;
+  output?: Record<string, unknown>;
+  tool?: string;
+  preview?: Record<string, unknown>;
+  message?: string;
+  pending_actions?: Array<{
+    id: string;
+    tool: string;
+    preview: Record<string, unknown>;
+  }>;
+  upgrade?: boolean;
+  /** Status code from the edge fn for error/denied events. */
+  status?: number;
+}
+
+/**
+ * Stream an Aimee response. Yields events as they arrive. The caller is
+ * responsible for accumulating text deltas and tool results.
+ *
+ * The async generator pattern lets the chat screen write a `for await` loop:
+ *
+ *   for await (const ev of generateAIResponseStream(text, ctx)) {
+ *     if (ev.type === 'text_delta') accumulate(ev.text);
+ *     if (ev.type === 'tool_result') showToolCard(ev);
+ *     if (ev.type === 'done') finalize();
+ *   }
+ */
+export async function* generateAIResponseStream(
+  userMessage: string,
+  context: EnhancedBotContext,
+  options?: { conversationId?: string },
+): AsyncGenerator<AimeeStreamEvent, void, unknown> {
+  if (!SUPABASE_URL) {
+    yield { type: 'error', message: 'No backend configured' };
+    return;
+  }
+
+  let session;
+  try {
+    const result = await supabase.auth.getSession();
+    session = result.data?.session;
+  } catch (e) {
+    if (__DEV__) console.warn('[llmService] getSession failed:', e);
+  }
+  if (!session?.access_token) {
+    yield { type: 'error', message: 'Not authenticated' };
+    return;
+  }
+
+  const serverContext = buildServerContext(context);
+  const conversationMessages = context.conversationHistory.slice(-10).map((msg) => ({
+    role: msg.role === 'bot' ? ('assistant' as const) : ('user' as const),
+    content: msg.content,
+  }));
+  conversationMessages.push({ role: 'user' as const, content: userMessage });
+
+  let res: Response;
+  try {
+    res = await fetch(`${SUPABASE_URL}/functions/v1/aimee-chat-stream`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+        apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        Accept: 'text/event-stream',
+      },
+      body: JSON.stringify({
+        messages: conversationMessages,
+        context: serverContext,
+        conversationId: options?.conversationId ?? null,
+      }),
+    });
+  } catch (e) {
+    if (__DEV__) console.warn('[llmService] stream fetch threw:', e);
+    yield { type: 'error', message: 'Network error' };
+    return;
+  }
+
+  if (!res.ok) {
+    // Try to parse a JSON error body — the streaming endpoint returns JSON
+    // for early failures (auth, rate limit, cap hit).
+    let errBody: any = {};
+    try {
+      errBody = await res.json();
+    } catch {
+      /* non-JSON */
+    }
+    if (res.status === 403 || res.status === 429) {
+      yield {
+        type: 'denied',
+        message: errBody?.error ?? 'AI unavailable',
+        upgrade: errBody?.upgrade === true,
+        status: res.status,
+      };
+      return;
+    }
+    yield {
+      type: 'error',
+      message: errBody?.error ?? `HTTP ${res.status}`,
+      status: res.status,
+    };
+    return;
+  }
+
+  // RN fetch: response.body may or may not be a stream depending on engine.
+  // Hermes on RN 0.81 supports response.body.getReader(). If it's not
+  // available, fall back to res.text() + parse-all-at-once (loses streaming
+  // UX but still works).
+  const body: any = (res as any).body;
+  if (body && typeof body.getReader === 'function') {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let nlIdx = buf.indexOf('\n\n');
+        while (nlIdx !== -1) {
+          const block = buf.slice(0, nlIdx);
+          buf = buf.slice(nlIdx + 2);
+          nlIdx = buf.indexOf('\n\n');
+          for (const evt of parseSseBlock(block)) {
+            yield evt;
+          }
+        }
+      }
+    } catch (e) {
+      if (__DEV__) console.warn('[llmService] stream read failed:', e);
+      yield { type: 'error', message: 'Stream interrupted' };
+      return;
+    }
+    // Flush any trailing partial event.
+    if (buf.trim()) {
+      for (const evt of parseSseBlock(buf)) yield evt;
+    }
+  } else {
+    // No streaming API on this runtime — read the whole thing.
+    if (__DEV__) console.warn('[llmService] response.body.getReader unavailable, reading full text');
+    let fullText = '';
+    try {
+      fullText = await res.text();
+    } catch (e) {
+      yield { type: 'error', message: 'Failed to read response' };
+      return;
+    }
+    for (const chunk of fullText.split('\n\n')) {
+      for (const evt of parseSseBlock(chunk)) yield evt;
+    }
+  }
+}
+
+function parseSseBlock(block: string): AimeeStreamEvent[] {
+  const out: AimeeStreamEvent[] = [];
+  const lines = block.split('\n');
+  let dataStr = '';
+  for (const line of lines) {
+    if (line.startsWith('data: ')) dataStr += line.slice(6);
+    else if (line.startsWith('data:')) dataStr += line.slice(5);
+  }
+  if (!dataStr.trim()) return out;
+  try {
+    const parsed = JSON.parse(dataStr);
+    if (parsed && typeof parsed === 'object') {
+      out.push(parsed as AimeeStreamEvent);
+    }
+  } catch {
+    /* unparseable — skip */
+  }
+  return out;
+}
+
+/**
+ * Confirm or cancel a pending action proposed by Aimee.
+ *
+ * Calls supabase/functions/aimee-action-confirm. Returns the server's reply
+ * so the UI can show "Saved" / "Cancelled" feedback.
+ */
+export async function resolveAimeeAction(args: {
+  actionId: string;
+  decision: 'confirm' | 'cancel';
+  edits?: Record<string, unknown>;
+}): Promise<{ ok: boolean; status?: string; error?: string }> {
+  if (!SUPABASE_URL) return { ok: false, error: 'No backend configured' };
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return { ok: false, error: 'Not authenticated' };
+
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/aimee-action-confirm`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        },
+        body: JSON.stringify({
+          action_id: args.actionId,
+          decision: args.decision,
+          edits: args.edits ?? null,
+        }),
+      },
+    );
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, error: json?.error ?? `HTTP ${res.status}` };
+    }
+    return { ok: true, status: json?.status };
+  } catch (e) {
+    if (__DEV__) console.warn('[llmService] resolveAimeeAction failed:', e);
+    return { ok: false, error: 'Network error' };
+  }
+}
