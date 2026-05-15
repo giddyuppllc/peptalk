@@ -303,13 +303,22 @@ export default function HealthProfileScreen() {
         keyboardType="decimal-pad"
       />
 
-      {/* Height */}
+      {/* Height — feet 3-8, inches 0-11. Range-clamp on each input so
+          a user can't end up with a "Height: 5'999\"" report by mashing
+          digits. Empty string is allowed for partial / mid-edit state. */}
       <Text style={styles.fieldLabel}>Height</Text>
       <View style={styles.heightRow}>
         <TextInput
           style={[styles.input, { flex: 1 }]}
           value={heightFeet}
-          onChangeText={setHeightFeet}
+          onChangeText={(v) => {
+            const digits = v.replace(/[^0-9]/g, '').slice(0, 1);
+            if (!digits) return setHeightFeet('');
+            const n = parseInt(digits, 10);
+            if (n >= 3 && n <= 8) setHeightFeet(digits);
+            else if (n < 3) setHeightFeet(digits); // allow mid-typing
+          }}
+          maxLength={1}
           placeholder="ft"
           placeholderTextColor={Colors.darkTextSecondary}
           keyboardType="number-pad"
@@ -318,7 +327,13 @@ export default function HealthProfileScreen() {
         <TextInput
           style={[styles.input, { flex: 1 }]}
           value={heightIn}
-          onChangeText={setHeightIn}
+          onChangeText={(v) => {
+            const digits = v.replace(/[^0-9]/g, '').slice(0, 2);
+            if (!digits) return setHeightIn('');
+            const n = parseInt(digits, 10);
+            if (n <= 11) setHeightIn(digits);
+          }}
+          maxLength={2}
           placeholder="in"
           placeholderTextColor={Colors.darkTextSecondary}
           keyboardType="number-pad"
