@@ -24,7 +24,6 @@ import {
   StyleSheet,
   FlatList,
   Modal,
-  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -113,13 +112,14 @@ export default function DosingCalculatorScreen() {
   // touch the picker.
   const [intensity, setIntensity] = useState<ProtocolIntensity>('standard');
 
-  // Simple mode — hides intensity picker, titration ladder, weight-based
-  // dosing, and the supplies estimator. The user explicitly asked for
-  // this toggle back ("the pill switch"); defaults ON because most users
-  // don't need the deep-research surface and it's overwhelming. Persisted
-  // per-account so the choice sticks across launches.
-  const simpleMode = useOnboardingStore((s) => s.simpleCalculatorMode);
-  const setSimpleMode = useOnboardingStore((s) => s.setSimpleCalculatorMode);
+  // Advanced sections (intensity tiers, titration ladders, body-weight
+  // scaling, supplies estimator) are hidden by default — most users
+  // don't need them and they exist on the peptide detail page anyway.
+  // A "Show research details" link at the bottom of the form expands
+  // them for power users. Local state because there's no value in
+  // persisting this across sessions (the user re-opens the calculator
+  // fresh each time and we want clean defaults).
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Results visibility
   const [showResults, setShowResults] = useState(false);
@@ -178,15 +178,70 @@ export default function DosingCalculatorScreen() {
 
   // When the user picks a peptide whose primary protocol is naturally
   // dosed in mg (Selank, Cerebrolysin, GLP-1s, etc.), flip the unit
-  // toggle to mg so they don't have to think in micrograms. Same for
-  // vial unit. Only fires when the user hasn't manually entered a dose
-  // yet — otherwise it would clobber their input.
+  // toggle to mg so they don't have to think in micrograms.
+  //
+  // Plus: in SIMPLE MODE, auto-fill vial size + BAC water + target
+  // dose with the recommended setup so the user sees a definitive
+  // answer the moment they pick a peptide. They can still tweak any
+  // field — auto-fill only happens when the field is empty, so we
+  // never clobber a user's input.
   useEffect(() => {
     const proto = protocolsForPeptide[0];
     if (!proto) return;
+
+    // Always sync the dose unit to whatever the protocol uses, so
+    // Selank opens in mg and BPC-157 opens in mcg.
     if (!targetDose) {
       setDoseUnit(proto.typicalDose?.unit === 'mg' ? 'mg' : 'mcg');
     }
+
+    // Auto-fill every empty input from the protocol so the user sees
+    // a definitive recommended setup the moment they pick a peptide.
+    // Empty-only so we never clobber a user's manual input.
+    //
+    // Vial size — most peptides come in 5 mg vials; pick the smallest
+    // standard vial size that holds the protocol's max dose.
+    if (!vialSize) {
+      const protoMaxMg = (proto.typicalDose?.unit === 'mg'
+        ? proto.typicalDose.max
+        : proto.typicalDose.max / 1000);
+      const guessVial = [2, 5, 10, 15, 30].find((v) => v >= protoMaxMg) ?? 5;
+      setVialSize(String(guessVial));
+      setVialUnit('mg');
+    }
+    // BAC water — 2 ml is the safe industry default that gives clean
+    // dose numbers for ~95% of reconstitutions.
+    if (!waterVolume) {
+      setWaterVolume('2');
+    }
+    // Target dose — the protocol's STANDARD intensity midpoint. One
+    // definitive number, not a range. Users wanting Mild or Aggressive
+    // can use the "Show research details" expander below.
+    if (!targetDose) {
+      const { mcg, displayUnit } = intensityToDoseMcg(proto, 'standard');
+      if (displayUnit === 'mg') {
+        setTargetDose(String((mcg / 1000).toFixed(2).replace(/\.?0+$/, '')));
+        setDoseUnit('mg');
+      } else {
+        setTargetDose(String(Math.round(mcg)));
+        setDoseUnit('mcg');
+      }
+    }
+    // Frequency — pull from the protocol if specified.
+    if (proto.frequency) {
+      const protoFreqMap: Record<string, Frequency> = {
+        daily: 'daily',
+        eod: 'eod',
+        biw: '2x_week',
+        tiw: '3x_week',
+        weekly: 'weekly',
+      };
+      const mapped = protoFreqMap[proto.frequency];
+      if (mapped) setFrequency(mapped);
+    }
+    // Show the answer card immediately so the user doesn't have to
+    // hit Calculate to see the dose math.
+    setShowResults(true);
   }, [selectedPeptide?.id]);
 
   // One-shot deep-link handler. Pre-selects the peptide + intensity from
@@ -472,39 +527,94 @@ export default function DosingCalculatorScreen() {
           </GlassCard>
         </View>
 
-        {/* Simple mode toggle — the user explicitly asked for this back
-            ("the pill switch"). When on, hides intensity picker,
-            titration ladder, weight-based dosing, supplies estimator
-            so the calculator stays to four inputs: peptide → dose →
-            frequency → BAC water. Choice persists per account. */}
-        <View style={styles.section}>
-          <GlassCard>
-            <View style={styles.simpleModeRow}>
-              <View style={{ flex: 1, paddingRight: 12 }}>
-                <Text style={[styles.simpleModeTitle, { color: t.text }]}>
-                  Simple mode {simpleMode ? '· on' : '· off'}
+        {/* Recommended Protocol — the safety-first answer card. Visible
+            the moment a peptide is selected. Shows the standard research
+            dose, the BAC water amount we recommend, and the source so
+            users can verify it isn't made up. We pull from protocols.ts
+            (Edward's curated, citation-anchored data) — never invented
+            numbers. The math card below this is auto-filled so the user
+            sees the result without typing anything. */}
+        {selectedPeptide && protocolsForPeptide[0] && (() => {
+          const proto = protocolsForPeptide[0];
+          const { mcg, displayUnit } = intensityToDoseMcg(proto, 'standard');
+          const recommendedDose = displayUnit === 'mg'
+            ? `${(mcg / 1000).toFixed(2).replace(/\.?0+$/, '')} mg`
+            : `${Math.round(mcg)} mcg`;
+          return (
+            <View style={styles.section}>
+              <GlassCard>
+                <View style={styles.recHeader}>
+                  <Ionicons name="shield-checkmark-outline" size={18} color="#3E7CB1" />
+                  <Text style={[styles.recHeaderText, { color: t.text }]}>
+                    Recommended protocol
+                  </Text>
+                </View>
+                <Text style={[styles.recSub, { color: t.textSecondary }]}>
+                  Based on {proto.name}. Edit any field below to override.
                 </Text>
-                <Text style={[styles.simpleModeHint, { color: t.textSecondary }]}>
-                  {simpleMode
-                    ? 'Just the basics. Toggle off to see intensity tiers, titration ladders, body-weight scaling, and supplies math.'
-                    : 'Showing every advanced input. Toggle on for the four-field starter view.'}
+                <View style={styles.recGrid}>
+                  <View style={styles.recCell}>
+                    <Text style={[styles.recCellLabel, { color: t.textSecondary }]}>DOSE</Text>
+                    <Text style={[styles.recCellValue, { color: t.text }]}>{recommendedDose}</Text>
+                  </View>
+                  <View style={styles.recCell}>
+                    <Text style={[styles.recCellLabel, { color: t.textSecondary }]}>FREQUENCY</Text>
+                    <Text style={[styles.recCellValue, { color: t.text }]}>
+                      {proto.frequencyLabel ?? 'Daily'}
+                    </Text>
+                  </View>
+                  <View style={styles.recCell}>
+                    <Text style={[styles.recCellLabel, { color: t.textSecondary }]}>BAC WATER</Text>
+                    <Text style={[styles.recCellValue, { color: t.text }]}>2 ml</Text>
+                  </View>
+                </View>
+                <Text style={[styles.recFineprint, { color: t.textSecondary }]}>
+                  Educational reference only — not medical advice.
+                  Always confirm with a licensed clinician before any
+                  peptide use.
                 </Text>
-              </View>
-              <Switch
-                value={simpleMode}
-                onValueChange={setSimpleMode}
-                accessibilityRole="switch"
-                accessibilityLabel="Simple mode"
-              />
+              </GlassCard>
             </View>
-          </GlassCard>
-        </View>
+          );
+        })()}
+
+        {/* "Show research details" expander — one tap reveals the
+            advanced protocol-intensity picker, titration ladder, body-
+            weight scaling, and supplies estimator. We keep the default
+            view answer-focused (recommended dose + calculated draw) so
+            new users aren't overwhelmed; power users tap to see the
+            full research surface. */}
+        {selectedPeptide && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              onPress={() => setShowAdvanced((v) => !v)}
+              activeOpacity={0.7}
+              style={[styles.advancedToggle, { borderColor: t.cardBorder }]}
+            >
+              <Ionicons
+                name={showAdvanced ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={t.textSecondary}
+              />
+              <Text style={[styles.advancedToggleText, { color: t.text }]}>
+                {showAdvanced ? 'Hide research details' : 'Show research details'}
+              </Text>
+              <Text style={[styles.advancedToggleHint, { color: t.textSecondary }]}>
+                {showAdvanced
+                  ? 'Hides intensity, titration, body-weight, and supplies sections.'
+                  : 'Intensity, titration schedule, body-weight scaling, supplies estimator.'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Protocol intensity — Mild / Standard / Aggressive. Visible the
             moment a peptide is selected so the user picks their tier
             before plugging in dose numbers. Standard is pre-selected
-            (matches typical research protocols). Hidden in simple mode. */}
-        {!simpleMode && selectedPeptide && protocolsForPeptide.length > 0 && (
+            (matches typical research protocols). Lives under the
+            "Show research details" expander so the default view stays
+            answer-focused. */}
+        {showAdvanced && selectedPeptide && protocolsForPeptide.length > 0 && (
           <View style={styles.section}>
             <ProtocolIntensityPicker
               protocol={protocolsForPeptide[0]}
@@ -530,8 +640,9 @@ export default function DosingCalculatorScreen() {
 
         {/* Titration ladder — shown only for peptides with structured weekly steps
             (GLP-1 family, TB-500, etc.). Lets the user pick the right step for
-            their week-of-cycle without leaving the calculator. Hidden in simple mode. */}
-        {!simpleMode && selectedPeptide && protocolsForPeptide[0]?.titrationSchedule && (
+            their week-of-cycle without leaving the calculator. Lives under
+            the "Show research details" expander. */}
+        {showAdvanced && selectedPeptide && protocolsForPeptide[0]?.titrationSchedule && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: t.text }]}>Recommended schedule</Text>
             <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
@@ -849,10 +960,10 @@ export default function DosingCalculatorScreen() {
           </GlassCard>
         </View>
 
-        {/* Body weight (optional — for mcg/kg). Hidden in simple mode —
-            most users don't need weight-based scaling, and the few who
-            do can flip simple mode off. */}
-        {!simpleMode && (
+        {/* Body weight (optional — for mcg/kg). Lives under the
+            "Show research details" expander — most users don't need
+            weight-based scaling. */}
+        {showAdvanced && (
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: t.text }]}>Body Weight (optional)</Text>
           <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
@@ -1073,9 +1184,9 @@ export default function DosingCalculatorScreen() {
         )}
 
         {/* Supplies estimator — concrete shopping list at 1 wk / 2 wks
-            / full cycle. Hidden in simple mode — most users buy a
-            single vial at a time. */}
-        {!simpleMode && selectedPeptide && protocolsForPeptide.length > 0 && (
+            / full cycle. Lives under the "Show research details"
+            expander — most users buy a single vial at a time. */}
+        {showAdvanced && selectedPeptide && protocolsForPeptide.length > 0 && (
           <View
             style={styles.section}
             onLayout={(e) => recordSectionY('supplies', e.nativeEvent.layout.y)}
@@ -1355,16 +1466,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
   },
-  // Simple-mode toggle row + the in-line BAC water warning are small UX
-  // additions for the v1.9.9 wave; styles live alongside section/* so
-  // they pick up the same horizontal padding.
-  simpleModeRow: {
+  // Recommended-protocol answer card (lives at top of the calculator).
+  // Definitive dose / frequency / BAC water pulled from protocols.ts so
+  // a user sees the answer before they touch any input.
+  recHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 4,
+    gap: 8,
+    marginBottom: 4,
   },
-  simpleModeTitle: { fontSize: FontSizes.md, fontWeight: '700' },
-  simpleModeHint: { fontSize: FontSizes.xs, lineHeight: 16, marginTop: 2 },
+  recHeaderText: { fontSize: FontSizes.md, fontWeight: '700' },
+  recSub: { fontSize: FontSizes.xs, lineHeight: 16, marginBottom: 10 },
+  recGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  recCell: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(62,124,177,0.10)',
+  },
+  recCellLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  recCellValue: { fontSize: FontSizes.md, fontWeight: '700', marginTop: 2 },
+  recFineprint: { fontSize: 11, lineHeight: 15, marginTop: 10 },
+  // "Show research details" expander row — collapses the advanced
+  // intensity / titration / weight / supplies sections so the default
+  // view stays answer-focused.
+  advancedToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  advancedToggleText: { fontSize: FontSizes.sm, fontWeight: '700' },
+  advancedToggleHint: { width: '100%', fontSize: FontSizes.xs, lineHeight: 16, marginTop: 2 },
   bacWarn: {
     flexDirection: 'row',
     alignItems: 'flex-start',
