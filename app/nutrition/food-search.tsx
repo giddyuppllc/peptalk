@@ -171,7 +171,14 @@ function PortionPickerModal({
   onLog,
   initialMealType = 'lunch',
 }: PortionPickerProps) {
-  const [selectedServing, setSelectedServing] = useState(0);
+  // Default to the food's natural household serving when the API gave
+  // us one (e.g. "1 salad", "1 strip"). Falls back to index 0 if the
+  // food doesn't have an explicit defaultServingIdx. Previously this
+  // was hardcoded to 0, which made USDA branded foods open on "1 gram"
+  // because the universal weight units were the only entries the
+  // picker could find.
+  const initialIdx = food?.defaultServingIdx ?? 0;
+  const [selectedServing, setSelectedServing] = useState(initialIdx);
   const [servingQty, setServingQty] = useState('1');
   const [mealType, setMealType] = useState<MealType>(initialMealType);
   const [showServingPicker, setShowServingPicker] = useState(false);
@@ -179,7 +186,7 @@ function PortionPickerModal({
 
   useEffect(() => {
     if (food) {
-      setSelectedServing(0);
+      setSelectedServing(food.defaultServingIdx ?? 0);
       setServingQty('1');
       setShowServingPicker(false);
       setShowNutritionInfo(false);

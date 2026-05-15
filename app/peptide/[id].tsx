@@ -17,7 +17,8 @@ import { useStackStore } from '../../src/store/useStackStore';
 import { GlassCard } from '../../src/components/GlassCard';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
 import { ProtocolPlanCard } from '../../src/components/ProtocolPlanCard';
-import { intensityToDoseRangeMcg } from '../../src/components/ProtocolIntensityPicker';
+import { intensityToDoseRangeMcg, intensityToDoseMcg } from '../../src/components/ProtocolIntensityPicker';
+import { ActivateProtocolButton } from '../../src/components/ActivateProtocolButton';
 import { SuppliesEstimatorCard } from '../../src/components/SuppliesEstimatorCard';
 import { PeptideTrendCard } from '../../src/components/PeptideTrendCard';
 import { PeptideCyclePhaseCard } from '../../src/components/PeptideCyclePhaseCard';
@@ -750,6 +751,15 @@ export default function PeptideDetailScreen() {
           </View>
         )}
 
+        {/* One-tap protocol activation — the Selank-style card. Plain-
+            language summary line over a big Activate button. Pre-fills
+            with the mild/starter dose because a one-tap flow should
+            err cautious; the calculator is the place to escalate to
+            standard/aggressive. */}
+        {protocols.length > 0 && (
+          <ActivationCard peptide={peptide} protocol={protocols[0]} />
+        )}
+
         {/* Supplies estimator — concrete shopping list per planning horizon. */}
         {protocols.length > 0 && (
           <View style={styles.section}>
@@ -1036,6 +1046,118 @@ function formatDoseMcg(value: number): string {
   }
   return `${Math.round(value)} mcg`;
 }
+
+// One-tap protocol activation card. Modelled after the Selank
+// activation screen Edward called out — plain-language summary in big
+// type, target dose + frequency below it, and the existing
+// ActivateProtocolButton at the bottom. Auto-fills the dose at the
+// mild (starter) end of the protocol's range so a one-tap activate
+// can't accidentally pick aggressive numbers.
+function ActivationCard({
+  peptide,
+  protocol,
+}: {
+  peptide: ReturnType<typeof getPeptideById> & { id: string; name: string };
+  protocol: ReturnType<typeof getProtocolsByPeptide>[number];
+}) {
+  const { mcg: starterMcg, displayUnit } = intensityToDoseMcg(protocol, 'mild');
+  const doseLabel =
+    displayUnit === 'mg'
+      ? `${(starterMcg / 1000).toFixed(2).replace(/\.?0+$/, '')} mg`
+      : `${Math.round(starterMcg)} mcg`;
+
+  // Frequency string mapped from the protocol enum to the 5-key set the
+  // ActivateProtocolButton expects. Unknown freqs (twice_daily, biweekly,
+  // monthly, custom) collapse to daily for the scheduler — accurate one is
+  // entered manually via the dosing calculator afterwards.
+  const calcFrequency: 'daily' | 'eod' | '2x_week' | '3x_week' | 'weekly' =
+    protocol.frequency === 'daily' ? 'daily' :
+    protocol.frequency === 'eod'   ? 'eod' :
+    protocol.frequency === 'biw'   ? '2x_week' :
+    protocol.frequency === 'tiw'   ? '3x_week' :
+    protocol.frequency === 'weekly' ? 'weekly' :
+    'daily';
+
+  const plainSummary = `Take ${doseLabel} ${protocol.frequencyLabel?.toLowerCase() ?? 'daily'}.${protocol.timing ? ` ${protocol.timing}.` : ''}`;
+
+  return (
+    <GlassCard style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Ionicons name="play-circle-outline" size={18} color="#7ABED0" />
+        <Text style={styles.sectionTitle}>Start tracking this peptide</Text>
+      </View>
+
+      <Text style={activationStyles.plainSummary}>{plainSummary}</Text>
+
+      <View style={activationStyles.statRow}>
+        <View style={activationStyles.statCell}>
+          <Text style={activationStyles.statLabel}>TARGET DOSE</Text>
+          <Text style={activationStyles.statValue}>{doseLabel}</Text>
+        </View>
+        <View style={[activationStyles.statCell, { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: '#E5E7EB' }]}>
+          <Text style={activationStyles.statLabel}>FREQUENCY</Text>
+          <Text style={activationStyles.statValue}>{protocol.frequencyLabel ?? 'Daily'}</Text>
+        </View>
+      </View>
+
+      <ActivateProtocolButton
+        peptideId={peptide.id}
+        peptideName={peptide.name}
+        protocol={protocol}
+        doseMcg={starterMcg}
+        frequency={calcFrequency}
+      />
+
+      <Text style={activationStyles.fineprint}>
+        Starts you at the cautious end of the published range. Fine-tune
+        dose, syringe, and schedule from the calculator anytime.
+      </Text>
+    </GlassCard>
+  );
+}
+
+const activationStyles = StyleSheet.create({
+  plainSummary: {
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '500',
+    color: '#2D2D2D',
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  statRow: {
+    flexDirection: 'row',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E5E7EB',
+    marginBottom: 16,
+  },
+  statCell: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#2D2D2D',
+  },
+  fineprint: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 10,
+    fontStyle: 'italic',
+  },
+});
 
 function BeginnerAdvancedDoseCard({
   peptideId: _peptideId,

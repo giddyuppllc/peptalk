@@ -916,10 +916,20 @@ Include: weekly workout schedule, meal plan framework, and any protocol/suppleme
 }
 
 /**
- * Check if the AI service is available (has API key configured).
+ * Whether the Aimee chat backend is reachable.
+ *
+ * Production builds ship WITHOUT a client-side XAI key — the
+ * server-side `aimee-chat` Supabase edge function holds it and
+ * authenticates every call. So the only thing the client needs to
+ * know is that the Supabase URL is configured.
+ *
+ * Including XAI_API_KEY in this check was misleading: the chat works
+ * fine in production via the edge function, but the header label was
+ * showing "Offline" because the client-side key is intentionally
+ * empty (see XAI_API_KEY definition above — DEV ONLY).
  */
 export function isAIAvailable(): boolean {
-  return SUPABASE_URL.length > 0 || XAI_API_KEY.length > 0;
+  return SUPABASE_URL.length > 0;
 }
 
 // ---------------------------------------------------------------------------

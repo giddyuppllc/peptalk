@@ -78,6 +78,11 @@ export interface UnifiedFood {
   servings: ServingOption[];
   /** Default serving size in grams */
   defaultServingGrams: number;
+  /** Index into `servings` that should be pre-selected when the user
+   *  taps the food. Defaults to 0 if absent. We want this to be the
+   *  natural / household-serving entry ("1 salad", "1 cup") rather
+   *  than the universal "1 gram" fallback. */
+  defaultServingIdx?: number;
   /** Category for UI */
   category?: string;
   emoji?: string;
@@ -180,23 +185,40 @@ async function searchUSDA(query: string, limit = 25): Promise<UnifiedFood[]> {
         }
       }
 
-      // Also check servingSize from branded items
+      // Also check servingSize from branded items. The user-facing label
+      // prefers the household description ("1 salad (270g)") over the
+      // raw weight ("270g") because nobody eats salad in raw grams.
+      // householdServingFullText is the USDA field that carries the
+      // human-readable form for branded items.
       if (item.servingSize && item.servingSizeUnit) {
-        const label = `${item.servingSize}${item.servingSizeUnit}`;
+        const rawLabel = `${item.servingSize}${item.servingSizeUnit}`;
+        const friendly = item.householdServingFullText?.trim();
+        const label = friendly
+          ? `${friendly} (${rawLabel})`
+          : rawLabel;
         if (!servings.some((s) => s.label === label)) {
-          servings.push({
+          servings.unshift({
             label,
             grams: item.servingSize,
-            description: item.householdServingFullText || label,
+            description: friendly || rawLabel,
           });
         }
       }
 
       const brandName = item.brandName || item.brandOwner;
 
+      const foodName = formatFoodName(item.description || item.lowercaseDescription || '');
+      // Make sure the user-facing picker doesn't default to "1 gram of salad."
+      // When USDA didn't ship a household serving, prepend a category-aware
+      // estimate so index 0 is something humans actually eat.
+      const finalServings = prependSensibleDefault(
+        appendUniversalUnits(servings),
+        foodName,
+      );
+
       return {
         id: `usda-${item.fdcId}`,
-        name: formatFoodName(item.description || item.lowercaseDescription || ''),
+        name: foodName,
         brand: brandName || undefined,
         source: 'usda',
         per100g: {
@@ -238,8 +260,12 @@ async function searchUSDA(query: string, limit = 25): Promise<UnifiedFood[]> {
           omega3Grams: round1(omega3),
           omega6Grams: round1(omega6),
         },
-        servings: appendUniversalUnits(servings),
-        defaultServingGrams: item.servingSize || 100,
+        servings: finalServings,
+        defaultServingGrams: finalServings[0]?.grams || item.servingSize || 100,
+        // Index 0 is either USDA's household serving (when available)
+        // or the category-aware sensibleServingGrams() prepend. Either
+        // way the user opens the picker on something a human would eat.
+        defaultServingIdx: 0,
         category: guessCategory(item.description),
         emoji: guessEmoji(item.description),
       };
@@ -307,9 +333,14 @@ async function searchOpenFoodFacts(query: string, limit = 25): Promise<UnifiedFo
           }
         }
 
+        const offFoodName = formatFoodName(p.product_name);
+        const offFinalServings = prependSensibleDefault(
+          appendUniversalUnits(servings),
+          offFoodName,
+        );
         return {
           id: `off-${p.code}`,
-          name: formatFoodName(p.product_name),
+          name: offFoodName,
           brand: p.brands || undefined,
           source: 'openfoodfacts',
           per100g: {
@@ -326,8 +357,8 @@ async function searchOpenFoodFacts(query: string, limit = 25): Promise<UnifiedFo
             calciumMg: Math.round((n.calcium_100g ?? 0) * 1000),
             ironMg: round1((n.iron_100g ?? 0) * 1000),
           },
-          servings: appendUniversalUnits(servings),
-          defaultServingGrams: parseServingToGrams(p.serving_size) || 100,
+          servings: offFinalServings,
+          defaultServingGrams: offFinalServings[0]?.grams || parseServingToGrams(p.serving_size) || 100,
           category: guessCategory(p.product_name),
           emoji: guessEmoji(p.product_name),
           barcode: p.code,
@@ -953,6 +984,58 @@ function appendUniversalUnits(servings: ServingOption[]): ServingOption[] {
     }
   }
   return result;
+}
+
+/** Returns a reasonable "1 serving" gram estimate by food name.
+ *  Used when USDA / Open Food Facts didn't ship a natural serving size.
+ *  Nobody eats 1 gram of salad — this gives the picker a default that
+ *  matches what a human would actually log. */
+export function sensibleServingGrams(name: string): { label: string; grams: number } {
+  if (!name) return { label: '1 serving (approx 100 g)', grams: 100 };
+  const n = name.toLowerCase();
+  // Strip / slice-shaped foods
+  if (/bacon|prosciutto/.test(n))         return { label: '1 strip (≈8 g)',          grams: 8 };
+  if (/pepperoni/.test(n))                return { label: '1 slice (≈3 g)',          grams: 3 };
+  if (/pizza/.test(n))                    return { label: '1 slice (≈110 g)',        grams: 110 };
+  if (/bread|toast/.test(n))              return { label: '1 slice (≈30 g)',         grams: 30 };
+  if (/bagel/.test(n))                    return { label: '1 bagel (≈100 g)',        grams: 100 };
+  // Whole-item foods
+  if (/salad/.test(n))                    return { label: '1 salad (≈250 g)',        grams: 250 };
+  if (/sandwich|burger/.test(n))          return { label: '1 sandwich (≈200 g)',     grams: 200 };
+  if (/wrap|burrito/.test(n))             return { label: '1 wrap (≈250 g)',         grams: 250 };
+  if (/taco/.test(n))                     return { label: '1 taco (≈90 g)',          grams: 90 };
+  if (/egg(?!plant)/.test(n))             return { label: '1 large egg (≈50 g)',     grams: 50 };
+  if (/banana/.test(n))                   return { label: '1 medium banana (≈118 g)',grams: 118 };
+  if (/apple|pear|orange|peach/.test(n))  return { label: '1 medium fruit (≈180 g)', grams: 180 };
+  if (/avocado/.test(n))                  return { label: '1 medium avocado (≈200 g)',grams: 200 };
+  // Beverages
+  if (/coffee|tea/.test(n))               return { label: '1 cup (240 ml)',          grams: 240 };
+  if (/smoothie|shake|juice|soda/.test(n))return { label: '12 fl oz (≈360 ml)',      grams: 360 };
+  // Protein category fallback
+  if (/chicken|beef|turkey|pork|fish|salmon|tuna|shrimp|steak|lamb|sausage/.test(n))
+                                          return { label: '1 serving (≈85 g · 3 oz)',grams: 85 };
+  // Veg / fruit fallback
+  if (/broccoli|spinach|kale|lettuce|carrot|tomato|pepper|onion|vegetable|fruit|berry/.test(n))
+                                          return { label: '1 cup (≈100 g)',          grams: 100 };
+  // Snack bars / cookies / sweets
+  if (/bar|cookie|brownie|candy/.test(n)) return { label: '1 piece (≈40 g)',         grams: 40 };
+  // Catch-all
+  return { label: '1 serving (approx 100 g)', grams: 100 };
+}
+
+/** When no natural serving exists, prepend a category-aware "1 serving"
+ *  estimate so the picker defaults to something a human would eat. */
+function prependSensibleDefault(
+  servings: ServingOption[],
+  foodName: string,
+): ServingOption[] {
+  // If we already have a non-universal "natural" serving, leave alone.
+  if (servings.some((s) => !s.isUniversal)) return servings;
+  const sensible = sensibleServingGrams(foodName);
+  return [
+    { label: sensible.label, grams: sensible.grams, description: sensible.label },
+    ...servings,
+  ];
 }
 
 /**

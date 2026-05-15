@@ -24,6 +24,7 @@ import {
   StyleSheet,
   FlatList,
   Modal,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -36,6 +37,7 @@ import { Colors, Spacing, FontSizes, BorderRadius, Gradients } from '../../src/c
 import { PEPTIDES } from '../../src/data/peptides';
 import { PROTOCOL_TEMPLATES } from '../../src/data/protocols';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import { useOnboardingStore } from '../../src/store/useOnboardingStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
 import { PeptideGuide } from '../../src/components/PeptideGuide';
@@ -67,7 +69,14 @@ const FREQUENCY_OPTIONS: { key: Frequency; label: string; perWeek: number }[] = 
 ];
 
 const VIAL_PRESETS = [2, 5, 10, 15, 30];
+// Most peptide vials hold 2-3 ml of BAC water. The 5 ml preset stays in
+// the list because some larger research vials accept it, but a warning
+// fires below the input whenever the user picks/types >3 ml so they
+// know not to try forcing 5 ml into a standard 3 ml vial — that was
+// the failure mode in the competitor screenshot Edward flagged
+// (their app suggested 4 ml without checking vial capacity).
 const WATER_PRESETS = [1, 2, 3, 5];
+const BAC_WATER_VIAL_TYPICAL_MAX_ML = 3;
 
 export default function DosingCalculatorScreen() {
   const router = useRouter();
@@ -103,6 +112,14 @@ export default function DosingCalculatorScreen() {
   // Standard so existing behavior is unchanged for users who don't
   // touch the picker.
   const [intensity, setIntensity] = useState<ProtocolIntensity>('standard');
+
+  // Simple mode — hides intensity picker, titration ladder, weight-based
+  // dosing, and the supplies estimator. The user explicitly asked for
+  // this toggle back ("the pill switch"); defaults ON because most users
+  // don't need the deep-research surface and it's overwhelming. Persisted
+  // per-account so the choice sticks across launches.
+  const simpleMode = useOnboardingStore((s) => s.simpleCalculatorMode);
+  const setSimpleMode = useOnboardingStore((s) => s.setSimpleCalculatorMode);
 
   // Results visibility
   const [showResults, setShowResults] = useState(false);
@@ -158,6 +175,19 @@ export default function DosingCalculatorScreen() {
     if (!selectedPeptide) return [];
     return PROTOCOL_TEMPLATES.filter((pt) => pt.peptideId === selectedPeptide.id);
   }, [selectedPeptide]);
+
+  // When the user picks a peptide whose primary protocol is naturally
+  // dosed in mg (Selank, Cerebrolysin, GLP-1s, etc.), flip the unit
+  // toggle to mg so they don't have to think in micrograms. Same for
+  // vial unit. Only fires when the user hasn't manually entered a dose
+  // yet — otherwise it would clobber their input.
+  useEffect(() => {
+    const proto = protocolsForPeptide[0];
+    if (!proto) return;
+    if (!targetDose) {
+      setDoseUnit(proto.typicalDose?.unit === 'mg' ? 'mg' : 'mcg');
+    }
+  }, [selectedPeptide?.id]);
 
   // One-shot deep-link handler. Pre-selects the peptide + intensity from
   // route params and auto-fills the target dose from the chosen tier so
@@ -442,11 +472,39 @@ export default function DosingCalculatorScreen() {
           </GlassCard>
         </View>
 
+        {/* Simple mode toggle — the user explicitly asked for this back
+            ("the pill switch"). When on, hides intensity picker,
+            titration ladder, weight-based dosing, supplies estimator
+            so the calculator stays to four inputs: peptide → dose →
+            frequency → BAC water. Choice persists per account. */}
+        <View style={styles.section}>
+          <GlassCard>
+            <View style={styles.simpleModeRow}>
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                <Text style={[styles.simpleModeTitle, { color: t.text }]}>
+                  Simple mode {simpleMode ? '· on' : '· off'}
+                </Text>
+                <Text style={[styles.simpleModeHint, { color: t.textSecondary }]}>
+                  {simpleMode
+                    ? 'Just the basics. Toggle off to see intensity tiers, titration ladders, body-weight scaling, and supplies math.'
+                    : 'Showing every advanced input. Toggle on for the four-field starter view.'}
+                </Text>
+              </View>
+              <Switch
+                value={simpleMode}
+                onValueChange={setSimpleMode}
+                accessibilityRole="switch"
+                accessibilityLabel="Simple mode"
+              />
+            </View>
+          </GlassCard>
+        </View>
+
         {/* Protocol intensity — Mild / Standard / Aggressive. Visible the
             moment a peptide is selected so the user picks their tier
             before plugging in dose numbers. Standard is pre-selected
-            (matches typical research protocols). */}
-        {selectedPeptide && protocolsForPeptide.length > 0 && (
+            (matches typical research protocols). Hidden in simple mode. */}
+        {!simpleMode && selectedPeptide && protocolsForPeptide.length > 0 && (
           <View style={styles.section}>
             <ProtocolIntensityPicker
               protocol={protocolsForPeptide[0]}
@@ -472,8 +530,8 @@ export default function DosingCalculatorScreen() {
 
         {/* Titration ladder — shown only for peptides with structured weekly steps
             (GLP-1 family, TB-500, etc.). Lets the user pick the right step for
-            their week-of-cycle without leaving the calculator. */}
-        {selectedPeptide && protocolsForPeptide[0]?.titrationSchedule && (
+            their week-of-cycle without leaving the calculator. Hidden in simple mode. */}
+        {!simpleMode && selectedPeptide && protocolsForPeptide[0]?.titrationSchedule && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: t.text }]}>Recommended schedule</Text>
             <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
@@ -586,6 +644,17 @@ export default function DosingCalculatorScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+            {/* Vial-capacity warning. Most peptide vials are 2-3 ml;
+                some research vials accept more, but check the rubber
+                stopper / vial neck before forcing extra BAC water in. */}
+            {waterMl > BAC_WATER_VIAL_TYPICAL_MAX_ML && (
+              <View style={styles.bacWarn}>
+                <Ionicons name="warning-outline" size={14} color="#B45309" />
+                <Text style={styles.bacWarnText}>
+                  Most peptide vials hold {BAC_WATER_VIAL_TYPICAL_MAX_ML} ml or less. Check your vial's capacity before adding {waterMl.toFixed(1)} ml — you may need to split across vials.
+                </Text>
+              </View>
+            )}
           </GlassCard>
         </View>
 
@@ -780,7 +849,10 @@ export default function DosingCalculatorScreen() {
           </GlassCard>
         </View>
 
-        {/* Body weight (optional — for mcg/kg) */}
+        {/* Body weight (optional — for mcg/kg). Hidden in simple mode —
+            most users don't need weight-based scaling, and the few who
+            do can flip simple mode off. */}
+        {!simpleMode && (
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: t.text }]}>Body Weight (optional)</Text>
           <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
@@ -813,17 +885,22 @@ export default function DosingCalculatorScreen() {
             </View>
           </GlassCard>
         </View>
+        )}
 
-        {/* Quick concentration preview */}
+        {/* Quick concentration preview. Phrased around U-100 unit marks
+            (each small line on an insulin syringe = 1 unit = 0.01 mL),
+            which is how the peptide community talks about doses. The
+            old "per tick (0.1 mL)" wording mixed unit marks and the
+            larger labeled gradations and confused users. */}
         {vialRaw > 0 && waterMl > 0 && (
           <View style={styles.section}>
             <GlassCard variant="gradient">
               <Text style={[styles.previewLabel, { color: t.textSecondary }]}>Concentration</Text>
               <Text style={styles.previewValue}>
-                {concentrationPerTick.toFixed(1)} mcg per tick (0.1mL)
+                {(concentrationPerMl / 100).toFixed(1)} mcg per unit mark
               </Text>
               <Text style={[styles.previewSub, { color: t.textSecondary }]}>
-                {concentrationPerMl.toFixed(0)} mcg per 1mL total
+                Each unit = 0.01 mL on a U-100 syringe · {concentrationPerMl.toFixed(0)} mcg per 1 mL total
               </Text>
             </GlassCard>
           </View>
@@ -884,18 +961,13 @@ export default function DosingCalculatorScreen() {
               <ResultRow
                 label="Pull syringe up to"
                 value={`${roundedUnits} mark${roundedUnits === 1 ? '' : 's'}`}
-                hint={`U-100 syringe · precise: ${syringeUnits.toFixed(2)} units`}
+                hint={`U-100 insulin syringe · the small unit lines · precise: ${syringeUnits.toFixed(2)} units`}
                 highlight
               />
               <ResultRow
                 label="Liquid amount per shot"
                 value={`${volumeToInjectMl.toFixed(3)} mL`}
                 hint={`≈${mlToTsp(volumeToInjectMl).toFixed(3)} tsp · how much fluid goes into the needle`}
-              />
-              <ResultRow
-                label="Small lines from the bottom"
-                value={`${ticksToDrawTo.toFixed(1)}`}
-                hint="each tick = 0.1 mL on a U-100 syringe"
               />
               <ResultRow
                 label="Actual peptide dose"
@@ -1001,8 +1073,9 @@ export default function DosingCalculatorScreen() {
         )}
 
         {/* Supplies estimator — concrete shopping list at 1 wk / 2 wks
-            / full cycle. */}
-        {selectedPeptide && protocolsForPeptide.length > 0 && (
+            / full cycle. Hidden in simple mode — most users buy a
+            single vial at a time. */}
+        {!simpleMode && selectedPeptide && protocolsForPeptide.length > 0 && (
           <View
             style={styles.section}
             onLayout={(e) => recordSectionY('supplies', e.nativeEvent.layout.y)}
@@ -1281,6 +1354,34 @@ const styles = StyleSheet.create({
   section: {
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
+  },
+  // Simple-mode toggle row + the in-line BAC water warning are small UX
+  // additions for the v1.9.9 wave; styles live alongside section/* so
+  // they pick up the same horizontal padding.
+  simpleModeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 4,
+  },
+  simpleModeTitle: { fontSize: FontSizes.md, fontWeight: '700' },
+  simpleModeHint: { fontSize: FontSizes.xs, lineHeight: 16, marginTop: 2 },
+  bacWarn: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+  },
+  bacWarnText: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 15,
+    color: '#9A3412',
   },
   sectionTitle: {
     fontSize: FontSizes.lg,
