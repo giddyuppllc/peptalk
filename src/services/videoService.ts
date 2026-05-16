@@ -37,30 +37,45 @@ import { supabase } from './supabase';
  * emits this block. For now it's checked in by hand whenever the
  * tagger output changes.
  */
+// 128 exercise → slug mappings (max-confidence pick per exercise from
+// reviewed + AI-suggested data in src/data/workoutVideos.json).
+// Generated 2026-05-16 by walking the JSON and accepting reviewed
+// exerciseId always, otherwise highest-confidence aiSuggested.exerciseId.
+// Used as the *canonical* slug per exercise (first take).
+// Full multi-take coverage lives below in EXERCISE_VIDEO_SLUGS.
 const EXERCISE_VIDEO_SLUG_MAP: Record<string, string> = {
   'ball-straight-leg-bridge': 'img-4652',
+  'band-shuffle': 'img-6231-1',
   'banded-donkey-kicks': 'img-6232-1',
+  'banded-glute-kicks': 'img-5778-2',
+  'banded-standing-glute-kicks': 'img-6187',
   'barbell-chest-press': 'img-6215',
   'barbell-deadlift': 'img-3886',
   'barbell-goodmorning-367': 'img-3900',
-  'barbell-hip-thrusts': 'img-3877',
+  'barbell-hip-thrusts': 'img-3878',
   'barbell-narrow-stance-hip-thrust': 'img-3880',
   'barbell-rdl-379': 'img-5791',
   'barbell-reverse-lunge': 'img-4642',
-  'barbell-squat': 'img-3901',
+  'barbell-squat': 'img-3904',
   'bench-glute-raises': 'img-3706',
+  'bench-low-leg-lifts-with-glute-raise': 'img-3714',
   'bench-supported-y': 'img-6228-2',
+  'bent-knee-raise-with-yoga-block-adduction': 'img-5779',
   'bent-knee-raises-with-block-between-feet': 'img-5784-1',
+  'bent-over-cable-bar-row': 'img-3913',
   'bent-over-cable-rope-row': 'img-6195',
   'bodyweight-squat': 'img-4650',
   'box-step-ups': 'img-4643',
   'bulgarian-split-squat-glute-focused': 'img-3875',
   'cable-abduction-straight-leg': 'img-6221-1',
   'cable-bar-bicep-curl': 'img-4621',
-  'cable-donkey-kickback': 'img-6218',
+  'cable-donkey-kickback': 'img-6222',
   'cable-isometric-squat-with-rope-pull': 'img-6193',
   'cable-kickback': 'img-6221-2',
   'cable-low-to-high-woodchops': 'img-6229-2',
+  'cable-oblique-rotations': 'img-4617',
+  'cable-overhead-tricep-extensions': 'img-4623',
+  'cable-rope-hammer-curls': 'img-6203',
   'cable-single-arm-tricep-push-down': 'img-6198',
   'chest-press-machine': 'img-6214-1',
   'chest-supported-incline-row': 'img-4775',
@@ -72,70 +87,252 @@ const EXERCISE_VIDEO_SLUG_MAP: Record<string, string> = {
   'dumbbell-lateral-raise': 'img-6181-2',
   'dumbbell-overhead-tricep-extensions': 'img-3703',
   'dumbbell-pullover': 'img-3707',
-  'dumbbell-rdl': 'img-6180',
+  'dumbbell-rdl': 'img-6812-3',
   'dumbbell-skull-crusher': 'img-3709',
+  'dumbbell-squat': 'img-4644',
   'dumbbell-upright-row-412': 'img-3866',
+  'elbows-to-knees-sit-up-291': 'img-3700',
+  'elevated-hip-bent-knee-raises-310': 'img-5779-1',
   'elevated-hip-sl-raises-w-kb-hold-317': 'img-3881',
   'facepull': 'img-4625',
   'hack-squat-machine-389': 'img-4799',
   'hanging-knee-raises': 'img-6219-1',
+  'hip-bridges-optional-423': 'img-6231',
   'hyperextensions': 'img-7287',
   'incline-dumbbell-bicep-curls': 'img-3694',
   'incline-push-up-348': 'img-3712',
   'jump-rope': 'img-6187-1',
+  'kb-alternating-low-leg-raises': 'img-6814',
   'kettlebell-rdl': 'img-3884',
   'kettlebell-swings': 'img-3890',
   'kneeling-cable-overhead-tricep-extensions': 'img-4629',
   'kneeling-cable-rope-pull': 'img-4618',
   'leg-curl-machine-glute-emphasis': 'img-4787',
-  'leg-lowers-296': 'img-5776',
-  'leg-press': 'img-4816',
+  'leg-lowers-296': 'img-5785',
+  'leg-press': 'img-6209-2',
   'leg-press-narrow-high-stance-glute-focus': 'img-6225',
   'lower-leg-lifts-with-block-feet-holds': 'img-6816-2',
+  'lower-leg-windmill': 'img-6232-1',
   'lying-crunch-with-adduction': 'img-6816-5',
   'machine-chest-press-349': 'img-6211',
   'machine-leg-extension-393': 'img-4788',
-  'machine-seated-abduction': 'img-4793',
+  'machine-seated-abduction': 'img-4797',
   'machine-tricep-push-down': 'img-6212',
-  'narrow-grip-seated-cable-row': 'img-4610',
-  'pallof-cable-press': 'img-4616',
+  'medicine-ball-burpees': 'img-3883',
+  'medicine-ball-dead-bugs': 'img-5779',
+  'narrow-grip-seated-cable-row': 'img-4613',
+  'pallof-cable-press': 'img-6230',
+  'pilates-lower-leg-lifts-309': 'img-5776-1',
   'plank-289': 'img-3681',
+  'plank-with-kettlebell-unilateral-slide': 'img-6813',
   'prone-hamstring-machine': 'img-4784',
   'renegade-row': 'img-6810',
   'sb-alt-dead-bug-312': 'img-5779-1',
-  'sb-plank': 'img-4655',
+  'sb-plank': 'img-4656',
   'seated-cable-lat-pull-down': 'img-4632',
-  'seated-dumbbell-bicep-curls': 'img-3693',
+  'seated-dumbbell-bicep-curls': 'img-3710',
   'seated-dumbbell-lateral-raises': 'img-3690',
   'seated-dumbbell-shoulder-press': 'img-3691',
   'seated-dumbbell-shoulder-press-with-adduction': 'img-6809',
+  'seated-single-arm-dumbbell-arnold-press': 'img-3697',
   'seated-single-arm-dumbbell-curl-with-block-adduction': 'img-6809-4',
+  'shoulder-floor-push-up': 'img-6233-3',
   'shoulder-press-machine': 'img-6211-1',
   'side-plank-292': 'img-5776-10',
+  'single-arm-cable-over-head-lat-pulldown': 'img-4628',
   'single-arm-dumbbell-bent-over-row': 'img-3699',
   'single-arm-dumbbell-row-323': 'img-3859',
   'single-arm-kneeling-cable-row': 'img-6181-3',
   'single-arm-overhead-dumbbell-tricep-extentions': 'img-3701',
-  'single-leg-leg-press-machine': 'img-6209-1',
+  'single-leg-leg-press-machine': 'img-6209-2',
+  'single-leg-reverse-lunges-366': 'img-6183',
+  'smith-machine-body-weight-prone-grip-row-321': 'img-4670',
   'smith-machine-narrow-rdl': 'img-4663',
   'smith-machine-rdl': 'img-4664',
-  'smith-machine-squat-387': 'img-4657',
-  'smith-machine-stationary-lunge': 'img-4661',
+  'smith-machine-squat-387': 'img-4660',
+  'smith-machine-stationary-lunge': 'img-4671',
   'stability-bird-dog-318': 'img-5787',
   'standing-calf-raise-machine': 'img-4782',
   'standing-dumbbell-alternating-bicep-curl': 'img-3857',
+  'standing-dumbbell-alternating-hammer-curl': 'img-6183-2',
+  'standing-dumbbell-curl-and-press': 'img-6183-3',
   'standing-dumbbell-frontal-raises': 'img-6179',
   'standing-dumbbell-windmill': 'img-6186-1',
+  'standing-plate-alternating-frontal-and-lateral-raises': 'img-6812-1',
   'standing-plate-lateral-raises': 'img-6812-2',
   'standing-single-leg-dumbbell-rdl': 'img-3874',
   'straight-arm-pulldown': 'img-4638',
   'superman': 'img-6233-2',
   'supported-hip-dead-bug': 'img-5786-1',
   'table-top-alternating-towel-arm-slides': 'img-5783-1',
+  'table-top-knee-taps-305': 'img-5781-2',
+  'table-top-knee-taps-with-block-adduction': 'img-5784',
+  'toe-touches-299': 'img-5776-5',
+  'towel-pike': 'img-5783-2',
   'tricep-dips-machine': 'img-4783',
-  'tricep-rope-pulldown': 'img-4609',
+  'tricep-rope-pulldown': 'img-4619',
   'wall-sit-with-parallel-isometric-arm-hold': 'img-6234-1',
 };
+
+// ═════════════════════════════════════════════════════════════════════════
+// Multi-take coverage — every video Jamie shot has a home in here.
+//
+// 264 tagged videos → 128 exercises (with alternate takes preserved)
+//  47 untagged videos → UNTAGGED_VIDEO_SLUGS pool (admin tagger inbox)
+// ───────────────────────────────────────────────────────────────────────
+// Total: 311 of 311 videos addressable.
+//
+// Sorted by AI confidence within each exercise — index 0 is the
+// canonical take (the one shown by default), the rest are alt angles /
+// variations the user can swipe through. UI consumes via
+// getAllExerciseVideoSlugs(exerciseId).
+// ═════════════════════════════════════════════════════════════════════════
+const EXERCISE_VIDEO_SLUGS: Record<string, readonly string[]> = {
+  'ball-straight-leg-bridge': ['img-4652'],
+  'band-shuffle': ['img-6231-1', 'img-6231-2'],
+  'banded-donkey-kicks': ['img-6232-1', 'img-6232', 'img-5783', 'img-5776-6', 'img-9654'],
+  'banded-glute-kicks': ['img-5778-2'],
+  'banded-standing-glute-kicks': ['img-6187'],
+  'barbell-chest-press': ['img-6215'],
+  'barbell-deadlift': ['img-3886', 'img-4641', 'img-5788-1', 'img-3888', 'img-4639'],
+  'barbell-goodmorning-367': ['img-3900'],
+  'barbell-hip-thrusts': ['img-3878', 'img-3877', 'img-3879', 'img-6227'],
+  'barbell-narrow-stance-hip-thrust': ['img-3880'],
+  'barbell-rdl-379': ['img-5791', 'img-5790'],
+  'barbell-reverse-lunge': ['img-4642'],
+  'barbell-squat': ['img-3904', 'img-4640', 'img-3901', 'img-3903', 'img-6213'],
+  'bench-glute-raises': ['img-3706'],
+  'bench-low-leg-lifts-with-glute-raise': ['img-3714'],
+  'bench-supported-y': ['img-6228-2', 'img-3708'],
+  'bent-knee-raise-with-yoga-block-adduction': ['img-5779', 'img-6816'],
+  'bent-knee-raises-with-block-between-feet': ['img-5784-1'],
+  'bent-over-cable-bar-row': ['img-3913', 'img-6188'],
+  'bent-over-cable-rope-row': ['img-6195', 'img-6229'],
+  'bodyweight-squat': ['img-4650', 'img-6182'],
+  'box-step-ups': ['img-4643'],
+  'bulgarian-split-squat-glute-focused': ['img-3875', 'img-4648', 'img-3716'],
+  'cable-abduction-straight-leg': ['img-6221-1'],
+  'cable-bar-bicep-curl': ['img-4621', 'img-6202'],
+  'cable-donkey-kickback': ['img-6222', 'img-6223', 'img-6218'],
+  'cable-isometric-squat-with-rope-pull': ['img-6193', 'img-6194', 'img-4630'],
+  'cable-kickback': ['img-6221-2'],
+  'cable-low-to-high-woodchops': ['img-6229-2', 'img-6229-1'],
+  'cable-oblique-rotations': ['img-4617'],
+  'cable-overhead-tricep-extensions': ['img-4623'],
+  'cable-rope-hammer-curls': ['img-6203'],
+  'cable-single-arm-tricep-push-down': ['img-6198'],
+  'chest-press-machine': ['img-6214-1'],
+  'chest-supported-incline-row': ['img-4775', 'img-6228-3', 'img-6228'],
+  'deadbug-extensions-optional-424': ['img-6815'],
+  'decline-leg-press': ['img-4804', 'img-4806', 'img-4808'],
+  'decline-leg-single-leg-press-high-stance': ['img-4807', 'img-4809', 'img-4813'],
+  'dumbbell-bulgarian-rdl-into-body-weight-pistol-squat': ['img-3717'],
+  'dumbbell-fly': ['img-6217'],
+  'dumbbell-lateral-raise': ['img-6181-2', 'img-6183-1', 'img-6183', 'img-6184', 'img-6184-1'],
+  'dumbbell-overhead-tricep-extensions': ['img-3703', 'img-3864', 'img-3865'],
+  'dumbbell-pullover': ['img-3707', 'img-3867', 'img-3868', 'img-3869', 'img-6814-1', 'img-3870', 'img-6216'],
+  'dumbbell-rdl': ['img-6812-3', 'img-6180', 'img-4645'],
+  'dumbbell-skull-crusher': ['img-3709'],
+  'dumbbell-squat': ['img-4644'],
+  'dumbbell-upright-row-412': ['img-3866'],
+  'elbows-to-knees-sit-up-291': ['img-3700'],
+  'elevated-hip-bent-knee-raises-310': ['img-5779-1'],
+  'elevated-hip-sl-raises-w-kb-hold-317': ['img-3881'],
+  'facepull': ['img-4625'],
+  'hack-squat-machine-389': ['img-4799', 'img-4801', 'img-4800', 'img-4803'],
+  'hanging-knee-raises': ['img-6219-1'],
+  'hip-bridges-optional-423': ['img-6231'],
+  'hyperextensions': ['img-7287'],
+  'incline-dumbbell-bicep-curls': ['img-3694'],
+  'incline-push-up-348': ['img-3712'],
+  'jump-rope': ['img-6187-1'],
+  'kb-alternating-low-leg-raises': ['img-6814'],
+  'kettlebell-rdl': ['img-3884'],
+  'kettlebell-swings': ['img-3890', 'img-3889'],
+  'kneeling-cable-overhead-tricep-extensions': ['img-4629'],
+  'kneeling-cable-rope-pull': ['img-4618', 'img-6189'],
+  'leg-curl-machine-glute-emphasis': ['img-4787'],
+  'leg-lowers-296': ['img-5785', 'img-5776', 'img-5776-8', 'img-4669', 'img-5781'],
+  'leg-press': ['img-6209-2', 'img-4816', 'img-6214'],
+  'leg-press-narrow-high-stance-glute-focus': ['img-6225'],
+  'lower-leg-lifts-with-block-feet-holds': ['img-6816-2', 'img-6816-3', 'img-4653'],
+  'lower-leg-windmill': ['img-6232-1'],
+  'lying-crunch-with-adduction': ['img-6816-5'],
+  'machine-chest-press-349': ['img-6211'],
+  'machine-leg-extension-393': ['img-4788', 'img-4789', 'img-6210'],
+  'machine-seated-abduction': ['img-4797', 'img-4794', 'img-4793', 'img-4798'],
+  'machine-tricep-push-down': ['img-6212'],
+  'medicine-ball-burpees': ['img-3883'],
+  'medicine-ball-dead-bugs': ['img-5779', 'img-5779-2'],
+  'narrow-grip-seated-cable-row': ['img-4613', 'img-4611', 'img-4610'],
+  'pallof-cable-press': ['img-6230', 'img-4616', 'img-4622', 'img-4624', 'img-6201', 'img-6207', 'img-6206'],
+  'pilates-lower-leg-lifts-309': ['img-5776-1', 'img-5776-2', 'img-5784'],
+  'plank-289': ['img-3681', 'img-5776-7', 'img-5778-3', 'img-6233-4', 'img-6233-6', 'img-5776-3'],
+  'plank-with-kettlebell-unilateral-slide': ['img-6813'],
+  'prone-hamstring-machine': ['img-4784', 'img-4785', 'img-4810', 'img-4812'],
+  'renegade-row': ['img-6810', 'img-6185'],
+  'sb-alt-dead-bug-312': ['img-5779-1'],
+  'sb-plank': ['img-4656', 'img-4655', 'img-5781'],
+  'seated-cable-lat-pull-down': ['img-4632', 'img-4633', 'img-4777', 'img-4634'],
+  'seated-dumbbell-bicep-curls': ['img-3710', 'img-3711', 'img-3693', 'img-3698', 'img-3704'],
+  'seated-dumbbell-lateral-raises': ['img-3690', 'img-6234-2', 'img-6809-1', 'img-6809-3'],
+  'seated-dumbbell-shoulder-press': ['img-3691', 'img-3692', 'img-6809-2'],
+  'seated-dumbbell-shoulder-press-with-adduction': ['img-6809'],
+  'seated-single-arm-dumbbell-arnold-press': ['img-3697'],
+  'seated-single-arm-dumbbell-curl-with-block-adduction': ['img-6809-4', 'img-3705'],
+  'shoulder-floor-push-up': ['img-6233-3'],
+  'shoulder-press-machine': ['img-6211-1'],
+  'side-plank-292': ['img-5776-10', 'img-5776-9'],
+  'single-arm-cable-over-head-lat-pulldown': ['img-4628'],
+  'single-arm-dumbbell-bent-over-row': ['img-3699', 'img-3863', 'img-6186'],
+  'single-arm-dumbbell-row-323': ['img-3859', 'img-3873', 'img-6228-1'],
+  'single-arm-kneeling-cable-row': ['img-6181-3'],
+  'single-arm-overhead-dumbbell-tricep-extentions': ['img-3701'],
+  'single-leg-leg-press-machine': ['img-6209-2', 'img-6209', 'img-6209-1'],
+  'single-leg-reverse-lunges-366': ['img-6183'],
+  'smith-machine-body-weight-prone-grip-row-321': ['img-4670'],
+  'smith-machine-narrow-rdl': ['img-4663', 'img-4666'],
+  'smith-machine-rdl': ['img-4664', 'img-4668'],
+  'smith-machine-squat-387': ['img-4660', 'img-4657', 'img-4658', 'img-4659'],
+  'smith-machine-stationary-lunge': ['img-4671', 'img-4661'],
+  'stability-bird-dog-318': ['img-5787', 'img-5779-2'],
+  'standing-calf-raise-machine': ['img-4782'],
+  'standing-dumbbell-alternating-bicep-curl': ['img-3857', 'img-3907'],
+  'standing-dumbbell-alternating-hammer-curl': ['img-6183-2'],
+  'standing-dumbbell-curl-and-press': ['img-6183-3'],
+  'standing-dumbbell-frontal-raises': ['img-6179'],
+  'standing-dumbbell-windmill': ['img-6186-1'],
+  'standing-plate-alternating-frontal-and-lateral-raises': ['img-6812-1'],
+  'standing-plate-lateral-raises': ['img-6812-2'],
+  'standing-single-leg-dumbbell-rdl': ['img-3874', 'img-6181-1', 'img-6181', 'img-3882', 'img-5789', 'img-6221'],
+  'straight-arm-pulldown': ['img-4638', 'img-6208'],
+  'superman': ['img-6233-2', 'img-6233-5', 'img-6233', 'img-5778'],
+  'supported-hip-dead-bug': ['img-5786-1'],
+  'table-top-alternating-towel-arm-slides': ['img-5783-1'],
+  'table-top-knee-taps-305': ['img-5781-2'],
+  'table-top-knee-taps-with-block-adduction': ['img-5784', 'img-5785-1'],
+  'toe-touches-299': ['img-5776-5', 'img-5781-1'],
+  'towel-pike': ['img-5783-2'],
+  'tricep-dips-machine': ['img-4783'],
+  'tricep-rope-pulldown': ['img-4619', 'img-6205', 'img-4609', 'img-6192'],
+  'wall-sit-with-parallel-isometric-arm-hold': ['img-6234-1', 'img-6234'],
+};
+
+// 47 videos with no AI tag yet — surfaced via the admin tagger only,
+// not through any exercise screen. Keeps every video file accounted for
+// so nothing in R2 sits orphaned.
+const UNTAGGED_VIDEO_SLUGS: readonly string[] = [
+  'img-3872', 'img-3887', 'img-3908', 'img-3909', 'img-3912',
+  'img-4315', 'img-4646', 'img-4647', 'img-4651', 'img-4654',
+  'img-4667', 'img-4779', 'img-4805', 'img-5776-4', 'img-5778-1',
+  'img-5778', 'img-5779-3', 'img-5779-4', 'img-5781-3', 'img-5782-1',
+  'img-5782', 'img-5785', 'img-5786', 'img-5788', 'img-6181-4',
+  'img-6185', 'img-6190', 'img-6191', 'img-6196', 'img-6197',
+  'img-6199', 'img-6204', 'img-6209-1', 'img-6218-1', 'img-6219',
+  'img-6220', 'img-6224', 'img-6226', 'img-6228', 'img-6232-2',
+  'img-6233-1', 'img-6234', 'img-6812', 'img-6813-1', 'img-6816-1',
+  'img-6816-4',
+];
 
 interface SignedUrlCacheEntry {
   videoUrl: string;
@@ -165,6 +362,42 @@ export function hasExerciseVideo(exerciseId: string): boolean {
  */
 export function getExerciseVideoSlug(exerciseId: string): string | null {
   return EXERCISE_VIDEO_SLUG_MAP[exerciseId] ?? null;
+}
+
+/**
+ * Look up ALL slugs for an exercise — canonical first, then alternate
+ * takes Jamie filmed for the same movement. Returns [] when the
+ * exercise has no mapped video.
+ *
+ * UI use: render a horizontal carousel / "alternate views" tab so users
+ * can swipe through different angles. Without this, only one of (e.g.)
+ * the 6 plank videos shows.
+ */
+export function getAllExerciseVideoSlugs(exerciseId: string): readonly string[] {
+  return EXERCISE_VIDEO_SLUGS[exerciseId] ?? [];
+}
+
+/**
+ * Untagged R2 video pool — videos uploaded but never assigned to an
+ * exercise (AI couldn't confidently tag them). Admin tagger reads from
+ * here; not surfaced through any exercise-facing screen.
+ */
+export function getUntaggedVideoSlugs(): readonly string[] {
+  return UNTAGGED_VIDEO_SLUGS;
+}
+
+/**
+ * Stats helper for the admin tagger header.
+ */
+export function getVideoCoverageStats() {
+  const exercises = Object.keys(EXERCISE_VIDEO_SLUGS).length;
+  const takes = Object.values(EXERCISE_VIDEO_SLUGS).reduce((n, arr) => n + arr.length, 0);
+  return {
+    totalVideos: takes + UNTAGGED_VIDEO_SLUGS.length,
+    taggedVideos: takes,
+    exercisesCovered: exercises,
+    untaggedVideos: UNTAGGED_VIDEO_SLUGS.length,
+  };
 }
 
 /**
