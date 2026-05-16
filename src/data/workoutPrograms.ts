@@ -1780,8 +1780,10 @@ export const MENS_BUILD: WorkoutProgram = {
   tags: ['strength', 'hypertrophy', 'mens', 'upper lower split', 'barbell', 'compound'],
 };
 
-/** All available workout programs */
-const _RAW_PROGRAMS: WorkoutProgram[] = [
+/**
+ * Every program defined in this file. New programs append here.
+ */
+const _ALL_PROGRAMS: WorkoutProgram[] = [
   CORE_CHALLENGE,
   BOOTY_CHALLENGE,
   LEAN_AND_MEAN,
@@ -1795,6 +1797,36 @@ const _RAW_PROGRAMS: WorkoutProgram[] = [
   SSD_2,
   MENS_BUILD,
 ];
+
+/**
+ * Programs shown in the app today (per Jamie 2026-05-16):
+ *   - Lusciously Lean BODYreCOMP 1.0 (the marquee Lusciously Lean program)
+ *   - Men's BUILD                    (the "Men Fit Program")
+ *   - 14-Day Trial Program           (stand-in for the "custom" slot until
+ *                                     the user-built program feature ships)
+ *
+ * All other programs stay defined above and are reachable via getProgramById
+ * (so any saved/active-program state still resolves) — they just don't appear
+ * in browse lists. Restore by adding their id to VISIBLE_PROGRAM_IDS.
+ *
+ * TODO when the program-builder lands: drop TRIAL_PROGRAM from this list
+ * and surface "Custom Fitness Program" as a build-your-own entry point.
+ */
+const VISIBLE_PROGRAM_IDS = new Set<string>([
+  'll-body-recomp-1',
+  'mens-build',
+  '14-day-trial',
+]);
+
+const _RAW_PROGRAMS: WorkoutProgram[] = _ALL_PROGRAMS.filter((p) =>
+  VISIBLE_PROGRAM_IDS.has(p.id),
+);
+
+/**
+ * Every program, including hidden ones — for admin tools, deep links, and
+ * resolving saved program state that references a now-hidden program.
+ */
+export const ALL_WORKOUT_PROGRAMS: readonly WorkoutProgram[] = _ALL_PROGRAMS;
 
 // Lazy Proxy — defers iteration until first access, reducing startup GC pressure
 export const WORKOUT_PROGRAMS: WorkoutProgram[] = new Proxy([] as WorkoutProgram[], {
@@ -1812,9 +1844,12 @@ export const WORKOUT_PROGRAMS: WorkoutProgram[] = new Proxy([] as WorkoutProgram
   },
 });
 
-/** Lookup by ID */
+/**
+ * Lookup by ID — checks ALL programs (visible + hidden) so users with
+ * an active program from before the visibility cull still resolve.
+ */
 export function getProgramById(programId: string): WorkoutProgram | undefined {
-  return _RAW_PROGRAMS.find((p) => p.id === programId);
+  return _ALL_PROGRAMS.find((p) => p.id === programId);
 }
 
 export default WORKOUT_PROGRAMS;
