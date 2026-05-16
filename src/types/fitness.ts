@@ -98,7 +98,23 @@ export interface Exercise {
   videoUrl?: string;
   /** Thumbnail image URL */
   thumbnailUrl?: string;
-  /** Brief cue or instruction */
+
+  // ── Coaching content (Grok-generated, Jamie-reviewable) ──────────────
+  // Populated from src/data/exerciseInstructions.json at build time.
+  // Empty/undefined when content hasn't been generated for an exercise.
+
+  /** One-sentence description: what this exercise is + primary target. */
+  description?: string;
+  /** Ordered "how to perform" steps. 3-5 numbered actions, plain English. */
+  steps?: string[];
+  /** 2-3 short coaching cues (form points). Each ≤ 80 chars. */
+  cues?: string[];
+  /** 1-2 safety notes — what to avoid, common injury pitfalls. */
+  safetyNotes?: string[];
+  /**
+   * Legacy single-string instructions field — kept for back-compat with
+   * any callers that haven't migrated to the structured `steps` array.
+   */
   instructions?: string;
 }
 

@@ -5,10 +5,18 @@
  * equivalent set of scopes to the HealthKit adapter for cross-platform
  * parity.
  *
- * Stubbed in 1.9.0 — available() returns true only when the SDK is
- * installed. Full read implementation lands in a 1.9.x patch once iOS
- * is validated.
+ * STATUS (May 2026): explicit "Android coming soon" — we don't ship a
+ * functional Android build today (iOS-only on the store), and the
+ * full Health Connect read path is staged behind an iOS validation
+ * window. available() reports false and connect() refuses so the
+ * integrations UI shows a clear "coming soon" message rather than a
+ * broken connect button.
+ *
+ * When we ship Android, flip `ANDROID_LIVE` to true and the rest of
+ * the adapter (init / sync) takes over.
  */
+
+const ANDROID_LIVE = false;
 
 import { Platform } from 'react-native';
 import type {
@@ -35,6 +43,8 @@ export const healthConnectAdapter: BiomarkerAdapter = {
   source: 'health_connect',
 
   available() {
+    // Hard-gated until Android ships. See ANDROID_LIVE flag above.
+    if (!ANDROID_LIVE) return false;
     return Platform.OS === 'android' && HealthConnect != null;
   },
 
@@ -45,7 +55,6 @@ export const healthConnectAdapter: BiomarkerAdapter = {
   async connect(_scopes: BiomarkerScope[]) {
     if (!this.available()) return false;
     try {
-      // Minimal init — real permission negotiation happens in 1.9.x
       const initialized = await HealthConnect.initialize?.();
       authorized = Boolean(initialized);
       return authorized;
@@ -61,6 +70,14 @@ export const healthConnectAdapter: BiomarkerAdapter = {
   },
 
   async status(): Promise<AdapterStatus> {
+    // Explicit "coming soon" surface — the integrations UI keys off
+    // the message field, so this is what users actually read.
+    if (!ANDROID_LIVE) {
+      return {
+        connected: false,
+        message: 'Android coming soon',
+      };
+    }
     return {
       connected: authorized,
       lastSyncedAt,
@@ -82,7 +99,9 @@ export const healthConnectAdapter: BiomarkerAdapter = {
       periods: [],
       cycleDayLogs: [],
       syncedAt,
-      notes: 'Health Connect read paths land in 1.9.x',
+      notes: ANDROID_LIVE
+        ? 'Health Connect read paths land in 1.9.x'
+        : 'Android coming soon — Health Connect integration not yet shipped',
     };
   },
 };

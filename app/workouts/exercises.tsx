@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
-import { EXERCISES, searchExercises } from '../../src/data/exercises';
+import { EXERCISES, searchExercises, getExerciseInstructions } from '../../src/data/exercises';
 import { ExerciseVideo } from '../../src/components/ExerciseVideo';
 import type { Exercise, MuscleGroup, Equipment } from '../../src/types/fitness';
 
@@ -170,6 +170,12 @@ function ExerciseDetailModal({
 }) {
   if (!exercise) return null;
 
+  // Lazy-resolve Grok-generated coaching content (description / steps /
+  // cues / safetyNotes). Wave 76.9 moved it out of the Exercise object
+  // so the 330 KB instructions JSON doesn't parse at cold start for
+  // users who never open Workouts.
+  const instructions = getExerciseInstructions(exercise.id);
+
   const equipStr = exercise.equipment
     .filter((e) => e !== 'none')
     .map(formatEquipment)
@@ -240,11 +246,66 @@ function ExerciseDetailModal({
               </View>
             </View>
 
-            {/* Instructions */}
-            {exercise.instructions ? (
+            {/* Description (one-line summary from Grok-generated content) */}
+            {instructions?.description ? (
+              <View style={styles.modalSection}>
+                <Text style={styles.modalDescription}>{instructions.description}</Text>
+              </View>
+            ) : null}
+
+            {/* Step-by-step instructions */}
+            {instructions?.steps && instructions.steps.length > 0 ? (
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>How to perform</Text>
+                {instructions.steps.map((step, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', marginTop: idx === 0 ? 0 : 8 }}>
+                    <Text style={[styles.modalDescription, { width: 22, fontWeight: '700' }]}>
+                      {idx + 1}.
+                    </Text>
+                    <Text style={[styles.modalDescription, { flex: 1 }]}>{step}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : exercise.instructions ? (
               <View style={styles.modalSection}>
                 <Text style={styles.modalSectionTitle}>Instructions</Text>
                 <Text style={styles.modalDescription}>{exercise.instructions}</Text>
+              </View>
+            ) : null}
+
+            {/* Coaching cues */}
+            {instructions?.cues && instructions.cues.length > 0 ? (
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>Cues</Text>
+                {instructions.cues.map((cue, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', marginTop: idx === 0 ? 0 : 4 }}>
+                    <Ionicons
+                      name="checkmark-circle-outline"
+                      size={14}
+                      color={Colors.raindropsDeep}
+                      style={{ marginTop: 3, marginRight: 6 }}
+                    />
+                    <Text style={[styles.modalDescription, { flex: 1 }]}>{cue}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
+            {/* Safety notes */}
+            {instructions?.safetyNotes && instructions.safetyNotes.length > 0 ? (
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>Safety</Text>
+                {instructions.safetyNotes.map((note, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', marginTop: idx === 0 ? 0 : 4 }}>
+                    <Ionicons
+                      name="warning-outline"
+                      size={14}
+                      color="#C76B45"
+                      style={{ marginTop: 3, marginRight: 6 }}
+                    />
+                    <Text style={[styles.modalDescription, { flex: 1 }]}>{note}</Text>
+                  </View>
+                ))}
               </View>
             ) : null}
 

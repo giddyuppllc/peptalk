@@ -21,6 +21,7 @@ import {
 } from '../types';
 import { secureStorage } from '../services/secureStorage';
 import { syncHealthProfile } from '../services/syncService';
+import { Clamps, clampNumber } from '../utils/inputClamps';
 
 // ---------------------------------------------------------------------------
 // Defaults
@@ -201,9 +202,24 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
 
       setBodyMetrics: (metrics) =>
         set((state) => {
+          // Clamp every numeric input so a typo / paste / bad import
+          // can't poison BMR, Aimee context, or the muscle-growth chart.
+          // Pre-clamp wave (76.10 audit) found 9 unbounded entry points
+          // — onboarding + health-profile + check-in + plan calc + Aimee
+          // all converge here.
+          const clamped: Partial<typeof state.profile.bodyMetrics> = {};
+          if ('weightLbs' in metrics) clamped.weightLbs = Clamps.weightLbs(metrics.weightLbs);
+          if ('heightInches' in metrics) clamped.heightInches = clampNumber((metrics as any).heightInches, 36, 96);
+          if ('bodyFatPercent' in metrics) clamped.bodyFatPercent = Clamps.bodyFatPct(metrics.bodyFatPercent);
+          if ('waistInches' in metrics) clamped.waistInches = Clamps.limbInches(metrics.waistInches);
+          if ('goalWeightLbs' in metrics) clamped.goalWeightLbs = Clamps.weightLbs(metrics.goalWeightLbs);
+          // Pass-through anything the clamp module doesn't know about
+          // (target_macros etc) — better to let unknown fields land than
+          // silently drop them.
+          const merged = { ...state.profile.bodyMetrics, ...metrics, ...clamped };
           const updated = {
             ...state.profile,
-            bodyMetrics: { ...state.profile.bodyMetrics, ...metrics },
+            bodyMetrics: merged,
             lastUpdated: new Date().toISOString(),
           };
           return { profile: { ...updated, profileCompleteness: calcCompleteness(updated) } };
@@ -308,17 +324,27 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
           },
         })),
 
-      // List manipulation helpers
+      // List manipulation helpers. Every "add" routes through
+      // Clamps.medicalTag (≤80 chars, trimmed) so a paste-bomb into
+      // an allergies/conditions/medications field doesn't blow up
+      // the Aimee prompt budget or saturate the row size on sync.
       addAllergy: (allergy) =>
-        set((state) => ({
-          profile: {
-            ...state.profile,
-            medical: {
-              ...state.profile.medical,
-              allergies: [...new Set([...state.profile.medical.allergies, allergy])],
+        set((state) => {
+          const clean = Clamps.medicalTag(allergy);
+          if (!clean) return state;
+          if (state.profile.medical.allergies.some((a) => a.toLowerCase() === clean.toLowerCase())) {
+            return state;
+          }
+          return {
+            profile: {
+              ...state.profile,
+              medical: {
+                ...state.profile.medical,
+                allergies: [...state.profile.medical.allergies, clean],
+              },
             },
-          },
-        })),
+          };
+        }),
 
       removeAllergy: (allergy) =>
         set((state) => ({
@@ -354,15 +380,22 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
         })),
 
       addCondition: (condition) =>
-        set((state) => ({
-          profile: {
-            ...state.profile,
-            medical: {
-              ...state.profile.medical,
-              conditions: [...new Set([...state.profile.medical.conditions, condition])],
+        set((state) => {
+          const clean = Clamps.medicalTag(condition);
+          if (!clean) return state;
+          if (state.profile.medical.conditions.some((c) => c.toLowerCase() === clean.toLowerCase())) {
+            return state;
+          }
+          return {
+            profile: {
+              ...state.profile,
+              medical: {
+                ...state.profile.medical,
+                conditions: [...state.profile.medical.conditions, clean],
+              },
             },
-          },
-        })),
+          };
+        }),
 
       removeCondition: (condition) =>
         set((state) => ({
@@ -376,15 +409,22 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
         })),
 
       addMedication: (medication) =>
-        set((state) => ({
-          profile: {
-            ...state.profile,
-            medical: {
-              ...state.profile.medical,
-              medications: [...new Set([...state.profile.medical.medications, medication])],
+        set((state) => {
+          const clean = Clamps.medicalTag(medication);
+          if (!clean) return state;
+          if (state.profile.medical.medications.some((m) => m.toLowerCase() === clean.toLowerCase())) {
+            return state;
+          }
+          return {
+            profile: {
+              ...state.profile,
+              medical: {
+                ...state.profile.medical,
+                medications: [...state.profile.medical.medications, clean],
+              },
             },
-          },
-        })),
+          };
+        }),
 
       removeMedication: (medication) =>
         set((state) => ({

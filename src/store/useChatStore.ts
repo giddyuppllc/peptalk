@@ -4,6 +4,67 @@ import { ChatMessage } from '../types';
 import { secureStorage } from '../services/secureStorage';
 import { syncRecord } from '../services/syncService';
 
+/**
+ * Debounced setItem wrapper around secureStorage. The chat store
+ * partializes the full chats[] tree, and the streaming chat flow fires
+ * `updateMessage` on every SSE text_delta — that's 30-50+ writes for
+ * a typical Aimee response, each encrypted via expo-secure-store /
+ * react-native-encrypted-storage. The marginal cost adds visible jank
+ * on the chat screen (perf audit P0).
+ *
+ * Coalescing the writes inside a 400 ms window collapses an entire
+ * streaming turn into ~1 write at the end. Reads are not debounced —
+ * they go straight through (hot path on screen mount).
+ *
+ * If the user backgrounds or kills the app while a write is pending,
+ * Zustand re-emits the whole state on next launch, so worst case is
+ * losing < 400 ms of in-flight token writes — equivalent to the
+ * stream having been a hair shorter.
+ */
+const PERSIST_DEBOUNCE_MS = 400;
+
+function createDebouncedStorage() {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let pending: { key: string; value: string } | null = null;
+  return {
+    async getItem(key: string): Promise<string | null> {
+      // Flush any in-flight write before reading so a hot reload
+      // doesn't return stale data.
+      if (pending) {
+        const { key: pk, value: pv } = pending;
+        pending = null;
+        if (timer) clearTimeout(timer);
+        timer = null;
+        await secureStorage.setItem(pk, pv);
+      }
+      return secureStorage.getItem(key);
+    },
+    setItem(key: string, value: string): void {
+      pending = { key, value };
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (pending) {
+          const { key: pk, value: pv } = pending;
+          pending = null;
+          timer = null;
+          // Fire-and-forget — Zustand's persist doesn't await the
+          // result anyway, and a failed write surfaces in the next
+          // attempt.
+          void secureStorage.setItem(pk, pv);
+        }
+      }, PERSIST_DEBOUNCE_MS);
+    },
+    async removeItem(key: string): Promise<void> {
+      pending = null;
+      if (timer) clearTimeout(timer);
+      timer = null;
+      await secureStorage.removeItem(key);
+    },
+  };
+}
+
+const debouncedChatStorage = createDebouncedStorage();
+
 const MAX_HISTORY = 200; // keep last 200 messages per chat
 
 export interface Chat {
@@ -59,6 +120,15 @@ interface ChatStore {
 
   // Message operations (act on active chat)
   addMessage: (message: ChatMessage) => void;
+  /** Patch an existing message in-place. Used for streaming updates where the
+   *  initial empty assistant bubble gets text/tool results filled in as the
+   *  SSE stream arrives. The patch is shallow-merged. */
+  updateMessage: (id: string, patch: Partial<ChatMessage>) => void;
+  /** Remove a single message by id (used when an SSE stream fails
+   *  before yielding any event — we need to drop the empty
+   *  placeholder bubble so the fallback reply doesn't render
+   *  alongside an empty one). */
+  removeMessage: (id: string) => void;
   setTyping: (typing: boolean) => void;
   clearChat: () => void;
 
@@ -220,6 +290,88 @@ export const useChatStore = create<ChatStore>()(
         })();
       },
 
+      updateMessage: (id, patch) => {
+        // Streaming updates land here repeatedly per token. We
+        // intentionally skip cloud sync on update — only the final
+        // assistant message gets synced server-side. Local mirror only.
+        //
+        // Fast-path: 99% of streaming updates target the ACTIVE chat.
+        // Walk that chat first (O(1) lookup); only fall back to a
+        // full-chats scan if the id isn't in the active chat. The
+        // earlier "scan all chats every time" implementation was the
+        // hot loop in the perf audit (O(N×M) array clones per token
+        // — N chats, M messages). Combined with the streaming-pause
+        // in the storage layer below, this turns each token into
+        // one map+spread, not N.
+        set((state) => {
+          const activeChatId = state.activeChatId;
+
+          // Fast path — active chat.
+          if (activeChatId) {
+            const activeIdx = state.chats.findIndex((c) => c.id === activeChatId);
+            if (activeIdx >= 0) {
+              const chat = state.chats[activeIdx];
+              const msgIdx = chat.messages.findIndex((m) => m.id === id);
+              if (msgIdx >= 0) {
+                const nextMessages = [...chat.messages];
+                nextMessages[msgIdx] = { ...nextMessages[msgIdx], ...patch };
+                const nextChat = { ...chat, messages: nextMessages };
+                const nextChats = [...state.chats];
+                nextChats[activeIdx] = nextChat;
+                return {
+                  ...state,
+                  chats: nextChats,
+                  messages: nextMessages,
+                };
+              }
+            }
+          }
+
+          // Slow path — message belongs to a backgrounded chat. Falls
+          // through here when the user switched conversations mid-
+          // stream; we still update the right chat so the bubble
+          // unfreezes when they switch back.
+          let foundChatId: string | null = null;
+          const nextChats = state.chats.map((c) => {
+            if (c.id === activeChatId) return c; // already checked
+            const idx = c.messages.findIndex((m) => m.id === id);
+            if (idx < 0) return c;
+            foundChatId = c.id;
+            const merged: ChatMessage = { ...c.messages[idx], ...patch };
+            const nextMessages = [...c.messages];
+            nextMessages[idx] = merged;
+            return { ...c, messages: nextMessages };
+          });
+          if (!foundChatId) return state;
+          return {
+            ...state,
+            chats: nextChats,
+            messages: activeChatId
+              ? activeMessages(nextChats, activeChatId)
+              : state.messages,
+          };
+        });
+      },
+
+      removeMessage: (id) => {
+        set((state) => {
+          let foundChatId: string | null = null;
+          const nextChats = state.chats.map((c) => {
+            if (!c.messages.some((m) => m.id === id)) return c;
+            foundChatId = c.id;
+            return { ...c, messages: c.messages.filter((m) => m.id !== id) };
+          });
+          if (!foundChatId) return state;
+          return {
+            ...state,
+            chats: nextChats,
+            messages: state.activeChatId
+              ? activeMessages(nextChats, state.activeChatId)
+              : state.messages,
+          };
+        });
+      },
+
       setTyping: (isTyping) => set({ isTyping }),
 
       clearChat: () => {
@@ -278,7 +430,10 @@ export const useChatStore = create<ChatStore>()(
     {
       name: 'peptalk-chat',
       version: 2,
-      storage: createJSONStorage(() => secureStorage),
+      // Debounced storage layer — collapses streaming-token write
+      // storms into one encrypted write per ~400 ms instead of 30+
+      // writes per turn. See createDebouncedStorage at top of file.
+      storage: createJSONStorage(() => debouncedChatStorage),
       partialize: (state) => ({
         chats: state.chats,
         activeChatId: state.activeChatId,
@@ -313,6 +468,27 @@ export const useChatStore = create<ChatStore>()(
           const fresh = makeEmptyChat();
           useChatStore.setState({ chats: [fresh], activeChatId: fresh.id, messages: fresh.messages });
           return;
+        }
+        // Defensive sweep — any message persisted with `streaming: true`
+        // came from a stream that was interrupted (force-quit, network
+        // drop, OS suspend) before the `done` event fired. Leaving it
+        // streaming makes the bubble render with a forever-blinking
+        // caret on next launch. Also drop empty bot bubbles that
+        // carry no toolResults / pendingActions — those are dead
+        // placeholders from a stream that threw before yielding any
+        // event.
+        for (const chat of state.chats) {
+          chat.messages = chat.messages.filter((m: ChatMessage) => {
+            if (m.role !== 'bot') return true;
+            const hasContent = typeof m.content === 'string' && m.content.trim().length > 0;
+            const hasCards =
+              (m.toolResults && m.toolResults.length > 0) ||
+              (m.pendingActions && m.pendingActions.length > 0);
+            return hasContent || hasCards;
+          });
+          for (const m of chat.messages) {
+            if (m.streaming) m.streaming = false;
+          }
         }
         const activeChatId = (!state.activeChatId || !state.chats.find((c: Chat) => c.id === state.activeChatId))
           ? state.chats[0].id

@@ -15,7 +15,7 @@
  * pitch + 3 bulleted promises.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -42,6 +42,16 @@ export function MaxYourStackCard({ compact = false }: MaxYourStackCardProps) {
   const join = useFeatureWaitlistStore((s) => s.join);
   const [pulse, setPulse] = useState(false);
 
+  // Track the pulse-clear timer so unmount cancels it. Earlier this
+  // fired setPulse(false) on a dead component when the user navigated
+  // away within the 600ms window after tapping Join.
+  const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    };
+  }, []);
+
   const handleJoin = () => {
     if (onWaitlist) {
       tapLight();
@@ -50,7 +60,11 @@ export function MaxYourStackCard({ compact = false }: MaxYourStackCardProps) {
     join(FEATURE_KEY);
     notifySuccess();
     setPulse(true);
-    setTimeout(() => setPulse(false), 600);
+    if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    pulseTimerRef.current = setTimeout(() => {
+      setPulse(false);
+      pulseTimerRef.current = null;
+    }, 600);
   };
 
   const promises = [

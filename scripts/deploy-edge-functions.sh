@@ -28,6 +28,13 @@ FUNCTIONS=(
 
   # AI / Aimee
   aimee-chat
+  aimee-chat-stream
+  aimee-action-confirm
+  aimee-lab-interpret
+  aimee-pantry-meal
+  aimee-pantry-parse
+  aimee-plan
+  aimee-recipe
 
   # Referrals
   redeem-referral-code

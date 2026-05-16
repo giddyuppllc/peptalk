@@ -70,9 +70,8 @@ const POLICY_SECTIONS: PolicySection[] = [
     title: 'Advertising',
     icon: 'megaphone-outline',
     paragraphs: [
-      'PepTalk may display advertisements in the future through Google AdMob or similar platforms. If and when ads are introduced:',
-      '\u2022  No Protected Health Information (PHI) will ever be shared with ad networks\n\u2022  Health-sensitive ad categories will be blocked at the network level\n\u2022  Ads will be contextual or based on anonymous, non-health demographics\n\u2022  You will never see ads based on your peptide usage, dose logs, or health conditions',
-      'We believe you should never have to worry that your health data is being used to target you with advertising.',
+      'PepTalk does not display advertisements. We have no advertising SDKs in the app and we do not partner with ad networks.',
+      'Your health data is never used for ad targeting. Period.',
     ],
   },
   {

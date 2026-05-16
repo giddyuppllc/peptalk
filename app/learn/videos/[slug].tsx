@@ -65,9 +65,11 @@ export default function VideoPlayerScreen() {
     );
   }
 
-  // Pre-release videos use PLACEHOLDER_* IDs until production filming wraps.
-  // Detect and gracefully tell users instead of dumping them into a 404.
-  const isPlaceholder = /PLACEHOLDER/i.test(video.videoUrl);
+  // Pre-release videos carry `comingSoon: true` (and historically also
+  // had a `PLACEHOLDER_*` token in videoUrl). Either signal flags the
+  // entry as not-yet-shipped so we surface a friendly notice instead
+  // of opening a broken external link.
+  const isPlaceholder = video.comingSoon === true || /PLACEHOLDER/i.test(video.videoUrl);
 
   const handleOpenVideo = () => {
     if (isPlaceholder) {

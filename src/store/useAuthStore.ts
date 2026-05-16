@@ -13,6 +13,7 @@ import { secureStorage } from '../services/secureStorage';
 import { supabase } from '../services/supabase';
 import { useSubscriptionStore } from './useSubscriptionStore';
 import { useOnboardingStore } from './useOnboardingStore';
+import { isAdminEmail } from '../hooks/useIsAdmin';
 import {
   trackSignupStarted,
   trackSignupCompleted,
@@ -92,54 +93,10 @@ export const useAuthStore = create<AuthStore>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true });
 
-        // Dev account bypass — skip Supabase for test/dev emails
-        const DEV_EMAILS: Record<string, { firstName: string; lastName: string; tier: string }> = {
-          'burnsnoho@gmail.com': { firstName: 'Burns', lastName: '', tier: 'pro' },
-          'free@test.com': { firstName: 'Free', lastName: 'Tester', tier: 'free' },
-          'plus@test.com': { firstName: 'Plus', lastName: 'Tester', tier: 'plus' },
-          'pro@test.com': { firstName: 'Pro', lastName: 'Tester', tier: 'pro' },
-          'jamie@test.com': { firstName: 'Jamie', lastName: '', tier: 'pro' },
-          'jake@test.com': { firstName: 'Jake', lastName: '', tier: 'pro' },
-          'sophia@test.com': { firstName: 'Sophia', lastName: '', tier: 'plus' },
-          'marcus@test.com': { firstName: 'Marcus', lastName: '', tier: 'pro' },
-          'sarah@test.com': { firstName: 'Sarah', lastName: '', tier: 'plus' },
-          'richard@test.com': { firstName: 'Richard', lastName: '', tier: 'pro' },
-          'diana@test.com': { firstName: 'Diana', lastName: '', tier: 'pro' },
-          'walter@test.com': { firstName: 'Walter', lastName: '', tier: 'free' },
-          'margaret@test.com': { firstName: 'Margaret', lastName: '', tier: 'pro' },
-        };
-
         const _email = email.toLowerCase().trim();
-        const devAccount = DEV_EMAILS[_email];
 
-        // Dev backdoor gate — requires BOTH __DEV__ AND an explicit env
-        // flag. `__DEV__` alone isn't safe because it can be flipped by
-        // non-obvious build settings (e.g. a prod build with sourcemaps
-        // enabled); requiring an opt-in env var means a TestFlight / App
-        // Store build can never accidentally grant tester backdoors.
-        const devModeEnabled =
-          __DEV__ && process.env.EXPO_PUBLIC_DEV_MODE === 'true';
-        if (devModeEnabled && devAccount) {
-          useSubscriptionStore.getState().setTier(devAccount.tier as any);
-
-          const appUser: User = {
-            id: `dev-${Date.now()}`,
-            email: _email,
-            firstName: devAccount.firstName,
-            lastName: devAccount.lastName,
-            savedStacks: [],
-            favoritePeptides: [],
-            isPro: devAccount.tier === 'pro',
-            createdAt: new Date().toISOString(),
-          };
-
-          set({ user: appUser, isAuthenticated: true, isLoading: false });
-          return;
-        }
-
-        // Real Supabase auth for non-dev emails — use the normalized form
-        // computed above so trailing whitespace / caps don't produce a
-        // client-validates-but-server-rejects mismatch.
+        // Use the normalized email so trailing whitespace / caps don't
+        // produce a client-validates-but-server-rejects mismatch.
         try {
           const { data, error } = await db.auth.signInWithPassword({
             email: _email,
@@ -164,7 +121,12 @@ export const useAuthStore = create<AuthStore>()(
             .maybeSingle();
 
           const safe = coerceProfileRow(profile, _email);
-          useSubscriptionStore.getState().setTier(safe.tier as any);
+          // Admin override: admins are upgraded to 'pro' on every login so
+          // they can test paid features + approve video tags without
+          // needing a real subscription. Source of truth is ADMIN_EMAILS
+          // in useIsAdmin.ts.
+          const effectiveTier = isAdminEmail(_email) ? 'pro' : safe.tier;
+          useSubscriptionStore.getState().setTier(effectiveTier as any);
 
           const appUser: User = {
             id: data.user.id,
@@ -174,7 +136,7 @@ export const useAuthStore = create<AuthStore>()(
             avatarUri: safe.avatarUri,
             savedStacks: [],
             favoritePeptides: safe.favoritePeptides,
-            isPro: safe.tier === 'pro',
+            isPro: effectiveTier === 'pro',
             createdAt: data.user.created_at,
           };
 
@@ -282,7 +244,10 @@ export const useAuthStore = create<AuthStore>()(
             .maybeSingle();
 
           const safe = coerceProfileRow(profile, session.user.email ?? '');
-          useSubscriptionStore.getState().setTier(safe.tier as any);
+          // Admin override: same rule as login — admins always get 'pro'
+          // tier so session restore can't drop them back to free.
+          const effectiveTier = isAdminEmail(session.user.email) ? 'pro' : safe.tier;
+          useSubscriptionStore.getState().setTier(effectiveTier as any);
 
           const appUser: User = {
             id: session.user.id,
@@ -292,7 +257,7 @@ export const useAuthStore = create<AuthStore>()(
             avatarUri: safe.avatarUri,
             savedStacks: [],
             favoritePeptides: safe.favoritePeptides,
-            isPro: safe.tier === 'pro',
+            isPro: effectiveTier === 'pro',
             createdAt: session.user.created_at,
           };
 

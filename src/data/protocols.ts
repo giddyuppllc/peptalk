@@ -473,11 +473,17 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     id: 'proto-motsc',
     peptideId: 'mots-c',
     name: 'MOTS-c Protocol',
-    typicalDose: { min: 5, max: 10, unit: 'mg' },
+    // Per-dose amount (NOT vial size). Edward's reference: 200 mcg
+    // start, titrating to ~1 mg over 8 weeks. The 5-10 mg figure that
+    // lived here was the VIAL SIZE — wildly wrong as a per-dose
+    // value, and the cause of TestFlight tester report
+    // "MOTSC → blank screen, app freezes" because downstream syringe
+    // math couldn't fit a 7.5 mg target into a 10 mg / 2 ml vial.
+    typicalDose: { min: 200, max: 1000, unit: 'mcg' },
     route: 'subcutaneous',
-    frequency: 'tiw',
-    frequencyLabel: '3-5x/week',
-    durationWeeks: { min: 4, max: 12 },
+    frequency: 'daily',
+    frequencyLabel: 'daily (titrate weekly)',
+    durationWeeks: { min: 6, max: 10 },
     timing: 'Morning or pre-exercise',
     storageNotes: 'Store at 2-8°C after reconstitution.',
     importantNotes: [

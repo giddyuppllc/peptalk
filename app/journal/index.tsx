@@ -446,6 +446,8 @@ export default function JournalFeedScreen() {
       <Pressable
         style={styles.fab}
         onPress={() => router.push('/journal/new')}
+        accessibilityRole="button"
+        accessibilityLabel="New journal entry"
       >
         <Ionicons name="add" size={28} color={Colors.darkBg} />
       </Pressable>

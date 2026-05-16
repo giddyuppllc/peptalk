@@ -10,6 +10,8 @@ import {
   Alert,
   Animated,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -219,12 +221,18 @@ function TodayGlow() {
   const glow = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
-    Animated.loop(
+    // Stop the animation on unmount — earlier this leaked an
+    // infinite loop on every remount of the Calendar tab. Mirrors
+    // the cleanup pattern in app/(tabs)/index.tsx and
+    // src/components/LiveEventBanner.tsx.
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(glow, { toValue: 1, duration: 1500, useNativeDriver: true }),
         Animated.timing(glow, { toValue: 0.4, duration: 1500, useNativeDriver: true }),
       ])
-    ).start();
+    );
+    loop.start();
+    return () => loop.stop();
   }, []);
 
   return (
@@ -414,7 +422,27 @@ export default function CalendarScreen() {
       return;
     }
 
-    const safety = checkDoseSafety(logSubstanceName.trim(), amount, logUnit);
+    // Magnitude sanity check — peptide doses don't legitimately
+    // exceed ~50,000 (in any unit). A 9,999,999 entry is a
+    // copy-paste fat-finger or unit slip. Refuse so the dose log
+    // doesn't store implausible values that poison the detect-alerts
+    // engine + Aimee context. P0 from input validation audit.
+    if (
+      (logUnit === 'mcg' && amount > 100000) ||
+      (logUnit === 'mg' && amount > 100) ||
+      (logUnit === 'IU' && amount > 10000)
+    ) {
+      Alert.alert(
+        'Dose too large',
+        `${amount} ${logUnit} is outside the plausible range for any peptide. Did you mean a different unit? Re-enter to confirm.`,
+      );
+      return;
+    }
+
+    // Substance name length cap so a paste-bomb doesn't bloat the row.
+    const trimmedName = logSubstanceName.trim().slice(0, 80);
+
+    const safety = checkDoseSafety(trimmedName, amount, logUnit);
 
     // Pregnancy contraindication check — lookup the peptide's protocol and
     // if its `contraindications` mentions pregnancy/nursing and the user
@@ -436,13 +464,13 @@ export default function CalendarScreen() {
 
     const persist = () => {
       logDose({
-        peptideId: logSubstanceName.trim(),
+        peptideId: trimmedName,
         amount,
         unit: logUnit,
         route: logRoute,
         date: selectedDate,
-        injectionSite: logSite || undefined,
-        notes: logNotes || undefined,
+        injectionSite: logSite ? logSite.slice(0, 60) : undefined,
+        notes: logNotes ? logNotes.slice(0, 500) : undefined,
       });
     };
 
@@ -1210,10 +1238,20 @@ export default function CalendarScreen() {
         onRequestClose={() => setShowLogModal(false)}
       >
         <SafeAreaView style={[styles.modalSafe, { backgroundColor: t.bg }]}>
-          <ScrollView contentContainerStyle={styles.modalContent}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+          >
+          <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: t.text }]}>Add Entry</Text>
-              <TouchableOpacity onPress={() => setShowLogModal(false)} style={[styles.modalCloseBtn, { backgroundColor: t.glass }]}>
+              <TouchableOpacity
+                onPress={() => setShowLogModal(false)}
+                style={[styles.modalCloseBtn, { backgroundColor: t.glass }]}
+                accessibilityRole="button"
+                accessibilityLabel="Close add entry"
+              >
                 <Ionicons name="close" size={22} color={t.text} />
               </TouchableOpacity>
             </View>
@@ -1341,6 +1379,7 @@ export default function CalendarScreen() {
               </LinearGradient>
             </TouchableOpacity>
           </ScrollView>
+          </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
 

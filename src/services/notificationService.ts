@@ -69,6 +69,60 @@ export function configureNotificationHandler(): void {
   });
 }
 
+// Single global response listener — fired when the user TAPS a
+// notification (push or local). Routes to the screen specified in
+// `data.route`, or falls back to a screen inferred from `data.type`
+// / `data.kind`. Without this, tapping any notification just opens
+// the app with no deep-linking, defeating every `route:` field we set
+// on scheduled reminders (P0 from Wave 76.9 push audit).
+let responseSub: { remove(): void } | null = null;
+export function registerNotificationResponseHandler(
+  router: { push: (path: string) => void },
+): void {
+  if (!isAvailable()) return;
+  if (responseSub) responseSub.remove();
+  responseSub = Notifications.addNotificationResponseReceivedListener(
+    (response: any) => {
+      const data = (response?.notification?.request?.content?.data ?? {}) as Record<string, unknown>;
+      const route =
+        typeof data.route === 'string' ? data.route : null;
+      if (route) {
+        try { router.push(route); } catch (err) {
+          if (__DEV__) console.warn('[notif] route push failed:', err, route);
+        }
+        return;
+      }
+      // Fallback: infer from category keys we set when scheduling.
+      const inferredRoute = (() => {
+        switch (data.type || data.kind) {
+          case 'check-in': return '/(tabs)/check-in';
+          case 'dose': return '/(tabs)/calendar';
+          case 'workout': return '/(tabs)/workouts';
+          case 'meal':
+          case 'meal-safety': return '/(tabs)/nutrition';
+          case 'community-reply':
+          case 'community-mention':
+          case 'community-like': {
+            const postId = typeof data.postId === 'string' ? data.postId : null;
+            return postId ? `/(tabs)/community/${postId}` : '/(tabs)/community';
+          }
+          default: return null;
+        }
+      })();
+      if (inferredRoute) {
+        try { router.push(inferredRoute); } catch (err) {
+          if (__DEV__) console.warn('[notif] fallback route push failed:', err, inferredRoute);
+        }
+      }
+    },
+  );
+}
+
+export function unregisterNotificationResponseHandler(): void {
+  responseSub?.remove();
+  responseSub = null;
+}
+
 // ─── Register for Push Notifications ─────────────────────────────────────────
 
 export async function registerForPushNotifications(): Promise<string | null> {
@@ -82,11 +136,21 @@ export async function registerForPushNotifications(): Promise<string | null> {
   }
 
   if (Platform.OS === 'android') {
+    // 'reminders' is the catch-all channel for scheduled notifications.
     await Notifications.setNotificationChannelAsync('reminders', {
       name: 'Reminders',
       importance: Notifications.AndroidImportance?.HIGH ?? 4,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#FF6B6B',
+      sound: 'default',
+    });
+    // 'motivation' is referenced by scheduleDailyMotivation below. On
+    // Android 8+, posting to an unregistered channel is silently
+    // dropped — register it up front to keep daily motivation pushes
+    // alive on Android. Earlier audit (Wave 76.8) caught this.
+    await Notifications.setNotificationChannelAsync('motivation', {
+      name: 'Motivation',
+      importance: Notifications.AndroidImportance?.DEFAULT ?? 3,
       sound: 'default',
     });
   }
@@ -112,16 +176,37 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
 // ─── Schedule Daily Check-In Reminder ────────────────────────────────────────
 
+/** Stable identifier for the daily check-in reminder. Reusing this
+ *  on every schedule call means iOS REPLACES the prior schedule
+ *  rather than creating a duplicate — without it, the boot-time
+ *  scheduler in app/_layout.tsx was creating a fresh reminder on
+ *  every cold launch, resulting in 10+ duplicate 9 AM pushes after
+ *  10 launches (and the "Off" toggle in profile silently failing
+ *  to cancel them because cancelRemindersByTag only matched
+ *  prefixed ids). Audit fix (Wave 76.8). */
+export const DAILY_CHECKIN_REMINDER_ID = 'checkin-daily';
+
 export async function scheduleDailyCheckInReminder(time: string): Promise<string> {
   if (!isAvailable()) return '';
 
   const [hours, minutes] = time.split(':').map(Number);
 
+  // Cancel any prior schedule with this identifier first. iOS replaces
+  // by id but a different code path may have leaked an unprefixed id
+  // before this fix shipped; the cancel guarantees idempotency.
+  try {
+    await Notifications.cancelScheduledNotificationAsync(DAILY_CHECKIN_REMINDER_ID);
+  } catch {
+    /* no-op if nothing to cancel */
+  }
+
   const identifier = await Notifications.scheduleNotificationAsync({
+    identifier: DAILY_CHECKIN_REMINDER_ID,
     content: {
       title: 'Time for your daily check-in',
       body: 'How are you feeling today? Log your mood, energy, and peptide effects.',
       sound: 'default',
+      data: { type: 'check-in', route: '/(tabs)/check-in' },
       ...(Platform.OS === 'android' && { channelId: 'reminders' }),
     },
     trigger: {
@@ -145,22 +230,54 @@ export async function scheduleDoseReminder(
 ): Promise<string> {
   if (!isAvailable()) return '';
 
+  // Stable per-peptide prefix lets cancelDoseReminders(peptideId) sweep
+  // all triggers we registered for this protocol — re-activating the
+  // same protocol no longer stacks duplicates (P1 from push audit).
+  // Sweep first, then schedule the fresh set.
+  await cancelDoseRemindersFor(peptideId);
+
   const [hours, minutes] = time.split(':').map(Number);
-  const trigger = buildTriggerForFrequency(frequency, hours, minutes);
+  const triggers = buildTriggersForFrequency(frequency, hours, minutes);
 
-  const identifier = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: `${peptideName} Dose Reminder`,
-      body: 'Time to take your scheduled dose.',
-      sound: 'default',
-      data: { peptideId, frequency },
-      ...(Platform.OS === 'android' && { channelId: 'reminders' }),
-    },
-    trigger,
-    identifier: `dose-${peptideId}-${Date.now()}`,
+  const ids: string[] = [];
+  for (let i = 0; i < triggers.length; i++) {
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `${peptideName} Dose Reminder`,
+        body: 'Time to take your scheduled dose.',
+        sound: 'default',
+        data: {
+          peptideId,
+          frequency,
+          type: 'dose',
+          route: '/(tabs)/calendar',
+        },
+        ...(Platform.OS === 'android' && { channelId: 'reminders' }),
+      },
+      trigger: triggers[i],
+      identifier: triggers.length === 1
+        ? `dose-${peptideId}`
+        : `dose-${peptideId}-slot-${i}`,
+    });
+    ids.push(id);
+  }
+
+  // Return the first id for back-compat with single-id callers.
+  return ids[0] ?? '';
+}
+
+/** Cancel all dose reminders scheduled for a specific peptide. */
+export async function cancelDoseRemindersFor(peptideId: string): Promise<void> {
+  if (!isAvailable()) return;
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  const prefix = `dose-${peptideId}`;
+  const toCancel = scheduled.filter((n: any) => {
+    const id = n.identifier ?? '';
+    return id === prefix || id.startsWith(`${prefix}-`);
   });
-
-  return identifier;
+  for (const n of toCancel as any[]) {
+    try { await Notifications.cancelScheduledNotificationAsync(n.identifier); } catch { /* ignore */ }
+  }
 }
 
 // ─── Cancel All Reminders ────────────────────────────────────────────────────
@@ -346,18 +463,63 @@ export async function cancelAll(): Promise<void> {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function buildTriggerForFrequency(frequency: string, hours: number, minutes: number): any {
+/**
+ * Returns an array of OS triggers for the given protocol frequency.
+ * Multi-day cadences (biw, tiw, biweekly) produce multiple weekly
+ * triggers — the caller schedules one notification per element.
+ *
+ * Earlier this function returned a single trigger and silently fell
+ * through to 'daily' for every cadence except 'weekly', meaning
+ * every-other-day, twice-weekly, and biweekly protocols fired EVERY
+ * DAY. P1 from Wave 76.9 push audit.
+ */
+function buildTriggersForFrequency(
+  frequency: string,
+  hours: number,
+  minutes: number,
+): any[] {
   const dailyType = Notifications?.SchedulableTriggerInputTypes?.DAILY ?? 'daily';
   const weeklyType = Notifications?.SchedulableTriggerInputTypes?.WEEKLY ?? 'weekly';
   const channelId = Platform.OS === 'android' ? 'reminders' : undefined;
+  const wk = (weekday: number) => ({
+    type: weeklyType,
+    weekday,
+    hour: hours,
+    minute: minutes,
+    channelId,
+  });
 
+  // Expo weekday convention: 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat.
   switch (frequency) {
-    case 'weekly':
-      return { type: weeklyType, weekday: 2, hour: hours, minute: minutes, channelId };
     case 'daily':
+      return [{ type: dailyType, hour: hours, minute: minutes, channelId }];
+    case 'weekly':
+    case 'biweekly': // every 2 wks — OS can't model exactly; fire same weekday weekly
+      return [wk(2)]; // Mon
+    case 'biw': // bi-weekly = TWICE per week (Mon + Thu)
+    case 'twice_weekly':
+      return [wk(2), wk(5)];
+    case 'tiw': // tri-weekly = THREE times per week (Mon + Wed + Fri)
+    case 'thrice_weekly':
+    case 'triweekly':
+      return [wk(2), wk(4), wk(6)];
+    case 'eod':
+    case 'every_other_day':
+      // OS doesn't model every-other-day natively. Approximate as
+      // Mon/Wed/Fri/Sun (4×/week) which is close to 3.5×/week target.
+      return [wk(1), wk(2), wk(4), wk(6)];
     default:
-      return { type: dailyType, hour: hours, minute: minutes, channelId };
+      // Unknown frequency — fall back to daily and log so we notice.
+      if (__DEV__) console.warn('[notif] unknown frequency, defaulting to daily:', frequency);
+      return [{ type: dailyType, hour: hours, minute: minutes, channelId }];
   }
+}
+
+// Back-compat shim — old callers got a single trigger. Returns the
+// first trigger so existing single-trigger schedule sites keep working
+// during migration. New call sites should use buildTriggersForFrequency.
+function buildTriggerForFrequency(frequency: string, hours: number, minutes: number): any {
+  return buildTriggersForFrequency(frequency, hours, minutes)[0];
 }
 
 /** Convert a day name (e.g. "Monday") to Expo weekday number (1=Sun … 7=Sat). */

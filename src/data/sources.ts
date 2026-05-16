@@ -252,7 +252,7 @@ export const SOURCES: Source[] = [
     lastReviewed: '2026-04-29',
     quote:
       'Tetrapeptide epitalon (Ala-Glu-Asp-Gly) shown to extend mean lifespan in rodent models; human data remains preliminary.',
-    peptideIds: ['epitalon'],
+    peptideIds: ['epithalon'],
     topics: ['efficacy', 'mechanism', 'long_term_outcomes'],
   },
   {

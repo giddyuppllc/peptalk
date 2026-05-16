@@ -23,6 +23,8 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { ChatBubble, TypingIndicator } from '../../src/components/ChatBubble';
+import { AimeePendingActionCard } from '../../src/components/AimeePendingActionCard';
+import { AimeeToolResultCard } from '../../src/components/AimeeToolResultCard';
 import { getAimeeNudges } from '../../src/services/aimeeNudges';
 import { PepTalkCharacter } from '../../src/components/PepTalkCharacter';
 import { AimeeDnaIcon } from '../../src/components/AimeeDnaIcon';
@@ -35,9 +37,16 @@ import { useCheckinStore } from '../../src/store/useCheckinStore';
 import { useOnboardingStore } from '../../src/store/useOnboardingStore';
 import { useStackStore } from '../../src/store/useStackStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
+import { useMealStore } from '../../src/store/useMealStore';
+import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import { PEPTIDES } from '../../src/data/peptides';
 import { generateLocalBotResponse } from '../../src/services/peptalkBot';
-import { generateAIResponse, isAIAvailable } from '../../src/services/llmService';
+import {
+  generateAIResponse,
+  generateAIResponseStream,
+  isAIAvailable,
+} from '../../src/services/llmService';
 import { canSendToCloud } from '../../src/services/privacyGuard';
 import { generateCorrelationInsights, buildCorrelationSummaryForBot } from '../../src/services/watchCorrelationService';
 import { getPeptideById } from '../../src/data/peptides';
@@ -70,6 +79,39 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
       (e) => { clearTimeout(timer); reject(e); },
     );
   });
+}
+
+/**
+ * Allowlist guard for navigation paths supplied by the Aimee edge fn
+ * (navigate / open_dosing_calculator client_actions). Even though the
+ * server already maps known screen names through SCREEN_TO_PATH, this
+ * second check refuses any unexpected path so a prompt-injection
+ * escape can't land users on /admin/* or any /dev-* route. Allow:
+ *   - / (root tab group)
+ *   - /(tabs)/<one of the visible tabs>
+ *   - /calculators/<screen>
+ *   - /peptide/<id>
+ *   - /subscription
+ *   - /auth (sign-in / sign-up)
+ */
+function isAllowedNavigationPath(path: string): boolean {
+  if (typeof path !== 'string' || path.length > 200) return false;
+  if (path.startsWith('//') || path.includes('..')) return false;
+  // No /admin/, no /dev-, no internal-only routes.
+  if (/^\/?(admin|dev-)/.test(path)) return false;
+  const allowed = [
+    /^\/?$/,
+    /^\/?\(tabs\)\/?$/,
+    /^\/?\(tabs\)\/(home|my-stacks|peptalk|nutrition|workouts|community|check-in|calendar|profile|stack-builder)(\?|\/|$)/,
+    /^\/?calculators(\/[\w-]+)?(\?.*)?$/,
+    /^\/?peptide\/[\w-]+(\?.*)?$/,
+    /^\/?subscription(\?.*)?$/,
+    /^\/?auth(\?.*)?$/,
+    /^\/?learn(\/.*)?$/,
+    /^\/?nutrition(\/[\w-]+)*(\?.*)?$/,
+    /^\/?workouts(\/[\w-]+)*(\?.*)?$/,
+  ];
+  return allowed.some((rx) => rx.test(path));
 }
 
 /* ─── Journal Toast Component ────────────────────────────────────── */
@@ -122,6 +164,8 @@ export default function PepTalkScreen() {
   const messages = useChatStore((s) => s.messages);
   const isTyping = useChatStore((s) => s.isTyping);
   const addMessage = useChatStore((s) => s.addMessage);
+  const updateMessage = useChatStore((s) => s.updateMessage);
+  const removeMessage = useChatStore((s) => s.removeMessage);
   const setTyping = useChatStore((s) => s.setTyping);
   const profile = useOnboardingStore((s) => s.profile);
   const checkIns = useCheckinStore((s) => s.entries);
@@ -132,6 +176,11 @@ export default function PepTalkScreen() {
   const alerts = useDoseLogStore((s) => s.alerts);
   const healthProfile = useHealthProfileStore((s) => s.profile);
   const addJournalEntry = useJournalStore((s) => s.addEntry);
+  // Aimee write-actions land in these local stores; sync-up to Supabase
+  // is handled inside each store's existing add* method via syncRecord.
+  const logDoseAction = useDoseLogStore((s) => s.logDose);
+  const addMealAction = useMealStore((s) => s.addMeal);
+  const addPlannedWorkoutAction = useWorkoutStore((s) => s.addPlannedLog);
 
   const [inputText, setInputText] = React.useState('');
   const [drawerOpen, setDrawerOpen] = React.useState(false);
@@ -141,6 +190,16 @@ export default function PepTalkScreen() {
   const prefillHandled = useRef(false);
   const messageHandled = useRef(false);
   const flatListRef = useRef<FlatList>(null);
+  // Abort controller for the in-flight Aimee SSE stream. When the chat
+  // screen unmounts (user navigates away mid-response), we abort the
+  // fetch so late client_action events don't fire router.push / store
+  // writes on a dead component.
+  const streamAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => {
+    return () => {
+      streamAbortRef.current?.abort();
+    };
+  }, []);
 
   // Pills only show on empty state — once any message exists, hide forever
   const showPills = messages.length === 0;
@@ -221,6 +280,319 @@ export default function PepTalkScreen() {
     [addMessage, addJournalEntry],
   );
 
+  // ────────────────────────────────────────────────────────────────────
+  // Aimee client_action appliers — invoked from the SSE stream when the
+  // edge fn emits a {type:'client_action', action:{type, payload}}
+  // event. Each one delegates to the matching local Zustand store so
+  // the new row appears immediately in the dose/meal/workout UI; each
+  // store handles the Supabase sync internally (syncRecord upsert).
+  // ────────────────────────────────────────────────────────────────────
+
+  const applyLogDoseAction = useCallback(
+    (payload: Record<string, unknown>) => {
+      const peptideName = typeof payload.peptideName === 'string' ? payload.peptideName : '';
+      const rawPid = typeof payload.peptideId === 'string' ? payload.peptideId : '';
+      // Resolve to a canonical peptide id from src/data/peptides so the
+      // store's dose alerts (which key off peptideId) work properly.
+      // Fall back to the raw id or the name slug.
+      const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const canonical =
+        PEPTIDES.find((p) => p.id === rawPid)?.id ??
+        PEPTIDES.find((p) => norm(p.name) === norm(peptideName))?.id ??
+        (rawPid || norm(peptideName));
+
+      const amount = Number(payload.amount);
+      const unit = typeof payload.unit === 'string' ? payload.unit.toLowerCase() : 'mcg';
+      const route = typeof payload.route === 'string' ? payload.route : 'subcutaneous';
+      if (!canonical || !Number.isFinite(amount) || amount <= 0) return;
+      // Magnitude clamps — Grok could hallucinate `amount: 999999` and the
+      // edge function passes it through verbatim. Mirror the manual-log
+      // dialog caps (calendar.tsx ~line 422). Prevents poisoned dose log
+      // rows that then feed back into Aimee's context.
+      if (
+        (unit === 'mcg' && amount > 100000) ||
+        (unit === 'mg' && amount > 100) ||
+        (unit === 'iu' && amount > 10000)
+      ) {
+        if (__DEV__) console.warn('[aimee] log_dose magnitude implausible, ignoring:', amount, unit);
+        return;
+      }
+      logDoseAction({
+        peptideId: canonical,
+        amount,
+        unit: unit as any,
+        route: route as any,
+        date: typeof payload.date === 'string' ? payload.date : undefined,
+        time: typeof payload.time === 'string' ? payload.time : undefined,
+        injectionSite: typeof payload.site === 'string' ? payload.site : undefined,
+        notes: typeof payload.notes === 'string' ? payload.notes : undefined,
+      });
+    },
+    [logDoseAction],
+  );
+
+  const applyLogMealAction = useCallback(
+    (payload: Record<string, unknown>) => {
+      const id =
+        typeof payload.id === 'string'
+          ? payload.id
+          : `meal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const date =
+        typeof payload.date === 'string'
+          ? payload.date
+          : new Date().toISOString().slice(0, 10);
+      const mealType =
+        typeof payload.mealType === 'string' ? payload.mealType : 'snack';
+      const timestamp =
+        typeof payload.timestamp === 'string' ? payload.timestamp : new Date().toISOString();
+      const items = Array.isArray(payload.items) ? payload.items : [];
+      const title = typeof payload.title === 'string' ? payload.title : 'Meal';
+      const totals = (payload.totals ?? {}) as Record<string, unknown>;
+
+      // Build a quickLog so the meal counts toward macro totals even
+      // when the items array doesn't carry full per-food nutrition.
+      // Field names MUST match MealEntry.quickLog in src/types/fitness.ts —
+      // useMealStore.getDailyTotals reads proteinGrams / carbsGrams /
+      // fatGrams. Earlier versions wrote `protein/carbs/fat` which the
+      // store silently ignored, zeroing macros for every Aimee-logged
+      // meal in the nutrition ring.
+      // Clamp every macro: never negative, never larger than a sane meal.
+      // Caps mirror the manual quick-log dialog (app/(tabs)/nutrition).
+      // Without these, Grok could fabricate `calories: -800` or
+      // `calories: 50000` and silently poison the user's daily totals.
+      const clamp = (v: unknown, max: number): number => {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return 0;
+        return Math.max(0, Math.min(max, n));
+      };
+      const quickLog = {
+        description: title,
+        calories: clamp(totals.calories, 5000),
+        proteinGrams: clamp(totals.protein, 500),
+        carbsGrams: clamp(totals.carbs, 1000),
+        fatGrams: clamp(totals.fat, 500),
+      };
+
+      addMealAction({
+        id,
+        date,
+        mealType: mealType as any,
+        timestamp,
+        foods: items as any,
+        quickLog,
+        notes: typeof payload.notes === 'string' ? payload.notes : undefined,
+      } as any);
+    },
+    [addMealAction],
+  );
+
+  const applyScheduleWorkoutAction = useCallback(
+    (payload: Record<string, unknown>) => {
+      const id =
+        typeof payload.id === 'string'
+          ? payload.id
+          : `wlog-aimee-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const startedAt =
+        typeof payload.startedAt === 'string' ? payload.startedAt : new Date().toISOString();
+      addPlannedWorkoutAction({
+        id,
+        date: startedAt.slice(0, 10),
+        sets: [],
+        durationMinutes:
+          typeof payload.durationMinutes === 'number' ? payload.durationMinutes : 0,
+        startedAt,
+        // completedAt deliberately undefined → marks this as a planned
+        // workout, not a completed one.
+        notes: typeof payload.notes === 'string' ? payload.notes : undefined,
+        workoutName:
+          typeof payload.workoutName === 'string' ? payload.workoutName : 'Workout',
+      });
+    },
+    [addPlannedWorkoutAction],
+  );
+
+  /**
+   * Stream an Aimee response from the Grok-backed endpoint.
+   *
+   * Flow:
+   *   1. Insert an empty assistant bubble immediately (so the typing
+   *      indicator gives way to a real bubble that fills with text).
+   *   2. Iterate SSE events, patching the bubble with each delta.
+   *   3. Tool calls and pending actions land on the bubble as structured
+   *      `toolResults` / `pendingActions` so the renderer can show cards.
+   *
+   * Returns `true` on a successful stream (regardless of model output); the
+   * caller can use that to decide whether to fall back to the legacy
+   * non-streaming path or the local bot.
+   */
+  const streamAimeeResponse = useCallback(
+    async (text: string, context: EnhancedBotContext): Promise<boolean> => {
+      const placeholderId = `bot-stream-${Date.now()}`;
+      const placeholder: ChatMessage = {
+        id: placeholderId,
+        role: 'bot',
+        content: '',
+        timestamp: new Date().toISOString(),
+        streaming: true,
+      };
+      addMessage(placeholder);
+
+      let accumulated = '';
+      const toolResults: NonNullable<ChatMessage['toolResults']> = [];
+      const pendingActions: NonNullable<ChatMessage['pendingActions']> = [];
+      let sawAnyEvent = false;
+      let stillStreaming = true;
+
+      // New stream → cancel any prior in-flight one, then create a fresh
+      // controller for this run. Storing in a ref so the unmount cleanup
+      // can call .abort() without recreating the listener.
+      streamAbortRef.current?.abort();
+      const controller = new AbortController();
+      streamAbortRef.current = controller;
+
+      try {
+        for await (const ev of generateAIResponseStream(text, context, {
+          signal: controller.signal,
+        })) {
+          sawAnyEvent = true;
+          if (ev.type === 'text_delta' && ev.text) {
+            accumulated += ev.text;
+            updateMessage(placeholderId, { content: accumulated });
+          } else if (ev.type === 'tool_result' && ev.tool && ev.output) {
+            const isPending =
+              typeof (ev.output as any)?.pending_action_id === 'string' &&
+              (ev.output as any)?.requires_confirm === true;
+            toolResults.push({
+              tool: ev.tool,
+              output: ev.output as Record<string, unknown>,
+              isPending,
+            });
+            updateMessage(placeholderId, { toolResults: [...toolResults] });
+          } else if (
+            ev.type === 'pending_action' &&
+            ev.id &&
+            ev.tool &&
+            ev.preview
+          ) {
+            pendingActions.push({
+              id: ev.id,
+              tool: ev.tool,
+              preview: ev.preview as Record<string, unknown>,
+              status: 'pending',
+            });
+            updateMessage(placeholderId, {
+              pendingActions: [...pendingActions],
+            });
+          } else if (ev.type === 'client_action' && ev.action) {
+            // Aimee asked the client to do something concrete. Three
+            // shapes are supported today:
+            //   - navigate         → router.push(path)
+            //   - log_dose         → useDoseLogStore.logDose(payload)
+            //   - log_meal         → useMealStore.addMeal(payload)
+            //   - schedule_workout → useWorkoutStore.addPlannedLog(payload)
+            // We trigger once per event; the assistant's text continues
+            // streaming in the bubble so the user still gets context.
+            const action = ev.action as {
+              type: string;
+              path?: string;
+              payload?: Record<string, unknown>;
+            };
+            try {
+              if (action.type === 'navigate' && typeof action.path === 'string') {
+                // Client-side allowlist check on the server-supplied
+                // path. Even though the server keeps a SCREEN_TO_PATH
+                // map, a prompt-injection escape could in theory get
+                // Aimee to emit a custom `navigate` action pointing
+                // at /admin or /dev — defense in depth. Refuse
+                // anything outside (tabs) and /calculators.
+                const safe = isAllowedNavigationPath(action.path);
+                if (safe) {
+                  router.push(action.path as any);
+                } else if (__DEV__) {
+                  console.warn('[aimee] navigate refused (not allowlisted):', action.path);
+                }
+              } else if (action.type === 'log_dose' && action.payload) {
+                applyLogDoseAction(action.payload);
+              } else if (action.type === 'log_meal' && action.payload) {
+                applyLogMealAction(action.payload);
+              } else if (action.type === 'schedule_workout' && action.payload) {
+                applyScheduleWorkoutAction(action.payload);
+              }
+            } catch (err) {
+              if (__DEV__) console.warn('[aimee] client_action failed:', err, action);
+            }
+          } else if (ev.type === 'done') {
+            stillStreaming = false;
+            updateMessage(placeholderId, { streaming: false });
+          } else if (ev.type === 'error') {
+            // Don't surface the placeholder as an error — drop a friendly
+            // line so it doesn't render as an empty bubble. The caller
+            // fallback path will not run because sawAnyEvent is true.
+            if (!accumulated) {
+              updateMessage(placeholderId, {
+                content:
+                  ev.message ?? 'I had trouble responding. Please try again.',
+                streaming: false,
+              });
+            } else {
+              updateMessage(placeholderId, { streaming: false });
+            }
+            stillStreaming = false;
+            return true;
+          } else if (ev.type === 'denied') {
+            const upgrade = ev.upgrade === true;
+            updateMessage(placeholderId, {
+              content: ev.message ?? 'Aimee requires an upgrade.',
+              streaming: false,
+              quickReplies: upgrade ? ['View subscription plans'] : undefined,
+              navAction: upgrade ? '/subscription' : undefined,
+              actions: upgrade
+                ? [
+                    {
+                      label: 'See plans',
+                      route: '/subscription',
+                      icon: 'sparkles-outline',
+                    },
+                  ]
+                : undefined,
+            });
+            return true;
+          }
+        }
+      } catch (err) {
+        if (__DEV__) console.warn('[aimee] stream iterator threw:', err);
+        if (!sawAnyEvent) {
+          // Stream threw before yielding ANY event. Drop the empty
+          // placeholder bubble so the legacy fallback (generateAIResponse)
+          // doesn't append a SECOND bot bubble next to a stale empty one.
+          removeMessage(placeholderId);
+          return false;
+        }
+      }
+
+      if (stillStreaming) {
+        // Iterator closed without a 'done' event — finalize anyway.
+        updateMessage(placeholderId, { streaming: false });
+      }
+      // If the model didn't emit any text or actions, treat as a failed run
+      // so the local fallback runs. Drop the dead placeholder first.
+      if (!sawAnyEvent || (accumulated.trim().length === 0 && toolResults.length === 0)) {
+        removeMessage(placeholderId);
+        return false;
+      }
+      return true;
+    },
+    [
+      addMessage,
+      updateMessage,
+      removeMessage,
+      router,
+      applyLogDoseAction,
+      applyLogMealAction,
+      applyScheduleWorkoutAction,
+    ],
+  );
+
   // Handle pre-filled message: auto-send it if chat is empty
   useEffect(() => {
     if (prefillMessage && !messageHandled.current && messages.length === 0) {
@@ -245,21 +617,36 @@ export default function PepTalkScreen() {
         }
       };
       if (useAI) {
+        // Prefer streaming Claude path. On failure or empty stream, fall
+        // through to the legacy non-streaming endpoint, then local.
+        setTyping(false);
         withTimeout(
-          generateAIResponse(prefillMessage, context),
+          streamAimeeResponse(prefillMessage, context),
           AIMEE_RESPONSE_TIMEOUT_MS,
-          'aimee prefill response',
+          'aimee prefill stream',
         )
-          .then((aiResponse) => {
-            if (aiResponse) {
-              handleBotResponse(aiResponse);
-              setTyping(false);
-            } else {
-              setTimeout(localFallback, 400 + Math.random() * 600);
+          .then(async (streamed) => {
+            if (streamed) return;
+            setTyping(true);
+            try {
+              const aiResponse = await withTimeout(
+                generateAIResponse(prefillMessage, context),
+                AIMEE_RESPONSE_TIMEOUT_MS,
+                'aimee prefill response',
+              );
+              if (aiResponse) {
+                handleBotResponse(aiResponse);
+                setTyping(false);
+              } else {
+                setTimeout(localFallback, 400 + Math.random() * 600);
+              }
+            } catch (err) {
+              if (__DEV__) console.warn('[aimee] prefill legacy failed:', err);
+              localFallback();
             }
           })
           .catch((err) => {
-            if (__DEV__) console.warn('[aimee] prefill AI failed/timed out:', err);
+            if (__DEV__) console.warn('[aimee] prefill stream failed/timed out:', err);
             localFallback();
           });
       } else {
@@ -273,6 +660,8 @@ export default function PepTalkScreen() {
     setTyping,
     buildContext,
     useAI,
+    streamAimeeResponse,
+    handleBotResponse,
   ]);
 
   // Scroll to bottom when messages change
@@ -302,9 +691,27 @@ export default function PepTalkScreen() {
     const context = buildContext();
 
     if (useAI) {
-      // Try Grok AI first, fall back to local bot. Wrapped so a throw
-      // OR a hang from generateAIResponse (network failure, edge fn stall,
-      // malformed JSON) doesn't strand the typing indicator forever.
+      // 1. Try the streaming Claude-backed endpoint first.
+      //
+      // The streaming helper returns true when SSE produced at least one
+      // event AND something useful (text or tool call) landed on the
+      // bubble. The placeholder bubble is inserted by the helper, so
+      // setTyping is flipped off before the stream starts to avoid
+      // double indicators.
+      setTyping(false);
+      try {
+        const streamed = await withTimeout(
+          streamAimeeResponse(text, context),
+          AIMEE_RESPONSE_TIMEOUT_MS,
+          'aimee stream',
+        );
+        if (streamed) return;
+      } catch (err) {
+        if (__DEV__) console.warn('[aimee] stream failed/timed out:', err);
+      }
+
+      // 2. Fall back to the legacy non-streaming endpoint (Grok-backed).
+      setTyping(true);
       try {
         const aiResponse = await withTimeout(
           generateAIResponse(text, context),
@@ -318,19 +725,16 @@ export default function PepTalkScreen() {
         }
       } catch (err) {
         if (__DEV__) console.warn('[aimee] generateAIResponse failed/timed out:', err);
-        // fall through to local fallback
       }
     }
 
-    // Local fallback (no API key, no consent, API failure, timeout, thrown error)
+    // 3. Local fallback (no API key, no consent, API failure, timeout, thrown error)
     setTimeout(() => {
       try {
         const botResponse = generateLocalBotResponse(text, context);
         handleBotResponse(botResponse);
       } catch (err) {
         if (__DEV__) console.warn('[aimee] local fallback threw:', err);
-        // Last-resort: a hand-written apology message so the user is never
-        // left staring at a frozen typing indicator.
         handleBotResponse({
           id: `bot-${Date.now()}`,
           role: 'bot',
@@ -341,7 +745,15 @@ export default function PepTalkScreen() {
         setTyping(false);
       }
     }, 400 + Math.random() * 600);
-  }, [inputText, addMessage, handleBotResponse, setTyping, buildContext, useAI]);
+  }, [
+    inputText,
+    addMessage,
+    handleBotResponse,
+    setTyping,
+    buildContext,
+    useAI,
+    streamAimeeResponse,
+  ]);
 
   const handleQuickReply = useCallback(
     async (reply: string) => {
@@ -360,6 +772,19 @@ export default function PepTalkScreen() {
       const context = buildContext();
 
       if (useAI) {
+        setTyping(false);
+        try {
+          const streamed = await withTimeout(
+            streamAimeeResponse(reply, context),
+            AIMEE_RESPONSE_TIMEOUT_MS,
+            'aimee quick-reply stream',
+          );
+          if (streamed) return;
+        } catch (err) {
+          if (__DEV__) console.warn('[aimee] quick-reply stream failed/timed out:', err);
+        }
+
+        setTyping(true);
         try {
           const aiResponse = await withTimeout(
             generateAIResponse(reply, context),
@@ -394,7 +819,7 @@ export default function PepTalkScreen() {
         }
       }, 400 + Math.random() * 600);
     },
-    [addMessage, setTyping, buildContext, useAI, handleBotResponse],
+    [addMessage, setTyping, buildContext, useAI, handleBotResponse, streamAimeeResponse],
   );
 
   // Get quick replies from the last bot message
@@ -404,7 +829,31 @@ export default function PepTalkScreen() {
   const lastBotHasJournal = !!lastBotMessage?.journalEntry;
 
   const renderMessage = useCallback(
-    ({ item }: { item: ChatMessage }) => <ChatBubble message={item} />,
+    ({ item }: { item: ChatMessage }) => {
+      // Tool results + pending actions live BELOW the bubble so the chat
+      // thread reads top-to-bottom: text → cards → next message.
+      const hasCards =
+        (item.toolResults && item.toolResults.length > 0) ||
+        (item.pendingActions && item.pendingActions.length > 0);
+      if (!hasCards) {
+        return <ChatBubble message={item} />;
+      }
+      return (
+        <View>
+          <ChatBubble message={item} />
+          <View style={{ marginLeft: 48, marginRight: 16 }}>
+            {(item.toolResults ?? [])
+              .filter((r) => !r.isPending)
+              .map((r, i) => (
+                <AimeeToolResultCard key={`tr-${item.id}-${i}`} result={r} />
+              ))}
+            {(item.pendingActions ?? []).map((a) => (
+              <AimeePendingActionCard key={`pa-${a.id}`} action={a} />
+            ))}
+          </View>
+        </View>
+      );
+    },
     [],
   );
 
@@ -479,6 +928,8 @@ export default function PepTalkScreen() {
             style={[styles.iconBtn, { backgroundColor: t.surface }]}
             activeOpacity={0.7}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            accessibilityRole="button"
+            accessibilityLabel="Open chat history"
           >
             <Ionicons name="menu" size={20} color={t.text} />
           </TouchableOpacity>
@@ -536,6 +987,8 @@ export default function PepTalkScreen() {
             style={[styles.iconBtn, { backgroundColor: t.surface }]}
             activeOpacity={0.7}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            accessibilityRole="button"
+            accessibilityLabel="Start new chat"
           >
             <Ionicons name="create-outline" size={20} color={t.text} />
           </TouchableOpacity>

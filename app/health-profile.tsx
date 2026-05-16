@@ -195,32 +195,38 @@ export default function HealthProfileScreen() {
     }
   };
 
+  // Clamp helpers — anything out-of-range gets dropped to undefined
+  // rather than persisted, so a stray 99999 doesn't poison macro calc
+  // or Aimee context. P0 from input validation audit (Wave 76.8).
+  const clamp = (v: number, lo: number, hi: number): number | undefined =>
+    !Number.isFinite(v) || v < lo || v > hi ? undefined : v;
+
   const saveCurrentStep = () => {
     switch (step) {
       case 0: { // Body
         const w = parseFloat(weightInput);
         const ft = parseInt(heightFeet) || 0;
         const inches = parseInt(heightIn) || 0;
-        const totalInches = ft * 12 + inches;
+        const totalInches = ft >= 1 && ft <= 8 ? ft * 12 + (inches >= 0 && inches < 12 ? inches : 0) : 0;
         const bf = parseFloat(bodyFatInput);
         const gw = parseFloat(goalWeightInput);
         store.setBodyMetrics({
-          weightLbs: isNaN(w) ? undefined : w,
-          heightInches: totalInches || undefined,
-          bodyFatPercent: isNaN(bf) ? undefined : bf,
-          goalWeightLbs: isNaN(gw) ? undefined : gw,
+          weightLbs: clamp(w, 50, 1000),
+          heightInches: totalInches > 0 ? totalInches : undefined,
+          bodyFatPercent: clamp(bf, 1, 80),
+          goalWeightLbs: clamp(gw, 50, 1000),
         });
         break;
       }
       case 4: { // Sleep
         const hrs = parseFloat(sleepHoursInput);
-        store.setSleep({ averageHours: isNaN(hrs) ? undefined : hrs });
+        store.setSleep({ averageHours: clamp(hrs, 0, 24) });
         break;
       }
       case 3: { // Nutrition
         const protein = parseInt(proteinInput);
         store.setNutrition({
-          dailyProteinGrams: isNaN(protein) ? undefined : protein,
+          dailyProteinGrams: clamp(protein, 0, 500),
         });
         break;
       }

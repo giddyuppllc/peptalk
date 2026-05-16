@@ -53,11 +53,15 @@ export function DoseHeatmap() {
   const doses = useDoseLogStore((s) => s.doses);
   const protocols = useDoseLogStore((s) => s.protocols);
 
-  // Hide entirely if user has never logged a dose AND has no active
-  // protocols — heatmap of an empty user is just a wall of blanks.
+  // CRITICAL: do NOT early-return before the useMemo hooks below.
+  // Doing so causes "Rendered more hooks than during the previous
+  // render" — a guaranteed crash the first time a user logs their
+  // first dose (the empty-state early-return runs zero hooks, then
+  // the post-dose render runs four, and React's hook-order check
+  // throws). P0 from Wave 76.10 render-safety audit.
   const anyDosed = doses.length > 0;
   const anyActive = protocols.some((p) => p.isActive);
-  if (!anyDosed && !anyActive) return null;
+  const hasAnyData = anyDosed || anyActive;
 
   // Group dose counts per (date, peptide) so we can pick a dominant
   // peptide per day for the cell color.
@@ -134,6 +138,11 @@ export function DoseHeatmap() {
         return { id, name: p?.name ?? id, color: colorFor(id) };
       });
   }, [grid]);
+
+  // Empty state — heatmap of an empty user is just a wall of blanks.
+  // Hide AFTER all hooks have run so hook order stays stable across
+  // the first-dose-logged transition.
+  if (!hasAnyData) return null;
 
   return (
     <GlassCard style={styles.card}>

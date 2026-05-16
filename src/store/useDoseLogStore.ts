@@ -462,6 +462,10 @@ export const useDoseLogStore = create<DoseLogStore>()(
         doses: state.doses,
         protocols: state.protocols,
         dismissedAlertIds: state.dismissedAlertIds,
+        // Must persist or the disclaimer modal re-fires on every cold
+        // launch — the gate at app/(tabs)/calendar.tsx reads this flag
+        // on mount.
+        hasAcceptedDoseDisclaimer: state.hasAcceptedDoseDisclaimer,
       }),
     }
   )

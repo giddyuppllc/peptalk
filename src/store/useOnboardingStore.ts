@@ -23,6 +23,14 @@ interface OnboardingStore {
    *  Shown the first time they enter any /community/live/[eventId] room. */
   acceptedLiveChatDisclaimer: boolean;
   setAcceptedLiveChatDisclaimer: (accepted: boolean) => void;
+  /** Dosing calculator "Simple mode" preference. When true the
+   *  calculator hides advanced inputs (intensity picker, titration
+   *  ladder, weight-based dosing, supplies estimator) and shows just
+   *  peptide → dose → frequency → BAC water → Calculate. Defaults to
+   *  true for new accounts — most users don't need the deep-research
+   *  surface and the previous default was overwhelming. */
+  simpleCalculatorMode: boolean;
+  setSimpleCalculatorMode: (simple: boolean) => void;
   setGender: (gender: Gender) => void;
   setAgeRange: (ageRange: AgeRange) => void;
   setEthnicity: (ethnicity: Ethnicity) => void;
@@ -62,6 +70,9 @@ export const useOnboardingStore = create<OnboardingStore>()(
       acceptedLiveChatDisclaimer: false,
       setAcceptedLiveChatDisclaimer: (acceptedLiveChatDisclaimer) =>
         set({ acceptedLiveChatDisclaimer }),
+      simpleCalculatorMode: true,
+      setSimpleCalculatorMode: (simpleCalculatorMode) =>
+        set({ simpleCalculatorMode }),
 
       setGender: (gender) =>
         set((state) => ({ profile: { ...state.profile, gender } })),
@@ -113,6 +124,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
         isComplete: state.isComplete,
         acceptedPeptideDisclaimer: state.acceptedPeptideDisclaimer,
         acceptedLiveChatDisclaimer: state.acceptedLiveChatDisclaimer,
+        simpleCalculatorMode: state.simpleCalculatorMode,
       }),
       onRehydrateStorage: () => (state) => {
         const safeProfile = {
@@ -126,6 +138,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
           isComplete: state?.isComplete ?? false,
           acceptedPeptideDisclaimer: state?.acceptedPeptideDisclaimer ?? false,
           acceptedLiveChatDisclaimer: state?.acceptedLiveChatDisclaimer ?? false,
+          simpleCalculatorMode: state?.simpleCalculatorMode ?? true,
           hasHydrated: true,
         });
       },

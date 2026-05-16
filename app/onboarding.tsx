@@ -209,9 +209,16 @@ export default function OnboardingScreen() {
       const weight = parseFloat(weightLbs);
       const feet = parseInt(heightFeet, 10);
       const inches = parseInt(heightInches, 10);
-      if (!isNaN(weight) && weight > 0) setBodyMetrics({ weightLbs: weight });
-      if (!isNaN(feet) && feet > 0) {
-        setBodyMetrics({ heightInches: feet * 12 + (isNaN(inches) ? 0 : inches) });
+      // Clamp to plausible adult ranges. Without this, a 999999 lb /
+      // 99 ft 99 in entry was silently persisted to the health profile
+      // and downstream poisoned macro calc + Aimee context. P0 from
+      // input validation audit (Wave 76.8).
+      if (!isNaN(weight) && weight >= 50 && weight <= 1000) {
+        setBodyMetrics({ weightLbs: weight });
+      }
+      if (!isNaN(feet) && feet >= 1 && feet <= 8) {
+        const safeInches = !isNaN(inches) && inches >= 0 && inches < 12 ? inches : 0;
+        setBodyMetrics({ heightInches: feet * 12 + safeInches });
       }
       setLifestyle({
         activityLevel,

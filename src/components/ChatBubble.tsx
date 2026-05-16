@@ -118,7 +118,13 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
         >
           <View style={[styles.botBubbleInner, { backgroundColor: t.surface }]}>
             <Text style={[styles.textBot, { color: t.text }]}>
-              {renderMarkdown(message.content)}
+              {message.content ? renderMarkdown(message.content) : null}
+              {/* Streaming caret — shown while the SSE stream is still
+                  active and we're waiting on the model. A subtle " ▍"
+                  glyph keeps the bubble alive without adding animation. */}
+              {message.streaming ? (
+                <Text style={{ color: accent.deep, opacity: 0.6 }}> ▍</Text>
+              ) : null}
             </Text>
 
             {/* Journal badge */}

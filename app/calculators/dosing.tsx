@@ -35,7 +35,12 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { Colors, Spacing, FontSizes, BorderRadius, Gradients } from '../../src/constants/theme';
 import { PEPTIDES } from '../../src/data/peptides';
 import { PROTOCOL_TEMPLATES } from '../../src/data/protocols';
+import {
+  getDosingReference,
+  PEPTALK_DOSING_DISCLAIMER,
+} from '../../src/data/peptideDosingReference';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import { useOnboardingStore } from '../../src/store/useOnboardingStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
 import { PeptideGuide } from '../../src/components/PeptideGuide';
@@ -67,7 +72,14 @@ const FREQUENCY_OPTIONS: { key: Frequency; label: string; perWeek: number }[] = 
 ];
 
 const VIAL_PRESETS = [2, 5, 10, 15, 30];
+// Most peptide vials hold 2-3 ml of BAC water. The 5 ml preset stays in
+// the list because some larger research vials accept it, but a warning
+// fires below the input whenever the user picks/types >3 ml so they
+// know not to try forcing 5 ml into a standard 3 ml vial — that was
+// the failure mode in the competitor screenshot Edward flagged
+// (their app suggested 4 ml without checking vial capacity).
 const WATER_PRESETS = [1, 2, 3, 5];
+const BAC_WATER_VIAL_TYPICAL_MAX_ML = 3;
 
 export default function DosingCalculatorScreen() {
   const router = useRouter();
@@ -75,7 +87,14 @@ export default function DosingCalculatorScreen() {
   // Optional deep-link params from peptide detail page Beginner/Advanced
   // pills: pre-select the peptide and the intensity tier so the user lands
   // straight on the dose they tapped.
-  const params = useLocalSearchParams<{ peptideId?: string; intensity?: string }>();
+  const params = useLocalSearchParams<{
+    peptideId?: string;
+    intensity?: string;
+    /** Optional Aimee-supplied pre-fills (open_dosing_calculator tool). */
+    doseMcg?: string;
+    vialMg?: string;
+    waterMl?: string;
+  }>();
 
   // Inputs
   const [selectedPeptide, setSelectedPeptide] = useState<Peptide | null>(null);
@@ -103,6 +122,15 @@ export default function DosingCalculatorScreen() {
   // Standard so existing behavior is unchanged for users who don't
   // touch the picker.
   const [intensity, setIntensity] = useState<ProtocolIntensity>('standard');
+
+  // Advanced sections (intensity tiers, titration ladders, body-weight
+  // scaling, supplies estimator) are hidden by default — most users
+  // don't need them and they exist on the peptide detail page anyway.
+  // A "Show research details" link at the bottom of the form expands
+  // them for power users. Local state because there's no value in
+  // persisting this across sessions (the user re-opens the calculator
+  // fresh each time and we want clean defaults).
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Results visibility
   const [showResults, setShowResults] = useState(false);
@@ -159,6 +187,121 @@ export default function DosingCalculatorScreen() {
     return PROTOCOL_TEMPLATES.filter((pt) => pt.peptideId === selectedPeptide.id);
   }, [selectedPeptide]);
 
+  // When the user picks a peptide whose primary protocol is naturally
+  // dosed in mg (Selank, Cerebrolysin, GLP-1s, etc.), flip the unit
+  // toggle to mg so they don't have to think in micrograms.
+  //
+  // Plus: in SIMPLE MODE, auto-fill vial size + BAC water + target
+  // dose with the recommended setup so the user sees a definitive
+  // answer the moment they pick a peptide. They can still tweak any
+  // field — auto-fill only happens when the field is empty, so we
+  // never clobber a user's input.
+  useEffect(() => {
+    // PRIORITY 1: Edward's authoritative dosing reference. If we have
+    // an entry for this peptide, fill vial / water / dose / frequency
+    // from there — those numbers are the source of truth for the
+    // recommended-protocol card directly above this block.
+    const ref = selectedPeptide ? getDosingReference(selectedPeptide.id) : null;
+    if (ref) {
+      const phase = ref.schedule[0];
+      // OVERWRITE — not "fill only if empty" — so a leftover vial/water
+      // from the previous peptide doesn't poison the new peptide's
+      // recommended setup. Earlier we gated each setX on the field
+      // being empty (`!vialSize`); switching from Pinealon (10mg/3ml)
+      // to Retatrutide-5mg (5mg/1ml) silently kept the Pinealon vial
+      // size and rendered wrong numbers on the recommended-protocol
+      // card. Users keep the override they typed AFTER the auto-fill
+      // because this effect only runs on selectedPeptide.id change.
+      if (phase) {
+        if (phase.doseMcg >= 1000) {
+          setTargetDose(String((phase.doseMcg / 1000).toFixed(2).replace(/\.?0+$/, '')));
+          setDoseUnit('mg');
+        } else {
+          setTargetDose(String(Math.round(phase.doseMcg)));
+          setDoseUnit('mcg');
+        }
+      }
+      setVialSize(String(ref.vialMg));
+      setVialUnit('mg');
+      setWaterVolume(String(ref.diluentMl));
+      // Frequency — only set if the first phase has a clean canonical
+      // mapping. The Frequency union is:
+      //   'daily' | 'eod' | '2x_week' | '3x_week' | 'weekly'
+      //
+      // Match in order of specificity:
+      //   "twice weekly" → 2x_week
+      //   "3x weekly" / "tiw" → 3x_week
+      //   "biweekly" / "Mon/Thu" → 2x_week
+      //   "weekly" (alone) → weekly
+      //   "eod" / "every other day" → eod
+      //   "twice daily" / anything else → daily (supply estimator
+      //     under-counts injection count for twice-daily, but the math
+      //     for daily-total mg is correct as long as doseMcg is
+      //     per-shot — which it is per reference-file convention)
+      //
+      // Important: don't cast an out-of-union value here. Casting
+      // '2x_day' earlier caused MOTSC freeze (NaN'd downstream lookup).
+      const lower = (phase?.frequency ?? '').toLowerCase();
+      if (lower.includes('twice weekly') || lower.includes('2x weekly') || lower.includes('biweek')) {
+        setFrequency('2x_week');
+      } else if (lower.includes('3x week') || lower.includes('three times weekly') || lower.includes('tiw')) {
+        setFrequency('3x_week');
+      } else if (lower.includes('mon') && lower.includes('thu')) {
+        setFrequency('2x_week');
+      } else if (lower.includes('eod') || lower.includes('every other day')) {
+        setFrequency('eod');
+      } else if (lower.includes('weekly')) {
+        setFrequency('weekly');
+      } else {
+        setFrequency('daily');
+      }
+      setShowResults(true);
+      return;
+    }
+
+    // PRIORITY 2: PROTOCOL_TEMPLATES fallback for peptides not in the
+    // reference (less common research compounds).
+    const proto = protocolsForPeptide[0];
+    if (!proto) return;
+
+    if (!targetDose) {
+      setDoseUnit(proto.typicalDose?.unit === 'mg' ? 'mg' : 'mcg');
+    }
+    if (!vialSize) {
+      const protoMaxMg = (proto.typicalDose?.unit === 'mg'
+        ? proto.typicalDose.max
+        : proto.typicalDose.max / 1000);
+      const guessVial = [2, 5, 10, 15, 30].find((v) => v >= protoMaxMg) ?? 5;
+      setVialSize(String(guessVial));
+      setVialUnit('mg');
+    }
+    if (!waterVolume) {
+      setWaterVolume('2');
+    }
+    if (!targetDose) {
+      const { mcg, displayUnit } = intensityToDoseMcg(proto, 'standard');
+      if (displayUnit === 'mg') {
+        setTargetDose(String((mcg / 1000).toFixed(2).replace(/\.?0+$/, '')));
+        setDoseUnit('mg');
+      } else {
+        setTargetDose(String(Math.round(mcg)));
+        setDoseUnit('mcg');
+      }
+    }
+    if (proto.frequency) {
+      const protoFreqMap: Record<string, Frequency> = {
+        daily: 'daily',
+        eod: 'eod',
+        biw: '2x_week',
+        tiw: '3x_week',
+        weekly: 'weekly',
+      };
+      const mapped = protoFreqMap[proto.frequency];
+      if (mapped) setFrequency(mapped);
+    }
+    setShowResults(true);
+  }, [selectedPeptide?.id]);
+
   // One-shot deep-link handler. Pre-selects the peptide + intensity from
   // route params and auto-fills the target dose from the chosen tier so
   // taps from the peptide-detail Beginner/Advanced pills land on the
@@ -168,32 +311,57 @@ export default function DosingCalculatorScreen() {
     if (appliedDeepLinkRef.current) return;
     const pid = typeof params.peptideId === 'string' ? params.peptideId : undefined;
     const intent = typeof params.intensity === 'string' ? params.intensity : undefined;
-    if (!pid && !intent) return;
+    const linkDoseMcg = parseFinite(params.doseMcg);
+    const linkVialMg = parseFinite(params.vialMg);
+    const linkWaterMl = parseFinite(params.waterMl);
+    if (!pid && !intent && linkDoseMcg == null && linkVialMg == null && linkWaterMl == null) {
+      return;
+    }
     if (pid && !selectedPeptide) {
       const found = PEPTIDES.find((p) => p.id === pid);
       if (found) setSelectedPeptide(found);
     }
     if (intent === 'mild' || intent === 'standard' || intent === 'aggressive') {
       setIntensity(intent);
-      // Resolve the matching protocol via the same filter the screen uses
-      // and seed targetDose with that intensity's midpoint dose.
       const targetPid = pid ?? selectedPeptide?.id;
       const proto = targetPid
         ? PROTOCOL_TEMPLATES.find((pt) => pt.peptideId === targetPid)
         : undefined;
       if (proto) {
         const { mcg, displayUnit } = intensityToDoseMcg(proto, intent);
-        // The protocol's display unit can technically be IU/ml in the
-        // shared DoseUnit type, but the calculator only supports mcg/mg.
-        // Default to mcg for any non-mg unit so the input is always valid.
         const localUnit: DoseUnit = displayUnit === 'mg' ? 'mg' : 'mcg';
         const value = localUnit === 'mg' ? mcg / 1000 : mcg;
         setTargetDose(String(Number(value.toFixed(2))));
         setDoseUnit(localUnit);
       }
     }
+    // Aimee-supplied pre-fills win over the intensity-driven dose so the
+    // user lands on exactly the number Aimee said in chat.
+    if (linkDoseMcg != null && linkDoseMcg > 0) {
+      if (linkDoseMcg >= 1000) {
+        setTargetDose(String(Number((linkDoseMcg / 1000).toFixed(2))));
+        setDoseUnit('mg');
+      } else {
+        setTargetDose(String(Math.round(linkDoseMcg)));
+        setDoseUnit('mcg');
+      }
+    }
+    if (linkVialMg != null && linkVialMg > 0) {
+      setVialSize(String(linkVialMg));
+      setVialUnit('mg');
+    }
+    if (linkWaterMl != null && linkWaterMl > 0) {
+      setWaterVolume(String(linkWaterMl));
+    }
     appliedDeepLinkRef.current = true;
-  }, [params.peptideId, params.intensity, selectedPeptide]);
+  }, [
+    params.peptideId,
+    params.intensity,
+    params.doseMcg,
+    params.vialMg,
+    params.waterMl,
+    selectedPeptide,
+  ]);
 
   // If the user has an ACTIVE PROTOCOL for the selected peptide, figure out
   // which titration step they're on so the calculator can pre-fill the
@@ -229,10 +397,15 @@ export default function DosingCalculatorScreen() {
 
   const frequencyOption = FREQUENCY_OPTIONS.find((f) => f.key === frequency)!;
 
-  // All calculations in mcg internally
-  const vialRaw = parseFloat(vialSize) || 0;
-  const waterMl = parseFloat(waterVolume) || 0;
-  const doseRaw = parseFloat(targetDose) || 0;
+  // All calculations in mcg internally. Clamp at parse so a user
+  // typing "-5" doesn't propagate negative concentration into the
+  // preview card. The Calculate gate already requires > 0, but the
+  // concentration preview keys off `vialRaw > 0 && waterMl > 0` and
+  // would otherwise render misleading "negative mcg per unit mark"
+  // text from a transient negative input.
+  const vialRaw = Math.max(0, parseFloat(vialSize) || 0);
+  const waterMl = Math.max(0, parseFloat(waterVolume) || 0);
+  const doseRaw = Math.max(0, parseFloat(targetDose) || 0);
   const vialMcg = vialUnit === 'mg' ? vialRaw * 1000 : vialRaw;
   const doseMcg = doseUnit === 'mg' ? doseRaw * 1000 : doseRaw;
 
@@ -255,7 +428,7 @@ export default function DosingCalculatorScreen() {
 
   // Optional: weight-normalized dose
   const bodyWeightKg = useMemo(() => {
-    const raw = parseFloat(bodyWeight) || 0;
+    const raw = Math.max(0, parseFloat(bodyWeight) || 0);
     return weightUnit === 'lbs' ? raw * 0.4536 : raw;
   }, [bodyWeight, weightUnit]);
 
@@ -442,11 +615,159 @@ export default function DosingCalculatorScreen() {
           </GlassCard>
         </View>
 
+        {/* Recommended Protocol — the safety-first answer card. Visible
+            the moment a peptide is selected. Pulls from Edward's
+            authoritative dosing reference when available
+            (src/data/peptideDosingReference.ts) and falls back to
+            PROTOCOL_TEMPLATES for less common research compounds.
+            Numbers are NEVER invented — every figure is sourced. */}
+        {selectedPeptide && (() => {
+          const ref = getDosingReference(selectedPeptide.id);
+
+          if (ref) {
+            // Authoritative reference path. Show vial / diluent / mg-mL
+            // and the first dosing phase (titration ladders surface
+            // additional phases under "Show research details" below).
+            const firstPhase = ref.schedule[0];
+            const recommendedDose = firstPhase.doseStated;
+            const hydrophobic = ref.diluent === 'acetic_acid';
+            return (
+              <View style={styles.section}>
+                <GlassCard>
+                  <View style={styles.recHeader}>
+                    <Ionicons name="shield-checkmark-outline" size={18} color="#3E7CB1" />
+                    <Text style={[styles.recHeaderText, { color: t.text }]}>
+                      Recommended protocol
+                    </Text>
+                  </View>
+                  <Text style={[styles.recSub, { color: t.textSecondary }]}>
+                    {ref.peptideName} — {firstPhase.label}. Edit any field below to override.
+                  </Text>
+                  <View style={styles.recGrid}>
+                    <View style={styles.recCell}>
+                      <Text style={[styles.recCellLabel, { color: t.textSecondary }]}>DOSE</Text>
+                      <Text style={[styles.recCellValue, { color: t.text }]}>{recommendedDose}</Text>
+                    </View>
+                    <View style={styles.recCell}>
+                      <Text style={[styles.recCellLabel, { color: t.textSecondary }]}>FREQUENCY</Text>
+                      <Text style={[styles.recCellValue, { color: t.text }]}>
+                        {firstPhase.frequency}
+                      </Text>
+                    </View>
+                    <View style={styles.recCell}>
+                      <Text style={[styles.recCellLabel, { color: t.textSecondary }]}>
+                        {hydrophobic ? 'ACETIC ACID' : 'BAC WATER'}
+                      </Text>
+                      <Text style={[styles.recCellValue, { color: t.text }]}>
+                        {ref.diluentMl} ml
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.recSub, { color: t.textSecondary, marginTop: 8 }]}>
+                    {ref.vialMg} mg vial → {ref.mgPerMl} mg/ml · Cycle: {ref.cycleLength}
+                    {ref.cycleOff ? ` · ${ref.cycleOff}` : ''}
+                  </Text>
+                  {hydrophobic && (
+                    <Text style={[styles.recSub, { color: '#9A3412', marginTop: 6 }]}>
+                      Hydrophobic compound — reconstitute with acetic acid, NOT bac water. BAC water causes rapid degradation.
+                    </Text>
+                  )}
+                  {ref.notes && ref.notes.length > 0 && (
+                    <Text style={[styles.recSub, { color: t.textSecondary, marginTop: 6 }]}>
+                      {ref.notes.join(' ')}
+                    </Text>
+                  )}
+                  <Text style={[styles.recFineprint, { color: t.textSecondary }]}>
+                    {PEPTALK_DOSING_DISCLAIMER}
+                  </Text>
+                </GlassCard>
+              </View>
+            );
+          }
+
+          // Fallback path: protocols.ts for peptides outside the
+          // authoritative reference.
+          const proto = protocolsForPeptide[0];
+          if (!proto) return null;
+          const { mcg, displayUnit } = intensityToDoseMcg(proto, 'standard');
+          const recommendedDose = displayUnit === 'mg'
+            ? `${(mcg / 1000).toFixed(2).replace(/\.?0+$/, '')} mg`
+            : `${Math.round(mcg)} mcg`;
+          return (
+            <View style={styles.section}>
+              <GlassCard>
+                <View style={styles.recHeader}>
+                  <Ionicons name="shield-checkmark-outline" size={18} color="#3E7CB1" />
+                  <Text style={[styles.recHeaderText, { color: t.text }]}>
+                    Recommended protocol
+                  </Text>
+                </View>
+                <Text style={[styles.recSub, { color: t.textSecondary }]}>
+                  Based on {proto.name}. Edit any field below to override.
+                </Text>
+                <View style={styles.recGrid}>
+                  <View style={styles.recCell}>
+                    <Text style={[styles.recCellLabel, { color: t.textSecondary }]}>DOSE</Text>
+                    <Text style={[styles.recCellValue, { color: t.text }]}>{recommendedDose}</Text>
+                  </View>
+                  <View style={styles.recCell}>
+                    <Text style={[styles.recCellLabel, { color: t.textSecondary }]}>FREQUENCY</Text>
+                    <Text style={[styles.recCellValue, { color: t.text }]}>
+                      {proto.frequencyLabel ?? 'Daily'}
+                    </Text>
+                  </View>
+                  <View style={styles.recCell}>
+                    <Text style={[styles.recCellLabel, { color: t.textSecondary }]}>BAC WATER</Text>
+                    <Text style={[styles.recCellValue, { color: t.text }]}>2 ml</Text>
+                  </View>
+                </View>
+                <Text style={[styles.recFineprint, { color: t.textSecondary }]}>
+                  Educational reference only — not medical advice.
+                  Always confirm with a licensed clinician before any
+                  peptide use.
+                </Text>
+              </GlassCard>
+            </View>
+          );
+        })()}
+
+        {/* "Show research details" expander — one tap reveals the
+            advanced protocol-intensity picker, titration ladder, body-
+            weight scaling, and supplies estimator. We keep the default
+            view answer-focused (recommended dose + calculated draw) so
+            new users aren't overwhelmed; power users tap to see the
+            full research surface. */}
+        {selectedPeptide && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              onPress={() => setShowAdvanced((v) => !v)}
+              activeOpacity={0.7}
+              style={[styles.advancedToggle, { borderColor: t.cardBorder }]}
+            >
+              <Ionicons
+                name={showAdvanced ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={t.textSecondary}
+              />
+              <Text style={[styles.advancedToggleText, { color: t.text }]}>
+                {showAdvanced ? 'Hide research details' : 'Show research details'}
+              </Text>
+              <Text style={[styles.advancedToggleHint, { color: t.textSecondary }]}>
+                {showAdvanced
+                  ? 'Hides intensity, titration, body-weight, and supplies sections.'
+                  : 'Intensity, titration schedule, body-weight scaling, supplies estimator.'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Protocol intensity — Mild / Standard / Aggressive. Visible the
             moment a peptide is selected so the user picks their tier
             before plugging in dose numbers. Standard is pre-selected
-            (matches typical research protocols). */}
-        {selectedPeptide && protocolsForPeptide.length > 0 && (
+            (matches typical research protocols). Lives under the
+            "Show research details" expander so the default view stays
+            answer-focused. */}
+        {showAdvanced && selectedPeptide && protocolsForPeptide.length > 0 && (
           <View style={styles.section}>
             <ProtocolIntensityPicker
               protocol={protocolsForPeptide[0]}
@@ -472,8 +793,9 @@ export default function DosingCalculatorScreen() {
 
         {/* Titration ladder — shown only for peptides with structured weekly steps
             (GLP-1 family, TB-500, etc.). Lets the user pick the right step for
-            their week-of-cycle without leaving the calculator. */}
-        {selectedPeptide && protocolsForPeptide[0]?.titrationSchedule && (
+            their week-of-cycle without leaving the calculator. Lives under
+            the "Show research details" expander. */}
+        {showAdvanced && selectedPeptide && protocolsForPeptide[0]?.titrationSchedule && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: t.text }]}>Recommended schedule</Text>
             <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
@@ -586,6 +908,17 @@ export default function DosingCalculatorScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+            {/* Vial-capacity warning. Most peptide vials are 2-3 ml;
+                some research vials accept more, but check the rubber
+                stopper / vial neck before forcing extra BAC water in. */}
+            {waterMl > BAC_WATER_VIAL_TYPICAL_MAX_ML && (
+              <View style={styles.bacWarn}>
+                <Ionicons name="warning-outline" size={14} color="#B45309" />
+                <Text style={styles.bacWarnText}>
+                  Most peptide vials hold {BAC_WATER_VIAL_TYPICAL_MAX_ML} ml or less. Check your vial's capacity before adding {waterMl.toFixed(1)} ml — you may need to split across vials.
+                </Text>
+              </View>
+            )}
           </GlassCard>
         </View>
 
@@ -780,7 +1113,10 @@ export default function DosingCalculatorScreen() {
           </GlassCard>
         </View>
 
-        {/* Body weight (optional — for mcg/kg) */}
+        {/* Body weight (optional — for mcg/kg). Lives under the
+            "Show research details" expander — most users don't need
+            weight-based scaling. */}
+        {showAdvanced && (
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: t.text }]}>Body Weight (optional)</Text>
           <Text style={[styles.sectionHint, { color: t.textSecondary }]}>
@@ -813,17 +1149,22 @@ export default function DosingCalculatorScreen() {
             </View>
           </GlassCard>
         </View>
+        )}
 
-        {/* Quick concentration preview */}
+        {/* Quick concentration preview. Phrased around U-100 unit marks
+            (each small line on an insulin syringe = 1 unit = 0.01 mL),
+            which is how the peptide community talks about doses. The
+            old "per tick (0.1 mL)" wording mixed unit marks and the
+            larger labeled gradations and confused users. */}
         {vialRaw > 0 && waterMl > 0 && (
           <View style={styles.section}>
             <GlassCard variant="gradient">
               <Text style={[styles.previewLabel, { color: t.textSecondary }]}>Concentration</Text>
               <Text style={styles.previewValue}>
-                {concentrationPerTick.toFixed(1)} mcg per tick (0.1mL)
+                {(concentrationPerMl / 100).toFixed(1)} mcg per unit mark
               </Text>
               <Text style={[styles.previewSub, { color: t.textSecondary }]}>
-                {concentrationPerMl.toFixed(0)} mcg per 1mL total
+                Each unit = 0.01 mL on a U-100 syringe · {concentrationPerMl.toFixed(0)} mcg per 1 mL total
               </Text>
             </GlassCard>
           </View>
@@ -884,18 +1225,13 @@ export default function DosingCalculatorScreen() {
               <ResultRow
                 label="Pull syringe up to"
                 value={`${roundedUnits} mark${roundedUnits === 1 ? '' : 's'}`}
-                hint={`U-100 syringe · precise: ${syringeUnits.toFixed(2)} units`}
+                hint={`U-100 insulin syringe · the small unit lines · precise: ${syringeUnits.toFixed(2)} units`}
                 highlight
               />
               <ResultRow
                 label="Liquid amount per shot"
                 value={`${volumeToInjectMl.toFixed(3)} mL`}
                 hint={`≈${mlToTsp(volumeToInjectMl).toFixed(3)} tsp · how much fluid goes into the needle`}
-              />
-              <ResultRow
-                label="Small lines from the bottom"
-                value={`${ticksToDrawTo.toFixed(1)}`}
-                hint="each tick = 0.1 mL on a U-100 syringe"
               />
               <ResultRow
                 label="Actual peptide dose"
@@ -1001,8 +1337,9 @@ export default function DosingCalculatorScreen() {
         )}
 
         {/* Supplies estimator — concrete shopping list at 1 wk / 2 wks
-            / full cycle. */}
-        {selectedPeptide && protocolsForPeptide.length > 0 && (
+            / full cycle. Lives under the "Show research details"
+            expander — most users buy a single vial at a time. */}
+        {showAdvanced && selectedPeptide && protocolsForPeptide.length > 0 && (
           <View
             style={styles.section}
             onLayout={(e) => recordSectionY('supplies', e.nativeEvent.layout.y)}
@@ -1231,6 +1568,17 @@ export default function DosingCalculatorScreen() {
   );
 }
 
+/**
+ * Parse a finite, non-NaN number from a string-or-undefined deep-link
+ * param. Returns null when the value is missing or unparseable so the
+ * caller can fall through to its default.
+ */
+function parseFinite(v: string | undefined | null): number | null {
+  if (typeof v !== 'string' || v.trim() === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 function ResultRow({
   label,
   value,
@@ -1281,6 +1629,64 @@ const styles = StyleSheet.create({
   section: {
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,
+  },
+  // Recommended-protocol answer card (lives at top of the calculator).
+  // Definitive dose / frequency / BAC water pulled from protocols.ts so
+  // a user sees the answer before they touch any input.
+  recHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  recHeaderText: { fontSize: FontSizes.md, fontWeight: '700' },
+  recSub: { fontSize: FontSizes.xs, lineHeight: 16, marginBottom: 10 },
+  recGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  recCell: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(62,124,177,0.10)',
+  },
+  recCellLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
+  recCellValue: { fontSize: FontSizes.md, fontWeight: '700', marginTop: 2 },
+  recFineprint: { fontSize: 11, lineHeight: 15, marginTop: 10 },
+  // "Show research details" expander row — collapses the advanced
+  // intensity / titration / weight / supplies sections so the default
+  // view stays answer-focused.
+  advancedToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  advancedToggleText: { fontSize: FontSizes.sm, fontWeight: '700' },
+  advancedToggleHint: { width: '100%', fontSize: FontSizes.xs, lineHeight: 16, marginTop: 2 },
+  bacWarn: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+  },
+  bacWarnText: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 15,
+    color: '#9A3412',
   },
   sectionTitle: {
     fontSize: FontSizes.lg,

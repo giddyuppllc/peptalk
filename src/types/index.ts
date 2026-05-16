@@ -312,6 +312,34 @@ export interface ChatMessage {
     relatedPeptideIds?: string[];
     mood?: CheckInRating;
   };
+  /** Set true while a streaming response is incomplete. Toggles to false once
+   *  the SSE 'done' event arrives. UI uses this to render a blinking caret. */
+  streaming?: boolean;
+  /** Tool-call results surfaced inline below the streamed text.
+   *  - suggest_workout → exercise cards
+   *  - summarize_pattern → counts/correlation block
+   *  - draft_meal_template / propose_log_field → confirm-modal trigger */
+  toolResults?: AimeeToolResult[];
+  /** Pending-action proposals that require user Confirm/Cancel in the UI.
+   *  Backed by rows in aimee_pending_actions. */
+  pendingActions?: AimeePendingAction[];
+}
+
+/** Inline tool-call result attached to a ChatMessage. */
+export interface AimeeToolResult {
+  tool: 'suggest_workout' | 'summarize_pattern' | 'draft_meal_template' | 'propose_log_field' | string;
+  output: Record<string, unknown>;
+  /** True if the tool returned a pending_action_id (handled separately). */
+  isPending?: boolean;
+}
+
+/** A proposal Aimee made that needs user confirmation before committing. */
+export interface AimeePendingAction {
+  id: string;
+  tool: 'draft_meal_template' | 'propose_log_field' | string;
+  preview: Record<string, unknown>;
+  /** UI-side state: pending → confirmed/cancelled once user taps. */
+  status?: 'pending' | 'confirmed' | 'cancelled';
 }
 
 export type BotIntent =
@@ -714,6 +742,13 @@ export interface VideoContent {
   relatedPeptideIds?: string[];
   featured?: boolean;
   publishedAt: string;
+  /**
+   * Marks a video as not yet published — production filming is still
+   * in progress. The Learn index renders it with a "Coming soon" badge
+   * and the detail screen shows a friendly notice rather than failing
+   * to open a placeholder URL.
+   */
+  comingSoon?: boolean;
 }
 
 export type GuideCategory = 'reconstitution' | 'injection' | 'storage' | 'dosing' | 'testing' | 'general';
