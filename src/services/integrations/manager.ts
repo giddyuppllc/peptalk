@@ -8,6 +8,7 @@ import { healthKitAdapter } from './healthKitAdapter';
 import { healthConnectAdapter } from './healthConnectAdapter';
 import { ouraAdapter } from './ouraAdapter';
 import { whoopAdapter } from './whoopAdapter';
+import { inBodyAdapter } from './inBodyAdapter';
 import type { BiomarkerSource } from '../../types/cycle';
 
 export const ADAPTERS: BiomarkerAdapter[] = [
@@ -15,6 +16,7 @@ export const ADAPTERS: BiomarkerAdapter[] = [
   healthConnectAdapter,
   ouraAdapter,
   whoopAdapter,
+  inBodyAdapter,
 ];
 
 export function getAdapter(source: BiomarkerSource): BiomarkerAdapter | undefined {

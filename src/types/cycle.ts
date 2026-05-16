@@ -224,6 +224,7 @@ export type BiomarkerSource =
   | 'kegg'
   | 'mira'
   | 'eight_sleep'
+  | 'inbody'
   | 'ai_inferred';
 
 export const BIOMARKER_SOURCE_LABELS: Record<BiomarkerSource, string> = {
@@ -242,6 +243,7 @@ export const BIOMARKER_SOURCE_LABELS: Record<BiomarkerSource, string> = {
   kegg:            'kegg',
   mira:            'Mira',
   eight_sleep:     'Eight Sleep',
+  inbody:          'InBody',
   ai_inferred:     'AI inferred',
 };
 
@@ -251,6 +253,7 @@ export const BIOMARKER_SOURCE_LABELS: Record<BiomarkerSource, string> = {
  */
 export const SOURCE_PRIORITY: Record<BiomarkerSource, number> = {
   manual:          100,
+  inbody:          95,  // dedicated body-comp device, more accurate than aggregators for that scope
   tempdrop:        90,
   kegg:            90,
   mira:            90,

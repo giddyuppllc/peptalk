@@ -19,11 +19,12 @@ import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { getPeptideById } from '../../src/data/peptides';
 import { PEPTIDES } from '../../src/data/peptides';
 import { PROTOCOL_TEMPLATES } from '../../src/data/protocols';
+import { getDosingReference } from '../../src/data/peptideDosingReference';
 import { GlassCard } from '../../src/components/GlassCard';
 import { CoachMark } from '../../src/components/tutorial/CoachMark';
 import { getCategoryColor } from '../../src/constants/categories';
-import { Colors } from '../../src/constants/theme';
-import { PeptideStack, PeptideCategory, GoalType, Peptide } from '../../src/types';
+import { Colors, Spacing, BorderRadius } from '../../src/constants/theme';
+import { PeptideStack, PeptideCategory, GoalType, Peptide, ActiveProtocol, DoseLogEntry } from '../../src/types';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { PeptideDisclaimerModal } from '../../src/components/PeptideDisclaimerModal';
@@ -33,6 +34,8 @@ import {
 } from '../../src/services/doseCalculator';
 import { mlToTsp } from '../../src/utils/unitConversions';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
+import { AdherenceDial, CycleProgressBar, DoseStrip } from '../../src/components/peptides';
+import { notifySuccess, selectionTick } from '../../src/utils/haptics';
 
 // ─── Category meta-groups (for the educational browsing grid) ─────────────
 interface CategoryMeta {

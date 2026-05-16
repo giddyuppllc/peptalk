@@ -63,6 +63,7 @@ const DEFAULT_SCOPES: Record<BiomarkerSource, BiomarkerScope[]> = {
   kegg: ['cervical_mucus', 'bbt'],
   mira: [],
   eight_sleep: ['sleep', 'resting_heart_rate', 'hrv'],
+  inbody: ['weight', 'body_fat'],
   ai_inferred: [],
 };
 
@@ -80,6 +81,7 @@ const ICONS: Partial<Record<BiomarkerSource, keyof typeof Ionicons.glyphMap>> = 
   mira: 'flask',
   withings: 'scale',
   eight_sleep: 'bed',
+  inbody: 'body',
   manual: 'create',
 };
 
@@ -100,6 +102,13 @@ export default function IntegrationsSettingsScreen() {
   }, [refreshStatuses]);
 
   const handleConnect = async (source: BiomarkerSource) => {
+    // InBody is manual-entry-only today (API credentials pending). The
+    // Connect button routes straight to the scan-logging form instead
+    // of attempting an OAuth flow that doesn't exist yet.
+    if (source === 'inbody') {
+      router.push('/settings/inbody-entry' as never);
+      return;
+    }
     setConnecting(source);
     try {
       const ok = await connectSource(source, DEFAULT_SCOPES[source]);

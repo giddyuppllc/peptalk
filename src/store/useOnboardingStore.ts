@@ -31,6 +31,12 @@ interface OnboardingStore {
    *  surface and the previous default was overwhelming. */
   simpleCalculatorMode: boolean;
   setSimpleCalculatorMode: (simple: boolean) => void;
+  /** Advanced workout inputs (RPE, tempo, %1RM, rest interval). Off by
+   *  default — the simplified custom builder only captures sets × reps.
+   *  Power users can flip this on in Profile → Settings to expose the
+   *  full set-prescription form. */
+  showAdvancedFitness: boolean;
+  setShowAdvancedFitness: (show: boolean) => void;
   setGender: (gender: Gender) => void;
   setAgeRange: (ageRange: AgeRange) => void;
   setEthnicity: (ethnicity: Ethnicity) => void;
@@ -73,6 +79,9 @@ export const useOnboardingStore = create<OnboardingStore>()(
       simpleCalculatorMode: true,
       setSimpleCalculatorMode: (simpleCalculatorMode) =>
         set({ simpleCalculatorMode }),
+      showAdvancedFitness: false,
+      setShowAdvancedFitness: (showAdvancedFitness) =>
+        set({ showAdvancedFitness }),
 
       setGender: (gender) =>
         set((state) => ({ profile: { ...state.profile, gender } })),
@@ -125,6 +134,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
         acceptedPeptideDisclaimer: state.acceptedPeptideDisclaimer,
         acceptedLiveChatDisclaimer: state.acceptedLiveChatDisclaimer,
         simpleCalculatorMode: state.simpleCalculatorMode,
+        showAdvancedFitness: state.showAdvancedFitness,
       }),
       onRehydrateStorage: () => (state) => {
         const safeProfile = {
@@ -139,6 +149,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
           acceptedPeptideDisclaimer: state?.acceptedPeptideDisclaimer ?? false,
           acceptedLiveChatDisclaimer: state?.acceptedLiveChatDisclaimer ?? false,
           simpleCalculatorMode: state?.simpleCalculatorMode ?? true,
+          showAdvancedFitness: state?.showAdvancedFitness ?? false,
           hasHydrated: true,
         });
       },

@@ -1799,23 +1799,20 @@ const _ALL_PROGRAMS: WorkoutProgram[] = [
 ];
 
 /**
- * Programs shown in the app today (per Jamie 2026-05-16):
- *   - Lusciously Lean BODYreCOMP 1.0 (the marquee Lusciously Lean program)
- *   - Men's BUILD                    (the "Men Fit Program")
- *   - 14-Day Trial Program           (stand-in for the "custom" slot until
- *                                     the user-built program feature ships)
+ * Programs shown in the app today (per Jamie feedback round 1, phase 1A):
+ *   - Lusciously Lean BODYreCOMP 1.0 (the only curated program for now)
  *
- * All other programs stay defined above and are reachable via getProgramById
- * (so any saved/active-program state still resolves) — they just don't appear
- * in browse lists. Restore by adding their id to VISIBLE_PROGRAM_IDS.
+ * Everything else stays defined above and reachable via getProgramById
+ * (so any saved/active-program state from before the cull still resolves)
+ * — they just don't appear in browse lists. Restore by adding the id to
+ * VISIBLE_PROGRAM_IDS.
  *
- * TODO when the program-builder lands: drop TRIAL_PROGRAM from this list
- * and surface "Custom Fitness Program" as a build-your-own entry point.
+ * The custom workout builder at /workouts/new now covers the "make your
+ * own" slot — users build from the 451-exercise library directly instead
+ * of getting a stand-in trial program.
  */
 const VISIBLE_PROGRAM_IDS = new Set<string>([
   'll-body-recomp-1',
-  'mens-build',
-  '14-day-trial',
 ]);
 
 const _RAW_PROGRAMS: WorkoutProgram[] = _ALL_PROGRAMS.filter((p) =>
