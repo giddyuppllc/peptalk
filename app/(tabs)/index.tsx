@@ -80,6 +80,12 @@ import { getPeptideById } from '../../src/data/peptides';
 import { useTutorialStore } from '../../src/store/useTutorialStore';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
 import { UpgradeNudgeCard } from '../../src/components/UpgradeNudgeCard';
+import {
+  ActivityHeatmap,
+  WeekStrip,
+  StreakBadge,
+  BodyCompositionHero,
+} from '../../src/components/progress';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -1101,6 +1107,26 @@ export default function DashboardScreen() {
         </View>
         <View style={styles.protocolBannerWrap}>
           <ActiveProtocolBanner />
+        </View>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            PROGRESS DASHBOARD — Phase 2.
+            Unified visual tracking pulled from every input store
+            (workouts · meals · doses · check-ins · body composition).
+            Order: hero → week strip → streak → heatmap. No toggles,
+            no filters; each widget shows its own data or hides.
+        ═══════════════════════════════════════════════════════════════ */}
+        <View style={styles.protocolBannerWrap}>
+          <BodyCompositionHero />
+        </View>
+        <View style={styles.protocolBannerWrap}>
+          <WeekStrip />
+        </View>
+        <View style={styles.protocolBannerWrap}>
+          <StreakBadge />
+        </View>
+        <View style={styles.protocolBannerWrap}>
+          <ActivityHeatmap weeks={26} />
         </View>
 
         {/* Readiness composite — HRV/RHR/sleep vs baselines + check-in. */}

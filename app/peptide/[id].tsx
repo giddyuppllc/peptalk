@@ -36,6 +36,24 @@ import { getPeptideNutrition } from '../../src/data/peptideNutrition';
 import { getVideosByPeptideId } from '../../src/data/videos';
 import { getGuidesByPeptideId } from '../../src/data/howToGuides';
 import { getInteractionsByPeptideId } from '../../src/data/interactions';
+import { CollapsibleSection } from '../../src/components/CollapsibleSection';
+import { AskAimeeButton } from '../../src/components/AskAimeeButton';
+
+// ── Plain-English join — "a, b, c" → "a, b, and c" / "a and b" / "a". ──
+// Used by the "What this does for you" lead card. Lower-cases when the
+// items aren't proper nouns so the sentence reads naturally; the data
+// in peptide.uses.commonGoals is already in sentence-case (e.g. "Lean
+// muscle gain"), so we just lower-case the first letter of each item.
+function naturalJoin(items: string[]): string {
+  const clean = items
+    .map((it) => it.trim())
+    .filter((it) => it.length > 0)
+    .map((it) => it[0].toLowerCase() + it.slice(1));
+  if (clean.length === 0) return '';
+  if (clean.length === 1) return clean[0];
+  if (clean.length === 2) return `${clean[0]} and ${clean[1]}`;
+  return `${clean.slice(0, -1).join(', ')}, and ${clean[clean.length - 1]}`;
+}
 
 // ── Helper Functions ──────────────────────────────────────────────
 
@@ -174,9 +192,41 @@ export default function PeptideDetailScreen() {
           )}
         </View>
 
-        {/* Plain-language "what is this for" — top of page so user gets
-            the answer before any technical content. */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
+        {/* Ask Aimee escape hatch — small chip under the title gives the
+            user a way out of the technical content into a conversational
+            explanation pre-loaded with the peptide name. */}
+        <View style={{ marginBottom: 12 }}>
+          <AskAimeeButton
+            prefill={`Tell me more about ${peptide.name}.`}
+            accessibilityLabel={`Ask Aimee about ${peptide.name}`}
+          />
+        </View>
+
+        {/* Plain-English "What this does for you" — front-and-center so
+            the user gets a natural-language answer before any technical
+            content. Pulls directly from peptide.uses.commonGoals (no
+            fabrication) and joins with sentence-case grammar. */}
+        {peptide.uses && peptide.uses.commonGoals && peptide.uses.commonGoals.length > 0 && (
+          <View style={plainLeadStyles.card}>
+            <View style={plainLeadStyles.header}>
+              <View style={plainLeadStyles.iconWrap}>
+                <Ionicons name="heart" size={14} color="#E89672" />
+              </View>
+              <Text style={plainLeadStyles.title}>What this does for you</Text>
+            </View>
+            <Text style={plainLeadStyles.body}>
+              Helps with {naturalJoin(peptide.uses.commonGoals)}.
+            </Text>
+            <Text style={plainLeadStyles.subhint}>
+              Based on the goals this peptide is researched for. Not a guarantee — actual results vary.
+            </Text>
+          </View>
+        )}
+
+        {/* Plain-language matrix card — still shown as a secondary
+            "Keep it simple" surface where the goalPeptideMatrix has
+            structured goal coverage with reasons. */}
+        <View style={{ marginBottom: 8 }}>
           <KeepItSimpleCard peptideId={peptide.id} />
         </View>
 
@@ -343,54 +393,8 @@ export default function PeptideDetailScreen() {
           <Text style={styles.sectionText}>{peptide.researchSummary}</Text>
         </GlassCard>
 
-        {/* Mechanism of Action */}
-        <GlassCard style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="git-branch-outline" size={18} color="#7ABED0" />
-            <Text style={styles.sectionTitle}>Mechanism of Action</Text>
-          </View>
-          <Text style={styles.sectionText}>{peptide.mechanismOfAction}</Text>
-        </GlassCard>
-
-        {/* Receptor Targets */}
-        {peptide.receptorTargets && peptide.receptorTargets.length > 0 && (
-          <GlassCard style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="radio-outline" size={18} color="#7ABED0" />
-              <Text style={styles.sectionTitle}>Receptor Targets</Text>
-            </View>
-            <View style={styles.pillsRow}>
-              {peptide.receptorTargets.map((target, index) => (
-                <View key={index} style={styles.targetPill}>
-                  <Text style={styles.targetPillText}>{target}</Text>
-                </View>
-              ))}
-            </View>
-          </GlassCard>
-        )}
-
-        {/* Signaling Pathways */}
-        {peptide.signalingPathways && peptide.signalingPathways.length > 0 && (
-          <GlassCard style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons
-                name="git-network-outline"
-                size={18}
-                color="#7ABED0"
-              />
-              <Text style={styles.sectionTitle}>Signaling Pathways</Text>
-            </View>
-            <View style={styles.pillsRow}>
-              {peptide.signalingPathways.map((pathway, index) => (
-                <View key={index} style={styles.pathwayPill}>
-                  <Text style={styles.pathwayPillText}>{pathway}</Text>
-                </View>
-              ))}
-            </View>
-          </GlassCard>
-        )}
-
-        {/* Stability Notes */}
+        {/* Stability Notes — kept up-top because storage/handling is a
+            practical concern, not a "go deep" detail. */}
         <GlassCard style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="shield-outline" size={18} color="#7ABED0" />
@@ -399,100 +403,157 @@ export default function PeptideDetailScreen() {
           <Text style={styles.sectionText}>{peptide.stabilityNotes}</Text>
         </GlassCard>
 
-        {/* Molecular Data */}
-        <GlassCard style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="analytics-outline" size={18} color="#7ABED0" />
-            <Text style={styles.sectionTitle}>Molecular Data</Text>
-          </View>
-          <View style={styles.dataGrid}>
-            {peptide.molecularWeight && (
-              <View style={styles.dataItem}>
-                <Text style={styles.dataLabel}>Molecular Weight</Text>
-                <Text style={styles.dataValue}>{peptide.molecularWeight}</Text>
+        {/* Learn more — collapses Mechanism / Receptor / Signaling /
+            Molecular Data / Additional Information into one expandable
+            section so the technical content is one tap away without
+            dominating the page for first-time users. */}
+        <View style={styles.section}>
+          <CollapsibleSection
+            id="learn-more"
+            title="Learn more"
+            hint="Mechanism, receptor targets, molecular data, and the science of how this peptide works."
+            icon="school-outline"
+            defaultExpanded={false}
+          >
+            {/* Mechanism of Action */}
+            <View style={{ marginBottom: 14 }}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="git-branch-outline" size={18} color="#7ABED0" />
+                <Text style={styles.sectionTitle}>Mechanism of Action</Text>
               </View>
-            )}
-            {peptide.sequenceLength && (
-              <View style={styles.dataItem}>
-                <Text style={styles.dataLabel}>Sequence Length</Text>
-                <Text style={styles.dataValue}>
-                  {peptide.sequenceLength} amino acids
-                </Text>
-              </View>
-            )}
-            {peptide.halfLife && (
-              <View style={styles.dataItem}>
-                <Text style={styles.dataLabel}>Half-Life</Text>
-                <Text style={styles.dataValue}>{peptide.halfLife}</Text>
-              </View>
-            )}
-            {peptide.storageTemp && (
-              <View style={styles.dataItem}>
-                <Text style={styles.dataLabel}>Storage Temperature</Text>
-                <Text style={styles.dataValue}>{peptide.storageTemp}</Text>
-              </View>
-            )}
-            {peptide.reconstitution && (
-              <View style={styles.dataItem}>
-                <Text style={styles.dataLabel}>Reconstitution</Text>
-                <Text style={styles.dataValue}>{peptide.reconstitution}</Text>
-              </View>
-            )}
-          </View>
-        </GlassCard>
+              <Text style={styles.sectionText}>{peptide.mechanismOfAction}</Text>
+            </View>
 
-        {/* NEW: Chemical Structure Image */}
-        {peptide.structureImageUrl && (
-          <GlassCard style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="flask-outline" size={18} color="#7ABED0" />
-              <Text style={styles.sectionTitle}>Chemical Structure</Text>
-            </View>
-            <Image source={{ uri: peptide.structureImageUrl }} style={styles.structureImage} resizeMode="contain" />
-          </GlassCard>
-        )}
-
-        {/* NEW: Additional Information */}
-        {(peptide.bioavailability || peptide.routeOfAdministration?.length || peptide.naturalSources || peptide.yearDiscovered || peptide.aminoAcidSequence) && (
-          <GlassCard style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="information-circle-outline" size={18} color="#7ABED0" />
-              <Text style={styles.sectionTitle}>Additional Information</Text>
-            </View>
-            <View style={styles.dataGrid}>
-              {peptide.yearDiscovered && (
-                <View style={styles.dataItem}>
-                  <Text style={styles.dataLabel}>Year Discovered</Text>
-                  <Text style={styles.dataValue}>{peptide.yearDiscovered}</Text>
+            {/* Receptor Targets */}
+            {peptide.receptorTargets && peptide.receptorTargets.length > 0 && (
+              <View style={{ marginBottom: 14 }}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="radio-outline" size={18} color="#7ABED0" />
+                  <Text style={styles.sectionTitle}>Receptor Targets</Text>
                 </View>
-              )}
-              {peptide.bioavailability && (
-                <View style={styles.dataItem}>
-                  <Text style={styles.dataLabel}>Bioavailability</Text>
-                  <Text style={styles.dataValue}>{peptide.bioavailability}</Text>
+                <View style={styles.pillsRow}>
+                  {peptide.receptorTargets.map((target, index) => (
+                    <View key={index} style={styles.targetPill}>
+                      <Text style={styles.targetPillText}>{target}</Text>
+                    </View>
+                  ))}
                 </View>
-              )}
-              {peptide.routeOfAdministration && peptide.routeOfAdministration.length > 0 && (
-                <View style={styles.dataItem}>
-                  <Text style={styles.dataLabel}>Route(s)</Text>
-                  <Text style={styles.dataValue}>{peptide.routeOfAdministration.join(', ')}</Text>
-                </View>
-              )}
-              {peptide.naturalSources && (
-                <View style={styles.dataItem}>
-                  <Text style={styles.dataLabel}>Natural Source</Text>
-                  <Text style={styles.dataValue}>{peptide.naturalSources}</Text>
-                </View>
-              )}
-            </View>
-            {peptide.aminoAcidSequence && (
-              <View style={styles.sequenceContainer}>
-                <Text style={styles.dataLabel}>Amino Acid Sequence</Text>
-                <Text style={styles.sequenceText}>{peptide.aminoAcidSequence}</Text>
               </View>
             )}
-          </GlassCard>
-        )}
+
+            {/* Signaling Pathways */}
+            {peptide.signalingPathways && peptide.signalingPathways.length > 0 && (
+              <View style={{ marginBottom: 14 }}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="git-network-outline" size={18} color="#7ABED0" />
+                  <Text style={styles.sectionTitle}>Signaling Pathways</Text>
+                </View>
+                <View style={styles.pillsRow}>
+                  {peptide.signalingPathways.map((pathway, index) => (
+                    <View key={index} style={styles.pathwayPill}>
+                      <Text style={styles.pathwayPillText}>{pathway}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Molecular Data */}
+            <View style={{ marginBottom: 14 }}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="analytics-outline" size={18} color="#7ABED0" />
+                <Text style={styles.sectionTitle}>Molecular Data</Text>
+              </View>
+              <View style={styles.dataGrid}>
+                {peptide.molecularWeight && (
+                  <View style={styles.dataItem}>
+                    <Text style={styles.dataLabel}>Molecular Weight</Text>
+                    <Text style={styles.dataValue}>{peptide.molecularWeight}</Text>
+                  </View>
+                )}
+                {peptide.sequenceLength && (
+                  <View style={styles.dataItem}>
+                    <Text style={styles.dataLabel}>Sequence Length</Text>
+                    <Text style={styles.dataValue}>
+                      {peptide.sequenceLength} amino acids
+                    </Text>
+                  </View>
+                )}
+                {peptide.halfLife && (
+                  <View style={styles.dataItem}>
+                    <Text style={styles.dataLabel}>Half-Life</Text>
+                    <Text style={styles.dataValue}>{peptide.halfLife}</Text>
+                  </View>
+                )}
+                {peptide.storageTemp && (
+                  <View style={styles.dataItem}>
+                    <Text style={styles.dataLabel}>Storage Temperature</Text>
+                    <Text style={styles.dataValue}>{peptide.storageTemp}</Text>
+                  </View>
+                )}
+                {peptide.reconstitution && (
+                  <View style={styles.dataItem}>
+                    <Text style={styles.dataLabel}>Reconstitution</Text>
+                    <Text style={styles.dataValue}>{peptide.reconstitution}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Chemical Structure Image */}
+            {peptide.structureImageUrl && (
+              <View style={{ marginBottom: 14 }}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="flask-outline" size={18} color="#7ABED0" />
+                  <Text style={styles.sectionTitle}>Chemical Structure</Text>
+                </View>
+                <Image source={{ uri: peptide.structureImageUrl }} style={styles.structureImage} resizeMode="contain" />
+              </View>
+            )}
+
+            {/* Additional Information */}
+            {(peptide.bioavailability || peptide.routeOfAdministration?.length || peptide.naturalSources || peptide.yearDiscovered || peptide.aminoAcidSequence) && (
+              <View>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="information-circle-outline" size={18} color="#7ABED0" />
+                  <Text style={styles.sectionTitle}>Additional Information</Text>
+                </View>
+                <View style={styles.dataGrid}>
+                  {peptide.yearDiscovered && (
+                    <View style={styles.dataItem}>
+                      <Text style={styles.dataLabel}>Year Discovered</Text>
+                      <Text style={styles.dataValue}>{peptide.yearDiscovered}</Text>
+                    </View>
+                  )}
+                  {peptide.bioavailability && (
+                    <View style={styles.dataItem}>
+                      <Text style={styles.dataLabel}>Bioavailability</Text>
+                      <Text style={styles.dataValue}>{peptide.bioavailability}</Text>
+                    </View>
+                  )}
+                  {peptide.routeOfAdministration && peptide.routeOfAdministration.length > 0 && (
+                    <View style={styles.dataItem}>
+                      <Text style={styles.dataLabel}>Route(s)</Text>
+                      <Text style={styles.dataValue}>{peptide.routeOfAdministration.join(', ')}</Text>
+                    </View>
+                  )}
+                  {peptide.naturalSources && (
+                    <View style={styles.dataItem}>
+                      <Text style={styles.dataLabel}>Natural Source</Text>
+                      <Text style={styles.dataValue}>{peptide.naturalSources}</Text>
+                    </View>
+                  )}
+                </View>
+                {peptide.aminoAcidSequence && (
+                  <View style={styles.sequenceContainer}>
+                    <Text style={styles.dataLabel}>Amino Acid Sequence</Text>
+                    <Text style={styles.sequenceText}>{peptide.aminoAcidSequence}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </CollapsibleSection>
+        </View>
 
         {/* NEW: Adverse Effects */}
         {peptide.adverseEffects && peptide.adverseEffects.length > 0 && (

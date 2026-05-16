@@ -1,5 +1,13 @@
 /**
- * Program detail screen — shows weekly breakdown and lets user start the program.
+ * Program detail (dynamic route) — shows weekly breakdown and starts the program.
+ *
+ * Replaces the old query-param flavor at app/workouts/program.tsx. Routes are
+ * now `/workouts/program/ll-body-recomp-1` style — that's what the train tab
+ * and the dashboard's "Following a program?" row link to.
+ *
+ * Falls back to the same `programId` local search param if anyone navigates
+ * here legacy-style, so the old paths from saved state / Aimee deep-links
+ * don't break.
  */
 
 import React from 'react';
@@ -14,19 +22,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { GlassCard } from '../../src/components/GlassCard';
-import { GradientButton } from '../../src/components/GradientButton';
-import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
-import { getProgramById } from '../../src/data/workoutPrograms';
-import { getExerciseById } from '../../src/data/exercises';
-import { useWorkoutStore } from '../../src/store/useWorkoutStore';
-import type { WorkoutDay } from '../../src/types/fitness';
+import { GlassCard } from '../../../src/components/GlassCard';
+import { GradientButton } from '../../../src/components/GradientButton';
+import { Colors, Spacing, FontSizes } from '../../../src/constants/theme';
+import { getProgramById } from '../../../src/data/workoutPrograms';
+import { getExerciseById } from '../../../src/data/exercises';
+import { useWorkoutStore } from '../../../src/store/useWorkoutStore';
+import type { WorkoutDay } from '../../../src/types/fitness';
 
 // ---------------------------------------------------------------------------
 // Day Preview
 // ---------------------------------------------------------------------------
 
-function DayPreview({ day, weekNum }: { day: WorkoutDay; weekNum: number }) {
+function DayPreview({ day }: { day: WorkoutDay }) {
   const exerciseNames = day.exercises.map((ex) => {
     const info = getExerciseById(ex.exerciseId);
     return info?.name ?? ex.exerciseId;
@@ -59,8 +67,9 @@ function DayPreview({ day, weekNum }: { day: WorkoutDay; weekNum: number }) {
 
 export default function ProgramDetailScreen() {
   const router = useRouter();
-  const { programId } = useLocalSearchParams<{ programId: string }>();
-  const program = getProgramById(programId ?? '');
+  const params = useLocalSearchParams<{ programId?: string }>();
+  const programId = params.programId ?? '';
+  const program = getProgramById(programId);
   const { activeProgram, startProgram } = useWorkoutStore();
   const isActive = activeProgram?.programId === programId;
 
@@ -77,14 +86,19 @@ export default function ProgramDetailScreen() {
 
   const handleStart = () => {
     startProgram(program.id);
-    router.push(`/workouts/player?programId=${program.id}`);
+    router.push(`/workouts/player?programId=${program.id}` as never);
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
@@ -129,7 +143,7 @@ export default function ProgramDetailScreen() {
 
         {/* Description */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About This Program</Text>
+          <Text style={styles.sectionTitle}>About this program</Text>
           <GlassCard>
             <Text style={styles.descText}>{program.description}</Text>
           </GlassCard>
@@ -142,7 +156,7 @@ export default function ProgramDetailScreen() {
             <GlassCard>
               {week.days.map((day, i) => (
                 <View key={day.id}>
-                  <DayPreview day={day} weekNum={week.weekNumber} />
+                  <DayPreview day={day} />
                   {i < week.days.length - 1 && <View style={styles.divider} />}
                 </View>
               ))}
@@ -156,7 +170,7 @@ export default function ProgramDetailScreen() {
             <GradientButton
               label="Continue Program"
               onPress={() =>
-                router.push(`/workouts/player?programId=${program.id}`)
+                router.push(`/workouts/player?programId=${program.id}` as never)
               }
               colors={[Colors.raindropsDeep, Colors.raindropsDeep]}
             />
