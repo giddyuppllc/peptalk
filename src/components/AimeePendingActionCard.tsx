@@ -27,9 +27,18 @@ import type { AimeePendingAction } from '../types';
 interface Props {
   action: AimeePendingAction;
   onResolved?: (decision: 'confirm' | 'cancel') => void;
+  /**
+   * Optional handler for actions that should resolve client-side instead
+   * of via the aimee-action-confirm edge function. Used for the deferred
+   * write tools (log_dose, log_meal, schedule_workout) that the chat
+   * client routes through this card to require user confirmation. When
+   * provided AND action.id starts with `client-`, we call this instead
+   * of POSTing to the server.
+   */
+  onLocalConfirm?: (action: AimeePendingAction) => Promise<{ ok: boolean; error?: string }>;
 }
 
-export const AimeePendingActionCard: React.FC<Props> = ({ action, onResolved }) => {
+export const AimeePendingActionCard: React.FC<Props> = ({ action, onResolved, onLocalConfirm }) => {
   const [status, setStatus] = useState<'idle' | 'submitting' | 'confirmed' | 'cancelled' | 'error'>(
     action.status === 'confirmed'
       ? 'confirmed'
@@ -39,15 +48,27 @@ export const AimeePendingActionCard: React.FC<Props> = ({ action, onResolved }) 
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const isClientSide = action.id.startsWith('client-') && !!onLocalConfirm;
+
   const resolve = async (decision: 'confirm' | 'cancel') => {
     if (status !== 'idle') return;
     setStatus('submitting');
     setErrorMessage(null);
     tapMedium();
-    const result = await resolveAimeeAction({
-      actionId: action.id,
-      decision,
-    });
+    let result: { ok: boolean; error?: string };
+    if (isClientSide) {
+      // Client-side write — no server row to flip. Cancel is always a no-op.
+      if (decision === 'cancel') {
+        result = { ok: true };
+      } else {
+        result = await onLocalConfirm!(action);
+      }
+    } else {
+      result = await resolveAimeeAction({
+        actionId: action.id,
+        decision,
+      });
+    }
     if (!result.ok) {
       setStatus('error');
       setErrorMessage(result.error ?? 'Failed to save');
@@ -130,12 +151,18 @@ export const AimeePendingActionCard: React.FC<Props> = ({ action, onResolved }) 
 function iconForTool(tool: string): keyof typeof Ionicons.glyphMap {
   if (tool === 'draft_meal_template') return 'restaurant-outline';
   if (tool === 'propose_log_field') return 'clipboard-outline';
+  if (tool === 'log_dose') return 'flask-outline';
+  if (tool === 'log_meal') return 'nutrition-outline';
+  if (tool === 'schedule_workout') return 'barbell-outline';
   return 'sparkles-outline';
 }
 
 function titleForTool(tool: string): string {
   if (tool === 'draft_meal_template') return 'Meal template — Confirm to add';
   if (tool === 'propose_log_field') return 'Today\'s log — Confirm to add';
+  if (tool === 'log_dose') return 'Log this dose? — Confirm to save';
+  if (tool === 'log_meal') return 'Log this meal? — Confirm to save';
+  if (tool === 'schedule_workout') return 'Schedule this workout? — Confirm to save';
   return 'Aimee proposed an action';
 }
 
@@ -173,6 +200,56 @@ function renderPreview(action: AimeePendingAction): React.ReactNode {
           {Array.isArray(value) ? value.join(', ') : String(value)}
         </Text>
       </Text>
+    );
+  }
+  if (action.tool === 'log_dose') {
+    const name = String(p.peptideName ?? p.peptide ?? p.peptideId ?? 'peptide');
+    const amount = p.amount ?? p.dose;
+    const unit = String(p.unit ?? 'mcg');
+    const route = p.route ? ` · ${String(p.route)}` : '';
+    return (
+      <Text style={styles.previewLine}>
+        <Text style={styles.previewTitle}>{name}</Text>
+        {'  '}
+        <Text style={styles.previewValue}>
+          {amount} {unit}
+        </Text>
+        {route}
+      </Text>
+    );
+  }
+  if (action.tool === 'log_meal') {
+    const name = String(p.name ?? p.title ?? p.foodName ?? 'meal');
+    const cals = p.calories ?? p.cal;
+    const proteinG = p.proteinG ?? p.protein;
+    return (
+      <>
+        <Text style={styles.previewTitle}>{name}</Text>
+        {(cals != null || proteinG != null) && (
+          <Text style={styles.previewMacro}>
+            {cals != null ? `${Math.round(Number(cals))} cal` : ''}
+            {cals != null && proteinG != null ? ' · ' : ''}
+            {proteinG != null ? `${Math.round(Number(proteinG))}g protein` : ''}
+          </Text>
+        )}
+      </>
+    );
+  }
+  if (action.tool === 'schedule_workout') {
+    const name = String(p.name ?? p.title ?? 'workout');
+    const date = p.date ? String(p.date) : '';
+    const duration = p.durationMin ? `${p.durationMin} min` : '';
+    return (
+      <>
+        <Text style={styles.previewTitle}>{name}</Text>
+        {(date || duration) && (
+          <Text style={styles.previewMacro}>
+            {date}
+            {date && duration ? ' · ' : ''}
+            {duration}
+          </Text>
+        )}
+      </>
     );
   }
   return <Text style={styles.previewLine}>(no preview)</Text>;

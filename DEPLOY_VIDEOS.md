@@ -55,7 +55,8 @@ The function needs 4 secrets (5 if you want admin preview):
 | `R2_SECRET_ACCESS_KEY` | R2 secret access key | Same flow — shown once when token created |
 | `R2_ENDPOINT` | R2 endpoint URL | `https://<YOUR_CF_ACCOUNT_ID>.r2.cloudflarestorage.com` (Cloudflare → R2 → bucket → "S3 API" tab) |
 | `R2_BUCKET` | Bucket name | `peptalktraining` |
-| `ALLOW_TAGGER_FREE` (optional) | `"true"` to let admin emails preview videos without Pro tier | leave unset for now |
+| `ALLOW_TAGGER_FREE` (optional but **likely the actual fix**) | `"true"` to let admin emails preview videos without Pro tier | **set to `true` AND add Jamie's email to `ADMIN_EMAILS`** — audit identified this as the most likely reason no videos play for the tester |
+| `ADMIN_EMAILS` (optional, comma-separated) | `jamiespositoFit@gmail.com,edward@giddyupp.com` | required when `ALLOW_TAGGER_FREE=true` |
 
 Set them with:
 

@@ -484,14 +484,20 @@ export default function PepTalkScreen() {
               pendingActions: [...pendingActions],
             });
           } else if (ev.type === 'client_action' && ev.action) {
-            // Aimee asked the client to do something concrete. Three
-            // shapes are supported today:
-            //   - navigate         → router.push(path)
-            //   - log_dose         → useDoseLogStore.logDose(payload)
-            //   - log_meal         → useMealStore.addMeal(payload)
-            //   - schedule_workout → useWorkoutStore.addPlannedLog(payload)
-            // We trigger once per event; the assistant's text continues
-            // streaming in the bubble so the user still gets context.
+            // Aimee asked the client to do something concrete.
+            //
+            // navigate         → auto-execute (read-only, allowlist-gated)
+            // log_dose         → REQUIRE user confirmation (writes to medical history)
+            // log_meal         → REQUIRE user confirmation (writes to food log)
+            // schedule_workout → REQUIRE user confirmation (writes to schedule)
+            //
+            // Audit 2026-05-16 (P0): write-actions previously auto-executed,
+            // so a hallucinated tool call landed straight in the user's
+            // local store and synced to Supabase with no opt-in. Routing
+            // them through the same pendingActions[] queue that the
+            // `pending_action` event uses means the user sees a confirm
+            // card (AimeePendingActionCard) and taps Approve before any
+            // write happens.
             const action = ev.action as {
               type: string;
               path?: string;
@@ -499,24 +505,35 @@ export default function PepTalkScreen() {
             };
             try {
               if (action.type === 'navigate' && typeof action.path === 'string') {
-                // Client-side allowlist check on the server-supplied
-                // path. Even though the server keeps a SCREEN_TO_PATH
-                // map, a prompt-injection escape could in theory get
-                // Aimee to emit a custom `navigate` action pointing
-                // at /admin or /dev — defense in depth. Refuse
-                // anything outside (tabs) and /calculators.
+                // Read-only navigation — auto-execute behind the
+                // allowlist guard (defense in depth against
+                // prompt-injected paths to /admin or /dev).
                 const safe = isAllowedNavigationPath(action.path);
                 if (safe) {
                   router.push(action.path as any);
                 } else if (__DEV__) {
                   console.warn('[aimee] navigate refused (not allowlisted):', action.path);
                 }
-              } else if (action.type === 'log_dose' && action.payload) {
-                applyLogDoseAction(action.payload);
-              } else if (action.type === 'log_meal' && action.payload) {
-                applyLogMealAction(action.payload);
-              } else if (action.type === 'schedule_workout' && action.payload) {
-                applyScheduleWorkoutAction(action.payload);
+              } else if (
+                (action.type === 'log_dose' ||
+                  action.type === 'log_meal' ||
+                  action.type === 'schedule_workout') &&
+                action.payload
+              ) {
+                // Defer write — push into the pendingActions queue so
+                // the confirmation card renders inline in the chat.
+                // User taps Approve → AimeePendingActionCard runs the
+                // matching apply*Action helper. Tap Dismiss → nothing
+                // writes.
+                pendingActions.push({
+                  id: `client-${action.type}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                  tool: action.type,
+                  preview: action.payload as Record<string, unknown>,
+                  status: 'pending',
+                });
+                updateMessage(placeholderId, {
+                  pendingActions: [...pendingActions],
+                });
               }
             } catch (err) {
               if (__DEV__) console.warn('[aimee] client_action failed:', err, action);
@@ -848,13 +865,35 @@ export default function PepTalkScreen() {
                 <AimeeToolResultCard key={`tr-${item.id}-${i}`} result={r} />
               ))}
             {(item.pendingActions ?? []).map((a) => (
-              <AimeePendingActionCard key={`pa-${a.id}`} action={a} />
+              <AimeePendingActionCard
+                key={`pa-${a.id}`}
+                action={a}
+                onLocalConfirm={async (action) => {
+                  // Client-side write actions deferred via the audit fix.
+                  // The card already gated on tap-Confirm; here we run the
+                  // matching apply handler with the payload Aimee proposed.
+                  try {
+                    if (action.tool === 'log_dose') {
+                      applyLogDoseAction(action.preview);
+                    } else if (action.tool === 'log_meal') {
+                      applyLogMealAction(action.preview);
+                    } else if (action.tool === 'schedule_workout') {
+                      applyScheduleWorkoutAction(action.preview);
+                    } else {
+                      return { ok: false, error: 'Unknown action type' };
+                    }
+                    return { ok: true };
+                  } catch (err) {
+                    return { ok: false, error: err instanceof Error ? err.message : 'Failed' };
+                  }
+                }}
+              />
             ))}
           </View>
         </View>
       );
     },
-    [],
+    [applyLogDoseAction, applyLogMealAction, applyScheduleWorkoutAction],
   );
 
   const renderEmpty = useCallback(

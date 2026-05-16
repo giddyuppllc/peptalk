@@ -90,9 +90,27 @@ export function SpotlightTour() {
 
   if (!tourActive || !step) return null;
 
+  // GUARD — when the spotlight has a targetKey but the rect hasn't been
+  // measured yet (the 200ms after the step navigates to a new screen and
+  // before useTourTarget runs its measure), the layout fell back to
+  // CenteredLayout which still rendered an absoluteFill View capturing
+  // every tap behind a near-invisible dim. That's the freeze symptom
+  // TestFlight users reported. Render NOTHING during the unmeasured
+  // window — the user can interact with the screen normally and the
+  // tour appears as soon as the rect lands.
+  if (step.targetKey && !rect) return null;
+
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent>
-      <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={StyleSheet.absoluteFill}>
+      <Animated.View
+        entering={FadeIn.duration(200)}
+        exiting={FadeOut.duration(150)}
+        style={StyleSheet.absoluteFill}
+        // box-none lets touches pass through this wrapper. Each layout
+        // below controls its own touch capture explicitly so the tooltip
+        // is interactive but the dim isn't a screen-wide tap trap.
+        pointerEvents="box-none"
+      >
         {hasTarget ? (
           <SpotlightLayout rect={rect!} step={step} stepIndex={currentStep} totalSteps={steps.length} onNext={isLast ? completeTour : nextStep} onSkip={skipTour} isLast={isLast} />
         ) : (
@@ -134,7 +152,11 @@ function SpotlightLayout({ rect, step, stepIndex, totalSteps, onNext, onSkip, is
     : highlightY + highlightH + TOOLTIP_GAP;
 
   return (
-    <View style={StyleSheet.absoluteFill}>
+    // box-none — the wrapping View itself doesn't eat touches. Each
+    // dim band sets pointerEvents="none" already; the tooltip is the
+    // only interactive surface. Without this, the absoluteFill View
+    // intercepted every tap on the screen — invisible tap trap.
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {/* 4 dark bands forming a "hole" around the target */}
       {/* Top band */}
       <View style={[styles.dimBand, { top: 0, left: 0, right: 0, height: highlightY }]} pointerEvents="none" />
@@ -204,7 +226,10 @@ function SpotlightLayout({ rect, step, stepIndex, totalSteps, onNext, onSkip, is
 
 function CenteredLayout({ step, stepIndex, totalSteps, onNext, onSkip, isLast }: LayoutProps) {
   return (
-    <View style={[StyleSheet.absoluteFill, styles.centered]}>
+    // box-none — same fix as SpotlightLayout. The tooltip needs taps,
+    // the dim layer is pointerEvents=none, and the wrapping View must
+    // not silently eat everything else.
+    <View style={[StyleSheet.absoluteFill, styles.centered]} pointerEvents="box-none">
       <View style={styles.fullDim} pointerEvents="none" />
       <Animated.View key={`step-${stepIndex}`} entering={FadeIn.duration(250)}>
         <TooltipCard

@@ -891,8 +891,38 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
  * Returns null when the peptide isn't in this reference set — the
  * calculator and Aimee should fall through to PROTOCOL_TEMPLATES.
  */
+/**
+ * Variants Edward's reference doc defined that aren't present as distinct
+ * entries in src/data/peptides.ts. Without aliasing, getDosingReference
+ * for the parent peptide misses these blocks of authoritative data.
+ */
+const PEPTIDE_VARIANT_PARENTS: Record<string, string> = {
+  'cjc-1295-no-dac': 'cjc-1295',
+  'cjc-1295-ipamorelin': 'cjc-1295',
+  'retatrutide-10mg': 'retatrutide',
+};
+
 export function getDosingReference(peptideId: string): DosingReference | null {
-  return PEPTIDE_DOSING_REFERENCE.find((r) => r.peptideId === peptideId) ?? null;
+  // Direct match wins.
+  const direct = PEPTIDE_DOSING_REFERENCE.find((r) => r.peptideId === peptideId);
+  if (direct) return direct;
+  // Variant fallback — user picked `retatrutide` and only `retatrutide-10mg`
+  // exists in the reference; return that so the calc still has Edward's data.
+  const variantMatch = PEPTIDE_DOSING_REFERENCE.find(
+    (r) => PEPTIDE_VARIANT_PARENTS[r.peptideId] === peptideId,
+  );
+  return variantMatch ?? null;
+}
+
+/**
+ * Return ALL dosing references for a peptide — canonical entry + any
+ * Edward-defined variants (no-DAC, combo stacks, alt vial sizes). For
+ * surfaces that want to expose a variant picker.
+ */
+export function getAllDosingReferencesForPeptide(peptideId: string): DosingReference[] {
+  return PEPTIDE_DOSING_REFERENCE.filter(
+    (r) => r.peptideId === peptideId || PEPTIDE_VARIANT_PARENTS[r.peptideId] === peptideId,
+  );
 }
 
 /** Standard PepTalk safety disclaimer attached to every reference reply. */

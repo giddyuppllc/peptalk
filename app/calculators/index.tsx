@@ -69,30 +69,15 @@ export default function CalculatorsHubScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* Quick Dose Guide — secondary, lighter walk-through */}
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => router.push('/calculators/quick-dose')}
-          style={{ marginTop: Spacing.md }}
-        >
-          <LinearGradient
-            colors={['#7ABED0', '#7ABED0']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[styles.card, styles.primaryCard]}
-          >
-            <View style={[styles.cardIcon, { backgroundColor: 'rgba(0,0,0,0.12)' }]}>
-              <Ionicons name="flash" size={32} color="#fff" />
-            </View>
-            <View style={styles.cardContent}>
-              <Text style={[styles.cardTitle, { color: '#fff' }]}>Quick Dose Guide</Text>
-              <Text style={[styles.cardDesc, { color: 'rgba(0,0,0,0.60)' }]}>
-                Lighter walk-through with mcg/mg conversions spelled out at every step.
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="rgba(0,0,0,0.50)" />
-          </LinearGradient>
-        </TouchableOpacity>
+        {/*
+         * Quick Dose Guide HIDDEN 2026-05-16 — audit caught that
+         * quick-dose.tsx hardcodes vialMg=5/waterMl=2 for every peptide
+         * (src/data/protocols.ts is consulted but not Edward's reference
+         * in peptideDosingReference.ts). Result: 2× concentration error
+         * on semaglutide, 2× under-draw on retatrutide. Until that
+         * screen is rewired through getDosingReference(), don't surface
+         * it. dosing.tsx above is the source of truth.
+         */}
 
         {/* Reconstitution Calculator — separate purpose: vial math only, not dosing */}
         <Text style={[styles.advancedLabel, { color: t.textSecondary }]}>ADVANCED TOOLS</Text>
