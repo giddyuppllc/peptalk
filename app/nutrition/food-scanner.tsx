@@ -27,6 +27,7 @@ import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { useMealStore } from '../../src/store/useMealStore';
 import { supabase } from '../../src/services/supabase';
 import { trackFeatureGated } from '../../src/services/analyticsEvents';
+import { AskAimeeButton } from '../../src/components/AskAimeeButton';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 
@@ -39,6 +40,37 @@ interface FoodItem {
   fat: number;
   fiber: number;
 }
+
+// ─── Traffic-light scoring ────────────────────────────────────────────────
+// Plain-English signal pulled from the macro fields already on the scan
+// result — no new data. We only have calories / protein / carbs / fat /
+// fiber from the vision endpoint, so the heuristic is intentionally
+// conservative and defensible:
+//
+//   Green  → solid pick: protein dense (>=15g) OR (>=8g protein with >=3g fiber)
+//   Yellow → fine, in moderation: anything that isn't green and isn't red
+//   Red    → indulgence: low protein (<4g) AND high fat (>=15g)
+//                        OR very low protein (<2g) with high carbs (>=30g)
+//
+// "Reasonable default" maps to yellow so we never falsely label an item
+// green/red without a clear signal.
+type FoodSignal = 'green' | 'yellow' | 'red';
+
+function scoreFoodItem(item: FoodItem): FoodSignal {
+  const lowProtein = item.protein < 4;
+  const veryLowProtein = item.protein < 2;
+  const highFat = item.fat >= 15;
+  const highCarbs = item.carbs >= 30;
+  if ((lowProtein && highFat) || (veryLowProtein && highCarbs)) return 'red';
+  if (item.protein >= 15 || (item.protein >= 8 && item.fiber >= 3)) return 'green';
+  return 'yellow';
+}
+
+const SIGNAL_META: Record<FoodSignal, { color: string; label: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  green: { color: '#22c55e', label: 'Solid pick', icon: 'checkmark-circle' },
+  yellow: { color: '#F4B942', label: 'Fine, in moderation', icon: 'remove-circle' },
+  red: { color: '#ef4444', label: 'Save it for sometimes', icon: 'alert-circle' },
+};
 
 interface ScanResult {
   description: string;
@@ -303,22 +335,49 @@ export default function FoodScannerScreen() {
               </GlassCard>
             </View>
 
-            {/* Individual items */}
+            {/* Individual items — leads with a traffic-light badge based
+                on the macro signal (see scoreFoodItem) so users get a
+                plain-English read on each item before the gram counts.
+                Macros drop to a smaller second line. */}
             <Text style={styles.sectionTitle}>Identified Foods</Text>
-            {result.items.map((item, i) => (
-              <GlassCard key={i} style={styles.itemCard}>
-                <View style={styles.itemHeader}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.itemGrams}>~{item.estimatedGrams}g</Text>
-                </View>
-                <View style={styles.itemMacros}>
-                  <Text style={styles.itemMacro}>{item.calories} cal</Text>
-                  <Text style={[styles.itemMacro, { color: accent.deep }]}>P {item.protein}g</Text>
-                  <Text style={[styles.itemMacro, { color: accent.pastel }]}>C {item.carbs}g</Text>
-                  <Text style={[styles.itemMacro, { color: '#ef4444' }]}>F {item.fat}g</Text>
-                </View>
-              </GlassCard>
-            ))}
+            {result.items.map((item, i) => {
+              const signal = scoreFoodItem(item);
+              const meta = SIGNAL_META[signal];
+              return (
+                <GlassCard key={i} style={styles.itemCard}>
+                  <View style={styles.itemHeader}>
+                    <View style={styles.itemHeaderLeft}>
+                      <View
+                        style={[styles.signalBadge, { backgroundColor: `${meta.color}1F`, borderColor: `${meta.color}55` }]}
+                        accessibilityLabel={`${meta.label} food`}
+                        accessibilityRole="text"
+                      >
+                        <Ionicons name={meta.icon} size={14} color={meta.color} />
+                        <Text style={[styles.signalText, { color: meta.color }]}>{meta.label}</Text>
+                      </View>
+                      <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
+                    </View>
+                    <Text style={styles.itemGrams}>~{item.estimatedGrams}g</Text>
+                  </View>
+                  <View style={styles.itemMacros}>
+                    <Text style={styles.itemMacro}>{item.calories} cal</Text>
+                    <Text style={[styles.itemMacro, { color: accent.deep }]}>P {item.protein}g</Text>
+                    <Text style={[styles.itemMacro, { color: accent.pastel }]}>C {item.carbs}g</Text>
+                    <Text style={[styles.itemMacro, { color: '#ef4444' }]}>F {item.fat}g</Text>
+                  </View>
+                </GlassCard>
+              );
+            })}
+
+            {/* Ask Aimee — escape hatch for "is this a good choice for my
+                goals?" Lives below the items list so the user has the
+                context of the scan results already in their head. */}
+            <View style={styles.aimeeRow}>
+              <AskAimeeButton
+                prefill="Is this a good choice for my goals?"
+                accessibilityLabel="Ask Aimee whether this meal fits your goals"
+              />
+            </View>
 
             {/* Meal type picker */}
             <Text style={styles.sectionTitle}>Log as</Text>
@@ -447,11 +506,32 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm, marginBottom: Spacing.sm,
   },
   itemCard: { marginBottom: Spacing.xs, paddingVertical: Spacing.sm },
-  itemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  itemName: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.darkText, flex: 1 },
-  itemGrams: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary },
+  itemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
+  itemHeaderLeft: { flex: 1, gap: 4 },
+  itemName: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.darkText },
+  itemGrams: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary, marginLeft: 8, marginTop: 4 },
   itemMacros: { flexDirection: 'row', gap: Spacing.md },
-  itemMacro: { fontSize: FontSizes.xs, fontWeight: '500', color: Colors.darkTextSecondary },
+  itemMacro: { fontSize: 11, fontWeight: '500', color: Colors.darkTextSecondary },
+  signalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  signalText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  aimeeRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginVertical: Spacing.md,
+  },
 
   // Meal type
   mealTypeRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
