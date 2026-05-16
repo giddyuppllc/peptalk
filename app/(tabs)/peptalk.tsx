@@ -291,6 +291,19 @@ export default function PepTalkScreen() {
             updateMessage(placeholderId, {
               pendingActions: [...pendingActions],
             });
+          } else if (ev.type === 'client_action' && ev.action) {
+            // Aimee asked the client to do something concrete — e.g. open the
+            // dosing calculator pre-filled, or jump to the workouts tab.
+            // We trigger it once per event; the assistant's text continues
+            // streaming in the bubble so the user still gets context.
+            const action = ev.action as { type: string; path?: string };
+            if (action.type === 'navigate' && typeof action.path === 'string') {
+              try {
+                router.push(action.path as any);
+              } catch (err) {
+                if (__DEV__) console.warn('[aimee] client_action navigate failed:', err, action);
+              }
+            }
           } else if (ev.type === 'done') {
             stillStreaming = false;
             updateMessage(placeholderId, { streaming: false });

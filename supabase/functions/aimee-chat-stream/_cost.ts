@@ -3,7 +3,7 @@
  *
  * Two layers:
  *   1. Per-user daily — protects against a single account fanning out cost.
- *   2. System-wide daily — global circuit breaker on the Anthropic bill.
+ *   2. System-wide daily — global circuit breaker on the Grok / xAI bill.
  *      Stored under the sentinel UUID below.
  *
  * Spend is recorded in microcents (1 USD = 100,000,000 mc).

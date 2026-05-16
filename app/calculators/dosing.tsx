@@ -83,7 +83,14 @@ export default function DosingCalculatorScreen() {
   // Optional deep-link params from peptide detail page Beginner/Advanced
   // pills: pre-select the peptide and the intensity tier so the user lands
   // straight on the dose they tapped.
-  const params = useLocalSearchParams<{ peptideId?: string; intensity?: string }>();
+  const params = useLocalSearchParams<{
+    peptideId?: string;
+    intensity?: string;
+    /** Optional Aimee-supplied pre-fills (open_dosing_calculator tool). */
+    doseMcg?: string;
+    vialMg?: string;
+    waterMl?: string;
+  }>();
 
   // Inputs
   const [selectedPeptide, setSelectedPeptide] = useState<Peptide | null>(null);
@@ -253,32 +260,57 @@ export default function DosingCalculatorScreen() {
     if (appliedDeepLinkRef.current) return;
     const pid = typeof params.peptideId === 'string' ? params.peptideId : undefined;
     const intent = typeof params.intensity === 'string' ? params.intensity : undefined;
-    if (!pid && !intent) return;
+    const linkDoseMcg = parseFinite(params.doseMcg);
+    const linkVialMg = parseFinite(params.vialMg);
+    const linkWaterMl = parseFinite(params.waterMl);
+    if (!pid && !intent && linkDoseMcg == null && linkVialMg == null && linkWaterMl == null) {
+      return;
+    }
     if (pid && !selectedPeptide) {
       const found = PEPTIDES.find((p) => p.id === pid);
       if (found) setSelectedPeptide(found);
     }
     if (intent === 'mild' || intent === 'standard' || intent === 'aggressive') {
       setIntensity(intent);
-      // Resolve the matching protocol via the same filter the screen uses
-      // and seed targetDose with that intensity's midpoint dose.
       const targetPid = pid ?? selectedPeptide?.id;
       const proto = targetPid
         ? PROTOCOL_TEMPLATES.find((pt) => pt.peptideId === targetPid)
         : undefined;
       if (proto) {
         const { mcg, displayUnit } = intensityToDoseMcg(proto, intent);
-        // The protocol's display unit can technically be IU/ml in the
-        // shared DoseUnit type, but the calculator only supports mcg/mg.
-        // Default to mcg for any non-mg unit so the input is always valid.
         const localUnit: DoseUnit = displayUnit === 'mg' ? 'mg' : 'mcg';
         const value = localUnit === 'mg' ? mcg / 1000 : mcg;
         setTargetDose(String(Number(value.toFixed(2))));
         setDoseUnit(localUnit);
       }
     }
+    // Aimee-supplied pre-fills win over the intensity-driven dose so the
+    // user lands on exactly the number Aimee said in chat.
+    if (linkDoseMcg != null && linkDoseMcg > 0) {
+      if (linkDoseMcg >= 1000) {
+        setTargetDose(String(Number((linkDoseMcg / 1000).toFixed(2))));
+        setDoseUnit('mg');
+      } else {
+        setTargetDose(String(Math.round(linkDoseMcg)));
+        setDoseUnit('mcg');
+      }
+    }
+    if (linkVialMg != null && linkVialMg > 0) {
+      setVialSize(String(linkVialMg));
+      setVialUnit('mg');
+    }
+    if (linkWaterMl != null && linkWaterMl > 0) {
+      setWaterVolume(String(linkWaterMl));
+    }
     appliedDeepLinkRef.current = true;
-  }, [params.peptideId, params.intensity, selectedPeptide]);
+  }, [
+    params.peptideId,
+    params.intensity,
+    params.doseMcg,
+    params.vialMg,
+    params.waterMl,
+    selectedPeptide,
+  ]);
 
   // If the user has an ACTIVE PROTOCOL for the selected peptide, figure out
   // which titration step they're on so the calculator can pre-fill the
@@ -1413,6 +1445,17 @@ export default function DosingCalculatorScreen() {
       </Modal>
     </SafeAreaView>
   );
+}
+
+/**
+ * Parse a finite, non-NaN number from a string-or-undefined deep-link
+ * param. Returns null when the value is missing or unparseable so the
+ * caller can fall through to its default.
+ */
+function parseFinite(v: string | undefined | null): number | null {
+  if (typeof v !== 'string' || v.trim() === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
 }
 
 function ResultRow({

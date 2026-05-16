@@ -963,6 +963,7 @@ export interface AimeeStreamEvent {
     | 'tool_use'
     | 'tool_result'
     | 'pending_action'
+    | 'client_action'
     | 'warning'
     | 'done'
     | 'error'
@@ -974,11 +975,17 @@ export interface AimeeStreamEvent {
   output?: Record<string, unknown>;
   tool?: string;
   preview?: Record<string, unknown>;
+  /** Deep-link action emitted by client-action tools (navigate, open_dosing_calculator). */
+  action?: { type: string; path?: string; [k: string]: unknown };
   message?: string;
   pending_actions?: Array<{
     id: string;
     tool: string;
     preview: Record<string, unknown>;
+  }>;
+  client_actions?: Array<{
+    tool: string;
+    action: { type: string; path?: string; [k: string]: unknown };
   }>;
   upgrade?: boolean;
   /** Status code from the edge fn for error/denied events. */
