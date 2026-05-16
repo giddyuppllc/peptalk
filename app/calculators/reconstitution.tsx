@@ -37,9 +37,12 @@ export default function ReconstitutionCalculatorScreen() {
   const [doseUnit, setDoseUnit] = useState<DoseUnit>('mcg');
   const [showResults, setShowResults] = useState(false);
 
-  const vialRaw = parseFloat(vialSize) || 0;
-  const waterMl = parseFloat(waterVolume) || 0;
-  const doseRaw = parseFloat(desiredDose) || 0;
+  // Clamp at parse so a transient negative input (user typing "-5") can't
+  // propagate negative concentration / volume into the downstream display.
+  // Mirrors the same guard in calculators/dosing.tsx.
+  const vialRaw = Math.max(0, parseFloat(vialSize) || 0);
+  const waterMl = Math.max(0, parseFloat(waterVolume) || 0);
+  const doseRaw = Math.max(0, parseFloat(desiredDose) || 0);
 
   // Normalize everything to mcg (matching peptidedosages.com logic)
   const vialMcg = vialUnit === 'mg' ? vialRaw * 1000 : vialRaw;
