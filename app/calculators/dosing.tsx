@@ -54,6 +54,7 @@ import {
 import { ReconstitutionGuideCard } from '../../src/components/ReconstitutionGuideCard';
 import { ActivateProtocolButton } from '../../src/components/ActivateProtocolButton';
 import { CollapsibleSection, type CollapsibleSectionRef } from '../../src/components/CollapsibleSection';
+import { AskAimeeButton } from '../../src/components/AskAimeeButton';
 import { CalculatorSectionTabs, type CalculatorTab } from '../../src/components/CalculatorSectionTabs';
 import { mlToTsp, mlToFlOz } from '../../src/utils/unitConversions';
 import type { Peptide } from '../../src/types';
@@ -524,7 +525,7 @@ export default function DosingCalculatorScreen() {
       list.push({ id: 'supplies', label: 'Supplies', icon: 'cube-outline' });
       list.push({ id: 'activate', label: 'Activate', icon: 'play-circle-outline' });
     }
-    list.push({ id: 'pervial', label: 'Per-vial', icon: 'flask-outline' });
+    list.push({ id: 'pervial', label: 'Cost & supply', icon: 'cash-outline' });
     if (selectedPeptide) {
       list.push({ id: 'mixing', label: 'Mixing', icon: 'water-outline' });
       list.push({ id: 'about', label: 'About', icon: 'information-circle-outline' });
@@ -1151,20 +1152,20 @@ export default function DosingCalculatorScreen() {
         </View>
         )}
 
-        {/* Quick concentration preview. Phrased around U-100 unit marks
-            (each small line on an insulin syringe = 1 unit = 0.01 mL),
-            which is how the peptide community talks about doses. The
-            old "per tick (0.1 mL)" wording mixed unit marks and the
-            larger labeled gradations and confused users. */}
+        {/* Quick concentration preview — phrased in plain English
+            ("Each tick of your insulin syringe = N mcg of peptide") so
+            non-technical users get a translatable answer instead of
+            a jargon-only concentration display. The technical figures
+            (per 1mL, per unit mark) stay as the secondary subline. */}
         {vialRaw > 0 && waterMl > 0 && (
           <View style={styles.section}>
             <GlassCard variant="gradient">
-              <Text style={[styles.previewLabel, { color: t.textSecondary }]}>Concentration</Text>
+              <Text style={[styles.previewLabel, { color: t.textSecondary }]}>Plain English</Text>
               <Text style={styles.previewValue}>
-                {(concentrationPerMl / 100).toFixed(1)} mcg per unit mark
+                Each tick of your insulin syringe = {(concentrationPerMl / 100).toFixed(1)} mcg of peptide
               </Text>
               <Text style={[styles.previewSub, { color: t.textSecondary }]}>
-                Each unit = 0.01 mL on a U-100 syringe · {concentrationPerMl.toFixed(0)} mcg per 1 mL total
+                One unit on a U-100 syringe · {concentrationPerMl.toFixed(0)} mcg per 1 mL total
               </Text>
             </GlassCard>
           </View>
@@ -1400,9 +1401,10 @@ export default function DosingCalculatorScreen() {
           >
             <CollapsibleSection
               id="pervial"
-              title="Per-vial economics"
-              hint="Math for comparing vial sizes side-by-side."
-              icon="flask-outline"
+              title="Cost & supply"
+              hint="Doses per vial, days each vial lasts, and weekly / monthly totals — for sizing up your order."
+              icon="cash-outline"
+              defaultExpanded={false}
               ref={setSectionRef('pervial')}
             >
               <GlassCard>
@@ -1496,6 +1498,19 @@ export default function DosingCalculatorScreen() {
                 </View>
               </View>
             </GlassCard>
+          </View>
+        )}
+
+        {/* Ask Aimee — escape hatch into a conversational explanation
+            of the dose the calculator just produced. Placed right above
+            the disclaimer so confused users see it before they bounce. */}
+        {showResults && (
+          <View style={[styles.section, { alignItems: 'center' }]}>
+            <AskAimeeButton
+              prefill="Help me understand this dose."
+              label="Help me understand this dose"
+              accessibilityLabel="Ask Aimee to explain this dose in plain English"
+            />
           </View>
         )}
 
