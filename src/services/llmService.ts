@@ -22,6 +22,7 @@
 import { ChatMessage, EnhancedBotContext } from '../types';
 import { sanitizeForLLM } from './privacyGuard';
 import { supabase } from './supabase';
+import { captureException } from './telemetry';
 
 // ---------------------------------------------------------------------------
 // Config
@@ -1068,6 +1069,7 @@ export async function* generateAIResponseStream(
       return;
     }
     if (__DEV__) console.warn('[llmService] stream fetch threw:', e);
+    captureException(e, { source: 'aimee-stream', stage: 'fetch' });
     yield { type: 'error', message: 'Network error' };
     return;
   }
@@ -1133,6 +1135,7 @@ export async function* generateAIResponseStream(
     } catch (e) {
       if (options?.signal?.aborted) return; // intentional cancel, silent
       if (__DEV__) console.warn('[llmService] stream read failed:', e);
+      captureException(e, { source: 'aimee-stream', stage: 'read' });
       yield { type: 'error', message: 'Stream interrupted' };
       return;
     }

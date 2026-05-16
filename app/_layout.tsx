@@ -49,11 +49,12 @@ import { usePantryStore } from '../src/store/usePantryStore';
 import { useCycleStore } from '../src/store/useCycleStore';
 import { useIntegrationsStore } from '../src/store/useIntegrationsStore';
 import { subscribeToReconnect } from '../src/hooks/useNetworkStatus';
-import { initTelemetry } from '../src/services/telemetry';
+import { initTelemetry, installGlobalErrorHandler } from '../src/services/telemetry';
 
 // Boot-time telemetry init (no-op if no DSN). Done at module scope so it
 // fires before any component renders or stores hydrate.
 initTelemetry();
+installGlobalErrorHandler();
 import { Platform } from 'react-native';
 import { useTheme } from '../src/hooks/useTheme';
 

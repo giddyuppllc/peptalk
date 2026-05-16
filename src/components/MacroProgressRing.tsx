@@ -51,12 +51,25 @@ export function MacroProgressRing({ size = 120, stroke = 10, onPress }: Props) {
   // Long-press hits the existing onPress (typically navigation).
   const [view, setView] = useState<'calories' | 'macros'>('calories');
   const fade = useRef(new Animated.Value(1)).current;
+  // Track the flip-view timer so we can cancel on unmount — earlier
+  // this leaked a setTimeout that fired setView on a dead component
+  // if the user tapped flip and immediately navigated away.
+  const flipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (flipTimerRef.current) clearTimeout(flipTimerRef.current);
+    };
+  }, []);
   const flipView = () => {
     Animated.sequence([
       Animated.timing(fade, { toValue: 0, duration: 120, useNativeDriver: true }),
       Animated.timing(fade, { toValue: 1, duration: 130, useNativeDriver: true }),
     ]).start();
-    setTimeout(() => setView((v) => (v === 'calories' ? 'macros' : 'calories')), 120);
+    if (flipTimerRef.current) clearTimeout(flipTimerRef.current);
+    flipTimerRef.current = setTimeout(() => {
+      setView((v) => (v === 'calories' ? 'macros' : 'calories'));
+      flipTimerRef.current = null;
+    }, 120);
   };
 
   // Today's totals across all macros — sum either quickLog or per-food values.

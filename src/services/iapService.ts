@@ -15,6 +15,7 @@
 
 import { Platform } from 'react-native';
 import type { SubscriptionTier } from '../types/fitness';
+import { captureException } from './telemetry';
 
 // Product IDs — must match App Store Connect / Play Console exactly.
 //
@@ -207,6 +208,13 @@ export async function initIAP(
         validated = true;
       } catch (err) {
         if (__DEV__) console.warn('[iapService] Purchase validation failed:', err);
+        // Money path — ops needs visibility on these. The user has
+        // paid Apple/Google but our validate-purchase didn't grant
+        // entitlement, which generates a refund-request support ticket.
+        captureException(err, {
+          source: 'iap.validate',
+          productId: purchase.productId,
+        });
         // On validation failure, intentionally do NOT finish the
         // transaction. Leaving it un-acknowledged means the store will
         // replay the purchase on the next launch / restore so the user
@@ -228,6 +236,7 @@ export async function initIAP(
     });
   } catch (err) {
     if (__DEV__) console.warn('[iapService] initConnection failed:', err);
+    captureException(err, { source: 'iap.init' });
   }
 }
 
@@ -420,6 +429,7 @@ export async function restorePurchases(): Promise<number> {
     return validated;
   } catch (err) {
     if (__DEV__) console.warn('[iapService] restorePurchases failed:', err);
+    captureException(err, { source: 'iap.restore' });
     return 0;
   }
 }

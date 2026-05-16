@@ -115,15 +115,58 @@ async function authedFetch<T>(fn: string, body: unknown): Promise<T> {
   return data as T;
 }
 
-function rowToPost(r: any): CommunityPost {
-  const author = r.profiles
-    ? {
-        id: r.profiles.id ?? r.user_id,
-        username: r.profiles.username ?? undefined,
-        displayName: r.profiles.display_name ?? undefined,
-        avatarUrl: r.profiles.avatar_url ?? undefined,
+/** Fetch public-safe profile rows for a set of user ids. Replaces the
+ *  PostgREST `profiles:user_id (...)` embed — the `profiles` table is
+ *  self-only RLS, so the embed returned NULL for every author except
+ *  the caller. Wave 76.11 added a `public_profiles` view that exposes
+ *  only (id, username, display_name, avatar_url, created_at) and is
+ *  readable by every authenticated user. We fetch from it manually
+ *  and merge in memory. */
+async function fetchAuthorMap(
+  supabase: any,
+  userIds: string[],
+): Promise<Map<string, { id: string; username?: string; displayName?: string; avatarUrl?: string }>> {
+  const out = new Map<string, { id: string; username?: string; displayName?: string; avatarUrl?: string }>();
+  const unique = Array.from(new Set(userIds.filter(Boolean)));
+  if (unique.length === 0) return out;
+  try {
+    const { data } = await supabase
+      .from('public_profiles')
+      .select('id, username, display_name, avatar_url')
+      .in('id', unique);
+    if (Array.isArray(data)) {
+      for (const r of data as any[]) {
+        out.set(r.id, {
+          id: r.id,
+          username: r.username ?? undefined,
+          displayName: r.display_name ?? undefined,
+          avatarUrl: r.avatar_url ?? undefined,
+        });
       }
-    : undefined;
+    }
+  } catch (err) {
+    if (__DEV__) console.warn('[community] fetchAuthorMap failed:', err);
+  }
+  return out;
+}
+
+function rowToPost(
+  r: any,
+  authorMap?: Map<string, { id: string; username?: string; displayName?: string; avatarUrl?: string }>,
+): CommunityPost {
+  // Prefer the merged author map (from public_profiles); fall back to
+  // the legacy `profiles` embed shape for any caller that still passes
+  // raw rows (e.g. server-rendered initial fetches).
+  const fromMap = authorMap?.get(r.user_id);
+  const author = fromMap
+    ?? (r.profiles
+      ? {
+          id: r.profiles.id ?? r.user_id,
+          username: r.profiles.username ?? undefined,
+          displayName: r.profiles.display_name ?? undefined,
+          avatarUrl: r.profiles.avatar_url ?? undefined,
+        }
+      : undefined);
   return {
     id: r.id,
     userId: r.user_id,
@@ -142,15 +185,20 @@ function rowToPost(r: any): CommunityPost {
   };
 }
 
-function rowToComment(r: any): CommunityComment {
-  const author = r.profiles
-    ? {
-        id: r.profiles.id ?? r.user_id,
-        username: r.profiles.username ?? undefined,
-        displayName: r.profiles.display_name ?? undefined,
-        avatarUrl: r.profiles.avatar_url ?? undefined,
-      }
-    : undefined;
+function rowToComment(
+  r: any,
+  authorMap?: Map<string, { id: string; username?: string; displayName?: string; avatarUrl?: string }>,
+): CommunityComment {
+  const fromMap = authorMap?.get(r.user_id);
+  const author = fromMap
+    ?? (r.profiles
+      ? {
+          id: r.profiles.id ?? r.user_id,
+          username: r.profiles.username ?? undefined,
+          displayName: r.profiles.display_name ?? undefined,
+          avatarUrl: r.profiles.avatar_url ?? undefined,
+        }
+      : undefined);
   return {
     id: r.id,
     postId: r.post_id,
@@ -221,8 +269,7 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
         .from('community_posts')
         .select(`
           id, user_id, topic_slug, title, body, reaction_count, comment_count,
-          is_deleted, is_anonymous, image_urls, last_edited_at, moderation_status, created_at, updated_at,
-          profiles:user_id ( id, username, display_name, avatar_url )
+          is_deleted, is_anonymous, image_urls, last_edited_at, moderation_status, created_at, updated_at
         `)
         .eq('is_deleted', false);
 
@@ -255,18 +302,26 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
       if (error) throw error;
 
       const blocked = new Set(get().blockedUserIds);
-      const posts = (data ?? [])
-        .filter((r: any) => !blocked.has(r.user_id))
-        .map((r: any) => {
-          const post = rowToPost(r);
-          if (r.is_anonymous) {
-            post.author = {
-              id: post.userId,
-              displayName: 'Anonymous member',
-            };
-          }
-          return post;
-        });
+      const visibleRows = (data ?? []).filter((r: any) => !blocked.has(r.user_id));
+      // Manual join against public_profiles since the base `profiles`
+      // table is self-only RLS (PostgREST embed returned NULL for
+      // every non-self author before Wave 76.11).
+      const authorMap = await fetchAuthorMap(
+        supabase,
+        visibleRows
+          .filter((r: any) => !r.is_anonymous)
+          .map((r: any) => r.user_id),
+      );
+      const posts = visibleRows.map((r: any) => {
+        const post = rowToPost(r, authorMap);
+        if (r.is_anonymous) {
+          post.author = {
+            id: post.userId,
+            displayName: 'Anonymous member',
+          };
+        }
+        return post;
+      });
 
       set({ posts });
     } catch (err) {
@@ -285,8 +340,7 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
         .from('community_posts')
         .select(`
           id, user_id, topic_slug, title, body, reaction_count, comment_count,
-          is_deleted, is_anonymous, image_urls, last_edited_at, moderation_status, created_at, updated_at,
-          profiles:user_id ( id, username, display_name, avatar_url )
+          is_deleted, is_anonymous, image_urls, last_edited_at, moderation_status, created_at, updated_at
         `)
         .eq('id', postId)
         .maybeSingle();
@@ -308,8 +362,7 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
         .from('community_comments')
         .select(`
           id, post_id, user_id, parent_comment_id, body, reaction_count,
-          is_deleted, is_anonymous, image_urls, last_edited_at, moderation_status, created_at,
-          profiles:user_id ( id, username, display_name, avatar_url )
+          is_deleted, is_anonymous, image_urls, last_edited_at, moderation_status, created_at
         `)
         .eq('post_id', postId)
         .eq('is_deleted', false)
@@ -318,7 +371,16 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
 
       const blocked = new Set(get().blockedUserIds);
 
-      const post = rowToPost(postRow);
+      // One author lookup for the post + all its comments. De-dupes
+      // multiple comments from the same user.
+      const allAuthorIds: string[] = [];
+      if (!postRow.is_anonymous) allAuthorIds.push(postRow.user_id);
+      for (const c of (commentRows ?? []) as any[]) {
+        if (!c.is_anonymous && !blocked.has(c.user_id)) allAuthorIds.push(c.user_id);
+      }
+      const authorMap = await fetchAuthorMap(supabase, allAuthorIds);
+
+      const post = rowToPost(postRow, authorMap);
       if (postRow.is_anonymous) {
         post.author = { id: post.userId, displayName: 'Anonymous member' };
       }
@@ -326,7 +388,7 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
       const comments = (commentRows ?? [])
         .filter((r: any) => !blocked.has(r.user_id))
         .map((r: any) => {
-          const c = rowToComment(r);
+          const c = rowToComment(r, authorMap);
           if (r.is_anonymous) {
             c.author = { id: c.userId, displayName: 'Anonymous member' };
           }

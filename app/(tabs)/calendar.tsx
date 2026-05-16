@@ -221,12 +221,18 @@ function TodayGlow() {
   const glow = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
-    Animated.loop(
+    // Stop the animation on unmount — earlier this leaked an
+    // infinite loop on every remount of the Calendar tab. Mirrors
+    // the cleanup pattern in app/(tabs)/index.tsx and
+    // src/components/LiveEventBanner.tsx.
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(glow, { toValue: 1, duration: 1500, useNativeDriver: true }),
         Animated.timing(glow, { toValue: 0.4, duration: 1500, useNativeDriver: true }),
       ])
-    ).start();
+    );
+    loop.start();
+    return () => loop.stop();
   }, []);
 
   return (
