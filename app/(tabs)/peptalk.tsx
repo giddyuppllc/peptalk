@@ -585,6 +585,20 @@ export default function PepTalkScreen() {
           removeMessage(placeholderId);
           return false;
         }
+        // Stream dropped mid-response — the placeholder already has
+        // partial text on screen. Append a small connection notice INTO
+        // the same bubble (not a separate one) so the user knows the
+        // truncation wasn't Aimee's choice and we don't render a dead
+        // streaming caret. Audit P1.
+        if (accumulated.length > 0) {
+          updateMessage(placeholderId, {
+            content: `${accumulated}\n\n⚠️ Connection dropped`,
+            streaming: false,
+          });
+        } else {
+          updateMessage(placeholderId, { streaming: false });
+        }
+        stillStreaming = false;
       }
 
       if (stillStreaming) {
