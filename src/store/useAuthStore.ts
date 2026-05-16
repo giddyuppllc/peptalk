@@ -13,6 +13,7 @@ import { secureStorage } from '../services/secureStorage';
 import { supabase } from '../services/supabase';
 import { useSubscriptionStore } from './useSubscriptionStore';
 import { useOnboardingStore } from './useOnboardingStore';
+import { isAdminEmail } from '../hooks/useIsAdmin';
 import {
   trackSignupStarted,
   trackSignupCompleted,
@@ -164,7 +165,12 @@ export const useAuthStore = create<AuthStore>()(
             .maybeSingle();
 
           const safe = coerceProfileRow(profile, _email);
-          useSubscriptionStore.getState().setTier(safe.tier as any);
+          // Admin override: admins are upgraded to 'pro' on every login so
+          // they can test paid features + approve video tags without
+          // needing a real subscription. Source of truth is ADMIN_EMAILS
+          // in useIsAdmin.ts.
+          const effectiveTier = isAdminEmail(_email) ? 'pro' : safe.tier;
+          useSubscriptionStore.getState().setTier(effectiveTier as any);
 
           const appUser: User = {
             id: data.user.id,
@@ -174,7 +180,7 @@ export const useAuthStore = create<AuthStore>()(
             avatarUri: safe.avatarUri,
             savedStacks: [],
             favoritePeptides: safe.favoritePeptides,
-            isPro: safe.tier === 'pro',
+            isPro: effectiveTier === 'pro',
             createdAt: data.user.created_at,
           };
 
@@ -282,7 +288,10 @@ export const useAuthStore = create<AuthStore>()(
             .maybeSingle();
 
           const safe = coerceProfileRow(profile, session.user.email ?? '');
-          useSubscriptionStore.getState().setTier(safe.tier as any);
+          // Admin override: same rule as login — admins always get 'pro'
+          // tier so session restore can't drop them back to free.
+          const effectiveTier = isAdminEmail(session.user.email) ? 'pro' : safe.tier;
+          useSubscriptionStore.getState().setTier(effectiveTier as any);
 
           const appUser: User = {
             id: session.user.id,
@@ -292,7 +301,7 @@ export const useAuthStore = create<AuthStore>()(
             avatarUri: safe.avatarUri,
             savedStacks: [],
             favoritePeptides: safe.favoritePeptides,
-            isPro: safe.tier === 'pro',
+            isPro: effectiveTier === 'pro',
             createdAt: session.user.created_at,
           };
 
