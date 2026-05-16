@@ -85,6 +85,7 @@ import {
   WeekStrip,
   StreakBadge,
   BodyCompositionHero,
+  BodyCompositionTrendCharts,
 } from '../../src/components/progress';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -1128,6 +1129,13 @@ export default function DashboardScreen() {
         <View style={styles.protocolBannerWrap}>
           <ActivityHeatmap weeks={26} />
         </View>
+
+        {/* ──── TRENDS — Phase 3 ──────────────────────────────────────
+            Line+area charts from the body-composition store. Each
+            chart auto-hides into its empty state if there's no data,
+            so users without InBody scans never see broken graphs.
+        ──────────────────────────────────────────────────────────── */}
+        <BodyCompositionTrendCharts />
 
         {/* Readiness composite — HRV/RHR/sleep vs baselines + check-in. */}
         <View style={styles.protocolBannerWrap}>
