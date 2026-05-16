@@ -240,11 +240,66 @@ function ExerciseDetailModal({
               </View>
             </View>
 
-            {/* Instructions */}
-            {exercise.instructions ? (
+            {/* Description (one-line summary from Grok-generated content) */}
+            {exercise.description ? (
+              <View style={styles.modalSection}>
+                <Text style={styles.modalDescription}>{exercise.description}</Text>
+              </View>
+            ) : null}
+
+            {/* Step-by-step instructions */}
+            {exercise.steps && exercise.steps.length > 0 ? (
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>How to perform</Text>
+                {exercise.steps.map((step, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', marginTop: idx === 0 ? 0 : 8 }}>
+                    <Text style={[styles.modalDescription, { width: 22, fontWeight: '700' }]}>
+                      {idx + 1}.
+                    </Text>
+                    <Text style={[styles.modalDescription, { flex: 1 }]}>{step}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : exercise.instructions ? (
               <View style={styles.modalSection}>
                 <Text style={styles.modalSectionTitle}>Instructions</Text>
                 <Text style={styles.modalDescription}>{exercise.instructions}</Text>
+              </View>
+            ) : null}
+
+            {/* Coaching cues */}
+            {exercise.cues && exercise.cues.length > 0 ? (
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>Cues</Text>
+                {exercise.cues.map((cue, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', marginTop: idx === 0 ? 0 : 4 }}>
+                    <Ionicons
+                      name="checkmark-circle-outline"
+                      size={14}
+                      color={Colors.raindropsDeep}
+                      style={{ marginTop: 3, marginRight: 6 }}
+                    />
+                    <Text style={[styles.modalDescription, { flex: 1 }]}>{cue}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
+            {/* Safety notes */}
+            {exercise.safetyNotes && exercise.safetyNotes.length > 0 ? (
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>Safety</Text>
+                {exercise.safetyNotes.map((note, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', marginTop: idx === 0 ? 0 : 4 }}>
+                    <Ionicons
+                      name="warning-outline"
+                      size={14}
+                      color="#C76B45"
+                      style={{ marginTop: 3, marginRight: 6 }}
+                    />
+                    <Text style={[styles.modalDescription, { flex: 1 }]}>{note}</Text>
+                  </View>
+                ))}
               </View>
             ) : null}
 

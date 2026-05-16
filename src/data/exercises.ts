@@ -17,6 +17,21 @@ import type {
   ExerciseTag,
 } from '../types/fitness';
 import rawExercises from './jamieExercises.json';
+// Grok-generated coaching content. The shape is:
+//   { [exerciseId]: { description, steps, cues, safetyNotes } }
+// Entries are merged into the Exercise object at buildExercise() time
+// so callers don't need a separate lookup. Missing entries silently
+// fall through — the UI shows the placeholder "no coaching content".
+import rawInstructions from './exerciseInstructions.json';
+
+interface ExerciseInstructions {
+  description?: string;
+  steps?: string[];
+  cues?: string[];
+  safetyNotes?: string[];
+}
+
+const INSTRUCTIONS_MAP = rawInstructions as Record<string, ExerciseInstructions>;
 
 // ---------------------------------------------------------------------------
 // Inference Helpers
@@ -116,6 +131,8 @@ function buildExercise(raw: RawExercise): Exercise {
   const primaryMuscle: MuscleGroup = muscles[0] || 'full_body';
   const secondaryMuscles = muscles.slice(1);
 
+  const instructions = INSTRUCTIONS_MAP[raw.id];
+
   return {
     id: raw.id,
     name: raw.name,
@@ -130,6 +147,10 @@ function buildExercise(raw: RawExercise): Exercise {
     location: (raw.location as ExerciseLocation) || 'any',
     gender: (raw.gender as ExerciseGender) || 'anyone',
     metrics: raw.metrics.map((m) => m.toLowerCase().trim() as ExerciseMetric).filter(Boolean),
+    description: instructions?.description,
+    steps: instructions?.steps,
+    cues: instructions?.cues,
+    safetyNotes: instructions?.safetyNotes,
   };
 }
 
