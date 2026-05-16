@@ -39,13 +39,6 @@ function fmt(n: number, max = 3): string {
   // Strip trailing zeros: 0.250 → 0.25, 250.0 → 250
   return Number(n.toFixed(max)).toString();
 }
-function formatBothUnits(value: number, unit: string): string {
-  const mcg = toMcg(value, unit);
-  const mg = toMg(value, unit);
-  // Lead with whatever unit the protocol uses, show the other in parens
-  if (unit === 'mg') return `${fmt(mg)} mg (${fmt(mcg, 0)} mcg)`;
-  return `${fmt(mcg, 0)} mcg (${fmt(mg)} mg)`;
-}
 
 export default function QuickDoseScreen() {
   const router = useRouter();
