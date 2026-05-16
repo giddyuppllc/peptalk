@@ -35,6 +35,10 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { Colors, Spacing, FontSizes, BorderRadius, Gradients } from '../../src/constants/theme';
 import { PEPTIDES } from '../../src/data/peptides';
 import { PROTOCOL_TEMPLATES } from '../../src/data/protocols';
+import {
+  getDosingReference,
+  PEPTALK_DOSING_DISCLAIMER,
+} from '../../src/data/peptideDosingReference';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { useOnboardingStore } from '../../src/store/useOnboardingStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
@@ -193,21 +197,50 @@ export default function DosingCalculatorScreen() {
   // field — auto-fill only happens when the field is empty, so we
   // never clobber a user's input.
   useEffect(() => {
+    // PRIORITY 1: Edward's authoritative dosing reference. If we have
+    // an entry for this peptide, fill vial / water / dose / frequency
+    // from there — those numbers are the source of truth for the
+    // recommended-protocol card directly above this block.
+    const ref = selectedPeptide ? getDosingReference(selectedPeptide.id) : null;
+    if (ref) {
+      const phase = ref.schedule[0];
+      if (!targetDose && phase) {
+        if (phase.doseMcg >= 1000) {
+          setTargetDose(String((phase.doseMcg / 1000).toFixed(2).replace(/\.?0+$/, '')));
+          setDoseUnit('mg');
+        } else {
+          setTargetDose(String(Math.round(phase.doseMcg)));
+          setDoseUnit('mcg');
+        }
+      }
+      if (!vialSize) {
+        setVialSize(String(ref.vialMg));
+        setVialUnit('mg');
+      }
+      if (!waterVolume) {
+        setWaterVolume(String(ref.diluentMl));
+      }
+      // Frequency — only set if the first phase has a clean canonical
+      // mapping. Multi-day-week schedules (Mon/Thu, twice daily) fall
+      // through to "daily" which is the safe default for the math.
+      const lower = (phase?.frequency ?? '').toLowerCase();
+      if (lower.includes('twice')) setFrequency('2x_day' as Frequency);
+      else if (lower.includes('weekly') && !lower.includes('biweek')) setFrequency('weekly');
+      else if (lower.includes('biweek')) setFrequency('2x_week' as Frequency);
+      else if (lower.includes('mon') && lower.includes('thu')) setFrequency('2x_week' as Frequency);
+      else setFrequency('daily');
+      setShowResults(true);
+      return;
+    }
+
+    // PRIORITY 2: PROTOCOL_TEMPLATES fallback for peptides not in the
+    // reference (less common research compounds).
     const proto = protocolsForPeptide[0];
     if (!proto) return;
 
-    // Always sync the dose unit to whatever the protocol uses, so
-    // Selank opens in mg and BPC-157 opens in mcg.
     if (!targetDose) {
       setDoseUnit(proto.typicalDose?.unit === 'mg' ? 'mg' : 'mcg');
     }
-
-    // Auto-fill every empty input from the protocol so the user sees
-    // a definitive recommended setup the moment they pick a peptide.
-    // Empty-only so we never clobber a user's manual input.
-    //
-    // Vial size — most peptides come in 5 mg vials; pick the smallest
-    // standard vial size that holds the protocol's max dose.
     if (!vialSize) {
       const protoMaxMg = (proto.typicalDose?.unit === 'mg'
         ? proto.typicalDose.max
@@ -216,14 +249,9 @@ export default function DosingCalculatorScreen() {
       setVialSize(String(guessVial));
       setVialUnit('mg');
     }
-    // BAC water — 2 ml is the safe industry default that gives clean
-    // dose numbers for ~95% of reconstitutions.
     if (!waterVolume) {
       setWaterVolume('2');
     }
-    // Target dose — the protocol's STANDARD intensity midpoint. One
-    // definitive number, not a range. Users wanting Mild or Aggressive
-    // can use the "Show research details" expander below.
     if (!targetDose) {
       const { mcg, displayUnit } = intensityToDoseMcg(proto, 'standard');
       if (displayUnit === 'mg') {
@@ -234,7 +262,6 @@ export default function DosingCalculatorScreen() {
         setDoseUnit('mcg');
       }
     }
-    // Frequency — pull from the protocol if specified.
     if (proto.frequency) {
       const protoFreqMap: Record<string, Frequency> = {
         daily: 'daily',
@@ -246,8 +273,6 @@ export default function DosingCalculatorScreen() {
       const mapped = protoFreqMap[proto.frequency];
       if (mapped) setFrequency(mapped);
     }
-    // Show the answer card immediately so the user doesn't have to
-    // hit Calculate to see the dose math.
     setShowResults(true);
   }, [selectedPeptide?.id]);
 
@@ -560,14 +585,79 @@ export default function DosingCalculatorScreen() {
         </View>
 
         {/* Recommended Protocol — the safety-first answer card. Visible
-            the moment a peptide is selected. Shows the standard research
-            dose, the BAC water amount we recommend, and the source so
-            users can verify it isn't made up. We pull from protocols.ts
-            (Edward's curated, citation-anchored data) — never invented
-            numbers. The math card below this is auto-filled so the user
-            sees the result without typing anything. */}
-        {selectedPeptide && protocolsForPeptide[0] && (() => {
+            the moment a peptide is selected. Pulls from Edward's
+            authoritative dosing reference when available
+            (src/data/peptideDosingReference.ts) and falls back to
+            PROTOCOL_TEMPLATES for less common research compounds.
+            Numbers are NEVER invented — every figure is sourced. */}
+        {selectedPeptide && (() => {
+          const ref = getDosingReference(selectedPeptide.id);
+
+          if (ref) {
+            // Authoritative reference path. Show vial / diluent / mg-mL
+            // and the first dosing phase (titration ladders surface
+            // additional phases under "Show research details" below).
+            const firstPhase = ref.schedule[0];
+            const recommendedDose = firstPhase.doseStated;
+            const hydrophobic = ref.diluent === 'acetic_acid';
+            return (
+              <View style={styles.section}>
+                <GlassCard>
+                  <View style={styles.recHeader}>
+                    <Ionicons name="shield-checkmark-outline" size={18} color="#3E7CB1" />
+                    <Text style={[styles.recHeaderText, { color: t.text }]}>
+                      Recommended protocol
+                    </Text>
+                  </View>
+                  <Text style={[styles.recSub, { color: t.textSecondary }]}>
+                    {ref.peptideName} — {firstPhase.label}. Edit any field below to override.
+                  </Text>
+                  <View style={styles.recGrid}>
+                    <View style={styles.recCell}>
+                      <Text style={[styles.recCellLabel, { color: t.textSecondary }]}>DOSE</Text>
+                      <Text style={[styles.recCellValue, { color: t.text }]}>{recommendedDose}</Text>
+                    </View>
+                    <View style={styles.recCell}>
+                      <Text style={[styles.recCellLabel, { color: t.textSecondary }]}>FREQUENCY</Text>
+                      <Text style={[styles.recCellValue, { color: t.text }]}>
+                        {firstPhase.frequency}
+                      </Text>
+                    </View>
+                    <View style={styles.recCell}>
+                      <Text style={[styles.recCellLabel, { color: t.textSecondary }]}>
+                        {hydrophobic ? 'ACETIC ACID' : 'BAC WATER'}
+                      </Text>
+                      <Text style={[styles.recCellValue, { color: t.text }]}>
+                        {ref.diluentMl} ml
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.recSub, { color: t.textSecondary, marginTop: 8 }]}>
+                    {ref.vialMg} mg vial → {ref.mgPerMl} mg/ml · Cycle: {ref.cycleLength}
+                    {ref.cycleOff ? ` · ${ref.cycleOff}` : ''}
+                  </Text>
+                  {hydrophobic && (
+                    <Text style={[styles.recSub, { color: '#9A3412', marginTop: 6 }]}>
+                      Hydrophobic compound — reconstitute with acetic acid, NOT bac water. BAC water causes rapid degradation.
+                    </Text>
+                  )}
+                  {ref.notes && ref.notes.length > 0 && (
+                    <Text style={[styles.recSub, { color: t.textSecondary, marginTop: 6 }]}>
+                      {ref.notes.join(' ')}
+                    </Text>
+                  )}
+                  <Text style={[styles.recFineprint, { color: t.textSecondary }]}>
+                    {PEPTALK_DOSING_DISCLAIMER}
+                  </Text>
+                </GlassCard>
+              </View>
+            );
+          }
+
+          // Fallback path: protocols.ts for peptides outside the
+          // authoritative reference.
           const proto = protocolsForPeptide[0];
+          if (!proto) return null;
           const { mcg, displayUnit } = intensityToDoseMcg(proto, 'standard');
           const recommendedDose = displayUnit === 'mg'
             ? `${(mcg / 1000).toFixed(2).replace(/\.?0+$/, '')} mg`
