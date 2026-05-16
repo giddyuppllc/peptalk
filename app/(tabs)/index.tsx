@@ -80,6 +80,11 @@ import { getPeptideById } from '../../src/data/peptides';
 import { useTutorialStore } from '../../src/store/useTutorialStore';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
 import { UpgradeNudgeCard } from '../../src/components/UpgradeNudgeCard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// AsyncStorage key for the "have you seen the home welcome card" flag.
+// Set to '1' on first dismiss; absent or anything else = not yet seen.
+const WELCOME_SEEN_KEY = '@peptalk:home_welcome_seen_v1';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -991,6 +996,67 @@ export default function DashboardScreen() {
         </RNAnimated.View>
 
         {/* ═══════════════════════════════════════════════════════════════
+            QUICK LOG — Jamie's #1 ask. Three prominent buttons that put
+            the most-used actions one tap from the home screen instead of
+            buried under the FAB. Nutrition / Workouts / Peptides.
+        ═══════════════════════════════════════════════════════════════ */}
+        <View style={styles.quickLogRow}>
+          <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={() => router.push('/nutrition/food-search' as any)}
+            style={styles.quickLogBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Log nutrition"
+          >
+            <LinearGradient
+              colors={['#7FB58F', '#6FA891']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.quickLogGrad}
+            >
+              <Ionicons name="nutrition" size={28} color="#fff" />
+              <Text style={styles.quickLogLabel}>NUTRITION</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={() => setShowWorkoutSheet(true)}
+            style={styles.quickLogBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Log workout"
+          >
+            <LinearGradient
+              colors={['#E89672', '#D98C86']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.quickLogGrad}
+            >
+              <Ionicons name="barbell" size={28} color="#fff" />
+              <Text style={styles.quickLogLabel}>WORKOUTS</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={() => router.push('/(tabs)/calendar?openLog=1' as any)}
+            style={styles.quickLogBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Log peptide dose"
+          >
+            <LinearGradient
+              colors={['#7ABED0', '#5BA9A7']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.quickLogGrad}
+            >
+              <Ionicons name="flask" size={28} color="#fff" />
+              <Text style={styles.quickLogLabel}>PEPTIDES</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
+        {/* ═══════════════════════════════════════════════════════════════
             DAILY HEALTH SNAPSHOT — step ring + macro ring + active protocol
         ═══════════════════════════════════════════════════════════════ */}
         <View style={styles.healthSnapshotRow}>
@@ -1777,6 +1843,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     marginTop: 4,
     marginBottom: 12,
+  },
+  // Quick Log buttons under the hero — Jamie's "stop burying it in the FAB" ask
+  quickLogRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: Spacing.lg,
+    marginTop: -8,
+    marginBottom: 16,
+  },
+  quickLogBtn: {
+    flex: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  quickLogGrad: {
+    paddingVertical: 18,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 96,
+  },
+  quickLogLabel: {
+    color: '#fff',
+    fontFamily: 'DMSans-Bold',
+    fontSize: 14,
+    marginTop: 6,
+    letterSpacing: 0.3,
+  },
+  quickLogSub: {
+    color: 'rgba(255,255,255,0.85)',
+    fontFamily: 'DMSans-Medium',
+    fontSize: 11,
+    marginTop: 2,
   },
   protocolBannerWrap: {
     paddingHorizontal: Spacing.lg,

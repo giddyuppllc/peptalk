@@ -33,36 +33,19 @@ export default function CalculatorsHubScreen() {
           Pick your peptide — we'll handle the math.
         </Text>
 
-        {/* ── Plan Your Cycle — primary CTA (goal-driven recommender) ── */}
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => router.push('/calculators/plan')}
-        >
-          <LinearGradient
-            colors={['#3E7CB1', '#7FB3D8']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[styles.card, styles.primaryCard]}
-          >
-            <View style={[styles.cardIcon, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
-              <Ionicons name="compass" size={32} color="#fff" />
-            </View>
-            <View style={styles.cardContent}>
-              <Text style={[styles.cardTitle, { color: '#fff' }]}>Plan Your Cycle</Text>
-              <Text style={[styles.cardDesc, { color: 'rgba(255,255,255,0.85)' }]}>
-                Tell us your goal — we'll suggest peptides commonly researched for it,
-                pull your stats, and walk you through the math.
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#fff" />
-          </LinearGradient>
-        </TouchableOpacity>
+        {/*
+         * COLLAPSED 2026-05-16 — the three calculators (plan, quick-dose,
+         * advanced dosing) were doing variations of the same job from
+         * separate files. Every tweak had to be applied three times and
+         * peptide-specific bugs (e.g. MOTSC freeze in advanced) only hit
+         * one path. Hub now points at quick-dose only; the other files
+         * stay on disk for parts but are not surfaced.
+         */}
 
-        {/* Quick Dose Guide — secondary CTA (peptide-first entry) */}
+        {/* Quick Dose Guide — the one and only calculator */}
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={() => router.push('/calculators/quick-dose')}
-          style={{ marginTop: Spacing.md }}
         >
           <LinearGradient
             colors={['#7ABED0', '#7ABED0']}
@@ -83,33 +66,8 @@ export default function CalculatorsHubScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* Advanced: Dosing Calculator Card */}
+        {/* Reconstitution Calculator Card — kept (separate purpose: vial math only, not dosing) */}
         <Text style={[styles.advancedLabel, { color: t.textSecondary }]}>ADVANCED TOOLS</Text>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => router.push('/calculators/dosing')}
-        >
-          <LinearGradient
-            colors={t.isDark ? [Gradients.card[0], Gradients.card[1]] : [t.card, t.card]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.card, { borderColor: t.glassBorder }]}
-          >
-            <View style={[styles.cardIcon, { backgroundColor: t.glass }]}>
-              <Ionicons name="calculator-outline" size={32} color={Colors.iceMeltDeep} />
-            </View>
-            <View style={styles.cardContent}>
-              <Text style={[styles.cardTitle, { color: t.text }]}>Dosing Calculator</Text>
-              <Text style={[styles.cardDesc, { color: t.textSecondary }]}>
-                Calculate your dose per injection, weekly totals, and monthly vial supply based on
-                peptide, body weight, target dose, and frequency.
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={t.textSecondary} />
-          </LinearGradient>
-        </TouchableOpacity>
-
-        {/* Reconstitution Calculator Card */}
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={() => router.push('/calculators/reconstitution')}

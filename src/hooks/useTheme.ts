@@ -91,8 +91,12 @@ const PEACH_DUST = '#F0CFB1';         // 13-1407 TCX — female surface/pastel
 const PEACH_DUST_DEEP = '#E89672';    // Derived darker for CTAs
 const PEACH_DUST_DARKER = '#C76B45';  // Derived darker still, strong contrast
 const RAINDROPS_ON_ROSES = '#F2D8D5'; // 12-2904 TCX — female blush secondary
-const ORCHID_TINT = '#DBC6D8';        // 13-3405 TCX — female soft lavender accent
-const ORCHID_DEEP = '#9B86A4';        // Derived deeper orchid for ombré mid-stops
+// "orchid" tokens kept by name for back-compat across the app — values
+// swapped 2026-05-16 from lavender to teal per Jamie. Every component that
+// uses `t.orchid` / `t.orchidDeep` (the home hero gradient is the big one)
+// now renders teal. Rename the constants when we do a full theme audit.
+const ORCHID_TINT = '#B5DDD8';        // Soft sea-glass teal (was lavender #DBC6D8)
+const ORCHID_DEEP = '#5BA9A7';        // Deeper teal for ombré mid-stops (was #9B86A4)
 const CREAM_WARM = '#FAF5EF';         // Warmer Cloud Dancer for female surface band
 const BORDER_WARM = '#EAE4DC';        // Soft beige border
 
