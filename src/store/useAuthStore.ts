@@ -93,54 +93,10 @@ export const useAuthStore = create<AuthStore>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true });
 
-        // Dev account bypass — skip Supabase for test/dev emails
-        const DEV_EMAILS: Record<string, { firstName: string; lastName: string; tier: string }> = {
-          'burnsnoho@gmail.com': { firstName: 'Burns', lastName: '', tier: 'pro' },
-          'free@test.com': { firstName: 'Free', lastName: 'Tester', tier: 'free' },
-          'plus@test.com': { firstName: 'Plus', lastName: 'Tester', tier: 'plus' },
-          'pro@test.com': { firstName: 'Pro', lastName: 'Tester', tier: 'pro' },
-          'jamie@test.com': { firstName: 'Jamie', lastName: '', tier: 'pro' },
-          'jake@test.com': { firstName: 'Jake', lastName: '', tier: 'pro' },
-          'sophia@test.com': { firstName: 'Sophia', lastName: '', tier: 'plus' },
-          'marcus@test.com': { firstName: 'Marcus', lastName: '', tier: 'pro' },
-          'sarah@test.com': { firstName: 'Sarah', lastName: '', tier: 'plus' },
-          'richard@test.com': { firstName: 'Richard', lastName: '', tier: 'pro' },
-          'diana@test.com': { firstName: 'Diana', lastName: '', tier: 'pro' },
-          'walter@test.com': { firstName: 'Walter', lastName: '', tier: 'free' },
-          'margaret@test.com': { firstName: 'Margaret', lastName: '', tier: 'pro' },
-        };
-
         const _email = email.toLowerCase().trim();
-        const devAccount = DEV_EMAILS[_email];
 
-        // Dev backdoor gate — requires BOTH __DEV__ AND an explicit env
-        // flag. `__DEV__` alone isn't safe because it can be flipped by
-        // non-obvious build settings (e.g. a prod build with sourcemaps
-        // enabled); requiring an opt-in env var means a TestFlight / App
-        // Store build can never accidentally grant tester backdoors.
-        const devModeEnabled =
-          __DEV__ && process.env.EXPO_PUBLIC_DEV_MODE === 'true';
-        if (devModeEnabled && devAccount) {
-          useSubscriptionStore.getState().setTier(devAccount.tier as any);
-
-          const appUser: User = {
-            id: `dev-${Date.now()}`,
-            email: _email,
-            firstName: devAccount.firstName,
-            lastName: devAccount.lastName,
-            savedStacks: [],
-            favoritePeptides: [],
-            isPro: devAccount.tier === 'pro',
-            createdAt: new Date().toISOString(),
-          };
-
-          set({ user: appUser, isAuthenticated: true, isLoading: false });
-          return;
-        }
-
-        // Real Supabase auth for non-dev emails — use the normalized form
-        // computed above so trailing whitespace / caps don't produce a
-        // client-validates-but-server-rejects mismatch.
+        // Use the normalized email so trailing whitespace / caps don't
+        // produce a client-validates-but-server-rejects mismatch.
         try {
           const { data, error } = await db.auth.signInWithPassword({
             email: _email,

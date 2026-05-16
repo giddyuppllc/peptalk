@@ -868,15 +868,6 @@ function RootLayout() {
             name="nutrition/meal-plan"
             options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
           />
-          {/* Dev / Testing */}
-          <Stack.Screen
-            name="dev-accounts"
-            options={{
-              headerShown: false,
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
-            }}
-          />
           {/* Subscription */}
           <Stack.Screen
             name="subscription"

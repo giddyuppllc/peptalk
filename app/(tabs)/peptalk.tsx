@@ -86,7 +86,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
  * (navigate / open_dosing_calculator client_actions). Even though the
  * server already maps known screen names through SCREEN_TO_PATH, this
  * second check refuses any unexpected path so a prompt-injection
- * escape can't land users on /admin/* or /dev-accounts. Allow:
+ * escape can't land users on /admin/* or any /dev-* route. Allow:
  *   - / (root tab group)
  *   - /(tabs)/<one of the visible tabs>
  *   - /calculators/<screen>
