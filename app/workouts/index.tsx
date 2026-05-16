@@ -81,7 +81,7 @@ function ActiveProgramBanner() {
           style={[s.heroCardBtn, { backgroundColor: accent.deep }]}
           onPress={() => {
             tapMedium();
-            router.push(`/workouts/player?programId=${activeProgram.programId}` as never);
+            router.push(`/workouts/player-v2?programId=${activeProgram.programId}` as never);
           }}
           activeOpacity={0.85}
         >
@@ -248,7 +248,7 @@ export default function WorkoutsScreen() {
                 template={tmpl}
                 onPress={() => {
                   tapMedium();
-                  router.push(`/workouts/player?templateId=${tmpl.id}` as never);
+                  router.push(`/workouts/player-v2?templateId=${tmpl.id}` as never);
                 }}
                 onDelete={() => confirmDelete(tmpl)}
               />

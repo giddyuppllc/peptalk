@@ -86,7 +86,7 @@ export default function ProgramDetailScreen() {
 
   const handleStart = () => {
     startProgram(program.id);
-    router.push(`/workouts/player?programId=${program.id}` as never);
+    router.push(`/workouts/player-v2?programId=${program.id}` as never);
   };
 
   return (
@@ -170,7 +170,7 @@ export default function ProgramDetailScreen() {
             <GradientButton
               label="Continue Program"
               onPress={() =>
-                router.push(`/workouts/player?programId=${program.id}` as never)
+                router.push(`/workouts/player-v2?programId=${program.id}` as never)
               }
               colors={[Colors.raindropsDeep, Colors.raindropsDeep]}
             />

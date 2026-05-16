@@ -14,6 +14,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from './GlassCard';
+import { AskAimeeButton } from './AskAimeeButton';
 import { useTheme } from '../hooks/useTheme';
 import { getReadinessScore } from '../services/readinessScore';
 import { Spacing, FontSizes } from '../constants/theme';
@@ -23,6 +24,63 @@ const VERDICT_COPY = {
   hold:  { label: 'Hold steady', color: '#3E7CB1', tip: 'Mid-range day — match training to how you feel.' },
   recover: { label: 'Recover', color: '#B45309', tip: 'Body\'s asking for a lighter day. Sleep + hydration first.' },
 } as const;
+
+// ─── Plain-English reads per metric ───────────────────────────────────
+// Inputs come back with a `delta` string like "+8% vs 30d" / "-12% vs 7d" /
+// "flat vs 30d". We parse the leading sign to bucket each metric into a
+// traffic-light read (green / yellow / red) plus a one-liner so the UI
+// is "metric · what it means today" rather than a bare number.
+type ReadLevel = 'green' | 'yellow' | 'red';
+
+function parseDeltaPct(delta?: string): number | null {
+  if (!delta) return null;
+  if (/flat/i.test(delta)) return 0;
+  const match = delta.match(/(-?\+?\d+(?:\.\d+)?)/);
+  if (!match) return null;
+  const num = parseFloat(match[1]);
+  if (isNaN(num)) return null;
+  // Encode "+8%" as 8, "-12%" as -12. Sign in raw delta carries direction.
+  return delta.includes('-') ? -Math.abs(num) : num;
+}
+
+// Higher-is-better metrics: HRV, Sleep. Lower-is-better: Resting HR.
+// 5% delta is the "noise" band; anything inside that is yellow.
+function readForMetric(label: string, delta?: string): { level: ReadLevel; phrase: string } {
+  const pct = parseDeltaPct(delta);
+  if (pct == null) {
+    return { level: 'yellow', phrase: 'no baseline yet' };
+  }
+  const lowerIsBetter = /resting hr|rhr/i.test(label);
+  const direction = lowerIsBetter ? -pct : pct;
+
+  if (label === 'HRV') {
+    if (direction > 5) return { level: 'green', phrase: 'nervous system in a good place' };
+    if (direction < -5) return { level: 'red', phrase: 'nervous system stressed today' };
+    return { level: 'yellow', phrase: 'in your normal range' };
+  }
+  if (/resting hr/i.test(label)) {
+    if (direction > 5) return { level: 'green', phrase: 'heart well recovered' };
+    if (direction < -5) return { level: 'red', phrase: 'heart still working hard' };
+    return { level: 'yellow', phrase: 'in your normal range' };
+  }
+  if (label === 'Sleep') {
+    if (direction > 5) return { level: 'green', phrase: 'solid night' };
+    if (direction < -10) return { level: 'red', phrase: 'short night — protect recovery' };
+    if (direction < -5) return { level: 'yellow', phrase: 'a little short' };
+    return { level: 'yellow', phrase: 'about your usual' };
+  }
+  if (/self-rating/i.test(label)) {
+    // delta isn't typed for self-rating, fall through to neutral
+    return { level: 'yellow', phrase: 'how you felt today' };
+  }
+  return { level: 'yellow', phrase: 'in range' };
+}
+
+const READ_COLOR: Record<ReadLevel, string> = {
+  green: '#6FA891',
+  yellow: '#B58A39',
+  red: '#B45309',
+};
 
 export function ReadinessCard() {
   const t = useTheme();
@@ -76,6 +134,14 @@ export function ReadinessCard() {
           <View style={styles.headerRow}>
             <Ionicons name="heart-outline" size={14} color={verdict.color} />
             <Text style={[styles.label, { color: verdict.color }]}>READINESS</Text>
+            <View style={{ flex: 1 }} />
+            {/* Icon-only Ask Aimee — small footprint, fits in the
+                header row without crowding the verdict copy. */}
+            <AskAimeeButton
+              variant="icon"
+              prefill="What does my readiness mean today?"
+              accessibilityLabel="Ask Aimee what your readiness means today"
+            />
           </View>
           <Text style={[styles.verdict, { color: t.text }]}>{verdict.label}</Text>
           <Text style={[styles.tip, { color: t.textSecondary }]} numberOfLines={2}>
@@ -84,18 +150,31 @@ export function ReadinessCard() {
         </View>
       </View>
 
-      {/* Per-input breakdown */}
+      {/* Per-input breakdown — each metric pairs the number with a
+          plain-English read derived from the delta vs baseline. The
+          read color follows traffic-light semantics so the user can
+          glance at the dot color and know if it's good/neutral/bad. */}
       {summary.inputs.length > 0 && (
-        <View style={[styles.inputsRow, { borderTopColor: t.cardBorder }]}>
-          {summary.inputs.map((input) => (
-            <View key={input.label} style={styles.inputCell}>
-              <Text style={[styles.inputLabel, { color: t.textSecondary }]}>{input.label}</Text>
-              <Text style={[styles.inputValue, { color: t.text }]}>{input.value}</Text>
-              {input.delta && (
-                <Text style={[styles.inputDelta, { color: t.textMuted }]}>{input.delta}</Text>
-              )}
-            </View>
-          ))}
+        <View style={[styles.inputsCol, { borderTopColor: t.cardBorder }]}>
+          {summary.inputs.map((input) => {
+            const read = readForMetric(input.label, input.delta);
+            const readColor = READ_COLOR[read.level];
+            return (
+              <View key={input.label} style={styles.inputRow}>
+                <View style={[styles.readDot, { backgroundColor: readColor }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.inputLine, { color: t.text }]}>
+                    <Text style={styles.inputLabelInline}>{input.label}: </Text>
+                    <Text style={styles.inputValueInline}>{input.value}</Text>
+                    <Text style={[styles.inputPhraseInline, { color: readColor }]}> · {read.phrase}</Text>
+                  </Text>
+                  {input.delta && (
+                    <Text style={[styles.inputDelta, { color: t.textMuted }]}>{input.delta}</Text>
+                  )}
+                </View>
+              </View>
+            );
+          })}
         </View>
       )}
     </GlassCard>
@@ -111,19 +190,29 @@ const styles = StyleSheet.create({
   label: { fontSize: 10, fontWeight: '800', letterSpacing: 1 },
   verdict: { fontSize: FontSizes.lg, fontWeight: '700' },
   tip: { fontSize: FontSizes.xs, lineHeight: 16, marginTop: 2 },
-  inputsRow: {
-    flexDirection: 'row',
+  inputsCol: {
     marginTop: Spacing.md,
     paddingTop: Spacing.sm,
     borderTopWidth: 1,
+    gap: 8,
   },
-  inputCell: { flex: 1, alignItems: 'center' },
-  inputLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
   },
-  inputValue: { fontSize: FontSizes.sm, fontWeight: '700', marginTop: 2 },
-  inputDelta: { fontSize: 10, marginTop: 1 },
+  readDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 6,
+  },
+  inputLine: {
+    fontSize: FontSizes.sm,
+    lineHeight: 18,
+  },
+  inputLabelInline: { fontWeight: '700' },
+  inputValueInline: { fontWeight: '600' },
+  inputPhraseInline: { fontWeight: '600' },
+  inputDelta: { fontSize: 10, marginTop: 1, fontStyle: 'italic' },
 });

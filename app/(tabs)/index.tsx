@@ -1724,7 +1724,7 @@ export default function DashboardScreen() {
                       key={tmpl.id}
                       style={[styles.wsRecentRow, { borderBottomColor: t.cardBorder }]}
                       activeOpacity={0.7}
-                      onPress={() => { setShowWorkoutSheet(false); router.push(`/workouts/player?templateId=${tmpl.id}` as any); }}
+                      onPress={() => { setShowWorkoutSheet(false); router.push(`/workouts/player-v2?templateId=${tmpl.id}` as any); }}
                     >
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.wsRecentName, { color: t.text }]}>{tmpl.name}</Text>
