@@ -37,7 +37,10 @@ import { useCheckinStore } from '../../src/store/useCheckinStore';
 import { useOnboardingStore } from '../../src/store/useOnboardingStore';
 import { useStackStore } from '../../src/store/useStackStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
+import { useMealStore } from '../../src/store/useMealStore';
+import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import { PEPTIDES } from '../../src/data/peptides';
 import { generateLocalBotResponse } from '../../src/services/peptalkBot';
 import {
   generateAIResponse,
@@ -139,6 +142,11 @@ export default function PepTalkScreen() {
   const alerts = useDoseLogStore((s) => s.alerts);
   const healthProfile = useHealthProfileStore((s) => s.profile);
   const addJournalEntry = useJournalStore((s) => s.addEntry);
+  // Aimee write-actions land in these local stores; sync-up to Supabase
+  // is handled inside each store's existing add* method via syncRecord.
+  const logDoseAction = useDoseLogStore((s) => s.logDose);
+  const addMealAction = useMealStore((s) => s.addMeal);
+  const addPlannedWorkoutAction = useWorkoutStore((s) => s.addPlannedLog);
 
   const [inputText, setInputText] = React.useState('');
   const [drawerOpen, setDrawerOpen] = React.useState(false);
@@ -228,8 +236,113 @@ export default function PepTalkScreen() {
     [addMessage, addJournalEntry],
   );
 
+  // ────────────────────────────────────────────────────────────────────
+  // Aimee client_action appliers — invoked from the SSE stream when the
+  // edge fn emits a {type:'client_action', action:{type, payload}}
+  // event. Each one delegates to the matching local Zustand store so
+  // the new row appears immediately in the dose/meal/workout UI; each
+  // store handles the Supabase sync internally (syncRecord upsert).
+  // ────────────────────────────────────────────────────────────────────
+
+  const applyLogDoseAction = useCallback(
+    (payload: Record<string, unknown>) => {
+      const peptideName = typeof payload.peptideName === 'string' ? payload.peptideName : '';
+      const rawPid = typeof payload.peptideId === 'string' ? payload.peptideId : '';
+      // Resolve to a canonical peptide id from src/data/peptides so the
+      // store's dose alerts (which key off peptideId) work properly.
+      // Fall back to the raw id or the name slug.
+      const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const canonical =
+        PEPTIDES.find((p) => p.id === rawPid)?.id ??
+        PEPTIDES.find((p) => norm(p.name) === norm(peptideName))?.id ??
+        (rawPid || norm(peptideName));
+
+      const amount = Number(payload.amount);
+      const unit = typeof payload.unit === 'string' ? payload.unit : 'mcg';
+      const route = typeof payload.route === 'string' ? payload.route : 'subcutaneous';
+      if (!canonical || !Number.isFinite(amount) || amount <= 0) return;
+      logDoseAction({
+        peptideId: canonical,
+        amount,
+        unit: unit as any,
+        route: route as any,
+        date: typeof payload.date === 'string' ? payload.date : undefined,
+        time: typeof payload.time === 'string' ? payload.time : undefined,
+        injectionSite: typeof payload.site === 'string' ? payload.site : undefined,
+        notes: typeof payload.notes === 'string' ? payload.notes : undefined,
+      });
+    },
+    [logDoseAction],
+  );
+
+  const applyLogMealAction = useCallback(
+    (payload: Record<string, unknown>) => {
+      const id =
+        typeof payload.id === 'string'
+          ? payload.id
+          : `meal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const date =
+        typeof payload.date === 'string'
+          ? payload.date
+          : new Date().toISOString().slice(0, 10);
+      const mealType =
+        typeof payload.mealType === 'string' ? payload.mealType : 'snack';
+      const timestamp =
+        typeof payload.timestamp === 'string' ? payload.timestamp : new Date().toISOString();
+      const items = Array.isArray(payload.items) ? payload.items : [];
+      const title = typeof payload.title === 'string' ? payload.title : 'Meal';
+      const totals = (payload.totals ?? {}) as Record<string, unknown>;
+
+      // Build a quick_log so the meal counts toward macro totals even
+      // when the items array doesn't carry full per-food nutrition.
+      const quickLog = {
+        title,
+        calories: Number(totals.calories) || 0,
+        protein: Number(totals.protein) || 0,
+        carbs: Number(totals.carbs) || 0,
+        fat: Number(totals.fat) || 0,
+      };
+
+      addMealAction({
+        id,
+        date,
+        mealType: mealType as any,
+        timestamp,
+        foods: items as any,
+        quickLog,
+        notes: typeof payload.notes === 'string' ? payload.notes : undefined,
+      } as any);
+    },
+    [addMealAction],
+  );
+
+  const applyScheduleWorkoutAction = useCallback(
+    (payload: Record<string, unknown>) => {
+      const id =
+        typeof payload.id === 'string'
+          ? payload.id
+          : `wlog-aimee-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const startedAt =
+        typeof payload.startedAt === 'string' ? payload.startedAt : new Date().toISOString();
+      addPlannedWorkoutAction({
+        id,
+        date: startedAt.slice(0, 10),
+        sets: [],
+        durationMinutes:
+          typeof payload.durationMinutes === 'number' ? payload.durationMinutes : 0,
+        startedAt,
+        // completedAt deliberately undefined → marks this as a planned
+        // workout, not a completed one.
+        notes: typeof payload.notes === 'string' ? payload.notes : undefined,
+        workoutName:
+          typeof payload.workoutName === 'string' ? payload.workoutName : 'Workout',
+      });
+    },
+    [addPlannedWorkoutAction],
+  );
+
   /**
-   * Stream an Aimee response from the new Claude-backed endpoint.
+   * Stream an Aimee response from the Grok-backed endpoint.
    *
    * Flow:
    *   1. Insert an empty assistant bubble immediately (so the typing
@@ -292,17 +405,31 @@ export default function PepTalkScreen() {
               pendingActions: [...pendingActions],
             });
           } else if (ev.type === 'client_action' && ev.action) {
-            // Aimee asked the client to do something concrete — e.g. open the
-            // dosing calculator pre-filled, or jump to the workouts tab.
-            // We trigger it once per event; the assistant's text continues
+            // Aimee asked the client to do something concrete. Three
+            // shapes are supported today:
+            //   - navigate         → router.push(path)
+            //   - log_dose         → useDoseLogStore.logDose(payload)
+            //   - log_meal         → useMealStore.addMeal(payload)
+            //   - schedule_workout → useWorkoutStore.addPlannedLog(payload)
+            // We trigger once per event; the assistant's text continues
             // streaming in the bubble so the user still gets context.
-            const action = ev.action as { type: string; path?: string };
-            if (action.type === 'navigate' && typeof action.path === 'string') {
-              try {
+            const action = ev.action as {
+              type: string;
+              path?: string;
+              payload?: Record<string, unknown>;
+            };
+            try {
+              if (action.type === 'navigate' && typeof action.path === 'string') {
                 router.push(action.path as any);
-              } catch (err) {
-                if (__DEV__) console.warn('[aimee] client_action navigate failed:', err, action);
+              } else if (action.type === 'log_dose' && action.payload) {
+                applyLogDoseAction(action.payload);
+              } else if (action.type === 'log_meal' && action.payload) {
+                applyLogMealAction(action.payload);
+              } else if (action.type === 'schedule_workout' && action.payload) {
+                applyScheduleWorkoutAction(action.payload);
               }
+            } catch (err) {
+              if (__DEV__) console.warn('[aimee] client_action failed:', err, action);
             }
           } else if (ev.type === 'done') {
             stillStreaming = false;
@@ -358,7 +485,14 @@ export default function PepTalkScreen() {
       }
       return true;
     },
-    [addMessage, updateMessage],
+    [
+      addMessage,
+      updateMessage,
+      router,
+      applyLogDoseAction,
+      applyLogMealAction,
+      applyScheduleWorkoutAction,
+    ],
   );
 
   // Handle pre-filled message: auto-send it if chat is empty

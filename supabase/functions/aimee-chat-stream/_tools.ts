@@ -616,11 +616,14 @@ export async function execDraftMealTemplate(
   };
 }
 
-export async function execLogMeal(
-  supabase: any,
-  userId: string,
+export function execLogMeal(
   input: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
+): Record<string, unknown> {
+  // We hand the payload back to the client and let useMealStore.addMeal
+  // own the write. Single source of truth: local Zustand → syncRecord
+  // upserts to Supabase. Avoids the "Aimee says Logged but nothing
+  // shows up in the meal log UI" bug that pure server-side inserts
+  // would create (no read-back layer for meal_entries).
   const mealType = typeof input.mealType === 'string' ? input.mealType : 'snack';
   const title = typeof input.title === 'string' ? input.title : 'Meal';
   const date = typeof input.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.date)
@@ -638,26 +641,24 @@ export async function execLogMeal(
     { protein: 0, carbs: 0, fat: 0, calories: 0 },
   );
 
-  const { data, error } = await supabase
-    .from('meal_entries')
-    .insert({
-      user_id: userId,
-      date,
-      meal_type: mealType,
-      timestamp: new Date().toISOString(),
-      foods: items,
-      quick_log: { title, ...totals },
-      notes: typeof input.notes === 'string' ? input.notes : null,
-    })
-    .select('id')
-    .single();
-  if (error) {
-    return { error: 'failed to log meal', detail: error.message };
-  }
+  const id = crypto.randomUUID();
   return {
     ok: true,
-    meal_entry_id: data.id,
+    meal_entry_id: id,
     summary: `Logged ${mealType}: ${title} (${Math.round(totals.calories)} kcal, ${Math.round(totals.protein)}g protein) on ${date}.`,
+    client_action: {
+      type: 'log_meal',
+      payload: {
+        id,
+        date,
+        mealType,
+        title,
+        items,
+        totals,
+        notes: typeof input.notes === 'string' ? input.notes : null,
+        timestamp: new Date().toISOString(),
+      },
+    },
   };
 }
 
@@ -705,11 +706,12 @@ export async function execProposeLogField(
   };
 }
 
-export async function execLogDose(
-  supabase: any,
-  userId: string,
+export function execLogDose(
   input: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
+): Record<string, unknown> {
+  // Hand the payload back to the client → useDoseLogStore.logDose owns
+  // the write. See execLogMeal for the rationale (single source of
+  // truth in the local store; syncRecord pushes to Supabase).
   const peptideName = typeof input.peptideName === 'string' ? input.peptideName : '';
   if (!peptideName) return { error: 'peptideName required' };
   const amount = Number(input.amount);
@@ -724,35 +726,31 @@ export async function execLogDose(
     ? input.time
     : new Date().toISOString().slice(11, 16);
 
-  const { data, error } = await supabase
-    .from('dose_logs')
-    .insert({
-      user_id: userId,
-      peptide_id: typeof input.peptideId === 'string' ? input.peptideId : null,
-      peptide_name: peptideName,
-      amount,
-      unit,
-      route: typeof input.route === 'string' ? input.route : 'subcutaneous',
-      site: typeof input.site === 'string' ? input.site : null,
-      notes: typeof input.notes === 'string' ? input.notes : null,
-      date,
-      time,
-    })
-    .select('id')
-    .single();
-  if (error) return { error: 'failed to log dose', detail: error.message };
   return {
     ok: true,
-    dose_log_id: data.id,
     summary: `Logged ${amount} ${unit} of ${peptideName} at ${time} on ${date}.`,
+    client_action: {
+      type: 'log_dose',
+      payload: {
+        peptideId: typeof input.peptideId === 'string' ? input.peptideId : peptideName,
+        peptideName,
+        amount,
+        unit,
+        route: typeof input.route === 'string' ? input.route : 'subcutaneous',
+        site: typeof input.site === 'string' ? input.site : undefined,
+        notes: typeof input.notes === 'string' ? input.notes : undefined,
+        date,
+        time,
+      },
+    },
   };
 }
 
-export async function execScheduleWorkout(
-  supabase: any,
-  userId: string,
+export function execScheduleWorkout(
   input: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
+): Record<string, unknown> {
+  // Returns a client_action payload — see execLogDose / execLogMeal for
+  // why we don't write to Supabase directly here.
   const name = typeof input.name === 'string' ? input.name : '';
   if (!name) return { error: 'name required' };
   const date = typeof input.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.date)
@@ -764,23 +762,19 @@ export async function execScheduleWorkout(
 
   const duration = typeof input.durationMinutes === 'number' ? Math.floor(input.durationMinutes) : null;
 
-  const { data, error } = await supabase
-    .from('workout_logs')
-    .insert({
-      user_id: userId,
-      workout_name: name,
-      started_at: startedAtIso,
-      duration_minutes: duration,
-      notes: typeof input.notes === 'string' ? input.notes : null,
-      sets: [],
-    })
-    .select('id')
-    .single();
-  if (error) return { error: 'failed to schedule workout', detail: error.message };
   return {
     ok: true,
-    workout_id: data.id,
     summary: `Scheduled "${name}" for ${date}${time !== '12:00' ? ` at ${time}` : ''}.`,
+    client_action: {
+      type: 'schedule_workout',
+      payload: {
+        id: crypto.randomUUID(),
+        workoutName: name,
+        startedAt: startedAtIso,
+        durationMinutes: duration,
+        notes: typeof input.notes === 'string' ? input.notes : null,
+      },
+    },
   };
 }
 
@@ -856,13 +850,13 @@ export async function executeTool(
     case 'draft_meal_template':
       return execDraftMealTemplate(ctx.supabase, ctx.userId, toolInput, ctx.conversationId);
     case 'log_meal':
-      return execLogMeal(ctx.supabase, ctx.userId, toolInput);
+      return execLogMeal(toolInput);
     case 'propose_log_field':
       return execProposeLogField(ctx.supabase, ctx.userId, toolInput, ctx.conversationId);
     case 'log_dose':
-      return execLogDose(ctx.supabase, ctx.userId, toolInput);
+      return execLogDose(toolInput);
     case 'schedule_workout':
-      return execScheduleWorkout(ctx.supabase, ctx.userId, toolInput);
+      return execScheduleWorkout(toolInput);
     case 'open_dosing_calculator':
       return execOpenDosingCalculator(toolInput);
     case 'navigate_to_screen':

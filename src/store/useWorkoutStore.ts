@@ -77,6 +77,14 @@ interface WorkoutActions {
   deleteGeneratedWorkout: (id: string) => void;
   getGeneratedWorkoutById: (id: string) => SavedGeneratedWorkout | null;
 
+  /**
+   * Insert a pre-built WorkoutLog row. Used by Aimee's schedule_workout
+   * client action — the workout is "planned" (completedAt left
+   * undefined) and shows up on the calendar / logs UI immediately.
+   * Pushes to Supabase via syncRecord, same as finishWorkout does.
+   */
+  addPlannedLog: (log: WorkoutLog) => void;
+
   // History & analytics
   getLogsByDate: (date: string) => WorkoutLog[];
   getLogsByProgram: (programId: string) => WorkoutLog[];
@@ -127,6 +135,22 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
 
       getGeneratedWorkoutById: (id) => {
         return get().savedGeneratedWorkouts.find((w) => w.id === id) ?? null;
+      },
+
+      addPlannedLog: (log) => {
+        set({ logs: [log, ...get().logs] });
+        syncRecord('workout_logs', {
+          id: log.id,
+          started_at: log.startedAt,
+          completed_at: log.completedAt ?? null,
+          duration_minutes: log.durationMinutes,
+          program_id: log.programId ?? null,
+          day_id: log.dayId ?? null,
+          sets: log.sets ?? [],
+          rating: log.rating ?? null,
+          notes: log.notes ?? null,
+          workout_name: log.workoutName ?? null,
+        });
       },
 
       // -----------------------------------------------------------------------

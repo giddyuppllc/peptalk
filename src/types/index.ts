@@ -742,6 +742,13 @@ export interface VideoContent {
   relatedPeptideIds?: string[];
   featured?: boolean;
   publishedAt: string;
+  /**
+   * Marks a video as not yet published — production filming is still
+   * in progress. The Learn index renders it with a "Coming soon" badge
+   * and the detail screen shows a friendly notice rather than failing
+   * to open a placeholder URL.
+   */
+  comingSoon?: boolean;
 }
 
 export type GuideCategory = 'reconstitution' | 'injection' | 'storage' | 'dosing' | 'testing' | 'general';
