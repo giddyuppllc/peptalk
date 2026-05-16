@@ -173,8 +173,6 @@ Deno.serve(async (req) => {
 
       try {
         let convoMessages = mapMessages(messages);
-        // SAFETY_TRAILER goes LAST so it can't be shadowed.
-        convoMessages.push({ role: 'user', content: SAFETY_TRAILER });
 
         let totalUsage: GrokUsage = { input_tokens: 0, output_tokens: 0 };
         let finalAssistantText = '';
@@ -189,9 +187,20 @@ Deno.serve(async (req) => {
         }> = [];
 
         for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+          // Re-append the SAFETY_TRAILER at the BOTTOM of the message
+          // queue every round so it can't be shadowed by adversarial
+          // tool result content from the previous round. The trailer is
+          // a user-role reminder the model reads after every other
+          // message; treating it as a stale once-only push left
+          // attacker-controllable tool outputs sitting between the
+          // trailer and the model's generation point on rounds ≥ 1.
+          const messagesForRound = [
+            ...convoMessages,
+            { role: 'user' as const, content: SAFETY_TRAILER },
+          ];
           const collected = await streamRound({
             system: systemPrompt,
-            messages: convoMessages,
+            messages: messagesForRound,
             send,
           });
 
@@ -217,15 +226,26 @@ Deno.serve(async (req) => {
           for (const tc of collected.toolCalls) {
             send({ type: 'tool_use', name: tc.name, input: tc.input, id: tc.id });
             let result: Record<string, unknown>;
-            try {
-              result = await executeTool(tc.name, tc.input, {
-                supabase,
-                userId: user.id,
-                conversationId,
-              });
-            } catch (e) {
-              console.error(`[aimee-chat-stream] tool ${tc.name} failed:`, e);
-              result = { error: 'tool execution failed' };
+            if (tc.parseError) {
+              // Malformed JSON args from the model — don't invoke the
+              // executor with an empty {} (would silently succeed for
+              // read-only tools and waste a tool round). Bounce a clear
+              // signal back so the model re-emits with valid JSON.
+              result = {
+                error:
+                  'Malformed tool arguments — your function.arguments was not valid JSON. Re-emit the tool call with valid JSON.',
+              };
+            } else {
+              try {
+                result = await executeTool(tc.name, tc.input, {
+                  supabase,
+                  userId: user.id,
+                  conversationId,
+                });
+              } catch (e) {
+                console.error(`[aimee-chat-stream] tool ${tc.name} failed:`, e);
+                result = { error: 'tool execution failed' };
+              }
             }
 
             send({
@@ -277,23 +297,43 @@ Deno.serve(async (req) => {
         await recordSpend(supabase, user.id, costMC);
 
         const userMessageContent = lastUserMessageText(messages);
-        if (userMessageContent && finalAssistantText) {
-          await supabase.from('chat_messages').insert([
-            {
-              id: cryptoRandomId(),
-              user_id: user.id,
-              chat_id: conversationId,
-              role: 'user',
-              content: userMessageContent,
-            },
-            {
-              id: cryptoRandomId(),
-              user_id: user.id,
-              chat_id: conversationId,
-              role: 'assistant',
-              content: finalAssistantText,
-            },
-          ]);
+        if (userMessageContent) {
+          // Persist the assistant turn even when Aimee only emitted
+          // tool calls (no text). Synth a placeholder so chat history
+          // continuity isn't broken — e.g. "open dosing calculator"
+          // would otherwise leave a gap in the user's conversation
+          // timeline.
+          const assistantContent = finalAssistantText
+            ? finalAssistantText
+            : clientActions.length > 0 || pendingActions.length > 0
+              ? `[Action taken: ${[
+                  ...clientActions.map((a) => a.tool),
+                  ...pendingActions.map((a) => a.tool),
+                ].join(', ')}]`
+              : '';
+          if (assistantContent) {
+            const { error: insertErr } = await supabase
+              .from('chat_messages')
+              .insert([
+                {
+                  id: cryptoRandomId(),
+                  user_id: user.id,
+                  chat_id: conversationId,
+                  role: 'user',
+                  content: userMessageContent,
+                },
+                {
+                  id: cryptoRandomId(),
+                  user_id: user.id,
+                  chat_id: conversationId,
+                  role: 'assistant',
+                  content: assistantContent,
+                },
+              ]);
+            if (insertErr) {
+              console.warn('[aimee-chat-stream] chat_messages insert failed:', insertErr);
+            }
+          }
         }
 
         send({
@@ -327,7 +367,13 @@ Deno.serve(async (req) => {
 
 interface StreamRoundResult {
   text: string;
-  toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>;
+  toolCalls: Array<{
+    id: string;
+    name: string;
+    input: Record<string, unknown>;
+    /** True when Grok streamed malformed JSON args; dispatcher short-circuits. */
+    parseError?: boolean;
+  }>;
   usage: GrokUsage;
 }
 
@@ -399,15 +445,23 @@ async function streamRound(args: {
   const toolCalls: StreamRoundResult['toolCalls'] = [];
   for (const [, b] of [...toolBuf.entries()].sort((a, b) => a[0] - b[0])) {
     let parsed: Record<string, unknown> = {};
+    let parseError = false;
     try {
       parsed = b.jsonStr ? JSON.parse(b.jsonStr) : {};
     } catch (e) {
       console.warn('[aimee-chat-stream] tool arg parse failed:', e, b.jsonStr.slice(0, 200));
+      parseError = true;
     }
     toolCalls.push({
       id: b.id || cryptoRandomId(),
       name: b.name || 'unknown',
       input: parsed,
+      // Signal to the dispatcher that args were malformed — instead of
+      // running the executor against `{}` (which would silently succeed
+      // for read-only tools and waste a tool round), we'll short-circuit
+      // with an error tool_result so the model gets a clear signal to
+      // re-call with valid JSON.
+      parseError,
     });
   }
 
@@ -423,12 +477,36 @@ function jsonError(status: number, message: string, extra?: Record<string, unkno
   );
 }
 
+/**
+ * Strip prompt-injection markers a user could plant inside context
+ * summary strings (workout name, self-stated goal, lab notes, etc.).
+ * The model can be coaxed to break safety rules if a summary contains:
+ *   - "[System reminder, …]" style fake-system messages
+ *   - "Ignore previous instructions" jailbreaks
+ *   - The literal sentinels we use to bound our own blocks
+ *     ("=== END LIBRARY ===", "=== END DOSING REFERENCE ===")
+ * Replace with a benign placeholder so user data still reaches the
+ * model, but cannot escape the user_data boundary.
+ */
+function scrubInjection(input: string): string {
+  let out = input;
+  out = out.replace(/\[\s*system\s+reminder[\s\S]*?\]/gi, '[redacted-bracketed]');
+  out = out.replace(/ignore\s+(all\s+)?previous\s+instructions?/gi, '[redacted-jailbreak]');
+  out = out.replace(/===\s*END\s+(LIBRARY|DOSING REFERENCE|USER CONTEXT)\s*===/gi, '[redacted-marker]');
+  out = out.replace(/(?:^|\n)\s*system\s*:\s*/gi, '\n[redacted-role]: ');
+  return out;
+}
+
 function sanitizeContext(
   clientContext: Record<string, unknown>,
   tier: string,
 ): AimeeServerContext {
-  const s = (v: unknown, max: number): string | undefined =>
-    typeof v === 'string' && v.trim() ? v.slice(0, max) : undefined;
+  // Truncate + scrub prompt-injection markers. The two-step
+  // (truncate then scrub) keeps the cost of the scrub bounded.
+  const s = (v: unknown, max: number): string | undefined => {
+    if (typeof v !== 'string' || !v.trim()) return undefined;
+    return scrubInjection(v.slice(0, max));
+  };
   const n = (v: unknown): number | undefined =>
     typeof v === 'number' && Number.isFinite(v) ? v : undefined;
   return {

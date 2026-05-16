@@ -204,7 +204,15 @@ export default function DosingCalculatorScreen() {
     const ref = selectedPeptide ? getDosingReference(selectedPeptide.id) : null;
     if (ref) {
       const phase = ref.schedule[0];
-      if (!targetDose && phase) {
+      // OVERWRITE — not "fill only if empty" — so a leftover vial/water
+      // from the previous peptide doesn't poison the new peptide's
+      // recommended setup. Earlier we gated each setX on the field
+      // being empty (`!vialSize`); switching from Pinealon (10mg/3ml)
+      // to Retatrutide-5mg (5mg/1ml) silently kept the Pinealon vial
+      // size and rendered wrong numbers on the recommended-protocol
+      // card. Users keep the override they typed AFTER the auto-fill
+      // because this effect only runs on selectedPeptide.id change.
+      if (phase) {
         if (phase.doseMcg >= 1000) {
           setTargetDose(String((phase.doseMcg / 1000).toFixed(2).replace(/\.?0+$/, '')));
           setDoseUnit('mg');
@@ -213,28 +221,40 @@ export default function DosingCalculatorScreen() {
           setDoseUnit('mcg');
         }
       }
-      if (!vialSize) {
-        setVialSize(String(ref.vialMg));
-        setVialUnit('mg');
-      }
-      if (!waterVolume) {
-        setWaterVolume(String(ref.diluentMl));
-      }
+      setVialSize(String(ref.vialMg));
+      setVialUnit('mg');
+      setWaterVolume(String(ref.diluentMl));
       // Frequency — only set if the first phase has a clean canonical
       // mapping. The Frequency union is:
       //   'daily' | 'eod' | '2x_week' | '3x_week' | 'weekly'
-      // Anything outside that (twice-daily, Mon/Thu, AM/PM) falls back
-      // to 'daily' because the downstream math doesn't model sub-day
-      // cadence; the user will see a note in the recommended-protocol
-      // card with the actual cadence from the reference. Casting an
-      // out-of-union string here caused the MOTSC freeze in TestFlight
-      // (downstream FREQUENCY_OPTIONS lookup returned undefined and
-      // NaN'd the math, locking the render).
+      //
+      // Match in order of specificity:
+      //   "twice weekly" → 2x_week
+      //   "3x weekly" / "tiw" → 3x_week
+      //   "biweekly" / "Mon/Thu" → 2x_week
+      //   "weekly" (alone) → weekly
+      //   "eod" / "every other day" → eod
+      //   "twice daily" / anything else → daily (supply estimator
+      //     under-counts injection count for twice-daily, but the math
+      //     for daily-total mg is correct as long as doseMcg is
+      //     per-shot — which it is per reference-file convention)
+      //
+      // Important: don't cast an out-of-union value here. Casting
+      // '2x_day' earlier caused MOTSC freeze (NaN'd downstream lookup).
       const lower = (phase?.frequency ?? '').toLowerCase();
-      if (lower.includes('weekly') && !lower.includes('biweek')) setFrequency('weekly');
-      else if (lower.includes('biweek')) setFrequency('2x_week');
-      else if (lower.includes('mon') && lower.includes('thu')) setFrequency('2x_week');
-      else setFrequency('daily');
+      if (lower.includes('twice weekly') || lower.includes('2x weekly') || lower.includes('biweek')) {
+        setFrequency('2x_week');
+      } else if (lower.includes('3x week') || lower.includes('three times weekly') || lower.includes('tiw')) {
+        setFrequency('3x_week');
+      } else if (lower.includes('mon') && lower.includes('thu')) {
+        setFrequency('2x_week');
+      } else if (lower.includes('eod') || lower.includes('every other day')) {
+        setFrequency('eod');
+      } else if (lower.includes('weekly')) {
+        setFrequency('weekly');
+      } else {
+        setFrequency('daily');
+      }
       setShowResults(true);
       return;
     }
@@ -377,10 +397,15 @@ export default function DosingCalculatorScreen() {
 
   const frequencyOption = FREQUENCY_OPTIONS.find((f) => f.key === frequency)!;
 
-  // All calculations in mcg internally
-  const vialRaw = parseFloat(vialSize) || 0;
-  const waterMl = parseFloat(waterVolume) || 0;
-  const doseRaw = parseFloat(targetDose) || 0;
+  // All calculations in mcg internally. Clamp at parse so a user
+  // typing "-5" doesn't propagate negative concentration into the
+  // preview card. The Calculate gate already requires > 0, but the
+  // concentration preview keys off `vialRaw > 0 && waterMl > 0` and
+  // would otherwise render misleading "negative mcg per unit mark"
+  // text from a transient negative input.
+  const vialRaw = Math.max(0, parseFloat(vialSize) || 0);
+  const waterMl = Math.max(0, parseFloat(waterVolume) || 0);
+  const doseRaw = Math.max(0, parseFloat(targetDose) || 0);
   const vialMcg = vialUnit === 'mg' ? vialRaw * 1000 : vialRaw;
   const doseMcg = doseUnit === 'mg' ? doseRaw * 1000 : doseRaw;
 
@@ -403,7 +428,7 @@ export default function DosingCalculatorScreen() {
 
   // Optional: weight-normalized dose
   const bodyWeightKg = useMemo(() => {
-    const raw = parseFloat(bodyWeight) || 0;
+    const raw = Math.max(0, parseFloat(bodyWeight) || 0);
     return weightUnit === 'lbs' ? raw * 0.4536 : raw;
   }, [bodyWeight, weightUnit]);
 

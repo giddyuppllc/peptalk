@@ -63,6 +63,11 @@ interface ChatStore {
    *  initial empty assistant bubble gets text/tool results filled in as the
    *  SSE stream arrives. The patch is shallow-merged. */
   updateMessage: (id: string, patch: Partial<ChatMessage>) => void;
+  /** Remove a single message by id (used when an SSE stream fails
+   *  before yielding any event — we need to drop the empty
+   *  placeholder bubble so the fallback reply doesn't render
+   *  alongside an empty one). */
+  removeMessage: (id: string) => void;
   setTyping: (typing: boolean) => void;
   clearChat: () => void;
 
@@ -229,22 +234,49 @@ export const useChatStore = create<ChatStore>()(
         // skip cloud sync on update — only the final assistant message gets
         // synced on the streaming endpoint's server side (chat_messages
         // insert is done by the edge function). Local mirror only.
+        //
+        // Search ALL chats for the matching message id, not just the
+        // active chat. Otherwise a user who switches conversations
+        // mid-stream silently no-ops the rest of the stream, leaving
+        // the original bubble frozen mid-sentence with
+        // `streaming: true` forever.
         set((state) => {
-          const activeChatId = state.activeChatId;
-          if (!activeChatId) return state;
+          let foundChatId: string | null = null;
           const nextChats = state.chats.map((c) => {
-            if (c.id !== activeChatId) return c;
             const idx = c.messages.findIndex((m) => m.id === id);
             if (idx < 0) return c;
+            foundChatId = c.id;
             const merged: ChatMessage = { ...c.messages[idx], ...patch };
             const nextMessages = [...c.messages];
             nextMessages[idx] = merged;
             return { ...c, messages: nextMessages };
           });
+          if (!foundChatId) return state;
           return {
             ...state,
             chats: nextChats,
-            messages: activeMessages(nextChats, activeChatId),
+            messages: state.activeChatId
+              ? activeMessages(nextChats, state.activeChatId)
+              : state.messages,
+          };
+        });
+      },
+
+      removeMessage: (id) => {
+        set((state) => {
+          let foundChatId: string | null = null;
+          const nextChats = state.chats.map((c) => {
+            if (!c.messages.some((m) => m.id === id)) return c;
+            foundChatId = c.id;
+            return { ...c, messages: c.messages.filter((m) => m.id !== id) };
+          });
+          if (!foundChatId) return state;
+          return {
+            ...state,
+            chats: nextChats,
+            messages: state.activeChatId
+              ? activeMessages(nextChats, state.activeChatId)
+              : state.messages,
           };
         });
       },
@@ -342,6 +374,27 @@ export const useChatStore = create<ChatStore>()(
           const fresh = makeEmptyChat();
           useChatStore.setState({ chats: [fresh], activeChatId: fresh.id, messages: fresh.messages });
           return;
+        }
+        // Defensive sweep — any message persisted with `streaming: true`
+        // came from a stream that was interrupted (force-quit, network
+        // drop, OS suspend) before the `done` event fired. Leaving it
+        // streaming makes the bubble render with a forever-blinking
+        // caret on next launch. Also drop empty bot bubbles that
+        // carry no toolResults / pendingActions — those are dead
+        // placeholders from a stream that threw before yielding any
+        // event.
+        for (const chat of state.chats) {
+          chat.messages = chat.messages.filter((m: ChatMessage) => {
+            if (m.role !== 'bot') return true;
+            const hasContent = typeof m.content === 'string' && m.content.trim().length > 0;
+            const hasCards =
+              (m.toolResults && m.toolResults.length > 0) ||
+              (m.pendingActions && m.pendingActions.length > 0);
+            return hasContent || hasCards;
+          });
+          for (const m of chat.messages) {
+            if (m.streaming) m.streaming = false;
+          }
         }
         const activeChatId = (!state.activeChatId || !state.chats.find((c: Chat) => c.id === state.activeChatId))
           ? state.chats[0].id

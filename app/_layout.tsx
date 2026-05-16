@@ -189,6 +189,15 @@ function RootLayout() {
           await import('../src/services/notificationService');
         const token = await registerForPushNotifications();
         if (!token) return; // user denied, or notifications unavailable
+        // Wait for the notification store to rehydrate before scheduling.
+        // Otherwise the in-memory default `dailyCheckInReminder=true`
+        // schedules a reminder the user previously disabled — they get
+        // a spurious 9 AM push and we never cancelled it.
+        let waited = 0;
+        while (!useNotificationStore.getState().hasHydrated && waited < 5000) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          waited += 50;
+        }
         const prefs = useNotificationStore.getState().preferences;
         if (prefs.dailyCheckInReminder && prefs.enabled) {
           await scheduleDailyCheckInReminder(prefs.checkInReminderTime);

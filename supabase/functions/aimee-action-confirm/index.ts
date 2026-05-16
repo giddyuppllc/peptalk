@@ -190,7 +190,7 @@ async function commitLogField(
   output: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   const field = String(output.field ?? '');
-  const value = output.value;
+  let value = output.value;
   const today = output.date ?? new Date().toISOString().slice(0, 10);
 
   const fieldMap: Record<string, string> = {
@@ -204,6 +204,48 @@ async function commitLogField(
   const dbField = fieldMap[field];
   if (!dbField) {
     throw new Error(`unknown log field: ${field}`);
+  }
+
+  // Re-validate at commit time. The propose-time validators ran in
+  // aimee-chat-stream/_tools.ts::execProposeLogField, but `mergeEdits`
+  // above lets the user overwrite `value` from the confirm UI, and
+  // the LLM-suggested input could also be edge-case junk. Apply the
+  // same range checks + length caps server-side so a malicious or
+  // sloppy edit can't ship 99,999 lb or a 5 MB notes string back into
+  // the check_ins row (which then poisons future Aimee prompts via
+  // healthProfileSummary). This is the second-order-prompt-injection
+  // defense; without it the action-confirm path was a write-anything
+  // hole.
+  if (field === 'mood' || field === 'energy') {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 1 || n > 5) {
+      throw new Error(`${field} must be 1-5`);
+    }
+    value = n;
+  } else if (field === 'sleepHours') {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 0 || n > 24) {
+      throw new Error('sleepHours must be 0-24');
+    }
+    value = n;
+  } else if (field === 'weightLbs') {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 40 || n > 800) {
+      throw new Error('weightLbs out of plausible range');
+    }
+    value = n;
+  } else if (field === 'symptoms') {
+    if (!Array.isArray(value) || !value.every((s) => typeof s === 'string')) {
+      throw new Error('symptoms must be an array of strings');
+    }
+    value = (value as string[])
+      .map((s) => s.slice(0, 50))
+      .slice(0, 10);
+  } else if (field === 'notes') {
+    if (typeof value !== 'string') {
+      throw new Error('notes must be a string');
+    }
+    value = value.slice(0, 500);
   }
 
   // Read-modify-write. Avoid clobbering other fields the user set today.
@@ -260,6 +302,13 @@ function ok(body: Record<string, unknown>): Response {
   );
 }
 
+/** Keys the client is NEVER allowed to overwrite via the confirm
+ *  edit payload — these define WHAT the action is. The user can
+ *  edit the VALUE of a proposed log field, not the field itself.
+ *  (Otherwise a propose for `mood: 4` could be confirmed as
+ *  `weightLbs: 9999` — bypassing the propose-time validator.) */
+const IMMUTABLE_ACTION_KEYS = new Set(['field', 'mealType', 'tool_name', 'date']);
+
 function mergeEdits(
   original: Record<string, unknown> | unknown,
   edits: Record<string, unknown> | null,
@@ -268,10 +317,11 @@ function mergeEdits(
     ? (original as Record<string, unknown>)
     : {};
   if (!edits) return base;
-  // Shallow merge — clients are not allowed to inject arbitrary keys; they
-  // can only overwrite existing keys.
+  // Shallow merge — clients can only overwrite existing keys, and even
+  // among those, fields that define the action's identity stay frozen.
   const out: Record<string, unknown> = { ...base };
   for (const k of Object.keys(base)) {
+    if (IMMUTABLE_ACTION_KEYS.has(k)) continue;
     if (k in edits) out[k] = edits[k];
   }
   return out;

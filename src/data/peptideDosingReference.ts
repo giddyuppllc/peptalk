@@ -289,45 +289,41 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
     ],
   },
 
-  // ───────────────────── MOTS-C 40 MG ─────────────────────
+  // ───────────────────── MOTS-C ─────────────────────
+  // Defaults to the 10 mg vial (more common in self-mix research
+  // community). The earlier split into `mots-c` (40 mg) + `mots-c-10mg`
+  // (10 mg) entries had the 10 mg variant UNREACHABLE because the
+  // peptide catalog only exposes one `mots-c` id — users with a 10 mg
+  // vial got the 40 mg reference (mgPerMl 13.33 vs 3.33), so every
+  // suggested syringe-unit count was 4× off. Now: 10 mg vial is the
+  // canonical recon; the 40 mg vial mapping lives in the notes block
+  // for the (rarer) users with that size.
   {
     peptideId: 'mots-c',
-    peptideName: 'MOTS-c (40 mg vial)',
-    vialMg: 40,
-    diluentMl: 3,
-    diluent: 'bac_water',
-    mgPerMl: 13.33,
-    schedule: [
-      { label: 'Weeks 1-2', weeks: '1-2', doseMcg: 200, doseStated: '1.5 units (≈200 mcg)', units: 1.5, frequency: 'daily' },
-      { label: 'Weeks 3-4', weeks: '3-4', doseMcg: 400, doseStated: '3 units (≈400 mcg)', units: 3, frequency: 'daily' },
-      { label: 'Weeks 5-6', weeks: '5-6', doseMcg: 600, doseStated: '4.5 units (≈600 mcg)', units: 4.5, frequency: 'daily' },
-      { label: 'Weeks 7-8', weeks: '7-8', doseMcg: 800, doseStated: '6 units (≈800 mcg)', units: 6, frequency: 'daily' },
-      { label: 'Weeks 9-10', weeks: '9-10', doseMcg: 1000, doseStated: '7.5 units (≈1 mg)', units: 7.5, frequency: 'daily' },
-    ],
-    cycleLength: '10 weeks',
-    route: 'subcutaneous',
-  },
-
-  // ───────────────────── MOTS-C 10 MG ─────────────────────
-  // Separate reference because the reconstitution differs.
-  {
-    peptideId: 'mots-c-10mg',
-    peptideName: 'MOTS-c (10 mg vial)',
+    peptideName: 'MOTS-c',
     vialMg: 10,
     diluentMl: 3,
     diluent: 'bac_water',
     mgPerMl: 3.33,
     schedule: [
-      { label: 'Start', weeks: '1-2', doseMcg: 200, doseStated: '200 mcg (6 units)', units: 6, frequency: 'daily' },
-      { label: '+2 wk', weeks: '3-4', doseMcg: 400, doseStated: '400 mcg (12 units)', units: 12, frequency: 'daily' },
-      { label: '+2 wk', weeks: '5-6', doseMcg: 600, doseStated: '600 mcg (18 units)', units: 18, frequency: 'daily' },
-      { label: '+2 wk', weeks: '7-8', doseMcg: 800, doseStated: '800 mcg (24 units)', units: 24, frequency: 'daily' },
+      { label: 'Weeks 1-2', weeks: '1-2', doseMcg: 200, doseStated: '200 mcg (6 units)', units: 6, frequency: 'daily' },
+      { label: 'Weeks 3-4', weeks: '3-4', doseMcg: 400, doseStated: '400 mcg (12 units)', units: 12, frequency: 'daily' },
+      { label: 'Weeks 5-6', weeks: '5-6', doseMcg: 600, doseStated: '600 mcg (18 units)', units: 18, frequency: 'daily' },
+      { label: 'Weeks 7-8', weeks: '7-8', doseMcg: 800, doseStated: '800 mcg (24 units)', units: 24, frequency: 'daily' },
     ],
     cycleLength: '6-8 weeks',
     route: 'subcutaneous',
+    notes: [
+      'Above figures are for the 10 mg vial (3 ml diluent → 3.33 mg/mL).',
+      'For a 40 mg vial reconstituted with 3 ml (13.33 mg/mL), divide unit count by 4: 1.5 / 3 / 4.5 / 6 units for the same 200/400/600/800 mcg dose.',
+    ],
   },
 
   // ───────────────────── NAD+ ─────────────────────
+  // At 100 mg/mL: 1 unit = 1 mg, so 20-100 units = 20-100 mg.
+  // Midpoint = 60 units = 60 mg = 60,000 mcg. The doseMcg below is the
+  // midpoint to match the units field; earlier this read 20_000 (low
+  // end) which was inconsistent with units=60 (midpoint).
   {
     peptideId: 'nad-plus',
     peptideName: 'NAD+',
@@ -338,11 +334,11 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
     schedule: [
       {
         label: 'Range',
-        doseMcg: 20_000, // 20 mg low end; high end 100 mg
-        doseStated: '20-100 units (20-100 mg)',
-        units: 60, // midpoint
+        doseMcg: 60_000, // 60 mg midpoint of 20-100 mg
+        doseStated: '20-100 mg (20-100 units)',
+        units: 60,
         frequency: 'twice weekly',
-        notes: 'Start low and work up.',
+        notes: 'Start low (20 units / 20 mg) and titrate up.',
       },
     ],
     cycleLength: 'Ongoing — twice weekly',
@@ -394,6 +390,12 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
   },
 
   // ───────────────────── TESAMORELIN ─────────────────────
+  // Doc transcript reads "15units (1mg daily) am/pm fasted" then "30units
+  // twice daily (2mg daily)" — the parenthesized mg figures are DAILY
+  // TOTALS, the units are PER SHOT. At 3.33 mg/mL, 15 units = 0.5 mg per
+  // shot × 2 shots/day = 1 mg/day. Schema convention is per-shot doseMcg,
+  // so we store 500 mcg / shot and rely on frequency='twice daily' for
+  // the daily-total math the supply estimator runs.
   {
     peptideId: 'tesamorelin',
     peptideName: 'Tesamorelin',
@@ -402,12 +404,26 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
     diluent: 'bac_water',
     mgPerMl: 3.33,
     schedule: [
-      { label: 'Weeks 1-2', weeks: '1-2', doseMcg: 1000, doseStated: '1 mg (15 units)', units: 15, frequency: 'AM/PM fasted' },
-      { label: 'Weeks 3+', weeks: '3+', doseMcg: 2000, doseStated: '2 mg/day (30 units twice daily)', units: 30, frequency: 'twice daily' },
+      {
+        label: 'Weeks 1-2',
+        weeks: '1-2',
+        doseMcg: 500,
+        doseStated: '500 mcg per shot (15 units) × 2 daily = 1 mg/day',
+        units: 15,
+        frequency: 'twice daily',
+      },
+      {
+        label: 'Weeks 3+',
+        weeks: '3+',
+        doseMcg: 1000,
+        doseStated: '1 mg per shot (30 units) × 2 daily = 2 mg/day',
+        units: 30,
+        frequency: 'twice daily',
+      },
     ],
     cycleLength: 'Open — titrate at 2 wk',
     route: 'subcutaneous',
-    notes: ['Fasted: no food 2 h before or after.'],
+    notes: ['Fasted: no food 2 h before or after.', 'AM/PM split.'],
   },
 
   // ───────────────────── OXYTOCIN ─────────────────────
@@ -493,18 +509,30 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
   },
 
   // ───────────────────── SEMAGLUTIDE ─────────────────────
+  // Doc transcript:
+  //   "Semiglutide 10mg add 3mL bac water. 3.33mg/ml 25 units is 2.5 mg
+  //    usually starting dose for weightloss. 1mg-1.5 mg is micro dosing."
+  //
+  // Internally inconsistent: at 3.33 mg/mL, 25 units = 0.83 mg, NOT 2.5 mg.
+  // For 25 units to equal 2.5 mg you need a 10 mg/mL concentration, i.e.
+  // 1 mL diluent on a 10 mg vial. That's the standard self-mix recon for
+  // semaglutide and matches the unit count Edward wrote.
+  //
+  // Honoring Edward's stated unit math, we use 1 mL diluent → 10 mg/mL.
+  // Microdosing 1-1.5 mg = 10-15 units in this recon.
   {
     peptideId: 'semaglutide',
     peptideName: 'Semaglutide',
     vialMg: 10,
-    diluentMl: 3,
+    diluentMl: 1,
     diluent: 'bac_water',
-    mgPerMl: 3.33,
+    mgPerMl: 10,
     schedule: [
       {
         label: 'Microdosing',
         doseMcg: 1250, // mid of 1-1.5 mg
-        doseStated: '1-1.5 mg (microdosing)',
+        doseStated: '1-1.5 mg (10-15 units) — microdosing',
+        units: 12, // midpoint of 10-15
         frequency: 'weekly',
       },
       {
@@ -644,6 +672,15 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
   },
 
   // ───────────────────── GHK-CU ─────────────────────
+  // Doc transcript:
+  //   "Ghk-cu 100mg add 3mL bac water dose range 3mg-3.33mg (6units -10units) daily."
+  //
+  // The doc has a unit slip: at 33.33 mg/mL, 6 units = 0.06 mL = 2 mg
+  // (not 3 mg), so the stated 3-3.33 mg range matches 9-10 units, not
+  // 6-10 units. We honor the unit range (6-10) the user wrote because
+  // that's the physically-defensible draw range at the chosen
+  // concentration, and reflect the resulting 2-3.33 mg span in the
+  // displayed dose. Midpoint 8 units = 2.67 mg = 2667 mcg.
   {
     peptideId: 'ghk-cu',
     peptideName: 'GHK-Cu',
@@ -654,8 +691,8 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
     schedule: [
       {
         label: 'Standard',
-        doseMcg: 3165, // mid of 3-3.33 mg
-        doseStated: '3-3.33 mg (6-10 units)',
+        doseMcg: 2667, // 8 units × 0.01 mL × 33.33 mg/mL = 2.67 mg
+        doseStated: '2-3.33 mg (6-10 units)',
         units: 8, // midpoint of 6-10
         frequency: 'daily',
       },
@@ -720,6 +757,131 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
     ],
     cycleLength: '8 weeks on',
     cycleOff: '4 weeks off',
+    route: 'subcutaneous',
+  },
+
+  // ───────────────────── LL-37 ─────────────────────
+  {
+    peptideId: 'll-37',
+    peptideName: 'LL-37',
+    vialMg: 10,
+    diluentMl: 3,
+    diluent: 'bac_water',
+    mgPerMl: 3.33,
+    schedule: [
+      {
+        label: 'Standard',
+        doseMcg: 87, // mid of 50-125 mcg
+        doseStated: '50-125 mcg daily',
+        frequency: 'daily',
+      },
+    ],
+    cycleLength: 'Open — daily',
+    route: 'subcutaneous',
+    notes: ['Topical application: 1-10 % concentration.'],
+  },
+
+  // ───────────────────── MELANOTAN 1 ─────────────────────
+  {
+    peptideId: 'melanotan-1',
+    peptideName: 'Melanotan I',
+    vialMg: 10,
+    diluentMl: 3,
+    diluent: 'bac_water',
+    mgPerMl: 3.33,
+    schedule: [
+      {
+        label: 'Loading (Week 1)',
+        weeks: '1',
+        doseMcg: 125, // mid of 50-200 mcg
+        doseStated: '50-200 mcg daily',
+        frequency: 'daily',
+      },
+      {
+        label: 'Maintenance',
+        weeks: '2+',
+        doseMcg: 100,
+        doseStated: '100 mcg',
+        frequency: '2× weekly',
+      },
+    ],
+    cycleLength: '4-6 weeks',
+    route: 'subcutaneous',
+  },
+
+  // ───────────────────── MELANOTAN 2 ─────────────────────
+  {
+    peptideId: 'melanotan-2',
+    peptideName: 'Melanotan II',
+    vialMg: 10,
+    diluentMl: 3,
+    diluent: 'bac_water',
+    mgPerMl: 3.33,
+    schedule: [
+      {
+        label: 'Loading (Week 1)',
+        weeks: '1',
+        doseMcg: 125, // mid of 50-200 mcg
+        doseStated: '50-200 mcg daily',
+        frequency: 'daily',
+      },
+      {
+        label: 'Maintenance',
+        weeks: '2+',
+        doseMcg: 100,
+        doseStated: '100 mcg',
+        frequency: '2× weekly',
+      },
+    ],
+    cycleLength: '4-6 weeks',
+    route: 'subcutaneous',
+  },
+
+  // ───────────────────── VIP ─────────────────────
+  {
+    peptideId: 'vip',
+    peptideName: 'VIP (Vasoactive Intestinal Peptide)',
+    vialMg: 10,
+    diluentMl: 3,
+    diluent: 'bac_water',
+    mgPerMl: 3.33,
+    schedule: [
+      {
+        label: 'Subq',
+        doseMcg: 75, // mid of 50-100 mcg
+        doseStated: '50-100 mcg daily',
+        frequency: 'daily',
+      },
+      {
+        label: 'Nasal spray',
+        doseMcg: 450, // mid of 300-600 mcg
+        doseStated: '300-600 mcg daily (nasal)',
+        frequency: 'daily',
+        notes: 'Often used 6-9 months in research.',
+      },
+    ],
+    cycleLength: '6-9 months (long-cycle research dose)',
+    route: 'subcutaneous or intranasal',
+  },
+
+  // ───────────────────── HEXARELIN ─────────────────────
+  {
+    peptideId: 'hexarelin',
+    peptideName: 'Hexarelin',
+    vialMg: 10,
+    diluentMl: 3,
+    diluent: 'bac_water',
+    mgPerMl: 3.33,
+    schedule: [
+      {
+        label: 'Starting',
+        doseMcg: 250, // mid of 200-300 mcg
+        doseStated: '200-300 mcg daily',
+        frequency: 'daily',
+        notes: 'Increase by 50 mcg every 2 weeks.',
+      },
+    ],
+    cycleLength: '8-12 weeks',
     route: 'subcutaneous',
   },
 ];

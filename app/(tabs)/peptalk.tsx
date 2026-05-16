@@ -132,6 +132,7 @@ export default function PepTalkScreen() {
   const isTyping = useChatStore((s) => s.isTyping);
   const addMessage = useChatStore((s) => s.addMessage);
   const updateMessage = useChatStore((s) => s.updateMessage);
+  const removeMessage = useChatStore((s) => s.removeMessage);
   const setTyping = useChatStore((s) => s.setTyping);
   const profile = useOnboardingStore((s) => s.profile);
   const checkIns = useCheckinStore((s) => s.entries);
@@ -156,6 +157,16 @@ export default function PepTalkScreen() {
   const prefillHandled = useRef(false);
   const messageHandled = useRef(false);
   const flatListRef = useRef<FlatList>(null);
+  // Abort controller for the in-flight Aimee SSE stream. When the chat
+  // screen unmounts (user navigates away mid-response), we abort the
+  // fetch so late client_action events don't fire router.push / store
+  // writes on a dead component.
+  const streamAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => {
+    return () => {
+      streamAbortRef.current?.abort();
+    };
+  }, []);
 
   // Pills only show on empty state — once any message exists, hide forever
   const showPills = messages.length === 0;
@@ -293,14 +304,19 @@ export default function PepTalkScreen() {
       const title = typeof payload.title === 'string' ? payload.title : 'Meal';
       const totals = (payload.totals ?? {}) as Record<string, unknown>;
 
-      // Build a quick_log so the meal counts toward macro totals even
+      // Build a quickLog so the meal counts toward macro totals even
       // when the items array doesn't carry full per-food nutrition.
+      // Field names MUST match MealEntry.quickLog in src/types/fitness.ts —
+      // useMealStore.getDailyTotals reads proteinGrams / carbsGrams /
+      // fatGrams. Earlier versions wrote `protein/carbs/fat` which the
+      // store silently ignored, zeroing macros for every Aimee-logged
+      // meal in the nutrition ring.
       const quickLog = {
-        title,
+        description: title,
         calories: Number(totals.calories) || 0,
-        protein: Number(totals.protein) || 0,
-        carbs: Number(totals.carbs) || 0,
-        fat: Number(totals.fat) || 0,
+        proteinGrams: Number(totals.protein) || 0,
+        carbsGrams: Number(totals.carbs) || 0,
+        fatGrams: Number(totals.fat) || 0,
       };
 
       addMealAction({
@@ -373,8 +389,17 @@ export default function PepTalkScreen() {
       let sawAnyEvent = false;
       let stillStreaming = true;
 
+      // New stream → cancel any prior in-flight one, then create a fresh
+      // controller for this run. Storing in a ref so the unmount cleanup
+      // can call .abort() without recreating the listener.
+      streamAbortRef.current?.abort();
+      const controller = new AbortController();
+      streamAbortRef.current = controller;
+
       try {
-        for await (const ev of generateAIResponseStream(text, context)) {
+        for await (const ev of generateAIResponseStream(text, context, {
+          signal: controller.signal,
+        })) {
           sawAnyEvent = true;
           if (ev.type === 'text_delta' && ev.text) {
             accumulated += ev.text;
@@ -471,7 +496,13 @@ export default function PepTalkScreen() {
         }
       } catch (err) {
         if (__DEV__) console.warn('[aimee] stream iterator threw:', err);
-        if (!sawAnyEvent) return false;
+        if (!sawAnyEvent) {
+          // Stream threw before yielding ANY event. Drop the empty
+          // placeholder bubble so the legacy fallback (generateAIResponse)
+          // doesn't append a SECOND bot bubble next to a stale empty one.
+          removeMessage(placeholderId);
+          return false;
+        }
       }
 
       if (stillStreaming) {
@@ -479,8 +510,9 @@ export default function PepTalkScreen() {
         updateMessage(placeholderId, { streaming: false });
       }
       // If the model didn't emit any text or actions, treat as a failed run
-      // so the local fallback runs.
+      // so the local fallback runs. Drop the dead placeholder first.
       if (!sawAnyEvent || (accumulated.trim().length === 0 && toolResults.length === 0)) {
+        removeMessage(placeholderId);
         return false;
       }
       return true;
@@ -488,6 +520,7 @@ export default function PepTalkScreen() {
     [
       addMessage,
       updateMessage,
+      removeMessage,
       router,
       applyLogDoseAction,
       applyLogMealAction,

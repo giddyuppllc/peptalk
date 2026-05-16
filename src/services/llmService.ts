@@ -1007,7 +1007,7 @@ export interface AimeeStreamEvent {
 export async function* generateAIResponseStream(
   userMessage: string,
   context: EnhancedBotContext,
-  options?: { conversationId?: string },
+  options?: { conversationId?: string; signal?: AbortSignal },
 ): AsyncGenerator<AimeeStreamEvent, void, unknown> {
   if (!SUPABASE_URL) {
     yield { type: 'error', message: 'No backend configured' };
@@ -1048,8 +1048,18 @@ export async function* generateAIResponseStream(
         context: serverContext,
         conversationId: options?.conversationId ?? null,
       }),
+      // Honor caller-supplied abort signal so the chat screen can
+      // cancel an in-flight stream when the user navigates away.
+      // Without this, late SSE events fire client_action handlers
+      // (router.push, store writes) on dead components — visible
+      // bug: yanked to an unrelated screen mid-task.
+      signal: options?.signal,
     });
   } catch (e) {
+    if (options?.signal?.aborted) {
+      // Caller aborted intentionally — silent close, no error event.
+      return;
+    }
     if (__DEV__) console.warn('[llmService] stream fetch threw:', e);
     yield { type: 'error', message: 'Network error' };
     return;
@@ -1092,6 +1102,14 @@ export async function* generateAIResponseStream(
     let buf = '';
     try {
       while (true) {
+        // Bail immediately if the caller aborted (component unmount,
+        // user navigated away). Without this, late client_action
+        // events from a backgrounded stream fire router.push and
+        // store writes on a dead screen.
+        if (options?.signal?.aborted) {
+          try { await reader.cancel(); } catch { /* already closed */ }
+          return;
+        }
         const { value, done } = await reader.read();
         if (done) break;
         buf += decoder.decode(value, { stream: true });
@@ -1106,6 +1124,7 @@ export async function* generateAIResponseStream(
         }
       }
     } catch (e) {
+      if (options?.signal?.aborted) return; // intentional cancel, silent
       if (__DEV__) console.warn('[llmService] stream read failed:', e);
       yield { type: 'error', message: 'Stream interrupted' };
       return;
@@ -1134,9 +1153,14 @@ function parseSseBlock(block: string): AimeeStreamEvent[] {
   const out: AimeeStreamEvent[] = [];
   const lines = block.split('\n');
   let dataStr = '';
+  // SSE spec: multi-line `data:` payloads join with literal '\n', not
+  // empty string. Concatenating without the newline corrupts any
+  // payload whose JSON contained a real newline — JSON.parse fails
+  // silently and the entire event is dropped. (Previously: the
+  // user saw a text reply but never the tool card.)
   for (const line of lines) {
-    if (line.startsWith('data: ')) dataStr += line.slice(6);
-    else if (line.startsWith('data:')) dataStr += line.slice(5);
+    if (line.startsWith('data: ')) dataStr += (dataStr ? '\n' : '') + line.slice(6);
+    else if (line.startsWith('data:')) dataStr += (dataStr ? '\n' : '') + line.slice(5);
   }
   if (!dataStr.trim()) return out;
   try {

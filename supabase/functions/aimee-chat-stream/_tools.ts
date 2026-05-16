@@ -5,7 +5,7 @@
  *
  *   1. READ-ONLY            — execute inline and return data to the model
  *                             (suggest_workout, summarize_pattern,
- *                              get_user_metrics, search_peptides)
+ *                              get_user_metrics)
  *   2. PROPOSING            — record an entry in `aimee_pending_actions`
  *                             and return its id; the RN client shows a
  *                             confirm modal; the user's tap actually
@@ -248,7 +248,7 @@ export const AIMEE_TOOLS: GrokTool[] = [
       name: 'log_dose',
       description: [
         'Log a peptide dose the user already took — direct write.',
-        'Call this when the user TELLS you they took something ("I just injected my Selank, 0.25 mg"). Do NOT call to schedule future doses or to recommend a protocol; use activate_protocol for scheduling and just chat for recommendations.',
+        'Call this when the user TELLS you they took something ("I just injected my Selank, 0.25 mg"). Do NOT call to schedule future doses or to recommend a protocol — for future scheduling, just describe what they should do in prose; never invent tool names.',
       ].join(' '),
       parameters: {
         type: 'object',
@@ -667,6 +667,7 @@ export async function execProposeLogField(
   userId: string,
   input: Record<string, unknown>,
   conversationId: string | null,
+  localDate?: string,
 ): Promise<Record<string, unknown>> {
   const field = String(input.field ?? '');
   const value = input.value;
@@ -684,8 +685,25 @@ export async function execProposeLogField(
     const n = Number(value);
     if (!Number.isFinite(n) || n < 40 || n > 800) return { error: 'weightLbs out of plausible range' };
   }
+  if (field === 'symptoms') {
+    if (!Array.isArray(value) || !value.every((s) => typeof s === 'string')) {
+      return { error: 'symptoms must be an array of strings' };
+    }
+  }
+  if (field === 'notes') {
+    if (typeof value !== 'string') {
+      return { error: 'notes must be a string' };
+    }
+  }
 
-  const output = { field, value, date: new Date().toISOString().slice(0, 10) };
+  // Prefer the user's LOCAL date (passed from the client per request)
+  // so an entry made at 9 PM PST lands on today's check-in row, not
+  // tomorrow's. Falls back to server UTC if the client didn't send it
+  // (legacy clients; harmless on older builds).
+  const date = (typeof localDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(localDate))
+    ? localDate
+    : new Date().toISOString().slice(0, 10);
+  const output = { field, value, date };
   const { data, error } = await supabase
     .from('aimee_pending_actions')
     .insert({
@@ -801,8 +819,12 @@ export function execOpenDosingCalculator(
   };
 }
 
+// Routes verified against app/(tabs)/ directory. The home tab is
+// app/(tabs)/index.tsx, which resolves to `/(tabs)` — there is no
+// `home.tsx`. Earlier versions had `'home': '/(tabs)/home'` which 404'd
+// when Aimee called navigate_to_screen({ screen: 'home' }).
 const SCREEN_TO_PATH: Record<string, string> = {
-  home: '/(tabs)/home',
+  home: '/(tabs)',
   peptides: '/(tabs)/my-stacks',
   aimee: '/(tabs)/peptalk',
   nutrition: '/(tabs)/nutrition',
@@ -838,7 +860,13 @@ export function execNavigateToScreen(
 export async function executeTool(
   toolName: string,
   toolInput: Record<string, unknown>,
-  ctx: { supabase: any; userId: string; conversationId: string | null },
+  ctx: {
+    supabase: any;
+    userId: string;
+    conversationId: string | null;
+    /** User's local-tz date (YYYY-MM-DD) so we don't write to the wrong day. */
+    localDate?: string;
+  },
 ): Promise<Record<string, unknown>> {
   switch (toolName) {
     case 'suggest_workout':
@@ -852,7 +880,13 @@ export async function executeTool(
     case 'log_meal':
       return execLogMeal(toolInput);
     case 'propose_log_field':
-      return execProposeLogField(ctx.supabase, ctx.userId, toolInput, ctx.conversationId);
+      return execProposeLogField(
+        ctx.supabase,
+        ctx.userId,
+        toolInput,
+        ctx.conversationId,
+        ctx.localDate,
+      );
     case 'log_dose':
       return execLogDose(toolInput);
     case 'schedule_workout':

@@ -6,6 +6,13 @@ import { NotificationPreferences } from '../types';
 // ─── Store Interface ─────────────────────────────────────────────────────────
 
 interface NotificationStore {
+  /** Whether persist has finished rehydrating. The boot-time
+   *  scheduler at app/_layout.tsx MUST gate any
+   *  scheduleNotificationAsync call on this — otherwise the in-memory
+   *  defaults (e.g. dailyCheckInReminder=true) schedule notifications
+   *  the user previously turned OFF, because the actual preferences
+   *  haven't been loaded from secureStorage yet. */
+  hasHydrated: boolean;
   preferences: NotificationPreferences;
   pushToken: string | null;
   setEnabled: (enabled: boolean) => void;
@@ -44,6 +51,7 @@ export const useNotificationStore = create<NotificationStore>()(
   persist(
     (set) => ({
       // ── Initial State ──────────────────────────────────────────────────────
+      hasHydrated: false,
       preferences: { ...DEFAULT_PREFERENCES },
       pushToken: null,
 
@@ -121,11 +129,13 @@ export const useNotificationStore = create<NotificationStore>()(
         pushToken: state.pushToken,
       }),
       onRehydrateStorage: () => (state) => {
-        if (!state) return;
         // Ensure all preference keys exist after rehydration (handles
         // migrations when new fields are added in future updates).
         useNotificationStore.setState({
-          preferences: { ...DEFAULT_PREFERENCES, ...state.preferences },
+          hasHydrated: true,
+          preferences: state
+            ? { ...DEFAULT_PREFERENCES, ...state.preferences }
+            : { ...DEFAULT_PREFERENCES },
         });
       },
     },

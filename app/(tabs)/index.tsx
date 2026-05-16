@@ -192,16 +192,21 @@ export default function DashboardScreen() {
     typeof category === 'string' ? category : category?.[0];
 
   // ── Tutorial: auto-start on first visit ───────────────────────────────────
+  // Gate on hasHydrated — otherwise the in-memory default hasSeenTour=false
+  // races against persist rehydration and fires the tour to returning
+  // users (visible in TestFlight on slower devices).
+  const tutorialHasHydrated = useTutorialStore((s) => s.hasHydrated);
   const hasSeenTour = useTutorialStore((s) => s.hasSeenTour);
   const tourActive = useTutorialStore((s) => s.tourActive);
   const startTour = useTutorialStore((s) => s.startTour);
   useEffect(() => {
+    if (!tutorialHasHydrated) return;
     if (!hasSeenTour && !tourActive) {
       // Delay briefly so the page is rendered before the modal pops
       const timer = setTimeout(() => startTour('intro'), 800);
       return () => clearTimeout(timer);
     }
-  }, [hasSeenTour, tourActive, startTour]);
+  }, [tutorialHasHydrated, hasSeenTour, tourActive, startTour]);
 
   // ── Tour targets for SpotlightTour highlighting ───────────────────────────
   const fabRef = useTourTarget('home_fab');

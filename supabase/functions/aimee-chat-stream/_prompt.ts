@@ -145,10 +145,15 @@ Ipamorelin — 10 mg vial + 3 ml bac water (3.33 mg/ml). Start 100 mcg daily, +5
 Cagrilintide — 10 mg vial + 3 ml bac water (3.33 mg/ml). Start 0.6 mg weekly, +0.6 mg every 2 wks (range 0.6-4.5 mg).
 Glutathione — 1500 mg vial + 5 ml bac water (300 mg/ml; 1 unit = 3 mg). 50-150 mg biweekly subq or IM.
 SLU-PP-332 — 5 mg vial + 3 ml bac water (1.67 mg/ml). 625 mcg twice daily (1250 mcg/day). MURINE dose — no human trials.
-GHK-Cu — 100 mg vial + 3 ml bac water (33.33 mg/ml). 3-3.33 mg daily (6-10 units).
+GHK-Cu — 100 mg vial + 3 ml bac water (33.33 mg/ml). 2-3.33 mg daily (6-10 units). (At 33.33 mg/mL, 6 units draws ≈2 mg, 10 units draws ≈3.33 mg. Edward's reference doc said "3-3.33 mg (6-10 units)" — that's a unit slip; the unit range is correct, the mg range is 2-3.33.)
 IGF-1 LR3 — 10 mg vial + 3 ml ACETIC ACID water (3.33 mg/ml). HYDROPHOBIC — bac water causes rapid degradation. Start 20 mcg, +20 mcg after 2 wks, +10 mcg after another 2 wks → 20/40/50 mcg. Cycle 6-8 wks.
 Dihexa — 10 mg vial + 3 ml ACETIC ACID water (3.33 mg/ml). HYDROPHOBIC. 1-2 mg daily. Cycle ≤ 20 days.
 DSIP — 10 mg vial + 3 ml bac water (3.33 mg/ml). Wk 1: 100 mcg. +50 mcg weekly → 250-300 mcg by wk 8. Take 30-60 min before bed. 8 wk on / 4 wk off.
+LL-37 — 10 mg vial + 3 ml bac water (3.33 mg/ml). Daily 50-125 mcg subq. Topical use: 1-10 % concentration.
+Melanotan I — 10 mg vial + 3 ml bac water (3.33 mg/ml). Wk 1 loading: 50-200 mcg daily. Maintenance: 100 mcg 2× weekly. Cycle 4-6 wks.
+Melanotan II — 10 mg vial + 3 ml bac water (3.33 mg/ml). Same dosing as Melanotan I: 50-200 mcg daily wk 1, 100 mcg 2× weekly maintenance. Cycle 4-6 wks.
+VIP — 10 mg vial + 3 ml bac water (3.33 mg/ml). Subq 50-100 mcg daily. Nasal spray 300-600 mcg daily; long-cycle research (6-9 months).
+Hexarelin — 10 mg vial + 3 ml bac water (3.33 mg/ml). Start 200-300 mcg daily, +50 mcg every 2 wks. Cycle 8-12 wks.
 
 DOSING-QUESTION RULES (must follow when citing the above):
 1. Quote vial size, BAC water (or acetic acid), and unit/mg dose EXACTLY as above.

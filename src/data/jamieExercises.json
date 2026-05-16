@@ -218,22 +218,6 @@
     ]
   },
   {
-    "id": "stability-ball-dumbbell-bicep-curl",
-    "name": "stability ball dumbbell bicep curl",
-    "muscles": [
-      "Biceps",
-      "Circuit Pull"
-    ],
-    "priority": "P1",
-    "level": "intermediate",
-    "location": "home",
-    "gender": "anyone",
-    "metrics": [
-      "reps",
-      "weight"
-    ]
-  },
-  {
     "id": "floor-dumbbell-chest-press",
     "name": "floor dumbbell chest press",
     "muscles": [
@@ -755,23 +739,6 @@
     "priority": "P1",
     "level": "advanced",
     "location": "gym",
-    "gender": "anyone",
-    "metrics": [
-      "weight",
-      "reps"
-    ]
-  },
-  {
-    "id": "dumbbell-lateral-raises-with-internal-frontal-raises",
-    "name": "dumbbell lateral raises with internal frontal raises",
-    "muscles": [
-      "Shoulders",
-      "Circuit Push",
-      "Warm Up Upper"
-    ],
-    "priority": "P2",
-    "level": "beginner",
-    "location": "any",
     "gender": "anyone",
     "metrics": [
       "weight",
@@ -1560,22 +1527,6 @@
     ]
   },
   {
-    "id": "kb-alternating-low-leg-raises",
-    "name": "KB alternating low leg raises",
-    "muscles": [
-      "Core Abdominals",
-      "Circuit Pull",
-      "Circuit Cardio"
-    ],
-    "priority": "P4",
-    "level": "beginner",
-    "location": "any",
-    "gender": "women",
-    "metrics": [
-      "reps"
-    ]
-  },
-  {
     "id": "kneeling-cable-rope-pull",
     "name": "kneeling cable rope pull",
     "muscles": [
@@ -1682,22 +1633,6 @@
     ],
     "priority": "P2",
     "level": "beginner",
-    "location": "gym",
-    "gender": "anyone",
-    "metrics": [
-      "weight",
-      "reps"
-    ]
-  },
-  {
-    "id": "power-squat-facing-in",
-    "name": "Power squat (facing in)",
-    "muscles": [
-      "Quadriceps",
-      "Glutes"
-    ],
-    "priority": "P1",
-    "level": "intermediate",
     "location": "gym",
     "gender": "anyone",
     "metrics": [
@@ -2115,20 +2050,6 @@
     ]
   },
   {
-    "id": "flat-lying-prone-row",
-    "name": "Flat lying prone row",
-    "muscles": [
-      "Back"
-    ],
-    "priority": "P2",
-    "level": "beginner",
-    "location": "gym",
-    "gender": "anyone",
-    "metrics": [
-      "reps"
-    ]
-  },
-  {
     "id": "standing-dumbbell-curl-and-press",
     "name": "standing Dumbbell curl and press",
     "muscles": [
@@ -2170,21 +2091,6 @@
     "metrics": [
       "weight",
       "reps"
-    ]
-  },
-  {
-    "id": "kb-pull-over-with-glute-bridge",
-    "name": "KB pull over with glute bridge",
-    "muscles": [
-      "Core Abdominals"
-    ],
-    "priority": "P4",
-    "level": "beginner",
-    "location": "any",
-    "gender": "anyone",
-    "metrics": [
-      "reps",
-      "weight"
     ]
   },
   {
@@ -2330,21 +2236,6 @@
     "priority": "P1",
     "level": "intermediate",
     "location": "any",
-    "gender": "anyone",
-    "metrics": [
-      "weight",
-      "reps"
-    ]
-  },
-  {
-    "id": "decline-leg-single-leg-press-high-stance",
-    "name": "Decline leg single leg press high stance",
-    "muscles": [
-      "Glutes"
-    ],
-    "priority": "P1",
-    "level": "beginner",
-    "location": "gym",
     "gender": "anyone",
     "metrics": [
       "weight",
@@ -2632,21 +2523,6 @@
     ]
   },
   {
-    "id": "cable-bar-bicep-curl",
-    "name": "Cable bar bicep curl",
-    "muscles": [
-      "Biceps"
-    ],
-    "priority": "P1",
-    "level": "beginner",
-    "location": "gym",
-    "gender": "anyone",
-    "metrics": [
-      "weight",
-      "reps"
-    ]
-  },
-  {
     "id": "dumbbell-opposite-lateral-and-frontal-raises",
     "name": "dumbbell opposite lateral and frontal raises",
     "muscles": [
@@ -2726,35 +2602,6 @@
       "Back"
     ],
     "priority": "P3",
-    "level": "beginner",
-    "location": "any",
-    "gender": "anyone",
-    "metrics": [
-      "weight",
-      "reps"
-    ]
-  },
-  {
-    "id": "lying-crunch-with-adduction",
-    "name": "lying crunch with adduction",
-    "muscles": [
-      "Core Abdominals"
-    ],
-    "priority": "P2",
-    "level": "beginner",
-    "location": "any",
-    "gender": "anyone",
-    "metrics": [
-      "reps"
-    ]
-  },
-  {
-    "id": "deficit-reverse-dumbbell-lunges",
-    "name": "deficit reverse dumbbell lunges",
-    "muscles": [
-      "Quadriceps"
-    ],
-    "priority": "P2",
     "level": "beginner",
     "location": "any",
     "gender": "anyone",
@@ -3108,20 +2955,6 @@
     ]
   },
   {
-    "id": "table-top-alternating-towel-arm-slides",
-    "name": "Table Top alternating towel arm slides",
-    "muscles": [
-      "Core Abdominals"
-    ],
-    "priority": "P2",
-    "level": "beginner",
-    "location": "any",
-    "gender": "anyone",
-    "metrics": [
-      "reps"
-    ]
-  },
-  {
     "id": "smith-machine-rdl",
     "name": "smith machine RDL",
     "muscles": [
@@ -3310,22 +3143,6 @@
     ]
   },
   {
-    "id": "wall-sit-with-parallel-isometric-arm-hold",
-    "name": "Wall sit with parallel isometric arm hold",
-    "muscles": [
-      "Quadriceps",
-      "Circuit Pull",
-      "Circuit Lower"
-    ],
-    "priority": "P2",
-    "level": "beginner",
-    "location": "any",
-    "gender": "anyone",
-    "metrics": [
-      "duration"
-    ]
-  },
-  {
     "id": "standing-dumbbell-frontal-raises",
     "name": "standing Dumbbell frontal raises",
     "muscles": [
@@ -3353,20 +3170,6 @@
     "metrics": [
       "reps",
       "duration"
-    ]
-  },
-  {
-    "id": "cable-single-arm-lateral-raises",
-    "name": "cable single arm lateral raises",
-    "muscles": [
-      "Shoulders"
-    ],
-    "priority": "P3",
-    "level": "beginner",
-    "location": "any",
-    "gender": "anyone",
-    "metrics": [
-      "reps"
     ]
   },
   {
@@ -3480,20 +3283,6 @@
     "level": "advanced",
     "location": "gym",
     "gender": "women",
-    "metrics": [
-      "reps"
-    ]
-  },
-  {
-    "id": "alternating-rocking-lat-pulldown",
-    "name": "Alternating rocking Lat pulldown",
-    "muscles": [
-      "Back"
-    ],
-    "priority": "P1",
-    "level": "intermediate",
-    "location": "gym",
-    "gender": "anyone",
     "metrics": [
       "reps"
     ]
@@ -4256,21 +4045,6 @@
     "gender": "anyone",
     "metrics": [
       "reps"
-    ]
-  },
-  {
-    "id": "tricep-rope-pulldown",
-    "name": "Tricep rope pulldown",
-    "muscles": [
-      "Triceps"
-    ],
-    "priority": "P1",
-    "level": "beginner",
-    "location": "gym",
-    "gender": "anyone",
-    "metrics": [
-      "reps",
-      "weight"
     ]
   },
   {
