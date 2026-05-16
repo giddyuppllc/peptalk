@@ -2,12 +2,13 @@
  * BodyCompositionHero — visual progress hero on Home.
  *
  * Reads from useBodyCompositionStore. When the user has at least one
- * scan it shows their latest numbers + a 30-day delta arrow. When
- * empty, surfaces a "Log your first scan" CTA pointing at the InBody
- * manual-entry screen.
+ * scan it shows a 2D body silhouette (front view) tinted by InBody
+ * segmental lean-mass data alongside their latest numbers + a 30-day
+ * delta arrow. When empty, surfaces a "Log your first scan" CTA
+ * pointing at the InBody manual-entry screen.
  *
- * Future enhancement (Phase 5.5): swap the placeholder body card for
- * a 2D SVG silhouette colored by segmental lean-mass data.
+ * Layout (populated): row split — silhouette (45%) | stat block (55%).
+ * Empty state remains a single-row gradient nudge.
  */
 
 import React from 'react';
@@ -15,14 +16,13 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useTheme } from '../../hooks/useTheme';
 import { useSectionAccent } from '../../hooks/useSectionAccent';
 import { useBodyCompositionStore } from '../../store/useBodyCompositionStore';
-import { FontSizes, Spacing, BorderRadius } from '../../constants/theme';
+import { Spacing } from '../../constants/theme';
 import { selectionTick } from '../../utils/haptics';
+import { BodySilhouette } from './BodySilhouette';
 
 export const BodyCompositionHero: React.FC = () => {
-  const t = useTheme();
   const accent = useSectionAccent();
   const router = useRouter();
 
@@ -84,7 +84,7 @@ export const BodyCompositionHero: React.FC = () => {
         end={{ x: 1, y: 1 }}
         style={styles.grad}
       >
-        <View style={styles.heroTopRow}>
+        <View style={styles.heroEyebrowRow}>
           <View>
             <Text style={styles.heroEyebrow}>Body composition</Text>
             <Text style={styles.heroDate}>
@@ -95,47 +95,65 @@ export const BodyCompositionHero: React.FC = () => {
                   : `Scanned ${daysAgo} days ago`}
             </Text>
           </View>
-          <Ionicons name="body" size={28} color="rgba(255,255,255,0.85)" />
+          <Ionicons name="body" size={22} color="rgba(255,255,255,0.85)" />
         </View>
 
-        <View style={styles.heroStatsRow}>
-          {typeof latest.weightLb === 'number' && (
-            <Stat
-              label="Weight"
-              value={`${latest.weightLb}`}
-              unit="lb"
-              delta={delta.weightLbDelta}
-              deltaSuffix="lb"
-              deltaGoodWhenNegative
+        <View style={styles.heroBodyRow}>
+          {/* Silhouette — left 45%. Tinted by segmental lean mass when
+              the latest scan carries it; otherwise outline-only. */}
+          <View style={styles.silhouetteCol}>
+            <BodySilhouette
+              width={120}
+              height={200}
+              segmental={latest.segmental}
+              accentColor="#FFFFFF"
             />
-          )}
-          {typeof latest.bodyFatPercent === 'number' && (
-            <Stat
-              label="Body fat"
-              value={`${latest.bodyFatPercent}`}
-              unit="%"
-              delta={delta.bodyFatDelta}
-              deltaSuffix="%"
-              deltaGoodWhenNegative
-            />
-          )}
-          {typeof latest.leanMassLb === 'number' && (
-            <Stat
-              label="Lean mass"
-              value={`${latest.leanMassLb}`}
-              unit="lb"
-              delta={delta.leanMassDelta ?? null}
-              deltaSuffix="lb"
-              deltaGoodWhenNegative={false}
-            />
-          )}
+          </View>
+
+          {/* Stat column — right 55%. Vertically stacked so the
+              numbers stay legible at narrow widths. */}
+          <View style={styles.statsCol}>
+            {typeof latest.weightLb === 'number' && (
+              <StackedStat
+                label="Weight"
+                value={`${latest.weightLb}`}
+                unit="lb"
+                delta={delta.weightLbDelta}
+                deltaSuffix="lb"
+                deltaGoodWhenNegative
+              />
+            )}
+            {typeof latest.bodyFatPercent === 'number' && (
+              <StackedStat
+                label="Body fat"
+                value={`${latest.bodyFatPercent}`}
+                unit="%"
+                delta={delta.bodyFatDelta}
+                deltaSuffix="%"
+                deltaGoodWhenNegative
+              />
+            )}
+            {typeof latest.leanMassLb === 'number' && (
+              <StackedStat
+                label="Lean mass"
+                value={`${latest.leanMassLb}`}
+                unit="lb"
+                delta={delta.leanMassDelta ?? null}
+                deltaSuffix="lb"
+                deltaGoodWhenNegative={false}
+              />
+            )}
+          </View>
         </View>
       </LinearGradient>
     </TouchableOpacity>
   );
 };
 
-function Stat({
+/** Vertically stacked stat — sits in the right column next to the
+ *  silhouette. Tighter spacing than the legacy horizontal Stat so we
+ *  can show three readings in 200px of height. */
+function StackedStat({
   label,
   value,
   unit,
@@ -154,22 +172,23 @@ function Stat({
   const isGood = hasDelta && (deltaGoodWhenNegative ? delta < 0 : delta > 0);
   const arrow = !hasDelta ? '' : delta > 0 ? '↑' : '↓';
   return (
-    <View style={styles.stat}>
+    <View style={styles.stackedStat}>
       <Text style={styles.statLabel}>{label}</Text>
       <View style={styles.statValueRow}>
-        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.stackedStatValue}>{value}</Text>
         <Text style={styles.statUnit}>{unit}</Text>
+        {hasDelta && (
+          <Text
+            style={[
+              styles.stackedStatDelta,
+              { color: isGood ? '#9BE3B8' : '#F5C7C2' },
+            ]}
+          >
+            {arrow}
+            {Math.abs(delta).toFixed(1)}
+          </Text>
+        )}
       </View>
-      {hasDelta && (
-        <Text
-          style={[
-            styles.statDelta,
-            { color: isGood ? '#9BE3B8' : '#F5C7C2' },
-          ]}
-        >
-          {arrow} {Math.abs(delta).toFixed(1)} {deltaSuffix} · 30d
-        </Text>
-      )}
     </View>
   );
 }
@@ -202,11 +221,36 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
   },
-  heroTopRow: {
+  heroEyebrowRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  heroBodyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  silhouetteCol: {
+    width: '45%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statsCol: {
+    width: '55%',
+    paddingLeft: Spacing.md,
+    gap: 14,
+  },
+  stackedStat: {},
+  stackedStatValue: {
+    color: '#fff',
+    fontFamily: 'DMSans-Bold',
+    fontSize: 22,
+  },
+  stackedStatDelta: {
+    fontFamily: 'DMSans-Medium',
+    fontSize: 11,
+    marginLeft: 'auto',
   },
   heroEyebrow: {
     color: 'rgba(255,255,255,0.85)',
@@ -221,14 +265,6 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans-Medium',
     fontSize: 13,
   },
-  heroStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  stat: {
-    flex: 1,
-  },
   statLabel: {
     color: 'rgba(255,255,255,0.85)',
     fontFamily: 'DMSans-Medium',
@@ -242,19 +278,9 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     gap: 4,
   },
-  statValue: {
-    color: '#fff',
-    fontFamily: 'DMSans-Bold',
-    fontSize: 26,
-  },
   statUnit: {
     color: 'rgba(255,255,255,0.85)',
     fontFamily: 'DMSans-Medium',
     fontSize: 12,
-  },
-  statDelta: {
-    fontFamily: 'DMSans-Medium',
-    fontSize: 11,
-    marginTop: 4,
   },
 });
