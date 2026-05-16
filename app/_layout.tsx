@@ -65,6 +65,7 @@ function RootLayout() {
   const hasHydrated = useOnboardingStore((state) => state.hasHydrated);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const authHydrated = useAuthStore((state) => state.hasHydrated);
+  const subscriptionHasHydrated = useSubscriptionStore((state) => state.hasHydrated);
   const t = useTheme();
 
   // Load custom fonts
@@ -106,10 +107,12 @@ function RootLayout() {
   const splashStarted = useRef(false);
 
   useEffect(() => {
-    // Wait for fonts AND hydrated auth/onboarding state before deciding
-    // which splash path to play. Otherwise returning users briefly get the
-    // full welcome animation before we know they've seen it already.
-    if (!fontsReady || !hasHydrated || !authHydrated) return;
+    // Wait for fonts AND hydrated auth/onboarding/subscription state before
+    // deciding which splash path to play. Otherwise returning users briefly
+    // get the full welcome animation before we know they've seen it already,
+    // and cold-install Pro users flash the paywall on first frame while the
+    // subscription store rehydrates from default tier='free'.
+    if (!fontsReady || !hasHydrated || !authHydrated || !subscriptionHasHydrated) return;
     if (splashStarted.current) return;
     splashStarted.current = true;
 
@@ -163,7 +166,7 @@ function RootLayout() {
     return () => {
       cancelled = true;
     };
-  }, [fontsReady, hasHydrated, authHydrated, isComplete, isAuthenticated]);
+  }, [fontsReady, hasHydrated, authHydrated, subscriptionHasHydrated, isComplete, isAuthenticated]);
 
   // Initialize notifications and restore session — no-ops gracefully in Expo Go
   useEffect(() => {

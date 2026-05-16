@@ -95,6 +95,13 @@ interface SubscriptionState {
   pendingPurchase: { productId: string; sinceMs: number } | null;
   /** ms epoch of the last successful server sync. Used to flag stale state. */
   lastSyncedAt: number;
+  /**
+   * True once the persisted state has been read back from secureStorage.
+   * Splash / paywall gating must wait on this — without it, cold-install
+   * Pro users briefly see the paywall on first frame while the store
+   * rehydrates from default `tier: 'free'`.
+   */
+  hasHydrated: boolean;
 }
 
 /** How old a syncFromServer result can be before we treat it as stale. */
@@ -145,6 +152,7 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
       betaUserIds: [],
       pendingPurchase: null,
       lastSyncedAt: 0,
+      hasHydrated: false,
 
       hasFeature: (feature) => {
         // Preview / development builds: every signed-in user gets full
@@ -378,6 +386,13 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
         // pendingPurchase is intentionally NOT persisted — a stale "waiting
         // for approval" across app restarts would be worse than losing it.
       }),
+      onRehydrateStorage: () => () => {
+        // Flag the store as hydrated so the splash gate (and any paywall
+        // checks that run on first frame) can wait until the persisted
+        // tier has been read back from secureStorage. Otherwise cold-
+        // install Pro users see a flash of the paywall on boot.
+        useSubscriptionStore.setState({ hasHydrated: true });
+      },
     },
   ),
 );
