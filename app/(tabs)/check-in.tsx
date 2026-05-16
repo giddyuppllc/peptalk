@@ -100,10 +100,15 @@ const RatingRow: React.FC<{
 }> = ({ label, value, onChange, lowLabel, highLabel }) => {
   const t = useTheme();
   const useEndpoints = !!(lowLabel && highLabel);
+  const endpointHint = useEndpoints ? `, 1 is ${lowLabel}, 5 is ${highLabel}` : '';
   return (
     <View style={styles.ratingRow}>
-      <Text style={[styles.ratingLabel, { color: t.tint }]}>{label}</Text>
-      <View style={styles.ratingPills}>
+      <Text style={[styles.ratingLabel, { color: t.tint }]} accessibilityRole="header">{label}</Text>
+      <View
+        style={styles.ratingPills}
+        accessibilityRole="radiogroup"
+        accessibilityLabel={`${label} rating, 1 to 5${endpointHint}`}
+      >
         {ratingValues.map((rating) => (
           <AnimatedPress
             key={rating}
@@ -114,6 +119,9 @@ const RatingRow: React.FC<{
             ]}
             onPress={() => { selectionTick(); onChange(rating); }}
             scaleTo={0.85}
+            accessibilityRole="radio"
+            accessibilityLabel={`${rating} out of 5`}
+            accessibilityState={{ selected: value === rating, checked: value === rating }}
           >
             <Text
               style={[
@@ -151,7 +159,11 @@ const SeverityPicker: React.FC<{
   return (
     <View style={styles.severityRow}>
       <Text style={[styles.severityLabel, { color: t.textSecondary }]}>Severity</Text>
-      <View style={styles.severityPills}>
+      <View
+        style={styles.severityPills}
+        accessibilityRole="radiogroup"
+        accessibilityLabel="Severity, 1 to 5"
+      >
         {ratingValues.map((v) => (
           <TouchableOpacity
             key={v}
@@ -162,6 +174,9 @@ const SeverityPicker: React.FC<{
               value === v && styles.severityPillActive,
             ]}
             activeOpacity={0.7}
+            accessibilityRole="radio"
+            accessibilityLabel={`Severity ${v} out of 5`}
+            accessibilityState={{ selected: value === v, checked: value === v }}
           >
             <Text
               style={[

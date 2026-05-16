@@ -114,6 +114,11 @@ interface SubscriptionActions {
   getTimeUntilExpiry: () => number | null;
   getFeatures: () => string[];
   setTier: (tier: SubscriptionTier) => void;
+  /** Hard reset for logout — wipes tier, productId, expiresAt,
+   *  isActive, and lastSyncedAt so the next signed-in user starts
+   *  clean instead of inheriting the previous user's subscription
+   *  metadata. P0 from Wave 76.11 logout audit. */
+  clearSubscription: () => void;
   /** Validate a fresh IAP receipt with the backend and update the tier. */
   validatePurchase: (platform: 'ios' | 'android', productId: string, receipt: string) => Promise<boolean>;
   /**
@@ -192,6 +197,15 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
       },
 
       setTier: (tier) => set({ tier, isActive: true }),
+
+      clearSubscription: () => set({
+        tier: 'free',
+        productId: null,
+        expiresAt: null,
+        isActive: false,
+        lastSyncedAt: 0,
+        pendingPurchase: null,
+      }),
 
       getFeatures: () => {
         const { tier } = get();

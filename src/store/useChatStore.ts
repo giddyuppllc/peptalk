@@ -131,6 +131,12 @@ interface ChatStore {
   removeMessage: (id: string) => void;
   setTyping: (typing: boolean) => void;
   clearChat: () => void;
+  /** Hard wipe — drop EVERY chat + every message. Used on logout
+   *  and deleteAccount. `clearChat()` only nukes the active chat
+   *  (an explicit UX action), so logout needs a deeper hook to
+   *  prevent cross-user message bleed on shared devices. P0 from
+   *  Wave 76.11 logout audit. */
+  wipeAllChats: () => void;
 
   /**
    * Retry any previously-failed message syncs. Call on app boot and after
@@ -383,6 +389,20 @@ export const useChatStore = create<ChatStore>()(
         }
         // Delete the active chat — if it was the last one, a fresh one gets spawned
         get().deleteChat(activeChatId);
+      },
+
+      wipeAllChats: () => {
+        // Drop every chat + every message + every pending sync.
+        // Spawn a single fresh empty chat so the UI mount path
+        // (which assumes activeChatId is set) keeps working.
+        const fresh = makeEmptyChat();
+        set({
+          chats: [fresh],
+          activeChatId: fresh.id,
+          messages: [],
+          pendingSyncs: [],
+          isTyping: false,
+        });
       },
 
       flushPendingSyncs: async () => {

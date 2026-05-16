@@ -667,11 +667,15 @@ export default function DashboardScreen() {
   useEffect(() => {
     const available = isHealthDataAvailable();
     setHealthAvailable(available);
-    if (available) {
-      getHealthMetrics()
-        .then(setHealthMetrics)
-        .catch(() => {});
-    }
+    if (!available) return;
+    // Unmount guard — HealthKit reads can take seconds on a fresh
+    // permission grant; if the user leaves Home before the promise
+    // resolves, setHealthMetrics would fire on a dead component.
+    let alive = true;
+    getHealthMetrics()
+      .then((m) => { if (alive) setHealthMetrics(m); })
+      .catch(() => {});
+    return () => { alive = false; };
   }, []);
 
   // ── Achievement Checker ───────────────────────────────────────────────────

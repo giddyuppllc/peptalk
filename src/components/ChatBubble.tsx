@@ -84,7 +84,12 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
   /* ─── User bubble ─────────────────────────────────────────────── */
   if (!isBot) {
     return (
-      <Animated.View style={[styles.row, styles.rowUser, animStyle]}>
+      <Animated.View
+        style={[styles.row, styles.rowUser, animStyle]}
+        accessible
+        accessibilityRole="text"
+        accessibilityLabel={`You said: ${message.content}, ${timeLabel}`}
+      >
         <View style={styles.userBubbleOuter}>
           <LinearGradient
             colors={[accent.deep, accent.darker]}
@@ -104,8 +109,13 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
 
   /* ─── Bot bubble ──────────────────────────────────────────────── */
   return (
-    <Animated.View style={[styles.row, styles.rowBot, animStyle]}>
-      <View style={styles.avatarWrap}>
+    <Animated.View
+      style={[styles.row, styles.rowBot, animStyle]}
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={`Aimee said: ${message.content}${hasJournal ? ', logged to journal' : ''}, ${timeLabel}`}
+    >
+      <View style={styles.avatarWrap} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         <PepTalkCharacter size={32} variant="avatar" />
       </View>
       <View style={styles.botBubbleContainer}>
@@ -188,8 +198,14 @@ export const TypingIndicator: React.FC = () => {
   const d3Style = useAnimatedStyle(() => ({ opacity: dot3.value }));
 
   return (
-    <View style={[styles.row, styles.rowBot]}>
-      <View style={styles.avatarWrap}>
+    <View
+      style={[styles.row, styles.rowBot]}
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel="Aimee is typing"
+      accessibilityLiveRegion="polite"
+    >
+      <View style={styles.avatarWrap} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         <PepTalkCharacter size={32} variant="avatar" typing />
       </View>
       <LinearGradient

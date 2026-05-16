@@ -49,7 +49,7 @@ import { usePantryStore } from '../src/store/usePantryStore';
 import { useCycleStore } from '../src/store/useCycleStore';
 import { useIntegrationsStore } from '../src/store/useIntegrationsStore';
 import { subscribeToReconnect } from '../src/hooks/useNetworkStatus';
-import { initTelemetry, installGlobalErrorHandler } from '../src/services/telemetry';
+import { initTelemetry, installGlobalErrorHandler, captureException } from '../src/services/telemetry';
 
 // Boot-time telemetry init (no-op if no DSN). Done at module scope so it
 // fires before any component renders or stores hydrate.
@@ -272,6 +272,7 @@ function RootLayout() {
       .restoreSession()
       ?.catch?.((err: unknown) => {
         if (__DEV__) console.warn('[boot] restoreSession failed:', err);
+      captureException(err, { source: 'boot.restoreSession' });
       });
 
     // Hook IAP into the app so purchase events flow into subscription
@@ -288,6 +289,7 @@ function RootLayout() {
               .validatePurchase(platform, productId, transactionReceipt);
           } catch (err) {
             if (__DEV__) console.warn('[boot] validatePurchase failed:', err);
+            captureException(err, { source: 'boot.validatePurchase' });
           }
         },
         onPending: ({ productId }) => {
@@ -296,6 +298,7 @@ function RootLayout() {
       });
     } catch (err) {
       if (__DEV__) console.warn('[boot] initIAP threw:', err);
+      captureException(err, { source: 'boot.initIAP' });
     }
 
     // Pull the authoritative tier from the server once session is ready
@@ -304,6 +307,7 @@ function RootLayout() {
       .syncFromServer()
       ?.catch?.((err: unknown) => {
         if (__DEV__) console.warn('[boot] subscription syncFromServer failed:', err);
+        captureException(err, { source: 'boot.subscription.syncFromServer' });
       });
 
     // Pull health profile from server (overwrites local on login)
