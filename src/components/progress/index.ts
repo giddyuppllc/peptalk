@@ -13,6 +13,7 @@ export { StreakBadge } from './StreakBadge';
 export { BodyCompositionHero } from './BodyCompositionHero';
 export { BodySilhouette } from './BodySilhouette';
 export type { BodySilhouetteProps, BodySilhouetteSegmental } from './BodySilhouette';
+export { AdherenceCard } from './AdherenceCard';
 export { TrendChart } from './TrendChart';
 export type { TrendPoint } from './TrendChart';
 export { BodyCompositionTrendCharts } from './BodyCompositionTrendCharts';

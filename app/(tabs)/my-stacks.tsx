@@ -24,7 +24,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { CoachMark } from '../../src/components/tutorial/CoachMark';
 import { getCategoryColor } from '../../src/constants/categories';
 import { Colors, Spacing, BorderRadius } from '../../src/constants/theme';
-import { PeptideStack, PeptideCategory, GoalType, Peptide, ActiveProtocol, DoseLogEntry } from '../../src/types';
+import { PeptideStack, PeptideCategory, GoalType, Peptide, DoseLogEntry } from '../../src/types';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { PeptideDisclaimerModal } from '../../src/components/PeptideDisclaimerModal';
@@ -36,6 +36,10 @@ import { mlToTsp } from '../../src/utils/unitConversions';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
 import { AdherenceDial, CycleProgressBar, DoseStrip } from '../../src/components/peptides';
 import { notifySuccess, selectionTick } from '../../src/utils/haptics';
+import {
+  resolveActiveCycle,
+  doseLoggedAt,
+} from '../../src/utils/doseAdherence';
 
 // ─── Category meta-groups (for the educational browsing grid) ─────────────
 interface CategoryMeta {
@@ -958,137 +962,10 @@ const calcStyles = StyleSheet.create({
 // and, when ties exist, falls back to the protocol with the best adherence.
 // Falls back to a curated empty-state when the user has no active protocol.
 
-interface ActiveCycleResolved {
-  protocol: ActiveProtocol;
-  /** Peptide display name. */
-  peptideName: string;
-  /** Calendar-day index inside the cycle (1-indexed). */
-  currentDay: number;
-  /** Total cycle length in days. Derived from PROTOCOL_TEMPLATES.durationWeeks.min × 7. */
-  totalDays: number;
-  /** Expected number of doses by today, given frequency × days elapsed. */
-  expectedDoses: number;
-  /** Doses logged for this peptide inside the cycle window. */
-  loggedDoses: DoseLogEntry[];
-  /** Adherence percent (0-100). */
-  adherencePct: number;
-  /** Cycle start date (parsed). */
-  startDate: Date;
-}
-
-/** Convert a stored DoseLogEntry into the Date it was logged at (uses
- *  date + time fields the store writes). Falls back to createdAt. */
-function doseLoggedAt(d: DoseLogEntry): Date {
-  if (d.date && d.time) {
-    const dt = new Date(`${d.date}T${d.time}:00`);
-    if (!isNaN(dt.getTime())) return dt;
-  }
-  if (d.createdAt) {
-    const dt = new Date(d.createdAt);
-    if (!isNaN(dt.getTime())) return dt;
-  }
-  return new Date();
-}
-
-/** Doses-per-week implied by a ProtocolFrequency string. */
-function dosesPerWeekFor(frequency: ActiveProtocol['frequency']): number {
-  switch (frequency) {
-    case 'twice_daily': return 14;
-    case 'daily': return 7;
-    case 'eod': return 3.5;
-    case 'tiw': return 3;
-    case 'biw': return 2;
-    case 'weekly': return 1;
-    case 'biweekly': return 0.5;
-    case 'monthly': return 0.25;
-    case 'custom':
-    default:
-      return 7;
-  }
-}
-
-function resolveActiveCycle(
-  protocols: ActiveProtocol[],
-  allDoses: DoseLogEntry[],
-): ActiveCycleResolved | null {
-  const active = protocols.filter((p) => p.isActive);
-  if (active.length === 0) return null;
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const scored = active.map((p) => {
-    // Prefer template durationWeeks.min, fall back to a parsed cycleLength
-    // string from Edward's reference, else default to a 4-week cycle so
-    // the visualization is never empty.
-    const template = PROTOCOL_TEMPLATES.find(
-      (t) => t.peptideId === p.peptideId,
-    );
-    let totalDays = template?.durationWeeks?.min
-      ? template.durationWeeks.min * 7
-      : 28;
-
-    const ref = getDosingReference(p.peptideId);
-    if (ref?.cycleLength) {
-      const m = ref.cycleLength.match(/(\d+)\s*(day|week)/i);
-      if (m) {
-        const n = parseInt(m[1], 10);
-        if (!isNaN(n) && n > 0) {
-          totalDays = /week/i.test(m[2]) ? n * 7 : n;
-        }
-      }
-    }
-
-    const start = new Date(p.startDate);
-    start.setHours(0, 0, 0, 0);
-    const daysElapsed = Math.max(
-      0,
-      Math.floor((today.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)),
-    );
-    const currentDay = Math.min(totalDays, daysElapsed + 1);
-
-    const cycleStartKey = start.toISOString().slice(0, 10);
-    const cycleEndDate = new Date(start);
-    cycleEndDate.setDate(start.getDate() + totalDays - 1);
-    const cycleEndKey = cycleEndDate.toISOString().slice(0, 10);
-
-    const loggedDoses = allDoses.filter(
-      (d) =>
-        d.peptideId === p.peptideId &&
-        d.date >= cycleStartKey &&
-        d.date <= cycleEndKey,
-    );
-
-    const expectedPerDay = dosesPerWeekFor(p.frequency) / 7;
-    const expectedDoses = Math.max(1, Math.round(expectedPerDay * (daysElapsed + 1)));
-    const adherencePct = Math.min(
-      100,
-      Math.round((loggedDoses.length / expectedDoses) * 100),
-    );
-
-    const peptide = getPeptideById(p.peptideId);
-    const peptideName = peptide?.name ?? p.peptideId;
-
-    return {
-      protocol: p,
-      peptideName,
-      currentDay,
-      totalDays,
-      expectedDoses,
-      loggedDoses,
-      adherencePct,
-      startDate: start,
-    };
-  });
-
-  scored.sort((a, b) => {
-    const dt = b.startDate.getTime() - a.startDate.getTime();
-    if (dt !== 0) return dt;
-    return b.adherencePct - a.adherencePct;
-  });
-
-  return scored[0];
-}
+// Shared adherence helpers live in `src/utils/doseAdherence.ts` so
+// the Home tab can re-use the same calculation. See that module for
+// the `resolveActiveCycle`, `doseLoggedAt`, and `dosesPerWeekFor`
+// implementations.
 
 /** Did the user already log this protocol today? */
 function loggedToday(loggedDoses: DoseLogEntry[]): DoseLogEntry | null {

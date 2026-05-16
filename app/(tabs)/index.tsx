@@ -86,6 +86,7 @@ import {
   StreakBadge,
   BodyCompositionHero,
   BodyCompositionTrendCharts,
+  AdherenceCard,
 } from '../../src/components/progress';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -1125,6 +1126,13 @@ export default function DashboardScreen() {
         </View>
         <View style={styles.protocolBannerWrap}>
           <StreakBadge />
+        </View>
+        {/* Dose-adherence dial — re-uses the same AdherenceDial that
+            anchors the Peptides tab so users see the same number
+            without tab-switching. Auto-hides when there's no active
+            protocol so we don't show a depressing 0%. */}
+        <View style={styles.protocolBannerWrap}>
+          <AdherenceCard />
         </View>
         <View style={styles.protocolBannerWrap}>
           <ActivityHeatmap weeks={26} />
