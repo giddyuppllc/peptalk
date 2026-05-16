@@ -345,16 +345,25 @@ export default function WorkoutPlayerV2Screen() {
   const targetReps = currentEx?.reps[setIdx] ?? 0;
   const targetSeconds = currentEx?.timeSeconds;
 
-  // Seed weight when exercise changes
+  // Seed weight when exercise changes — runs once per exId
   useEffect(() => {
     if (!currentExId) return;
     if (weightByExercise[currentExId] != null) return;
     const history = getExerciseHistory(currentExId);
     const seed = history?.bestWeight ?? 0;
-    setWeightByExercise((prev) => ({ ...prev, [currentExId]: snap5(seed) }));
+    setWeightByExercise((prev) =>
+      prev[currentExId] != null ? prev : { ...prev, [currentExId]: snap5(seed) },
+    );
   }, [currentExId, getExerciseHistory, weightByExercise]);
 
-  const currentWeight = currentExId ? weightByExercise[currentExId] ?? 0 : 0;
+  // Resolve weight synchronously when there's no entry yet — avoids a 1-frame
+  // 0 lb flash when moving to a new exercise.
+  const currentWeight = useMemo(() => {
+    if (!currentExId) return 0;
+    if (weightByExercise[currentExId] != null) return weightByExercise[currentExId];
+    const history = getExerciseHistory(currentExId);
+    return snap5(history?.bestWeight ?? 0);
+  }, [currentExId, weightByExercise, getExerciseHistory]);
 
   // Totals
   const totalSets = useMemo(

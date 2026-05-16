@@ -740,6 +740,14 @@ function RootLayout() {
             }}
           />
           <Stack.Screen
+            name="workouts/player-v2"
+            options={{
+              headerShown: false,
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
             name="workouts/exercises"
             options={{
               headerShown: false,
