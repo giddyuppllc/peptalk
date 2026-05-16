@@ -2,10 +2,10 @@
   {
     "slug": "img-3681",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3681.MP4",
-    "title": "IMG_3681",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Bodyweight Plank Hold",
+    "exerciseId": "plank-289",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "plank-289",
       "category": "strength",
@@ -19,10 +19,10 @@
   {
     "slug": "img-3690",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3690.MP4",
-    "title": "IMG_3690",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Dumbbell Lateral Raises",
+    "exerciseId": "seated-dumbbell-lateral-raises",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-dumbbell-lateral-raises",
       "category": "strength",
@@ -36,10 +36,10 @@
   {
     "slug": "img-3691",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3691.MP4",
-    "title": "IMG_3691",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Dumbbell Shoulder Press",
+    "exerciseId": "seated-dumbbell-shoulder-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-dumbbell-shoulder-press",
       "category": "strength",
@@ -53,10 +53,10 @@
   {
     "slug": "img-3692",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3692.MP4",
-    "title": "IMG_3692",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Dumbbell Shoulder Press",
+    "exerciseId": "seated-dumbbell-shoulder-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-dumbbell-shoulder-press",
       "category": "strength",
@@ -70,10 +70,10 @@
   {
     "slug": "img-3693",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3693.MP4",
-    "title": "IMG_3693",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Dumbbell Bicep Curls",
+    "exerciseId": "seated-dumbbell-bicep-curls",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-dumbbell-bicep-curls",
       "category": "strength",
@@ -87,10 +87,10 @@
   {
     "slug": "img-3694",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3694.MP4",
-    "title": "IMG_3694",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Incline Dumbbell Bicep Curls",
+    "exerciseId": "incline-dumbbell-bicep-curls",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "incline-dumbbell-bicep-curls",
       "category": "strength",
@@ -104,10 +104,10 @@
   {
     "slug": "img-3697",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3697.MP4",
-    "title": "IMG_3697",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Single Arm Dumbbell Arnold Press",
+    "exerciseId": "seated-single-arm-dumbbell-arnold-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-single-arm-dumbbell-arnold-press",
       "category": "strength",
@@ -121,10 +121,10 @@
   {
     "slug": "img-3698",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3698.MP4",
-    "title": "IMG_3698",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Dumbbell Bicep Curls",
+    "exerciseId": "seated-dumbbell-bicep-curls",
+    "category": "muscle_gain",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-dumbbell-bicep-curls",
       "category": "muscle_gain",
@@ -138,10 +138,10 @@
   {
     "slug": "img-3699",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3699.MP4",
-    "title": "IMG_3699",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Single Arm Bent Over Row",
+    "exerciseId": "single-arm-dumbbell-bent-over-row",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "single-arm-dumbbell-bent-over-row",
       "category": "strength",
@@ -155,10 +155,10 @@
   {
     "slug": "img-3700",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3700.MP4",
-    "title": "IMG_3700",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Elbows to Knees Sit Up",
+    "exerciseId": "elbows-to-knees-sit-up-291",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "elbows-to-knees-sit-up-291",
       "category": "toning",
@@ -172,10 +172,10 @@
   {
     "slug": "img-3701",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3701.MP4",
-    "title": "IMG_3701",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Single Arm Overhead Tricep Extension",
+    "exerciseId": "single-arm-overhead-dumbbell-tricep-extentions",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "single-arm-overhead-dumbbell-tricep-extentions",
       "category": "strength",
@@ -189,10 +189,10 @@
   {
     "slug": "img-3703",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3703.MP4",
-    "title": "IMG_3703",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Dumbbell Overhead Tricep Extension",
+    "exerciseId": "dumbbell-overhead-tricep-extensions",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-overhead-tricep-extensions",
       "category": "strength",
@@ -206,10 +206,10 @@
   {
     "slug": "img-3704",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3704.MP4",
-    "title": "IMG_3704",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Dumbbell Bicep Curl",
+    "exerciseId": "seated-dumbbell-bicep-curls",
+    "category": "muscle_gain",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-dumbbell-bicep-curls",
       "category": "muscle_gain",
@@ -223,10 +223,10 @@
   {
     "slug": "img-3705",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3705.MP4",
-    "title": "IMG_3705",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Single Arm Bicep Curl Adduction",
+    "exerciseId": "seated-single-arm-dumbbell-curl-with-block-adduction",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-single-arm-dumbbell-curl-with-block-adduction",
       "category": "toning",
@@ -240,10 +240,10 @@
   {
     "slug": "img-3706",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3706.MP4",
-    "title": "IMG_3706",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Bench Glute Raises",
+    "exerciseId": "bench-glute-raises",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "bench-glute-raises",
       "category": "strength",
@@ -257,10 +257,10 @@
   {
     "slug": "img-3707",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3707.MP4",
-    "title": "IMG_3707",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Pullover",
+    "exerciseId": "dumbbell-pullover",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-pullover",
       "category": "strength",
@@ -274,10 +274,10 @@
   {
     "slug": "img-3708",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3708.MP4",
-    "title": "IMG_3708",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Bench Supported Y Raise",
+    "exerciseId": "bench-supported-y",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "bench-supported-y",
       "category": "strength",
@@ -291,10 +291,10 @@
   {
     "slug": "img-3709",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3709.MP4",
-    "title": "IMG_3709",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Skull Crusher",
+    "exerciseId": "dumbbell-skull-crusher",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-skull-crusher",
       "category": "strength",
@@ -308,10 +308,10 @@
   {
     "slug": "img-3710",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3710.MP4",
-    "title": "IMG_3710",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Dumbbell Bicep Curls",
+    "exerciseId": "seated-dumbbell-bicep-curls",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-dumbbell-bicep-curls",
       "category": "strength",
@@ -325,10 +325,10 @@
   {
     "slug": "img-3711",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3711.MP4",
-    "title": "IMG_3711",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Dumbbell Bicep Curls",
+    "exerciseId": "seated-dumbbell-bicep-curls",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-dumbbell-bicep-curls",
       "category": "strength",
@@ -342,10 +342,10 @@
   {
     "slug": "img-3712",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3712.MP4",
-    "title": "IMG_3712",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Incline Push-Up",
+    "exerciseId": "incline-push-up-348",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "incline-push-up-348",
       "category": "strength",
@@ -359,10 +359,10 @@
   {
     "slug": "img-3714",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3714.MOV",
-    "title": "IMG_3714",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Bench Low Leg Lifts",
+    "exerciseId": "bench-low-leg-lifts-with-glute-raise",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "bench-low-leg-lifts-with-glute-raise",
       "category": "toning",
@@ -376,10 +376,10 @@
   {
     "slug": "img-3716",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3716.MP4",
-    "title": "IMG_3716",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Glute Focused Bulgarian Split Squat",
+    "exerciseId": "bulgarian-split-squat-glute-focused",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "bulgarian-split-squat-glute-focused",
       "category": "strength",
@@ -393,10 +393,10 @@
   {
     "slug": "img-3717",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3717.MP4",
-    "title": "IMG_3717",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Bulgarian RDL",
+    "exerciseId": "dumbbell-bulgarian-rdl-into-body-weight-pistol-squat",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-bulgarian-rdl-into-body-weight-pistol-squat",
       "category": "strength",
@@ -410,10 +410,10 @@
   {
     "slug": "img-3857",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3857.MP4",
-    "title": "IMG_3857",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standing Dumbbell Alternating Bicep Curl",
+    "exerciseId": "standing-dumbbell-alternating-bicep-curl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "standing-dumbbell-alternating-bicep-curl",
       "category": "strength",
@@ -427,10 +427,10 @@
   {
     "slug": "img-3859",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3859.MP4",
-    "title": "IMG_3859",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Single Arm Dumbbell Row",
+    "exerciseId": "single-arm-dumbbell-row-323",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "single-arm-dumbbell-row-323",
       "category": "strength",
@@ -444,10 +444,10 @@
   {
     "slug": "img-3863",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3863.MP4",
-    "title": "IMG_3863",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Single Arm Dumbbell Bent Over Row",
+    "exerciseId": "single-arm-dumbbell-bent-over-row",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "single-arm-dumbbell-bent-over-row",
       "category": "strength",
@@ -461,10 +461,10 @@
   {
     "slug": "img-3864",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3864.MP4",
-    "title": "IMG_3864",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Overhead Tricep Extension",
+    "exerciseId": "dumbbell-overhead-tricep-extensions",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-overhead-tricep-extensions",
       "category": "strength",
@@ -478,10 +478,10 @@
   {
     "slug": "img-3865",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3865.MP4",
-    "title": "IMG_3865",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Overhead Tricep Extension",
+    "exerciseId": "dumbbell-overhead-tricep-extensions",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-overhead-tricep-extensions",
       "category": "strength",
@@ -495,10 +495,10 @@
   {
     "slug": "img-3866",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3866.MP4",
-    "title": "IMG_3866",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Upright Row",
+    "exerciseId": "dumbbell-upright-row-412",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-upright-row-412",
       "category": "strength",
@@ -512,10 +512,10 @@
   {
     "slug": "img-3867",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3867.MP4",
-    "title": "IMG_3867",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Pullover",
+    "exerciseId": "dumbbell-pullover",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-pullover",
       "category": "strength",
@@ -529,10 +529,10 @@
   {
     "slug": "img-3868",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3868.MP4",
-    "title": "IMG_3868",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Incline Dumbbell Pullover",
+    "exerciseId": "dumbbell-pullover",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-pullover",
       "category": "strength",
@@ -546,10 +546,10 @@
   {
     "slug": "img-3869",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3869.MP4",
-    "title": "IMG_3869",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Pullover",
+    "exerciseId": "dumbbell-pullover",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-pullover",
       "category": "strength",
@@ -563,10 +563,10 @@
   {
     "slug": "img-3870",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3870.MP4",
-    "title": "IMG_3870",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Pullover",
+    "exerciseId": "dumbbell-pullover",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-pullover",
       "category": "strength",
@@ -597,10 +597,10 @@
   {
     "slug": "img-3873",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3873.MP4",
-    "title": "IMG_3873",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Single Arm Dumbbell Row",
+    "exerciseId": "single-arm-dumbbell-row-323",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "single-arm-dumbbell-row-323",
       "category": "strength",
@@ -614,10 +614,10 @@
   {
     "slug": "img-3874",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3874.MP4",
-    "title": "IMG_3874",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standing Single Leg Dumbbell RDL",
+    "exerciseId": "standing-single-leg-dumbbell-rdl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "standing-single-leg-dumbbell-rdl",
       "category": "strength",
@@ -631,10 +631,10 @@
   {
     "slug": "img-3875",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3875.MP4",
-    "title": "IMG_3875",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Bulgarian Split Squat",
+    "exerciseId": "bulgarian-split-squat-glute-focused",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "bulgarian-split-squat-glute-focused",
       "category": "strength",
@@ -648,10 +648,10 @@
   {
     "slug": "img-3877",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3877.MP4",
-    "title": "IMG_3877",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Hip Thrust",
+    "exerciseId": "barbell-hip-thrusts",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-hip-thrusts",
       "category": "strength",
@@ -665,10 +665,10 @@
   {
     "slug": "img-3878",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3878.MP4",
-    "title": "IMG_3878",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Hip Thrust",
+    "exerciseId": "barbell-hip-thrusts",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-hip-thrusts",
       "category": "strength",
@@ -682,10 +682,10 @@
   {
     "slug": "img-3879",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3879.MP4",
-    "title": "IMG_3879",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Hip Thrust",
+    "exerciseId": "barbell-hip-thrusts",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-hip-thrusts",
       "category": "strength",
@@ -699,10 +699,10 @@
   {
     "slug": "img-3880",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3880.MP4",
-    "title": "IMG_3880",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Narrow Stance Hip Thrust",
+    "exerciseId": "barbell-narrow-stance-hip-thrust",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-narrow-stance-hip-thrust",
       "category": "strength",
@@ -716,10 +716,10 @@
   {
     "slug": "img-3881",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3881.MP4",
-    "title": "IMG_3881",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Elevated Hip Single Leg Raises",
+    "exerciseId": "elevated-hip-sl-raises-w-kb-hold-317",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "elevated-hip-sl-raises-w-kb-hold-317",
       "category": "pilates",
@@ -733,10 +733,10 @@
   {
     "slug": "img-3882",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3882.MP4",
-    "title": "IMG_3882",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standing Single Leg Dumbbell RDL",
+    "exerciseId": "standing-single-leg-dumbbell-rdl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "standing-single-leg-dumbbell-rdl",
       "category": "strength",
@@ -750,10 +750,10 @@
   {
     "slug": "img-3883",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3883.MP4",
-    "title": "IMG_3883",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Medicine Ball Burpees",
+    "exerciseId": "medicine-ball-burpees",
+    "category": "endurance",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "medicine-ball-burpees",
       "category": "endurance",
@@ -767,10 +767,10 @@
   {
     "slug": "img-3884",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3884.MP4",
-    "title": "IMG_3884",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Kettlebell RDL",
+    "exerciseId": "kettlebell-rdl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "kettlebell-rdl",
       "category": "strength",
@@ -784,10 +784,10 @@
   {
     "slug": "img-3886",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3886.MP4",
-    "title": "IMG_3886",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Deadlift",
+    "exerciseId": "barbell-deadlift",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-deadlift",
       "category": "strength",
@@ -809,10 +809,10 @@
   {
     "slug": "img-3888",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3888.MP4",
-    "title": "IMG_3888",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Deadlift",
+    "exerciseId": "barbell-deadlift",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-deadlift",
       "category": "strength",
@@ -826,10 +826,10 @@
   {
     "slug": "img-3889",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3889.MP4",
-    "title": "IMG_3889",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Kettlebell Swings",
+    "exerciseId": "kettlebell-swings",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "kettlebell-swings",
       "category": "strength",
@@ -843,10 +843,10 @@
   {
     "slug": "img-3890",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3890.MP4",
-    "title": "IMG_3890",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Kettlebell Swings",
+    "exerciseId": "kettlebell-swings",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "kettlebell-swings",
       "category": "strength",
@@ -860,10 +860,10 @@
   {
     "slug": "img-3900",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3900.MP4",
-    "title": "IMG_3900",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Good Morning",
+    "exerciseId": "barbell-goodmorning-367",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-goodmorning-367",
       "category": "strength",
@@ -877,10 +877,10 @@
   {
     "slug": "img-3901",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3901.MP4",
-    "title": "IMG_3901",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Squat",
+    "exerciseId": "barbell-squat",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-squat",
       "category": "strength",
@@ -894,10 +894,10 @@
   {
     "slug": "img-3903",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3903.MP4",
-    "title": "IMG_3903",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Squat",
+    "exerciseId": "barbell-squat",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-squat",
       "category": "strength",
@@ -911,10 +911,10 @@
   {
     "slug": "img-3904",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3904.MP4",
-    "title": "IMG_3904",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Squat",
+    "exerciseId": "barbell-squat",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-squat",
       "category": "strength",
@@ -928,10 +928,10 @@
   {
     "slug": "img-3907",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3907.MP4",
-    "title": "IMG_3907",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standing Alternating Dumbbell Bicep Curl",
+    "exerciseId": "standing-dumbbell-alternating-bicep-curl",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "standing-dumbbell-alternating-bicep-curl",
       "category": "toning",
@@ -996,10 +996,10 @@
   {
     "slug": "img-3913",
     "objectKey": "jamie-esposito-icloud-photos/IMG_3913.MP4",
-    "title": "IMG_3913",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Bent Over Cable Bar Row",
+    "exerciseId": "bent-over-cable-bar-row",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "bent-over-cable-bar-row",
       "category": "strength",
@@ -1030,10 +1030,10 @@
   {
     "slug": "img-4609",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4609.MP4",
-    "title": "IMG_4609",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Tricep Rope Pulldown",
+    "exerciseId": "tricep-rope-pulldown",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "tricep-rope-pulldown",
       "category": "strength",
@@ -1047,10 +1047,10 @@
   {
     "slug": "img-4610",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4610.MP4",
-    "title": "IMG_4610",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Narrow Grip Seated Cable Row",
+    "exerciseId": "narrow-grip-seated-cable-row",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "narrow-grip-seated-cable-row",
       "category": "strength",
@@ -1064,10 +1064,10 @@
   {
     "slug": "img-4611",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4611.MP4",
-    "title": "IMG_4611",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Narrow Grip Seated Cable Row",
+    "exerciseId": "narrow-grip-seated-cable-row",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "narrow-grip-seated-cable-row",
       "category": "strength",
@@ -1081,10 +1081,10 @@
   {
     "slug": "img-4613",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4613.MP4",
-    "title": "IMG_4613",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Narrow Grip Seated Cable Row",
+    "exerciseId": "narrow-grip-seated-cable-row",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "narrow-grip-seated-cable-row",
       "category": "strength",
@@ -1098,10 +1098,10 @@
   {
     "slug": "img-4616",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4616.MP4",
-    "title": "IMG_4616",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Pallof Cable Press",
+    "exerciseId": "pallof-cable-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "pallof-cable-press",
       "category": "strength",
@@ -1115,10 +1115,10 @@
   {
     "slug": "img-4617",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4617.MP4",
-    "title": "IMG_4617",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Oblique Rotations",
+    "exerciseId": "cable-oblique-rotations",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-oblique-rotations",
       "category": "strength",
@@ -1132,10 +1132,10 @@
   {
     "slug": "img-4618",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4618.MP4",
-    "title": "IMG_4618",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Kneeling Cable Rope Pull",
+    "exerciseId": "kneeling-cable-rope-pull",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "kneeling-cable-rope-pull",
       "category": "strength",
@@ -1149,10 +1149,10 @@
   {
     "slug": "img-4619",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4619.MP4",
-    "title": "IMG_4619",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Tricep Rope Pulldown",
+    "exerciseId": "tricep-rope-pulldown",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "tricep-rope-pulldown",
       "category": "strength",
@@ -1166,10 +1166,10 @@
   {
     "slug": "img-4621",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4621.MP4",
-    "title": "IMG_4621",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Bar Bicep Curl",
+    "exerciseId": "cable-bar-bicep-curl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-bar-bicep-curl",
       "category": "strength",
@@ -1183,10 +1183,10 @@
   {
     "slug": "img-4622",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4622.MP4",
-    "title": "IMG_4622",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Pallof Cable Press",
+    "exerciseId": "pallof-cable-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "pallof-cable-press",
       "category": "strength",
@@ -1200,10 +1200,10 @@
   {
     "slug": "img-4623",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4623.MP4",
-    "title": "IMG_4623",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Overhead Tricep Extension",
+    "exerciseId": "cable-overhead-tricep-extensions",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-overhead-tricep-extensions",
       "category": "strength",
@@ -1217,10 +1217,10 @@
   {
     "slug": "img-4624",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4624.MP4",
-    "title": "IMG_4624",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Pallof Press",
+    "exerciseId": "pallof-cable-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "pallof-cable-press",
       "category": "strength",
@@ -1234,10 +1234,10 @@
   {
     "slug": "img-4625",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4625.MP4",
-    "title": "IMG_4625",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Face Pull",
+    "exerciseId": "facepull",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "facepull",
       "category": "strength",
@@ -1251,10 +1251,10 @@
   {
     "slug": "img-4628",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4628.MP4",
-    "title": "IMG_4628",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Single Arm Overhead Cable Lat Pulldown",
+    "exerciseId": "single-arm-cable-over-head-lat-pulldown",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "single-arm-cable-over-head-lat-pulldown",
       "category": "strength",
@@ -1268,10 +1268,10 @@
   {
     "slug": "img-4629",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4629.MP4",
-    "title": "IMG_4629",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Kneeling Cable Overhead Tricep Extension",
+    "exerciseId": "kneeling-cable-overhead-tricep-extensions",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "kneeling-cable-overhead-tricep-extensions",
       "category": "strength",
@@ -1285,10 +1285,10 @@
   {
     "slug": "img-4630",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4630.MP4",
-    "title": "IMG_4630",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Isometric Squat Hold",
+    "exerciseId": "cable-isometric-squat-with-rope-pull",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-isometric-squat-with-rope-pull",
       "category": "strength",
@@ -1302,10 +1302,10 @@
   {
     "slug": "img-4632",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4632.MP4",
-    "title": "IMG_4632",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Cable Lat Pulldown",
+    "exerciseId": "seated-cable-lat-pull-down",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-cable-lat-pull-down",
       "category": "strength",
@@ -1319,10 +1319,10 @@
   {
     "slug": "img-4633",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4633.MP4",
-    "title": "IMG_4633",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Cable Lat Pulldown",
+    "exerciseId": "seated-cable-lat-pull-down",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-cable-lat-pull-down",
       "category": "strength",
@@ -1336,10 +1336,10 @@
   {
     "slug": "img-4634",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4634.MP4",
-    "title": "IMG_4634",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Cable Lat Pulldown",
+    "exerciseId": "seated-cable-lat-pull-down",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-cable-lat-pull-down",
       "category": "strength",
@@ -1353,10 +1353,10 @@
   {
     "slug": "img-4638",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4638.MP4",
-    "title": "IMG_4638",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Straight Arm Pulldown",
+    "exerciseId": "straight-arm-pulldown",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "straight-arm-pulldown",
       "category": "strength",
@@ -1370,10 +1370,10 @@
   {
     "slug": "img-4639",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4639.MP4",
-    "title": "IMG_4639",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Deadlift",
+    "exerciseId": "barbell-deadlift",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-deadlift",
       "category": "strength",
@@ -1387,10 +1387,10 @@
   {
     "slug": "img-4640",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4640.MP4",
-    "title": "IMG_4640",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Squat",
+    "exerciseId": "barbell-squat",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-squat",
       "category": "strength",
@@ -1404,10 +1404,10 @@
   {
     "slug": "img-4641",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4641.MP4",
-    "title": "IMG_4641",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Deadlift",
+    "exerciseId": "barbell-deadlift",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-deadlift",
       "category": "strength",
@@ -1421,10 +1421,10 @@
   {
     "slug": "img-4642",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4642.MP4",
-    "title": "IMG_4642",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Reverse Lunge",
+    "exerciseId": "barbell-reverse-lunge",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-reverse-lunge",
       "category": "strength",
@@ -1438,10 +1438,10 @@
   {
     "slug": "img-4643",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4643.MP4",
-    "title": "IMG_4643",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Box Step Ups",
+    "exerciseId": "box-step-ups",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "box-step-ups",
       "category": "strength",
@@ -1455,10 +1455,10 @@
   {
     "slug": "img-4644",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4644.MP4",
-    "title": "IMG_4644",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Kettlebell Goblet Squat",
+    "exerciseId": "dumbbell-squat",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-squat",
       "category": "strength",
@@ -1472,10 +1472,10 @@
   {
     "slug": "img-4645",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4645.MP4",
-    "title": "IMG_4645",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Romanian Deadlift",
+    "exerciseId": "dumbbell-rdl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-rdl",
       "category": "strength",
@@ -1505,10 +1505,10 @@
   {
     "slug": "img-4648",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4648.MP4",
-    "title": "IMG_4648",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Bulgarian Split Squat",
+    "exerciseId": "bulgarian-split-squat-glute-focused",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "bulgarian-split-squat-glute-focused",
       "category": "strength",
@@ -1522,10 +1522,10 @@
   {
     "slug": "img-4650",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4650.MP4",
-    "title": "IMG_4650",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Bodyweight Squat",
+    "exerciseId": "bodyweight-squat",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "bodyweight-squat",
       "category": "strength",
@@ -1547,10 +1547,10 @@
   {
     "slug": "img-4652",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4652.MP4",
-    "title": "IMG_4652",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Ball Straight Leg Bridge",
+    "exerciseId": "ball-straight-leg-bridge",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "ball-straight-leg-bridge",
       "category": "strength",
@@ -1564,10 +1564,10 @@
   {
     "slug": "img-4653",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4653.MP4",
-    "title": "IMG_4653",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Lower Leg Lifts Block Squeeze",
+    "exerciseId": "lower-leg-lifts-with-block-feet-holds",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "lower-leg-lifts-with-block-feet-holds",
       "category": "pilates",
@@ -1589,10 +1589,10 @@
   {
     "slug": "img-4655",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4655.MP4",
-    "title": "IMG_4655",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Stability Ball Plank",
+    "exerciseId": "sb-plank",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "sb-plank",
       "category": "strength",
@@ -1606,10 +1606,10 @@
   {
     "slug": "img-4656",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4656.MP4",
-    "title": "IMG_4656",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Stability Ball Plank",
+    "exerciseId": "sb-plank",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "sb-plank",
       "category": "strength",
@@ -1623,10 +1623,10 @@
   {
     "slug": "img-4657",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4657.MP4",
-    "title": "IMG_4657",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Smith Machine Squat",
+    "exerciseId": "smith-machine-squat-387",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "smith-machine-squat-387",
       "category": "strength",
@@ -1640,10 +1640,10 @@
   {
     "slug": "img-4658",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4658.MP4",
-    "title": "IMG_4658",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Smith Machine Squat",
+    "exerciseId": "smith-machine-squat-387",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "smith-machine-squat-387",
       "category": "strength",
@@ -1657,10 +1657,10 @@
   {
     "slug": "img-4659",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4659.MP4",
-    "title": "IMG_4659",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Smith Machine Squat",
+    "exerciseId": "smith-machine-squat-387",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "smith-machine-squat-387",
       "category": "strength",
@@ -1674,10 +1674,10 @@
   {
     "slug": "img-4660",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4660.MP4",
-    "title": "IMG_4660",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Smith Machine Squat",
+    "exerciseId": "smith-machine-squat-387",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "smith-machine-squat-387",
       "category": "strength",
@@ -1691,10 +1691,10 @@
   {
     "slug": "img-4661",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4661.MP4",
-    "title": "IMG_4661",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Smith Machine Stationary Lunge",
+    "exerciseId": "smith-machine-stationary-lunge",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "smith-machine-stationary-lunge",
       "category": "strength",
@@ -1708,10 +1708,10 @@
   {
     "slug": "img-4663",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4663.MP4",
-    "title": "IMG_4663",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Smith Machine Narrow RDL",
+    "exerciseId": "smith-machine-narrow-rdl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "smith-machine-narrow-rdl",
       "category": "strength",
@@ -1725,10 +1725,10 @@
   {
     "slug": "img-4664",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4664.MP4",
-    "title": "IMG_4664",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Smith Machine Romanian Deadlift",
+    "exerciseId": "smith-machine-rdl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "smith-machine-rdl",
       "category": "strength",
@@ -1742,10 +1742,10 @@
   {
     "slug": "img-4666",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4666.MP4",
-    "title": "IMG_4666",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Smith Machine Narrow RDL",
+    "exerciseId": "smith-machine-narrow-rdl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "smith-machine-narrow-rdl",
       "category": "strength",
@@ -1776,10 +1776,10 @@
   {
     "slug": "img-4668",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4668.MP4",
-    "title": "IMG_4668",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Smith Machine RDL",
+    "exerciseId": "smith-machine-rdl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "smith-machine-rdl",
       "category": "strength",
@@ -1793,10 +1793,10 @@
   {
     "slug": "img-4669",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4669.MP4",
-    "title": "IMG_4669",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Lying Leg Lowers",
+    "exerciseId": "leg-lowers-296",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "leg-lowers-296",
       "category": "toning",
@@ -1810,10 +1810,10 @@
   {
     "slug": "img-4670",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4670.MP4",
-    "title": "IMG_4670",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Smith Machine Prone Grip Row",
+    "exerciseId": "smith-machine-body-weight-prone-grip-row-321",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "smith-machine-body-weight-prone-grip-row-321",
       "category": "strength",
@@ -1827,10 +1827,10 @@
   {
     "slug": "img-4671",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4671.MP4",
-    "title": "IMG_4671",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Smith Machine Stationary Lunge",
+    "exerciseId": "smith-machine-stationary-lunge",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "smith-machine-stationary-lunge",
       "category": "strength",
@@ -1844,10 +1844,10 @@
   {
     "slug": "img-4775",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4775.MP4",
-    "title": "IMG_4775",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Chest Supported Incline Row",
+    "exerciseId": "chest-supported-incline-row",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "chest-supported-incline-row",
       "category": "strength",
@@ -1861,10 +1861,10 @@
   {
     "slug": "img-4777",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4777.MP4",
-    "title": "IMG_4777",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Cable Lat Pulldown",
+    "exerciseId": "seated-cable-lat-pull-down",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-cable-lat-pull-down",
       "category": "strength",
@@ -1886,10 +1886,10 @@
   {
     "slug": "img-4782",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4782.MOV",
-    "title": "IMG_4782",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standing Calf Raise Machine",
+    "exerciseId": "standing-calf-raise-machine",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "standing-calf-raise-machine",
       "category": "strength",
@@ -1903,10 +1903,10 @@
   {
     "slug": "img-4783",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4783.MOV",
-    "title": "IMG_4783",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Machine Tricep Dips",
+    "exerciseId": "tricep-dips-machine",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "tricep-dips-machine",
       "category": "strength",
@@ -1920,10 +1920,10 @@
   {
     "slug": "img-4784",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4784.MOV",
-    "title": "IMG_4784",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Prone Hamstring Curl",
+    "exerciseId": "prone-hamstring-machine",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "prone-hamstring-machine",
       "category": "strength",
@@ -1937,10 +1937,10 @@
   {
     "slug": "img-4785",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4785.MOV",
-    "title": "IMG_4785",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Prone Hamstring Curl Machine",
+    "exerciseId": "prone-hamstring-machine",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "prone-hamstring-machine",
       "category": "strength",
@@ -1954,10 +1954,10 @@
   {
     "slug": "img-4787",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4787.MP4",
-    "title": "IMG_4787",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Prone Leg Curl Glute Emphasis",
+    "exerciseId": "leg-curl-machine-glute-emphasis",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "leg-curl-machine-glute-emphasis",
       "category": "strength",
@@ -1971,10 +1971,10 @@
   {
     "slug": "img-4788",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4788.MP4",
-    "title": "IMG_4788",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Machine Leg Extension",
+    "exerciseId": "machine-leg-extension-393",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "machine-leg-extension-393",
       "category": "strength",
@@ -1988,10 +1988,10 @@
   {
     "slug": "img-4789",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4789.MP4",
-    "title": "IMG_4789",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Machine Leg Extension",
+    "exerciseId": "machine-leg-extension-393",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "machine-leg-extension-393",
       "category": "strength",
@@ -2005,10 +2005,10 @@
   {
     "slug": "img-4793",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4793.MP4",
-    "title": "IMG_4793",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Machine Seated Hip Abduction",
+    "exerciseId": "machine-seated-abduction",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "machine-seated-abduction",
       "category": "toning",
@@ -2022,10 +2022,10 @@
   {
     "slug": "img-4794",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4794.MP4",
-    "title": "IMG_4794",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Hip Abduction Machine",
+    "exerciseId": "machine-seated-abduction",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "machine-seated-abduction",
       "category": "toning",
@@ -2039,10 +2039,10 @@
   {
     "slug": "img-4797",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4797.MP4",
-    "title": "IMG_4797",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Machine Hip Abduction",
+    "exerciseId": "machine-seated-abduction",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "machine-seated-abduction",
       "category": "strength",
@@ -2056,10 +2056,10 @@
   {
     "slug": "img-4798",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4798.MP4",
-    "title": "IMG_4798",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Hip Abduction Machine",
+    "exerciseId": "machine-seated-abduction",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "machine-seated-abduction",
       "category": "toning",
@@ -2073,10 +2073,10 @@
   {
     "slug": "img-4799",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4799.MP4",
-    "title": "IMG_4799",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Hack Squat Machine",
+    "exerciseId": "hack-squat-machine-389",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "hack-squat-machine-389",
       "category": "strength",
@@ -2090,10 +2090,10 @@
   {
     "slug": "img-4800",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4800.MP4",
-    "title": "IMG_4800",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Hack Squat Machine",
+    "exerciseId": "hack-squat-machine-389",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "hack-squat-machine-389",
       "category": "strength",
@@ -2107,10 +2107,10 @@
   {
     "slug": "img-4801",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4801.MP4",
-    "title": "IMG_4801",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Hack Squat Machine",
+    "exerciseId": "hack-squat-machine-389",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "hack-squat-machine-389",
       "category": "strength",
@@ -2124,10 +2124,10 @@
   {
     "slug": "img-4803",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4803.MP4",
-    "title": "IMG_4803",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Hack Squat Machine",
+    "exerciseId": "hack-squat-machine-389",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "hack-squat-machine-389",
       "category": "strength",
@@ -2141,10 +2141,10 @@
   {
     "slug": "img-4804",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4804.MP4",
-    "title": "IMG_4804",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Decline Leg Press",
+    "exerciseId": "decline-leg-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "decline-leg-press",
       "category": "strength",
@@ -2175,10 +2175,10 @@
   {
     "slug": "img-4806",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4806.MP4",
-    "title": "IMG_4806",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Decline Leg Press",
+    "exerciseId": "decline-leg-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "decline-leg-press",
       "category": "strength",
@@ -2192,10 +2192,10 @@
   {
     "slug": "img-4807",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4807.MP4",
-    "title": "IMG_4807",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Decline Single Leg Press",
+    "exerciseId": "decline-leg-single-leg-press-high-stance",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "decline-leg-single-leg-press-high-stance",
       "category": "strength",
@@ -2209,10 +2209,10 @@
   {
     "slug": "img-4808",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4808.MP4",
-    "title": "IMG_4808",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Decline Leg Press",
+    "exerciseId": "decline-leg-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "decline-leg-press",
       "category": "strength",
@@ -2226,10 +2226,10 @@
   {
     "slug": "img-4809",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4809.MP4",
-    "title": "IMG_4809",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Decline Single Leg High Press",
+    "exerciseId": "decline-leg-single-leg-press-high-stance",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "decline-leg-single-leg-press-high-stance",
       "category": "strength",
@@ -2243,10 +2243,10 @@
   {
     "slug": "img-4810",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4810.MP4",
-    "title": "IMG_4810",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Prone Hamstring Machine Curl",
+    "exerciseId": "prone-hamstring-machine",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "prone-hamstring-machine",
       "category": "strength",
@@ -2260,10 +2260,10 @@
   {
     "slug": "img-4812",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4812.MP4",
-    "title": "IMG_4812",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Prone Hamstring Curl Machine",
+    "exerciseId": "prone-hamstring-machine",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "prone-hamstring-machine",
       "category": "strength",
@@ -2277,10 +2277,10 @@
   {
     "slug": "img-4813",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4813.MP4",
-    "title": "IMG_4813",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Decline Single Leg Leg Press",
+    "exerciseId": "decline-leg-single-leg-press-high-stance",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "decline-leg-single-leg-press-high-stance",
       "category": "strength",
@@ -2294,10 +2294,10 @@
   {
     "slug": "img-4816",
     "objectKey": "jamie-esposito-icloud-photos/IMG_4816.MP4",
-    "title": "IMG_4816",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Leg Press",
+    "exerciseId": "leg-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "leg-press",
       "category": "strength",
@@ -2311,10 +2311,10 @@
   {
     "slug": "img-5776-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5776-1.MP4",
-    "title": "IMG_5776-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Pilates Lower Leg Lifts",
+    "exerciseId": "pilates-lower-leg-lifts-309",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "pilates-lower-leg-lifts-309",
       "category": "pilates",
@@ -2328,10 +2328,10 @@
   {
     "slug": "img-5776-10",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5776-10.MP4",
-    "title": "IMG_5776-10",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Side Plank",
+    "exerciseId": "side-plank-292",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "side-plank-292",
       "category": "pilates",
@@ -2345,10 +2345,10 @@
   {
     "slug": "img-5776-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5776-2.MP4",
-    "title": "IMG_5776-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Pilates Lower Leg Lifts",
+    "exerciseId": "pilates-lower-leg-lifts-309",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "pilates-lower-leg-lifts-309",
       "category": "pilates",
@@ -2362,10 +2362,10 @@
   {
     "slug": "img-5776-3",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5776-3.MP4",
-    "title": "IMG_5776-3",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Single Leg Plank",
+    "exerciseId": "plank-289",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "plank-289",
       "category": "strength",
@@ -2396,10 +2396,10 @@
   {
     "slug": "img-5776-5",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5776-5.MP4",
-    "title": "IMG_5776-5",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Toe Touches",
+    "exerciseId": "toe-touches-299",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "toe-touches-299",
       "category": "toning",
@@ -2413,10 +2413,10 @@
   {
     "slug": "img-5776-6",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5776-6.MP4",
-    "title": "IMG_5776-6",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Banded Donkey Kicks",
+    "exerciseId": "banded-donkey-kicks",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "banded-donkey-kicks",
       "category": "toning",
@@ -2430,10 +2430,10 @@
   {
     "slug": "img-5776-7",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5776-7.MP4",
-    "title": "IMG_5776-7",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Forearm Plank Hold",
+    "exerciseId": "plank-289",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "plank-289",
       "category": "strength",
@@ -2447,10 +2447,10 @@
   {
     "slug": "img-5776-8",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5776-8.MP4",
-    "title": "IMG_5776-8",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Leg Lowers",
+    "exerciseId": "leg-lowers-296",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "leg-lowers-296",
       "category": "pilates",
@@ -2464,10 +2464,10 @@
   {
     "slug": "img-5776-9",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5776-9.MP4",
-    "title": "IMG_5776-9",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Side Plank",
+    "exerciseId": "side-plank-292",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "side-plank-292",
       "category": "strength",
@@ -2481,10 +2481,10 @@
   {
     "slug": "img-5776",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5776.MP4",
-    "title": "IMG_5776",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Leg Lowers",
+    "exerciseId": "leg-lowers-296",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "leg-lowers-296",
       "category": "toning",
@@ -2515,10 +2515,10 @@
   {
     "slug": "img-5778-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5778-2.MP4",
-    "title": "IMG_5778-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Banded Glute Kicks",
+    "exerciseId": "banded-glute-kicks",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "banded-glute-kicks",
       "category": "toning",
@@ -2532,10 +2532,10 @@
   {
     "slug": "img-5778-3",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5778-3.MP4",
-    "title": "IMG_5778-3",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "High Plank Hold",
+    "exerciseId": "plank-289",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "plank-289",
       "category": "strength",
@@ -2549,10 +2549,10 @@
   {
     "slug": "img-5778",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5778.MOV",
-    "title": "IMG_5778",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Superman Back Extension",
+    "exerciseId": "superman",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "superman",
       "category": "strength",
@@ -2583,10 +2583,10 @@
   {
     "slug": "img-5779-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5779-1.MOV",
-    "title": "IMG_5779-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Elevated Hip Bent Knee Raises",
+    "exerciseId": "elevated-hip-bent-knee-raises-310",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "elevated-hip-bent-knee-raises-310",
       "category": "pilates",
@@ -2600,10 +2600,10 @@
   {
     "slug": "img-5779-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5779-1.MP4",
-    "title": "IMG_5779-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Stability Ball Alternating Dead Bug",
+    "exerciseId": "sb-alt-dead-bug-312",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "sb-alt-dead-bug-312",
       "category": "pilates",
@@ -2617,10 +2617,10 @@
   {
     "slug": "img-5779-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5779-2.MOV",
-    "title": "IMG_5779-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Medicine Ball Dead Bugs",
+    "exerciseId": "medicine-ball-dead-bugs",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "medicine-ball-dead-bugs",
       "category": "pilates",
@@ -2634,10 +2634,10 @@
   {
     "slug": "img-5779-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5779-2.MP4",
-    "title": "IMG_5779-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Stability Ball Bird Dog",
+    "exerciseId": "stability-bird-dog-318",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "stability-bird-dog-318",
       "category": "pilates",
@@ -2667,10 +2667,10 @@
   {
     "slug": "img-5779",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5779.MOV",
-    "title": "IMG_5779",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Medicine Ball Dead Bugs",
+    "exerciseId": "medicine-ball-dead-bugs",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "medicine-ball-dead-bugs",
       "category": "pilates",
@@ -2684,10 +2684,10 @@
   {
     "slug": "img-5779",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5779.MP4",
-    "title": "IMG_5779",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Bent Knee Raise Yoga Block Adduction",
+    "exerciseId": "bent-knee-raise-with-yoga-block-adduction",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "bent-knee-raise-with-yoga-block-adduction",
       "category": "pilates",
@@ -2701,10 +2701,10 @@
   {
     "slug": "img-5781-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5781-1.MP4",
-    "title": "IMG_5781-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Toe Touches",
+    "exerciseId": "toe-touches-299",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "toe-touches-299",
       "category": "pilates",
@@ -2718,10 +2718,10 @@
   {
     "slug": "img-5781-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5781-2.MP4",
-    "title": "IMG_5781-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Table Top Knee Taps",
+    "exerciseId": "table-top-knee-taps-305",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "table-top-knee-taps-305",
       "category": "pilates",
@@ -2752,10 +2752,10 @@
   {
     "slug": "img-5781",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5781.MOV",
-    "title": "IMG_5781",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Lying Leg Lowers",
+    "exerciseId": "leg-lowers-296",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "leg-lowers-296",
       "category": "pilates",
@@ -2769,10 +2769,10 @@
   {
     "slug": "img-5781",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5781.MP4",
-    "title": "IMG_5781",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Stability Ball Plank",
+    "exerciseId": "sb-plank",
+    "category": "endurance",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "sb-plank",
       "category": "endurance",
@@ -2819,10 +2819,10 @@
   {
     "slug": "img-5783-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5783-1.MOV",
-    "title": "IMG_5783-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Table Top Towel Arm Slides",
+    "exerciseId": "table-top-alternating-towel-arm-slides",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "table-top-alternating-towel-arm-slides",
       "category": "pilates",
@@ -2836,10 +2836,10 @@
   {
     "slug": "img-5783-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5783-2.MOV",
-    "title": "IMG_5783-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Towel Pike",
+    "exerciseId": "towel-pike",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "towel-pike",
       "category": "pilates",
@@ -2853,10 +2853,10 @@
   {
     "slug": "img-5783",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5783.MOV",
-    "title": "IMG_5783",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Banded Donkey Kicks",
+    "exerciseId": "banded-donkey-kicks",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "banded-donkey-kicks",
       "category": "strength",
@@ -2870,10 +2870,10 @@
   {
     "slug": "img-5784-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5784-1.MOV",
-    "title": "IMG_5784-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Bent Knee Raises with Block",
+    "exerciseId": "bent-knee-raises-with-block-between-feet",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "bent-knee-raises-with-block-between-feet",
       "category": "pilates",
@@ -2887,10 +2887,10 @@
   {
     "slug": "img-5784",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5784.MOV",
-    "title": "IMG_5784",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Pilates Lower Leg Lifts",
+    "exerciseId": "pilates-lower-leg-lifts-309",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "pilates-lower-leg-lifts-309",
       "category": "pilates",
@@ -2904,10 +2904,10 @@
   {
     "slug": "img-5784",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5784.MP4",
-    "title": "IMG_5784",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Table Top Knee Taps Adduction",
+    "exerciseId": "table-top-knee-taps-with-block-adduction",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "table-top-knee-taps-with-block-adduction",
       "category": "pilates",
@@ -2921,10 +2921,10 @@
   {
     "slug": "img-5785-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5785-1.MP4",
-    "title": "IMG_5785-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Table Top Knee Taps Adduction",
+    "exerciseId": "table-top-knee-taps-with-block-adduction",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "table-top-knee-taps-with-block-adduction",
       "category": "pilates",
@@ -2946,10 +2946,10 @@
   {
     "slug": "img-5785",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5785.MP4",
-    "title": "IMG_5785",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Leg Lowers",
+    "exerciseId": "leg-lowers-296",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "leg-lowers-296",
       "category": "pilates",
@@ -2963,10 +2963,10 @@
   {
     "slug": "img-5786-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5786-1.MP4",
-    "title": "IMG_5786-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Supported Hip Dead Bug",
+    "exerciseId": "supported-hip-dead-bug",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "supported-hip-dead-bug",
       "category": "pilates",
@@ -2988,10 +2988,10 @@
   {
     "slug": "img-5787",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5787.MP4",
-    "title": "IMG_5787",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Stability Bird Dog",
+    "exerciseId": "stability-bird-dog-318",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "stability-bird-dog-318",
       "category": "pilates",
@@ -3005,10 +3005,10 @@
   {
     "slug": "img-5788-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5788-1.MP4",
-    "title": "IMG_5788-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Deadlift",
+    "exerciseId": "barbell-deadlift",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-deadlift",
       "category": "strength",
@@ -3039,10 +3039,10 @@
   {
     "slug": "img-5789",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5789.MP4",
-    "title": "IMG_5789",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standing Single Leg RDL",
+    "exerciseId": "standing-single-leg-dumbbell-rdl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "standing-single-leg-dumbbell-rdl",
       "category": "strength",
@@ -3056,10 +3056,10 @@
   {
     "slug": "img-5790",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5790.MP4",
-    "title": "IMG_5790",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Romanian Deadlift",
+    "exerciseId": "barbell-rdl-379",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-rdl-379",
       "category": "strength",
@@ -3073,10 +3073,10 @@
   {
     "slug": "img-5791",
     "objectKey": "jamie-esposito-icloud-photos/IMG_5791.MP4",
-    "title": "IMG_5791",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Romanian Deadlift",
+    "exerciseId": "barbell-rdl-379",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-rdl-379",
       "category": "strength",
@@ -3090,10 +3090,10 @@
   {
     "slug": "img-6179",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6179.MOV",
-    "title": "IMG_6179",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standing Dumbbell Frontal Raises",
+    "exerciseId": "standing-dumbbell-frontal-raises",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "standing-dumbbell-frontal-raises",
       "category": "strength",
@@ -3107,10 +3107,10 @@
   {
     "slug": "img-6180",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6180.MOV",
-    "title": "IMG_6180",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Romanian Deadlift",
+    "exerciseId": "dumbbell-rdl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-rdl",
       "category": "strength",
@@ -3124,10 +3124,10 @@
   {
     "slug": "img-6181-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6181-1.MP4",
-    "title": "IMG_6181-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standing Single Leg Dumbbell RDL",
+    "exerciseId": "standing-single-leg-dumbbell-rdl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "standing-single-leg-dumbbell-rdl",
       "category": "strength",
@@ -3141,10 +3141,10 @@
   {
     "slug": "img-6181-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6181-2.MP4",
-    "title": "IMG_6181-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Lateral Raise",
+    "exerciseId": "dumbbell-lateral-raise",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-lateral-raise",
       "category": "toning",
@@ -3158,10 +3158,10 @@
   {
     "slug": "img-6181-3",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6181-3.MP4",
-    "title": "IMG_6181-3",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Single Arm Kneeling Cable Row",
+    "exerciseId": "single-arm-kneeling-cable-row",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "single-arm-kneeling-cable-row",
       "category": "strength",
@@ -3192,10 +3192,10 @@
   {
     "slug": "img-6181",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6181.MP4",
-    "title": "IMG_6181",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standing Single Leg Dumbbell RDL",
+    "exerciseId": "standing-single-leg-dumbbell-rdl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "standing-single-leg-dumbbell-rdl",
       "category": "strength",
@@ -3209,10 +3209,10 @@
   {
     "slug": "img-6182",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6182.MP4",
-    "title": "IMG_6182",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Bodyweight Squat",
+    "exerciseId": "bodyweight-squat",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "bodyweight-squat",
       "category": "strength",
@@ -3226,10 +3226,10 @@
   {
     "slug": "img-6183-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6183-1.MP4",
-    "title": "IMG_6183-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Lateral Raise",
+    "exerciseId": "dumbbell-lateral-raise",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-lateral-raise",
       "category": "toning",
@@ -3243,10 +3243,10 @@
   {
     "slug": "img-6183-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6183-2.MP4",
-    "title": "IMG_6183-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standing Dumbbell Hammer Curl",
+    "exerciseId": "standing-dumbbell-alternating-hammer-curl",
+    "category": "muscle_gain",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "standing-dumbbell-alternating-hammer-curl",
       "category": "muscle_gain",
@@ -3260,10 +3260,10 @@
   {
     "slug": "img-6183-3",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6183-3.MP4",
-    "title": "IMG_6183-3",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standing Dumbbell Curl and Press",
+    "exerciseId": "standing-dumbbell-curl-and-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "standing-dumbbell-curl-and-press",
       "category": "strength",
@@ -3277,10 +3277,10 @@
   {
     "slug": "img-6183",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6183.MOV",
-    "title": "IMG_6183",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Single Leg Reverse Lunge",
+    "exerciseId": "single-leg-reverse-lunges-366",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "single-leg-reverse-lunges-366",
       "category": "strength",
@@ -3294,10 +3294,10 @@
   {
     "slug": "img-6183",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6183.MP4",
-    "title": "IMG_6183",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Lateral Raise",
+    "exerciseId": "dumbbell-lateral-raise",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-lateral-raise",
       "category": "strength",
@@ -3311,10 +3311,10 @@
   {
     "slug": "img-6184-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6184-1.MP4",
-    "title": "IMG_6184-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Lateral Raise",
+    "exerciseId": "dumbbell-lateral-raise",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-lateral-raise",
       "category": "strength",
@@ -3328,10 +3328,10 @@
   {
     "slug": "img-6184",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6184.MP4",
-    "title": "IMG_6184",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Lateral Raise",
+    "exerciseId": "dumbbell-lateral-raise",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-lateral-raise",
       "category": "strength",
@@ -3345,10 +3345,10 @@
   {
     "slug": "img-6185",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6185.MOV",
-    "title": "IMG_6185",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Renegade Row",
+    "exerciseId": "renegade-row",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "renegade-row",
       "category": "strength",
@@ -3379,10 +3379,10 @@
   {
     "slug": "img-6186-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6186-1.MOV",
-    "title": "IMG_6186-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standing Dumbbell Windmill",
+    "exerciseId": "standing-dumbbell-windmill",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "standing-dumbbell-windmill",
       "category": "strength",
@@ -3396,10 +3396,10 @@
   {
     "slug": "img-6186",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6186.MOV",
-    "title": "IMG_6186",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Single Arm Bent Over Row",
+    "exerciseId": "single-arm-dumbbell-bent-over-row",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "single-arm-dumbbell-bent-over-row",
       "category": "strength",
@@ -3413,10 +3413,10 @@
   {
     "slug": "img-6187-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6187-1.MOV",
-    "title": "IMG_6187-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Jump Rope",
+    "exerciseId": "jump-rope",
+    "category": "endurance",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "jump-rope",
       "category": "endurance",
@@ -3430,10 +3430,10 @@
   {
     "slug": "img-6187",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6187.MOV",
-    "title": "IMG_6187",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Banded Standing Glute Kicks",
+    "exerciseId": "banded-standing-glute-kicks",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "banded-standing-glute-kicks",
       "category": "toning",
@@ -3447,10 +3447,10 @@
   {
     "slug": "img-6188",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6188.MOV",
-    "title": "IMG_6188",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Bent Over Cable Bar Row",
+    "exerciseId": "bent-over-cable-bar-row",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "bent-over-cable-bar-row",
       "category": "strength",
@@ -3464,10 +3464,10 @@
   {
     "slug": "img-6189",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6189.MOV",
-    "title": "IMG_6189",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Kneeling Cable Rope Pull",
+    "exerciseId": "kneeling-cable-rope-pull",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "kneeling-cable-rope-pull",
       "category": "strength",
@@ -3497,10 +3497,10 @@
   {
     "slug": "img-6192",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6192.MP4",
-    "title": "IMG_6192",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Tricep Rope Pulldown",
+    "exerciseId": "tricep-rope-pulldown",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "tricep-rope-pulldown",
       "category": "toning",
@@ -3514,10 +3514,10 @@
   {
     "slug": "img-6193",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6193.MP4",
-    "title": "IMG_6193",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Isometric Squat Cable Rope Pull",
+    "exerciseId": "cable-isometric-squat-with-rope-pull",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-isometric-squat-with-rope-pull",
       "category": "strength",
@@ -3531,10 +3531,10 @@
   {
     "slug": "img-6194",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6194.MP4",
-    "title": "IMG_6194",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Isometric Squat Rope Pull",
+    "exerciseId": "cable-isometric-squat-with-rope-pull",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-isometric-squat-with-rope-pull",
       "category": "strength",
@@ -3548,10 +3548,10 @@
   {
     "slug": "img-6195",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6195.MP4",
-    "title": "IMG_6195",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Bent Over Cable Rope Row",
+    "exerciseId": "bent-over-cable-rope-row",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "bent-over-cable-rope-row",
       "category": "strength",
@@ -3581,10 +3581,10 @@
   {
     "slug": "img-6198",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6198.MP4",
-    "title": "IMG_6198",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Single Arm Cable Tricep Pushdown",
+    "exerciseId": "cable-single-arm-tricep-push-down",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-single-arm-tricep-push-down",
       "category": "toning",
@@ -3606,10 +3606,10 @@
   {
     "slug": "img-6201",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6201.MOV",
-    "title": "IMG_6201",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Pallof Cable Press",
+    "exerciseId": "pallof-cable-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "pallof-cable-press",
       "category": "strength",
@@ -3623,10 +3623,10 @@
   {
     "slug": "img-6202",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6202.MP4",
-    "title": "IMG_6202",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Bar Bicep Curl",
+    "exerciseId": "cable-bar-bicep-curl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-bar-bicep-curl",
       "category": "strength",
@@ -3640,10 +3640,10 @@
   {
     "slug": "img-6203",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6203.MP4",
-    "title": "IMG_6203",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Rope Hammer Curls",
+    "exerciseId": "cable-rope-hammer-curls",
+    "category": "muscle_gain",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-rope-hammer-curls",
       "category": "muscle_gain",
@@ -3674,10 +3674,10 @@
   {
     "slug": "img-6205",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6205.MOV",
-    "title": "IMG_6205",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Tricep Rope Pulldown",
+    "exerciseId": "tricep-rope-pulldown",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "tricep-rope-pulldown",
       "category": "strength",
@@ -3691,10 +3691,10 @@
   {
     "slug": "img-6206",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6206.MOV",
-    "title": "IMG_6206",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Pallof Cable Press",
+    "exerciseId": "pallof-cable-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "pallof-cable-press",
       "category": "strength",
@@ -3708,10 +3708,10 @@
   {
     "slug": "img-6207",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6207.MOV",
-    "title": "IMG_6207",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Pallof Press",
+    "exerciseId": "pallof-cable-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "pallof-cable-press",
       "category": "strength",
@@ -3725,10 +3725,10 @@
   {
     "slug": "img-6208",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6208.MP4",
-    "title": "IMG_6208",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Straight Arm Pulldown",
+    "exerciseId": "straight-arm-pulldown",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "straight-arm-pulldown",
       "category": "strength",
@@ -3759,10 +3759,10 @@
   {
     "slug": "img-6209-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6209-1.MP4",
-    "title": "IMG_6209-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Single Leg Leg Press",
+    "exerciseId": "single-leg-leg-press-machine",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "single-leg-leg-press-machine",
       "category": "strength",
@@ -3776,10 +3776,10 @@
   {
     "slug": "img-6209-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6209-2.MOV",
-    "title": "IMG_6209-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Machine Leg Press",
+    "exerciseId": "leg-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "leg-press",
       "category": "strength",
@@ -3793,10 +3793,10 @@
   {
     "slug": "img-6209-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6209-2.MP4",
-    "title": "IMG_6209-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Single Leg Leg Press",
+    "exerciseId": "single-leg-leg-press-machine",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "single-leg-leg-press-machine",
       "category": "strength",
@@ -3810,10 +3810,10 @@
   {
     "slug": "img-6209",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6209.MOV",
-    "title": "IMG_6209",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Single Leg Leg Press",
+    "exerciseId": "single-leg-leg-press-machine",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "single-leg-leg-press-machine",
       "category": "strength",
@@ -3827,10 +3827,10 @@
   {
     "slug": "img-6209",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6209.MP4",
-    "title": "IMG_6209",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Single Leg Leg Press",
+    "exerciseId": "single-leg-leg-press-machine",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "single-leg-leg-press-machine",
       "category": "strength",
@@ -3844,10 +3844,10 @@
   {
     "slug": "img-6210",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6210.MP4",
-    "title": "IMG_6210",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Machine Leg Extension",
+    "exerciseId": "machine-leg-extension-393",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "machine-leg-extension-393",
       "category": "strength",
@@ -3861,10 +3861,10 @@
   {
     "slug": "img-6211-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6211-1.MP4",
-    "title": "IMG_6211-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Machine Shoulder Press",
+    "exerciseId": "shoulder-press-machine",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "shoulder-press-machine",
       "category": "strength",
@@ -3878,10 +3878,10 @@
   {
     "slug": "img-6211",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6211.MP4",
-    "title": "IMG_6211",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Machine Chest Press",
+    "exerciseId": "machine-chest-press-349",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "machine-chest-press-349",
       "category": "strength",
@@ -3895,10 +3895,10 @@
   {
     "slug": "img-6212",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6212.MP4",
-    "title": "IMG_6212",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Machine Tricep Pushdown",
+    "exerciseId": "machine-tricep-push-down",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "machine-tricep-push-down",
       "category": "strength",
@@ -3912,10 +3912,10 @@
   {
     "slug": "img-6213",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6213.MP4",
-    "title": "IMG_6213",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Squat",
+    "exerciseId": "barbell-squat",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-squat",
       "category": "strength",
@@ -3929,10 +3929,10 @@
   {
     "slug": "img-6214-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6214-1.MP4",
-    "title": "IMG_6214-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Chest Press Machine",
+    "exerciseId": "chest-press-machine",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "chest-press-machine",
       "category": "strength",
@@ -3946,10 +3946,10 @@
   {
     "slug": "img-6214",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6214.MP4",
-    "title": "IMG_6214",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Machine Leg Press",
+    "exerciseId": "leg-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "leg-press",
       "category": "strength",
@@ -3963,10 +3963,10 @@
   {
     "slug": "img-6215",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6215.MP4",
-    "title": "IMG_6215",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Chest Press",
+    "exerciseId": "barbell-chest-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-chest-press",
       "category": "strength",
@@ -3980,10 +3980,10 @@
   {
     "slug": "img-6216",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6216.MOV",
-    "title": "IMG_6216",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Pullover",
+    "exerciseId": "dumbbell-pullover",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-pullover",
       "category": "strength",
@@ -3997,10 +3997,10 @@
   {
     "slug": "img-6217",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6217.MOV",
-    "title": "IMG_6217",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Chest Fly",
+    "exerciseId": "dumbbell-fly",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-fly",
       "category": "toning",
@@ -4031,10 +4031,10 @@
   {
     "slug": "img-6218",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6218.MP4",
-    "title": "IMG_6218",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Donkey Kickback",
+    "exerciseId": "cable-donkey-kickback",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-donkey-kickback",
       "category": "strength",
@@ -4048,10 +4048,10 @@
   {
     "slug": "img-6219-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6219-1.MP4",
-    "title": "IMG_6219-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Hanging Knee Raises",
+    "exerciseId": "hanging-knee-raises",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "hanging-knee-raises",
       "category": "strength",
@@ -4090,10 +4090,10 @@
   {
     "slug": "img-6221-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6221-1.MOV",
-    "title": "IMG_6221-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Straight Leg Abduction",
+    "exerciseId": "cable-abduction-straight-leg",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-abduction-straight-leg",
       "category": "toning",
@@ -4107,10 +4107,10 @@
   {
     "slug": "img-6221-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6221-2.MOV",
-    "title": "IMG_6221-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Glute Kickback",
+    "exerciseId": "cable-kickback",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-kickback",
       "category": "strength",
@@ -4124,10 +4124,10 @@
   {
     "slug": "img-6221",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6221.MOV",
-    "title": "IMG_6221",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standing Single Leg RDL",
+    "exerciseId": "standing-single-leg-dumbbell-rdl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "standing-single-leg-dumbbell-rdl",
       "category": "strength",
@@ -4141,10 +4141,10 @@
   {
     "slug": "img-6222",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6222.MOV",
-    "title": "IMG_6222",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Donkey Kickback",
+    "exerciseId": "cable-donkey-kickback",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-donkey-kickback",
       "category": "strength",
@@ -4158,10 +4158,10 @@
   {
     "slug": "img-6222",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6222.MP4",
-    "title": "IMG_6222",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Glute Kickback",
+    "exerciseId": "cable-kickback",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-kickback",
       "category": "strength",
@@ -4175,10 +4175,10 @@
   {
     "slug": "img-6223",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6223.MOV",
-    "title": "IMG_6223",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Donkey Kickback",
+    "exerciseId": "cable-donkey-kickback",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-donkey-kickback",
       "category": "strength",
@@ -4200,10 +4200,10 @@
   {
     "slug": "img-6225",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6225.MP4",
-    "title": "IMG_6225",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Narrow High Stance Leg Press",
+    "exerciseId": "leg-press-narrow-high-stance-glute-focus",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "leg-press-narrow-high-stance-glute-focus",
       "category": "strength",
@@ -4234,10 +4234,10 @@
   {
     "slug": "img-6227",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6227.MP4",
-    "title": "IMG_6227",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Barbell Hip Thrusts",
+    "exerciseId": "barbell-hip-thrusts",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "barbell-hip-thrusts",
       "category": "strength",
@@ -4251,10 +4251,10 @@
   {
     "slug": "img-6228-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6228-1.MP4",
-    "title": "IMG_6228-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Single Arm Dumbbell Row",
+    "exerciseId": "single-arm-dumbbell-row-323",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "single-arm-dumbbell-row-323",
       "category": "strength",
@@ -4268,10 +4268,10 @@
   {
     "slug": "img-6228-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6228-2.MP4",
-    "title": "IMG_6228-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Bench Supported Y Raise",
+    "exerciseId": "bench-supported-y",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "bench-supported-y",
       "category": "strength",
@@ -4285,10 +4285,10 @@
   {
     "slug": "img-6228-3",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6228-3.MP4",
-    "title": "IMG_6228-3",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Chest Supported Incline Row",
+    "exerciseId": "chest-supported-incline-row",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "chest-supported-incline-row",
       "category": "strength",
@@ -4302,10 +4302,10 @@
   {
     "slug": "img-6228",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6228.MOV",
-    "title": "IMG_6228",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Chest Supported Incline Row",
+    "exerciseId": "chest-supported-incline-row",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "chest-supported-incline-row",
       "category": "strength",
@@ -4327,10 +4327,10 @@
   {
     "slug": "img-6229-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6229-1.MP4",
-    "title": "IMG_6229-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Low-to-High Woodchop",
+    "exerciseId": "cable-low-to-high-woodchops",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-low-to-high-woodchops",
       "category": "strength",
@@ -4344,10 +4344,10 @@
   {
     "slug": "img-6229-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6229-2.MP4",
-    "title": "IMG_6229-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Cable Low to High Woodchop",
+    "exerciseId": "cable-low-to-high-woodchops",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "cable-low-to-high-woodchops",
       "category": "strength",
@@ -4361,10 +4361,10 @@
   {
     "slug": "img-6229",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6229.MP4",
-    "title": "IMG_6229",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Bent Over Cable Rope Row",
+    "exerciseId": "bent-over-cable-rope-row",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "bent-over-cable-rope-row",
       "category": "strength",
@@ -4378,10 +4378,10 @@
   {
     "slug": "img-6230",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6230.MP4",
-    "title": "IMG_6230",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Pallof Cable Press",
+    "exerciseId": "pallof-cable-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "pallof-cable-press",
       "category": "strength",
@@ -4395,10 +4395,10 @@
   {
     "slug": "img-6231-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6231-1.MP4",
-    "title": "IMG_6231-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Banded Side Shuffle",
+    "exerciseId": "band-shuffle",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "band-shuffle",
       "category": "strength",
@@ -4412,10 +4412,10 @@
   {
     "slug": "img-6231-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6231-2.MP4",
-    "title": "IMG_6231-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Band Shuffle",
+    "exerciseId": "band-shuffle",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "band-shuffle",
       "category": "toning",
@@ -4429,10 +4429,10 @@
   {
     "slug": "img-6231",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6231.MP4",
-    "title": "IMG_6231",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Hip Bridges",
+    "exerciseId": "hip-bridges-optional-423",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "hip-bridges-optional-423",
       "category": "strength",
@@ -4446,10 +4446,10 @@
   {
     "slug": "img-6232-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6232-1.MOV",
-    "title": "IMG_6232-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Banded Donkey Kicks",
+    "exerciseId": "banded-donkey-kicks",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "banded-donkey-kicks",
       "category": "strength",
@@ -4463,10 +4463,10 @@
   {
     "slug": "img-6232-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6232-1.MP4",
-    "title": "IMG_6232-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Lower Leg Windmill",
+    "exerciseId": "lower-leg-windmill",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "lower-leg-windmill",
       "category": "pilates",
@@ -4497,10 +4497,10 @@
   {
     "slug": "img-6232",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6232.MOV",
-    "title": "IMG_6232",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Banded Donkey Kicks",
+    "exerciseId": "banded-donkey-kicks",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "banded-donkey-kicks",
       "category": "strength",
@@ -4514,10 +4514,10 @@
   {
     "slug": "img-6232",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6232.MP4",
-    "title": "IMG_6232",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Banded Donkey Kicks",
+    "exerciseId": "banded-donkey-kicks",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "banded-donkey-kicks",
       "category": "strength",
@@ -4548,10 +4548,10 @@
   {
     "slug": "img-6233-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6233-2.MP4",
-    "title": "IMG_6233-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Superman Back Extension",
+    "exerciseId": "superman",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "superman",
       "category": "strength",
@@ -4565,10 +4565,10 @@
   {
     "slug": "img-6233-3",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6233-3.MP4",
-    "title": "IMG_6233-3",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Shoulder Floor Push Up",
+    "exerciseId": "shoulder-floor-push-up",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "shoulder-floor-push-up",
       "category": "strength",
@@ -4582,10 +4582,10 @@
   {
     "slug": "img-6233-4",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6233-4.MP4",
-    "title": "IMG_6233-4",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standard Plank Hold",
+    "exerciseId": "plank-289",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "plank-289",
       "category": "strength",
@@ -4599,10 +4599,10 @@
   {
     "slug": "img-6233-5",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6233-5.MP4",
-    "title": "IMG_6233-5",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Superman Back Extension",
+    "exerciseId": "superman",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "superman",
       "category": "strength",
@@ -4616,10 +4616,10 @@
   {
     "slug": "img-6233-6",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6233-6.MP4",
-    "title": "IMG_6233-6",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standard Plank Hold",
+    "exerciseId": "plank-289",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "plank-289",
       "category": "strength",
@@ -4633,10 +4633,10 @@
   {
     "slug": "img-6233",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6233.MP4",
-    "title": "IMG_6233",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Superman Back Extension",
+    "exerciseId": "superman",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "superman",
       "category": "strength",
@@ -4650,10 +4650,10 @@
   {
     "slug": "img-6234-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6234-1.MOV",
-    "title": "IMG_6234-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Wall Sit with Arm Hold",
+    "exerciseId": "wall-sit-with-parallel-isometric-arm-hold",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "wall-sit-with-parallel-isometric-arm-hold",
       "category": "strength",
@@ -4667,10 +4667,10 @@
   {
     "slug": "img-6234-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6234-2.MOV",
-    "title": "IMG_6234-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Dumbbell Lateral Raises",
+    "exerciseId": "seated-dumbbell-lateral-raises",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-dumbbell-lateral-raises",
       "category": "toning",
@@ -4692,10 +4692,10 @@
   {
     "slug": "img-6234",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6234.MP4",
-    "title": "IMG_6234",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Wall Sit with Arm Hold",
+    "exerciseId": "wall-sit-with-parallel-isometric-arm-hold",
+    "category": "endurance",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "wall-sit-with-parallel-isometric-arm-hold",
       "category": "endurance",
@@ -4709,10 +4709,10 @@
   {
     "slug": "img-6809-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6809-1.MP4",
-    "title": "IMG_6809-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Dumbbell Lateral Raises",
+    "exerciseId": "seated-dumbbell-lateral-raises",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-dumbbell-lateral-raises",
       "category": "strength",
@@ -4726,10 +4726,10 @@
   {
     "slug": "img-6809-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6809-2.MP4",
-    "title": "IMG_6809-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Dumbbell Shoulder Press",
+    "exerciseId": "seated-dumbbell-shoulder-press",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-dumbbell-shoulder-press",
       "category": "strength",
@@ -4743,10 +4743,10 @@
   {
     "slug": "img-6809-3",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6809-3.MP4",
-    "title": "IMG_6809-3",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Dumbbell Lateral Raise",
+    "exerciseId": "seated-dumbbell-lateral-raises",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-dumbbell-lateral-raises",
       "category": "strength",
@@ -4760,10 +4760,10 @@
   {
     "slug": "img-6809-4",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6809-4.MP4",
-    "title": "IMG_6809-4",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Single Arm Dumbbell Curl Adduction",
+    "exerciseId": "seated-single-arm-dumbbell-curl-with-block-adduction",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-single-arm-dumbbell-curl-with-block-adduction",
       "category": "strength",
@@ -4777,10 +4777,10 @@
   {
     "slug": "img-6809",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6809.MP4",
-    "title": "IMG_6809",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Seated Dumbbell Shoulder Press Adduction",
+    "exerciseId": "seated-dumbbell-shoulder-press-with-adduction",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "seated-dumbbell-shoulder-press-with-adduction",
       "category": "strength",
@@ -4794,10 +4794,10 @@
   {
     "slug": "img-6810",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6810.MP4",
-    "title": "IMG_6810",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Renegade Row",
+    "exerciseId": "renegade-row",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "renegade-row",
       "category": "strength",
@@ -4811,10 +4811,10 @@
   {
     "slug": "img-6812-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6812-1.MP4",
-    "title": "IMG_6812-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standing Plate Lateral Raises",
+    "exerciseId": "standing-plate-alternating-frontal-and-lateral-raises",
+    "category": "muscle_gain",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "standing-plate-alternating-frontal-and-lateral-raises",
       "category": "muscle_gain",
@@ -4828,10 +4828,10 @@
   {
     "slug": "img-6812-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6812-2.MP4",
-    "title": "IMG_6812-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Standing Plate Lateral Raises",
+    "exerciseId": "standing-plate-lateral-raises",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "standing-plate-lateral-raises",
       "category": "strength",
@@ -4845,10 +4845,10 @@
   {
     "slug": "img-6812-3",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6812-3.MP4",
-    "title": "IMG_6812-3",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Romanian Deadlift",
+    "exerciseId": "dumbbell-rdl",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-rdl",
       "category": "strength",
@@ -4878,10 +4878,10 @@
   {
     "slug": "img-6813",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6813.MP4",
-    "title": "IMG_6813",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Kettlebell Plank Unilateral Slide",
+    "exerciseId": "plank-with-kettlebell-unilateral-slide",
+    "category": "endurance",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "plank-with-kettlebell-unilateral-slide",
       "category": "endurance",
@@ -4895,10 +4895,10 @@
   {
     "slug": "img-6814-1",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6814-1.MP4",
-    "title": "IMG_6814-1",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Dumbbell Pullover",
+    "exerciseId": "dumbbell-pullover",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "dumbbell-pullover",
       "category": "strength",
@@ -4912,10 +4912,10 @@
   {
     "slug": "img-6814",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6814.MP4",
-    "title": "IMG_6814",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "KB Alternating Low Leg Raises",
+    "exerciseId": "kb-alternating-low-leg-raises",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "kb-alternating-low-leg-raises",
       "category": "toning",
@@ -4929,10 +4929,10 @@
   {
     "slug": "img-6815",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6815.MP4",
-    "title": "IMG_6815",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Deadbug Extensions",
+    "exerciseId": "deadbug-extensions-optional-424",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "deadbug-extensions-optional-424",
       "category": "strength",
@@ -4963,10 +4963,10 @@
   {
     "slug": "img-6816-2",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6816-2.MP4",
-    "title": "IMG_6816-2",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Lower Leg Lifts with Block",
+    "exerciseId": "lower-leg-lifts-with-block-feet-holds",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "lower-leg-lifts-with-block-feet-holds",
       "category": "pilates",
@@ -4980,10 +4980,10 @@
   {
     "slug": "img-6816-3",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6816-3.MP4",
-    "title": "IMG_6816-3",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Lower Leg Lifts with Block",
+    "exerciseId": "lower-leg-lifts-with-block-feet-holds",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "lower-leg-lifts-with-block-feet-holds",
       "category": "pilates",
@@ -5005,10 +5005,10 @@
   {
     "slug": "img-6816-5",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6816-5.MP4",
-    "title": "IMG_6816-5",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Lying Crunch with Adduction",
+    "exerciseId": "lying-crunch-with-adduction",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "lying-crunch-with-adduction",
       "category": "pilates",
@@ -5022,10 +5022,10 @@
   {
     "slug": "img-6816",
     "objectKey": "jamie-esposito-icloud-photos/IMG_6816.MP4",
-    "title": "IMG_6816",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Bent Knee Raise Yoga Block Adduction",
+    "exerciseId": "bent-knee-raise-with-yoga-block-adduction",
+    "category": "pilates",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "bent-knee-raise-with-yoga-block-adduction",
       "category": "pilates",
@@ -5039,10 +5039,10 @@
   {
     "slug": "img-7287",
     "objectKey": "jamie-esposito-icloud-photos/IMG_7287.MP4",
-    "title": "IMG_7287",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Bench Hyperextensions",
+    "exerciseId": "hyperextensions",
+    "category": "strength",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "hyperextensions",
       "category": "strength",
@@ -5056,10 +5056,10 @@
   {
     "slug": "img-9654",
     "objectKey": "jamie-esposito-icloud-photos/IMG_9654.MP4",
-    "title": "IMG_9654",
-    "exerciseId": null,
-    "category": null,
-    "needsReview": true,
+    "title": "Banded Donkey Kicks",
+    "exerciseId": "banded-donkey-kicks",
+    "category": "toning",
+    "needsReview": false,
     "aiSuggested": {
       "exerciseId": "banded-donkey-kicks",
       "category": "toning",
