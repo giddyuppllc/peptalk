@@ -74,10 +74,13 @@ export default function GuideDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back Button */}
+        {/* Back Button — falls back to Learn index for deep-link cold-starts. */}
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace('/learn');
+          }}
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel="Go back"

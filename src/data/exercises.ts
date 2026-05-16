@@ -17,12 +17,6 @@ import type {
   ExerciseTag,
 } from '../types/fitness';
 import rawExercises from './jamieExercises.json';
-// Grok-generated coaching content. The shape is:
-//   { [exerciseId]: { description, steps, cues, safetyNotes } }
-// Entries are merged into the Exercise object at buildExercise() time
-// so callers don't need a separate lookup. Missing entries silently
-// fall through — the UI shows the placeholder "no coaching content".
-import rawInstructions from './exerciseInstructions.json';
 
 interface ExerciseInstructions {
   description?: string;
@@ -31,7 +25,18 @@ interface ExerciseInstructions {
   safetyNotes?: string[];
 }
 
-const INSTRUCTIONS_MAP = rawInstructions as Record<string, ExerciseInstructions>;
+// Lazy-loaded Grok-generated coaching content (~330 KB JSON). Top-level
+// `import` would parse the JSON on every cold start even for users who
+// never open the Workouts tab — perf audit P0. Now resolved on first
+// call to getInstructionsMap() and cached. Required at runtime via
+// Metro's static analyzer, so it still ships in the bundle.
+let _instructionsMap: Record<string, ExerciseInstructions> | null = null;
+function getInstructionsMap(): Record<string, ExerciseInstructions> {
+  if (_instructionsMap) return _instructionsMap;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  _instructionsMap = require('./exerciseInstructions.json') as Record<string, ExerciseInstructions>;
+  return _instructionsMap;
+}
 
 // ---------------------------------------------------------------------------
 // Inference Helpers
@@ -131,8 +136,16 @@ function buildExercise(raw: RawExercise): Exercise {
   const primaryMuscle: MuscleGroup = muscles[0] || 'full_body';
   const secondaryMuscles = muscles.slice(1);
 
-  const instructions = INSTRUCTIONS_MAP[raw.id];
-
+  // NOTE: coaching content (description/steps/cues/safetyNotes) is no
+  // longer merged here. The 330 KB exerciseInstructions.json used to
+  // load eagerly via top-level import; even after switching to a lazy
+  // getInstructionsMap(), calling it during buildExercise() defeated
+  // the lazy load (the build runs at module load for every exercise).
+  //
+  // Consumers needing coaching content call getExerciseInstructions(id)
+  // — that only resolves the JSON when the user actually opens an
+  // exercise detail screen. Saves ~100ms cold-start parse for users
+  // who never open Workouts.
   return {
     id: raw.id,
     name: raw.name,
@@ -147,11 +160,16 @@ function buildExercise(raw: RawExercise): Exercise {
     location: (raw.location as ExerciseLocation) || 'any',
     gender: (raw.gender as ExerciseGender) || 'anyone',
     metrics: raw.metrics.map((m) => m.toLowerCase().trim() as ExerciseMetric).filter(Boolean),
-    description: instructions?.description,
-    steps: instructions?.steps,
-    cues: instructions?.cues,
-    safetyNotes: instructions?.safetyNotes,
   };
+}
+
+/**
+ * Look up Grok-generated coaching content for an exercise. Resolves
+ * the JSON lazily — only call from screens that actually render
+ * description/steps/cues (ExerciseDetailModal, etc).
+ */
+export function getExerciseInstructions(exerciseId: string): ExerciseInstructions | null {
+  return getInstructionsMap()[exerciseId] ?? null;
 }
 
 // Lazy-initialized
@@ -168,21 +186,26 @@ function getExerciseMap(): Map<string, Exercise> {
   return _exerciseMap;
 }
 
-/** Full exercise list (289 exercises) */
-export const EXERCISES: Exercise[] = new Proxy([] as Exercise[], {
-  get(_, prop) {
-    const list = getExerciseList();
-    if (prop === 'length') return list.length;
-    if (prop === 'map') return list.map.bind(list);
-    if (prop === 'filter') return list.filter.bind(list);
-    if (prop === 'forEach') return list.forEach.bind(list);
-    if (prop === 'find') return list.find.bind(list);
-    if (prop === 'slice') return list.slice.bind(list);
-    if (prop === Symbol.iterator) return list[Symbol.iterator].bind(list);
-    if (typeof prop === 'string' && !isNaN(Number(prop))) return list[Number(prop)];
-    return (list as any)[prop];
-  },
-});
+/**
+ * Full exercise list (436 unique entries after Wave 76.7 dedup).
+ *
+ * Earlier versions used a Proxy that lazy-built the list on first
+ * property access. The trap fired on EVERY .filter / .find / .map /
+ * .length access (which on screens like app/workouts/library.tsx
+ * happens hundreds of times per render). Real cost was non-trivial:
+ * each access ran a string-ladder dispatch + bound a fresh method.
+ *
+ * The underlying jamieExercises.json is already imported at module
+ * load, so the "save cold-start" promise the Proxy made was empty —
+ * the parse already happened. Switched to a plain eager array via the
+ * existing getExerciseList() builder; same one-shot init cost as a
+ * lazy Proxy on first access, but no per-access overhead afterwards.
+ *
+ * Coaching content (exerciseInstructions.json) IS still lazy via
+ * getInstructionsMap() so the heavy 330 KB JSON doesn't parse until
+ * someone actually opens a workout screen.
+ */
+export const EXERCISES: Exercise[] = getExerciseList();
 
 // ---------------------------------------------------------------------------
 // Query Helpers

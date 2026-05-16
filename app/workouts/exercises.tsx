@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
-import { EXERCISES, searchExercises } from '../../src/data/exercises';
+import { EXERCISES, searchExercises, getExerciseInstructions } from '../../src/data/exercises';
 import { ExerciseVideo } from '../../src/components/ExerciseVideo';
 import type { Exercise, MuscleGroup, Equipment } from '../../src/types/fitness';
 
@@ -170,6 +170,12 @@ function ExerciseDetailModal({
 }) {
   if (!exercise) return null;
 
+  // Lazy-resolve Grok-generated coaching content (description / steps /
+  // cues / safetyNotes). Wave 76.9 moved it out of the Exercise object
+  // so the 330 KB instructions JSON doesn't parse at cold start for
+  // users who never open Workouts.
+  const instructions = getExerciseInstructions(exercise.id);
+
   const equipStr = exercise.equipment
     .filter((e) => e !== 'none')
     .map(formatEquipment)
@@ -241,17 +247,17 @@ function ExerciseDetailModal({
             </View>
 
             {/* Description (one-line summary from Grok-generated content) */}
-            {exercise.description ? (
+            {instructions?.description ? (
               <View style={styles.modalSection}>
-                <Text style={styles.modalDescription}>{exercise.description}</Text>
+                <Text style={styles.modalDescription}>{instructions.description}</Text>
               </View>
             ) : null}
 
             {/* Step-by-step instructions */}
-            {exercise.steps && exercise.steps.length > 0 ? (
+            {instructions?.steps && instructions.steps.length > 0 ? (
               <View style={styles.modalSection}>
                 <Text style={styles.modalSectionTitle}>How to perform</Text>
-                {exercise.steps.map((step, idx) => (
+                {instructions.steps.map((step, idx) => (
                   <View key={idx} style={{ flexDirection: 'row', marginTop: idx === 0 ? 0 : 8 }}>
                     <Text style={[styles.modalDescription, { width: 22, fontWeight: '700' }]}>
                       {idx + 1}.
@@ -268,10 +274,10 @@ function ExerciseDetailModal({
             ) : null}
 
             {/* Coaching cues */}
-            {exercise.cues && exercise.cues.length > 0 ? (
+            {instructions?.cues && instructions.cues.length > 0 ? (
               <View style={styles.modalSection}>
                 <Text style={styles.modalSectionTitle}>Cues</Text>
-                {exercise.cues.map((cue, idx) => (
+                {instructions.cues.map((cue, idx) => (
                   <View key={idx} style={{ flexDirection: 'row', marginTop: idx === 0 ? 0 : 4 }}>
                     <Ionicons
                       name="checkmark-circle-outline"
@@ -286,10 +292,10 @@ function ExerciseDetailModal({
             ) : null}
 
             {/* Safety notes */}
-            {exercise.safetyNotes && exercise.safetyNotes.length > 0 ? (
+            {instructions?.safetyNotes && instructions.safetyNotes.length > 0 ? (
               <View style={styles.modalSection}>
                 <Text style={styles.modalSectionTitle}>Safety</Text>
-                {exercise.safetyNotes.map((note, idx) => (
+                {instructions.safetyNotes.map((note, idx) => (
                   <View key={idx} style={{ flexDirection: 'row', marginTop: idx === 0 ? 0 : 4 }}>
                     <Ionicons
                       name="warning-outline"

@@ -195,7 +195,14 @@ function PortionPickerModal({
 
   let effectiveGrams = 0;
   if (food && food.servings[selectedServing]) {
-    effectiveGrams = food.servings[selectedServing].grams * (parseFloat(servingQty) || 0);
+    // Clamp serving quantity to a sane range. `-3 servings` was
+    // accepted and produced negative calories in daily totals; `99999`
+    // hung the UI rendering. P0 from input validation audit.
+    const rawQty = parseFloat(servingQty);
+    const safeQty = Number.isFinite(rawQty) && rawQty > 0
+      ? Math.min(rawQty, 50)
+      : 0;
+    effectiveGrams = food.servings[selectedServing].grams * safeQty;
   }
   const displayGrams = Math.round(effectiveGrams * 10) / 10;
 
@@ -960,12 +967,27 @@ export default function FoodSearchScreen() {
     setLoading(true);
     setHasSearched(true);
 
-    searchAllFoods(debouncedQuery).then((foods) => {
-      if (!cancelled) {
+    // Both .then AND .catch — earlier audit caught that a network drop
+    // or 5xx left the spinner spinning forever because the catch path
+    // never fired setLoading(false). Now: every terminal state flips
+    // loading off and surfaces an explicit error message when the
+    // search itself threw.
+    searchAllFoods(debouncedQuery)
+      .then((foods) => {
+        if (cancelled) return;
         setResults(foods);
         setLoading(false);
-      }
-    });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (__DEV__) console.warn('[food-search] searchAllFoods failed:', err);
+        setResults([]);
+        setLoading(false);
+        Alert.alert(
+          'Search failed',
+          'Couldn\'t reach the food database. Check your connection and try again.',
+        );
+      });
 
     return () => { cancelled = true; };
   }, [debouncedQuery]);

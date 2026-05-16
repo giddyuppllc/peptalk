@@ -4,6 +4,67 @@ import { ChatMessage } from '../types';
 import { secureStorage } from '../services/secureStorage';
 import { syncRecord } from '../services/syncService';
 
+/**
+ * Debounced setItem wrapper around secureStorage. The chat store
+ * partializes the full chats[] tree, and the streaming chat flow fires
+ * `updateMessage` on every SSE text_delta — that's 30-50+ writes for
+ * a typical Aimee response, each encrypted via expo-secure-store /
+ * react-native-encrypted-storage. The marginal cost adds visible jank
+ * on the chat screen (perf audit P0).
+ *
+ * Coalescing the writes inside a 400 ms window collapses an entire
+ * streaming turn into ~1 write at the end. Reads are not debounced —
+ * they go straight through (hot path on screen mount).
+ *
+ * If the user backgrounds or kills the app while a write is pending,
+ * Zustand re-emits the whole state on next launch, so worst case is
+ * losing < 400 ms of in-flight token writes — equivalent to the
+ * stream having been a hair shorter.
+ */
+const PERSIST_DEBOUNCE_MS = 400;
+
+function createDebouncedStorage() {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let pending: { key: string; value: string } | null = null;
+  return {
+    async getItem(key: string): Promise<string | null> {
+      // Flush any in-flight write before reading so a hot reload
+      // doesn't return stale data.
+      if (pending) {
+        const { key: pk, value: pv } = pending;
+        pending = null;
+        if (timer) clearTimeout(timer);
+        timer = null;
+        await secureStorage.setItem(pk, pv);
+      }
+      return secureStorage.getItem(key);
+    },
+    setItem(key: string, value: string): void {
+      pending = { key, value };
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (pending) {
+          const { key: pk, value: pv } = pending;
+          pending = null;
+          timer = null;
+          // Fire-and-forget — Zustand's persist doesn't await the
+          // result anyway, and a failed write surfaces in the next
+          // attempt.
+          void secureStorage.setItem(pk, pv);
+        }
+      }, PERSIST_DEBOUNCE_MS);
+    },
+    async removeItem(key: string): Promise<void> {
+      pending = null;
+      if (timer) clearTimeout(timer);
+      timer = null;
+      await secureStorage.removeItem(key);
+    },
+  };
+}
+
+const debouncedChatStorage = createDebouncedStorage();
+
 const MAX_HISTORY = 200; // keep last 200 messages per chat
 
 export interface Chat {
@@ -230,19 +291,49 @@ export const useChatStore = create<ChatStore>()(
       },
 
       updateMessage: (id, patch) => {
-        // Streaming updates land here repeatedly per token. We intentionally
-        // skip cloud sync on update — only the final assistant message gets
-        // synced on the streaming endpoint's server side (chat_messages
-        // insert is done by the edge function). Local mirror only.
+        // Streaming updates land here repeatedly per token. We
+        // intentionally skip cloud sync on update — only the final
+        // assistant message gets synced server-side. Local mirror only.
         //
-        // Search ALL chats for the matching message id, not just the
-        // active chat. Otherwise a user who switches conversations
-        // mid-stream silently no-ops the rest of the stream, leaving
-        // the original bubble frozen mid-sentence with
-        // `streaming: true` forever.
+        // Fast-path: 99% of streaming updates target the ACTIVE chat.
+        // Walk that chat first (O(1) lookup); only fall back to a
+        // full-chats scan if the id isn't in the active chat. The
+        // earlier "scan all chats every time" implementation was the
+        // hot loop in the perf audit (O(N×M) array clones per token
+        // — N chats, M messages). Combined with the streaming-pause
+        // in the storage layer below, this turns each token into
+        // one map+spread, not N.
         set((state) => {
+          const activeChatId = state.activeChatId;
+
+          // Fast path — active chat.
+          if (activeChatId) {
+            const activeIdx = state.chats.findIndex((c) => c.id === activeChatId);
+            if (activeIdx >= 0) {
+              const chat = state.chats[activeIdx];
+              const msgIdx = chat.messages.findIndex((m) => m.id === id);
+              if (msgIdx >= 0) {
+                const nextMessages = [...chat.messages];
+                nextMessages[msgIdx] = { ...nextMessages[msgIdx], ...patch };
+                const nextChat = { ...chat, messages: nextMessages };
+                const nextChats = [...state.chats];
+                nextChats[activeIdx] = nextChat;
+                return {
+                  ...state,
+                  chats: nextChats,
+                  messages: nextMessages,
+                };
+              }
+            }
+          }
+
+          // Slow path — message belongs to a backgrounded chat. Falls
+          // through here when the user switched conversations mid-
+          // stream; we still update the right chat so the bubble
+          // unfreezes when they switch back.
           let foundChatId: string | null = null;
           const nextChats = state.chats.map((c) => {
+            if (c.id === activeChatId) return c; // already checked
             const idx = c.messages.findIndex((m) => m.id === id);
             if (idx < 0) return c;
             foundChatId = c.id;
@@ -255,8 +346,8 @@ export const useChatStore = create<ChatStore>()(
           return {
             ...state,
             chats: nextChats,
-            messages: state.activeChatId
-              ? activeMessages(nextChats, state.activeChatId)
+            messages: activeChatId
+              ? activeMessages(nextChats, activeChatId)
               : state.messages,
           };
         });
@@ -339,7 +430,10 @@ export const useChatStore = create<ChatStore>()(
     {
       name: 'peptalk-chat',
       version: 2,
-      storage: createJSONStorage(() => secureStorage),
+      // Debounced storage layer — collapses streaming-token write
+      // storms into one encrypted write per ~400 ms instead of 30+
+      // writes per turn. See createDebouncedStorage at top of file.
+      storage: createJSONStorage(() => debouncedChatStorage),
       partialize: (state) => ({
         chats: state.chats,
         activeChatId: state.activeChatId,

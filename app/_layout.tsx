@@ -177,6 +177,23 @@ function RootLayout() {
       if (__DEV__) console.warn('[boot] configureNotificationHandler threw:', err);
     }
 
+    // Register the tap-routing listener once at boot so any scheduled
+    // reminder (with `data.route`) or push fan-out (with `data.kind`)
+    // routes to the right screen when tapped. Without this, every
+    // notification just opens the app to its last screen — the `route:`
+    // fields we wrote on each scheduled reminder were dead data. P0
+    // from Wave 76.9 push audit.
+    (async () => {
+      try {
+        const { registerNotificationResponseHandler } = await import(
+          '../src/services/notificationService'
+        );
+        registerNotificationResponseHandler(router);
+      } catch (err) {
+        if (__DEV__) console.warn('[boot] notif response handler failed:', err);
+      }
+    })();
+
     // First-run notification permission + daily check-in reminder.
     // Tester feedback: users want a morning nudge so the habit forms even
     // on days they're not actively dosing. Default-on in preferences,
@@ -206,6 +223,49 @@ function RootLayout() {
         if (__DEV__) console.warn('[boot] notification registration failed:', err);
       }
     })();
+
+    // Tap-to-deep-link for push notifications. Until this listener
+    // was added, tapping any scheduled notification (check-in reminder,
+    // dose reminder, motivation, community broadcast) was a no-op
+    // route-wise — the `data.route` payload was set everywhere but
+    // never read. Audit fix (Wave 76.8).
+    //
+    // Handles BOTH cold-start (getLastNotificationResponseAsync) and
+    // warm-foreground (addNotificationResponseReceivedListener) cases.
+    let notificationSub: any = null;
+    (async () => {
+      try {
+        const Notifications = await import('expo-notifications');
+        const handleResponse = (
+          response: { notification: { request: { content: { data: any } } } } | null,
+        ) => {
+          if (!response) return;
+          const data = response.notification.request.content.data ?? {};
+          const route = typeof data.route === 'string' ? data.route : null;
+          if (!route) return;
+          // Guard: don't route into auth-gated screens if user isn't
+          // signed in yet. Bounce to /auth and stash the intent.
+          try {
+            const isAuthed = useAuthStore.getState().isAuthenticated;
+            if (!isAuthed) {
+              import('expo-router').then(({ router }) => router.replace('/auth'));
+              return;
+            }
+            import('expo-router').then(({ router }) => router.push(route as any));
+          } catch (err) {
+            if (__DEV__) console.warn('[boot] notification route failed:', err);
+          }
+        };
+        // Cold-start tap (app launched from a notification).
+        const cold = await Notifications.getLastNotificationResponseAsync();
+        if (cold) handleResponse(cold);
+        // Subsequent taps while the app is alive.
+        notificationSub = Notifications.addNotificationResponseReceivedListener(handleResponse);
+      } catch (err) {
+        if (__DEV__) console.warn('[boot] notification response listener failed:', err);
+      }
+    })();
+
     useAuthStore
       .getState()
       .restoreSession()
@@ -397,6 +457,7 @@ function RootLayout() {
       try { endIAP(); } catch {}
       try { unsubReconnect?.(); } catch {}
       try { appStateSub?.remove(); } catch {}
+      try { notificationSub?.remove(); } catch {}
     };
   }, []);
 

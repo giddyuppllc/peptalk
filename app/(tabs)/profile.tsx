@@ -933,7 +933,14 @@ function NotificationSettings() {
     if (value && notifEnabled) {
       await rescheduleAllMeals(preferences.mealReminderTimes);
     } else {
-      await cancelRemindersByTag('meal');
+      // Cancel the meal-time reminders (breakfast/lunch/dinner). Do NOT
+      // use `'meal'` as the tag — that would also sweep the
+      // `meal-safety-...` identifiers from scheduleMealSafetyChecks
+      // (the leftovers / fridge-check reminders), which is a separate
+      // toggle. P1 from Wave 76.9 push audit.
+      await cancelRemindersByTag('meal-breakfast-');
+      await cancelRemindersByTag('meal-lunch-');
+      await cancelRemindersByTag('meal-dinner-');
     }
   };
 
@@ -1406,8 +1413,19 @@ export default function ProfileScreen() {
     // would keep getting charged until they manually cancel in iOS
     // Settings. We want to surface that clearly so we don't end up with
     // a refund-request support ticket.
-    const tier = useSubscriptionStore.getState().tier;
-    const hasActiveSubscription = tier === 'plus' || tier === 'pro';
+    //
+    // Use getStatus() rather than raw tier, so we don't fire the
+    // "will keep renewing" scare on users whose subscription is
+    // already expired/cancelled. P1 from Wave 76.7 IAP audit.
+    const subState = useSubscriptionStore.getState();
+    const tier = subState.tier;
+    const status = typeof subState.getStatus === 'function'
+      ? subState.getStatus()
+      : (tier === 'free' ? 'none' : 'active');
+    // Only the states where Apple will keep billing show the warning.
+    const willKeepBilling = status === 'active' || status === 'expiring' || status === 'trial';
+    const hasActiveSubscription =
+      (tier === 'plus' || tier === 'pro') && willKeepBilling;
 
     const runDestructiveConfirm = () => {
       Alert.alert(
@@ -1439,9 +1457,13 @@ export default function ProfileScreen() {
     };
 
     if (hasActiveSubscription) {
+      const tierName = tier === 'pro' ? 'PepTalk Pro' : 'PepTalk+';
+      const message = status === 'expiring'
+        ? `Your ${tierName} subscription is set to renew soon through your Apple ID. Deleting your PepTalk account does NOT cancel that renewal — Apple owns billing.\n\nTap "Manage subscription" first to turn off auto-renew, then come back to delete.`
+        : `Your ${tierName} subscription will keep renewing through your Apple ID unless you cancel it FIRST.\n\nDeleting your PepTalk account does NOT cancel your Apple subscription — Apple owns billing.\n\nWe recommend you tap "Manage subscription" first to cancel through Apple, then come back to delete the account.`;
       Alert.alert(
         'Subscription still active',
-        `Your ${tier === 'pro' ? 'PepTalk Pro' : 'PepTalk+'} subscription will keep renewing through your Apple ID unless you cancel it FIRST.\n\nDeleting your PepTalk account does NOT cancel your Apple subscription — Apple owns billing.\n\nWe recommend you tap "Manage subscription" first to cancel through Apple, then come back to delete the account.`,
+        message,
         [
           { text: 'Cancel', style: 'cancel' },
           {

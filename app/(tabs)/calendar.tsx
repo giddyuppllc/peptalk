@@ -414,7 +414,27 @@ export default function CalendarScreen() {
       return;
     }
 
-    const safety = checkDoseSafety(logSubstanceName.trim(), amount, logUnit);
+    // Magnitude sanity check — peptide doses don't legitimately
+    // exceed ~50,000 (in any unit). A 9,999,999 entry is a
+    // copy-paste fat-finger or unit slip. Refuse so the dose log
+    // doesn't store implausible values that poison the detect-alerts
+    // engine + Aimee context. P0 from input validation audit.
+    if (
+      (logUnit === 'mcg' && amount > 100000) ||
+      (logUnit === 'mg' && amount > 100) ||
+      (logUnit === 'IU' && amount > 10000)
+    ) {
+      Alert.alert(
+        'Dose too large',
+        `${amount} ${logUnit} is outside the plausible range for any peptide. Did you mean a different unit? Re-enter to confirm.`,
+      );
+      return;
+    }
+
+    // Substance name length cap so a paste-bomb doesn't bloat the row.
+    const trimmedName = logSubstanceName.trim().slice(0, 80);
+
+    const safety = checkDoseSafety(trimmedName, amount, logUnit);
 
     // Pregnancy contraindication check — lookup the peptide's protocol and
     // if its `contraindications` mentions pregnancy/nursing and the user
@@ -436,13 +456,13 @@ export default function CalendarScreen() {
 
     const persist = () => {
       logDose({
-        peptideId: logSubstanceName.trim(),
+        peptideId: trimmedName,
         amount,
         unit: logUnit,
         route: logRoute,
         date: selectedDate,
-        injectionSite: logSite || undefined,
-        notes: logNotes || undefined,
+        injectionSite: logSite ? logSite.slice(0, 60) : undefined,
+        notes: logNotes ? logNotes.slice(0, 500) : undefined,
       });
     };
 

@@ -188,11 +188,18 @@ function initHealthKit(permissions: {
  * to an empty array — the connect flow gracefully degrades.
  */
 function getWriteScope(): string[] {
-  const out: string[] = [];
-  if (PERMS.Weight) out.push(PERMS.Weight);                  // bodyMass
-  if (PERMS.MindfulSession) out.push(PERMS.MindfulSession);
-  if (PERMS.SleepAnalysis) out.push(PERMS.SleepAnalysis);
-  return out;
+  // No writes are implemented today. Wave 76.6 added the scope before
+  // any write call sites existed, which Wave 76.9's build-config audit
+  // flagged as misleading-for-App-Review (we'd be requesting permission
+  // to write data we never actually write). Returning [] until the
+  // first real write feature lands (check-in weight → HealthKit).
+  //
+  // When wiring writes back in, restore:
+  //   if (PERMS.Weight) out.push(PERMS.Weight);
+  //   if (PERMS.MindfulSession) out.push(PERMS.MindfulSession);
+  //   if (PERMS.SleepAnalysis) out.push(PERMS.SleepAnalysis);
+  // AND add the corresponding saveSample call sites.
+  return [];
 }
 
 function getSamples<T>(method: string, opts: any): Promise<T[]> {

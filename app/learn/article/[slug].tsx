@@ -92,10 +92,15 @@ export default function ArticleDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back Button */}
+        {/* Back Button — falls back to the Learn index when there's no nav
+            stack (deep link or push notification cold-start), otherwise the
+            tap is a no-op and looks like a frozen screen. */}
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace('/learn');
+          }}
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel="Go back"

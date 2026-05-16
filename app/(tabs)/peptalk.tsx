@@ -81,6 +81,39 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   });
 }
 
+/**
+ * Allowlist guard for navigation paths supplied by the Aimee edge fn
+ * (navigate / open_dosing_calculator client_actions). Even though the
+ * server already maps known screen names through SCREEN_TO_PATH, this
+ * second check refuses any unexpected path so a prompt-injection
+ * escape can't land users on /admin/* or /dev-accounts. Allow:
+ *   - / (root tab group)
+ *   - /(tabs)/<one of the visible tabs>
+ *   - /calculators/<screen>
+ *   - /peptide/<id>
+ *   - /subscription
+ *   - /auth (sign-in / sign-up)
+ */
+function isAllowedNavigationPath(path: string): boolean {
+  if (typeof path !== 'string' || path.length > 200) return false;
+  if (path.startsWith('//') || path.includes('..')) return false;
+  // No /admin/, no /dev-, no internal-only routes.
+  if (/^\/?(admin|dev-)/.test(path)) return false;
+  const allowed = [
+    /^\/?$/,
+    /^\/?\(tabs\)\/?$/,
+    /^\/?\(tabs\)\/(home|my-stacks|peptalk|nutrition|workouts|community|check-in|calendar|profile|stack-builder)(\?|\/|$)/,
+    /^\/?calculators(\/[\w-]+)?(\?.*)?$/,
+    /^\/?peptide\/[\w-]+(\?.*)?$/,
+    /^\/?subscription(\?.*)?$/,
+    /^\/?auth(\?.*)?$/,
+    /^\/?learn(\/.*)?$/,
+    /^\/?nutrition(\/[\w-]+)*(\?.*)?$/,
+    /^\/?workouts(\/[\w-]+)*(\?.*)?$/,
+  ];
+  return allowed.some((rx) => rx.test(path));
+}
+
 /* ─── Journal Toast Component ────────────────────────────────────── */
 
 const JournalToast: React.FC = () => {
@@ -269,9 +302,21 @@ export default function PepTalkScreen() {
         (rawPid || norm(peptideName));
 
       const amount = Number(payload.amount);
-      const unit = typeof payload.unit === 'string' ? payload.unit : 'mcg';
+      const unit = typeof payload.unit === 'string' ? payload.unit.toLowerCase() : 'mcg';
       const route = typeof payload.route === 'string' ? payload.route : 'subcutaneous';
       if (!canonical || !Number.isFinite(amount) || amount <= 0) return;
+      // Magnitude clamps — Grok could hallucinate `amount: 999999` and the
+      // edge function passes it through verbatim. Mirror the manual-log
+      // dialog caps (calendar.tsx ~line 422). Prevents poisoned dose log
+      // rows that then feed back into Aimee's context.
+      if (
+        (unit === 'mcg' && amount > 100000) ||
+        (unit === 'mg' && amount > 100) ||
+        (unit === 'iu' && amount > 10000)
+      ) {
+        if (__DEV__) console.warn('[aimee] log_dose magnitude implausible, ignoring:', amount, unit);
+        return;
+      }
       logDoseAction({
         peptideId: canonical,
         amount,
@@ -311,12 +356,21 @@ export default function PepTalkScreen() {
       // fatGrams. Earlier versions wrote `protein/carbs/fat` which the
       // store silently ignored, zeroing macros for every Aimee-logged
       // meal in the nutrition ring.
+      // Clamp every macro: never negative, never larger than a sane meal.
+      // Caps mirror the manual quick-log dialog (app/(tabs)/nutrition).
+      // Without these, Grok could fabricate `calories: -800` or
+      // `calories: 50000` and silently poison the user's daily totals.
+      const clamp = (v: unknown, max: number): number => {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return 0;
+        return Math.max(0, Math.min(max, n));
+      };
       const quickLog = {
         description: title,
-        calories: Number(totals.calories) || 0,
-        proteinGrams: Number(totals.protein) || 0,
-        carbsGrams: Number(totals.carbs) || 0,
-        fatGrams: Number(totals.fat) || 0,
+        calories: clamp(totals.calories, 5000),
+        proteinGrams: clamp(totals.protein, 500),
+        carbsGrams: clamp(totals.carbs, 1000),
+        fatGrams: clamp(totals.fat, 500),
       };
 
       addMealAction({
@@ -445,7 +499,18 @@ export default function PepTalkScreen() {
             };
             try {
               if (action.type === 'navigate' && typeof action.path === 'string') {
-                router.push(action.path as any);
+                // Client-side allowlist check on the server-supplied
+                // path. Even though the server keeps a SCREEN_TO_PATH
+                // map, a prompt-injection escape could in theory get
+                // Aimee to emit a custom `navigate` action pointing
+                // at /admin or /dev — defense in depth. Refuse
+                // anything outside (tabs) and /calculators.
+                const safe = isAllowedNavigationPath(action.path);
+                if (safe) {
+                  router.push(action.path as any);
+                } else if (__DEV__) {
+                  console.warn('[aimee] navigate refused (not allowlisted):', action.path);
+                }
               } else if (action.type === 'log_dose' && action.payload) {
                 applyLogDoseAction(action.payload);
               } else if (action.type === 'log_meal' && action.payload) {
