@@ -221,13 +221,19 @@ export default function DosingCalculatorScreen() {
         setWaterVolume(String(ref.diluentMl));
       }
       // Frequency — only set if the first phase has a clean canonical
-      // mapping. Multi-day-week schedules (Mon/Thu, twice daily) fall
-      // through to "daily" which is the safe default for the math.
+      // mapping. The Frequency union is:
+      //   'daily' | 'eod' | '2x_week' | '3x_week' | 'weekly'
+      // Anything outside that (twice-daily, Mon/Thu, AM/PM) falls back
+      // to 'daily' because the downstream math doesn't model sub-day
+      // cadence; the user will see a note in the recommended-protocol
+      // card with the actual cadence from the reference. Casting an
+      // out-of-union string here caused the MOTSC freeze in TestFlight
+      // (downstream FREQUENCY_OPTIONS lookup returned undefined and
+      // NaN'd the math, locking the render).
       const lower = (phase?.frequency ?? '').toLowerCase();
-      if (lower.includes('twice')) setFrequency('2x_day' as Frequency);
-      else if (lower.includes('weekly') && !lower.includes('biweek')) setFrequency('weekly');
-      else if (lower.includes('biweek')) setFrequency('2x_week' as Frequency);
-      else if (lower.includes('mon') && lower.includes('thu')) setFrequency('2x_week' as Frequency);
+      if (lower.includes('weekly') && !lower.includes('biweek')) setFrequency('weekly');
+      else if (lower.includes('biweek')) setFrequency('2x_week');
+      else if (lower.includes('mon') && lower.includes('thu')) setFrequency('2x_week');
       else setFrequency('daily');
       setShowResults(true);
       return;

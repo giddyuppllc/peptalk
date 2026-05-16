@@ -165,13 +165,34 @@ async function verifyLiveAuth(): Promise<boolean> {
 
 // ── Promise wrappers (react-native-health uses callbacks) ──────────────────
 
-function initHealthKit(permissions: { permissions: { read: string[] } }): Promise<void> {
+function initHealthKit(permissions: {
+  permissions: { read: string[]; write?: string[] };
+}): Promise<void> {
   return new Promise((resolve, reject) => {
     AppleHealthKit.initHealthKit(permissions, (err: Error | null) => {
       if (err) return reject(err);
       resolve();
     });
   });
+}
+
+/**
+ * HealthKit categories PepTalk writes back to. Marketing copy claims
+ * we write Body Mass, Mindful Session, and Sleep Analysis (e.g. a
+ * user logs sleep in our check-in flow → it lands in Health), so the
+ * Info.plist `NSHealthUpdateUsageDescription` is set up and Apple's
+ * permission sheet shows the right toggles on first connect.
+ *
+ * If the underlying react-native-health module isn't loaded (Expo
+ * Go, simulator without HealthKit) PERMS will be {} and this resolves
+ * to an empty array — the connect flow gracefully degrades.
+ */
+function getWriteScope(): string[] {
+  const out: string[] = [];
+  if (PERMS.Weight) out.push(PERMS.Weight);                  // bodyMass
+  if (PERMS.MindfulSession) out.push(PERMS.MindfulSession);
+  if (PERMS.SleepAnalysis) out.push(PERMS.SleepAnalysis);
+  return out;
 }
 
 function getSamples<T>(method: string, opts: any): Promise<T[]> {
@@ -205,10 +226,17 @@ export const healthKitAdapter: BiomarkerAdapter = {
     if (!this.available()) return false;
     try {
       await initHealthKit({
-        permissions: { read: scopeToHKPerms(scopes) },
+        permissions: {
+          read: scopeToHKPerms(scopes),
+          // Write scope is fixed — we want the same three Health writes
+          // regardless of which biomarker the user toggled on. Listed
+          // up-front in NSHealthUpdateUsageDescription so the permission
+          // sheet matches.
+          write: getWriteScope(),
+        },
       });
       authorized = true;
-      log('connected with scopes', scopes);
+      log('connected with scopes', scopes, 'write scope', getWriteScope());
       return true;
     } catch (err) {
       log('connect failed', err);
