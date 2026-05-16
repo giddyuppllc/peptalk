@@ -17,6 +17,7 @@ import { useTutorialStore } from '../../store/useTutorialStore';
 
 export function UpgradeDeltaWatcher() {
   const tier = useSubscriptionStore((s) => s.tier);
+  const subscriptionHasHydrated = useSubscriptionStore((s) => s.hasHydrated);
   const lastKnownTier = useTutorialStore((s) => s.lastKnownTier);
   const setLastKnownTier = useTutorialStore((s) => s.setLastKnownTier);
   const startTour = useTutorialStore((s) => s.startTour);
@@ -25,6 +26,12 @@ export function UpgradeDeltaWatcher() {
   const tourActive = useTutorialStore((s) => s.tourActive);
 
   useEffect(() => {
+    // Don't seed lastKnownTier (or fire a delta) until the subscription
+    // store has actually rehydrated. Otherwise on first boot we record
+    // tier='free' (the default), then the persisted tier='pro' lands
+    // and we fire a spurious free→pro upgrade tour.
+    if (!subscriptionHasHydrated) return;
+
     // On first run, just record the current tier so we don't fire a delta
     // for a tier that was set during onboarding.
     if (lastKnownTier === null) {
@@ -60,7 +67,7 @@ export function UpgradeDeltaWatcher() {
         startTour(variant as any);
       }, 1200);
     }
-  }, [tier, lastKnownTier, setLastKnownTier, startTour, hasSeenTour, seenDeltaTours, tourActive]);
+  }, [tier, subscriptionHasHydrated, lastKnownTier, setLastKnownTier, startTour, hasSeenTour, seenDeltaTours, tourActive]);
 
   return null;
 }
