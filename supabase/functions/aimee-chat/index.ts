@@ -275,34 +275,28 @@ async function checkRateLimit(
 ): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number; failedClosed?: boolean }> {
   const today = new Date().toISOString().slice(0, 10);
   try {
-    const { data: existing } = await supabase
-      .from('ai_usage_log')
-      .select('count')
-      .eq('user_id', userId)
-      .eq('function_name', functionName)
-      .eq('date', today)
-      .maybeSingle();
-    const count = existing?.count ?? 0;
-    if (count >= limit) {
+    // Atomic bump via SECURITY DEFINER RPC. Earlier this used
+    // read-modify-write which could leak one extra call past the
+    // limit under concurrent same-user requests.
+    const { data, error } = await supabase.rpc('bump_ai_usage', {
+      p_user_id: userId,
+      p_function_name: functionName,
+      p_date: today,
+    });
+    if (error) throw error;
+
+    const newCount = Array.isArray(data) && data[0]
+      ? (data[0] as any).count ?? 0
+      : 0;
+
+    if (newCount > limit) {
       const now = new Date();
       const tomorrow = new Date(now);
       tomorrow.setUTCHours(24, 0, 0, 0);
       const retryAfter = Math.max(1, Math.round((tomorrow.getTime() - now.getTime()) / 1000));
-      return { allowed: false, limit, count, retryAfter };
+      return { allowed: false, limit, count: newCount, retryAfter };
     }
-    await supabase
-      .from('ai_usage_log')
-      .upsert(
-        {
-          user_id: userId,
-          function_name: functionName,
-          date: today,
-          count: count + 1,
-          last_called_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,function_name,date' },
-      );
-    return { allowed: true, limit, count: count + 1 };
+    return { allowed: true, limit, count: newCount };
   } catch (err) {
     // Fail CLOSED. If we can't reach ai_usage_log we cannot enforce the
     // per-user cap, and the function fans out to the LLM provider —
