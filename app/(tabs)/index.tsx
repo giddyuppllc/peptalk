@@ -80,11 +80,6 @@ import { getPeptideById } from '../../src/data/peptides';
 import { useTutorialStore } from '../../src/store/useTutorialStore';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
 import { UpgradeNudgeCard } from '../../src/components/UpgradeNudgeCard';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// AsyncStorage key for the "have you seen the home welcome card" flag.
-// Set to '1' on first dismiss; absent or anything else = not yet seen.
-const WELCOME_SEEN_KEY = '@peptalk:home_welcome_seen_v1';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -1001,6 +996,38 @@ export default function DashboardScreen() {
         </RNAnimated.View>
 
         {/* ═══════════════════════════════════════════════════════════════
+            CHAT WITH AIMEE — Jamie: "I don't know how to start a chat or
+            where to type." The tab is labeled "Aimee" with a helix icon
+            but apparently still missable. A prominent card on Home
+            routes you straight there.
+        ═══════════════════════════════════════════════════════════════ */}
+        <TouchableOpacity
+          activeOpacity={0.86}
+          onPress={() => router.push('/(tabs)/peptalk' as any)}
+          style={styles.aimeeCtaWrap}
+          accessibilityRole="button"
+          accessibilityLabel="Chat with Aimee"
+        >
+          <LinearGradient
+            colors={['#3E7CB1', '#5BA9A7']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.aimeeCtaGrad}
+          >
+            <View style={styles.aimeeCtaIconWrap}>
+              <Ionicons name="chatbubbles" size={26} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.aimeeCtaTitle}>Chat with Aimee</Text>
+              <Text style={styles.aimeeCtaSub}>
+                Ask anything — peptides, nutrition, training, recovery
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" />
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* ═══════════════════════════════════════════════════════════════
             QUICK LOG — Jamie's #1 ask. Three prominent buttons that put
             the most-used actions one tap from the home screen instead of
             buried under the FAB. Nutrition / Workouts / Peptides.
@@ -1848,6 +1875,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     marginTop: 4,
     marginBottom: 12,
+  },
+  // Chat with Aimee CTA — pulls the chat into the user's path from Home
+  aimeeCtaWrap: {
+    marginHorizontal: Spacing.lg,
+    marginTop: -4,
+    marginBottom: 14,
+    borderRadius: 18,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 4,
+  },
+  aimeeCtaGrad: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    gap: 14,
+  },
+  aimeeCtaIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aimeeCtaTitle: {
+    color: '#fff',
+    fontFamily: 'DMSans-Bold',
+    fontSize: 16,
+    letterSpacing: 0.2,
+  },
+  aimeeCtaSub: {
+    color: 'rgba(255,255,255,0.85)',
+    fontFamily: 'DMSans-Regular',
+    fontSize: 12,
+    marginTop: 2,
   },
   // Quick Log buttons under the hero — Jamie's "stop burying it in the FAB" ask
   quickLogRow: {

@@ -34,18 +34,46 @@ export default function CalculatorsHubScreen() {
         </Text>
 
         {/*
-         * COLLAPSED 2026-05-16 — the three calculators (plan, quick-dose,
-         * advanced dosing) were doing variations of the same job from
-         * separate files. Every tweak had to be applied three times and
-         * peptide-specific bugs (e.g. MOTSC freeze in advanced) only hit
-         * one path. Hub now points at quick-dose only; the other files
-         * stay on disk for parts but are not surfaced.
+         * Hub restructure 2026-05-16:
+         *  - Primary  → Dosing Calculator (`dosing.tsx`). Their Wave 76.4
+         *    work baked Edward's authoritative dosing reference into this
+         *    screen, so it's the canonical source of truth for what to draw.
+         *  - Secondary → Quick Dose Guide (`quick-dose.tsx`). Lighter
+         *    peptide-first walk-through that includes the mcg/mg
+         *    conversion footer Jamie asked for.
+         *  - Hidden    → Plan Your Cycle (still on disk for parts).
          */}
 
-        {/* Quick Dose Guide — the one and only calculator */}
+        {/* Dosing Calculator — primary, with Edward's authoritative data */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => router.push('/calculators/dosing')}
+        >
+          <LinearGradient
+            colors={['#3E7CB1', '#7FB3D8']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.card, styles.primaryCard]}
+          >
+            <View style={[styles.cardIcon, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
+              <Ionicons name="calculator" size={32} color="#fff" />
+            </View>
+            <View style={styles.cardContent}>
+              <Text style={[styles.cardTitle, { color: '#fff' }]}>Dosing Calculator</Text>
+              <Text style={[styles.cardDesc, { color: 'rgba(255,255,255,0.85)' }]}>
+                Pick a peptide and we'll show Edward's recommended ladder, draw amount
+                in ticks, mL, and mcg — plus doses per vial.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#fff" />
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* Quick Dose Guide — secondary, lighter walk-through */}
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={() => router.push('/calculators/quick-dose')}
+          style={{ marginTop: Spacing.md }}
         >
           <LinearGradient
             colors={['#7ABED0', '#7ABED0']}
@@ -59,14 +87,14 @@ export default function CalculatorsHubScreen() {
             <View style={styles.cardContent}>
               <Text style={[styles.cardTitle, { color: '#fff' }]}>Quick Dose Guide</Text>
               <Text style={[styles.cardDesc, { color: 'rgba(0,0,0,0.60)' }]}>
-                Already know which peptide? Jump straight to dosing, reconstitution, and cycling.
+                Lighter walk-through with mcg/mg conversions spelled out at every step.
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="rgba(0,0,0,0.50)" />
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* Reconstitution Calculator Card — kept (separate purpose: vial math only, not dosing) */}
+        {/* Reconstitution Calculator — separate purpose: vial math only, not dosing */}
         <Text style={[styles.advancedLabel, { color: t.textSecondary }]}>ADVANCED TOOLS</Text>
         <TouchableOpacity
           activeOpacity={0.85}
