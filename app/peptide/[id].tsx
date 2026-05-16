@@ -1282,6 +1282,52 @@ function BeginnerAdvancedDoseCard({
   );
 }
 
+const plainLeadStyles = StyleSheet.create({
+  card: {
+    backgroundColor: '#FAF5EF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(232, 150, 114, 0.20)',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  iconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E8967220',
+  },
+  title: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Bold',
+    color: '#6B7280',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  body: {
+    fontSize: 17,
+    lineHeight: 24,
+    fontFamily: 'DMSans-SemiBold',
+    color: '#2D2D2D',
+  },
+  subhint: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Regular',
+    color: '#9CA3AF',
+    marginTop: 8,
+    lineHeight: 17,
+    fontStyle: 'italic',
+  },
+});
+
 const dosePillStyles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10, marginTop: 4 },
   pill: {

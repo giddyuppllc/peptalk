@@ -470,10 +470,51 @@ function UserProfile() {
           </View>
         </GlassCard>
 
+        {/* Advanced fitness inputs — RPE, tempo, %1RM, rest intervals.
+            Off by default; the custom workout builder shows just sets ×
+            reps. Power users can flip this on for the full prescription
+            form. */}
+        <AdvancedFitnessToggle t={t} />
+
         {/* Dark Mode removed — app uses gender-based light themes only */}
       </View>
 
     </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Advanced Fitness Toggle
+// ---------------------------------------------------------------------------
+function AdvancedFitnessToggle({ t }: { t: ReturnType<typeof useTheme> }) {
+  const showAdvancedFitness = useOnboardingStore((st) => st.showAdvancedFitness);
+  const setShowAdvancedFitness = useOnboardingStore((st) => st.setShowAdvancedFitness);
+
+  return (
+    <GlassCard style={styles.settingCard}>
+      <View style={styles.settingRow}>
+        <View style={styles.settingInfo}>
+          <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(122, 190, 208, 0.14)' }]}>
+            <Ionicons name="options-outline" size={18} color="#5BA9A7" />
+          </View>
+          <View style={styles.settingTextContainer}>
+            <Text style={[styles.settingTitle, { color: t.text }]}>Advanced fitness inputs</Text>
+            <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
+              Show RPE, tempo, and rest intervals in the workout builder
+            </Text>
+          </View>
+        </View>
+        <Switch
+          value={showAdvancedFitness}
+          onValueChange={setShowAdvancedFitness}
+          trackColor={{
+            false: 'rgba(0,0,0,0.08)',
+            true: 'rgba(122, 190, 208, 0.5)',
+          }}
+          thumbColor={showAdvancedFitness ? '#5BA9A7' : '#6B7280'}
+        />
+      </View>
+    </GlassCard>
   );
 }
 

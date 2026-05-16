@@ -717,10 +717,18 @@ function RootLayout() {
             }}
           />
           <Stack.Screen
-            name="workouts/program"
+            name="workouts/program/[programId]"
             options={{
               headerShown: false,
               animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="workouts/new"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_bottom',
+              presentation: 'modal',
             }}
           />
           <Stack.Screen
