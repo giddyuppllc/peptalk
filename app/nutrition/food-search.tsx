@@ -551,12 +551,16 @@ function CustomFoodModal({ visible, onClose, onSave }: CustomFoodModalProps) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { minHeight: '80%' }]}>
+        <KeyboardAvoidingView
+          style={[styles.modalContent, { minHeight: '80%' }]}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+        >
           <View style={styles.modalHandle} />
 
           <View style={styles.modalHeader}>
             <Text style={styles.modalFoodName}>Create Custom Food</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="Close create custom food">
               <Ionicons name="close" size={22} color={Colors.darkText} />
             </TouchableOpacity>
           </View>
@@ -701,7 +705,7 @@ function CustomFoodModal({ visible, onClose, onSave }: CustomFoodModalProps) {
           <View style={styles.logBtnWrapper}>
             <GradientButton label="Save Custom Food" onPress={handleSave} />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );

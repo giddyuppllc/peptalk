@@ -195,10 +195,27 @@ Deno.serve(async (req) => {
     //
     // Best-effort: a failure here doesn't affect entitlement (the
     // subscriptions row is already correct) — just log and continue.
+    // External event id MUST be stable so retries dedupe via the
+    // `UNIQUE (platform, external_event_id)` constraint. Earlier this
+    // baked Date.now() into the id — every re-validation (which the
+    // client runs on every cold boot via syncFromServer) created a
+    // fresh row, triggered notify_crm_fanout to fire the
+    // `subscription.activated` webhook to Edward's CRM repeatedly for
+    // the same purchase. P0 from Wave 76.10 schema audit.
+    //
+    // Apple: originalTransactionId is stable across renewals + the
+    // entire subscription lifecycle (Apple docs guarantee this).
+    // Google: orderId is unique per purchase event; for the initial
+    // purchase audit we fall back to the receipt prefix only when
+    // originalTransactionId is missing.
     const externalEventId =
       body.platform === 'ios'
-        ? `validate-ios-${user.id}-${body.productId}-${Date.now()}`
-        : `validate-android-${body.productId}-${body.receipt.substring(0, 40)}`;
+        ? originalTransactionId
+          ? `validate-ios-${originalTransactionId}`
+          : `validate-ios-${user.id}-${body.productId}-receipt-${body.receipt.substring(0, 40)}`
+        : originalTransactionId
+          ? `validate-android-${originalTransactionId}`
+          : `validate-android-${body.productId}-${body.receipt.substring(0, 40)}`;
     await adminClient
       .from('subscription_events')
       .upsert(

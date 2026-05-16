@@ -10,6 +10,8 @@ import {
   Alert,
   Animated,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -1230,10 +1232,20 @@ export default function CalendarScreen() {
         onRequestClose={() => setShowLogModal(false)}
       >
         <SafeAreaView style={[styles.modalSafe, { backgroundColor: t.bg }]}>
-          <ScrollView contentContainerStyle={styles.modalContent}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+          >
+          <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: t.text }]}>Add Entry</Text>
-              <TouchableOpacity onPress={() => setShowLogModal(false)} style={[styles.modalCloseBtn, { backgroundColor: t.glass }]}>
+              <TouchableOpacity
+                onPress={() => setShowLogModal(false)}
+                style={[styles.modalCloseBtn, { backgroundColor: t.glass }]}
+                accessibilityRole="button"
+                accessibilityLabel="Close add entry"
+              >
                 <Ionicons name="close" size={22} color={t.text} />
               </TouchableOpacity>
             </View>
@@ -1361,6 +1373,7 @@ export default function CalendarScreen() {
               </LinearGradient>
             </TouchableOpacity>
           </ScrollView>
+          </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
 

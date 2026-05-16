@@ -928,6 +928,8 @@ export default function PepTalkScreen() {
             style={[styles.iconBtn, { backgroundColor: t.surface }]}
             activeOpacity={0.7}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            accessibilityRole="button"
+            accessibilityLabel="Open chat history"
           >
             <Ionicons name="menu" size={20} color={t.text} />
           </TouchableOpacity>
@@ -985,6 +987,8 @@ export default function PepTalkScreen() {
             style={[styles.iconBtn, { backgroundColor: t.surface }]}
             activeOpacity={0.7}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            accessibilityRole="button"
+            accessibilityLabel="Start new chat"
           >
             <Ionicons name="create-outline" size={20} color={t.text} />
           </TouchableOpacity>

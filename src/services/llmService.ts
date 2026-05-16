@@ -13,7 +13,12 @@
  * - System prompt is built fresh per request from local stores
  */
 
-import OpenAI from 'openai';
+// NOTE: `openai` SDK is intentionally NOT imported at the top of this
+// file. It's a ~200KB SDK used only by the dev fallback below, and a
+// top-level static import would let Metro bundle it into production
+// even though every call site is __DEV__-gated. Lazy `require()`
+// inside getClient() makes the import unreachable in prod and
+// drops the SDK from the release bundle entirely.
 import { ChatMessage, EnhancedBotContext } from '../types';
 import { sanitizeForLLM } from './privacyGuard';
 import { supabase } from './supabase';
@@ -35,8 +40,8 @@ const MODEL = 'grok-4-1-fast-reasoning';
 const TIMEOUT_MS = 30_000;
 
 // Lazy-init the OpenAI client (avoid creating at import time)
-let _client: OpenAI | null = null;
-function getClient(): OpenAI {
+let _client: any = null;
+function getClient(): any {
   // Hard-stop: never instantiate the direct-API client off a dev build.
   // If we ever get here in production, the fallback gate has been
   // bypassed and we want to fail loudly rather than leak a key.
@@ -44,6 +49,8 @@ function getClient(): OpenAI {
     throw new Error('[llmService] Direct XAI client is dev-only; route via Supabase Edge Function in production.');
   }
   if (!_client) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const OpenAI = require('openai').default ?? require('openai');
     _client = new OpenAI({
       apiKey: XAI_API_KEY || 'dummy',
       baseURL: 'https://api.x.ai/v1',
@@ -712,7 +719,7 @@ export async function generateAIResponse(
         model: MODEL,
         messages: [
           { role: 'system', content: devSystemPrompt },
-          ...conversationMessages as OpenAI.ChatCompletionMessageParam[],
+          ...(conversationMessages as any[]),
         ],
         max_tokens: 1024,
         temperature: 0.7,
