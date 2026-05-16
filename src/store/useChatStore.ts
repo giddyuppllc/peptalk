@@ -389,6 +389,24 @@ export const useChatStore = create<ChatStore>()(
         const queue = get().pendingSyncs;
         if (queue.length === 0) return;
 
+        // Short-circuit when offline. Walking the queue serially with
+        // syncRecord against a dead connection burns CPU + retry budget
+        // (each entry's attempts counter ticks up toward MAX_SYNC_ATTEMPTS
+        // and the message gets dropped permanently after enough failures).
+        // The reconnect listener in app/_layout.tsx re-calls this when the
+        // device comes back online.
+        try {
+          const { isCurrentlyOnline } = await import('../hooks/useNetworkStatus');
+          const online = await isCurrentlyOnline();
+          if (!online) {
+            if (__DEV__) console.log('[useChatStore] flushPendingSyncs offline — skipping');
+            return;
+          }
+        } catch {
+          // NetInfo unavailable (Expo Go / web / jest) — fall through and
+          // let syncRecord fail naturally if the network really is down.
+        }
+
         // Look up the message bodies from the local chat store. If the
         // message was deleted (clearChat), drop it from the queue.
         const allMessages = new Map<string, { message: ChatMessage; chatId: string | null }>();
