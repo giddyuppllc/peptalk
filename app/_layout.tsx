@@ -23,7 +23,6 @@ import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { OfflineBanner } from '../src/components/OfflineBanner';
 import { CelebrationModal } from '../src/components/CelebrationModal';
-import { ProfileShortcutFab } from '../src/components/ProfileShortcutFab';
 import { WorkoutRewardModal } from '../src/components/WorkoutRewardModal';
 import { PepTalkCharacter } from '../src/components/PepTalkCharacter';
 import { SpotlightTour } from '../src/components/tutorial/SpotlightTour';
@@ -942,10 +941,10 @@ function RootLayout() {
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
         </Stack>
-        {/* Profile shortcut overlay — sits OUTSIDE the Stack so it's
-            visible above whichever screen is rendered. The component
-            itself decides via usePathname whether to render. */}
-        <ProfileShortcutFab />
+        {/* Profile shortcut overlay lives in the (tabs) layout — mounting
+            it here too caused the FAB to render twice on tab screens. The
+            (tabs) mount is the canonical one; non-tab routes don't get the
+            FAB by design. */}
       </View>
     </SafeAreaProvider>
     </GluestackUIProvider>
