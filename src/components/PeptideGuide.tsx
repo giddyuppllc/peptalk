@@ -74,7 +74,13 @@ export function PeptideGuide({ peptide, vial_mg, bac_water_ml }: Props) {
   // educationally before the user has typed anything in.
   const recon_vial = vial_mg && vial_mg > 0 ? vial_mg : 10;
   const recon_bac  = bac_water_ml && bac_water_ml > 0 ? bac_water_ml : 2;
-  const reconMath = calculatePeptideDose(recon_vial, recon_bac, 0);
+  // calculatePeptideDose returns a discriminated result. Unwrap with a
+  // safe fallback so the UI never renders zeros / NaN even if the inputs
+  // somehow slip past the guards above.
+  const reconMathResult = calculatePeptideDose(recon_vial, recon_bac, 0);
+  const reconMath = reconMathResult.ok
+    ? reconMathResult.math
+    : { concentration_mg_per_ml: 0, volume_ml: 0, units_u100: 0, mcg_per_unit: 0 };
   const examples  = generateDoseTable(recon_vial, recon_bac);
 
   // Compliance tier badge — fall back to mapping approvalStatus when the
