@@ -461,6 +461,92 @@ export async function cancelAll(): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
 }
 
+// ─── Mid-day macro deficit nudge (Master Refactor Plan v3.1 §6.4) ────────────
+
+/**
+ * Fire a one-off local notification when an enabled macro is tracking
+ * meaningfully short past midday. Called from the foreground sync
+ * handler in app/_layout.tsx — content is computed at fire time so the
+ * deficit reflects what the user has actually logged today (a daily
+ * pre-scheduled notification can't do that).
+ *
+ * Single-fire per day per macro: keyed by `macro_nudge_<kind>_<YYYY-MM-DD>`.
+ * If we have already fired today, no-op.
+ */
+const NUDGE_THRESHOLD_PCT = 0.6; // fire when < 60% of target
+const NUDGE_AFTER_HOUR = 14; // local time (14:00 = 2pm)
+
+export async function checkMidDayMacroDeficit(args: {
+  totalsByMacro: {
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber: number;
+  };
+  targetsByMacro: {
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber: number;
+  };
+  prefs: {
+    proteinDeficitNudge: boolean;
+    carbsDeficitNudge: boolean;
+    fatDeficitNudge: boolean;
+    fiberDeficitNudge: boolean;
+  };
+}): Promise<void> {
+  if (!isAvailable()) return;
+  const now = new Date();
+  if (now.getHours() < NUDGE_AFTER_HOUR) return;
+
+  const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  const macros: Array<{
+    key: 'protein' | 'carbs' | 'fat' | 'fiber';
+    label: string;
+    enabled: boolean;
+  }> = [
+    { key: 'protein', label: 'Protein', enabled: args.prefs.proteinDeficitNudge },
+    { key: 'carbs', label: 'Carbs', enabled: args.prefs.carbsDeficitNudge },
+    { key: 'fat', label: 'Fat', enabled: args.prefs.fatDeficitNudge },
+    { key: 'fiber', label: 'Fiber', enabled: args.prefs.fiberDeficitNudge },
+  ];
+
+  for (const m of macros) {
+    if (!m.enabled) continue;
+    const target = args.targetsByMacro[m.key];
+    const current = args.totalsByMacro[m.key];
+    if (!target || target <= 0) continue;
+    if (current >= target * NUDGE_THRESHOLD_PCT) continue;
+    const id = `macro_nudge_${m.key}_${dateKey}`;
+    // Check if we already fired today by looking at delivered + scheduled.
+    try {
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      if (scheduled?.some?.((n: any) => n.identifier === id)) continue;
+    } catch {
+      /* no-op */
+    }
+    try {
+      await Notifications.scheduleNotificationAsync({
+        identifier: id,
+        content: {
+          title: `${m.label} is low today`,
+          body: `Let's focus on getting more ${m.label.toLowerCase()} in your next meals.`,
+          sound: 'default',
+          data: { type: 'macro_nudge', macro: m.key, route: '/(tabs)/nutrition' },
+          ...(Platform.OS === 'android' && { channelId: 'reminders' }),
+        },
+        trigger: null, // immediate
+      });
+    } catch (err) {
+      if (__DEV__)
+        // eslint-disable-next-line no-console
+        console.warn(`[notif] macro nudge ${m.key} failed:`, err);
+    }
+  }
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**

@@ -831,6 +831,17 @@ export interface NotificationPreferences {
   mealRemindersEnabled: boolean;
   mealReminderTimes: Record<string, string>; // e.g. { breakfast: '07:00', lunch: '12:00', dinner: '18:00' }
   weeklyReportEnabled: boolean;
+  /**
+   * Mid-day macro deficit nudges (Master Refactor Plan v3.1 §6.4).
+   * Protein nudge is on by default; the others are opt-in. Fired by a
+   * scheduled check around 15:00 local time — if intake is < target *
+   * thresholdPct, a local notification fires "Protein is low today —
+   * let's focus on getting more protein in your next meals."
+   */
+  proteinDeficitNudge: boolean;
+  carbsDeficitNudge: boolean;
+  fatDeficitNudge: boolean;
+  fiberDeficitNudge: boolean;
 }
 
 // ─── Nutrition Consultation Request ───────────────────────────────────────────

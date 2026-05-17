@@ -43,6 +43,11 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   mealRemindersEnabled: false,
   mealReminderTimes: { breakfast: '07:00', lunch: '12:00', dinner: '18:00' },
   weeklyReportEnabled: false,
+  // §6.4 — protein nudge on by default; others off.
+  proteinDeficitNudge: true,
+  carbsDeficitNudge: false,
+  fatDeficitNudge: false,
+  fiberDeficitNudge: false,
 };
 
 // ─── Store ───────────────────────────────────────────────────────────────────
