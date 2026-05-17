@@ -1,14 +1,8 @@
 /**
- * Nutrition detail (v3 Phase A placeholder).
+ * Activity detail (v3 Phase A placeholder).
  *
- * §6 spec — drill-in for Nutrition. Phase D ships protein-focal macros,
- * three macro-target modes (calc / custom / AI), photo food log Pro-
- * gated, mid-day protein deficit nudges, water tracker, appetite log,
- * AI meal plan + grocery list.
- *
- * Legacy nutrition sub-routes (food-search, food-scanner, meal-plan,
- * recipe-generator, etc.) still live in this folder and remain reachable
- * for deep-links until Phase D folds them into the v3 surface.
+ * §7 spec — drill-in for Activity. Phase E ships the full workout log,
+ * custom program follow-along, performance metrics, and HealthKit pull.
  */
 
 import React from 'react';
@@ -16,13 +10,13 @@ import { Text, StyleSheet } from 'react-native';
 import { V3DetailShell, GlassCard } from '../../src/components/v3';
 import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 
-export default function NutritionScreen() {
+export default function ActivityScreen() {
   const t = useV3Theme();
   return (
     <V3DetailShell
-      title="Nutrition"
-      observation="You haven't logged today's protein. 47g to target."
-      intent="nutrition_overview"
+      title="Activity"
+      observation="Two workouts this week. One more keeps the streak alive."
+      intent="activity_overview"
     >
       <GlassCard>
         <Text
@@ -36,7 +30,7 @@ export default function NutritionScreen() {
             },
           ]}
         >
-          Nutrition detail — coming online
+          Activity detail — coming online
         </Text>
         <Text
           style={[
@@ -47,10 +41,8 @@ export default function NutritionScreen() {
             },
           ]}
         >
-          Phase D ships the protein-focal macro card, the three target
-          modes (calculator / custom / AI), the photo food log, the water
-          tracker, the appetite log, and the AI meal plan with grocery
-          export.
+          Phase E ships the workout log, custom programs, performance
+          metrics, and HealthKit / Google Fit step pull.
         </Text>
       </GlassCard>
     </V3DetailShell>
