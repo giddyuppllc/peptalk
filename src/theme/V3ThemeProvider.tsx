@@ -11,6 +11,7 @@
 
 import React, { createContext, useContext, useMemo } from 'react';
 import { useOnboardingStore } from '../store/useOnboardingStore';
+import { useThemeStore } from '../store/useThemeStore';
 import { v3Female, v3Male, type V3Variant } from './v3';
 
 const V3ThemeContext = createContext<V3Variant>(v3Female);
@@ -26,12 +27,17 @@ export function V3ThemeProvider({ children, forceVariant }: ProviderProps) {
   // Read the gender once; the persisted store rehydrates on boot so
   // this is stable for the session.
   const gender = useOnboardingStore((s) => s.profile.gender);
+  // §4.6 — Profile setting lets a user pin a variant regardless of sex.
+  const v3Variant = useThemeStore((s) => s.v3Variant);
 
   const theme = useMemo<V3Variant>(() => {
     if (forceVariant === 'male') return v3Male;
     if (forceVariant === 'female') return v3Female;
+    if (v3Variant === 'male') return v3Male;
+    if (v3Variant === 'female') return v3Female;
+    // 'auto' — onboarding sex wins.
     return gender === 'Male' ? v3Male : v3Female;
-  }, [forceVariant, gender]);
+  }, [forceVariant, v3Variant, gender]);
 
   return <V3ThemeContext.Provider value={theme}>{children}</V3ThemeContext.Provider>;
 }
