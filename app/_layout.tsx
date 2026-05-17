@@ -555,6 +555,65 @@ function RootLayout() {
       } catch (err) {
         if (__DEV__) console.warn('[foreground-sync] macro nudge setup failed:', err);
       }
+
+      // §16 — missed-dose nudges. Both checks run on foreground so
+      // dynamic "did the user log this today" content is correct at
+      // fire time (local scheduled notifications can't compute that).
+      try {
+        const dateKey = (() => {
+          const d = new Date();
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        })();
+        const doseState = useDoseLogStore.getState();
+        const todayLogged = doseState.doses.filter(
+          (d) => d.date === dateKey && !d.planned,
+        );
+        const todayPlanned = doseState.doses.filter(
+          (d) => d.date === dateKey && d.planned,
+        );
+        // Unconfirmed planned doses today, mapped to the shape the
+        // notification service expects.
+        const peptideNameFor = (id: string) => {
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const { getPeptideById } = require('../src/data/peptides');
+            return getPeptideById(id)?.name ?? id;
+          } catch {
+            return id;
+          }
+        };
+        const missedCandidates = todayPlanned
+          .filter(
+            (p) =>
+              !todayLogged.some(
+                (l) => l.peptideId === p.peptideId && !l.planned,
+              ),
+          )
+          .map((p) => ({
+            peptideId: p.peptideId,
+            peptideName: peptideNameFor(p.peptideId),
+            date: p.date,
+            time: p.time,
+          }));
+        import('../src/services/notificationService').then((mod) => {
+          mod
+            .checkMissedDosesTwoHourNudge(missedCandidates)
+            .catch((err: unknown) => {
+              if (__DEV__) console.warn('[foreground-sync] 2hr nudge failed:', err);
+            });
+          mod
+            .checkMissedDosesEndOfDay({
+              hasUnconfirmedPlannedToday: missedCandidates.length > 0,
+              dateKey,
+            })
+            .catch((err: unknown) => {
+              if (__DEV__) console.warn('[foreground-sync] eod nudge failed:', err);
+            });
+        });
+      } catch (err) {
+        if (__DEV__)
+          console.warn('[foreground-sync] missed-dose check setup failed:', err);
+      }
     });
 
     return () => {

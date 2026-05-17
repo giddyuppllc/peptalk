@@ -450,8 +450,14 @@ export const useDoseLogStore = create<DoseLogStore>()(
         if (proto) {
           try {
             // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const { cancelRemindersByTag } = require('../services/notificationService');
-            cancelRemindersByTag?.(`dose-${proto.peptideId}-`)?.catch?.(() => {});
+            const notif = require('../services/notificationService');
+            notif.cancelRemindersByTag?.(`dose-${proto.peptideId}-`)?.catch?.(() => {});
+            // §16 — cycle-complete push routes to the cycle report.
+            const peptide = getPeptideById(proto.peptideId);
+            notif.fireCycleCompleteNudge?.({
+              peptideName: peptide?.name ?? proto.peptideId,
+              protocolId: proto.id,
+            })?.catch?.(() => {});
           } catch {}
         }
       },

@@ -92,6 +92,10 @@ export default function BodyCompositionEntryScreen() {
     });
     // §10.4 — Aimee narrative on new upload.
     refreshInsights();
+    // §16 — fire the ingest push so the user gets a tap-to-read banner.
+    import('../../src/services/notificationService')
+      .then((m) => m.fireIngestNarrativeNudge('inbody'))
+      .catch(() => {});
     Alert.alert('Scan saved', 'Your trend lines updated.', [
       { text: 'OK', onPress: () => router.back() },
     ]);

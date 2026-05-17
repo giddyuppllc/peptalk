@@ -120,6 +120,11 @@ export default function LabEntryScreen() {
     // §10.4 — Aimee narrative on new upload. Refreshing insights picks
     // up the new data point in the next correlation pass.
     refreshInsights();
+    // §16 — fire the ingest push so the user gets a tap-to-read banner.
+    // Fire-and-forget; failure here doesn't block the save.
+    import('../../src/services/notificationService')
+      .then((m) => m.fireIngestNarrativeNudge('labs'))
+      .catch(() => {});
     Alert.alert(
       'Saved',
       `${savedCount} result${savedCount === 1 ? '' : 's'} added.`,

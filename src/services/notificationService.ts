@@ -427,6 +427,128 @@ export async function cancelWeeklyReport(): Promise<void> {
   }
 }
 
+// ─── §16 — One-off event nudges ──────────────────────────────────────────────
+//
+// Fires a local notification immediately. Used for ingest events (new
+// lab / scan), cycle completion, and dose-miss nudges that compute
+// dynamic content at fire time (can't be pre-scheduled as a weekly).
+// Idempotency is on the caller via the `id` parameter — the same id
+// won't fan out duplicates within a single OS session.
+
+export async function fireImmediateNudge(args: {
+  id: string;
+  title: string;
+  body: string;
+  route?: string;
+  data?: Record<string, unknown>;
+}): Promise<void> {
+  if (!isAvailable()) return;
+  try {
+    // Skip if already scheduled / delivered today with the same id.
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    if (scheduled?.some?.((n: any) => n.identifier === args.id)) return;
+  } catch {
+    /* fall through */
+  }
+  try {
+    await Notifications.scheduleNotificationAsync({
+      identifier: args.id,
+      content: {
+        title: args.title,
+        body: args.body,
+        sound: 'default',
+        data: { route: args.route, ...(args.data ?? {}) },
+        ...(Platform.OS === 'android' && { channelId: 'reminders' }),
+      },
+      trigger: null, // immediate
+    });
+  } catch (err) {
+    if (__DEV__)
+      // eslint-disable-next-line no-console
+      console.warn(`[notif] fireImmediateNudge ${args.id} failed:`, err);
+  }
+}
+
+// ─── §16 — Missed-dose foreground checks ─────────────────────────────────────
+//
+// Local scheduled notifications can't compute "did the user log this
+// today" at fire time. Instead we run these checks when the user
+// foregrounds the app (boot + foreground sync in app/_layout.tsx) and
+// fire one-off notifications that the user will see immediately if
+// the OS allows banner-while-active.
+//
+//   - "Did you take your [peptide] dose?"  — fires when a planned
+//     dose's time was >= 2 hours ago and no logged entry exists today.
+//   - "Tough day? Tap to chat with Aimee." — fires end-of-day (after
+//     21:00 local) when any planned dose for today is still uncomfirmed.
+
+/** Two-hour soft nudge — caller passes the candidate planned doses. */
+export async function checkMissedDosesTwoHourNudge(planned: {
+  peptideName: string;
+  peptideId: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
+}[]): Promise<void> {
+  if (!isAvailable()) return;
+  const now = new Date();
+  for (const p of planned) {
+    const [hh, mm] = p.time.split(':').map(Number);
+    const planAt = new Date(`${p.date}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00`);
+    const hoursLate = (now.getTime() - planAt.getTime()) / 3_600_000;
+    if (hoursLate < 2 || hoursLate > 8) continue;
+    await fireImmediateNudge({
+      id: `dose_missed_2h_${p.peptideId}_${p.date}`,
+      title: `Did you take your ${p.peptideName} dose?`,
+      body: 'A nudge in case it slipped your mind. Tap to log it or postpone.',
+      route: '/doses/tracker',
+      data: { type: 'dose_missed_2h', peptideId: p.peptideId },
+    });
+  }
+}
+
+/** End-of-day Aimee check-in — call when local time is >= 21:00. */
+export async function checkMissedDosesEndOfDay(args: {
+  hasUnconfirmedPlannedToday: boolean;
+  dateKey: string;
+}): Promise<void> {
+  if (!isAvailable()) return;
+  const now = new Date();
+  if (now.getHours() < 21) return;
+  if (!args.hasUnconfirmedPlannedToday) return;
+  await fireImmediateNudge({
+    id: `dose_missed_eod_${args.dateKey}`,
+    title: 'Tough day?',
+    body: 'Tap to chat with Aimee about what got in the way today.',
+    route: '/(tabs)/peptalk',
+    data: { type: 'dose_missed_eod' },
+  });
+}
+
+/** New lab / InBody ingested — call from the relevant store action. */
+export async function fireIngestNarrativeNudge(kind: 'labs' | 'inbody'): Promise<void> {
+  await fireImmediateNudge({
+    id: `${kind}_ingest_${Date.now()}`,
+    title: `Your latest ${kind === 'labs' ? 'labs' : 'InBody'} —`,
+    body: 'Aimee has a note. Tap to read.',
+    route: '/aimee/reports',
+    data: { type: 'lab_ingest', kind },
+  });
+}
+
+/** Cycle complete — call from useDoseLogStore.deactivateProtocol. */
+export async function fireCycleCompleteNudge(args: {
+  peptideName: string;
+  protocolId: string;
+}): Promise<void> {
+  await fireImmediateNudge({
+    id: `cycle_complete_${args.protocolId}`,
+    title: `${args.peptideName} cycle complete`,
+    body: 'View your cycle report — body-comp deltas, adherence, side-effects.',
+    route: '/aimee/reports',
+    data: { type: 'cycle_complete', protocolId: args.protocolId },
+  });
+}
+
 // ─── Reschedule All From Plan ────────────────────────────────────────────────
 
 export async function rescheduleAllFromPlan(
