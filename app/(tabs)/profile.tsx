@@ -1563,6 +1563,9 @@ export default function ProfileScreen() {
               <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
               {/* §4.6 — manually pin a v3 theme variant regardless of sex. */}
               <ProfileRow icon="color-palette-outline" label="Appearance" onPress={() => router.push('/profile/appearance' as any)} color={t.text} />
+              <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+              {/* §12 + §13.5 — opt-in public-tracking categories. */}
+              <ProfileRow icon="people-circle-outline" label="Public sharing" onPress={() => router.push('/profile/community-prefs' as any)} color={t.text} />
             </View>
           </View>
         )}
