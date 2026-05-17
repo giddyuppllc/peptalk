@@ -605,6 +605,10 @@ function RootLayout() {
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
           <Stack.Screen
+            name="profile/appearance"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
             name="peptide/[id]"
             options={{
               headerShown: true,

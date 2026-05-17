@@ -1560,6 +1560,9 @@ export default function ProfileScreen() {
               <ProfileRow icon="library-outline" label="Sources & references" onPress={() => router.push('/resources' as any)} color={t.text} />
               <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
               <ProfileRow icon="people-outline" label="Community" onPress={() => router.push('/community' as any)} color={t.text} />
+              <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+              {/* §4.6 — manually pin a v3 theme variant regardless of sex. */}
+              <ProfileRow icon="color-palette-outline" label="Appearance" onPress={() => router.push('/profile/appearance' as any)} color={t.text} />
             </View>
           </View>
         )}
