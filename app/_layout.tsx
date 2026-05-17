@@ -19,8 +19,11 @@ import { DMSans_400Regular } from '@expo-google-fonts/dm-sans/400Regular';
 import { DMSans_500Medium } from '@expo-google-fonts/dm-sans/500Medium';
 import { DMSans_600SemiBold } from '@expo-google-fonts/dm-sans/600SemiBold';
 import { DMSans_700Bold } from '@expo-google-fonts/dm-sans/700Bold';
+import { Newsreader_600SemiBold } from '@expo-google-fonts/newsreader/600SemiBold';
+import { Newsreader_700Bold } from '@expo-google-fonts/newsreader/700Bold';
 import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
+import { V3ThemeProvider } from '../src/theme/V3ThemeProvider';
 import { OfflineBanner } from '../src/components/OfflineBanner';
 import { CelebrationModal } from '../src/components/CelebrationModal';
 import { WorkoutRewardModal } from '../src/components/WorkoutRewardModal';
@@ -77,6 +80,11 @@ function RootLayout() {
     'DMSans-Medium': DMSans_500Medium,
     'DMSans-SemiBold': DMSans_600SemiBold,
     'DMSans-Bold': DMSans_700Bold,
+    // v3 male theme — Newsreader is the masculine serif counterpart to
+    // Playfair on the female side (§3 / §10 of Master Refactor Plan v3.1).
+    // EDWARD H. greeting + male glass-card headlines use these weights.
+    'Newsreader-SemiBold': Newsreader_600SemiBold,
+    'Newsreader-Bold': Newsreader_700Bold,
   });
 
   // Safety net: if @expo-google-fonts can't reach its CDN (captive wifi,
@@ -521,6 +529,7 @@ function RootLayout() {
   return (
     <ErrorBoundary>
     <GluestackUIProvider colorMode="light">
+    <V3ThemeProvider>
     <SafeAreaProvider>
       <View style={[styles.container, { backgroundColor: t.bg }]}>
         <StatusBar style={t.statusBar} />
@@ -562,6 +571,19 @@ function RootLayout() {
         >
           <Stack.Screen name="onboarding" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          {/* v3 detail screens — drill-ins from the 4-card home (§2 / §4). */}
+          <Stack.Screen
+            name="tracker/index"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="activity/index"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="doses/index"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
           <Stack.Screen
             name="peptide/[id]"
             options={{
@@ -950,6 +972,7 @@ function RootLayout() {
             FAB by design. */}
       </View>
     </SafeAreaProvider>
+    </V3ThemeProvider>
     </GluestackUIProvider>
     </ErrorBoundary>
   );

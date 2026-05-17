@@ -75,19 +75,15 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        // v3.1 §4.1 + §20.1 — "No bottom tab bar (4 cards are the nav)."
+        // The Tabs navigator stays so existing routes (peptalk, my-stacks,
+        // train, profile) still resolve for deep links + back navigation,
+        // but the bar itself is hidden. The v3 home renders the 4 drill
+        // cards as the actual navigation surface.
+        tabBarStyle: { display: 'none' },
         tabBarActiveTintColor: accent.deep,
         tabBarInactiveTintColor: t.textSecondary,
-        tabBarStyle: [
-          styles.tabBar,
-          {
-            backgroundColor: t.tabBar,
-            borderTopColor: t.glassBorder,
-            height: tabBarHeight,
-            paddingBottom: Math.max(insets.bottom, 6),
-          },
-        ],
         tabBarLabelStyle: styles.tabBarLabel,
-        // Slightly smaller icons so 6 tabs fit comfortably on iPhone SE width.
         tabBarItemStyle: { paddingTop: 4 },
       }}
     >
