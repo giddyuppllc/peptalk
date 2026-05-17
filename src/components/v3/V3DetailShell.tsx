@@ -16,14 +16,15 @@ import { AimeePersistentChip } from './AimeePersistentChip';
 import { AimeeFAB } from './AimeeFAB';
 import { useV3Theme } from '../../theme/V3ThemeProvider';
 import { tapLight } from '../../utils/haptics';
+import type { AimeeIntent } from '../../hooks/useAimeeRouter';
 
 interface Props {
   /** Screen title shown in the greeting slot. */
   title: string;
   /** 1-line observation surfaced in the persistent Aimee chip. */
   observation: string;
-  /** Intent the chat sheet pre-loads when the user taps Aimee. */
-  intent?: string;
+  /** Intent the chat pre-loads when the user taps Aimee. */
+  intent?: AimeeIntent;
   children: React.ReactNode;
   contentStyle?: StyleProp<ViewStyle>;
 }

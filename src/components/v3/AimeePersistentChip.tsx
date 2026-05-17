@@ -10,28 +10,35 @@
  * be flipped manually.
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Pressable, Text, View, StyleSheet } from 'react-native';
 import { useV3Theme } from '../../theme/V3ThemeProvider';
-import { tapMedium } from '../../utils/haptics';
-import { AimeeChatSheet } from './AimeeChatSheet';
+import {
+  useAimeeRouter,
+  type AimeeIntent,
+} from '../../hooks/useAimeeRouter';
 
 interface Props {
   /** 1-line observation specific to this screen. */
   observation: string;
-  /** Intent pre-load for the chat sheet on tap. */
-  intent?: string;
+  /** Intent pre-load for the chat on tap. */
+  intent?: AimeeIntent;
   /** Compact mode — just the avatar (used after 8s of scroll, Phase F1). */
   collapsed?: boolean;
 }
 
 export function AimeePersistentChip({ observation, intent, collapsed }: Props) {
   const t = useV3Theme();
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const openAimee = useAimeeRouter();
 
   const onPress = () => {
-    tapMedium();
-    setSheetOpen(true);
+    openAimee({
+      intent: intent ?? 'open_chat',
+      // The chip is a contextual prompt — send the observation itself so
+      // Aimee replies in-thread to *exactly* what the screen surfaced,
+      // instead of a generic intent prompt.
+      messageOverride: observation,
+    });
   };
 
   return (
@@ -93,11 +100,6 @@ export function AimeePersistentChip({ observation, intent, collapsed }: Props) {
           ) : null}
         </View>
       </Pressable>
-      <AimeeChatSheet
-        visible={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        intent={intent}
-      />
     </View>
   );
 }

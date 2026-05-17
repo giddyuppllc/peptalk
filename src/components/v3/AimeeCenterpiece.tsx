@@ -11,7 +11,7 @@
  * observation engine (§9.8 Pro tier).
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -23,15 +23,17 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useV3Theme } from '../../theme/V3ThemeProvider';
-import { tapMedium } from '../../utils/haptics';
-import { AimeeChatSheet } from './AimeeChatSheet';
+import {
+  useAimeeRouter,
+  type AimeeIntent,
+} from '../../hooks/useAimeeRouter';
 import { Chip } from './ChipRow';
 
 interface Props {
   /** Override the observation (Phase F1 will inject dynamic copy). */
   observation?: string;
   /** Override the chips. */
-  chips?: Array<{ label: string; intent?: string; primary?: boolean }>;
+  chips?: Array<{ label: string; intent?: AimeeIntent; primary?: boolean }>;
 }
 
 const DEFAULT_CHIPS: NonNullable<Props['chips']> = [
@@ -45,8 +47,7 @@ export function AimeeCenterpiece({
   chips = DEFAULT_CHIPS,
 }: Props) {
   const t = useV3Theme();
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [sheetIntent, setSheetIntent] = useState<string | undefined>();
+  const openAimee = useAimeeRouter();
 
   // Pulse animation
   const pulse = useSharedValue(1);
@@ -68,10 +69,15 @@ export function AimeeCenterpiece({
     transform: [{ scale: pulse.value }],
   }));
 
-  const openSheet = (intent?: string) => {
-    tapMedium();
-    setSheetIntent(intent);
-    setSheetOpen(true);
+  const openSheet = (intent?: AimeeIntent) => {
+    openAimee({
+      intent: intent ?? 'open_chat',
+      // Tapping the orb (no chip intent) sends the observation itself
+      // as the prompt, so Aimee responds to *exactly* what the
+      // centerpiece surfaced. Chips with an explicit intent get the
+      // mapped prompt from useAimeeRouter.
+      messageOverride: intent ? undefined : observation,
+    });
   };
 
   const orbColors = (t.isDark
@@ -139,11 +145,6 @@ export function AimeeCenterpiece({
         ))}
       </View>
 
-      <AimeeChatSheet
-        visible={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        intent={sheetIntent}
-      />
     </View>
   );
 }
