@@ -71,13 +71,19 @@ export const useAppetiteLogStore = create<
   ),
 );
 
+/**
+ * Appetite chip option metadata. The `tintKey` names the semantic token
+ * the consumer should pull from the active v3 palette (`semanticPositive`,
+ * `semanticCaution`, `semanticDanger`) — never hardcode the hex at the
+ * call site.
+ */
 export const APPETITE_OPTIONS: {
   state: AppetiteState;
   emoji: string;
   label: string;
-  tint: string;
+  tintKey: 'semanticPositive' | 'semanticCaution' | 'semanticDanger';
 }[] = [
-  { state: 'hungry', emoji: '🟢', label: 'Hungry', tint: '#6FA891' },
-  { state: 'full', emoji: '🟡', label: 'Full', tint: '#D9B65A' },
-  { state: 'nauseous', emoji: '🔴', label: 'Nauseous', tint: '#D43A3A' },
+  { state: 'hungry', emoji: '🟢', label: 'Hungry', tintKey: 'semanticPositive' },
+  { state: 'full', emoji: '🟡', label: 'Full', tintKey: 'semanticCaution' },
+  { state: 'nauseous', emoji: '🔴', label: 'Nauseous', tintKey: 'semanticDanger' },
 ];

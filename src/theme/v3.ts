@@ -36,6 +36,21 @@ const FEMALE_COLORS = {
 
   fabGradientStart: '#E5928D',
   fabGradientEnd: '#D4C8E8',
+
+  // Semantic — shared meaning across both palettes. Severity ramps,
+  // delta direction (gain vs loss), and interaction tints all draw
+  // from here so consumers never hardcode hex.
+  divider: 'rgba(42,26,79,0.10)',              // matches plum-navy text
+  semanticDanger: '#D43A3A',                   // hard warnings only
+  semanticCaution: '#D9B65A',                  // soft amber, mid severity
+  semanticPositive: '#6FA891',                 // loss, success, calm
+  semanticNeutral: '#9AA3B5',                  // no-op / undocumented
+  semanticWarn: '#D08850',                     // friction / unwanted gain
+  severity1: '#6FA891',                        // mild → severe ramp
+  severity2: '#9FB16E',
+  severity3: '#D9B65A',
+  severity4: '#D08850',
+  severity5: '#D43A3A',
 } as const;
 
 // ── Male palette (charcoal / cognac / oxblood) ──────────────────────
@@ -66,6 +81,21 @@ const MALE_COLORS = {
 
   fabGradientStart: '#8B1A24',
   fabGradientEnd: '#C9885A',
+
+  // Semantic — same meaning as the female palette, slightly desaturated
+  // for the dark backdrop. Severity / delta direction / interaction
+  // tints draw from these tokens.
+  divider: 'rgba(241,236,228,0.10)',           // matches bone text
+  semanticDanger: '#D43A3A',                   // hard warnings only
+  semanticCaution: '#C9A35A',                  // muted amber on dark
+  semanticPositive: '#7AAA94',                 // loss, success, calm
+  semanticNeutral: '#8A93A6',                  // no-op / undocumented
+  semanticWarn: '#B97A48',                     // friction / unwanted gain
+  severity1: '#7AAA94',                        // mild → severe ramp
+  severity2: '#9AA875',
+  severity3: '#C9A35A',
+  severity4: '#B97A48',
+  severity5: '#D43A3A',
 } as const;
 
 // ── Shared tokens ───────────────────────────────────────────────────
