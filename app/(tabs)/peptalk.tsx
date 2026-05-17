@@ -624,9 +624,15 @@ export default function PepTalkScreen() {
     ],
   );
 
-  // Handle pre-filled message: auto-send it if chat is empty
+  // Handle pre-filled message: auto-send when a new prefill arrives.
+  // §9.1 — Aimee FAB / Centerpiece / Persistent Chip route here with the
+  // chosen intent as a message. The previous gate (`messages.length === 0`)
+  // dropped the prompt when an existing thread already had history; now
+  // we key on the prefill value so each new tap sends once.
+  const lastHandledPrefill = useRef<string | null>(null);
   useEffect(() => {
-    if (prefillMessage && !messageHandled.current && messages.length === 0) {
+    if (prefillMessage && lastHandledPrefill.current !== prefillMessage) {
+      lastHandledPrefill.current = prefillMessage;
       messageHandled.current = true;
       const userMsg: ChatMessage = {
         id: `user-${Date.now()}`,
