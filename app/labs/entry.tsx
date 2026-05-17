@@ -30,6 +30,8 @@ import {
 } from '../../src/store/useLabResultsStore';
 import { useAimeeReportsStore } from '../../src/store/useAimeeReportsStore';
 import { detectLabParser } from '../../src/services/labParsers';
+import { recognizeLabPhoto } from '../../src/services/labOcr';
+import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 
 function todayKey(): string {
   const d = new Date();
@@ -62,6 +64,72 @@ export default function LabEntryScreen() {
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pastedText, setPastedText] = useState('');
   const [parseStatus, setParseStatus] = useState<string | null>(null);
+
+  const tier = useSubscriptionStore((s) => s.tier);
+  const isPro = tier !== 'free';
+  const [scanInFlight, setScanInFlight] = useState(false);
+
+  const handleScanPhoto = async () => {
+    if (!isPro) {
+      router.push('/subscription' as never);
+      return;
+    }
+    tapMedium();
+    try {
+      const ImagePicker = await import('expo-image-picker');
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        const lib = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!lib.granted) {
+          Alert.alert(
+            'Photos access needed',
+            'Allow camera or library access in Settings to scan a report.',
+          );
+          return;
+        }
+      }
+      const result = perm.granted
+        ? await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 0.9,
+          })
+        : await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 0.9,
+          });
+      if (result.canceled || !result.assets?.[0]) return;
+      setScanInFlight(true);
+      const ocr = await recognizeLabPhoto(result.assets[0].uri);
+      setScanInFlight(false);
+      if (!ocr.ok) {
+        const msg =
+          ocr.reason === 'unavailable'
+            ? 'Vision OCR is rolling out — paste the report text or enter values manually.'
+            : ocr.reason === 'no_match'
+              ? 'No lab values detected in the photo. Try a clearer crop or paste the text.'
+              : `Scan failed: ${ocr.error ?? 'unknown error'}.`;
+        setParseStatus(msg);
+        return;
+      }
+      const nextValues: Record<string, string> = {};
+      for (const v of ocr.values) {
+        nextValues[v.markerId] = String(v.value);
+      }
+      setValues((prev) => ({ ...prev, ...nextValues }));
+      if (ocr.drawDate) setDrawDate(ocr.drawDate);
+      setParseStatus(
+        `${ocr.vendor ?? 'Vision'}: pre-filled ${ocr.values.length} marker${ocr.values.length === 1 ? '' : 's'}.${ocr.unmappedLines.length ? ` ${ocr.unmappedLines.length} lines unmapped.` : ''}`,
+      );
+    } catch (err) {
+      setScanInFlight(false);
+      Alert.alert(
+        'Could not scan',
+        err instanceof Error ? err.message : 'Try paste-text instead.',
+      );
+    }
+  };
 
   const handleParsePasted = () => {
     if (!pastedText.trim()) {
@@ -176,6 +244,66 @@ export default function LabEntryScreen() {
             />
           </View>
         </GlassCard>
+
+        {/* §10.1 — vision OCR. Pro feature; fail-soft when the edge
+            function isn't deployed yet. */}
+        <Pressable
+          onPress={handleScanPhoto}
+          disabled={scanInFlight}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isPro
+              ? scanInFlight
+                ? 'Scanning report — please wait'
+                : 'Scan a report photo with vision OCR'
+              : 'Upgrade to Pro to unlock photo OCR'
+          }
+        >
+          <GlassCard style={styles.cardSpacing}>
+            <View style={styles.pasteRow}>
+              <Ionicons
+                name="camera-outline"
+                size={18}
+                color={t.colors.textSecondary as string}
+              />
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.pasteTitle,
+                    {
+                      color: t.colors.textPrimary as string,
+                      fontFamily: t.isDark
+                        ? t.typography.headlineMale
+                        : t.typography.headlineFemale,
+                    },
+                  ]}
+                >
+                  {isPro ? 'Scan a report photo' : 'Photo OCR (Pro)'}
+                </Text>
+                <Text
+                  style={[
+                    styles.pasteHint,
+                    {
+                      color: t.colors.textSecondary as string,
+                      fontFamily: t.typography.body,
+                    },
+                  ]}
+                >
+                  {scanInFlight
+                    ? 'Scanning…'
+                    : isPro
+                      ? 'Vision pulls structured markers. You confirm before save.'
+                      : 'Upgrade to let Aimee extract markers from a photo.'}
+                </Text>
+              </View>
+              <Ionicons
+                name={scanInFlight ? 'ellipsis-horizontal' : 'chevron-forward'}
+                size={16}
+                color={t.colors.textSecondary as string}
+              />
+            </View>
+          </GlassCard>
+        </Pressable>
 
         {/* §10.1 — paste-text parser. Reachable from this screen so the
             vendor adapters in src/services/labParsers/ get used today
