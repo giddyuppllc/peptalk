@@ -378,28 +378,53 @@ export async function scheduleMealReminder(
 
 // ─── Schedule Weekly Report ──────────────────────────────────────────────────
 
+// Stable identifier so re-scheduling on every app boot doesn't fan out
+// duplicate weekly notifications. iOS replaces by identifier; Android's
+// OS-level scheduler does the same as long as the id matches.
+const WEEKLY_REPORT_ID = 'peptalk-aimee-weekly-report';
+
 export async function scheduleWeeklyReport(): Promise<string> {
   if (!isAvailable()) return '';
 
+  // Cancel any prior schedule with this identifier before re-creating.
+  try {
+    await Notifications.cancelScheduledNotificationAsync(WEEKLY_REPORT_ID);
+  } catch {
+    /* no-op if nothing to cancel */
+  }
+
   const identifier = await Notifications.scheduleNotificationAsync({
+    identifier: WEEKLY_REPORT_ID,
     content: {
-      title: 'Weekly Progress Report',
-      body: 'Your weekly summary is ready. See how you did this week!',
+      title: 'Your Aimee weekly report is ready',
+      body: "Tap to see what's worth your attention this week.",
       sound: 'default',
-      data: { type: 'weekly-report' },
+      // §9.3 — tap routes through the existing notification-response
+      // handler in app/_layout.tsx, which honors `data.route`. Land
+      // straight on the reports list so the user can pick the latest
+      // weekly without an extra hop.
+      data: { type: 'aimee-weekly-report', route: '/aimee/reports' },
       ...(Platform.OS === 'android' && { channelId: 'reminders' }),
     },
     trigger: {
       type: Notifications?.SchedulableTriggerInputTypes?.WEEKLY ?? 'weekly',
-      weekday: 1, // Sunday (Expo uses 1 = Sunday)
-      hour: 19,
+      weekday: 1, // Expo: 1 = Sunday
+      hour: 9, // 9 AM Sunday — start-of-week framing
       minute: 0,
       ...(Platform.OS === 'android' && { channelId: 'reminders' }),
     },
-    identifier: `weekly-report-${Date.now()}`,
   });
 
   return identifier;
+}
+
+export async function cancelWeeklyReport(): Promise<void> {
+  if (!isAvailable()) return;
+  try {
+    await Notifications.cancelScheduledNotificationAsync(WEEKLY_REPORT_ID);
+  } catch {
+    /* no-op */
+  }
 }
 
 // ─── Reschedule All From Plan ────────────────────────────────────────────────

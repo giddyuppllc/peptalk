@@ -213,8 +213,12 @@ function RootLayout() {
     // OS short-circuits if permission already granted.
     (async () => {
       try {
-        const { registerForPushNotifications, scheduleDailyCheckInReminder } =
-          await import('../src/services/notificationService');
+        const {
+          registerForPushNotifications,
+          scheduleDailyCheckInReminder,
+          scheduleWeeklyReport,
+          cancelWeeklyReport,
+        } = await import('../src/services/notificationService');
         const token = await registerForPushNotifications();
         if (!token) return; // user denied, or notifications unavailable
         // Wait for the notification store to rehydrate before scheduling.
@@ -230,8 +234,50 @@ function RootLayout() {
         if (prefs.dailyCheckInReminder && prefs.enabled) {
           await scheduleDailyCheckInReminder(prefs.checkInReminderTime);
         }
+        // §9.3 — Aimee weekly report. Schedule a Sunday 9 AM local push
+        // when notifications + weeklyReport are on; cancel cleanly when
+        // either is off so a previously-scheduled Sunday push doesn't
+        // keep firing for a user who turned the feature off.
+        if (prefs.enabled && prefs.weeklyReport) {
+          await scheduleWeeklyReport();
+        } else {
+          await cancelWeeklyReport();
+        }
       } catch (err) {
         if (__DEV__) console.warn('[boot] notification registration failed:', err);
+      }
+    })();
+
+    // §9.3 — refresh the weekly report on every cold boot when the last
+    // refresh is older than 6 days. This way the report the user lands
+    // on after tapping a Sunday push is the current one, even though
+    // the notification itself can't run code. Dynamic import keeps boot
+    // cheap when the reports surface is never opened.
+    (async () => {
+      try {
+        let waited = 0;
+        // Wait for stores to hydrate so the report sees real data.
+        while (waited < 5000) {
+          const ready =
+            useDoseLogStore.getState().doses != null &&
+            useMealStore.getState().meals != null;
+          if (ready) break;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          waited += 50;
+        }
+        const { useAimeeReportsStore } = await import(
+          '../src/store/useAimeeReportsStore'
+        );
+        const state = useAimeeReportsStore.getState();
+        const lastAt = state.lastWeeklyAt
+          ? new Date(state.lastWeeklyAt).getTime()
+          : 0;
+        if (Date.now() - lastAt > 6 * 86400_000) {
+          state.refreshWeekly();
+        }
+        state.refreshInsights();
+      } catch (err) {
+        if (__DEV__) console.warn('[boot] weekly report refresh failed:', err);
       }
     })();
 
@@ -685,6 +731,10 @@ function RootLayout() {
           />
           <Stack.Screen
             name="community/leaderboard"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="community/milestones"
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
           <Stack.Screen

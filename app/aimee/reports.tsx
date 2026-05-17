@@ -22,6 +22,11 @@ import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 import { tapLight, tapMedium } from '../../src/utils/haptics';
 import { useAimeeReportsStore } from '../../src/store/useAimeeReportsStore';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
+import { useNotificationStore } from '../../src/store/useNotificationStore';
+import {
+  scheduleWeeklyReport,
+  notificationsAvailable,
+} from '../../src/services/notificationService';
 
 export default function ReportsListScreen() {
   const t = useV3Theme();
@@ -32,10 +37,28 @@ export default function ReportsListScreen() {
   const refreshInsights = useAimeeReportsStore((s) => s.refreshInsights);
   const tier = useSubscriptionStore((s) => s.tier);
   const isPro = tier !== 'free';
+  const weeklyReportPref = useNotificationStore((s) => s.preferences.weeklyReport);
+  const setWeeklyReportPref = useNotificationStore((s) => s.toggleWeeklyReport);
+  const notifsOn = useNotificationStore((s) => s.preferences.enabled);
 
   useEffect(() => {
     refreshInsights();
   }, [refreshInsights]);
+
+  // §9.3 — Pro users who opt in to weekly Sunday pushes inline; off by
+  // default so we never push without consent.
+  const handleEnableSundayPush = async () => {
+    if (!isPro) return;
+    tapMedium();
+    setWeeklyReportPref();
+    if (notificationsAvailable() && notifsOn) {
+      try {
+        await scheduleWeeklyReport();
+      } catch {
+        /* no-op — toggling the pref is the source of truth */
+      }
+    }
+  };
 
   const handleGenerate = () => {
     if (!isPro) {
@@ -137,6 +160,57 @@ export default function ReportsListScreen() {
             </View>
           </GlassCard>
         </Pressable>
+
+        {/* §9.3 — Sunday auto-push opt-in. Only nudge Pro users who
+            haven't enabled it yet. */}
+        {isPro && !weeklyReportPref ? (
+          <Pressable
+            onPress={handleEnableSundayPush}
+            accessibilityRole="button"
+            accessibilityLabel="Turn on Sunday 9 AM weekly report push"
+          >
+            <GlassCard style={styles.cardSpacing}>
+              <View style={styles.optInRow}>
+                <Ionicons
+                  name="notifications-outline"
+                  size={18}
+                  color={t.colors.textSecondary as string}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.optInTitle,
+                      {
+                        color: t.colors.textPrimary as string,
+                        fontFamily: t.isDark
+                          ? t.typography.headlineMale
+                          : t.typography.headlineFemale,
+                      },
+                    ]}
+                  >
+                    Sunday 9 AM push
+                  </Text>
+                  <Text
+                    style={[
+                      styles.optInBody,
+                      {
+                        color: t.colors.textSecondary as string,
+                        fontFamily: t.typography.body,
+                      },
+                    ]}
+                  >
+                    I'll ping you when the weekly is ready. Off by default.
+                  </Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color={t.colors.textSecondary as string}
+                />
+              </View>
+            </GlassCard>
+          </Pressable>
+        ) : null}
 
         {/* Insights feed */}
         {insights.length > 0 ? (
@@ -353,6 +427,18 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   reportPeriod: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  optInRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  optInTitle: {
+    fontSize: 14,
+  },
+  optInBody: {
     fontSize: 11,
     marginTop: 2,
   },
