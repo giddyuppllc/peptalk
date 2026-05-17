@@ -20,7 +20,7 @@
  * Deploy: supabase functions deploy aimee-chat-stream
  * Secrets:
  *   GROK_API_KEY (or XAI_API_KEY / OPENAI_API_KEY) — required
- *   GROK_MODEL                 (optional — default grok-4-1-fast-reasoning)
+ *   GROK_MODEL                 (optional — default grok-4.3)
  *   GROK_BASE_URL              (optional — default https://api.x.ai/v1)
  *   AIMEE_DAILY_BUDGET_CENTS   (optional — default 1000 = $10)
  *   AIMEE_PER_USER_DAILY_CENTS (optional — default 200 = $2)

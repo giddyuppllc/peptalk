@@ -17,7 +17,7 @@ const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 // Default to Grok — matches the other edge functions. If secrets aren't set
 // for this function, at least we're calling the same provider consistently.
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
-const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL') ?? 'grok-4-1-fast-reasoning';
+const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL') ?? 'grok-4.3';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
