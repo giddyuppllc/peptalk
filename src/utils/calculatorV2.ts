@@ -163,3 +163,87 @@ export function formatVolumeMl(ml: number): string {
 export function formatUnits(units: number): string {
   return `${units.toFixed(1)} units`;
 }
+
+// ─── §8.8 — Full-cycle schedule generator ────────────────────────────────────
+
+/**
+ * Parse a free-text frequency phrase from peptideDosingReference into the
+ * canonical set we know how to schedule. Anything ambiguous (e.g. "as needed",
+ * "open") defaults to weekly so we emit *something* the user can edit, not
+ * nothing.
+ */
+export type CadenceKind =
+  | 'daily'
+  | 'weekly'
+  | 'eod'
+  | 'mon_wed_fri'
+  | 'mon_thu';
+
+export function parseCadence(frequency: string): CadenceKind {
+  const f = frequency.toLowerCase().trim();
+  if (/(mon\/?thu|2x\/?week|biw|twice weekly|twice\/week)/.test(f))
+    return 'mon_thu';
+  if (/(mon\/?wed\/?fri|3x\/?week|tiw|thrice weekly|3\/week)/.test(f))
+    return 'mon_wed_fri';
+  if (/(eod|every other day|alt(ernating)? days?)/.test(f)) return 'eod';
+  if (/once weekly|weekly|once\/week|1x\/?week/.test(f)) return 'weekly';
+  if (/daily|every day|each day|2-?3.?\s*(x|×)?\s*daily|twice daily/.test(f))
+    return 'daily';
+  return 'weekly';
+}
+
+/**
+ * Generate planned dose dates for a single cycle window.
+ *
+ * `cycleLength` accepts the same free-text strings the dosing reference
+ * uses ("12 weeks", "20 days on", "Open — daily as needed"). Anything
+ * not parseable defaults to a 4-week window so a "schedule cycle" tap
+ * always produces a usable plan the user can edit.
+ */
+export function generateCycleDates(
+  startISO: string,
+  cycleLength: string | undefined,
+  frequency: string,
+): string[] {
+  const cadence = parseCadence(frequency);
+  const totalDays = parseCycleDays(cycleLength);
+  const start = new Date(startISO);
+  const out: string[] = [];
+  for (let i = 0; i < totalDays; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    if (shouldEmit(d, i, cadence)) out.push(toDateKey(d));
+  }
+  return out;
+}
+
+function parseCycleDays(cycleLength: string | undefined): number {
+  if (!cycleLength) return 28;
+  const weekMatch = cycleLength.match(/(\d+)\s*weeks?/i);
+  if (weekMatch) return Number(weekMatch[1]) * 7;
+  const dayMatch = cycleLength.match(/(\d+)\s*days?/i);
+  if (dayMatch) return Number(dayMatch[1]);
+  // "Open — daily as needed" / "Weekly, titrate to effect" → default 4 weeks.
+  return 28;
+}
+
+function shouldEmit(d: Date, dayIndex: number, cadence: CadenceKind): boolean {
+  const dow = d.getDay(); // 0 Sun … 6 Sat
+  switch (cadence) {
+    case 'daily':
+      return true;
+    case 'eod':
+      return dayIndex % 2 === 0;
+    case 'weekly':
+      // Anchor to the start day.
+      return dayIndex % 7 === 0;
+    case 'mon_wed_fri':
+      return dow === 1 || dow === 3 || dow === 5;
+    case 'mon_thu':
+      return dow === 1 || dow === 4;
+  }
+}
+
+function toDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}

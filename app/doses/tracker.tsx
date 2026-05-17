@@ -19,6 +19,7 @@ export default function DoseTrackerScreen() {
   const t = useV3Theme();
   const doses = useDoseLogStore((s) => s.doses);
   const deleteDose = useDoseLogStore((s) => s.deleteDose);
+  const confirmPlannedDose = useDoseLogStore((s) => s.confirmPlannedDose);
 
   const [filter, setFilter] = useState<string | null>(null);
 
@@ -98,20 +99,49 @@ export default function DoseTrackerScreen() {
               PEPTIDES.find((p) => p.id === d.peptideId)?.name ??
               d.peptideId;
             return (
-              <GlassCard key={d.id} style={styles.entryCard}>
+              <GlassCard
+                key={d.id}
+                style={[
+                  styles.entryCard,
+                  d.planned ? { opacity: 0.62 } : undefined,
+                ]}
+              >
                 <View style={styles.entryRow}>
                   <View style={{ flex: 1 }}>
-                    <Text
-                      style={[
-                        styles.peptideName,
-                        {
-                          color: t.colors.textPrimary as string,
-                          fontFamily: t.typography.bodyBold,
-                        },
-                      ]}
-                    >
-                      {name}
-                    </Text>
+                    <View style={styles.headRow}>
+                      <Text
+                        style={[
+                          styles.peptideName,
+                          {
+                            color: t.colors.textPrimary as string,
+                            fontFamily: t.typography.bodyBold,
+                          },
+                        ]}
+                      >
+                        {name}
+                      </Text>
+                      {d.planned ? (
+                        <View
+                          style={[
+                            styles.plannedPill,
+                            {
+                              borderColor: t.colors.cardBorder as string,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={{
+                              color: t.colors.textSecondary as string,
+                              fontFamily: t.typography.label,
+                              fontSize: 9,
+                              letterSpacing: 1.2,
+                            }}
+                          >
+                            PLANNED
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
                     <Text
                       style={[
                         styles.amount,
@@ -151,19 +181,40 @@ export default function DoseTrackerScreen() {
                       </Text>
                     ) : null}
                   </View>
-                  <Pressable
-                    onPress={() => {
-                      tapMedium();
-                      deleteDose(d.id);
-                    }}
-                    hitSlop={10}
-                  >
-                    <Ionicons
-                      name="trash-outline"
-                      size={16}
-                      color={t.colors.textSecondary as string}
-                    />
-                  </Pressable>
+                  <View style={styles.actions}>
+                    {d.planned ? (
+                      <Pressable
+                        onPress={() => {
+                          tapMedium();
+                          confirmPlannedDose(d.id);
+                        }}
+                        hitSlop={10}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Mark ${name} dose taken`}
+                      >
+                        <Ionicons
+                          name="checkmark-circle-outline"
+                          size={20}
+                          color={t.colors.textPrimary as string}
+                        />
+                      </Pressable>
+                    ) : null}
+                    <Pressable
+                      onPress={() => {
+                        tapMedium();
+                        deleteDose(d.id);
+                      }}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete ${name} dose`}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={16}
+                        color={t.colors.textSecondary as string}
+                      />
+                    </Pressable>
+                  </View>
                 </View>
               </GlassCard>
             );
@@ -192,6 +243,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
+  },
+  headRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  plannedPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  actions: {
+    alignItems: 'center',
+    gap: 14,
+    paddingTop: 4,
   },
   peptideName: {
     fontSize: 12,

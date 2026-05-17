@@ -42,6 +42,7 @@ import {
   formatVolumeMl,
   formatUnits,
   parseDoseToMg,
+  generateCycleDates,
   type CalculatorWarning,
 } from '../../src/utils/calculatorV2';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
@@ -60,6 +61,7 @@ export default function CalculatorV2Screen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ peptideId?: string }>();
   const logDose = useDoseLogStore((s) => s.logDose);
+  const scheduleCycle = useDoseLogStore((s) => s.scheduleCycle);
 
   const [peptideId, setPeptideId] = useState<string | null>(
     params.peptideId ?? null,
@@ -173,6 +175,45 @@ export default function CalculatorV2Screen() {
         err instanceof Error ? err.message : 'Try again.',
       );
     }
+  };
+
+  // §8.8 — bulk-schedule every planned dose across the cycle.
+  const handleScheduleCycle = () => {
+    if (!peptideId || !ref || !phase || !result || result.hardFailures.length > 0) return;
+    tapMedium();
+    const startISO = new Date().toISOString().slice(0, 10);
+    const dates = generateCycleDates(startISO, ref.cycleLength, phase.frequency);
+    if (dates.length === 0) {
+      Alert.alert(
+        'Nothing to schedule',
+        'Could not parse this protocol into a planned cadence. Log doses manually from Tracker.',
+      );
+      return;
+    }
+    Alert.alert(
+      'Schedule cycle?',
+      `${dates.length} planned doses across ~${Math.ceil(dates.length / 7) || 1} week${dates.length > 7 ? 's' : ''}. They'll appear in Tracker as planned — confirm each as you take it.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Schedule',
+          onPress: () => {
+            const written = scheduleCycle({
+              peptideId,
+              amount: perShotMg,
+              unit: 'mg',
+              route: 'subcutaneous',
+              dates,
+              notes: `Planned: ${INTENT_LABELS[intent]} (${formatDose(perShotMg, displayUnit)} per shot)`,
+            });
+            Alert.alert(
+              'Scheduled',
+              `${written} planned dose${written === 1 ? '' : 's'} added to Tracker.${dates.length - written > 0 ? ` ${dates.length - written} skipped (already on file).` : ''}`,
+            );
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -507,35 +548,61 @@ export default function CalculatorV2Screen() {
           </Text>
         </GlassCard>
 
-        {/* Add to calendar */}
+        {/* CTAs — log today, or schedule the whole cycle. */}
         {peptideId && result ? (
-          <Pressable
-            onPress={handleAddToCalendar}
-            disabled={result.hardFailures.length > 0}
-            style={[
-              styles.cta,
-              {
-                backgroundColor:
-                  result.hardFailures.length > 0
-                    ? '#888'
-                    : (t.colors.textPrimary as string),
-                opacity: result.hardFailures.length > 0 ? 0.5 : 1,
-              },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Add dose to calendar"
-          >
-            <Text
-              style={{
-                color: t.colors.bgBase1 as string,
-                fontFamily: t.typography.bodyBold,
-                fontSize: 13,
-                letterSpacing: 0.3,
-              }}
+          <View style={styles.ctaStack}>
+            <Pressable
+              onPress={handleAddToCalendar}
+              disabled={result.hardFailures.length > 0}
+              style={[
+                styles.cta,
+                {
+                  backgroundColor:
+                    result.hardFailures.length > 0
+                      ? (t.colors.textSecondary as string)
+                      : (t.colors.textPrimary as string),
+                  opacity: result.hardFailures.length > 0 ? 0.5 : 1,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Log today's dose to Tracker"
             >
-              Add to Tracker
-            </Text>
-          </Pressable>
+              <Text
+                style={{
+                  color: t.colors.bgBase1 as string,
+                  fontFamily: t.typography.bodyBold,
+                  fontSize: 13,
+                  letterSpacing: 0.3,
+                }}
+              >
+                Log today's dose
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={handleScheduleCycle}
+              disabled={result.hardFailures.length > 0}
+              style={[
+                styles.ctaSecondary,
+                {
+                  borderColor: t.colors.textPrimary as string,
+                  opacity: result.hardFailures.length > 0 ? 0.4 : 1,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Schedule the entire protocol cycle to Tracker"
+            >
+              <Text
+                style={{
+                  color: t.colors.textPrimary as string,
+                  fontFamily: t.typography.bodyBold,
+                  fontSize: 13,
+                  letterSpacing: 0.3,
+                }}
+              >
+                Schedule cycle
+              </Text>
+            </Pressable>
+          </View>
         ) : null}
       </ScrollView>
 
@@ -960,12 +1027,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-  cta: {
+  ctaStack: {
     marginTop: 18,
+    gap: 10,
+  },
+  cta: {
     alignSelf: 'stretch',
     alignItems: 'center',
     paddingVertical: 14,
     borderRadius: 999,
+  },
+  ctaSecondary: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    paddingVertical: 13,
+    borderRadius: 999,
+    borderWidth: 1.5,
   },
   pickerBackdrop: {
     flex: 1,

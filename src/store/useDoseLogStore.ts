@@ -194,6 +194,26 @@ interface DoseLogStore {
   deactivateProtocol: (id: string) => void;
   deleteProtocol: (id: string) => void;
 
+  /**
+   * §8.8 — bulk-insert planned doses across a cycle window. Returns
+   * the number of entries written. De-dupes against existing logged or
+   * planned entries on the same (peptideId, date) so re-running the
+   * Calculator's "Schedule cycle" action a second time after edits
+   * doesn't fan-out duplicates.
+   */
+  scheduleCycle: (input: {
+    peptideId: string;
+    amount: number;
+    unit: DoseUnit;
+    route: AdministrationRoute;
+    dates: string[];
+    time?: string;
+    notes?: string;
+  }) => number;
+
+  /** Mark a planned dose as taken — flips `planned: false` and updates time. */
+  confirmPlannedDose: (id: string, time?: string) => void;
+
   // Alerts
   dismissAlert: (id: string) => void;
   refreshAlerts: () => void;
@@ -281,6 +301,91 @@ export const useDoseLogStore = create<DoseLogStore>()(
         // Also delete from Supabase — otherwise the row stays on the
         // server and reappears on the next syncFromServer() pull.
         deleteRecord('dose_logs', id);
+      },
+
+      // §8.8 — full-cycle scheduler. Writes one planned entry per
+      // generated date so the Weekly Tracker can render the full plan.
+      scheduleCycle: (input) => {
+        const existing = get().doses;
+        // De-dupe key: same peptide on same date already on file (logged
+        // or planned). User can edit the calculator and re-schedule without
+        // accidentally piling on duplicate entries.
+        const occupied = new Set(
+          existing
+            .filter((d) => d.peptideId === input.peptideId)
+            .map((d) => d.date),
+        );
+        const newEntries: DoseLogEntry[] = [];
+        for (const date of input.dates) {
+          if (occupied.has(date)) continue;
+          newEntries.push({
+            id: uid(),
+            peptideId: input.peptideId,
+            date,
+            time: input.time ?? '09:00',
+            amount: input.amount,
+            unit: input.unit,
+            route: input.route,
+            notes: input.notes ?? 'Planned via Calculator',
+            createdAt: new Date().toISOString(),
+            planned: true,
+          });
+        }
+        if (newEntries.length === 0) return 0;
+        set((state) => ({
+          doses: capNewestFirst(
+            [...newEntries, ...state.doses],
+            STORE_LIMITS.DOSES,
+          ),
+        }));
+        // Sync each planned entry. The server uses `source: 'planned'` so
+        // adherence calculations can distinguish planned vs logged.
+        const peptide = getPeptideById(input.peptideId);
+        for (const entry of newEntries) {
+          syncRecord('dose_logs', {
+            id: entry.id,
+            peptide_id: entry.peptideId,
+            peptide_name: peptide?.name ?? entry.peptideId,
+            amount: entry.amount,
+            unit: entry.unit,
+            route: entry.route,
+            date: entry.date,
+            time: entry.time,
+            site: entry.injectionSite ?? null,
+            batch_number: entry.batchNumber ?? null,
+            notes: entry.notes ?? null,
+            source: 'planned',
+          });
+        }
+        return newEntries.length;
+      },
+
+      confirmPlannedDose: (id, time) => {
+        set((state) => ({
+          doses: state.doses.map((d) =>
+            d.id === id
+              ? { ...d, planned: false, time: time ?? timeNow() }
+              : d,
+          ),
+        }));
+        const updated = get().doses.find((d) => d.id === id);
+        if (updated) {
+          const peptide = getPeptideById(updated.peptideId);
+          syncRecord('dose_logs', {
+            id: updated.id,
+            peptide_id: updated.peptideId,
+            peptide_name: peptide?.name ?? updated.peptideId,
+            amount: updated.amount,
+            unit: updated.unit,
+            route: updated.route,
+            date: updated.date,
+            time: updated.time,
+            site: updated.injectionSite ?? null,
+            batch_number: updated.batchNumber ?? null,
+            notes: updated.notes ?? null,
+            source: 'user',
+          });
+        }
       },
 
       // ── Protocols ────────────────────────────────────────────────────────
