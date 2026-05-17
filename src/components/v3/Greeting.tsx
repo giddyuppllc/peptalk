@@ -13,6 +13,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useV3Theme } from '../../theme/V3ThemeProvider';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useActivePeptideCycle } from '../../hooks/useActivePeptideCycle';
 import { AvatarShortcut } from './AvatarShortcut';
 import { ProBadge } from './ProBadge';
 
@@ -40,6 +41,7 @@ function todayLine(): string {
 export function Greeting({ variant = 'home', subline, proBadge }: Props) {
   const t = useV3Theme();
   const firstName = useAuthStore((s) => s.user?.firstName) ?? 'there';
+  const activeCycle = useActivePeptideCycle();
 
   const isHome = variant === 'home';
   const isDark = t.isDark;
@@ -54,7 +56,15 @@ export function Greeting({ variant = 'home', subline, proBadge }: Props) {
     ? maleGreeting(firstName)
     : `Hi, ${firstName}`;
 
-  const sublineText = subline ?? (isDark ? '' : todayLine());
+  // §4.5 male subline = cycle line ("Retatrutide Gradual · Wk 6/12") when
+  // an active protocol exists, otherwise the date keeps the row from being
+  // empty. Female default stays as today's date.
+  const maleCycleLine = activeCycle
+    ? `${activeCycle.peptideName} ${activeCycle.intent} · Wk ${activeCycle.weekNumber}${
+        activeCycle.totalWeeks ? `/${activeCycle.totalWeeks}` : ''
+      }`
+    : todayLine();
+  const sublineText = subline ?? (isDark ? maleCycleLine : todayLine());
 
   const headlineFont = isDark ? t.typography.headlineMale : t.typography.headlineFemale;
   const headlineSize = isHome ? 28 : 20;

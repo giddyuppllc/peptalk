@@ -9,6 +9,7 @@ import React from 'react';
 import { View, Text, StyleSheet, type ViewStyle, type StyleProp } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useV3Theme } from '../../theme/V3ThemeProvider';
+import { useSubscriptionStore } from '../../store/useSubscriptionStore';
 
 interface Props {
   /** Override visible Pro status (e.g. for previews). */
@@ -18,8 +19,8 @@ interface Props {
 
 export function ProBadge({ forcePro, style }: Props) {
   const t = useV3Theme();
-  // For now we always show it; Phase F1+ will gate by subscription store
-  const isPro = forcePro ?? true;
+  const tier = useSubscriptionStore((s) => s.tier);
+  const isPro = forcePro ?? tier !== 'free';
   if (!isPro) return null;
 
   if (t.isDark) {
