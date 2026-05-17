@@ -81,7 +81,7 @@ export function generateDoseTable(
   vial_mg: number,
   bac_water_ml: number,
   customDoses?: number[],
-): Array<{ dose_mg: number; volume_ml: number; units_u100: number }> {
+): { dose_mg: number; volume_ml: number; units_u100: number }[] {
   const concentration = vial_mg > 0 && bac_water_ml > 0 ? vial_mg / bac_water_ml : 0;
   if (concentration <= 0) return [];
 

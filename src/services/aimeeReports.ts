@@ -9,11 +9,13 @@
  *   - generateCycleReport(protocolId) — end-of-cycle review.
  *   - generateInsights() — small correlation cards for the insights feed.
  *
- * These are pure-TypeScript right now — they read real data and emit
- * structured narrative using template fragments + actual numbers. The
- * LLM rewrite pass that turns these into the second-person prose the
- * plan wants is wired in F2.1 (TODO marker below). Even without the
- * rewrite, the reports surface real, accurate weekly summaries today.
+ * These are pure-TypeScript — they read real data and emit structured
+ * narrative using template fragments + actual numbers. The LLM rewrite
+ * pass that turns these into Aimee's second-person voice is wired via
+ * the `aimee-report-rewrite` edge function: `refreshWeekly()` returns
+ * the templated body immediately; `useAimeeReportsStore.rewriteReportBody`
+ * patches it once the server returns. Fail-soft — templated body stays
+ * if the rewrite call fails.
  */
 
 import { useDoseLogStore } from '../store/useDoseLogStore';
@@ -79,9 +81,16 @@ function toDateKey(d: Date): string {
 }
 
 function addDays(iso: string, days: number): string {
-  const d = new Date(iso);
-  d.setDate(d.getDate() + days);
-  return toDateKey(d);
+  // 2026-05-17 timezone fix: `new Date('2026-05-17')` parses as UTC
+  // midnight, but `.setDate(d.getDate() + n)` reads local time. In all
+  // Western TZs the result is the previous day, so every weekly-report
+  // date window was off-by-one for ~80% of users. Anchor to local noon
+  // so the day component is stable across DST + offset.
+  const [y, mo, d] = iso.split('-').map(Number);
+  if (!y || !mo || !d) return iso;
+  const local = new Date(y, mo - 1, d, 12, 0, 0, 0);
+  local.setDate(local.getDate() + days);
+  return toDateKey(local);
 }
 
 function lastMondayISO(now = new Date()): string {
@@ -220,10 +229,10 @@ export function generateWeeklyReport(weekStartISO?: string): Report {
       'You hit the basics. Try an InBody scan or lab pull this week to lock in measurable progress.';
   }
 
-  // TODO(F2.1): wire LLM rewrite pass so paragraphs read as Aimee's
-  // second-person voice instead of these templated assemblies. The
-  // structured data (paragraphs + charts + recommendation) is the
-  // contract; the rewrite is a pure transform on top.
+  // LLM rewrite is wired in `useAimeeReportsStore.rewriteReportBody`
+  // which the reports screen + boot scheduler call after this returns.
+  // The structured data here is the contract; the rewrite is a pure
+  // transform on top.
 
   return {
     id: uid('weekly'),
@@ -335,7 +344,15 @@ export function generateCycleReport(
 export function generateInsights(): Insight[] {
   const out: Insight[] = [];
   const now = new Date().toISOString();
-  const fourteenDaysAgo = new Date(Date.now() - 14 * 86400_000);
+  // 2026-05-17 timezone fix: compare date-only strings (YYYY-MM-DD) via
+  // string comparison instead of Date objects. `new Date('2026-05-04') >= someLocalDate`
+  // was off-by-one in Western TZs because the ISO date parses as UTC
+  // midnight. String comparison is lexicographic and TZ-stable. The
+  // `loggedAt` field below is a full ISO timestamp so Date math is
+  // unambiguous; only date-only fields like `w.date` need the swap.
+  const fourteenDaysAgoMs = Date.now() - 14 * 86400_000;
+  const fourteenDaysAgo = new Date(fourteenDaysAgoMs);
+  const fourteenDaysAgoKey = toDateKey(fourteenDaysAgo);
 
   const meals = useMealStore.getState();
   const workouts = useWorkoutStore.getState();
@@ -345,7 +362,7 @@ export function generateInsights(): Insight[] {
   // Insight 1 — protein vs workout PR correlation (very simple heuristic
   // version of the §9.4 "PRs cluster on days you hit protein" line).
   const recentWorkouts = workouts.logs.filter(
-    (w) => new Date(w.date) >= fourteenDaysAgo,
+    (w) => (w.date ?? '') >= fourteenDaysAgoKey,
   );
   if (recentWorkouts.length >= 4) {
     const proteinHitWorkouts = recentWorkouts.filter((w) => {

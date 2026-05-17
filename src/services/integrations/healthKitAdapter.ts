@@ -42,7 +42,7 @@ import type { PeriodEntry, CycleDayLog, FlowIntensity, BiomarkerScope } from '..
 let AppleHealthKit: any = null;
 try {
   if (Platform.OS === 'ios') {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     AppleHealthKit = require('react-native-health').default ?? require('react-native-health');
   }
 } catch {

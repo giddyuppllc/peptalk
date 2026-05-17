@@ -108,6 +108,22 @@ export default function PeptideDetailScreen() {
 
   const peptide = getPeptideById(id ?? '');
 
+  // ── Data lookups (memoized — these scan large in-memory tables and were
+  //    blocking the JS thread on every render, causing the MOTSC freeze).
+  //    Hooks MUST be called before the early-return below or React's hook
+  //    order trips when `peptide` flips from undefined → defined during
+  //    a refetch (rules-of-hooks). Pre-2026-05-17 these sat after the
+  //    early return and would crash on rebind.
+  const peptideKey = peptide?.id ?? '';
+  const safetyProfile = useMemo(() => peptideKey ? getSafetyProfileByPeptideId(peptideKey) : null, [peptideKey]);
+  const clinicalTrials = useMemo(() => peptideKey ? getTrialsByPeptideId(peptideKey) : [], [peptideKey]);
+  const protocols = useMemo(() => peptideKey ? getProtocolsByPeptide(peptideKey) : [], [peptideKey]);
+  const curatedSources = useMemo(() => peptideKey ? getSourcesByPeptide(peptideKey) : [], [peptideKey]);
+  const relatedStacks = useMemo(() => peptideKey ? getCuratedStacksByPeptideId(peptideKey) : [], [peptideKey]);
+  const nutritionGuidance = useMemo(() => peptideKey ? getPeptideNutrition(peptideKey) : null, [peptideKey]);
+  const relatedVideos = useMemo(() => peptideKey ? getVideosByPeptideId(peptideKey) : [], [peptideKey]);
+  const relatedGuides = useMemo(() => peptideKey ? getGuidesByPeptideId(peptideKey) : [], [peptideKey]);
+
   useEffect(() => {
     if (!peptide) return;
     trackPeptideView(peptide.id, peptide.name);
@@ -132,17 +148,6 @@ export default function PeptideDetailScreen() {
       </SafeAreaView>
     );
   }
-
-  // ── Data lookups (memoized — these scan large in-memory tables and were
-  //    blocking the JS thread on every render, causing the MOTSC freeze) ──
-  const safetyProfile = useMemo(() => getSafetyProfileByPeptideId(peptide.id), [peptide.id]);
-  const clinicalTrials = useMemo(() => getTrialsByPeptideId(peptide.id), [peptide.id]);
-  const protocols = useMemo(() => getProtocolsByPeptide(peptide.id), [peptide.id]);
-  const curatedSources = useMemo(() => getSourcesByPeptide(peptide.id), [peptide.id]);
-  const relatedStacks = useMemo(() => getCuratedStacksByPeptideId(peptide.id), [peptide.id]);
-  const nutritionGuidance = useMemo(() => getPeptideNutrition(peptide.id), [peptide.id]);
-  const relatedVideos = useMemo(() => getVideosByPeptideId(peptide.id), [peptide.id]);
-  const relatedGuides = useMemo(() => getGuidesByPeptideId(peptide.id), [peptide.id]);
 
   const isInStack = currentStack.includes(peptide.id);
   const stackFull = currentStack.length >= 5;
@@ -366,11 +371,14 @@ export default function PeptideDetailScreen() {
                     const pairPeptide = getPeptideById(pairId);
                     if (!pairPeptide) return null;
                     return (
+                      // 2026-05-17 a11y
                       <TouchableOpacity
                         key={pairId}
                         style={styles.usesPairChip}
                         onPress={() => router.push(`/peptide/${pairId}` as any)}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`View ${pairPeptide.name}`}
                       >
                         <Ionicons name="link-outline" size={14} color="#7ABED0" />
                         <Text style={styles.usesPairChipText}>{pairPeptide.name}</Text>
@@ -746,7 +754,12 @@ export default function PeptideDetailScreen() {
                   <Text style={styles.trialFindings}>{trial.keyFindings}</Text>
                 )}
                 {trial.nctId && (
-                  <TouchableOpacity onPress={() => handlePubMedLink(`https://clinicaltrials.gov/study/${trial.nctId}`)}>
+                  // 2026-05-17 a11y
+                  <TouchableOpacity
+                    onPress={() => handlePubMedLink(`https://clinicaltrials.gov/study/${trial.nctId}`)}
+                    accessibilityRole="link"
+                    accessibilityLabel={`Open clinical trial ${trial.nctId} on ClinicalTrials.gov`}
+                  >
                     <Text style={styles.trialLink}>{trial.nctId}</Text>
                   </TouchableOpacity>
                 )}
@@ -764,7 +777,7 @@ export default function PeptideDetailScreen() {
             protocol={protocols[0]}
             onPick={(intensity) =>
               router.push({
-                pathname: '/calculators/dosing',
+                pathname: '/doses/calculator',
                 params: { peptideId: peptide.id, intensity },
               } as any)
             }
@@ -886,11 +899,12 @@ export default function PeptideDetailScreen() {
               <Text style={styles.sectionTitle}>Featured In Stacks</Text>
             </View>
             {relatedStacks.map((stack) => (
+              // 2026-05-17 a11y
               <TouchableOpacity key={stack.id} style={styles.relatedStackCard} onPress={() => {
                 const { loadStack } = useStackStore.getState();
                 loadStack(stack);
                 router.push('/(tabs)/stack-builder');
-              }} activeOpacity={0.7}>
+              }} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`Open stack ${stack.name}, ${stack.peptideIds.length} peptides`}>
                 <View style={styles.relatedStackHeader}>
                   <Text style={styles.relatedStackName}>{stack.name}</Text>
                   <Text style={styles.relatedStackCount}>{stack.peptideIds.length} peptides</Text>
@@ -911,7 +925,8 @@ export default function PeptideDetailScreen() {
               <Text style={styles.sectionTitle}>Related Videos</Text>
             </View>
             {relatedVideos.map((video) => (
-              <TouchableOpacity key={video.id} style={styles.videoCard} onPress={() => router.push(`/learn/videos/${video.slug}`)} activeOpacity={0.7}>
+              // 2026-05-17 a11y
+              <TouchableOpacity key={video.id} style={styles.videoCard} onPress={() => router.push(`/learn/videos/${video.slug}`)} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`Play video: ${video.title}${video.duration ? `, ${video.duration}` : ''}`}>
                 <Ionicons name="play-circle-outline" size={32} color="#7ABED0" />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.videoTitle}>{video.title}</Text>
@@ -930,7 +945,8 @@ export default function PeptideDetailScreen() {
               <Text style={styles.sectionTitle}>How-To Guides</Text>
             </View>
             {relatedGuides.map((guide) => (
-              <TouchableOpacity key={guide.id} style={styles.guideCard} onPress={() => router.push(`/learn/guides/${guide.slug}`)} activeOpacity={0.7}>
+              // 2026-05-17 a11y
+              <TouchableOpacity key={guide.id} style={styles.guideCard} onPress={() => router.push(`/learn/guides/${guide.slug}`)} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`Open guide: ${guide.title}`}>
                 <Ionicons name="list-outline" size={20} color="#7ABED0" />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.guideTitle}>{guide.title}</Text>
@@ -970,14 +986,18 @@ export default function PeptideDetailScreen() {
 
         {/* Quick Actions */}
         <View style={styles.quickActionRow}>
+          {/* 2026-05-17 a11y */}
           <TouchableOpacity
             style={styles.quickActionBtn}
             onPress={() => router.push('/(tabs)/calendar')}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`Log dose of ${peptide.name}`}
           >
             <Ionicons name="add-circle-outline" size={18} color="#7ABED0" />
             <Text style={styles.quickActionText}>Log Dose</Text>
           </TouchableOpacity>
+          {/* 2026-05-17 a11y */}
           <TouchableOpacity
             style={styles.quickActionBtn}
             onPress={() =>
@@ -987,6 +1007,8 @@ export default function PeptideDetailScreen() {
               } as any)
             }
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`Ask Aimee about ${peptide.name} dosing`}
           >
             <Ionicons name="chatbubble-outline" size={18} color="#A4D9D1" />
             <Text style={styles.quickActionText}>Ask Aimee</Text>
@@ -1080,7 +1102,15 @@ export default function PeptideDetailScreen() {
               <Text style={styles.sectionTitle}>DOI Citations</Text>
             </View>
             {peptide.doiLinks.map((doi, index) => (
-              <TouchableOpacity key={index} style={styles.pubmedLink} onPress={() => handlePubMedLink(doi.startsWith('http') ? doi : `https://doi.org/${doi}`)} activeOpacity={0.7}>
+              // 2026-05-17 a11y
+              <TouchableOpacity
+                key={index}
+                style={styles.pubmedLink}
+                onPress={() => handlePubMedLink(doi.startsWith('http') ? doi : `https://doi.org/${doi}`)}
+                activeOpacity={0.7}
+                accessibilityRole="link"
+                accessibilityLabel={`Open DOI ${doi}`}
+              >
                 <Ionicons name="open-outline" size={14} color="#7ABED0" />
                 <Text style={styles.pubmedLinkText} numberOfLines={1}>{doi}</Text>
               </TouchableOpacity>
@@ -1099,7 +1129,7 @@ export default function PeptideDetailScreen() {
 // Derives two range pills from the peptide's protocol research bounds.
 // Beginner = lower-third (matches `intensityToDoseRangeMcg('mild')`);
 // Advanced = upper-third (`intensityToDoseRangeMcg('aggressive')`). Tapping
-// a pill deep-links into /calculators/dosing pre-pointed at that intensity.
+// a pill deep-links into /doses/calculator pre-pointed at that intensity.
 
 function formatDoseMcg(value: number): string {
   if (value >= 1000) {

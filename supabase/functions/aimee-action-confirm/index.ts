@@ -144,18 +144,54 @@ async function commitMealTemplate(
   const totals = (output.totals as Record<string, number>) ?? {};
   const items = Array.isArray(output.items) ? (output.items as any[]) : [];
   const today = new Date().toISOString().slice(0, 10);
+
+  // Re-validate every LLM-emitted value at commit time. The propose-time
+  // validators in aimee-chat-stream/_tools.ts::execDraftMealTemplate run
+  // on the model's first draft, but the confirm UI lets the user edit
+  // `title` / `totals` / `items` before this handler fires, and those
+  // edited values land here verbatim. Without these clamps a hostile or
+  // sloppy edit could ship `calories: 9999999` or a 1MB title into
+  // meal_entries, then poison every future Aimee prompt via the daily
+  // macro summary. Mirrors the client sanitize module
+  // (src/utils/aimeeActionSanitize.ts) so server + client agree.
+  const ALLOWED_MEAL_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
+  const clampNum = (v: unknown, max: number): number => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 0;
+    return Math.max(0, Math.min(max, Math.round(n)));
+  };
+  const clampStr = (v: unknown, max: number): string => {
+    if (typeof v !== 'string') return '';
+    return v.trim().slice(0, max);
+  };
+  const rawMealType = typeof output.mealType === 'string' ? output.mealType.toLowerCase() : 'snack';
+  const mealType = ALLOWED_MEAL_TYPES.has(rawMealType) ? rawMealType : 'snack';
+  const title = clampStr(output.title, 120) || 'Aimee meal template';
+  const notes = clampStr(output.notes, 500) || null;
+  // Per-item magnitude clamp — items[] is summed alongside the totals
+  // in some downstream contexts, so an unclamped item poisons the
+  // ring even if `totals` is bounded. Mirrors client per-row caps.
+  const safeItems = items.slice(0, 20).map((it: any) => ({
+    ...it,
+    foodName: clampStr(it?.foodName ?? it?.name, 200) || 'item',
+    calories: clampNum(it?.calories, 3000),
+    proteinGrams: clampNum(it?.proteinGrams ?? it?.protein, 300),
+    carbsGrams: clampNum(it?.carbsGrams ?? it?.carbs, 500),
+    fatGrams: clampNum(it?.fatGrams ?? it?.fat, 300),
+  }));
+
   const row: Record<string, unknown> = {
     user_id: userId,
     date: today,
-    meal_type: output.mealType ?? 'snack',
-    title: output.title ?? 'Aimee meal template',
-    foods: items, // jsonb in meal_entries
-    calories: Math.round(totals.calories ?? 0),
-    protein_grams: Math.round(totals.protein ?? 0),
-    carbs_grams: Math.round(totals.carbs ?? 0),
-    fat_grams: Math.round(totals.fat ?? 0),
-    source: 'aimee',
-    notes: output.notes ?? null,
+    meal_type: mealType,
+    title,
+    foods: safeItems, // jsonb in meal_entries
+    calories: clampNum(totals.calories, 5000),
+    protein_grams: clampNum(totals.protein, 500),
+    carbs_grams: clampNum(totals.carbs, 1000),
+    fat_grams: clampNum(totals.fat, 500),
+    source: 'aimee', // immutable — never honour a user/LLM override
+    notes,
   };
   // Some meal_entries deployments have different column names. Try the
   // strict shape first; if it fails on a missing column, retry with the
@@ -170,7 +206,7 @@ async function commitMealTemplate(
       user_id: userId,
       date: today,
       meal_type: row.meal_type,
-      foods: items,
+      foods: safeItems,
       source: 'aimee',
     };
     ({ data, error } = await tryInsert(minimal));

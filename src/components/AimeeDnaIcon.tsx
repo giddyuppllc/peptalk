@@ -47,7 +47,7 @@ export function AimeeDnaIcon({
 
   // Cross-rungs (positions chosen at the helix narrow points where
   // strands cross, plus a couple in between for the "ladder" look).
-  const rungs: Array<{ y: number; x1: number; x2: number; isCenter?: boolean }> = [
+  const rungs: { y: number; x1: number; x2: number; isCenter?: boolean }[] = [
     { y: 5, x1: 9, x2: 15 },
     { y: 8, x1: 11, x2: 13, isCenter: true },
     { y: 11, x1: 7, x2: 17 },

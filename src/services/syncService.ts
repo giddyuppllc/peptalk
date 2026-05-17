@@ -272,7 +272,7 @@ export async function hydrateFromServer<Row, Entry extends { id: string }>(
     return Array.from(byId.values());
   } catch (e) {
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      // eslint-disable-next-line no-console
+       
       if (__DEV__) console.warn(`[sync] ${table} hydrate failed:`, e);
     }
     return localEntries;

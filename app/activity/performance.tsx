@@ -35,7 +35,11 @@ interface TopSet {
 export default function PerformanceScreen() {
   const t = useV3Theme();
   const logs = useWorkoutStore((s) => s.logs);
-  const weeklyVolume = useWorkoutStore((s) => s.getWeeklyVolume(8));
+  // Wrap getWeeklyVolume in useMemo — the selector returns a fresh
+  // WeeklyVolume[] each call, which without memoization causes Zustand to
+  // see a new reference every render and trigger an infinite loop.
+  const getWeeklyVolume = useWorkoutStore((s) => s.getWeeklyVolume);
+  const weeklyVolume = useMemo(() => getWeeklyVolume(8), [getWeeklyVolume, logs]);
 
   const topSets = useMemo<TopSet[]>(() => {
     const byExercise = new Map<string, TopSet>();

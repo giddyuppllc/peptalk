@@ -188,7 +188,8 @@ function ExerciseDetailModal({
       transparent
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
+      {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
+      <View style={styles.modalOverlay} accessibilityViewIsModal={true}>
         <View style={styles.modalContent}>
           {/* Close button */}
           <TouchableOpacity style={styles.modalClose} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close">
@@ -471,6 +472,10 @@ export default function ExerciseLibraryScreen() {
       </Text>
 
       {/* List */}
+      {/* 2026-05-17 perf: virtualization hints (initialNumToRender / windowSize
+          / removeClippedSubviews) cut first-frame work on the long list of
+          400+ exercises. renderItem arrow stays inline (refactoring its
+          identity would require restructuring openDetail's memoization). */}
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
@@ -489,6 +494,10 @@ export default function ExerciseLibraryScreen() {
             <Text style={styles.emptyText}>No exercises found</Text>
           </View>
         }
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={9}
+        removeClippedSubviews
       />
 
       {/* Detail Modal */}

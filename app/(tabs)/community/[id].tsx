@@ -154,7 +154,7 @@ export default function PostDetailScreen() {
 
   const showActions = (target: { postId?: string; commentId?: string; userId: string }) => {
     const isOwn = !!currentUserId && target.userId === currentUserId;
-    const buttons: Array<{ text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }> = [];
+    const buttons: { text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }[] = [];
 
     if (isOwn) {
       buttons.push({

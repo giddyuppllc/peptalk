@@ -21,7 +21,7 @@ export interface ReadinessSummary {
   /** "Ready / Hold steady / Recover" — one-word verdict. */
   verdict: 'recover' | 'hold' | 'ready';
   /** Per-input contributions used so the UI can explain the score. */
-  inputs: Array<{ label: string; value: string; delta?: string }>;
+  inputs: { label: string; value: string; delta?: string }[];
 }
 
 function toDateKey(d: Date): string {
@@ -104,7 +104,7 @@ export function getReadinessScore(): ReadinessSummary | null {
         return days <= 2;
       });
       if (recent) {
-        const ratings = ([recent.mood, recent.energy, recent.recovery] as Array<unknown>).filter(
+        const ratings = ([recent.mood, recent.energy, recent.recovery] as unknown[]).filter(
           (n): n is number => typeof n === 'number',
         );
         if (ratings.length > 0) {

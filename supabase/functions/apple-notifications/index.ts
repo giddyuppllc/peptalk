@@ -174,60 +174,111 @@ Deno.serve(async (req) => {
         console.warn('[apple-notifications] unknown productId, skipping subscriptions upsert:', productId);
       } else {
         const stillActive = !['expiration', 'refund', 'revoked'].includes(eventType);
-        await admin.from('subscriptions').upsert(
-          {
-            user_id: userId,
-            product_id: productId,
-            tier,
-            platform: 'ios',
-            expires_at: expiresAt,
-            is_active: stillActive,
-            // Also persist the original transaction id so future
-            // notifications carrying only originalTxId (legacy receipts,
-            // family-share fallback) can still resolve the row.
-            original_transaction_id: originalTxId ?? null,
-            last_validated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id,product_id' },
-        );
 
-        // ALSO mirror the tier into `profiles.subscription_tier` so the
-        // server-side feature gates (aimee-chat-stream, aimee-lab-
-        // interpret, community-create-post, etc.) reflect the new
-        // state. Without this, a refunded/expired/revoked user keeps
-        // server-side Pro access forever — they get blocked from
-        // upgrading (already have access) but the feature still serves
-        // them, so the only "downgrade" is when they buy something new
-        // (which they won't, since it's free). P0 from Wave 76.7 audit.
-        const profileTier = stillActive ? tier : 'free';
-        const isPro = stillActive && tier === 'pro';
-        const isPlus = stillActive && tier === 'plus';
-        const { error: profileErr } = await admin
-          .from('profiles')
-          .update({
-            subscription_tier: profileTier,
-            is_pro: isPro,
-            is_plus: isPlus,
-          })
-          .eq('id', userId);
-        if (profileErr) {
+        // 2026-05-17 ordering fix: Apple does NOT guarantee notification
+        // delivery order. A late `EXPIRED` for period N arriving after
+        // `DID_RENEW` for period N+1 used to flip is_active=false and
+        // rewrite expires_at backward. Compare against the existing row's
+        // expires_at and only overwrite if the incoming event is for a
+        // strictly newer period (OR the user lacks a row at all). Refund
+        // / revoke events are terminal and always apply regardless of
+        // expires_at — those are authoritative downgrades.
+        const isTerminalDowngrade = eventType === 'refund' || eventType === 'revoked';
+        const { data: existing } = await admin
+          .from('subscriptions')
+          .select('expires_at, is_active')
+          .eq('user_id', userId)
+          .eq('product_id', productId)
+          .maybeSingle();
+
+        const existingExpiresMs = existing?.expires_at
+          ? new Date(existing.expires_at).getTime()
+          : 0;
+        const incomingExpiresMs = expiresAt
+          ? new Date(expiresAt).getTime()
+          : 0;
+
+        const eventIsStale =
+          !isTerminalDowngrade &&
+          existing &&
+          existingExpiresMs > 0 &&
+          incomingExpiresMs > 0 &&
+          incomingExpiresMs < existingExpiresMs;
+
+        if (eventIsStale) {
           console.warn(
-            '[apple-notifications] profiles.subscription_tier update failed:',
-            profileErr.message,
+            '[apple-notifications] stale event ignored (incoming expires_at',
+            expiresAt,
+            'older than stored',
+            existing.expires_at,
+            ') user_id=',
+            userId,
+            'product_id=',
+            productId,
+          );
+        } else {
+          await admin.from('subscriptions').upsert(
+            {
+              user_id: userId,
+              product_id: productId,
+              tier,
+              platform: 'ios',
+              expires_at: expiresAt,
+              is_active: stillActive,
+              // Also persist the original transaction id so future
+              // notifications carrying only originalTxId (legacy receipts,
+              // family-share fallback) can still resolve the row.
+              original_transaction_id: originalTxId ?? null,
+              last_validated_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id,product_id' },
           );
         }
 
-        // If a Plus→Pro upgrade just happened, deactivate any sibling
-        // subscription rows for the same user (different product_id)
-        // that are still flagged is_active. Otherwise syncFromServer's
-        // "most recent wins" query could later pick a stale Plus row
-        // and downgrade the user. P1 from the same audit.
-        if (stillActive) {
-          await admin
-            .from('subscriptions')
-            .update({ is_active: false })
-            .eq('user_id', userId)
-            .neq('product_id', productId);
+        // Gate the profile mirror on whether we actually applied the
+        // subscriptions row. If the event was ignored as stale, the
+        // profile would otherwise be flipped to a state that doesn't
+        // match the (newer) subscription row, falsely downgrading the
+        // user.
+        if (!eventIsStale) {
+          // ALSO mirror the tier into `profiles.subscription_tier` so the
+          // server-side feature gates (aimee-chat-stream, aimee-lab-
+          // interpret, community-create-post, etc.) reflect the new
+          // state. Without this, a refunded/expired/revoked user keeps
+          // server-side Pro access forever — they get blocked from
+          // upgrading (already have access) but the feature still serves
+          // them, so the only "downgrade" is when they buy something new
+          // (which they won't, since it's free). P0 from Wave 76.7 audit.
+          const profileTier = stillActive ? tier : 'free';
+          const isPro = stillActive && tier === 'pro';
+          const isPlus = stillActive && tier === 'plus';
+          const { error: profileErr } = await admin
+            .from('profiles')
+            .update({
+              subscription_tier: profileTier,
+              is_pro: isPro,
+              is_plus: isPlus,
+            })
+            .eq('id', userId);
+          if (profileErr) {
+            console.warn(
+              '[apple-notifications] profiles.subscription_tier update failed:',
+              profileErr.message,
+            );
+          }
+
+          // If a Plus→Pro upgrade just happened, deactivate any sibling
+          // subscription rows for the same user (different product_id)
+          // that are still flagged is_active. Otherwise syncFromServer's
+          // "most recent wins" query could later pick a stale Plus row
+          // and downgrade the user. P1 from the same audit.
+          if (stillActive) {
+            await admin
+              .from('subscriptions')
+              .update({ is_active: false })
+              .eq('user_id', userId)
+              .neq('product_id', productId);
+          }
         }
       }
     }

@@ -3,7 +3,7 @@
  * Pro tier only.
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -27,6 +28,7 @@ import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { useMealStore } from '../../src/store/useMealStore';
 import { supabase } from '../../src/services/supabase';
 import { trackFeatureGated } from '../../src/services/analyticsEvents';
+import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
 import { AskAimeeButton } from '../../src/components/AskAimeeButton';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
@@ -96,6 +98,14 @@ export default function FoodScannerScreen() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [selectedMealType, setSelectedMealType] = useState<string>('lunch');
 
+  // 30s vision round-trip can outlive the screen if the user navigates
+  // back mid-scan. Guard every post-await setState.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   // Gate: Pro only — fire feature_gated analytics so paywall funnel data is
   // complete (matches what <PaywallGate> does for other Pro screens).
   React.useEffect(() => {
@@ -143,9 +153,22 @@ export default function FoodScannerScreen() {
           <Text style={styles.lockedText}>
             Allow camera access to scan your meals and automatically calculate nutrition.
           </Text>
-          <AnimatedPress onPress={requestPermission}>
+          {/* 2026-05-17 a11y fix: route to Settings when OS won't prompt again. */}
+          <AnimatedPress
+            onPress={() => {
+              if (permission?.canAskAgain ?? true) {
+                requestPermission();
+              } else {
+                Linking.openSettings().catch(() => {});
+              }
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={(permission?.canAskAgain ?? true) ? 'Enable camera' : 'Open settings to enable camera'}
+          >
             <LinearGradient colors={[accent.deep, accent.deep]} style={styles.upgradeBtn}>
-              <Text style={styles.upgradeBtnText}>Enable Camera</Text>
+              <Text style={styles.upgradeBtnText}>
+                {(permission?.canAskAgain ?? true) ? 'Enable Camera' : 'Open Settings'}
+              </Text>
             </LinearGradient>
           </AnimatedPress>
         </View>
@@ -187,6 +210,7 @@ export default function FoodScannerScreen() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!mountedRef.current) return;
       if (!session?.access_token) {
         Alert.alert('Error', 'Please log in to use the food scanner.');
         setScanning(false);
@@ -202,6 +226,7 @@ export default function FoodScannerScreen() {
         },
         body: JSON.stringify({ imageBase64: base64 }),
       });
+      if (!mountedRef.current) return;
 
       if (!res.ok) {
         const data = await res.json();
@@ -211,11 +236,14 @@ export default function FoodScannerScreen() {
       }
 
       const data: ScanResult = await res.json();
+      if (!mountedRef.current) return;
       setResult(data);
     } catch (e) {
-      Alert.alert('Error', 'Network error. Please try again.');
+      if (mountedRef.current) {
+        Alert.alert('Error', 'Network error. Please try again.');
+      }
     } finally {
-      setScanning(false);
+      if (mountedRef.current) setScanning(false);
     }
   };
 
@@ -223,20 +251,24 @@ export default function FoodScannerScreen() {
     if (!result) return;
 
     const today = new Date().toISOString().slice(0, 10);
+    // Clamp every LLM-emitted item — vision model can hallucinate any
+    // value, and these foods land directly in the daily ring. Same
+    // per-row caps as sanitizeLogMeal so the scan surface can't bypass
+    // the chat sanitize pipeline.
     addMeal({
       id: `scan-${Date.now()}`,
       date: today,
       mealType: selectedMealType as any,
-      foods: result.items.map((item, i) => ({
+      foods: result.items.slice(0, 20).map((item, i) => ({
         foodId: `scan-${Date.now()}-${i}`,
-        foodName: item.name,
+        foodName: clampString(item.name, 200) || 'item',
         servings: 1,
-        calories: item.calories,
-        proteinGrams: item.protein,
-        carbsGrams: item.carbs,
-        fatGrams: item.fat,
+        calories: clamp(item.calories, 3000),
+        proteinGrams: clamp(item.protein, 300),
+        carbsGrams: clamp(item.carbs, 500),
+        fatGrams: clamp(item.fat, 300),
       })),
-      notes: `Scanned: ${result.description}`,
+      notes: `Scanned: ${clampString(result.description, 400)}`,
       timestamp: new Date().toISOString(),
     });
 

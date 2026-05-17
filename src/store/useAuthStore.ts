@@ -126,7 +126,9 @@ export const useAuthStore = create<AuthStore>()(
           // needing a real subscription. Source of truth is ADMIN_EMAILS
           // in useIsAdmin.ts.
           const effectiveTier = isAdminEmail(_email) ? 'pro' : safe.tier;
-          useSubscriptionStore.getState().setTier(effectiveTier as any);
+          // Use mirror-aware setter — won't clobber a more-recent
+          // syncFromServer write. 2026-05-17 IAP P0 fix.
+          useSubscriptionStore.getState().setTierFromProfileMirror(effectiveTier as any);
 
           const appUser: User = {
             id: data.user.id,
@@ -247,7 +249,9 @@ export const useAuthStore = create<AuthStore>()(
           // Admin override: same rule as login — admins always get 'pro'
           // tier so session restore can't drop them back to free.
           const effectiveTier = isAdminEmail(session.user.email) ? 'pro' : safe.tier;
-          useSubscriptionStore.getState().setTier(effectiveTier as any);
+          // Use mirror-aware setter — won't clobber a more-recent
+          // syncFromServer write. 2026-05-17 IAP P0 fix.
+          useSubscriptionStore.getState().setTierFromProfileMirror(effectiveTier as any);
 
           const appUser: User = {
             id: session.user.id,
@@ -311,62 +315,44 @@ export const useAuthStore = create<AuthStore>()(
 
         // Lazy-require the rest so this file doesn't force early
         // initialization of every store on app boot.
-        try {
-          const { useMealStore } = require('./useMealStore');
-          useMealStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useDoseLogStore } = require('./useDoseLogStore');
-          useDoseLogStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useHealthProfileStore } = require('./useHealthProfileStore');
-          useHealthProfileStore.getState().resetProfile?.();
-        } catch {}
-        try {
-          const { useCheckinStore } = require('./useCheckinStore');
-          useCheckinStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useStackStore } = require('./useStackStore');
-          useStackStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useJournalStore } = require('./useJournalStore');
-          useJournalStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useBodyMapStore } = require('./useBodyMapStore');
-          useBodyMapStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useWorkoutStore } = require('./useWorkoutStore');
-          useWorkoutStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useChatStore } = require('./useChatStore');
-          useChatStore.getState().clearChat?.();
-        } catch {}
-        try {
-          const { useAchievementStore } = require('./useAchievementStore');
-          useAchievementStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { usePantryStore } = require('./usePantryStore');
-          usePantryStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useCycleStore } = require('./useCycleStore');
-          useCycleStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useIntegrationsStore } = require('./useIntegrationsStore');
-          useIntegrationsStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useAllergyStore } = require('./useAllergyStore');
-          useAllergyStore.getState().clearAll?.();
-        } catch {}
+        //
+        // 2026-05-17 P1 fix: every previous `catch {}` was silent. If
+        // a store's clear method threw (e.g. corrupt state, native
+        // module hang), the next user logging in on the same device
+        // would silently inherit the previous user's data — and we'd
+        // never know. Centralize the pattern so every failure lands
+        // in telemetry. HIPAA-adjacent app — cross-user leaks deserve
+        // a Sentry event.
+        const safeClear = (label: string, fn: () => void) => {
+          try {
+            fn();
+          } catch (err) {
+            try {
+
+              const { captureException } = require('../services/telemetry');
+              captureException?.(err, { source: 'logout.wipe', store: label });
+            } catch {
+              // Telemetry itself failed — don't recurse.
+            }
+          }
+        };
+        safeClear('meal', () => require('./useMealStore').useMealStore.getState().clearAll?.());
+        safeClear('dose', () => require('./useDoseLogStore').useDoseLogStore.getState().clearAll?.());
+        safeClear('healthProfile', () => require('./useHealthProfileStore').useHealthProfileStore.getState().resetProfile?.());
+        safeClear('checkin', () => require('./useCheckinStore').useCheckinStore.getState().clearAll?.());
+        safeClear('stack', () => require('./useStackStore').useStackStore.getState().clearAll?.());
+        safeClear('journal', () => require('./useJournalStore').useJournalStore.getState().clearAll?.());
+        safeClear('bodyMap', () => require('./useBodyMapStore').useBodyMapStore.getState().clearAll?.());
+        safeClear('workout', () => require('./useWorkoutStore').useWorkoutStore.getState().clearAll?.());
+        // Use the hard-reset variant — `clearChat` only drops the
+        // active thread and leaves pendingSyncs intact, which would
+        // replay user A's queued messages under user B's auth.
+        safeClear('chat', () => require('./useChatStore').useChatStore.getState().resetForLogout?.());
+        safeClear('achievement', () => require('./useAchievementStore').useAchievementStore.getState().clearAll?.());
+        safeClear('pantry', () => require('./usePantryStore').usePantryStore.getState().clearAll?.());
+        safeClear('cycle', () => require('./useCycleStore').useCycleStore.getState().clearAll?.());
+        safeClear('integrations', () => require('./useIntegrationsStore').useIntegrationsStore.getState().clearAll?.());
+        safeClear('allergy', () => require('./useAllergyStore').useAllergyStore.getState().clearAll?.());
 
         set({
           user: null,

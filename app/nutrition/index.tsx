@@ -51,13 +51,25 @@ export default function NutritionScreen() {
   const router = useRouter();
   const today = todayKey();
   const targets = useMealStore((s) => s.targets);
-  const totals = useMealStore((s) => s.getDailyTotals(today));
+  // Select primitives only — `getDailyTotals(today)` and `getByDate(today)`
+  // returned a fresh object/array on every call, which made Zustand's
+  // useSyncExternalStore see a new reference each render → infinite loop.
+  const meals = useMealStore((s) => s.meals);
   const waterOz = useMealStore((s) => s.getWater(today));
   const logWater = useMealStore((s) => s.logWater);
+  const getDailyTotals = useMealStore((s) => s.getDailyTotals);
+  const totals = useMemo(
+    () => getDailyTotals(today),
+    [getDailyTotals, today, meals],
+  );
   const tier = useSubscriptionStore((s) => s.tier);
   const isPro = tier !== 'free';
   const logAppetite = useAppetiteLogStore((s) => s.logAppetite);
-  const recentAppetite = useAppetiteLogStore((s) => s.getByDate(today));
+  const appetiteEntries = useAppetiteLogStore((s) => s.entries);
+  const recentAppetite = useMemo(
+    () => appetiteEntries.filter((e) => e.loggedAt.slice(0, 10) === today),
+    [appetiteEntries, today],
+  );
 
   const proteinDeficit = useMemo(() => {
     if (!targets.proteinGrams) return null;
@@ -156,6 +168,102 @@ export default function NutritionScreen() {
                   {isPro
                     ? 'Aimee estimates macros, you confirm before it writes.'
                     : 'Upgrade to log meals by photo — Aimee estimates macros.'}
+                </Text>
+              </View>
+              {!isPro ? (
+                <View
+                  style={[
+                    styles.proPill,
+                    {
+                      backgroundColor: t.isDark
+                        ? 'rgba(201,136,90,0.30)'
+                        : 'rgba(229,146,141,0.25)',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      color: t.colors.textPrimary as string,
+                      fontFamily: t.typography.label,
+                      fontSize: 9,
+                      letterSpacing: 1.4,
+                    }}
+                  >
+                    PRO
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </GlassCard>
+        </Pressable>
+
+        {/* Scan fridge / pantry — drill into the kitchen-inventory flow. */}
+        <Pressable
+          onPress={() => {
+            tapMedium();
+            if (!isPro) {
+              router.push('/subscription' as never);
+              return;
+            }
+            router.push('/pantry/scan' as never);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isPro
+              ? 'Scan your fridge or pantry to keep your inventory current'
+              : 'Upgrade to Pro to scan your fridge'
+          }
+        >
+          <GlassCard style={styles.cardSpacing}>
+            <View style={styles.photoRow}>
+              <View
+                style={[
+                  styles.cameraBubble,
+                  {
+                    backgroundColor: isPro
+                      ? t.isDark
+                        ? 'rgba(201,136,90,0.22)'
+                        : 'rgba(229,146,141,0.22)'
+                      : 'rgba(0,0,0,0.06)',
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="scan-outline"
+                  size={26}
+                  color={
+                    t.isDark
+                      ? ((t.colors as any).accentCognac as string)
+                      : ((t.colors as any).accentRose as string)
+                  }
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.cardTitle,
+                    {
+                      color: t.colors.textPrimary as string,
+                      fontFamily: t.isDark
+                        ? t.typography.headlineMale
+                        : t.typography.headlineFemale,
+                    },
+                  ]}
+                >
+                  {isPro ? 'Scan your kitchen' : 'Scan kitchen — Pro feature'}
+                </Text>
+                <Text
+                  style={[
+                    styles.cardSub,
+                    {
+                      color: t.colors.textSecondary as string,
+                      fontFamily: t.typography.body,
+                    },
+                  ]}
+                >
+                  {isPro
+                    ? 'Snap your fridge or pantry — Aimee identifies items, you confirm before they save.'
+                    : 'Upgrade to Pro to keep your kitchen inventory current with one photo.'}
                 </Text>
               </View>
               {!isPro ? (
@@ -467,6 +575,52 @@ export default function NutritionScreen() {
                   color={t.colors.textSecondary as string}
                 />
               )}
+            </View>
+          </GlassCard>
+        </Pressable>
+
+        {/* Build a meal from pantry — drill into the inventory-based composer. */}
+        <Pressable
+          onPress={() => {
+            tapLight();
+            router.push('/nutrition/custom-meal-from-pantry' as never);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Build a meal from your pantry"
+        >
+          <GlassCard style={styles.cardSpacing}>
+            <View style={styles.rowBetween}>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.cardTitle,
+                    {
+                      color: t.colors.textPrimary as string,
+                      fontFamily: t.isDark
+                        ? t.typography.headlineMale
+                        : t.typography.headlineFemale,
+                    },
+                  ]}
+                >
+                  Build from your pantry
+                </Text>
+                <Text
+                  style={[
+                    styles.cardSub,
+                    {
+                      color: t.colors.textSecondary as string,
+                      fontFamily: t.typography.body,
+                    },
+                  ]}
+                >
+                  Pick what you're cooking — macros auto-tally and pantry quantities decrement.
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={t.colors.textSecondary as string}
+              />
             </View>
           </GlassCard>
         </Pressable>

@@ -102,17 +102,17 @@ Deno.serve(async (req) => {
       .eq('id', user.id)
       .single();
     const effectiveTier = isBetaTester ? 'pro' : (profile?.subscription_tier ?? 'free');
-    if (effectiveTier !== 'pro') {
+    if (effectiveTier !== 'pro' && effectiveTier !== 'plus') {
       return jsonResp({
-        error: 'Lab scanning requires PepTalk Pro subscription',
+        error: 'Lab scanning requires PepTalk+ or Pro',
         upgrade: true,
       }, 403);
     }
 
-    // 3. Rate limit — 10 scans/day. Lab uploads are infrequent; a higher
-    //    cap doesn't help and a low cap protects against accidental
-    //    upload loops.
-    const rateLimit = await checkRateLimit(supabase, user.id, 'lab-scan', 10);
+    // 3. Tiered rate limit — Plus 5/day, Pro 20/day. Lab uploads are
+    //    infrequent; the cap protects against accidental upload loops.
+    const dailyLimit = effectiveTier === 'pro' ? 20 : 5;
+    const rateLimit = await checkRateLimit(supabase, user.id, 'lab-scan', dailyLimit);
     if (!rateLimit.allowed) {
       return jsonResp({
         error: `Daily lab-scan limit reached (${rateLimit.limit}/day). Resets tomorrow.`,
@@ -121,6 +121,12 @@ Deno.serve(async (req) => {
     }
 
     // 4. Parse + size guard
+    // 2026-05-17 security fix: reject oversize bodies before parsing
+    // so an attacker can't OOM the worker by streaming 100MB.
+    const contentLength = Number(req.headers.get('content-length') ?? 0);
+    if (contentLength > 10_000_000) {
+      return jsonResp({ error: 'Request too large' }, 413);
+    }
     const { imageBase64 } = await req.json();
     if (!imageBase64 || typeof imageBase64 !== 'string') {
       return jsonResp({ error: 'No image provided' }, 400);
@@ -221,42 +227,29 @@ async function checkRateLimit(
   functionName: string,
   limit: number,
 ): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number }> {
-  const today = new Date().toISOString().slice(0, 10);
+  // Atomic increment via bump_ai_usage RPC. P0 fix from 2026-05-17
+  // security audit — the previous read-modify-write leaked one call
+  // per concurrent same-user request.
   try {
-    const { data: existing } = await supabase
-      .from('ai_usage_log')
-      .select('count')
-      .eq('user_id', userId)
-      .eq('function_name', functionName)
-      .eq('date', today)
-      .maybeSingle();
-    const count = existing?.count ?? 0;
-    if (count >= limit) {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data, error } = await supabase.rpc('bump_ai_usage', {
+      p_user_id: userId,
+      p_function_name: functionName,
+      p_date: today,
+    });
+    if (error) throw error;
+    const newCount = Array.isArray(data) && data[0]
+      ? (data[0] as any).count ?? 0
+      : 0;
+    if (newCount > limit) {
       const now = new Date();
       const tomorrow = new Date(now);
       tomorrow.setUTCHours(24, 0, 0, 0);
       const retryAfter = Math.max(1, Math.round((tomorrow.getTime() - now.getTime()) / 1000));
-      return { allowed: false, limit, count, retryAfter };
+      return { allowed: false, limit, count: newCount, retryAfter };
     }
-    await supabase
-      .from('ai_usage_log')
-      .upsert(
-        {
-          user_id: userId,
-          function_name: functionName,
-          date: today,
-          count: count + 1,
-          last_called_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,function_name,date' },
-      );
-    return { allowed: true, limit, count: count + 1 };
+    return { allowed: true, limit, count: newCount };
   } catch (err) {
-    // Fail CLOSED. If we can't reach ai_usage_log we cannot enforce the
-    // per-user cap, and the function fans out to the LLM/vision provider —
-    // unlimited spam quickly translates to real money. Better to return
-    // a 503 to the caller and let them retry once the DB recovers than
-    // to leave the cost door wide open.
     console.error(`[${functionName}] rate-limit check failed; failing closed:`, err);
     return { allowed: false, limit, count: 0, retryAfter: 60, failedClosed: true };
   }

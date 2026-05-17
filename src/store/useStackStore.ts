@@ -112,11 +112,16 @@ export const useStackStore = create<StackStore>()(
       canSaveAnotherStack: () => {
         const { savedStacks } = get();
         const userStackCount = savedStacks.filter((s) => !s.isCurated).length;
-        // Lazy require to avoid a circular dep between the two stores
+        // Lazy require to avoid a circular dep between the two stores.
+        // 2026-05-17 race fix: also check `hasHydrated` — without it, a
+        // Pro user on cold boot would get a 'free' tier default and
+        // be blocked from saving a second stack until the subscription
+        // store rehydrated. Fall open during the hydration window.
         try {
           const { useSubscriptionStore } = require('./useSubscriptionStore');
-          const tier = useSubscriptionStore.getState().tier;
-          if (tier === 'free') return userStackCount < 1;
+          const subState = useSubscriptionStore.getState();
+          if (subState.hasHydrated !== true) return true;
+          if (subState.tier === 'free') return userStackCount < 1;
         } catch {
           // If the subscription store isn't available, fall open so dev/test
           // flows aren't blocked. Server is still source of truth.
@@ -190,7 +195,7 @@ export const useStackStore = create<StackStore>()(
           // Kept tolerant: new writes send string[] (matching the TEXT[]
           // column) but any legacy rows written as jsonb-of-objects still
           // hydrate correctly.
-          peptides: Array<{ peptideId?: string } | string> | string[] | null;
+          peptides: ({ peptideId?: string } | string)[] | string[] | null;
           target_goals: string[] | null;
           notes: string | null;
           is_curated: boolean | null;

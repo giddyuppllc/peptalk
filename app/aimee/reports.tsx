@@ -35,6 +35,7 @@ export default function ReportsListScreen() {
   const insights = useAimeeReportsStore((s) => s.insights);
   const refreshWeekly = useAimeeReportsStore((s) => s.refreshWeekly);
   const refreshInsights = useAimeeReportsStore((s) => s.refreshInsights);
+  const rewriteReportBody = useAimeeReportsStore((s) => s.rewriteReportBody);
   const tier = useSubscriptionStore((s) => s.tier);
   const isPro = tier !== 'free';
   const weeklyReportPref = useNotificationStore((s) => s.preferences.weeklyReport);
@@ -67,6 +68,11 @@ export default function ReportsListScreen() {
     }
     tapMedium();
     const r = refreshWeekly();
+    // Kick off the LLM rewrite in the background — the templated body
+    // is shown immediately on the detail screen, the prose swaps in
+    // when the server returns. Cap is 2/day per user; failures are
+    // silent (templated stays).
+    rewriteReportBody(r.id).catch(() => {});
     router.push(`/aimee/report/${r.id}` as never);
   };
 

@@ -3,7 +3,7 @@
  * Uses the OpenAI service already configured in the app.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/th
 import { useMealStore } from '../../src/store/useMealStore';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { generateRecipe, isAIAvailable } from '../../src/services/llmService';
+import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { useAllergyStore } from '../../src/store/useAllergyStore';
 import { PaywallGate } from '../../src/hooks/useFeatureGate';
@@ -195,6 +196,14 @@ export default function RecipeGeneratorScreen() {
   const [loading, setLoading] = useState(false);
   const [recipes, setRecipes] = useState<GeneratedRecipe[]>([]);
 
+  // AI recipe gen can take 10-20s. Guard post-await setState so backing
+  // out mid-generation doesn't leak state into the next mount.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const addMeal = useMealStore((s) => s.addMeal);
   const canUse = hasFeature('recipe_generator');
 
@@ -206,25 +215,30 @@ export default function RecipeGeneratorScreen() {
       return `${y}-${m}-${dd}`;
     };
 
+    // Clamp every LLM-emitted field. Recipe macros land in the daily
+    // ring, so unbounded values would poison nutrition totals just like
+    // an Aimee chat log would. Same caps as sanitizeLogMeal.quickLog.
+    const safeName = clampString(recipe.name, 100) || 'AI recipe';
+    const safeCalories = clamp(recipe.macros.calories, 5000);
     addMeal({
       id: `meal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       date: toDateKey(new Date()),
       mealType: mealType as any,
       foods: [],
       quickLog: {
-        description: recipe.name,
-        calories: recipe.macros.calories,
-        proteinGrams: recipe.macros.protein,
-        carbsGrams: recipe.macros.carbs,
-        fatGrams: recipe.macros.fat,
+        description: safeName,
+        calories: safeCalories,
+        proteinGrams: clamp(recipe.macros.protein, 500),
+        carbsGrams: clamp(recipe.macros.carbs, 1000),
+        fatGrams: clamp(recipe.macros.fat, 500),
       },
-      notes: `AI-generated recipe: ${recipe.name}`,
+      notes: `AI-generated recipe: ${safeName}`,
       timestamp: new Date().toISOString(),
     });
 
     Alert.alert(
       'Meal Logged!',
-      `${recipe.name} (${recipe.macros.calories} cal) added to today's nutrition.`,
+      `${safeName} (${safeCalories} cal) added to today's nutrition.`,
     );
   }, [addMeal, mealType]);
 
@@ -279,6 +293,7 @@ export default function RecipeGeneratorScreen() {
           targets,
           allergens,
         });
+        if (!mountedRef.current) return;
         if (aiRecipes && aiRecipes.length > 0) {
           setRecipes(aiRecipes);
           setLoading(false);

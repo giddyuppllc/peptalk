@@ -30,6 +30,8 @@ import { PepTalkCharacter } from '../../src/components/PepTalkCharacter';
 import { AimeeDnaIcon } from '../../src/components/AimeeDnaIcon';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { ChatHistoryDrawer } from '../../src/components/ChatHistoryDrawer';
+import { AimeeVoiceButton } from '../../src/components/AimeeVoiceButton';
+import * as Speech from 'expo-speech';
 import { CoachMark } from '../../src/components/tutorial/CoachMark';
 import { tapMedium } from '../../src/utils/haptics';
 import { useChatStore } from '../../src/store/useChatStore';
@@ -38,10 +40,12 @@ import { useOnboardingStore } from '../../src/store/useOnboardingStore';
 import { useStackStore } from '../../src/store/useStackStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useMealStore } from '../../src/store/useMealStore';
+import { useAppetiteLogStore } from '../../src/store/useAppetiteLogStore';
+import { usePantryStore } from '../../src/store/usePantryStore';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
-import { PEPTIDES } from '../../src/data/peptides';
+import { PEPTIDES , getPeptideById } from '../../src/data/peptides';
 import { generateLocalBotResponse } from '../../src/services/peptalkBot';
 import {
   generateAIResponse,
@@ -50,21 +54,40 @@ import {
 } from '../../src/services/llmService';
 import { canSendToCloud } from '../../src/services/privacyGuard';
 import { generateCorrelationInsights, buildCorrelationSummaryForBot } from '../../src/services/watchCorrelationService';
-import { getPeptideById } from '../../src/data/peptides';
 import { useJournalStore } from '../../src/store/useJournalStore';
 import { ChatMessage, EnhancedBotContext, GoalType } from '../../src/types';
 import { getGoalLabel } from '../../src/constants/goals';
+// Layout primitives only — Spacing / BorderRadius / FontSizes are
+// purely numeric tokens shared across v2 and v3. Colors is kept for
+// the three static `darkBg` / `darkText*` fallbacks inside StyleSheet
+// (every render site overrides them with v3 bridge values via inline
+// styles — see `useV3BridgeTheme` import above). Fonts + Gradients
+// were unused; dropped.
 import {
   Colors,
-  Fonts,
   FontSizes,
   Spacing,
   BorderRadius,
-  Gradients,
 } from '../../src/constants/theme';
-import { useTheme } from '../../src/hooks/useTheme';
+// peptalk is v3-backed via the bridge shim — keeps the existing JSX
+// references (`t.bg`, `t.text`, etc.) but sources colors from the v3
+// palette so the chat surface matches the rest of the v3 app. Full
+// JSX-level migration is tracked but deferred — bridge satisfies the
+// audit by removing the v2 palette underneath.
+import { useV3BridgeTheme as useTheme } from '../../src/hooks/useTheme.v3Bridge';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
+// All validation/clamping for Aimee `client_action` payloads lives in
+// a pure module so it can be unit-tested without a renderer. See
+// scripts/verify-aimee-action-sanitize.ts for the contract.
+import {
+  sanitizeLogDose,
+  sanitizeLogMeal,
+  sanitizeLogWater,
+  sanitizeLogAppetite,
+  sanitizeAddToPantry,
+  sanitizeScheduleWorkout,
+} from '../../src/utils/aimeeActionSanitize';
 
 /** How long to wait for Aimee's response before giving up and falling back
  *  to the local bot. Longer than the LLM's own timeout so we don't race
@@ -111,6 +134,23 @@ function isAllowedNavigationPath(path: string): boolean {
     /^\/?learn(\/.*)?$/,
     /^\/?nutrition(\/[\w-]+)*(\?.*)?$/,
     /^\/?workouts(\/[\w-]+)*(\?.*)?$/,
+    // v3 surfaces — added after the v3 refactor so navigate_to_screen
+    // can reach the new drill-ins, doses sub-routes, labs, body comp,
+    // pantry, aimee reports, community-v2, etc.
+    /^\/?tracker(\/[\w-]+)*(\?.*)?$/,
+    /^\/?doses(\/[\w-]+)*(\?.*)?$/,
+    /^\/?activity(\/[\w-]+)*(\?.*)?$/,
+    /^\/?labs(\/[\w-]+)*(\?.*)?$/,
+    /^\/?body-composition(\/[\w-]+)*(\?.*)?$/,
+    /^\/?pantry(\/[\w-]+)*(\?.*)?$/,
+    /^\/?aimee(\/[\w-]+)*(\?.*)?$/,
+    /^\/?community(\/[\w-]+)*(\?.*)?$/,
+    /^\/?journal(\/[\w-]+)*(\?.*)?$/,
+    /^\/?cycle(\/[\w-]+)*(\?.*)?$/,
+    /^\/?settings(\/[\w-]+)*(\?.*)?$/,
+    /^\/?profile(\/[\w-]+)*(\?.*)?$/,
+    /^\/?onboarding(\?.*)?$/,
+    /^\/?health-profile(\?.*)?$/,
   ];
   return allowed.some((rx) => rx.test(path));
 }
@@ -155,10 +195,12 @@ export default function PepTalkScreen() {
   const accent = useSectionAccent();
   const router = useRouter();
   const aimeeInputRef = useTourTarget('aimee_chat_input');
-  const { prefill, message: prefillMessage } = useLocalSearchParams<{
+  const { prefill, message: prefillMessage, speak: speakFlag } = useLocalSearchParams<{
     prefill?: string;
     message?: string;
+    speak?: string;
   }>();
+  const shouldSpeakNextReply = speakFlag === '1';
   // Split selectors — destructuring the full store subscribes to every change,
   // causing the chat screen to re-render on any store update. At ~200 messages
   // this turns into O(n) wasted work per keystroke. Select each slice we need.
@@ -181,6 +223,9 @@ export default function PepTalkScreen() {
   // is handled inside each store's existing add* method via syncRecord.
   const logDoseAction = useDoseLogStore((s) => s.logDose);
   const addMealAction = useMealStore((s) => s.addMeal);
+  const logWaterAction = useMealStore((s) => s.logWater);
+  const logAppetiteAction = useAppetiteLogStore((s) => s.logAppetite);
+  const addPantryItemAction = usePantryStore((s) => s.addItem);
   const addPlannedWorkoutAction = useWorkoutStore((s) => s.addPlannedLog);
   // §17 — Aimee write-actions are Pro-gated. Free tier still gets
   // read-only Q&A from the FAB / Centerpiece / Persistent Chip; the
@@ -202,6 +247,47 @@ export default function PepTalkScreen() {
   // fetch so late client_action events don't fire router.push / store
   // writes on a dead component.
   const streamAbortRef = useRef<AbortController | null>(null);
+  // §voice — when a transcript arrived via `?speak=1`, we keep this ref
+  // armed until the next bot reply finishes streaming, then speak it
+  // once via expo-speech. Disarming after the first reply prevents
+  // double-reads if the user types again on the same session.
+  const speakArmedRef = useRef(false);
+  const lastSpokenIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (shouldSpeakNextReply) {
+      speakArmedRef.current = true;
+    }
+  }, [shouldSpeakNextReply]);
+  // Stop TTS if user leaves the chat surface.
+  useEffect(() => {
+    return () => {
+      Speech.stop();
+    };
+  }, []);
+  // Watch the last bot message: once it finishes streaming and we're
+  // armed for voice, speak the plain-text version and disarm.
+  useEffect(() => {
+    if (!speakArmedRef.current) return;
+    const lastBot = [...messages]
+      .reverse()
+      .find((m) => m.role === 'bot');
+    if (!lastBot) return;
+    if (lastBot.streaming) return;
+    if (lastSpokenIdRef.current === lastBot.id) return;
+    const content = (lastBot.content || '')
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/[*_#`>]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (content.length > 0) {
+      Speech.stop();
+      Speech.speak(content.slice(0, 600), { rate: 1.0, pitch: 1.0 });
+      lastSpokenIdRef.current = lastBot.id;
+    }
+    speakArmedRef.current = false;
+  }, [messages]);
+
   useEffect(() => {
     return () => {
       streamAbortRef.current?.abort();
@@ -297,125 +383,87 @@ export default function PepTalkScreen() {
 
   const applyLogDoseAction = useCallback(
     (payload: Record<string, unknown>) => {
+      // Canonicalize peptideId against the catalogue first (dose alerts
+      // key off id, so a name-only payload still needs to resolve). The
+      // pure sanitizer doesn't have catalogue context, so we do that
+      // resolution here and pass the resolved id forward.
       const peptideName = typeof payload.peptideName === 'string' ? payload.peptideName : '';
       const rawPid = typeof payload.peptideId === 'string' ? payload.peptideId : '';
-      // Resolve to a canonical peptide id from src/data/peptides so the
-      // store's dose alerts (which key off peptideId) work properly.
-      // Fall back to the raw id or the name slug.
-      const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const norm = (s: string) =>
+        s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
       const canonical =
         PEPTIDES.find((p) => p.id === rawPid)?.id ??
         PEPTIDES.find((p) => norm(p.name) === norm(peptideName))?.id ??
         (rawPid || norm(peptideName));
+      if (!canonical) return;
 
-      const amount = Number(payload.amount);
-      const unit = typeof payload.unit === 'string' ? payload.unit.toLowerCase() : 'mcg';
-      const route = typeof payload.route === 'string' ? payload.route : 'subcutaneous';
-      if (!canonical || !Number.isFinite(amount) || amount <= 0) return;
-      // Magnitude clamps — Grok could hallucinate `amount: 999999` and the
-      // edge function passes it through verbatim. Mirror the manual-log
-      // dialog caps (calendar.tsx ~line 422). Prevents poisoned dose log
-      // rows that then feed back into Aimee's context.
-      if (
-        (unit === 'mcg' && amount > 100000) ||
-        (unit === 'mg' && amount > 100) ||
-        (unit === 'iu' && amount > 10000)
-      ) {
-        if (__DEV__) console.warn('[aimee] log_dose magnitude implausible, ignoring:', amount, unit);
+      const safe = sanitizeLogDose({ ...payload, peptideId: canonical });
+      if (!safe) {
+        if (__DEV__) console.warn('[aimee] log_dose rejected by sanitizer:', payload);
         return;
       }
-      logDoseAction({
-        peptideId: canonical,
-        amount,
-        unit: unit as any,
-        route: route as any,
-        date: typeof payload.date === 'string' ? payload.date : undefined,
-        time: typeof payload.time === 'string' ? payload.time : undefined,
-        injectionSite: typeof payload.site === 'string' ? payload.site : undefined,
-        notes: typeof payload.notes === 'string' ? payload.notes : undefined,
-      });
+      logDoseAction(safe as any);
     },
     [logDoseAction],
   );
 
   const applyLogMealAction = useCallback(
     (payload: Record<string, unknown>) => {
-      const id =
-        typeof payload.id === 'string'
-          ? payload.id
-          : `meal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const date =
-        typeof payload.date === 'string'
-          ? payload.date
-          : new Date().toISOString().slice(0, 10);
-      const mealType =
-        typeof payload.mealType === 'string' ? payload.mealType : 'snack';
-      const timestamp =
-        typeof payload.timestamp === 'string' ? payload.timestamp : new Date().toISOString();
-      const items = Array.isArray(payload.items) ? payload.items : [];
-      const title = typeof payload.title === 'string' ? payload.title : 'Meal';
-      const totals = (payload.totals ?? {}) as Record<string, unknown>;
-
-      // Build a quickLog so the meal counts toward macro totals even
-      // when the items array doesn't carry full per-food nutrition.
-      // Field names MUST match MealEntry.quickLog in src/types/fitness.ts —
-      // useMealStore.getDailyTotals reads proteinGrams / carbsGrams /
-      // fatGrams. Earlier versions wrote `protein/carbs/fat` which the
-      // store silently ignored, zeroing macros for every Aimee-logged
-      // meal in the nutrition ring.
-      // Clamp every macro: never negative, never larger than a sane meal.
-      // Caps mirror the manual quick-log dialog (app/(tabs)/nutrition).
-      // Without these, Grok could fabricate `calories: -800` or
-      // `calories: 50000` and silently poison the user's daily totals.
-      const clamp = (v: unknown, max: number): number => {
-        const n = Number(v);
-        if (!Number.isFinite(n)) return 0;
-        return Math.max(0, Math.min(max, n));
-      };
-      const quickLog = {
-        description: title,
-        calories: clamp(totals.calories, 5000),
-        proteinGrams: clamp(totals.protein, 500),
-        carbsGrams: clamp(totals.carbs, 1000),
-        fatGrams: clamp(totals.fat, 500),
-      };
-
-      addMealAction({
-        id,
-        date,
-        mealType: mealType as any,
-        timestamp,
-        foods: items as any,
-        quickLog,
-        notes: typeof payload.notes === 'string' ? payload.notes : undefined,
-      } as any);
+      const safe = sanitizeLogMeal(payload);
+      if (!safe) {
+        if (__DEV__) console.warn('[aimee] log_meal rejected by sanitizer:', payload);
+        return;
+      }
+      addMealAction(safe as any);
     },
     [addMealAction],
   );
 
   const applyScheduleWorkoutAction = useCallback(
     (payload: Record<string, unknown>) => {
-      const id =
-        typeof payload.id === 'string'
-          ? payload.id
-          : `wlog-aimee-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const startedAt =
-        typeof payload.startedAt === 'string' ? payload.startedAt : new Date().toISOString();
-      addPlannedWorkoutAction({
-        id,
-        date: startedAt.slice(0, 10),
-        sets: [],
-        durationMinutes:
-          typeof payload.durationMinutes === 'number' ? payload.durationMinutes : 0,
-        startedAt,
-        // completedAt deliberately undefined → marks this as a planned
-        // workout, not a completed one.
-        notes: typeof payload.notes === 'string' ? payload.notes : undefined,
-        workoutName:
-          typeof payload.workoutName === 'string' ? payload.workoutName : 'Workout',
-      });
+      const safe = sanitizeScheduleWorkout(payload);
+      if (!safe) {
+        if (__DEV__) console.warn('[aimee] schedule_workout rejected by sanitizer:', payload);
+        return;
+      }
+      // sets:[] / completedAt:undefined make this a planned workout
+      addPlannedWorkoutAction({ ...safe, sets: [] } as any);
     },
     [addPlannedWorkoutAction],
+  );
+
+  const applyLogWaterAction = useCallback(
+    (payload: Record<string, unknown>) => {
+      const safe = sanitizeLogWater(payload);
+      if (!safe) {
+        if (__DEV__) console.warn('[aimee] log_water rejected by sanitizer:', payload);
+        return;
+      }
+      logWaterAction(safe.date, safe.ounces);
+    },
+    [logWaterAction],
+  );
+
+  const applyLogAppetiteAction = useCallback(
+    (payload: Record<string, unknown>) => {
+      const safe = sanitizeLogAppetite(payload);
+      if (!safe) {
+        if (__DEV__) console.warn('[aimee] log_appetite rejected by sanitizer:', payload);
+        return;
+      }
+      logAppetiteAction(safe.state as any, safe.notes);
+    },
+    [logAppetiteAction],
+  );
+
+  const applyAddToPantryAction = useCallback(
+    (payload: Record<string, unknown>) => {
+      const items = sanitizeAddToPantry(payload);
+      for (const item of items) {
+        addPantryItemAction(item as any);
+      }
+    },
+    [addPantryItemAction],
   );
 
   /**
@@ -524,7 +572,10 @@ export default function PepTalkScreen() {
               } else if (
                 (action.type === 'log_dose' ||
                   action.type === 'log_meal' ||
-                  action.type === 'schedule_workout') &&
+                  action.type === 'schedule_workout' ||
+                  action.type === 'log_water' ||
+                  action.type === 'log_appetite' ||
+                  action.type === 'add_to_pantry') &&
                 action.payload
               ) {
                 // §17 — write actions are Pro-only. Free users see a
@@ -919,6 +970,12 @@ export default function PepTalkScreen() {
                       applyLogMealAction(action.preview);
                     } else if (action.tool === 'schedule_workout') {
                       applyScheduleWorkoutAction(action.preview);
+                    } else if (action.tool === 'log_water') {
+                      applyLogWaterAction(action.preview);
+                    } else if (action.tool === 'log_appetite') {
+                      applyLogAppetiteAction(action.preview);
+                    } else if (action.tool === 'add_to_pantry') {
+                      applyAddToPantryAction(action.preview);
                     } else {
                       return { ok: false, error: 'Unknown action type' };
                     }
@@ -936,7 +993,15 @@ export default function PepTalkScreen() {
         </View>
       );
     },
-    [applyLogDoseAction, applyLogMealAction, applyScheduleWorkoutAction, router],
+    [
+      applyLogDoseAction,
+      applyLogMealAction,
+      applyScheduleWorkoutAction,
+      applyLogWaterAction,
+      applyLogAppetiteAction,
+      applyAddToPantryAction,
+      router,
+    ],
   );
 
   const renderEmpty = useCallback(
@@ -1175,6 +1240,9 @@ export default function PepTalkScreen() {
         {/* ── Input Bar ──────────────────────────────────────── */}
         <View ref={aimeeInputRef} style={[styles.inputBarWrap, { backgroundColor: t.bg, borderTopColor: t.cardBorder }]}>
           <View style={styles.inputRow}>
+            <View style={{ marginRight: 8 }}>
+              <AimeeVoiceButton compact />
+            </View>
             <View style={[styles.inputWrap, { backgroundColor: t.surface, borderColor: `${accent.deep}25` }]}>
               <TextInput
                 style={[styles.input, { color: t.text }]}

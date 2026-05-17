@@ -1,5 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import * as ImagePicker from 'expo-image-picker';
+// 2026-05-17 perf fix: lazy-required inside the pickAvatar handler
+// instead of statically imported. expo-image-picker pulls in a
+// non-trivial native bridge surface; the profile tab loads at app
+// boot and only ~5% of users ever tap the avatar. Save the parse +
+// bridge init for users who actually need it.
 import {
   View,
   Text,
@@ -12,6 +16,8 @@ import {
   StyleSheet,
   Animated,
   Image,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,8 +32,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { Disclaimer } from '../../src/components/Disclaimer';
 import { trackConsentUpdated } from '../../src/services/analyticsEvents';
 import { useNotificationStore } from '../../src/store/useNotificationStore';
-import { notificationsAvailable } from '../../src/services/notificationService';
-import {
+import { notificationsAvailable ,
   scheduleDailyCheckInReminder,
   cancelAllReminders,
   scheduleWorkoutReminder,
@@ -161,6 +166,7 @@ const tierStyles = StyleSheet.create({
 function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { login, isLoading } = useAuthStore();
   const t = useTheme();
@@ -189,7 +195,16 @@ function LoginForm() {
   };
 
   return (
-    <View style={styles.loginContainer}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+    >
+    <ScrollView
+      contentContainerStyle={styles.loginContainer}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       {/* Branding */}
       <View style={styles.brandingSection}>
         <LinearGradient
@@ -236,9 +251,23 @@ function LoginForm() {
               onChangeText={setPassword}
               placeholder="Enter password"
               placeholderTextColor={t.placeholder}
-              secureTextEntry
+              secureTextEntry={!showPw}
+              autoComplete="current-password"
+              textContentType="password"
               selectionColor="#e3a7a1"
             />
+            <TouchableOpacity
+              onPress={() => setShowPw(!showPw)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={showPw ? 'Hide password' : 'Show password'}
+            >
+              <Ionicons
+                name={showPw ? 'eye-off' : 'eye'}
+                size={18}
+                color={t.textSecondary}
+              />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -272,7 +301,8 @@ function LoginForm() {
           </LinearGradient>
         </TouchableOpacity>
       </GlassCard>
-    </View>
+    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -289,6 +319,8 @@ function UserProfile() {
   const darkMode = t.isDark;
 
   const pickAvatar = useCallback(async () => {
+    // Lazy-load the native module so boot doesn't pay for it.
+    const ImagePicker = await import('expo-image-picker');
     Alert.alert('Profile Photo', 'Choose a photo', [
       {
         text: 'Take Photo',
@@ -1749,6 +1781,8 @@ const styles = StyleSheet.create({
   // -- Login Form
   loginContainer: {
     marginTop: Spacing.md,
+    paddingBottom: 40,
+    flexGrow: 1,
   },
   brandingSection: {
     alignItems: 'center',

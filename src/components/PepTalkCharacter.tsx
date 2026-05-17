@@ -9,8 +9,10 @@ import Animated, {
   withRepeat,
   withTiming,
   withSequence,
+  cancelAnimation,
   Easing,
 } from 'react-native-reanimated';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 interface PepTalkCharacterProps {
   size?: number;
@@ -43,19 +45,34 @@ export function PepTalkCharacter({
   const scale = useSharedValue(1);
   const pulseOpacity = useSharedValue(0);
   const pulseScale = useSharedValue(1);
+  const reduceMotion = useReduceMotion();
 
+  // 2026-05-17 perf+a11y: cancel worklet on unmount + honor Reduce Motion
   useEffect(() => {
     if (animated) {
+      if (reduceMotion) {
+        scale.value = 1;
+        return;
+      }
       scale.value = withRepeat(
         withTiming(1.05, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
         -1,
         true,
       );
     }
-  }, [animated, scale]);
+    return () => {
+      cancelAnimation(scale);
+    };
+  }, [animated, scale, reduceMotion]);
 
+  // 2026-05-17 perf+a11y: cancel worklet on unmount + honor Reduce Motion
   useEffect(() => {
     if (typing) {
+      if (reduceMotion) {
+        pulseOpacity.value = 0;
+        pulseScale.value = 1;
+        return;
+      }
       pulseOpacity.value = withRepeat(
         withSequence(
           withTiming(0.6, { duration: 800, easing: Easing.inOut(Easing.ease) }),
@@ -76,7 +93,11 @@ export function PepTalkCharacter({
       pulseOpacity.value = withTiming(0, { duration: 200 });
       pulseScale.value = withTiming(1, { duration: 200 });
     }
-  }, [typing, pulseOpacity, pulseScale]);
+    return () => {
+      cancelAnimation(pulseOpacity);
+      cancelAnimation(pulseScale);
+    };
+  }, [typing, pulseOpacity, pulseScale, reduceMotion]);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],

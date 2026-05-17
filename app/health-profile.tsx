@@ -39,7 +39,7 @@ const STEP_TITLES = [
   'Peptide Experience',
 ];
 
-const GOALS: Array<{ id: GoalType; label: string; icon: string }> = [
+const GOALS: { id: GoalType; label: string; icon: string }[] = [
   { id: 'weight_loss', label: 'Weight Loss', icon: 'trending-down' },
   { id: 'muscle_gain', label: 'Muscle Gain', icon: 'barbell' },
   { id: 'body_recomp', label: 'Body Recomp', icon: 'body' },
@@ -55,7 +55,7 @@ const GOALS: Array<{ id: GoalType; label: string; icon: string }> = [
   { id: 'general_wellness', label: 'General Wellness', icon: 'heart' },
 ];
 
-const DIET_OPTIONS: Array<{ id: DietType; label: string }> = [
+const DIET_OPTIONS: { id: DietType; label: string }[] = [
   { id: 'no_restriction', label: 'No Restrictions' },
   { id: 'keto', label: 'Keto' },
   { id: 'paleo', label: 'Paleo' },
@@ -67,7 +67,7 @@ const DIET_OPTIONS: Array<{ id: DietType; label: string }> = [
   { id: 'other', label: 'Other' },
 ];
 
-const ACTIVITY_OPTIONS: Array<{ id: ActivityLevel; label: string; desc: string }> = [
+const ACTIVITY_OPTIONS: { id: ActivityLevel; label: string; desc: string }[] = [
   { id: 'sedentary', label: 'Sedentary', desc: 'Desk job, little exercise' },
   { id: 'light', label: 'Light', desc: '1-2 days/week' },
   { id: 'moderate', label: 'Moderate', desc: '3-4 days/week' },
@@ -75,14 +75,14 @@ const ACTIVITY_OPTIONS: Array<{ id: ActivityLevel; label: string; desc: string }
   { id: 'very_active', label: 'Very Active', desc: 'Daily + physically demanding' },
 ];
 
-const SLEEP_PATTERNS: Array<{ id: SleepPattern; label: string }> = [
+const SLEEP_PATTERNS: { id: SleepPattern; label: string }[] = [
   { id: 'early_bird', label: 'Early Bird (asleep by 10pm)' },
   { id: 'night_owl', label: 'Night Owl (past midnight)' },
   { id: 'irregular', label: 'Irregular Schedule' },
   { id: 'shift_work', label: 'Shift Worker' },
 ];
 
-const DEVICES: Array<{ id: ConnectedDevice; label: string }> = [
+const DEVICES: { id: ConnectedDevice; label: string }[] = [
   { id: 'apple_watch', label: 'Apple Watch' },
   { id: 'apple_health', label: 'Apple Health' },
   { id: 'google_fit', label: 'Google Fit' },

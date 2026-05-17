@@ -46,8 +46,6 @@ import { supabase } from './supabase';
 const EXERCISE_VIDEO_SLUG_MAP: Record<string, string> = {
   'ball-straight-leg-bridge': 'img-4652',
   'band-shuffle': 'img-6231-1',
-  // Canonical was img-6232-1, but that slug went to lower-leg-windmill
-  // (higher AI confidence). Falling back to next alternate take img-6232.
   'banded-donkey-kicks': 'img-6232',
   'banded-glute-kicks': 'img-5778-2',
   'banded-standing-glute-kicks': 'img-6187',
@@ -62,7 +60,7 @@ const EXERCISE_VIDEO_SLUG_MAP: Record<string, string> = {
   'bench-glute-raises': 'img-3706',
   'bench-low-leg-lifts-with-glute-raise': 'img-3714',
   'bench-supported-y': 'img-6228-2',
-  'bent-knee-raise-with-yoga-block-adduction': 'img-5779',
+  'bent-knee-raise-with-yoga-block-adduction': 'img-6816',
   'bent-knee-raises-with-block-between-feet': 'img-5784-1',
   'bent-over-cable-bar-row': 'img-3913',
   'bent-over-cable-rope-row': 'img-6195',
@@ -94,11 +92,6 @@ const EXERCISE_VIDEO_SLUG_MAP: Record<string, string> = {
   'dumbbell-squat': 'img-4644',
   'dumbbell-upright-row-412': 'img-3866',
   'elbows-to-knees-sit-up-291': 'img-3700',
-  // img-5779-1 went to sb-alt-dead-bug-312 (higher AI confidence). No
-  // remaining slugs map to this exercise — removed from the canonical
-  // map so hasExerciseVideo returns false rather than 404'ing on a
-  // stolen slug.
-  // 'elevated-hip-bent-knee-raises-310': removed (slug claimed elsewhere)
   'elevated-hip-sl-raises-w-kb-hold-317': 'img-3881',
   'facepull': 'img-4625',
   'hack-squat-machine-389': 'img-4799',
@@ -115,23 +108,16 @@ const EXERCISE_VIDEO_SLUG_MAP: Record<string, string> = {
   'kneeling-cable-rope-pull': 'img-4618',
   'leg-curl-machine-glute-emphasis': 'img-4787',
   'leg-lowers-296': 'img-5785',
-  // Canonical was img-6209-2, but that slug went to
-  // single-leg-leg-press-machine (higher AI confidence). Falling back to
-  // next alternate take img-4816.
-  'leg-press': 'img-4816',
+  'leg-press': 'img-6209-2',
   'leg-press-narrow-high-stance-glute-focus': 'img-6225',
   'lower-leg-lifts-with-block-feet-holds': 'img-6816-2',
-  'lower-leg-windmill': 'img-6232-1',
   'lying-crunch-with-adduction': 'img-6816-5',
   'machine-chest-press-349': 'img-6211',
   'machine-leg-extension-393': 'img-4788',
   'machine-seated-abduction': 'img-4797',
   'machine-tricep-push-down': 'img-6212',
   'medicine-ball-burpees': 'img-3883',
-  // Both img-5779 and img-5779-2 went to higher-confidence neighbours
-  // (bent-knee-raise-with-yoga-block-adduction and stability-bird-dog-318
-  // respectively). No remaining slugs — removed from canonical map.
-  // 'medicine-ball-dead-bugs': removed (all slugs claimed elsewhere)
+  'medicine-ball-dead-bugs': 'img-5779',
   'narrow-grip-seated-cable-row': 'img-4613',
   'pallof-cable-press': 'img-6230',
   'pilates-lower-leg-lifts-309': 'img-5776-1',
@@ -156,10 +142,7 @@ const EXERCISE_VIDEO_SLUG_MAP: Record<string, string> = {
   'single-arm-dumbbell-row-323': 'img-3859',
   'single-arm-kneeling-cable-row': 'img-6181-3',
   'single-arm-overhead-dumbbell-tricep-extentions': 'img-3701',
-  'single-leg-leg-press-machine': 'img-6209-2',
-  // img-6183 went to dumbbell-lateral-raise (higher AI confidence). No
-  // remaining slugs — removed from canonical map.
-  // 'single-leg-reverse-lunges-366': removed (slug claimed elsewhere)
+  'single-leg-leg-press-machine': 'img-6209',
   'smith-machine-body-weight-prone-grip-row-321': 'img-4670',
   'smith-machine-narrow-rdl': 'img-4663',
   'smith-machine-rdl': 'img-4664',
@@ -185,27 +168,22 @@ const EXERCISE_VIDEO_SLUG_MAP: Record<string, string> = {
   'towel-pike': 'img-5783-2',
   'tricep-dips-machine': 'img-4783',
   'tricep-rope-pulldown': 'img-4619',
-  'wall-sit-with-parallel-isometric-arm-hold': 'img-6234-1',
+  'wall-sit-with-parallel-isometric-arm-hold': 'img-6234',
 };
 
+// Auto-regenerated 2026-05-17 by approving every AI-tagged
+// video in src/data/workoutVideos.json. 128 exercises × 253 takes.
+
 // ═════════════════════════════════════════════════════════════════════════
-// Multi-take coverage — every video Jamie shot has a home in here.
-//
-// 264 tagged videos → 128 exercises (with alternate takes preserved)
-//  47 untagged videos → UNTAGGED_VIDEO_SLUGS pool (admin tagger inbox)
-// ───────────────────────────────────────────────────────────────────────
-// Total: 311 of 311 videos addressable.
-//
+// MULTI-TAKE COVERAGE — all approved slugs per exercise, canonical first.
 // Sorted by AI confidence within each exercise — index 0 is the
-// canonical take (the one shown by default), the rest are alt angles /
-// variations the user can swipe through. UI consumes via
-// getAllExerciseVideoSlugs(exerciseId).
+// canonical take (the one shown by default), the rest are alt angles.
+// UI consumes via getAllExerciseVideoSlugs(exerciseId).
 // ═════════════════════════════════════════════════════════════════════════
 const EXERCISE_VIDEO_SLUGS: Record<string, readonly string[]> = {
   'ball-straight-leg-bridge': ['img-4652'],
   'band-shuffle': ['img-6231-1', 'img-6231-2'],
-  // img-6232-1 removed — claimed by lower-leg-windmill (higher AI confidence).
-  'banded-donkey-kicks': ['img-6232', 'img-5783', 'img-5776-6', 'img-9654'],
+  'banded-donkey-kicks': ['img-6232', 'img-6232-1', 'img-5783', 'img-5776-6', 'img-9654'],
   'banded-glute-kicks': ['img-5778-2'],
   'banded-standing-glute-kicks': ['img-6187'],
   'barbell-chest-press': ['img-6215'],
@@ -219,7 +197,7 @@ const EXERCISE_VIDEO_SLUGS: Record<string, readonly string[]> = {
   'bench-glute-raises': ['img-3706'],
   'bench-low-leg-lifts-with-glute-raise': ['img-3714'],
   'bench-supported-y': ['img-6228-2', 'img-3708'],
-  'bent-knee-raise-with-yoga-block-adduction': ['img-5779', 'img-6816'],
+  'bent-knee-raise-with-yoga-block-adduction': ['img-6816'],
   'bent-knee-raises-with-block-between-feet': ['img-5784-1'],
   'bent-over-cable-bar-row': ['img-3913', 'img-6188'],
   'bent-over-cable-rope-row': ['img-6195', 'img-6229'],
@@ -237,13 +215,13 @@ const EXERCISE_VIDEO_SLUGS: Record<string, readonly string[]> = {
   'cable-rope-hammer-curls': ['img-6203'],
   'cable-single-arm-tricep-push-down': ['img-6198'],
   'chest-press-machine': ['img-6214-1'],
-  'chest-supported-incline-row': ['img-4775', 'img-6228-3', 'img-6228'],
+  'chest-supported-incline-row': ['img-4775', 'img-6228', 'img-6228-3'],
   'deadbug-extensions-optional-424': ['img-6815'],
   'decline-leg-press': ['img-4804', 'img-4806', 'img-4808'],
   'decline-leg-single-leg-press-high-stance': ['img-4807', 'img-4809', 'img-4813'],
   'dumbbell-bulgarian-rdl-into-body-weight-pistol-squat': ['img-3717'],
   'dumbbell-fly': ['img-6217'],
-  'dumbbell-lateral-raise': ['img-6181-2', 'img-6183-1', 'img-6183', 'img-6184', 'img-6184-1'],
+  'dumbbell-lateral-raise': ['img-6181-2', 'img-6183', 'img-6183-1', 'img-6184', 'img-6184-1'],
   'dumbbell-overhead-tricep-extensions': ['img-3703', 'img-3864', 'img-3865'],
   'dumbbell-pullover': ['img-3707', 'img-3867', 'img-3868', 'img-3869', 'img-6814-1', 'img-3870', 'img-6216'],
   'dumbbell-rdl': ['img-6812-3', 'img-6180', 'img-4645'],
@@ -251,9 +229,6 @@ const EXERCISE_VIDEO_SLUGS: Record<string, readonly string[]> = {
   'dumbbell-squat': ['img-4644'],
   'dumbbell-upright-row-412': ['img-3866'],
   'elbows-to-knees-sit-up-291': ['img-3700'],
-  // img-5779-1 removed — claimed by sb-alt-dead-bug-312 (higher AI confidence).
-  // No remaining slugs; exercise will fall back to "video coming soon".
-  'elevated-hip-bent-knee-raises-310': [],
   'elevated-hip-sl-raises-w-kb-hold-317': ['img-3881'],
   'facepull': ['img-4625'],
   'hack-squat-machine-389': ['img-4799', 'img-4801', 'img-4800', 'img-4803'],
@@ -269,27 +244,19 @@ const EXERCISE_VIDEO_SLUGS: Record<string, readonly string[]> = {
   'kneeling-cable-overhead-tricep-extensions': ['img-4629'],
   'kneeling-cable-rope-pull': ['img-4618', 'img-6189'],
   'leg-curl-machine-glute-emphasis': ['img-4787'],
-  // img-5781 removed — claimed by sb-plank (higher AI confidence).
   'leg-lowers-296': ['img-5785', 'img-5776', 'img-5776-8', 'img-4669'],
-  // img-6209-2 removed — claimed by single-leg-leg-press-machine (higher AI confidence).
-  'leg-press': ['img-4816', 'img-6214'],
+  'leg-press': ['img-6209-2', 'img-4816', 'img-6214'],
   'leg-press-narrow-high-stance-glute-focus': ['img-6225'],
   'lower-leg-lifts-with-block-feet-holds': ['img-6816-2', 'img-6816-3', 'img-4653'],
-  'lower-leg-windmill': ['img-6232-1'],
   'lying-crunch-with-adduction': ['img-6816-5'],
   'machine-chest-press-349': ['img-6211'],
   'machine-leg-extension-393': ['img-4788', 'img-4789', 'img-6210'],
   'machine-seated-abduction': ['img-4797', 'img-4794', 'img-4793', 'img-4798'],
   'machine-tricep-push-down': ['img-6212'],
   'medicine-ball-burpees': ['img-3883'],
-  // img-5779 claimed by bent-knee-raise-with-yoga-block-adduction;
-  // img-5779-2 claimed by stability-bird-dog-318. No remaining slugs;
-  // exercise falls back to "video coming soon".
-  'medicine-ball-dead-bugs': [],
+  'medicine-ball-dead-bugs': ['img-5779', 'img-5779-2'],
   'narrow-grip-seated-cable-row': ['img-4613', 'img-4611', 'img-4610'],
   'pallof-cable-press': ['img-6230', 'img-4616', 'img-4622', 'img-4624', 'img-6201', 'img-6207', 'img-6206'],
-  // img-5784 removed — claimed by table-top-knee-taps-with-block-adduction
-  // (higher AI confidence).
   'pilates-lower-leg-lifts-309': ['img-5776-1', 'img-5776-2'],
   'plank-289': ['img-3681', 'img-5776-7', 'img-5778-3', 'img-6233-4', 'img-6233-6', 'img-5776-3'],
   'plank-with-kettlebell-unilateral-slide': ['img-6813'],
@@ -312,16 +279,13 @@ const EXERCISE_VIDEO_SLUGS: Record<string, readonly string[]> = {
   'single-arm-dumbbell-row-323': ['img-3859', 'img-3873', 'img-6228-1'],
   'single-arm-kneeling-cable-row': ['img-6181-3'],
   'single-arm-overhead-dumbbell-tricep-extentions': ['img-3701'],
-  'single-leg-leg-press-machine': ['img-6209-2', 'img-6209', 'img-6209-1'],
-  // img-6183 claimed by dumbbell-lateral-raise (higher AI confidence).
-  // No remaining slugs; exercise falls back to "video coming soon".
-  'single-leg-reverse-lunges-366': [],
+  'single-leg-leg-press-machine': ['img-6209', 'img-6209-1'],
   'smith-machine-body-weight-prone-grip-row-321': ['img-4670'],
   'smith-machine-narrow-rdl': ['img-4663', 'img-4666'],
   'smith-machine-rdl': ['img-4664', 'img-4668'],
   'smith-machine-squat-387': ['img-4660', 'img-4657', 'img-4658', 'img-4659'],
   'smith-machine-stationary-lunge': ['img-4671', 'img-4661'],
-  'stability-bird-dog-318': ['img-5787', 'img-5779-2'],
+  'stability-bird-dog-318': ['img-5787'],
   'standing-calf-raise-machine': ['img-4782'],
   'standing-dumbbell-alternating-bicep-curl': ['img-3857', 'img-3907'],
   'standing-dumbbell-alternating-hammer-curl': ['img-6183-2'],
@@ -330,7 +294,7 @@ const EXERCISE_VIDEO_SLUGS: Record<string, readonly string[]> = {
   'standing-dumbbell-windmill': ['img-6186-1'],
   'standing-plate-alternating-frontal-and-lateral-raises': ['img-6812-1'],
   'standing-plate-lateral-raises': ['img-6812-2'],
-  'standing-single-leg-dumbbell-rdl': ['img-3874', 'img-6181-1', 'img-6181', 'img-3882', 'img-5789', 'img-6221'],
+  'standing-single-leg-dumbbell-rdl': ['img-3874', 'img-6181', 'img-6181-1', 'img-3882', 'img-5789', 'img-6221'],
   'straight-arm-pulldown': ['img-4638', 'img-6208'],
   'superman': ['img-6233-2', 'img-6233-5', 'img-6233', 'img-5778'],
   'supported-hip-dead-bug': ['img-5786-1'],
@@ -341,7 +305,7 @@ const EXERCISE_VIDEO_SLUGS: Record<string, readonly string[]> = {
   'towel-pike': ['img-5783-2'],
   'tricep-dips-machine': ['img-4783'],
   'tricep-rope-pulldown': ['img-4619', 'img-6205', 'img-4609', 'img-6192'],
-  'wall-sit-with-parallel-isometric-arm-hold': ['img-6234-1', 'img-6234'],
+  'wall-sit-with-parallel-isometric-arm-hold': ['img-6234', 'img-6234-1'],
 };
 
 // 47 videos with no AI tag yet — surfaced via the admin tagger only,

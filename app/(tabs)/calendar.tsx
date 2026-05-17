@@ -674,7 +674,8 @@ export default function CalendarScreen() {
               >
                 <View style={styles.alertHeader}>
                   <Text style={[styles.alertTitle, { color: t.text }]}>{alert.title}</Text>
-                  <TouchableOpacity onPress={() => dismissAlert(alert.id)}>
+                  {/* 2026-05-17 a11y */}
+                  <TouchableOpacity onPress={() => dismissAlert(alert.id)} accessibilityRole="button" accessibilityLabel="Dismiss alert">
                     <Ionicons name="close" size={18} color={t.textSecondary} />
                   </TouchableOpacity>
                 </View>
@@ -740,6 +741,18 @@ export default function CalendarScreen() {
                 cyclePhase === 'follicular' ? 'rgba(127, 179, 216, 0.10)' :  // very light blue for fertile-side follicular
                 undefined;
 
+              // 2026-05-17 a11y — build VoiceOver label from active indicators
+              const a11yParts: string[] = [];
+              if (hasDose) a11yParts.push('dose');
+              if (hasCheckin) a11yParts.push('check-in');
+              if (hasJournal) a11yParts.push('journal');
+              if (hasWorkout) a11yParts.push('workout');
+              if (hasMeal) a11yParts.push('meal');
+              const a11yDateStr = `${MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+              const a11yLabel = a11yParts.length > 0
+                ? `${a11yDateStr} — ${a11yParts.join(', ')}`
+                : a11yDateStr;
+
               return (
                 <TouchableOpacity
                   key={idx}
@@ -750,6 +763,9 @@ export default function CalendarScreen() {
                   onPress={() => setSelectedDate(key)}
                   onLongPress={() => { setSelectedDate(key); setDaySummaryOpen(true); }}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={a11yLabel}
+                  accessibilityState={{ selected: isSelected }}
                 >
                   {/* Today pulsing glow */}
                   {isToday && !isSelected && <TodayGlow />}
@@ -1237,7 +1253,8 @@ export default function CalendarScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowLogModal(false)}
       >
-        <SafeAreaView style={[styles.modalSafe, { backgroundColor: t.bg }]}>
+        {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
+        <SafeAreaView style={[styles.modalSafe, { backgroundColor: t.bg }]} accessibilityViewIsModal={true}>
           <KeyboardAvoidingView
             style={{ flex: 1 }}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -1266,6 +1283,7 @@ export default function CalendarScreen() {
 
             {/* Substance / supplement -- free text */}
             <Text style={[styles.fieldLabel, { color: t.textSecondary }]}>Substance / Supplement</Text>
+            {/* 2026-05-17 a11y: explicit label for VoiceOver */}
             <TextInput
               style={[styles.textInput, { backgroundColor: t.card, color: t.text }]}
               value={logSubstanceName}
@@ -1273,11 +1291,14 @@ export default function CalendarScreen() {
               placeholder="Type what you took..."
               placeholderTextColor={t.textSecondary}
               autoCapitalize="words"
+              accessibilityLabel="Substance or supplement"
+              accessibilityHint="Enter the name of the substance or supplement you took"
             />
 
             {/* Amount + Unit */}
             <Text style={[styles.fieldLabel, { color: t.textSecondary }]}>Amount Noted</Text>
             <View style={styles.amountRow}>
+              {/* 2026-05-17 a11y: explicit label for VoiceOver */}
               <TextInput
                 style={[styles.textInput, { flex: 1, backgroundColor: t.card, color: t.text }]}
                 value={logAmount}
@@ -1285,6 +1306,8 @@ export default function CalendarScreen() {
                 placeholder="e.g. 250"
                 placeholderTextColor={t.textSecondary}
                 keyboardType="decimal-pad"
+                accessibilityLabel="Amount noted"
+                accessibilityHint={`Enter dose amount in ${logUnit}`}
               />
               <View style={styles.unitRow}>
                 {UNITS.map((u) => (
@@ -1340,16 +1363,20 @@ export default function CalendarScreen() {
 
             {/* Injection site */}
             <Text style={[styles.fieldLabel, { color: t.textSecondary }]}>Injection Site (optional)</Text>
+            {/* 2026-05-17 a11y: explicit label for VoiceOver */}
             <TextInput
               style={[styles.textInput, { backgroundColor: t.card, color: t.text }]}
               value={logSite}
               onChangeText={setLogSite}
               placeholder="e.g. abdomen left, deltoid right"
               placeholderTextColor={t.textSecondary}
+              accessibilityLabel="Injection site, optional"
+              accessibilityHint="Enter the body location where you injected, for example abdomen left or deltoid right"
             />
 
             {/* Notes */}
             <Text style={[styles.fieldLabel, { color: t.textSecondary }]}>Notes (optional)</Text>
+            {/* 2026-05-17 a11y: explicit label for VoiceOver */}
             <TextInput
               style={[styles.textInput, { minHeight: 60, backgroundColor: t.card, color: t.text }]}
               value={logNotes}
@@ -1357,6 +1384,8 @@ export default function CalendarScreen() {
               placeholder="How did you feel? Any effects?"
               placeholderTextColor={t.textSecondary}
               multiline
+              accessibilityLabel="Notes, optional"
+              accessibilityHint="Add any notes about how you felt or any effects you experienced"
             />
 
             {/* Journal disclaimer in modal */}
@@ -1398,10 +1427,12 @@ export default function CalendarScreen() {
         transparent
         onRequestClose={() => setShowAddSheet(false)}
       >
+        {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
         <TouchableOpacity
           style={styles.addSheetOverlay}
           activeOpacity={1}
           onPress={() => setShowAddSheet(false)}
+          accessibilityViewIsModal={true}
         >
           <View style={[styles.addSheet, { backgroundColor: t.bg }]}>
             <SafeAreaView edges={['bottom']}>

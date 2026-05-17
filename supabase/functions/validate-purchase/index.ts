@@ -152,7 +152,13 @@ Deno.serve(async (req) => {
     //   3. Log any error loudly with the user id so ops can reconcile.
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    const { error: subErr } = await adminClient.from('subscriptions').upsert({
+    // 2026-05-17 IAP P1 fix: write Google purchaseTokens into a
+    // dedicated `purchase_token` column (added in migration
+    // 20260517000001) so google-rtdn can do a clean indexed lookup
+    // without colliding on the first-500-chars-of-receipt_data
+    // legacy path. iOS keeps writing the full base64 receipt into
+    // receipt_data — that field's no longer used as a lookup key.
+    const subRow: Record<string, unknown> = {
       user_id: user.id,
       product_id: body.productId,
       tier,
@@ -162,7 +168,13 @@ Deno.serve(async (req) => {
       last_validated_at: new Date().toISOString(),
       receipt_data: body.receipt.substring(0, 500),
       original_transaction_id: originalTransactionId,
-    }, { onConflict: 'user_id,product_id' });
+    };
+    if (body.platform === 'android') {
+      subRow.purchase_token = body.receipt;
+    }
+    const { error: subErr } = await adminClient
+      .from('subscriptions')
+      .upsert(subRow, { onConflict: 'user_id,product_id' });
 
     if (subErr) {
       console.error(
@@ -251,13 +263,33 @@ async function verifyAppleReceipt(
   receipt: string,
   expectedProductId: string,
 ): Promise<{ valid: boolean; expiresAt: string | null; originalTransactionId: string | null }> {
-  // Try production first, fall back to sandbox if Apple responds with 21007
+  // Try production first, fall back to sandbox if Apple responds with 21007.
+  // 2026-05-17 security fix: track which environment validated so we can
+  // reject sandbox receipts in a production app. Without this, anyone with
+  // a sandbox-signed receipt (TestFlight build, jailbroken device, sandbox
+  // tester) can self-grant Pro tier in the released app.
   let res = await postAppleReceipt(APPLE_PROD_URL, receipt);
+  let validatedEnvironment: 'Production' | 'Sandbox' = 'Production';
   if (res.status === 21007) {
     res = await postAppleReceipt(APPLE_SANDBOX_URL, receipt);
+    validatedEnvironment = 'Sandbox';
   }
 
   if (res.status !== 0) {
+    return { valid: false, expiresAt: null, originalTransactionId: null };
+  }
+
+  // Reject sandbox receipts in a production build. The function reads
+  // EXPO_PUBLIC_ENV at boot (defaults to 'production' so a missing flag
+  // fails closed). TestFlight + development builds set this to 'staging'
+  // or 'development' so sandbox testers continue to work there.
+  const envFlag = (Deno.env.get('EXPO_PUBLIC_ENV') ?? 'production').toLowerCase();
+  const isProdRuntime = envFlag === 'production' || envFlag === 'prod';
+  const receiptEnv = (res.environment ?? validatedEnvironment) as string;
+  if (isProdRuntime && receiptEnv === 'Sandbox') {
+    console.warn(
+      '[validate-purchase] rejected sandbox receipt in prod runtime — possible self-grant attempt',
+    );
     return { valid: false, expiresAt: null, originalTransactionId: null };
   }
 

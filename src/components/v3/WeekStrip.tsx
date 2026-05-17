@@ -18,12 +18,12 @@ interface Props {
   /** Optional day index of today (0 = Sun). Defaults to actual today. */
   todayIndex?: number;
   /** Optional dot status per day (mock-able for Phase A). */
-  statusPerDay?: Array<{
+  statusPerDay?: {
     workout?: boolean;
     meal?: boolean;
     dose?: boolean;
     checkin?: boolean;
-  }>;
+  }[];
 }
 
 export function WeekStrip({ todayIndex = new Date().getDay(), statusPerDay }: Props) {

@@ -7,7 +7,7 @@
  * single confirm step before save.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ScrollView,
   View,
@@ -32,6 +32,7 @@ import { useAimeeReportsStore } from '../../src/store/useAimeeReportsStore';
 import { detectLabParser } from '../../src/services/labParsers';
 import { recognizeLabPhoto } from '../../src/services/labOcr';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
+import { isValidIsoDate } from '../../src/utils/aimeeActionSanitize';
 
 function todayKey(): string {
   const d = new Date();
@@ -58,6 +59,14 @@ export default function LabEntryScreen() {
   const [category, setCategory] = useState<LabCategory>('lipid');
   const [drawDate, setDrawDate] = useState(todayKey());
   const [values, setValues] = useState<Record<string, string>>({});
+
+  // Lab vision OCR can take 10-20s. Guard post-await setState so backing
+  // out mid-scan doesn't bleed state into the next mount.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   // §10.1 — paste raw text from a LabCorp / Quest report (OCR output,
   // PDF text extraction, or copy-paste from the patient portal). The
   // vendor adapter pattern auto-detects and pre-fills the form.
@@ -102,6 +111,7 @@ export default function LabEntryScreen() {
       if (result.canceled || !result.assets?.[0]) return;
       setScanInFlight(true);
       const ocr = await recognizeLabPhoto(result.assets[0].uri);
+      if (!mountedRef.current) return;
       setScanInFlight(false);
       if (!ocr.ok) {
         const msg =
@@ -113,16 +123,28 @@ export default function LabEntryScreen() {
         setParseStatus(msg);
         return;
       }
+      // Validate vision output before piping into form state. A 50MB
+      // value string would freeze the TextInput; an unknown markerId
+      // would create dead keys; a malformed drawDate would corrupt
+      // every saved row's sort key. The save handler at line 175+
+      // also enforces markerId allowlist + parseFloat, so this is
+      // belt-and-braces — guards the UI, not just the persistence.
+      const validMarkerIds = new Set(LAB_MARKERS.map((m) => m.id));
       const nextValues: Record<string, string> = {};
-      for (const v of ocr.values) {
-        nextValues[v.markerId] = String(v.value);
+      for (const v of (ocr.values ?? []).slice(0, 80)) {
+        if (typeof v.markerId !== 'string' || !validMarkerIds.has(v.markerId)) continue;
+        const n = Number(v.value);
+        if (!Number.isFinite(n) || n < 0 || n > 1_000_000) continue;
+        nextValues[v.markerId] = String(n);
       }
       setValues((prev) => ({ ...prev, ...nextValues }));
-      if (ocr.drawDate) setDrawDate(ocr.drawDate);
+      if (ocr.drawDate && isValidIsoDate(ocr.drawDate)) setDrawDate(ocr.drawDate);
+      const filled = Object.keys(nextValues).length;
       setParseStatus(
-        `${ocr.vendor ?? 'Vision'}: pre-filled ${ocr.values.length} marker${ocr.values.length === 1 ? '' : 's'}.${ocr.unmappedLines.length ? ` ${ocr.unmappedLines.length} lines unmapped.` : ''}`,
+        `${ocr.vendor ?? 'Vision'}: pre-filled ${filled} marker${filled === 1 ? '' : 's'}.${ocr.unmappedLines.length ? ` ${ocr.unmappedLines.length} lines unmapped.` : ''}`,
       );
     } catch (err) {
+      if (!mountedRef.current) return;
       setScanInFlight(false);
       Alert.alert(
         'Could not scan',
@@ -150,14 +172,22 @@ export default function LabEntryScreen() {
       );
       return;
     }
+    // Same defense as the OCR path — even though paste-text parsers
+    // are deterministic (LabCorp/Quest regex), the input itself is
+    // user-pasted and could be a 5MB blob of crafted gibberish.
+    const validMarkerIds = new Set(LAB_MARKERS.map((m) => m.id));
     const nextValues: Record<string, string> = {};
-    for (const v of result.values) {
-      nextValues[v.markerId] = String(v.value);
+    for (const v of (result.values ?? []).slice(0, 80)) {
+      if (typeof v.markerId !== 'string' || !validMarkerIds.has(v.markerId)) continue;
+      const n = Number(v.value);
+      if (!Number.isFinite(n) || n < 0 || n > 1_000_000) continue;
+      nextValues[v.markerId] = String(n);
     }
     setValues((prev) => ({ ...prev, ...nextValues }));
-    if (result.drawDate) setDrawDate(result.drawDate);
+    if (result.drawDate && isValidIsoDate(result.drawDate)) setDrawDate(result.drawDate);
+    const filled = Object.keys(nextValues).length;
     setParseStatus(
-      `${parser.label}: pre-filled ${result.values.length} marker${result.values.length === 1 ? '' : 's'}.${result.unmappedLines.length ? ` ${result.unmappedLines.length} lines unmapped — add manually if needed.` : ''}`,
+      `${parser.label}: pre-filled ${filled} marker${filled === 1 ? '' : 's'}.${result.unmappedLines.length ? ` ${result.unmappedLines.length} lines unmapped — add manually if needed.` : ''}`,
     );
     setPasteOpen(false);
   };

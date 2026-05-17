@@ -199,6 +199,11 @@ export function parseCadence(frequency: string): CadenceKind {
  * uses ("12 weeks", "20 days on", "Open — daily as needed"). Anything
  * not parseable defaults to a 4-week window so a "schedule cycle" tap
  * always produces a usable plan the user can edit.
+ *
+ * §timezone — `startISO` is parsed as a LOCAL-time calendar date, not a
+ * UTC instant. A bare "YYYY-MM-DD" passed to `new Date()` parses as UTC
+ * midnight, which previously emitted dates one day early for any user
+ * west of UTC (verified by verify-calculator-math.ts).
  */
 export function generateCycleDates(
   startISO: string,
@@ -207,7 +212,7 @@ export function generateCycleDates(
 ): string[] {
   const cadence = parseCadence(frequency);
   const totalDays = parseCycleDays(cycleLength);
-  const start = new Date(startISO);
+  const start = parseLocalDate(startISO);
   const out: string[] = [];
   for (let i = 0; i < totalDays; i++) {
     const d = new Date(start);
@@ -215,6 +220,18 @@ export function generateCycleDates(
     if (shouldEmit(d, i, cadence)) out.push(toDateKey(d));
   }
   return out;
+}
+
+/**
+ * Parse "YYYY-MM-DD" as a local-tz date (constructor with three args is
+ * local-time, not UTC). Anything else falls back to standard Date parsing.
+ */
+function parseLocalDate(iso: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? '');
+  if (m) {
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  }
+  return new Date(iso);
 }
 
 function parseCycleDays(cycleLength: string | undefined): number {

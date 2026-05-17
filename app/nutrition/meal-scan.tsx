@@ -12,7 +12,7 @@
  *   5. User reviews + confirms which to log
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import {
   Image,
   ScrollView,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -98,6 +99,16 @@ function MealScanScreen() {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [mealType] = useState<MealType>(paramMealType ?? inferMealType());
 
+  // Vision detect + N food-search awaits can take 20s+. If the user
+  // navigates back mid-scan, post-await setState fires on a dead
+  // component (React warning + state leak into next mount). The ref
+  // flips on unmount and every post-await setState short-circuits.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   // ── Permission gate ──
   if (!permission) {
     return (
@@ -122,11 +133,24 @@ function MealScanScreen() {
           <Text style={[s.permDesc, { color: t.textSecondary }]}>
             Grant camera access to scan plates of food.
           </Text>
+          {/* 2026-05-17 a11y fix: if the OS won't prompt again
+              (user previously denied + checked "don't ask"),
+              requestPermission is a no-op. Route them to Settings. */}
           <TouchableOpacity
             style={[s.primaryBtn, { backgroundColor: accent.deep }]}
-            onPress={requestPermission}
+            onPress={() => {
+              if (permission.canAskAgain) {
+                requestPermission();
+              } else {
+                Linking.openSettings().catch(() => {});
+              }
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={permission.canAskAgain ? 'Grant camera access' : 'Open settings to enable camera'}
           >
-            <Text style={s.primaryBtnText}>Grant access</Text>
+            <Text style={s.primaryBtnText}>
+              {permission.canAskAgain ? 'Grant access' : 'Open Settings'}
+            </Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -138,12 +162,14 @@ function MealScanScreen() {
     if (!cameraRef.current) return;
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.5, base64: false });
+      if (!mountedRef.current) return;
       if (!photo?.uri) return;
       setPhotoUri(photo.uri);
       setAnalyzing(true);
 
       // 1. Detect food names via Grok Vision
       const detected = await detectFoodsFromPhoto(photo.uri);
+      if (!mountedRef.current) return;
 
       if (detected.length === 0) {
         Alert.alert(
@@ -158,16 +184,20 @@ function MealScanScreen() {
       const all: UnifiedFood[] = [];
       for (const name of detected) {
         const results = await searchAllFoods(name, { limit: 3 });
+        if (!mountedRef.current) return;
         if (results.length > 0) all.push(results[0]);
       }
+      if (!mountedRef.current) return;
       setMatches(all);
       const initial: Record<string, boolean> = {};
       all.forEach((f) => { initial[f.id] = true; });
       setSelected(initial);
     } catch (err) {
-      Alert.alert('Capture failed', 'Could not capture or analyze the photo.');
+      if (mountedRef.current) {
+        Alert.alert('Capture failed', 'Could not capture or analyze the photo.');
+      }
     } finally {
-      setAnalyzing(false);
+      if (mountedRef.current) setAnalyzing(false);
     }
   };
 

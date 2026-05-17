@@ -18,6 +18,8 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,11 +49,11 @@ import {
   type CommunityPreset,
 } from '../src/store/useCommunityPrefsStore';
 
-const COMMUNITY_PRESETS: Array<{
+const COMMUNITY_PRESETS: {
   value: CommunityPreset;
   label: string;
   body: string;
-}> = [
+}[] = [
   {
     value: 'all_in',
     label: 'All in',
@@ -382,6 +384,11 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+      >
       {/* Progress bar */}
       {step > 0 && (
         <View style={s.progressWrap}>
@@ -1035,6 +1042,7 @@ export default function OnboardingScreen() {
           </View>
         </Animated.View>
       )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -33,7 +33,8 @@ export function PeptideDisclaimerModal() {
 
   return (
     <Modal visible transparent animationType="fade">
-      <View style={styles.backdrop}>
+      {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
+      <View style={styles.backdrop} accessibilityViewIsModal={true}>
         <View style={[styles.card, { backgroundColor: t.bg }]}>
           {/* Icon */}
           <LinearGradient

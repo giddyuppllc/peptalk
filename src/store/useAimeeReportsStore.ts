@@ -29,6 +29,12 @@ interface ReportsActions {
   refreshWeekly: () => Report;
   refreshInsights: () => Insight[];
   generateCycleReportFor: (protocolId: string) => Report | null;
+  /**
+   * Server-side LLM rewrite of an existing report's body. Non-blocking:
+   * the templated body is shown immediately; the rewrite swaps in when
+   * it arrives. Failures are silent — the templated version stays put.
+   */
+  rewriteReportBody: (id: string) => Promise<void>;
   removeReport: (id: string) => void;
   markReportRead: (id: string) => void;
   clearAll: () => void;
@@ -71,6 +77,45 @@ export const useAimeeReportsStore = create<ReportsState & ReportsActions>()(
         if (!r) return null;
         set({ reports: [r, ...get().reports].slice(0, 52) });
         return r;
+      },
+
+      rewriteReportBody: async (id) => {
+        const report = get().reports.find((r) => r.id === id);
+        if (!report) return;
+        try {
+          // Lazy-require to keep this store boot-cheap; supabase client
+          // pulls in expo-secure-store + the SDK.
+          const { supabase } = await import('../services/supabase');
+          const { data, error } = await (supabase as any).functions.invoke(
+            'aimee-report-rewrite',
+            {
+              body: {
+                body: report.body,
+                headline: report.headline,
+                recommendation: report.recommendation,
+              },
+            },
+          );
+          if (error) return;
+          // Cap LLM output. Templated bodies are ≤2KB; a runaway model
+          // could otherwise return megabytes that get persisted into
+          // SecureStorage forever. 8KB is generous (4x the template
+          // ceiling) and small enough that 52 weekly reports stay
+          // comfortably inside the secure-store budget. Also strips
+          // tags as a belt-and-braces measure against any future
+          // markdown→HTML renderer.
+          const raw = typeof data?.body === 'string' ? data.body.trim() : '';
+          if (!raw) return;
+          const rewritten = raw.replace(/<[^>]*>/g, '').slice(0, 8000);
+          if (!rewritten) return;
+          set({
+            reports: get().reports.map((r) =>
+              r.id === id ? { ...r, body: rewritten } : r,
+            ),
+          });
+        } catch {
+          // Silent fail — templated body stays.
+        }
       },
 
       removeReport: (id) =>

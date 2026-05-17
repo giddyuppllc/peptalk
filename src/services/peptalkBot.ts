@@ -1227,7 +1227,7 @@ function respondHealthSuggest(context: BotContext): string {
     }
 
     // Research suggestions for lower-scoring areas
-    const suggestions: Array<{ area: string; score: number; categories: PeptideCategory[]; peptideHints: string[] }> = [];
+    const suggestions: { area: string; score: number; categories: PeptideCategory[]; peptideHints: string[] }[] = [];
 
     if (avgSleep < 3) {
       suggestions.push({ area: 'Sleep Quality', score: avgSleep, categories: ['Sleep'], peptideHints: ['DSIP', 'Pinealon', 'Epithalon'] });

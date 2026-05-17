@@ -20,9 +20,11 @@ import Animated, {
   withRepeat,
   withTiming,
   withSequence,
+  cancelAnimation,
   Easing,
 } from 'react-native-reanimated';
 import { useV3Theme } from '../../theme/V3ThemeProvider';
+import { useReduceMotion } from '../../hooks/useReduceMotion';
 import {
   useAimeeRouter,
   type AimeeIntent,
@@ -33,7 +35,7 @@ interface Props {
   /** Override the observation (Phase F1 will inject dynamic copy). */
   observation?: string;
   /** Override the chips. */
-  chips?: Array<{ label: string; intent?: AimeeIntent; primary?: boolean }>;
+  chips?: { label: string; intent?: AimeeIntent; primary?: boolean }[];
 }
 
 const DEFAULT_CHIPS: NonNullable<Props['chips']> = [
@@ -51,7 +53,12 @@ export function AimeeCenterpiece({
 
   // Pulse animation
   const pulse = useSharedValue(1);
+  const reduceMotion = useReduceMotion();
   useEffect(() => {
+    if (reduceMotion) {
+      pulse.value = 1;
+      return;
+    }
     const duration = t.isDark
       ? t.motion.orbPulseDurationMale
       : t.motion.orbPulseDurationFemale;
@@ -63,7 +70,12 @@ export function AimeeCenterpiece({
       -1,
       false,
     );
-  }, [pulse, t.isDark, t.motion.orbPulseDurationFemale, t.motion.orbPulseDurationMale]);
+    // 2026-05-17 perf fix: cancel the infinite worklet on unmount so
+    // the orb doesn't keep ticking after the user navigates away.
+    return () => {
+      cancelAnimation(pulse);
+    };
+  }, [pulse, reduceMotion, t.isDark, t.motion.orbPulseDurationFemale, t.motion.orbPulseDurationMale]);
 
   const orbStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulse.value }],

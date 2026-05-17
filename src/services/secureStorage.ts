@@ -28,13 +28,15 @@ type NativeEncryptedStorage = {
 };
 
 let encryptedStorage: NativeEncryptedStorage | null = null;
+let nativeModuleLoadError: string | null = null;
 try {
   const mod = require('react-native-encrypted-storage');
   encryptedStorage = (mod?.default ?? mod) as NativeEncryptedStorage;
-} catch {
+} catch (err) {
   // Not installed / not linked yet (Expo Go, web, fresh clone before
   // prebuild). We'll fall back to AsyncStorage. Keys will NOT be encrypted
   // in that case — so production builds MUST include the native module.
+  nativeModuleLoadError = err instanceof Error ? err.message : 'unknown';
   if (__DEV__) {
     console.warn(
       '[storage] react-native-encrypted-storage unavailable; falling back to plaintext AsyncStorage. Run `npx expo prebuild` to enable encryption.',
@@ -43,6 +45,29 @@ try {
 }
 
 const isEncryptionAvailable = () => encryptedStorage != null;
+
+// 2026-05-17 P1 fix: surface the unencrypted fallback to telemetry so
+// a TestFlight build with a broken native-module link doesn't silently
+// store health data in plaintext AsyncStorage. The previous warning
+// fired only in `__DEV__`, which is never true in a release build.
+// Fires once per session via the lazy require pattern used elsewhere
+// (no top-level await, no circular import on telemetry).
+let warnedOnce = false;
+function warnIfUnencrypted(): void {
+  if (warnedOnce || isEncryptionAvailable()) return;
+  warnedOnce = true;
+  try {
+
+    const { captureMessage } = require('./telemetry');
+    captureMessage?.(
+      'secureStorage falling back to plaintext AsyncStorage — encryption native module not loaded',
+      'warning',
+      { nativeModuleLoadError },
+    );
+  } catch {
+    // Telemetry not initialized yet — fine, this is best-effort.
+  }
+}
 
 const safeGet = async (key: string): Promise<string | null> => {
   if (encryptedStorage) {
@@ -71,6 +96,9 @@ const safeGet = async (key: string): Promise<string | null> => {
       }
     }
   }
+  // Falling back to AsyncStorage — telemetry breadcrumb (fires once
+  // per session to avoid spamming Sentry).
+  warnIfUnencrypted();
   try {
     return await AsyncStorage.getItem(key);
   } catch {
@@ -88,6 +116,10 @@ const safeSet = async (key: string, value: string): Promise<void> => {
       if (__DEV__) console.warn('[storage] encrypted write failed, falling back:', err);
     }
   }
+  // Falling back to AsyncStorage (no encryption) for a write — surface
+  // via telemetry so prod builds with broken native-module link aren't
+  // silently storing health data in plaintext.
+  warnIfUnencrypted();
   try {
     await AsyncStorage.setItem(key, value);
   } catch {

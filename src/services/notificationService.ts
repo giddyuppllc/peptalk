@@ -9,6 +9,7 @@
  */
 
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 // ---------------------------------------------------------------------------
 // Dynamic module loading — safe for Expo Go
@@ -16,6 +17,15 @@ import { Platform } from 'react-native';
 
 let Notifications: any = null;
 let Device: any = null;
+
+/**
+ * SDK 53+ removed the Push API from Expo Go on Android. `getExpoPushTokenAsync`
+ * throws a hard error there. Local notifications + permissions still work, so
+ * we only short-circuit the remote-token path — scheduled reminders / channels
+ * remain functional inside Expo Go for dev testing.
+ */
+const isExpoGoOnAndroid =
+  Platform.OS === 'android' && Constants.appOwnership === 'expo';
 
 // Re-enabled with defensive load. The earlier Hermes-init crash that
 // forced this off was on an older expo-notifications + RN combo; SDK
@@ -170,8 +180,32 @@ export async function registerForPushNotifications(): Promise<string | null> {
     return null;
   }
 
-  const tokenData = await Notifications.getExpoPushTokenAsync();
-  return tokenData.data;
+  // SDK 53+ blocks getExpoPushTokenAsync inside Expo Go on Android. Return
+  // null so the caller's "no token yet" branch runs cleanly — local
+  // notifications and scheduled reminders still work above.
+  if (isExpoGoOnAndroid) {
+    if (__DEV__) {
+      console.info(
+        '[notificationService] Skipping Expo push token: not supported in Expo Go on Android. Build a dev client to test remote pushes.',
+      );
+    }
+    return null;
+  }
+
+  try {
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      (Constants as any).easConfig?.projectId;
+    const tokenData = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined,
+    );
+    return tokenData.data;
+  } catch (err) {
+    if (__DEV__) {
+      console.warn('[notificationService] getExpoPushTokenAsync failed:', err);
+    }
+    return null;
+  }
 }
 
 // ─── Schedule Daily Check-In Reminder ────────────────────────────────────────
@@ -331,6 +365,12 @@ export async function scheduleWorkoutReminder(
           ...(Platform.OS === 'android' && { channelId: 'reminders' }),
         };
 
+  // 2026-05-17 race fix: stable id so concurrent calls (boot effect +
+  // settings toggle) overwrite each other instead of stacking. The
+  // previous Date.now() suffix meant duplicate scheduled pings if
+  // both fired their cancel-then-schedule pair before either committed.
+  const stableId = `workout-${dayName.toLowerCase()}`;
+  await Notifications.cancelScheduledNotificationAsync(stableId).catch(() => {});
   const identifier = await Notifications.scheduleNotificationAsync({
     content: {
       title: 'Workout Reminder',
@@ -340,7 +380,7 @@ export async function scheduleWorkoutReminder(
       ...(Platform.OS === 'android' && { channelId: 'reminders' }),
     },
     trigger,
-    identifier: `workout-${dayName.toLowerCase()}-${Date.now()}`,
+    identifier: stableId,
   });
 
   return identifier;
@@ -356,6 +396,9 @@ export async function scheduleMealReminder(
 
   const [hours, minutes] = time.split(':').map(Number);
 
+  // 2026-05-17 race fix: see scheduleWorkoutReminder.
+  const stableId = `meal-${mealType.toLowerCase()}`;
+  await Notifications.cancelScheduledNotificationAsync(stableId).catch(() => {});
   const identifier = await Notifications.scheduleNotificationAsync({
     content: {
       title: `${capitalize(mealType)} Reminder`,
@@ -370,7 +413,7 @@ export async function scheduleMealReminder(
       minute: minutes,
       ...(Platform.OS === 'android' && { channelId: 'reminders' }),
     },
-    identifier: `meal-${mealType.toLowerCase()}-${Date.now()}`,
+    identifier: stableId,
   });
 
   return identifier;
@@ -464,7 +507,7 @@ export async function fireImmediateNudge(args: {
     });
   } catch (err) {
     if (__DEV__)
-      // eslint-disable-next-line no-console
+       
       console.warn(`[notif] fireImmediateNudge ${args.id} failed:`, err);
   }
 }
@@ -552,7 +595,7 @@ export async function fireCycleCompleteNudge(args: {
 // ─── Reschedule All From Plan ────────────────────────────────────────────────
 
 export async function rescheduleAllFromPlan(
-  reminders: Array<{ type: string; time: string; dayOfWeek?: number }>,
+  reminders: { type: string; time: string; dayOfWeek?: number }[],
 ): Promise<string[]> {
   if (!isAvailable()) return [];
 
@@ -649,11 +692,11 @@ export async function checkMidDayMacroDeficit(args: {
 
   const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-  const macros: Array<{
+  const macros: {
     key: 'protein' | 'carbs' | 'fat' | 'fiber';
     label: string;
     enabled: boolean;
-  }> = [
+  }[] = [
     { key: 'protein', label: 'Protein', enabled: args.prefs.proteinDeficitNudge },
     { key: 'carbs', label: 'Carbs', enabled: args.prefs.carbsDeficitNudge },
     { key: 'fat', label: 'Fat', enabled: args.prefs.fatDeficitNudge },
@@ -688,7 +731,7 @@ export async function checkMidDayMacroDeficit(args: {
       });
     } catch (err) {
       if (__DEV__)
-        // eslint-disable-next-line no-console
+         
         console.warn(`[notif] macro nudge ${m.key} failed:`, err);
     }
   }
@@ -844,11 +887,15 @@ function getRandomMotivation(): string {
 
 // ─── Schedule Daily Check-In Reminder ──────────────────────────────────────
 
+const CHECKIN_NOTIF_ID = 'checkin-daily';
+
 export async function scheduleCheckInReminder(time: string = '20:00'): Promise<string> {
   if (!isAvailable()) return '';
 
   const [hours, minutes] = time.split(':').map(Number);
 
+  // 2026-05-17 race fix: see scheduleMealSafetyChecks comment.
+  await Notifications.cancelScheduledNotificationAsync(CHECKIN_NOTIF_ID).catch(() => {});
   const identifier = await Notifications.scheduleNotificationAsync({
     content: {
       title: 'Daily Check-In',
@@ -863,7 +910,7 @@ export async function scheduleCheckInReminder(time: string = '20:00'): Promise<s
       minute: minutes,
       ...(Platform.OS === 'android' && { channelId: 'reminders' }),
     },
-    identifier: `checkin-daily-${Date.now()}`,
+    identifier: CHECKIN_NOTIF_ID,
   });
 
   return identifier;
@@ -871,11 +918,15 @@ export async function scheduleCheckInReminder(time: string = '20:00'): Promise<s
 
 // ─── Schedule Daily Motivation ─────────────────────────────────────────────
 
+const MOTIVATION_NOTIF_ID = 'motivation-daily';
+
 export async function scheduleDailyMotivation(time: string = '08:00'): Promise<string> {
   if (!isAvailable()) return '';
 
   const [hours, minutes] = time.split(':').map(Number);
 
+  // 2026-05-17 race fix: see scheduleMealSafetyChecks comment.
+  await Notifications.cancelScheduledNotificationAsync(MOTIVATION_NOTIF_ID).catch(() => {});
   const identifier = await Notifications.scheduleNotificationAsync({
     content: {
       title: 'PepTalk',
@@ -890,7 +941,7 @@ export async function scheduleDailyMotivation(time: string = '08:00'): Promise<s
       minute: minutes,
       ...(Platform.OS === 'android' && { channelId: 'motivation' }),
     },
-    identifier: `motivation-daily-${Date.now()}`,
+    identifier: MOTIVATION_NOTIF_ID,
   });
 
   return identifier;
@@ -923,6 +974,12 @@ export async function scheduleGoalReminder(
         ...(Platform.OS === 'android' && { channelId: 'reminders' }),
       };
 
+  // 2026-05-17 race fix: stable id keyed on the goal name so repeat
+  // scheduling overwrites the same notification slot rather than
+  // stacking. Two pings for the same goal because the user re-saved
+  // it in settings was the visible glitch.
+  const stableId = `goal-${goalName.toLowerCase().replace(/\s+/g, '-')}`;
+  await Notifications.cancelScheduledNotificationAsync(stableId).catch(() => {});
   const identifier = await Notifications.scheduleNotificationAsync({
     content: {
       title: goalName,
@@ -932,7 +989,7 @@ export async function scheduleGoalReminder(
       ...(Platform.OS === 'android' && { channelId: 'reminders' }),
     },
     trigger,
-    identifier: `goal-${goalName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
+    identifier: stableId,
   });
 
   return identifier;
@@ -949,11 +1006,20 @@ export async function scheduleGoalReminder(
  *
  * No-op until expo-notifications is re-enabled (see file header).
  */
+/** Stable identifier so concurrent schedule calls overwrite each
+ *  other instead of stacking. 2026-05-17 fix. */
+const MEAL_SAFETY_NOTIF_ID = 'meal-safety-daily';
+
 export async function scheduleMealSafetyChecks(hour: number = 9, minute: number = 0): Promise<string> {
   if (!isAvailable()) return '';
 
-  // Cancel any previous food-safety reminders so we don't stack duplicates
-  await cancelRemindersByTag('meal-safety-');
+  // 2026-05-17 race fix: previously used `Date.now()`-suffixed
+  // identifier. Two concurrent callers (boot + settings toggle) each
+  // ran cancel-then-schedule, but their cancel reads happened before
+  // either schedule write, so BOTH schedules survived → duplicate
+  // 9 AM pings. A stable identifier means the OS overwrites the prior
+  // scheduled notification by id, no race possible.
+  await Notifications.cancelScheduledNotificationAsync(MEAL_SAFETY_NOTIF_ID).catch(() => {});
 
   const identifier = await Notifications.scheduleNotificationAsync({
     content: {
@@ -969,7 +1035,7 @@ export async function scheduleMealSafetyChecks(hour: number = 9, minute: number 
       minute,
       ...(Platform.OS === 'android' && { channelId: 'reminders' }),
     },
-    identifier: `meal-safety-daily-${Date.now()}`,
+    identifier: MEAL_SAFETY_NOTIF_ID,
   });
 
   return identifier;
@@ -977,13 +1043,13 @@ export async function scheduleMealSafetyChecks(hour: number = 9, minute: number 
 
 // ─── Get All Scheduled Reminders ───────────────────────────────────────────
 
-export async function getScheduledReminders(): Promise<Array<{
+export async function getScheduledReminders(): Promise<{
   id: string;
   type: string;
   title: string;
   body: string;
   trigger: any;
-}>> {
+}[]> {
   if (!isAvailable()) return [];
 
   try {

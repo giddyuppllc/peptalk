@@ -105,7 +105,7 @@ const PatternResult: React.FC<{ result: AimeeToolResult }> = ({ result }) => {
   const out = (result.output as any) ?? {};
   const days = out.timeframeDays ?? 14;
 
-  const rows: Array<{ label: string; value: string }> = [];
+  const rows: { label: string; value: string }[] = [];
 
   if (out.checkins) {
     const c = out.checkins;

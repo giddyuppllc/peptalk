@@ -80,6 +80,16 @@ function jsonResp(body: unknown, status = 200): Response {
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return jsonResp({ error: 'Method not allowed' }, 405);
 
+  // 2026-05-17 security fix: depending on whether this fn is deployed
+  // with --no-verify-jwt, the public URL may be reachable unauthenticated.
+  // Add an internal-secret check matching the pattern used by community-
+  // live-broadcast — the trigger passes x-internal-key via pg_net.http_post.
+  const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET') ?? '';
+  const providedSecret = req.headers.get('x-internal-key') ?? '';
+  if (!internalSecret || providedSecret !== internalSecret) {
+    return jsonResp({ error: 'Unauthorized' }, 401);
+  }
+
   try {
     const { notificationId } = await req.json().catch(() => ({}));
     if (!notificationId || typeof notificationId !== 'string') {

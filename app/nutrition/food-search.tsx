@@ -41,7 +41,7 @@ import {
 } from '../../src/constants/theme';
 import { useMealStore, type RecentFood, type CustomMeal, type MealTemplate } from '../../src/store/useMealStore';
 import { computeSafetyStatus, statusBadge, DEFAULT_SAFETY_WINDOWS } from '../../src/data/foodSafety';
-import type { FoodItem } from '../../src/types/fitness';
+import type { FoodItem , MealType } from '../../src/types/fitness';
 import { useFeatureGate } from '../../src/hooks/useFeatureGate';
 import { PaywallModal } from '../../src/components/PaywallModal';
 import { LockBadge } from '../../src/components/LockBadge';
@@ -53,7 +53,6 @@ import {
   lookupBarcode,
   type UnifiedFood,
 } from '../../src/services/foodSearchService';
-import type { MealType } from '../../src/types/fitness';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

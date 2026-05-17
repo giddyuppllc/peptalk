@@ -16,8 +16,6 @@
  * the adapter (init / sync) takes over.
  */
 
-const ANDROID_LIVE = false;
-
 import { Platform } from 'react-native';
 import type {
   BiomarkerAdapter,
@@ -26,10 +24,12 @@ import type {
 } from './types';
 import type { BiomarkerScope } from '../../types/cycle';
 
+const ANDROID_LIVE = false;
+
 let HealthConnect: any = null;
 try {
   if (Platform.OS === 'android') {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     HealthConnect = require('react-native-health-connect');
   }
 } catch {

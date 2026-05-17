@@ -170,16 +170,16 @@ export function recommendPeptidesForGoal(
  * (primary tier first, then secondary). Experimental matches are
  * dropped to keep the simple summary high-signal.
  */
-export function plainGoalsForPeptide(peptideId: string): Array<{
+export function plainGoalsForPeptide(peptideId: string): {
   goal: GoalType;
   tier: GoalPeptideMatch['tier'];
   reason: string;
-}> {
-  const hits: Array<{ goal: GoalType; tier: GoalPeptideMatch['tier']; reason: string }> = [];
-  for (const [goalKey, matches] of Object.entries(GOAL_PEPTIDE_MATRIX) as Array<[
+}[] {
+  const hits: { goal: GoalType; tier: GoalPeptideMatch['tier']; reason: string }[] = [];
+  for (const [goalKey, matches] of Object.entries(GOAL_PEPTIDE_MATRIX) as [
     GoalType,
     GoalPeptideMatch[],
-  ]>) {
+  ][]) {
     const m = matches.find((x) => x.id === peptideId);
     if (m && m.tier !== 'experimental') {
       hits.push({ goal: goalKey, tier: m.tier, reason: m.reason });

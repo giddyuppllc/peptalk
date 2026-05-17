@@ -42,6 +42,22 @@ function dateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/**
+ * Convert a date-only "YYYY-MM-DD" string to a stable ISO timestamp.
+ *
+ * Naive `new Date('2026-05-17').toISOString()` parses the string as UTC
+ * midnight, so a user east of UTC sees "2026-05-17" → "2026-05-17T00:00:00Z"
+ * but a user west of UTC sees the same string render as the previous day
+ * in milestone cards. Anchor to local noon instead — the date component
+ * stays stable across DST + UTC offsets. 2026-05-17 timezone fix.
+ */
+function dateOnlyToIsoLocal(iso: string): string {
+  if (typeof iso !== 'string') return new Date().toISOString();
+  const [y, mo, d] = iso.split('-').map(Number);
+  if (!y || !mo || !d) return new Date(iso).toISOString();
+  return new Date(y, mo - 1, d, 12, 0, 0, 0).toISOString();
+}
+
 function epley1RM(weightLb: number, reps: number): number {
   if (reps <= 1) return weightLb;
   return weightLb * (1 + reps / 30);
@@ -109,7 +125,7 @@ export function computeMilestones(): Milestone[] {
     out.push({
       id: `cycle_complete_${p.id}`,
       kind: 'cycle_complete',
-      achievedAt: new Date(p.endDate).toISOString(),
+      achievedAt: dateOnlyToIsoLocal(p.endDate),
       headline: `Cycle complete — ${peptide?.name ?? p.peptideId}`,
       detail: `${p.startDate} → ${p.endDate}`,
     });
@@ -134,7 +150,7 @@ export function computeMilestones(): Milestone[] {
     out.push({
       id: `pr_${exerciseId}`,
       kind: 'pr_set',
-      achievedAt: new Date(date).toISOString(),
+      achievedAt: dateOnlyToIsoLocal(date),
       headline: `PR — est. 1RM ${Math.round(rm)} lb`,
       detail: exerciseId,
     });
@@ -172,7 +188,7 @@ export function computeMilestones(): Milestone[] {
       out.push({
         id: `lab_improvement_${markerId}_${last.date}`,
         kind: 'lab_improvement',
-        achievedAt: new Date(last.date).toISOString(),
+        achievedAt: dateOnlyToIsoLocal(last.date),
         headline: `${markerId.toUpperCase()} moved ${pctChange >= 0 ? '+' : ''}${pctChange.toFixed(0)}%`,
         detail: `${first.value} → ${last.value} ${last.unit}`,
       });

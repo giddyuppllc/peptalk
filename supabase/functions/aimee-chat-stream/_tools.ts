@@ -302,7 +302,7 @@ export const AIMEE_TOOLS: GrokTool[] = [
       description: [
         'Open the dosing calculator screen, optionally pre-filled with a peptide + suggested dose.',
         'Call this when the user asks "calculate my dose for X", "how much X do I draw", or anything that needs the reconstitution math.',
-        'The client navigates to /calculators/dosing with the deep-link params; no server state changes.',
+        'The client navigates to /doses/calculator with the deep-link params; no server state changes.',
       ].join(' '),
       parameters: {
         type: 'object',
@@ -323,7 +323,15 @@ export const AIMEE_TOOLS: GrokTool[] = [
       name: 'navigate_to_screen',
       description: [
         'Navigate the user to another screen in the app. Use sparingly — only when the user explicitly asks to "open" or "go to" something, or when answering a question really needs them to be on a specific screen.',
-        'Available screens: "home", "peptides" (my stacks), "aimee" (this chat), "nutrition", "workouts", "community", "check-in", "calendar", "profile", "stack-builder", "dosing-calc" (alias for open_dosing_calculator with no args).',
+        'Available screens (v3): "home", "peptides", "aimee", "nutrition", "workouts", "community", "check-in", "calendar", "profile", "stack-builder", "dosing-calc",',
+        '"tracker", "tracker-weight", "tracker-sleep", "tracker-mood", "tracker-photos",',
+        '"doses", "doses-calculator", "doses-stack-builder", "doses-library", "doses-tracker", "doses-side-effects",',
+        '"activity", "activity-performance",',
+        '"labs", "labs-entry", "body-composition", "body-composition-entry",',
+        '"pantry", "pantry-add", "pantry-scan",',
+        '"aimee-reports",',
+        '"community-leaderboard", "community-milestones",',
+        '"profile-appearance", "profile-community-prefs", "settings-notifications", "subscription".',
       ].join(' '),
       parameters: {
         type: 'object',
@@ -331,6 +339,87 @@ export const AIMEE_TOOLS: GrokTool[] = [
           screen: { type: 'string', description: 'One of the available screen names.' },
         },
         required: ['screen'],
+      },
+    },
+  },
+  // ───── water (direct write, confirm card) ───────────────────────────────
+  {
+    type: 'function',
+    function: {
+      name: 'log_water',
+      description: [
+        'Log water the user drank — direct write, requires user confirm on client.',
+        'Call this when the user says they drank water ("I had a glass of water", "log 16 oz", "two cups").',
+        'Convert to ounces (cup = 8 oz, glass = 8 oz, bottle = 16 oz unless they specify).',
+      ].join(' '),
+      parameters: {
+        type: 'object',
+        properties: {
+          ounces: { type: 'number', description: 'Amount of water in ounces. Must be > 0.' },
+          date: { type: 'string', description: 'ISO date (YYYY-MM-DD). Defaults to today.' },
+        },
+        required: ['ounces'],
+      },
+    },
+  },
+  // ───── appetite (direct write, confirm card) ────────────────────────────
+  {
+    type: 'function',
+    function: {
+      name: 'log_appetite',
+      description: [
+        'Log how the user\'s appetite is right now — direct write, requires user confirm.',
+        'Call this when the user mentions appetite ("I\'m hungry", "I feel full", "kinda nauseous").',
+      ].join(' '),
+      parameters: {
+        type: 'object',
+        properties: {
+          state: { type: 'string', enum: ['hungry', 'full', 'nauseous'] },
+          notes: { type: 'string', description: 'Optional context — under 200 chars.' },
+        },
+        required: ['state'],
+      },
+    },
+  },
+  // ───── pantry (direct write, confirm card) ──────────────────────────────
+  {
+    type: 'function',
+    function: {
+      name: 'add_to_pantry',
+      description: [
+        'Add items to the user\'s kitchen / pantry inventory — direct write, requires user confirm.',
+        'Call this when the user says they bought groceries or stocked up ("I bought 2 lbs chicken", "I have eggs and yogurt in the fridge").',
+        'Infer storageLocation: meat/dairy/produce → fridge, ice cream / frozen veg → freezer, cans/dry goods → pantry.',
+      ].join(' '),
+      parameters: {
+        type: 'object',
+        properties: {
+          items: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string' },
+                quantity: { type: 'number', description: 'Defaults to 1 if unknown.' },
+                unit: {
+                  type: 'string',
+                  enum: ['each', 'oz', 'g', 'lb', 'cup', 'tbsp', 'tsp', 'ml', 'l'],
+                },
+                category: {
+                  type: 'string',
+                  enum: ['produce', 'dairy', 'grain', 'protein', 'frozen', 'condiment', 'other'],
+                },
+                storageLocation: {
+                  type: 'string',
+                  enum: ['fridge', 'freezer', 'pantry'],
+                },
+              },
+              required: ['name'],
+            },
+            description: '1-20 pantry items to add.',
+          },
+        },
+        required: ['items'],
       },
     },
   },
@@ -800,9 +889,9 @@ export function execOpenDosingCalculator(
   input: Record<string, unknown>,
 ): Record<string, unknown> {
   const params = new URLSearchParams();
-  // The calculator screen reads `peptideId`, `intensity`, `doseMcg`,
-  // `vialMg`, `waterMl`. Keep keys aligned so the deep link Just Works
-  // without translation on the client.
+  // v3 calculator at /doses/calculator reads `peptideId`, `doseMcg`,
+  // `vialMg`, `waterMl` from query params. Old /calculators/dosing was
+  // retired — v3 is feature-complete per §14.
   if (typeof input.peptideId === 'string') params.set('peptideId', input.peptideId);
   else if (typeof input.peptideName === 'string') params.set('peptideId', input.peptideName);
   if (typeof input.doseMcg === 'number') params.set('doseMcg', String(input.doseMcg));
@@ -810,7 +899,7 @@ export function execOpenDosingCalculator(
   if (typeof input.waterMl === 'number') params.set('waterMl', String(input.waterMl));
 
   const qs = params.toString();
-  const path = qs ? `/calculators/dosing?${qs}` : '/calculators/dosing';
+  const path = qs ? `/doses/calculator?${qs}` : '/doses/calculator';
 
   return {
     ok: true,
@@ -819,11 +908,11 @@ export function execOpenDosingCalculator(
   };
 }
 
-// Routes verified against app/(tabs)/ directory. The home tab is
-// app/(tabs)/index.tsx, which resolves to `/(tabs)` — there is no
-// `home.tsx`. Earlier versions had `'home': '/(tabs)/home'` which 404'd
-// when Aimee called navigate_to_screen({ screen: 'home' }).
+// Routes verified against app/ directory. v3 screens are NOT inside
+// (tabs) for most surfaces — they're top-level routes pushed via the
+// 4-card home drill (per the v3 refactor; bottom tab bar is hidden).
 const SCREEN_TO_PATH: Record<string, string> = {
+  // Original tab routes (still reachable as deep links)
   home: '/(tabs)',
   peptides: '/(tabs)/my-stacks',
   aimee: '/(tabs)/peptalk',
@@ -834,8 +923,125 @@ const SCREEN_TO_PATH: Record<string, string> = {
   calendar: '/(tabs)/calendar',
   profile: '/(tabs)/profile',
   'stack-builder': '/(tabs)/stack-builder',
-  'dosing-calc': '/calculators/dosing',
+  'dosing-calc': '/doses/calculator',
+  subscription: '/subscription',
+  // v3 tracker hub
+  tracker: '/tracker',
+  'tracker-weight': '/tracker/weight',
+  'tracker-sleep': '/tracker/sleep',
+  'tracker-mood': '/tracker/mood',
+  'tracker-photos': '/tracker/photos',
+  // v3 doses hub
+  doses: '/doses',
+  'doses-calculator': '/doses/calculator',
+  'doses-stack-builder': '/doses/stack-builder',
+  'doses-library': '/doses/library',
+  'doses-tracker': '/doses/tracker',
+  'doses-side-effects': '/doses/side-effects',
+  // v3 activity hub
+  activity: '/activity',
+  'activity-performance': '/activity/performance',
+  // v3 labs + body comp
+  labs: '/labs',
+  'labs-entry': '/labs/entry',
+  'body-composition': '/body-composition',
+  'body-composition-entry': '/body-composition/entry',
+  // Pantry
+  pantry: '/pantry',
+  'pantry-add': '/pantry/add',
+  'pantry-scan': '/pantry/scan',
+  // Aimee reports
+  'aimee-reports': '/aimee/reports',
+  // Community v2
+  'community-leaderboard': '/community/leaderboard',
+  'community-milestones': '/community/milestones',
+  // Profile drills
+  'profile-appearance': '/profile/appearance',
+  'profile-community-prefs': '/profile/community-prefs',
+  'settings-notifications': '/settings/notifications',
 };
+
+export function execLogWater(
+  input: Record<string, unknown>,
+): Record<string, unknown> {
+  const ounces = Number(input.ounces);
+  if (!Number.isFinite(ounces) || ounces <= 0) {
+    return { error: 'ounces must be > 0' };
+  }
+  // Sanity cap — single log shouldn't exceed 200 oz (a gallon-and-a-half).
+  // Prevents a hallucinated 9999 from poisoning daily totals.
+  if (ounces > 200) return { error: 'ounces too large (max 200 per log)' };
+  const date =
+    typeof input.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.date)
+      ? input.date
+      : new Date().toISOString().slice(0, 10);
+  return {
+    ok: true,
+    summary: `Log ${Math.round(ounces)} oz of water for ${date}.`,
+    client_action: {
+      type: 'log_water',
+      payload: { ounces: Math.round(ounces), date },
+    },
+  };
+}
+
+export function execLogAppetite(
+  input: Record<string, unknown>,
+): Record<string, unknown> {
+  const state = typeof input.state === 'string' ? input.state : '';
+  if (!['hungry', 'full', 'nauseous'].includes(state)) {
+    return { error: 'state must be hungry/full/nauseous' };
+  }
+  const notes =
+    typeof input.notes === 'string' && input.notes.length <= 200
+      ? input.notes
+      : undefined;
+  return {
+    ok: true,
+    summary: `Log appetite: ${state}${notes ? ` (${notes})` : ''}.`,
+    client_action: {
+      type: 'log_appetite',
+      payload: { state, notes },
+    },
+  };
+}
+
+export function execAddToPantry(
+  input: Record<string, unknown>,
+): Record<string, unknown> {
+  const raw = Array.isArray(input.items) ? input.items : [];
+  if (raw.length === 0) return { error: 'items array required' };
+  if (raw.length > 20) return { error: 'max 20 items per call' };
+  const items = raw
+    .map((it: any) => {
+      const name = typeof it?.name === 'string' ? it.name.trim() : '';
+      if (!name) return null;
+      const quantity = Number(it?.quantity);
+      const unit = typeof it?.unit === 'string' ? it.unit : 'each';
+      const category = typeof it?.category === 'string' ? it.category : undefined;
+      const storageLocation =
+        typeof it?.storageLocation === 'string' && ['fridge', 'freezer', 'pantry'].includes(it.storageLocation)
+          ? it.storageLocation
+          : 'pantry';
+      return {
+        name,
+        quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+        unit,
+        category,
+        storageLocation,
+      };
+    })
+    .filter(Boolean);
+  if (items.length === 0) return { error: 'no valid items' };
+  return {
+    ok: true,
+    summary: `Add ${items.length} item${items.length === 1 ? '' : 's'} to your pantry.`,
+    client_action: {
+      type: 'add_to_pantry',
+      payload: { items },
+    },
+  };
+}
 
 export function execNavigateToScreen(
   input: Record<string, unknown>,
@@ -895,6 +1101,12 @@ export async function executeTool(
       return execOpenDosingCalculator(toolInput);
     case 'navigate_to_screen':
       return execNavigateToScreen(toolInput);
+    case 'log_water':
+      return execLogWater(toolInput);
+    case 'log_appetite':
+      return execLogAppetite(toolInput);
+    case 'add_to_pantry':
+      return execAddToPantry(toolInput);
     default:
       return { error: `unknown tool: ${toolName}` };
   }

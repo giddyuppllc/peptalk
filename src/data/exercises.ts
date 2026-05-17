@@ -33,7 +33,7 @@ interface ExerciseInstructions {
 let _instructionsMap: Record<string, ExerciseInstructions> | null = null;
 function getInstructionsMap(): Record<string, ExerciseInstructions> {
   if (_instructionsMap) return _instructionsMap;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   _instructionsMap = require('./exerciseInstructions.json') as Record<string, ExerciseInstructions>;
   return _instructionsMap;
 }

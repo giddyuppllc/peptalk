@@ -30,6 +30,7 @@ import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { useAllergyStore } from '../../src/store/useAllergyStore';
 import { supabase } from '../../src/services/supabase';
+import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
 
 interface SuggestedIngredient {
   name: string;
@@ -53,7 +54,7 @@ interface Suggestion {
   notes?: string;
 }
 
-const MEAL_TYPES: Array<'breakfast' | 'lunch' | 'dinner' | 'snack'> = [
+const MEAL_TYPES: ('breakfast' | 'lunch' | 'dinner' | 'snack')[] = [
   'breakfast',
   'lunch',
   'dinner',
@@ -158,27 +159,38 @@ function PantrySuggestionsInner() {
 
   const handleLogSuggestion = (s: Suggestion) => {
     const macros = s.estimatedMacros ?? {};
+    // Clamp every LLM-emitted field before it reaches the meal store.
+    // Mirrors the per-row caps in sanitizeLogMeal (calories ≤3000,
+    // protein ≤300, carbs ≤500, fat ≤300) so a hallucinated
+    // `calories: 99999` here can't poison the daily ring just because
+    // this surface bypasses the chat sanitize pipeline.
+    const safeFood = {
+      foodId: `ai-${Date.now()}`,
+      foodName: clampString(s.name, 200) || 'AI suggestion',
+      servings: 1,
+      calories: clamp(macros.calories, 3000),
+      proteinGrams: clamp(macros.proteinGrams, 300),
+      carbsGrams: clamp(macros.carbsGrams, 500),
+      fatGrams: clamp(macros.fatGrams, 300),
+    };
     const ingredientsText = (s.ingredients ?? [])
-      .map((ing) =>
-        ing.qty && ing.unit ? `${ing.qty} ${ing.unit} ${ing.name}` : ing.name,
-      )
-      .join(', ');
+      .slice(0, 20)
+      .map((ing) => {
+        const name = clampString(ing.name, 80);
+        if (!name) return '';
+        const qty = clamp(ing.qty, 10000);
+        const unit = clampString(ing.unit, 10);
+        return qty > 0 && unit ? `${qty} ${unit} ${name}` : name;
+      })
+      .filter(Boolean)
+      .join(', ')
+      .slice(0, 500);
     const now = new Date();
     addMeal({
       id: `meal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       date: now.toISOString().slice(0, 10),
       mealType,
-      foods: [
-        {
-          foodId: `ai-${Date.now()}`,
-          foodName: s.name,
-          servings: 1,
-          calories: macros.calories ?? 0,
-          proteinGrams: macros.proteinGrams ?? 0,
-          carbsGrams: macros.carbsGrams ?? 0,
-          fatGrams: macros.fatGrams ?? 0,
-        },
-      ],
+      foods: [safeFood],
       notes: ingredientsText,
       timestamp: now.toISOString(),
     });
@@ -186,22 +198,24 @@ function PantrySuggestionsInner() {
     // Deduct any pantry-sourced ingredients so the list reflects reality.
     // Case-insensitive match on name + brand — same way the AI flagged them.
     let deductedCount = 0;
-    for (const ing of s.ingredients ?? []) {
+    for (const ing of (s.ingredients ?? []).slice(0, 20)) {
       if (!ing.fromPantry || !ing.name) continue;
-      const needle = ing.name.toLowerCase().trim();
+      const needle = clampString(ing.name, 80).toLowerCase();
+      if (!needle) continue;
       const match = items.find(
         (p) =>
           p.name.toLowerCase().includes(needle) ||
           needle.includes(p.name.toLowerCase()),
       );
       if (match) {
-        // If units match, use the AI-suggested qty; otherwise subtract 1 unit
-        // of the pantry item. Better to under-deduct than over-deduct when
-        // the units disagree (e.g., "2 tbsp olive oil" vs "1 bottle").
+        // Pantry-decrement amount also LLM-emitted — clamp it. A
+        // hostile model returning `qty: -1e10` would otherwise
+        // multiply the pantry row to absurdity inside consumeQuantity.
         const sameUnit =
           ing.unit && match.unit &&
           ing.unit.toLowerCase() === match.unit.toLowerCase();
-        const amount = sameUnit && ing.qty && ing.qty > 0 ? ing.qty : 1;
+        const rawAmount = sameUnit && ing.qty && ing.qty > 0 ? ing.qty : 1;
+        const amount = clamp(rawAmount, 1000, 0) || 1;
         consumeQuantity(match.id, amount);
         deductedCount++;
       }

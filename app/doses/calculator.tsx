@@ -8,7 +8,7 @@
  * schedule into the dose log so the Tracker reflects it immediately.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -47,7 +47,7 @@ import {
 } from '../../src/utils/calculatorV2';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 
-const VIAL_SIZES: Array<3 | 5 | 10> = [3, 5, 10];
+const VIAL_SIZES: (3 | 5 | 10)[] = [3, 5, 10];
 type ProtocolIntent = 'gradual' | 'aggressive' | 'maintenance';
 
 const INTENT_LABELS: Record<ProtocolIntent, string> = {
@@ -59,7 +59,12 @@ const INTENT_LABELS: Record<ProtocolIntent, string> = {
 export default function CalculatorV2Screen() {
   const t = useV3Theme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ peptideId?: string }>();
+  const params = useLocalSearchParams<{
+    peptideId?: string;
+    doseMcg?: string;
+    vialMg?: string;
+    waterMl?: string;
+  }>();
   const logDose = useDoseLogStore((s) => s.logDose);
   const scheduleCycle = useDoseLogStore((s) => s.scheduleCycle);
 
@@ -107,6 +112,39 @@ export default function CalculatorV2Screen() {
     setPerShotOverride('');
     if (meta.diluentType === 'aceticAcid') setShowAceticFlag(true);
   }, [meta, ref]);
+
+  // Apply Aimee deep-link overrides AFTER the metadata effect so they win.
+  // Aimee tool open_dosing_calculator passes:
+  //   doseMcg   → preShotOverride (the user's intended per-shot dose)
+  //   vialMg    → peptideMg
+  //   waterMl   → diluentMl
+  // Tracked refs prevent the override from looping when the user later
+  // edits a field manually.
+  const deepLinkApplied = useRef(false);
+  useEffect(() => {
+    if (deepLinkApplied.current) return;
+    if (!meta || !ref) return; // wait for metadata defaults first
+    const doseMcg = params.doseMcg ? Number(params.doseMcg) : NaN;
+    const vialMg = params.vialMg ? Number(params.vialMg) : NaN;
+    const waterMl = params.waterMl ? Number(params.waterMl) : NaN;
+    let applied = false;
+    if (Number.isFinite(doseMcg) && doseMcg > 0) {
+      // Honor displayUnit chosen by metadata: render the number in the
+      // matching unit so the input box shows the same value Aimee said.
+      const value = meta.displayUnit === 'mcg' ? doseMcg : doseMcg / 1000;
+      setPerShotOverride(String(value));
+      applied = true;
+    }
+    if (Number.isFinite(vialMg) && vialMg > 0) {
+      setPeptideMg(String(vialMg));
+      applied = true;
+    }
+    if (Number.isFinite(waterMl) && waterMl > 0) {
+      setDiluentMl(String(waterMl));
+      applied = true;
+    }
+    if (applied) deepLinkApplied.current = true;
+  }, [meta, ref, params.doseMcg, params.vialMg, params.waterMl]);
 
   const phase = useMemo(() => {
     if (!ref) return null;
@@ -290,7 +328,12 @@ export default function CalculatorV2Screen() {
             >
               Display unit
             </Text>
-            <View style={styles.toggle}>
+            <View
+              style={[
+                styles.toggle,
+                { backgroundColor: (t.colors as any).divider as string },
+              ]}
+            >
               {(['mg', 'mcg'] as const).map((u) => {
                 const active = displayUnit === u;
                 return (
@@ -699,13 +742,20 @@ function NumericField({
   value,
   onChange,
   suffix,
+  accessibilityLabel,
+  accessibilityHint,
 }: {
   label: string;
   value: string;
   onChange: (next: string) => void;
   suffix?: string;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 }) {
   const t = useV3Theme();
+  // 2026-05-17 a11y: explicit label for VoiceOver — fall back to visual label + suffix
+  const a11yLabel =
+    accessibilityLabel ?? (suffix ? `${label}, ${suffix}` : label);
   return (
     <View style={{ marginTop: 10 }}>
       <Text
@@ -742,6 +792,8 @@ function NumericField({
             paddingVertical: 6,
           }}
           placeholderTextColor={t.colors.textSecondary as string}
+          accessibilityLabel={a11yLabel}
+          accessibilityHint={accessibilityHint}
         />
         {suffix ? (
           <Text
@@ -981,7 +1033,8 @@ const styles = StyleSheet.create({
   },
   toggle: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.06)',
+    // backgroundColor set inline from t.colors.divider so the toggle
+    // matches the active palette (female/male) instead of a fixed grey.
     borderRadius: 999,
     padding: 2,
   },

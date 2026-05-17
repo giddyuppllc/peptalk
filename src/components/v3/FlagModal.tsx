@@ -32,7 +32,8 @@ export function FlagModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
-      <View style={styles.backdrop}>
+      {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
+      <View style={styles.backdrop} accessibilityViewIsModal={true}>
         <View
           style={[
             styles.card,

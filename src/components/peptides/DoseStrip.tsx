@@ -86,7 +86,7 @@ export function DoseStrip({
     today.setHours(0, 0, 0, 0);
 
     // Pre-bucket entries by local date.
-    const buckets = new Map<string, Array<DoseStripEntry & { dt: Date }>>();
+    const buckets = new Map<string, (DoseStripEntry & { dt: Date })[]>();
     for (const e of entries) {
       const dt = e.loggedAt instanceof Date ? e.loggedAt : new Date(e.loggedAt);
       if (isNaN(dt.getTime())) continue;
@@ -101,7 +101,7 @@ export function DoseStrip({
       date: Date;
       letter: string;
       isToday: boolean;
-      doses: Array<DoseStripEntry & { dt: Date }>;
+      doses: (DoseStripEntry & { dt: Date })[];
     }[] = [];
 
     for (let i = windowDays - 1; i >= 0; i--) {

@@ -161,6 +161,16 @@ interface DoseLogStore {
   /** Alert IDs the user has dismissed — survives reload so they don't keep reappearing. */
   dismissedAlertIds: string[];
   hasAcceptedDoseDisclaimer: boolean;
+  /**
+   * Dose entry IDs whose Supabase upsert failed (offline, transient
+   * network, RLS race). The boot effect + reconnect listener call
+   * `flushPendingSyncs()` to retry. Without this, a dose logged
+   * offline stayed local-only forever — last-writer-wins meant a
+   * future edit would re-sync, but doses never edited stayed
+   * trapped on the device. 2026-05-17 round-8 P1 fix.
+   */
+  pendingSyncs: string[];
+  flushPendingSyncs: () => Promise<void>;
 
   // Disclaimer gate
   acceptDoseDisclaimer: () => void;
@@ -240,6 +250,34 @@ export const useDoseLogStore = create<DoseLogStore>()(
       alerts: [],
       dismissedAlertIds: [],
       hasAcceptedDoseDisclaimer: false,
+      pendingSyncs: [],
+
+      flushPendingSyncs: async () => {
+        const ids = get().pendingSyncs;
+        if (ids.length === 0) return;
+        const stillFailing: string[] = [];
+        for (const id of ids) {
+          const dose = get().doses.find((d) => d.id === id);
+          if (!dose) continue; // dropped or deleted locally
+          const peptide = getPeptideById(dose.peptideId);
+          const ok = await syncRecord('dose_logs', {
+            id: dose.id,
+            peptide_id: dose.peptideId,
+            peptide_name: peptide?.name ?? dose.peptideId,
+            amount: dose.amount,
+            unit: dose.unit,
+            route: dose.route,
+            date: dose.date,
+            time: dose.time,
+            site: dose.injectionSite ?? null,
+            batch_number: dose.batchNumber ?? null,
+            notes: dose.notes ?? null,
+            source: 'user',
+          });
+          if (!ok) stillFailing.push(id);
+        }
+        set({ pendingSyncs: stillFailing });
+      },
 
       // ── Disclaimer Gate ────────────────────────────────────────────────────
 
@@ -286,6 +324,23 @@ export const useDoseLogStore = create<DoseLogStore>()(
           batch_number: entry.batchNumber ?? null,
           notes: entry.notes ?? null,
           source: 'user',
+        }).then((ok) => {
+          // 2026-05-17 P1 fix: queue failed syncs for retry on next
+          // reconnect / boot. Previously a dose logged offline stayed
+          // local-only forever.
+          if (!ok) {
+            set((state) => ({
+              pendingSyncs: state.pendingSyncs.includes(entry.id)
+                ? state.pendingSyncs
+                : [...state.pendingSyncs, entry.id],
+            }));
+          }
+        }).catch(() => {
+          set((state) => ({
+            pendingSyncs: state.pendingSyncs.includes(entry.id)
+              ? state.pendingSyncs
+              : [...state.pendingSyncs, entry.id],
+          }));
         });
 
         // Refresh alerts after logging
@@ -419,9 +474,9 @@ export const useDoseLogStore = create<DoseLogStore>()(
         try {
           // Lazy require to avoid circular import + keep this store
           // testable in environments without expo-notifications.
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
+           
           const { scheduleDoseReminder, notificationsAvailable } = require('../services/notificationService');
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
+           
           const { getPeptideById } = require('../data/peptides');
           if (notificationsAvailable?.()) {
             const peptideName = getPeptideById?.(input.peptideId)?.name ?? input.peptideId;
@@ -449,9 +504,15 @@ export const useDoseLogStore = create<DoseLogStore>()(
         }));
         if (proto) {
           try {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
+
             const notif = require('../services/notificationService');
-            notif.cancelRemindersByTag?.(`dose-${proto.peptideId}-`)?.catch?.(() => {});
+            // 2026-05-17 P0 fix: single-cadence schedules (daily/weekly/
+            // biweekly) use identifier `dose-${peptideId}` with NO
+            // trailing dash, so `cancelRemindersByTag('dose-${id}-')`
+            // missed them and the deactivated protocol kept firing
+            // reminders forever. Use the canonical helper that handles
+            // both forms.
+            notif.cancelDoseRemindersFor?.(proto.peptideId)?.catch?.(() => {});
             // §16 — cycle-complete push routes to the cycle report.
             const peptide = getPeptideById(proto.peptideId);
             notif.fireCycleCompleteNudge?.({
@@ -469,9 +530,10 @@ export const useDoseLogStore = create<DoseLogStore>()(
         }));
         if (proto) {
           try {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const { cancelRemindersByTag } = require('../services/notificationService');
-            cancelRemindersByTag?.(`dose-${proto.peptideId}-`)?.catch?.(() => {});
+
+            const { cancelDoseRemindersFor } = require('../services/notificationService');
+            // Same canonical cancel helper — see deactivateProtocol comment.
+            cancelDoseRemindersFor?.(proto.peptideId)?.catch?.(() => {});
           } catch {}
         }
       },
@@ -522,6 +584,10 @@ export const useDoseLogStore = create<DoseLogStore>()(
           alerts: [],
           dismissedAlertIds: [],
           hasAcceptedDoseDisclaimer: false,
+          // Clear the offline retry queue too — otherwise user A's
+          // queued doses would replay under user B's auth on the
+          // next reconnect after a shared-device re-login.
+          pendingSyncs: [],
         }),
 
       syncFromServer: async () => {
@@ -577,6 +643,10 @@ export const useDoseLogStore = create<DoseLogStore>()(
         // launch — the gate at app/(tabs)/calendar.tsx reads this flag
         // on mount.
         hasAcceptedDoseDisclaimer: state.hasAcceptedDoseDisclaimer,
+        // Persist the offline retry queue across cold launches so a
+        // dose logged offline + app killed + reopened on the same
+        // network state still gets retried at the next reconnect.
+        pendingSyncs: state.pendingSyncs,
       }),
     }
   )

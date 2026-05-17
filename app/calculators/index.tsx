@@ -47,7 +47,7 @@ export default function CalculatorsHubScreen() {
         {/* Dosing Calculator — primary, with Edward's authoritative data */}
         <TouchableOpacity
           activeOpacity={0.85}
-          onPress={() => router.push('/calculators/dosing')}
+          onPress={() => router.push('/doses/calculator')}
         >
           <LinearGradient
             colors={['#3E7CB1', '#7FB3D8']}

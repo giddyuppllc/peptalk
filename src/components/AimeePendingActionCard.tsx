@@ -154,6 +154,9 @@ function iconForTool(tool: string): keyof typeof Ionicons.glyphMap {
   if (tool === 'log_dose') return 'flask-outline';
   if (tool === 'log_meal') return 'nutrition-outline';
   if (tool === 'schedule_workout') return 'barbell-outline';
+  if (tool === 'log_water') return 'water-outline';
+  if (tool === 'log_appetite') return 'happy-outline';
+  if (tool === 'add_to_pantry') return 'basket-outline';
   return 'sparkles-outline';
 }
 
@@ -163,6 +166,9 @@ function titleForTool(tool: string): string {
   if (tool === 'log_dose') return 'Log this dose? — Confirm to save';
   if (tool === 'log_meal') return 'Log this meal? — Confirm to save';
   if (tool === 'schedule_workout') return 'Schedule this workout? — Confirm to save';
+  if (tool === 'log_water') return 'Log water? — Confirm to save';
+  if (tool === 'log_appetite') return 'Log appetite? — Confirm to save';
+  if (tool === 'add_to_pantry') return 'Add to pantry? — Confirm to save';
   return 'Aimee proposed an action';
 }
 
@@ -249,6 +255,48 @@ function renderPreview(action: AimeePendingAction): React.ReactNode {
             {duration}
           </Text>
         )}
+      </>
+    );
+  }
+  if (action.tool === 'log_water') {
+    const ounces = Number(p.ounces);
+    const cups = Math.round(ounces / 8);
+    const date = p.date ? String(p.date) : '';
+    return (
+      <>
+        <Text style={styles.previewTitle}>
+          {Number.isFinite(ounces) ? `${ounces} oz` : 'Water'}
+          {Number.isFinite(ounces) && cups > 0 ? ` (~${cups} cups)` : ''}
+        </Text>
+        {date ? <Text style={styles.previewMacro}>{date}</Text> : null}
+      </>
+    );
+  }
+  if (action.tool === 'log_appetite') {
+    const state = String(p.state ?? '');
+    const notes = typeof p.notes === 'string' ? p.notes : '';
+    const label = state ? state[0].toUpperCase() + state.slice(1) : 'Appetite';
+    return (
+      <>
+        <Text style={styles.previewTitle}>{label}</Text>
+        {notes ? <Text style={styles.previewMacro}>{notes}</Text> : null}
+      </>
+    );
+  }
+  if (action.tool === 'add_to_pantry') {
+    const items = Array.isArray(p.items) ? (p.items as any[]) : [];
+    return (
+      <>
+        <Text style={styles.previewTitle}>
+          {items.length} item{items.length === 1 ? '' : 's'}
+        </Text>
+        <Text style={styles.previewMacro}>
+          {items
+            .slice(0, 6)
+            .map((it) => `${it.quantity ?? 1} ${it.unit ?? ''} ${it.name}`.trim())
+            .join(', ')}
+          {items.length > 6 ? ` +${items.length - 6} more` : ''}
+        </Text>
       </>
     );
   }

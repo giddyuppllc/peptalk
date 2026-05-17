@@ -39,7 +39,7 @@ export default function ReconstitutionCalculatorScreen() {
 
   // Clamp at parse so a transient negative input (user typing "-5") can't
   // propagate negative concentration / volume into the downstream display.
-  // Mirrors the same guard in calculators/dosing.tsx.
+  // Mirrors the same guard in app/doses/calculator.tsx.
   const vialRaw = Math.max(0, parseFloat(vialSize) || 0);
   const waterMl = Math.max(0, parseFloat(waterVolume) || 0);
   const doseRaw = Math.max(0, parseFloat(desiredDose) || 0);

@@ -71,7 +71,9 @@ export function AimeeChatSheet({ visible, onClose, intent }: Props) {
       </Animated.View>
 
       {/* Sheet */}
+      {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
       <Animated.View
+        accessibilityViewIsModal={true}
         style={[
           styles.sheet,
           sheetStyle,

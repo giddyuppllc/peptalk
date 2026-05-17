@@ -113,7 +113,19 @@ Deno.serve(async (req: Request) => {
       .filter(Boolean)
       .includes(userEmail);
 
-  if (!isPro && !taggerOverride) {
+  // Beta-tester bypass — same pattern as food-scan / aimee-pantry-scan.
+  // Test users on free tier get video access so they can validate the
+  // player + content without paying. Set BETA_TESTER_EMAILS in secrets
+  // as a comma-separated list.
+  const isBetaTester =
+    !!userEmail &&
+    (Deno.env.get('BETA_TESTER_EMAILS') ?? '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean)
+      .includes(userEmail);
+
+  if (!isPro && !taggerOverride && !isBetaTester) {
     return json({ error: 'Workout videos require PepTalk Pro' }, 403);
   }
 

@@ -44,7 +44,11 @@ Return ONLY valid JSON in this shape:
       "category": "protein",
       "storageLocation": "freezer",
       "expiryDate": "2026-04-28",
-      "notes": null
+      "notes": null,
+      "nutrition": {
+        "perServing": { "calories": 165, "proteinGrams": 31, "carbsGrams": 0, "fatGrams": 3.6, "fiberGrams": 0 },
+        "servingLabel": "100 g cooked"
+      }
     }
   ]
 }
@@ -57,6 +61,7 @@ Rules:
 - If expiry isn't mentioned, leave expiryDate null.
 - If the user mentions multiple items in one sentence, return each as a separate entry.
 - Never invent details — if the user didn't say a brand, leave brand null.
+- "nutrition" carries per-serving macros for the custom-meal builder. Include it only when you can estimate confidently from typical generic values for the item. Omit the field for unbranded mystery items — the client falls back to a food-database lookup. \`servingLabel\` is a plain-English description of one unit of \`unit\` (e.g. "1 large egg", "100 g", "1 cup").
 - Output JSON only. No prose, no code fences.`;
 
 Deno.serve(async (req) => {
@@ -94,8 +99,9 @@ Deno.serve(async (req) => {
       return json({ error: 'Plus or Pro tier required', upgrade: true }, 403);
     }
 
-    // Rate limit — Plus 30/day, Pro 100/day. Voice parsing is cheap but spammable.
-    const limit = tier === 'pro' ? 100 : 30;
+    // Rate limit — Plus 25/day, Pro 50/day. Text parsing is cheap (~$0.0005)
+    // but spammable. Caps locked in plan.
+    const limit = tier === 'pro' ? 50 : 25;
     const rateLimit = await checkRateLimit(supabase, user.id, 'aimee-pantry-parse', limit);
     if (!rateLimit.allowed) {
       return json({
@@ -111,6 +117,13 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as ParseBody;
     const text = (body.text ?? '').trim();
     if (!text) return json({ error: 'Empty input' }, 400);
+    // Hard cap to bound vendor token cost — a 50 MB payload would burn
+    // dollars on a single parse call. 4K is generous for a pantry list.
+    if (text.length > 4000) {
+      return json({
+        error: 'Pantry description too long. Keep it under 4000 characters.',
+      }, 413);
+    }
 
     const today = new Date().toISOString().slice(0, 10);
 

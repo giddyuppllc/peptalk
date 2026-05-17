@@ -27,6 +27,8 @@ interface NotificationStore {
   setMealRemindersEnabled: (enabled: boolean) => void;
   setMealReminderTime: (meal: string, time: string) => void;
   toggleWeeklyReport: () => void;
+  setMealSafetyReminders: (enabled: boolean) => void;
+  setMealSafetyReminderTime: (time: string) => void;
 }
 
 // ─── Default Preferences ─────────────────────────────────────────────────────
@@ -48,6 +50,9 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   carbsDeficitNudge: false,
   fatDeficitNudge: false,
   fiberDeficitNudge: false,
+  // Food-safety reminder — daily 09:00 by default; safety feature, not paywall.
+  mealSafetyReminders: true,
+  mealSafetyReminderTime: '09:00',
 };
 
 // ─── Store ───────────────────────────────────────────────────────────────────
@@ -124,6 +129,16 @@ export const useNotificationStore = create<NotificationStore>()(
             ...state.preferences,
             weeklyReportEnabled: !state.preferences.weeklyReportEnabled,
           },
+        })),
+
+      setMealSafetyReminders: (enabled: boolean) =>
+        set((state) => ({
+          preferences: { ...state.preferences, mealSafetyReminders: enabled },
+        })),
+
+      setMealSafetyReminderTime: (time: string) =>
+        set((state) => ({
+          preferences: { ...state.preferences, mealSafetyReminderTime: time },
         })),
     }),
     {

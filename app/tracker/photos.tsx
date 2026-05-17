@@ -292,7 +292,8 @@ export default function ProgressPhotosScreen() {
         transparent
         onRequestClose={() => setCaptionOpen(false)}
       >
-        <View style={styles.captionBackdrop}>
+        {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
+        <View style={styles.captionBackdrop} accessibilityViewIsModal={true}>
           <View
             style={[
               styles.captionSheet,

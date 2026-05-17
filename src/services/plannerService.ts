@@ -6,8 +6,7 @@
  * to a template-based plan.
  */
 
-import type { GoalType, HealthPlan, HealthPlanItem } from '../types';
-import type { HealthProfile } from '../types';
+import type { GoalType, HealthPlan, HealthPlanItem , HealthProfile } from '../types';
 import { generateHealthPlan, isAIAvailable } from './llmService';
 import { usePlanStore } from '../store/usePlanStore';
 import { getGoalLabel } from '../constants/goals';

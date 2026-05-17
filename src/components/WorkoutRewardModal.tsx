@@ -182,7 +182,8 @@ export function WorkoutRewardModal() {
       animationType="fade"
       onRequestClose={() => setVisible(false)}
     >
-      <Pressable style={styles.backdrop} onPress={() => setVisible(false)}>
+      {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
+      <Pressable style={styles.backdrop} onPress={() => setVisible(false)} accessibilityViewIsModal={true}>
         <Pressable
           style={[styles.card, { backgroundColor: t.bg }]}
           onPress={(e) => e.stopPropagation()}

@@ -873,6 +873,16 @@ export interface NotificationPreferences {
   carbsDeficitNudge: boolean;
   fatDeficitNudge: boolean;
   fiberDeficitNudge: boolean;
+
+  /**
+   * Food-safety reminder (Master Refactor Plan addendum). Daily local
+   * notification "Tap to see which meal preps are expiring or need to
+   * be frozen." Default on — safety, not paywall — but the user can
+   * silence it from settings.
+   */
+  mealSafetyReminders: boolean;
+  /** HH:mm of the daily food-safety check. Default 09:00. */
+  mealSafetyReminderTime: string;
 }
 
 // ─── Nutrition Consultation Request ───────────────────────────────────────────

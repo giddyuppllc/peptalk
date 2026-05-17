@@ -50,7 +50,7 @@ function getClient(): any {
     throw new Error('[llmService] Direct XAI client is dev-only; route via Supabase Edge Function in production.');
   }
   if (!_client) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     const OpenAI = require('openai').default ?? require('openai');
     _client = new OpenAI({
       apiKey: XAI_API_KEY || 'dummy',
@@ -535,7 +535,7 @@ RESPONSE FORMAT:
 
 APP NAVIGATION (Pro tier only):
 - If a user wants to go somewhere in the app, include a line: ---NAV_ACTION--- /route/path
-- Available routes: /nutrition, /workouts, /workouts/exercises, /calculators, /calculators/dosing, /calculators/reconstitution, /body-map, /journal, /health-profile, /health-report, /subscription, /(tabs)/calendar, /(tabs)/check-in, /(tabs)/my-stacks, /(tabs)/peptalk
+- Available routes: /nutrition, /workouts, /workouts/exercises, /calculators, /doses/calculator, /calculators/reconstitution, /body-map, /journal, /health-profile, /health-report, /subscription, /(tabs)/calendar, /(tabs)/check-in, /(tabs)/my-stacks, /(tabs)/peptalk
 - Example: "Let me take you to the workout builder. ---NAV_ACTION--- /workouts/exercises"
 
 DATA ACTIONS (Pro tier only):
@@ -584,7 +584,7 @@ function describeRoute(route: string): { label: string; icon: string } {
     '/workouts/exercises': { label: 'Browse exercises', icon: 'list-outline' },
     '/workouts/library': { label: 'Workout library', icon: 'play-circle-outline' },
     '/calculators': { label: 'Calculators', icon: 'calculator-outline' },
-    '/calculators/dosing': { label: 'Dosing calculator', icon: 'calculator-outline' },
+    '/doses/calculator': { label: 'Dosing calculator', icon: 'calculator-outline' },
     '/calculators/reconstitution': { label: 'Reconstitution', icon: 'flask-outline' },
     '/calculators/plan': { label: 'Plan a cycle', icon: 'compass-outline' },
     '/cycle': { label: 'Cycle dashboard', icon: 'flower-outline' },
@@ -767,7 +767,7 @@ export async function generateRecipe(params: {
   targets: { calories: number; proteinGrams: number; carbsGrams: number; fatGrams: number };
   /** User's allergens — pushed into the constraints list so the AI avoids them. */
   allergens?: string[];
-}): Promise<Array<{
+}): Promise<{
   name: string;
   description: string;
   prepMinutes: number;
@@ -776,7 +776,7 @@ export async function generateRecipe(params: {
   ingredients: string[];
   instructions: string[];
   macros: { calories: number; protein: number; carbs: number; fat: number };
-}> | null> {
+}[] | null> {
   const { diet, mealType, preferences, targets, allergens } = params;
 
   // ── Try server edge function first (production path — key stays server-side) ──
@@ -986,15 +986,15 @@ export interface AimeeStreamEvent {
   /** Deep-link action emitted by client-action tools (navigate, open_dosing_calculator). */
   action?: { type: string; path?: string; [k: string]: unknown };
   message?: string;
-  pending_actions?: Array<{
+  pending_actions?: {
     id: string;
     tool: string;
     preview: Record<string, unknown>;
-  }>;
-  client_actions?: Array<{
+  }[];
+  client_actions?: {
     tool: string;
     action: { type: string; path?: string; [k: string]: unknown };
-  }>;
+  }[];
   upgrade?: boolean;
   /** Status code from the edge fn for error/denied events. */
   status?: number;

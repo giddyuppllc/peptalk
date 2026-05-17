@@ -59,7 +59,7 @@ export function initTelemetry(): void {
   try {
     // Lazy require so we don't pull the SDK + native module when DSN
     // is unset (DEV builds, contributors without Sentry access).
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     _sentry = require('@sentry/react-native');
     _sentry.init({
       dsn: DSN,
@@ -95,6 +95,37 @@ export function isEnabled(): boolean {
   return _initialized && !!DSN && !!_sentry;
 }
 
+// 2026-05-17 P0 fix: per-signature rate-limiting to prevent Sentry
+// quota burn. Sentry's own dedupe is event-instance-based, but a
+// runaway useEffect that wraps a service which calls
+// captureException(new Error('x'), { source: 'aimee-stream' }) emits
+// a fresh Error each render and bypasses dedupe. Floor 30s per
+// (source + first 80 chars of message) tag.
+const _lastSentByKey = new Map<string, number>();
+const RATE_LIMIT_MS = 30_000;
+
+function shouldSend(key: string): boolean {
+  const now = Date.now();
+  const last = _lastSentByKey.get(key) ?? 0;
+  if (now - last < RATE_LIMIT_MS) return false;
+  _lastSentByKey.set(key, now);
+  // Prune the map so it doesn't grow unbounded for long-lived sessions.
+  if (_lastSentByKey.size > 200) {
+    for (const [k, ts] of _lastSentByKey.entries()) {
+      if (now - ts > 5 * RATE_LIMIT_MS) _lastSentByKey.delete(k);
+    }
+  }
+  return true;
+}
+
+function errSignature(err: unknown, context?: Record<string, unknown>): string {
+  const src = String(context?.source ?? 'unknown');
+  const msg = err instanceof Error
+    ? err.message.slice(0, 80)
+    : String(err).slice(0, 80);
+  return `ex:${src}:${msg}`;
+}
+
 /** Report an unhandled exception with optional context tags. */
 export function captureException(
   err: unknown,
@@ -103,7 +134,7 @@ export function captureException(
   if (__DEV__) {
     console.warn('[telemetry:exception]', err, context ?? {});
   }
-  if (_sentry) {
+  if (_sentry && shouldSend(errSignature(err, context))) {
     try {
       _sentry.captureException(err, { extra: scrubContext(context) });
     } catch { /* never let telemetry crash callers */ }
@@ -119,7 +150,8 @@ export function captureMessage(
   if (__DEV__) {
     console.warn(`[telemetry:${level}]`, message, context ?? {});
   }
-  if (_sentry) {
+  const key = `msg:${context?.source ?? 'na'}:${message.slice(0, 80)}`;
+  if (_sentry && shouldSend(key)) {
     try {
       _sentry.captureMessage(message, {
         level,

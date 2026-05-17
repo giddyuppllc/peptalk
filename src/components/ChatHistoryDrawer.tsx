@@ -116,7 +116,8 @@ export const ChatHistoryDrawer: React.FC<Props> = ({ visible, onClose }) => {
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={StyleSheet.absoluteFillObject}>
+      {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
+      <View style={StyleSheet.absoluteFillObject} accessibilityViewIsModal={true}>
         {/* Backdrop */}
         <Animated.View
           style={[

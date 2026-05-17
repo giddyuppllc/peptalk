@@ -162,15 +162,30 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // Look up the user by purchaseToken (stored at validate-purchase time
-    // in the subscriptions.receipt_data column, up to 500 chars — Play
-    // tokens fit comfortably).
-    const { data: existing } = await admin
+    // Look up the user by purchaseToken via the dedicated `purchase_token`
+    // column (migration 20260517000001). Previously matched against
+    // `receipt_data.substring(0,500)` which mixed polymorphic Apple
+    // receipts with Google tokens and risked collisions on
+    // refunds/regrants where different tokens share a 500-char prefix.
+    // Backfill in the same migration so legacy rows still resolve.
+    let { data: existing } = await admin
       .from('subscriptions')
       .select('user_id, product_id')
-      .eq('receipt_data', purchaseToken.substring(0, 500))
+      .eq('purchase_token', purchaseToken)
       .limit(1)
       .maybeSingle();
+    // Backstop: if migration backfill hasn't run yet, fall back to
+    // the legacy receipt_data lookup so we don't drop events during
+    // the cutover window.
+    if (!existing) {
+      const fallback = await admin
+        .from('subscriptions')
+        .select('user_id, product_id')
+        .eq('receipt_data', purchaseToken.substring(0, 500))
+        .limit(1)
+        .maybeSingle();
+      existing = fallback.data ?? null;
+    }
     const userId = existing?.user_id ?? null;
 
     const eventType = GOOGLE_EVENT_MAP[notificationType] ?? 'unknown';

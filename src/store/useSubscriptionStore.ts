@@ -121,6 +121,16 @@ interface SubscriptionActions {
   getTimeUntilExpiry: () => number | null;
   getFeatures: () => string[];
   setTier: (tier: SubscriptionTier) => void;
+  /**
+   * Apply a tier from the `profiles.subscription_tier` MIRROR (e.g. from
+   * useAuthStore on login/restore). The subscriptions table is the source
+   * of truth; this method exists so the auth path can populate tier
+   * optimistically while syncFromServer is still in-flight, WITHOUT
+   * clobbering a more-recent authoritative sync. Skips if syncFromServer
+   * has run within the staleness window — that ran from the source-of-
+   * truth subscriptions row and is authoritative.
+   */
+  setTierFromProfileMirror: (tier: SubscriptionTier) => void;
   /** Validate a fresh IAP receipt with the backend and update the tier. */
   validatePurchase: (platform: 'ios' | 'android', productId: string, receipt: string) => Promise<boolean>;
   /**
@@ -169,7 +179,29 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
         } catch {
           // Auth store not ready or env missing — fall through to tier check.
         }
-        const { tier } = get();
+        const { tier, isActive, expiresAt } = get();
+        // 2026-05-17 expiry leak fix: tier alone wasn't enough. If a
+        // user's Plus/Pro subscription expired and the apple-notifications
+        // webhook hadn't landed yet (network drop, foregrounded refresh
+        // not run), `tier` stayed 'pro' and they kept getting paid
+        // features for free. The server-side fns gate by their own
+        // `profiles.subscription_tier` query so the *cost door* is closed,
+        // but client-side UI was happily unlocking features. Now require
+        // active flag + non-expired window for paid features. Free-tier
+        // features (`tier === 'free'` lookup) are unaffected.
+        if (tier !== 'free') {
+          if (isActive === false) {
+            const features = TIER_FEATURES.free ?? [];
+            return features.includes(feature);
+          }
+          if (expiresAt) {
+            const expiresMs = new Date(expiresAt).getTime();
+            if (Number.isFinite(expiresMs) && Date.now() > expiresMs) {
+              const features = TIER_FEATURES.free ?? [];
+              return features.includes(feature);
+            }
+          }
+        }
         const features = TIER_FEATURES[tier] ?? [];
         return features.includes(feature);
       },
@@ -199,7 +231,48 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
         return exp - Date.now();
       },
 
-      setTier: (tier) => set({ tier, isActive: true }),
+      setTier: (tier) =>
+        // 2026-05-17 fix: previously only mutated `tier`+`isActive`,
+        // leaving `expiresAt`/`productId` stale from a previous
+        // subscription cycle. After a downgrade-then-reupgrade, the
+        // old expiresAt would cause getStatus/getTimeUntilExpiry to
+        // lie and the win-back banner to fire incorrectly. When the
+        // caller pushes a tier without a receipt context, also clear
+        // the receipt-bound fields so they re-populate on the next
+        // validatePurchase / syncFromServer.
+        set((prev) => ({
+          tier,
+          isActive: true,
+          ...(tier === 'free'
+            ? { expiresAt: null, productId: null }
+            : prev.tier !== tier
+              ? { expiresAt: null, productId: null }
+              : {}),
+        })),
+
+      setTierFromProfileMirror: (tier) => {
+        const { lastSyncedAt } = get();
+        // If syncFromServer ran recently, it already wrote tier from the
+        // authoritative `subscriptions` row. The `profile.subscription_tier`
+        // mirror can lag (apple-notifications updates `subscriptions` first
+        // then `profiles`), so honouring it would silently downgrade a
+        // user during the lag window. 5-minute freshness window matches
+        // typical webhook latency.
+        const recentSyncMs = 5 * 60 * 1000;
+        if (lastSyncedAt > 0 && Date.now() - lastSyncedAt < recentSyncMs) {
+          return;
+        }
+        // Reuse setTier's receipt-clearing logic.
+        set((prev) => ({
+          tier,
+          isActive: true,
+          ...(tier === 'free'
+            ? { expiresAt: null, productId: null }
+            : prev.tier !== tier
+              ? { expiresAt: null, productId: null }
+              : {}),
+        }));
+      },
 
       getFeatures: () => {
         const { tier } = get();
@@ -309,14 +382,61 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
             // longer filter on `is_active=true` here because expiry is the
             // authoritative signal and bad DB state (stale is_active=false)
             // can mask a currently-valid subscription.
-            const { data, error } = await (supabase as any)
+            // 2026-05-17 dual-platform conflict fix: previously this took
+            // the most-recently-validated row, which silently picked an
+            // expired Android sub over a still-valid iOS sub if Android
+            // webhook fired last. Now we pull recent rows and pick the
+            // best one client-side using a priority that mirrors the
+            // user's intent: a currently-valid row always beats an
+            // expired one, regardless of which validated last.
+            const { data: rows, error } = await (supabase as any)
               .from('subscriptions')
-              .select('tier, product_id, expires_at, is_active')
+              .select('tier, product_id, expires_at, is_active, last_validated_at')
               .eq('user_id', user.id)
               .order('last_validated_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
+              .limit(5);
             if (error) throw error;
+            const candidates: Array<{
+              tier: SubscriptionTier;
+              product_id: string;
+              expires_at: string | null;
+              is_active: boolean | null;
+              last_validated_at: string | null;
+            }> = Array.isArray(rows) ? rows : [];
+            const nowMs = Date.now();
+            const tierRank: Record<SubscriptionTier, number> = {
+              free: 0, plus: 1, pro: 2,
+            };
+            // Score each row. Higher = better. Compose:
+            //   100k base if (is_active && not-expired)
+            //   10k base if (is_active even if expired) — paid but stale
+            //   then tier rank (pro > plus > free) at *1000
+            //   then last_validated_at recency in seconds (small additive)
+            const score = (r: typeof candidates[number]): number => {
+              const valid = (r.is_active ?? false) &&
+                (!r.expires_at || new Date(r.expires_at).getTime() > nowMs);
+              const base = valid ? 100_000 : (r.is_active ? 10_000 : 0);
+              const tierBoost = (tierRank[r.tier] ?? 0) * 1000;
+              const recencyMs = r.last_validated_at
+                ? new Date(r.last_validated_at).getTime()
+                : 0;
+              // Newer wins as a small tiebreaker; convert to seconds to
+              // keep within safe integer range.
+              const recencyBoost = Math.floor(recencyMs / 1000) - 1_700_000_000;
+              return base + tierBoost + Math.max(0, recencyBoost);
+            };
+            const best = candidates.length > 0
+              ? candidates.slice().sort((a, b) => score(b) - score(a))[0]
+              : null;
+            // Adapt to the existing single-row downstream code shape.
+            const data = best
+              ? {
+                  tier: best.tier,
+                  product_id: best.product_id,
+                  expires_at: best.expires_at,
+                  is_active: best.is_active,
+                }
+              : null;
             if (!data) {
               // No subscription row. Two cases:
               //   (a) brand-new user (current tier is 'free' anyway) → fine to set
@@ -371,6 +491,18 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
         if (__DEV__) {
           console.warn('[useSubscriptionStore] syncFromServer gave up:', lastErr);
         }
+        // 2026-05-17 P1 fix: prod was silent on exhausted retries.
+        // Support needs to be able to correlate "I paid for Pro but
+        // it shows free" reports with the underlying sync failure.
+        try {
+
+          const { captureMessage } = require('../services/telemetry');
+          captureMessage?.(
+            'subscription syncFromServer exhausted retries',
+            'warning',
+            { lastErr: lastErr instanceof Error ? lastErr.message : String(lastErr) },
+          );
+        } catch {}
       },
     }),
     {

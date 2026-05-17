@@ -86,7 +86,7 @@ const ANDROID_PENDING = 2;
  *  `restorePurchases` + `waitForPendingValidations` can cleanly block until
  *  background receipt validation has reconciled with the server. */
 const pendingValidations = new Set<string>();
-let idleResolvers: Array<() => void> = [];
+let idleResolvers: (() => void)[] = [];
 
 function purchaseKey(purchase: any): string {
   return (
@@ -233,6 +233,22 @@ export async function initIAP(
 
     errorListener = IAP.purchaseErrorListener((error: any) => {
       if (__DEV__) console.warn('[iapService] Purchase error:', error);
+      // 2026-05-17 P1 fix: previously dropped silently. User-cancelled
+      // is normal flow — skip those. Everything else is a money-path
+      // failure worth surfacing to Sentry so support can correlate
+      // "I bought Pro but the app didn't unlock" reports with the
+      // underlying storekit failure mode.
+      const code = error?.code ?? error?.errorCode;
+      const isUserCancel =
+        code === 'E_USER_CANCELLED' ||
+        code === 'E_USER_CANCELED' ||
+        /cancel/i.test(error?.message ?? '');
+      if (!isUserCancel) {
+        captureException(error, {
+          source: 'iap.purchase_error',
+          code: code ?? 'unknown',
+        });
+      }
     });
   } catch (err) {
     if (__DEV__) console.warn('[iapService] initConnection failed:', err);

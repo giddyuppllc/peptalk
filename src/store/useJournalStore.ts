@@ -48,6 +48,13 @@ interface JournalStore {
   entries: JournalEntry[];
   weeklyEntryCount: number;
   weekStartDate: string;
+  /**
+   * Entry IDs whose Supabase upsert failed (offline, transient
+   * network, RLS race). Mirrors useDoseLogStore / useWorkoutStore /
+   * useChatStore. Flushed on boot + reconnect.
+   */
+  pendingSyncs: string[];
+  flushPendingSyncs: () => Promise<void>;
 
   /** Creates a journal entry. Returns the created entry, or `null` if the
    *  free-tier weekly cap is hit. Check-and-increment is atomic so rapid
@@ -72,15 +79,50 @@ export const useJournalStore = create<JournalStore>()(
       entries: [],
       weeklyEntryCount: 0,
       weekStartDate: '',
+      pendingSyncs: [],
+
+      flushPendingSyncs: async () => {
+        const ids = get().pendingSyncs;
+        if (ids.length === 0) return;
+        const stillFailing: string[] = [];
+        for (const id of ids) {
+          const entry = get().entries.find((e) => e.id === id);
+          if (!entry) continue;
+          const ok = await syncRecord('journal_entries', {
+            id: entry.id,
+            date: entry.date,
+            title: entry.title,
+            category: entry.category,
+            content: entry.content,
+            tags: entry.tags,
+            related_peptide_ids: entry.relatedPeptideIds ?? [],
+            mood: entry.mood ?? null,
+          });
+          if (!ok) stillFailing.push(id);
+        }
+        set({ pendingSyncs: stillFailing });
+      },
 
       addEntry: (input) => {
         // Atomic: determine tier, reconcile week boundary, and check the
         // cap inside the same set() so two rapid taps can't both slip past.
+        //
+        // 2026-05-17 race fix: previously read tier without checking the
+        // subscription store's `hasHydrated` flag. On cold boot the store
+        // returns 'free' as default before AsyncStorage rehydrates, so a
+        // Pro user's first write after launch was silently rejected.
+        // Now we skip the cap entirely until hydration completes — the
+        // cost of one extra entry slipping through during the ~100ms
+        // hydration window is far less than the cost of silently
+        // dropping a paid user's write.
         const currentWeekStart = getWeekStart();
         let tier: 'free' | 'plus' | 'pro' = 'free';
+        let hydrated = false;
         try {
           const { useSubscriptionStore } = require('./useSubscriptionStore');
-          tier = useSubscriptionStore.getState().tier ?? 'free';
+          const subState = useSubscriptionStore.getState();
+          hydrated = subState.hasHydrated === true;
+          tier = subState.tier ?? 'free';
         } catch {
           tier = 'free';
         }
@@ -89,7 +131,7 @@ export const useJournalStore = create<JournalStore>()(
         const weekReset = weekStartDate !== currentWeekStart;
         const effectiveCount = weekReset ? 0 : weeklyEntryCount;
 
-        if (tier === 'free' && effectiveCount >= FREE_WEEKLY_ENTRY_LIMIT) {
+        if (hydrated && tier === 'free' && effectiveCount >= FREE_WEEKLY_ENTRY_LIMIT) {
           return null;
         }
 
@@ -121,6 +163,20 @@ export const useJournalStore = create<JournalStore>()(
           tags: entry.tags,
           related_peptide_ids: entry.relatedPeptideIds ?? [],
           mood: entry.mood ?? null,
+        }).then((ok) => {
+          if (!ok) {
+            set((state) => ({
+              pendingSyncs: state.pendingSyncs.includes(entry.id)
+                ? state.pendingSyncs
+                : [...state.pendingSyncs, entry.id],
+            }));
+          }
+        }).catch(() => {
+          set((state) => ({
+            pendingSyncs: state.pendingSyncs.includes(entry.id)
+              ? state.pendingSyncs
+              : [...state.pendingSyncs, entry.id],
+          }));
         });
 
         return entry;
@@ -155,6 +211,20 @@ export const useJournalStore = create<JournalStore>()(
             tags: updated.tags,
             related_peptide_ids: updated.relatedPeptideIds ?? [],
             mood: updated.mood ?? null,
+          }).then((ok) => {
+            if (!ok) {
+              set((state) => ({
+                pendingSyncs: state.pendingSyncs.includes(updated.id)
+                  ? state.pendingSyncs
+                  : [...state.pendingSyncs, updated.id],
+              }));
+            }
+          }).catch(() => {
+            set((state) => ({
+              pendingSyncs: state.pendingSyncs.includes(updated.id)
+                ? state.pendingSyncs
+                : [...state.pendingSyncs, updated.id],
+            }));
           });
         }
       },
@@ -188,7 +258,13 @@ export const useJournalStore = create<JournalStore>()(
         );
       },
 
-      clearAll: () => set({ entries: [], weeklyEntryCount: 0, weekStartDate: '' }),
+      clearAll: () => set({
+        entries: [],
+        weeklyEntryCount: 0,
+        weekStartDate: '',
+        // Wipe retry queue on logout — same reason as other stores.
+        pendingSyncs: [],
+      }),
 
       incrementEntryCount: () => {
         const currentWeekStart = getWeekStart();
@@ -255,6 +331,7 @@ export const useJournalStore = create<JournalStore>()(
         entries: state.entries,
         weeklyEntryCount: state.weeklyEntryCount,
         weekStartDate: state.weekStartDate,
+        pendingSyncs: state.pendingSyncs,
       }),
     },
   ),

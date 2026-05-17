@@ -115,8 +115,19 @@ export function resolveActiveCycle(
       }
     }
 
-    const start = new Date(p.startDate);
-    start.setHours(0, 0, 0, 0);
+    // 2026-05-17 timezone fix: `new Date('2026-05-11')` parses as UTC
+    // midnight, so `.setHours(0,0,0,0)` in any negative-offset TZ
+    // (Americas) silently shifts the date back by one calendar day.
+    // That made daysElapsed overshoot by one, which inflated
+    // expectedDoses, which deflated every user's adherence percent
+    // by ~14% on a daily-7-day cycle. Parse the YYYY-MM-DD components
+    // directly into a local-time Date so the midnight anchor is
+    // unambiguous.
+    const [sy, smo, sd] = (p.startDate ?? '').split('-').map(Number);
+    const start = sy && smo && sd
+      ? new Date(sy, smo - 1, sd, 0, 0, 0, 0)
+      : new Date(p.startDate);
+    if (!sy || !smo || !sd) start.setHours(0, 0, 0, 0);
     const daysElapsed = Math.max(
       0,
       Math.floor((today.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)),

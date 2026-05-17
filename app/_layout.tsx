@@ -8,7 +8,7 @@ import {
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Animated, Text, AppState } from 'react-native';
+import { View, StyleSheet, Animated, Text, AppState , Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts } from 'expo-font';
@@ -52,13 +52,12 @@ import { useCycleStore } from '../src/store/useCycleStore';
 import { useIntegrationsStore } from '../src/store/useIntegrationsStore';
 import { subscribeToReconnect } from '../src/hooks/useNetworkStatus';
 import { initTelemetry, installGlobalErrorHandler } from '../src/services/telemetry';
+import { useTheme } from '../src/hooks/useTheme';
 
 // Boot-time telemetry init (no-op if no DSN). Done at module scope so it
 // fires before any component renders or stores hydrate.
 initTelemetry();
 installGlobalErrorHandler();
-import { Platform } from 'react-native';
-import { useTheme } from '../src/hooks/useTheme';
 
 function RootLayout() {
   const router = useRouter();
@@ -100,6 +99,36 @@ function RootLayout() {
   }, [fontsLoaded]);
   const fontsReady = fontsLoaded || fontsTimedOut || !!fontsError;
 
+  // 2026-05-17 P0 fix: splash deadlock if any persistence store fails
+  // to rehydrate (corrupted blob, encryption module link broken, OS
+  // keychain locked). Fonts had a timeout but the hydration flags did
+  // not — user saw the gradient + logo with no path forward. Now an
+  // 8s ceiling forces the splash to dismiss even with stuck hydration.
+  // Telemetry breadcrumb fires once so engineering can spot it.
+  const [hydrationTimedOut, setHydrationTimedOut] = useState(false);
+  useEffect(() => {
+    if (hasHydrated && authHydrated && subscriptionHasHydrated) return;
+    const timer = setTimeout(() => {
+      setHydrationTimedOut(true);
+      try {
+
+        const { captureMessage } = require('../src/services/telemetry');
+        captureMessage?.(
+          'Splash hydration timeout — proceeding with stuck stores',
+          'warning',
+          {
+            hasHydrated,
+            authHydrated,
+            subscriptionHasHydrated,
+          },
+        );
+      } catch {}
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [hasHydrated, authHydrated, subscriptionHasHydrated]);
+  const hydrationReady =
+    (hasHydrated && authHydrated && subscriptionHasHydrated) || hydrationTimedOut;
+
   // Wait for the navigator (<Stack>) to mount before attempting navigation
   const [navReady, setNavReady] = useState(false);
 
@@ -113,6 +142,56 @@ function RootLayout() {
   // can flip as stores hydrate, and without this guard the effect re-fires
   // and layers animations.
   const splashStarted = useRef(false);
+  // Holds a deep-link route from a notification tap that arrived before
+  // auth was ready. Drained by the effect below once the user is
+  // authenticated. P0 cold-tap intent-loss fix.
+  const pendingDeepLinkRef = useRef<string | null>(null);
+
+  // Drain the stashed deep-link once auth flips authenticated.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const route = pendingDeepLinkRef.current;
+    if (!route) return;
+    pendingDeepLinkRef.current = null;
+    // Defer one frame so the navigator is definitely mounted.
+    requestAnimationFrame(() => {
+      import('expo-router').then(({ router }) => router.push(route as any));
+    });
+  }, [isAuthenticated]);
+
+  // 2026-05-17 P0 fix (IAP audit): when the signed-in user id changes
+  // (logout-then-login as a different user on the same device),
+  // re-cycle the IAP connection so any stale purchase listener bound
+  // to the previous user's context is torn down and a fresh one
+  // captures the new user's uid for the cross-user mismatch check.
+  const currentUserId = useAuthStore((s) => s.user?.id ?? null);
+  const lastIapUserIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!currentUserId) return;
+    if (lastIapUserIdRef.current === currentUserId) return;
+    // Only fire on actual user changes after first boot binding.
+    if (lastIapUserIdRef.current !== null) {
+      try { endIAP(); } catch {}
+      try {
+        initIAP({
+          onPurchase: async ({ productId, transactionReceipt }) => {
+            const liveUserId = useAuthStore.getState().user?.id ?? null;
+            if (liveUserId && currentUserId !== liveUserId) return;
+            const platform: 'ios' | 'android' = Platform.OS === 'ios' ? 'ios' : 'android';
+            try {
+              await useSubscriptionStore
+                .getState()
+                .validatePurchase(platform, productId, transactionReceipt);
+            } catch {}
+          },
+          onPending: ({ productId }) => {
+            useSubscriptionStore.getState().setPendingPurchase({ productId });
+          },
+        });
+      } catch {}
+    }
+    lastIapUserIdRef.current = currentUserId;
+  }, [currentUserId]);
 
   useEffect(() => {
     // Wait for fonts AND hydrated auth/onboarding/subscription state before
@@ -120,7 +199,7 @@ function RootLayout() {
     // get the full welcome animation before we know they've seen it already,
     // and cold-install Pro users flash the paywall on first frame while the
     // subscription store rehydrates from default tier='free'.
-    if (!fontsReady || !hasHydrated || !authHydrated || !subscriptionHasHydrated) return;
+    if (!fontsReady || !hydrationReady) return;
     if (splashStarted.current) return;
     splashStarted.current = true;
 
@@ -218,6 +297,8 @@ function RootLayout() {
           scheduleDailyCheckInReminder,
           scheduleWeeklyReport,
           cancelWeeklyReport,
+          scheduleMealSafetyChecks,
+          cancelRemindersByTag,
         } = await import('../src/services/notificationService');
         const token = await registerForPushNotifications();
         if (!token) return; // user denied, or notifications unavailable
@@ -243,6 +324,20 @@ function RootLayout() {
         } else {
           await cancelWeeklyReport();
         }
+        // Food-safety reminder — daily local notification that points at
+        // the nutrition tab so the user can check which preps are stale.
+        // Default-on safety feature, not paywall-gated.
+        if (prefs.enabled && prefs.mealSafetyReminders) {
+          const [hh, mm] = (prefs.mealSafetyReminderTime ?? '09:00')
+            .split(':')
+            .map((s) => Number(s));
+          await scheduleMealSafetyChecks(
+            Number.isFinite(hh) ? hh : 9,
+            Number.isFinite(mm) ? mm : 0,
+          );
+        } else {
+          await cancelRemindersByTag('meal-safety-');
+        }
       } catch (err) {
         if (__DEV__) console.warn('[boot] notification registration failed:', err);
       }
@@ -266,7 +361,15 @@ function RootLayout() {
           waited += 50;
         }
         // §17 — Reports + Insights are Pro features; skip the work for
-        // free-tier users entirely.
+        // free-tier users entirely. Wait for subscription hydration
+        // first; previously this read `tier` before the store rehydrated
+        // from disk, defaulting Pro users to 'free' on cold boot and
+        // skipping their weekly refresh (2026-05-17 correctness audit).
+        let subWait = 0;
+        while (!useSubscriptionStore.getState().hasHydrated && subWait < 5000) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          subWait += 50;
+        }
         const subTier = useSubscriptionStore.getState().tier;
         if (subTier === 'free') return;
         const { useAimeeReportsStore } = await import(
@@ -277,7 +380,10 @@ function RootLayout() {
           ? new Date(state.lastWeeklyAt).getTime()
           : 0;
         if (Date.now() - lastAt > 6 * 86400_000) {
-          state.refreshWeekly();
+          const r = state.refreshWeekly();
+          // Pro users get the LLM rewrite kicked off after the templated
+          // weekly lands. Silent fail-soft on rate-limit or network.
+          state.rewriteReportBody(r.id).catch(() => {});
         }
         state.refreshInsights();
       } catch (err) {
@@ -293,6 +399,13 @@ function RootLayout() {
     //
     // Handles BOTH cold-start (getLastNotificationResponseAsync) and
     // warm-foreground (addNotificationResponseReceivedListener) cases.
+    //
+    // 2026-05-17 P0 fix: previously the unauthenticated branch dropped
+    // the route and just bounced to /auth — the comment claimed to
+    // "stash the intent" but no stash existed. Cold-start taps before
+    // auth rehydrated were always lost. Now we keep the pending route
+    // in module state and a separate effect (below) drains it once
+    // auth flips authenticated.
     let notificationSub: any = null;
     (async () => {
       try {
@@ -304,12 +417,16 @@ function RootLayout() {
           const data = response.notification.request.content.data ?? {};
           const route = typeof data.route === 'string' ? data.route : null;
           if (!route) return;
-          // Guard: don't route into auth-gated screens if user isn't
-          // signed in yet. Bounce to /auth and stash the intent.
           try {
-            const isAuthed = useAuthStore.getState().isAuthenticated;
-            if (!isAuthed) {
-              import('expo-router').then(({ router }) => router.replace('/auth'));
+            const authState = useAuthStore.getState();
+            const hydrated = authState.hasHydrated === true;
+            const isAuthed = authState.isAuthenticated;
+            if (!hydrated || !isAuthed) {
+              // Stash the intent — drained by the post-auth effect.
+              pendingDeepLinkRef.current = route;
+              if (!hydrated || !isAuthed) {
+                import('expo-router').then(({ router }) => router.replace('/auth'));
+              }
               return;
             }
             import('expo-router').then(({ router }) => router.push(route as any));
@@ -338,9 +455,32 @@ function RootLayout() {
     // validation. `onPending` surfaces Ask-to-Buy / SCA / parental-consent
     // flows so the UI can show a "waiting for approval" state instead of
     // silently hanging.
+    //
+    // 2026-05-17 P0 fix: capture the authenticated user id at init time
+    // so a delayed Ask-to-Buy approval (Apple can deliver this hours or
+    // days later, possibly after a logout/login cycle on the same
+    // device) doesn't run validatePurchase under user B's session and
+    // credit them with user A's purchase. We compare the boot-time uid
+    // against the live session uid at delivery; mismatch → drop the
+    // event, telemetry breadcrumb so support can correlate.
+    const iapBootUserId = useAuthStore.getState().user?.id ?? null;
     try {
       initIAP({
         onPurchase: async ({ productId, transactionReceipt }) => {
+          const liveUserId = useAuthStore.getState().user?.id ?? null;
+          if (iapBootUserId && liveUserId && iapBootUserId !== liveUserId) {
+            // Cross-user purchase event — drop it.
+            try {
+
+              const { captureMessage } = require('../src/services/telemetry');
+              captureMessage?.(
+                'IAP purchase event mismatched user — dropping',
+                'warning',
+                { bootUid: iapBootUserId, liveUid: liveUserId, productId },
+              );
+            } catch {}
+            return;
+          }
           const platform: 'ios' | 'android' = Platform.OS === 'ios' ? 'ios' : 'android';
           try {
             await useSubscriptionStore
@@ -386,12 +526,48 @@ function RootLayout() {
     // Drain any chat messages whose cloud sync failed on a previous
     // session (offline send, flaky network). Without this, chat history
     // silently diverges across the user's devices.
-    useChatStore
-      .getState()
-      .flushPendingSyncs()
-      ?.catch?.((err: unknown) => {
-        if (__DEV__) console.warn('[boot] chat sync flush failed:', err);
-      });
+    //
+    // 2026-05-17 race fix: chat store uses async storage. Calling
+    // flushPendingSyncs() before `hasHydrated` flips means pendingSyncs
+    // is still empty — the flush was a no-op and queued messages stayed
+    // queued until the user happened to send another message. Now we
+    // wait (up to 5s) for the rehydrate, same pattern as the subscription
+    // store wait above.
+    (async () => {
+      const start = Date.now();
+      while (!useChatStore.getState().hasHydrated && Date.now() - start < 5000) {
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      useChatStore
+        .getState()
+        .flushPendingSyncs()
+        ?.catch?.((err: unknown) => {
+          if (__DEV__) console.warn('[boot] chat sync flush failed:', err);
+        });
+      // Same drain for offline doses (2026-05-17 P1 fix). A dose
+      // logged offline used to stay local-only forever; now the boot
+      // path retries any queued upserts.
+      useDoseLogStore
+        .getState()
+        .flushPendingSyncs()
+        ?.catch?.((err: unknown) => {
+          if (__DEV__) console.warn('[boot] dose sync flush failed:', err);
+        });
+      // And the workout retry queue — same pattern for gym data.
+      useWorkoutStore
+        .getState()
+        .flushPendingSyncs()
+        ?.catch?.((err: unknown) => {
+          if (__DEV__) console.warn('[boot] workout sync flush failed:', err);
+        });
+      // And journal entries.
+      useJournalStore
+        .getState()
+        .flushPendingSyncs?.()
+        ?.catch?.((err: unknown) => {
+          if (__DEV__) console.warn('[boot] journal sync flush failed:', err);
+        });
+    })();
 
     // Hydrate user-owned data from the server so a reinstall / new device
     // picks up the full history instead of a blank slate. Each store
@@ -401,7 +577,7 @@ function RootLayout() {
     // Also re-runs below in a separate effect when isAuthenticated flips
     // from false → true so signup/login flows correctly hydrate without
     // requiring a restart or network disconnect.
-    const bootHydrations: Array<[string, () => Promise<void>]> = [
+    const bootHydrations: [string, () => Promise<void>][] = [
       ['meals',      () => useMealStore.getState().syncFromServer()],
       ['check-ins',  () => useCheckinStore.getState().syncFromServer()],
       ['dose logs',  () => useDoseLogStore.getState().syncFromServer()],
@@ -427,7 +603,15 @@ function RootLayout() {
     // recovery routines so queued work catches up without any user action.
     const unsubReconnect = subscribeToReconnect(() => {
       if (__DEV__) console.log('[net] back online — running recovery syncs');
-      useChatStore.getState().flushPendingSyncs()?.catch?.(() => {});
+      // Reconnect can fire before the chat store rehydrates (rare —
+      // device goes from offline at cold boot back to online inside
+      // the first ~50ms — but it happens). Gate on hasHydrated.
+      if (useChatStore.getState().hasHydrated) {
+        useChatStore.getState().flushPendingSyncs()?.catch?.(() => {});
+      }
+      useDoseLogStore.getState().flushPendingSyncs()?.catch?.(() => {});
+      useWorkoutStore.getState().flushPendingSyncs()?.catch?.(() => {});
+      useJournalStore.getState().flushPendingSyncs?.()?.catch?.(() => {});
       useSubscriptionStore.getState().syncFromServer()?.catch?.(() => {});
       useMealStore.getState().syncFromServer()?.catch?.(() => {});
       useCheckinStore.getState().syncFromServer()?.catch?.(() => {});
@@ -575,7 +759,7 @@ function RootLayout() {
         // notification service expects.
         const peptideNameFor = (id: string) => {
           try {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
+             
             const { getPeptideById } = require('../src/data/peptides');
             return getPeptideById(id)?.name ?? id;
           } catch {
@@ -1102,10 +1286,6 @@ function RootLayout() {
           {/* Calculators */}
           <Stack.Screen
             name="calculators/index"
-            options={{ headerShown: false, animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
-            name="calculators/dosing"
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
           <Stack.Screen

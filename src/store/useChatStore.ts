@@ -66,6 +66,11 @@ function createDebouncedStorage() {
 const debouncedChatStorage = createDebouncedStorage();
 
 const MAX_HISTORY = 200; // keep last 200 messages per chat
+// Bound the outer chats array too. Heavy users were creating many
+// threads with no upper limit, so the persisted store kept growing
+// toward the secure-store budget. 100 chats × 200 messages × ~2KB ≈
+// 40MB worst case, but typical usage is far below.
+const MAX_CHATS = 100;
 
 export interface Chat {
   id: string;
@@ -111,6 +116,14 @@ interface ChatStore {
   isTyping: boolean;
   /** Messages whose cloud sync failed. Flushed on boot + after every new message. */
   pendingSyncs: PendingSyncEntry[];
+  /**
+   * True once async storage rehydration completes. Callers that depend
+   * on `pendingSyncs` (the boot flush in `_layout.tsx`) must wait on
+   * this — otherwise they see an empty array because rehydration
+   * hasn't filled it yet, and silently fail to drain queued offline
+   * messages.
+   */
+  hasHydrated: boolean;
 
   // Chat management
   newChat: () => string;
@@ -131,6 +144,14 @@ interface ChatStore {
   removeMessage: (id: string) => void;
   setTyping: (typing: boolean) => void;
   clearChat: () => void;
+  /**
+   * Hard reset for logout — wipes EVERY chat thread + the pending-sync
+   * queue. `clearChat` only drops the active thread and leaves
+   * pendingSyncs intact, which means a queued offline message from
+   * user A would be replayed on user B's auth after re-login on the
+   * same device. P0 cross-user data leak. 2026-05-17 fix.
+   */
+  resetForLogout: () => void;
 
   /**
    * Retry any previously-failed message syncs. Call on app boot and after
@@ -182,11 +203,13 @@ export const useChatStore = create<ChatStore>()(
       messages: [],
       isTyping: false,
       pendingSyncs: [],
+      hasHydrated: false,
 
       newChat: () => {
         const chat = makeEmptyChat();
         set((state) => {
-          const chats = [chat, ...state.chats];
+          // Newest chats win; drop the oldest tail past MAX_CHATS.
+          const chats = [chat, ...state.chats].slice(0, MAX_CHATS);
           return {
             chats,
             activeChatId: chat.id,
@@ -385,6 +408,21 @@ export const useChatStore = create<ChatStore>()(
         get().deleteChat(activeChatId);
       },
 
+      resetForLogout: () => {
+        // Wipe EVERYTHING — every chat thread, every queued sync, the
+        // active id, the messages mirror. Critical for shared-device
+        // privacy: without this, user A's pendingSyncs would be sent
+        // under user B's auth after re-login.
+        const fresh = makeEmptyChat();
+        set({
+          chats: [fresh],
+          activeChatId: fresh.id,
+          messages: fresh.messages,
+          pendingSyncs: [],
+          isTyping: false,
+        });
+      },
+
       flushPendingSyncs: async () => {
         const queue = get().pendingSyncs;
         if (queue.length === 0) return;
@@ -481,10 +519,18 @@ export const useChatStore = create<ChatStore>()(
       },
       onRehydrateStorage: () => (state) => {
         // Ensure there's always at least one chat after hydration, and sync the messages mirror
-        if (!state) return;
+        if (!state) {
+          useChatStore.setState({ hasHydrated: true });
+          return;
+        }
         if (!state.chats || state.chats.length === 0) {
           const fresh = makeEmptyChat();
-          useChatStore.setState({ chats: [fresh], activeChatId: fresh.id, messages: fresh.messages });
+          useChatStore.setState({
+            chats: [fresh],
+            activeChatId: fresh.id,
+            messages: fresh.messages,
+            hasHydrated: true,
+          });
           return;
         }
         // Defensive sweep — any message persisted with `streaming: true`
@@ -511,7 +557,11 @@ export const useChatStore = create<ChatStore>()(
         const activeChatId = (!state.activeChatId || !state.chats.find((c: Chat) => c.id === state.activeChatId))
           ? state.chats[0].id
           : state.activeChatId;
-        useChatStore.setState({ activeChatId, messages: activeMessages(state.chats, activeChatId) });
+        useChatStore.setState({
+          activeChatId,
+          messages: activeMessages(state.chats, activeChatId),
+          hasHydrated: true,
+        });
       },
     },
   ),

@@ -32,7 +32,7 @@ import { Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 // Live chat is paying-members-only by product policy (Edward, 2026-05-14).
 // "Everyone" / free tier option intentionally removed — admins can't open
 // an event up to free users. Both options below are paywalled tiers.
-const TIER_OPTIONS: Array<{ value: 'plus' | 'pro'; label: string; sub: string }> = [
+const TIER_OPTIONS: { value: 'plus' | 'pro'; label: string; sub: string }[] = [
   { value: 'plus', label: 'Plus + Pro', sub: 'Default · all paying members' },
   { value: 'pro', label: 'Pro only', sub: 'Restricted to Pro tier' },
 ];

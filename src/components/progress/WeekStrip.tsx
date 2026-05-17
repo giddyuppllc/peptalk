@@ -45,7 +45,7 @@ export const WeekStrip: React.FC = () => {
   const days = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const out: Array<{
+    const out: {
       key: string;
       label: string;
       isToday: boolean;
@@ -53,7 +53,7 @@ export const WeekStrip: React.FC = () => {
       meal: boolean;
       dose: boolean;
       checkin: boolean;
-    }> = [];
+    }[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today.getTime() - i * 86_400_000);
       const key = dateKey(d);
