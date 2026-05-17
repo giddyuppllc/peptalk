@@ -656,6 +656,14 @@ function RootLayout() {
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
           <Stack.Screen
+            name="aimee/reports"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="aimee/report/[id]"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
             name="peptide/[id]"
             options={{
               headerShown: true,

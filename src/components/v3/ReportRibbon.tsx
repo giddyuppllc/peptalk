@@ -14,24 +14,38 @@ import React from 'react';
 import { Pressable, Text, View, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useV3Theme } from '../../theme/V3ThemeProvider';
+import { useAimeeReportsStore } from '../../store/useAimeeReportsStore';
 import { tapLight } from '../../utils/haptics';
 
 interface Props {
-  /** Override label (e.g. "Your Week 6 Report is ready"). */
+  /** Override label. Default: latest report headline, otherwise generic. */
   label?: string;
   onPress?: () => void;
 }
 
-export function ReportRibbon({
-  label = 'Your Week 6 Report is ready',
-  onPress,
-}: Props) {
+export function ReportRibbon({ label, onPress }: Props) {
   const t = useV3Theme();
+  const router = useRouter();
+  const latestReport = useAimeeReportsStore((s) => s.reports[0]);
+  const insightCount = useAimeeReportsStore((s) => s.insights.length);
+
+  const resolvedLabel =
+    label ??
+    (latestReport
+      ? `${latestReport.headline} ›`
+      : insightCount > 0
+        ? `${insightCount} new insight${insightCount === 1 ? '' : 's'} ›`
+        : 'See your Aimee reports ›');
 
   const handlePress = () => {
     tapLight();
-    if (onPress) onPress();
+    if (onPress) {
+      onPress();
+      return;
+    }
+    router.push('/aimee/reports' as never);
   };
 
   return (
@@ -39,7 +53,7 @@ export function ReportRibbon({
       onPress={handlePress}
       style={styles.wrap}
       accessibilityRole="button"
-      accessibilityLabel={`${label}. Tap to view.`}
+      accessibilityLabel={`${resolvedLabel}. Tap to view.`}
     >
       <LinearGradient
         colors={[
@@ -64,7 +78,7 @@ export function ReportRibbon({
               letterSpacing: 0.2,
             }}
           >
-            {label}
+            {resolvedLabel}
           </Text>
           <Ionicons
             name="chevron-forward"
