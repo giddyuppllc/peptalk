@@ -462,6 +462,49 @@ function RootLayout() {
         .catch((err: unknown) => {
           if (__DEV__) console.warn('[foreground-sync] push-token sync failed:', err);
         });
+
+      // §6.4 — mid-day macro deficit nudge. Reads notification prefs +
+      // today's totals + targets; fires a one-off local notification per
+      // enabled macro tracking below 60% of target after 14:00 local.
+      // Single-fire per day per macro is enforced inside the service.
+      try {
+        const dateKey = (() => {
+          const d = new Date();
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        })();
+        const mealState = useMealStore.getState();
+        const totals = mealState.getDailyTotals(dateKey);
+        const targets = mealState.targets;
+        const prefs = useNotificationStore.getState().preferences;
+        import('../src/services/notificationService').then((mod) =>
+          mod
+            .checkMidDayMacroDeficit({
+              totalsByMacro: {
+                protein: totals.proteinGrams,
+                carbs: totals.carbsGrams,
+                fat: totals.fatGrams,
+                fiber: totals.fiberGrams ?? 0,
+              },
+              targetsByMacro: {
+                protein: targets.proteinGrams,
+                carbs: targets.carbsGrams,
+                fat: targets.fatGrams,
+                fiber: targets.fiberGrams ?? 30,
+              },
+              prefs: {
+                proteinDeficitNudge: prefs.proteinDeficitNudge,
+                carbsDeficitNudge: prefs.carbsDeficitNudge,
+                fatDeficitNudge: prefs.fatDeficitNudge,
+                fiberDeficitNudge: prefs.fiberDeficitNudge,
+              },
+            })
+            .catch((err: unknown) => {
+              if (__DEV__) console.warn('[foreground-sync] macro nudge failed:', err);
+            }),
+        );
+      } catch (err) {
+        if (__DEV__) console.warn('[foreground-sync] macro nudge setup failed:', err);
+      }
     });
 
     return () => {
