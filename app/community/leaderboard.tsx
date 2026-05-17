@@ -217,6 +217,60 @@ export default function LeaderboardScreen() {
           </GlassCard>
         )}
 
+        {/* Milestones drill-in — opted-in users can react / encourage
+            (§12.1). Sits above the roster card so it's reachable even
+            when the user is opted-in but the chosen leaderboard
+            category isn't shared. */}
+        <Pressable
+          onPress={() => {
+            tapLight();
+            router.push('/community/milestones' as never);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Open your milestones to react and encourage"
+        >
+          <GlassCard style={styles.cardSpacing}>
+            <View style={styles.rosterRow}>
+              <Ionicons
+                name="ribbon-outline"
+                size={20}
+                color={t.colors.textSecondary as string}
+              />
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.rosterTitle,
+                    {
+                      color: t.colors.textPrimary as string,
+                      fontFamily: t.isDark
+                        ? t.typography.headlineMale
+                        : t.typography.headlineFemale,
+                    },
+                  ]}
+                >
+                  Your milestones
+                </Text>
+                <Text
+                  style={[
+                    styles.rosterBody,
+                    {
+                      color: t.colors.textSecondary as string,
+                      fontFamily: t.typography.body,
+                    },
+                  ]}
+                >
+                  Streaks, cycles, PRs, lean-mass gains. Tap to react.
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color={t.colors.textSecondary as string}
+              />
+            </View>
+          </GlassCard>
+        </Pressable>
+
         {/* Community status — read-only roadmap copy until server
             aggregation lands. */}
         <GlassCard style={styles.cardSpacing}>
@@ -344,5 +398,10 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 12,
     lineHeight: 17,
+  },
+  rosterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
 });
