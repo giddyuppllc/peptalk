@@ -212,8 +212,9 @@ export default function ReportsListScreen() {
           </Pressable>
         ) : null}
 
-        {/* Insights feed */}
-        {insights.length > 0 ? (
+        {/* §17 — Insights feed is Pro-gated. Free users see nothing here
+            (the upsell sits in the Generate CTA above). */}
+        {isPro && insights.length > 0 ? (
           <>
             <Text
               style={[

@@ -265,6 +265,10 @@ function RootLayout() {
           await new Promise((resolve) => setTimeout(resolve, 50));
           waited += 50;
         }
+        // §17 — Reports + Insights are Pro features; skip the work for
+        // free-tier users entirely.
+        const subTier = useSubscriptionStore.getState().tier;
+        if (subTier === 'free') return;
         const { useAimeeReportsStore } = await import(
           '../src/store/useAimeeReportsStore'
         );

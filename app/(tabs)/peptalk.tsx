@@ -38,6 +38,7 @@ import { useOnboardingStore } from '../../src/store/useOnboardingStore';
 import { useStackStore } from '../../src/store/useStackStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useMealStore } from '../../src/store/useMealStore';
+import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { PEPTIDES } from '../../src/data/peptides';
@@ -181,6 +182,12 @@ export default function PepTalkScreen() {
   const logDoseAction = useDoseLogStore((s) => s.logDose);
   const addMealAction = useMealStore((s) => s.addMeal);
   const addPlannedWorkoutAction = useWorkoutStore((s) => s.addPlannedLog);
+  // §17 — Aimee write-actions are Pro-gated. Free tier still gets
+  // read-only Q&A from the FAB / Centerpiece / Persistent Chip; the
+  // confirm-card flow upgrades to an upsell when a write would have
+  // been required.
+  const subTier = useSubscriptionStore((s) => s.tier);
+  const isPro = subTier !== 'free';
 
   const [inputText, setInputText] = React.useState('');
   const [drawerOpen, setDrawerOpen] = React.useState(false);
@@ -520,20 +527,32 @@ export default function PepTalkScreen() {
                   action.type === 'schedule_workout') &&
                 action.payload
               ) {
-                // Defer write — push into the pendingActions queue so
-                // the confirmation card renders inline in the chat.
-                // User taps Approve → AimeePendingActionCard runs the
-                // matching apply*Action helper. Tap Dismiss → nothing
-                // writes.
-                pendingActions.push({
-                  id: `client-${action.type}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-                  tool: action.type,
-                  preview: action.payload as Record<string, unknown>,
-                  status: 'pending',
-                });
-                updateMessage(placeholderId, {
-                  pendingActions: [...pendingActions],
-                });
+                // §17 — write actions are Pro-only. Free users see a
+                // structured upsell in-thread instead of the confirm
+                // card; nothing writes either way.
+                if (!isPro) {
+                  updateMessage(placeholderId, {
+                    proUpsell: {
+                      kind: action.type,
+                      payload: action.payload as Record<string, unknown>,
+                    },
+                  });
+                } else {
+                  // Defer write — push into the pendingActions queue so
+                  // the confirmation card renders inline in the chat.
+                  // User taps Approve → AimeePendingActionCard runs the
+                  // matching apply*Action helper. Tap Dismiss → nothing
+                  // writes.
+                  pendingActions.push({
+                    id: `client-${action.type}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                    tool: action.type,
+                    preview: action.payload as Record<string, unknown>,
+                    status: 'pending',
+                  });
+                  updateMessage(placeholderId, {
+                    pendingActions: [...pendingActions],
+                  });
+                }
               }
             } catch (err) {
               if (__DEV__) console.warn('[aimee] client_action failed:', err, action);
@@ -871,7 +890,8 @@ export default function PepTalkScreen() {
       // thread reads top-to-bottom: text → cards → next message.
       const hasCards =
         (item.toolResults && item.toolResults.length > 0) ||
-        (item.pendingActions && item.pendingActions.length > 0);
+        (item.pendingActions && item.pendingActions.length > 0) ||
+        !!item.proUpsell;
       if (!hasCards) {
         return <ChatBubble message={item} />;
       }
@@ -909,11 +929,14 @@ export default function PepTalkScreen() {
                 }}
               />
             ))}
+            {item.proUpsell ? (
+              <ProActionUpsell upsell={item.proUpsell} onUpgrade={() => router.push('/subscription' as any)} />
+            ) : null}
           </View>
         </View>
       );
     },
-    [applyLogDoseAction, applyLogMealAction, applyScheduleWorkoutAction],
+    [applyLogDoseAction, applyLogMealAction, applyScheduleWorkoutAction, router],
   );
 
   const renderEmpty = useCallback(
@@ -1212,6 +1235,71 @@ export default function PepTalkScreen() {
 
       <ChatHistoryDrawer visible={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </SafeAreaView>
+  );
+}
+
+/* ─── Pro write-action upsell card ───────────────────────────────────
+ *
+ * §17 — Aimee proposes a write action (log_dose / log_meal /
+ * schedule_workout) for a free user. Instead of executing, this card
+ * lets the user know the action is Pro-gated and routes to subscription.
+ * Nothing has been written; tapping is opt-in.
+ */
+function ProActionUpsell({
+  upsell,
+  onUpgrade,
+}: {
+  upsell: NonNullable<ChatMessage['proUpsell']>;
+  onUpgrade: () => void;
+}) {
+  const t = useTheme();
+  const action = (() => {
+    if (upsell.kind === 'log_dose') return 'log a dose';
+    if (upsell.kind === 'log_meal') return 'log a meal';
+    if (upsell.kind === 'schedule_workout') return 'schedule a workout';
+    return 'write to your data';
+  })();
+  return (
+    <TouchableOpacity
+      onPress={onUpgrade}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={`Upgrade to Pro to let Aimee ${action}`}
+      style={{
+        backgroundColor: t.card,
+        borderColor: t.cardBorder,
+        borderWidth: 1,
+        borderRadius: 12,
+        padding: 14,
+        marginTop: 8,
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <Ionicons name="sparkles-outline" size={18} color={t.text} />
+        <Text
+          style={{
+            color: t.text,
+            fontSize: 13,
+            fontWeight: '700',
+            flex: 1,
+          }}
+        >
+          Upgrade to let Aimee {action}
+        </Text>
+        <Ionicons name="chevron-forward" size={16} color={t.textSecondary} />
+      </View>
+      <Text
+        style={{
+          color: t.textSecondary,
+          fontSize: 11,
+          lineHeight: 16,
+          marginTop: 6,
+        }}
+      >
+        I can show you the data and reasoning for free. Pro lets me
+        write it for you with a one-tap confirm.
+      </Text>
+    </TouchableOpacity>
   );
 }
 

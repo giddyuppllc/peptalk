@@ -336,6 +336,16 @@ export interface ChatMessage {
   /** Pending-action proposals that require user Confirm/Cancel in the UI.
    *  Backed by rows in aimee_pending_actions. */
   pendingActions?: AimeePendingAction[];
+  /**
+   * §17 — when Aimee proposes a write action (log_dose / log_meal /
+   * schedule_workout) but the user is on the free tier, the chat
+   * surface renders this upsell card inline instead of a confirm card.
+   * Nothing writes; tapping it routes to /subscription.
+   */
+  proUpsell?: {
+    kind: 'log_dose' | 'log_meal' | 'schedule_workout' | string;
+    payload: Record<string, unknown>;
+  };
 }
 
 /** Inline tool-call result attached to a ChatMessage. */
