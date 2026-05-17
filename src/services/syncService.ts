@@ -51,7 +51,8 @@ type TableName =
   | 'cycle_day_logs'
   | 'contraception_history'
   | 'connected_integrations'
-  | 'allergen_entries';
+  | 'allergen_entries'
+  | 'side_effect_entries';
 
 // ---------------------------------------------------------------------------
 // Generic helpers
