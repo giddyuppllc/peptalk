@@ -42,6 +42,32 @@ import {
   predictionModeFor,
 } from '../src/types/cycle';
 import { useCycleStore } from '../src/store/useCycleStore';
+import {
+  useCommunityPrefsStore,
+  type CommunityPreset,
+} from '../src/store/useCommunityPrefsStore';
+
+const COMMUNITY_PRESETS: Array<{
+  value: CommunityPreset;
+  label: string;
+  body: string;
+}> = [
+  {
+    value: 'all_in',
+    label: 'All in',
+    body: 'Share streak, adherence, body-comp deltas, and milestones.',
+  },
+  {
+    value: 'picky',
+    label: 'Picky',
+    body: 'Streak and milestones only. Edit per-category later.',
+  },
+  {
+    value: 'nothing',
+    label: 'Nothing',
+    body: 'Stay completely private. No public surfaces.',
+  },
+];
 
 const { width: SW } = Dimensions.get('window');
 
@@ -138,6 +164,12 @@ export default function OnboardingScreen() {
   const [accountError, setAccountError] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'plus' | 'pro'>('free');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  // §11.2 + §11.4 — referral-claim string + community public-tracking
+  // opt-in preset. Both committed at handleNext() on the account step.
+  const [referralClaimRaw, setReferralClaimRaw] = useState('');
+  const [communityPreset, setCommunityPreset] = useState<
+    'all_in' | 'picky' | 'nothing'
+  >('nothing');
 
   // Stores
   const login = useAuthStore((s) => s.login);
@@ -148,7 +180,9 @@ export default function OnboardingScreen() {
   const {
     profile, setGender, setAgeRange, toggleHealthGoal,
     setAcceptedSafety, completeOnboarding,
+    setReferralClaim,
   } = useOnboardingStore();
+  const applyCommunityPreset = useCommunityPrefsStore((s) => s.applyPreset);
   const {
     setBodyMetrics,
     setLifestyle,
@@ -320,6 +354,15 @@ export default function OnboardingScreen() {
         const trimmedFeatureWish = featureWish.trim();
         if (trimmedFeatureWish) persistFeatureWish(trimmedFeatureWish);
 
+        // §11.2 — persist the referral claim so signup-time attribution
+        // can pick it up server-side.
+        const trimmedRef = referralClaimRaw.trim();
+        if (trimmedRef) setReferralClaim(trimmedRef);
+
+        // §11.4 — apply the community public-tracking preset chosen at
+        // intake. User can fine-tune per-category later in Profile.
+        applyCommunityPreset(communityPreset);
+
         completeOnboarding();
         trackOnboardingComplete(0);
         router.replace('/(tabs)');
@@ -452,11 +495,11 @@ export default function OnboardingScreen() {
             contentContainerStyle={s.scrollPadding}
             renderItem={() => (
               <View>
-                <Text style={s.stepTitle}>About You</Text>
-                <Text style={s.stepSub}>Three quick questions so your numbers make sense.</Text>
+                <Text style={s.stepTitle}>About you</Text>
+                <Text style={s.stepSub}>Three answers. Direct. The numbers depend on them.</Text>
 
-                {/* Gender */}
-                <Text style={s.label}>I am <Text style={s.requiredMark}>*</Text></Text>
+                {/* Sex */}
+                <Text style={s.label}>Sex <Text style={s.requiredMark}>*</Text></Text>
                 <View style={s.genderRow}>
                   {GENDER_OPTIONS.map((g) => {
                     const active = profile.gender === g.value;
@@ -475,7 +518,7 @@ export default function OnboardingScreen() {
                 </View>
 
                 {/* Age */}
-                <Text style={s.label}>Your age <Text style={s.requiredMark}>*</Text></Text>
+                <Text style={s.label}>Age <Text style={s.requiredMark}>*</Text></Text>
                 <TextInput
                   style={s.ageInput}
                   placeholder="e.g. 30"
@@ -496,8 +539,8 @@ export default function OnboardingScreen() {
                 )}
 
                 {/* Goals */}
-                <Text style={s.label}>What are your goals? <Text style={s.requiredMark}>*</Text></Text>
-                <Text style={s.labelSub}>Pick at least one — select all that apply.</Text>
+                <Text style={s.label}>Your goal <Text style={s.requiredMark}>*</Text></Text>
+                <Text style={s.labelSub}>Pick one or more.</Text>
                 <View style={s.chipGrid}>
                   {GOAL_OPTIONS.map((goal) => {
                     const active = profile.healthGoals.includes(goal.value);
@@ -562,10 +605,10 @@ export default function OnboardingScreen() {
             keyboardShouldPersistTaps="handled"
             renderItem={() => (
               <View>
-                <Text style={s.stepTitle}>Health Basics</Text>
-                <Text style={s.stepSub}>Just weight and height — the rest is set up later in Profile.</Text>
+                <Text style={s.stepTitle}>Basics</Text>
+                <Text style={s.stepSub}>Weight and height. The rest lives in Profile.</Text>
 
-                <Text style={s.label}>Weight (lbs) <Text style={s.requiredMark}>*</Text></Text>
+                <Text style={s.label}>Weight today (lb) <Text style={s.requiredMark}>*</Text></Text>
                 <TextInput
                   style={s.input}
                   placeholder="e.g. 165"
@@ -797,6 +840,84 @@ export default function OnboardingScreen() {
                 )}
 
                 {!!accountError && <Text style={s.errorText}>{accountError}</Text>}
+
+                {/* §11.2 — Referral claim. Optional. */}
+                <Text style={[s.label, { marginTop: 20 }]}>Did someone refer you?</Text>
+                <Text style={s.labelSub}>Their code, handle, or name. Optional.</Text>
+                <TextInput
+                  style={s.input}
+                  placeholder="e.g. JAMIE10"
+                  placeholderTextColor="#9CA3AF"
+                  value={referralClaimRaw}
+                  onChangeText={setReferralClaimRaw}
+                  autoCapitalize="characters"
+                  accessibilityLabel="Referral code, handle, or name (optional)"
+                />
+
+                {/* §11.4 — Community public-tracking opt-in. */}
+                <Text style={[s.label, { marginTop: 20 }]}>Public progress sharing</Text>
+                <Text style={s.labelSub}>Off by default. You can change this in Profile any time.</Text>
+                <View style={{ gap: 8, marginBottom: 12 }}>
+                  {COMMUNITY_PRESETS.map((p) => {
+                    const active = communityPreset === p.value;
+                    return (
+                      <TouchableOpacity
+                        key={p.value}
+                        style={[
+                          s.chip,
+                          {
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'flex-start',
+                            gap: 10,
+                            paddingVertical: 12,
+                            paddingHorizontal: 14,
+                          },
+                          active && {
+                            backgroundColor: `${HIGHLIGHT}18`,
+                            borderColor: HIGHLIGHT,
+                          },
+                        ]}
+                        onPress={() => setCommunityPreset(p.value)}
+                        activeOpacity={0.7}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: active }}
+                        accessibilityLabel={`${p.label}. ${p.body}`}
+                      >
+                        <View
+                          style={[
+                            s.radio,
+                            { width: 18, height: 18, borderRadius: 9 },
+                            active && { borderColor: ACCENT },
+                          ]}
+                        >
+                          {active ? (
+                            <View
+                              style={[
+                                s.radioDot,
+                                { width: 8, height: 8, borderRadius: 4, backgroundColor: ACCENT },
+                              ]}
+                            />
+                          ) : null}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={[
+                              s.chipText,
+                              { fontWeight: '700' },
+                              active && { color: ACCENT },
+                            ]}
+                          >
+                            {p.label}
+                          </Text>
+                          <Text style={[s.labelSub, { marginTop: 2 }]}>
+                            {p.body}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
 
                 <Text style={[s.label, { marginTop: 20 }]}>Choose your plan</Text>
                 {PLANS.map((plan) => {
