@@ -26,13 +26,16 @@ import {
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { PEPTIDES } from '../../src/data/peptides';
 
-const SEVERITY_COLORS: Record<SideEffectSeverity, string> = {
-  1: '#6FA891',
-  2: '#9FB16E',
-  3: '#D9B65A',
-  4: '#D08850',
-  5: '#D43A3A',
-};
+function severityColorFor(
+  t: ReturnType<typeof useV3Theme>,
+  n: SideEffectSeverity,
+): string {
+  const c = t.colors as any;
+  return (
+    [c.severity1, c.severity2, c.severity3, c.severity4, c.severity5][n - 1] ??
+    c.semanticNeutral
+  );
+}
 
 export default function SideEffectsScreen() {
   const t = useV3Theme();
@@ -170,10 +173,13 @@ export default function SideEffectsScreen() {
                   styles.severityDot,
                   {
                     backgroundColor:
-                      severity === n ? SEVERITY_COLORS[n] : 'transparent',
-                    borderColor: SEVERITY_COLORS[n],
+                      severity === n ? severityColorFor(t, n) : 'transparent',
+                    borderColor: severityColorFor(t, n),
                   },
                 ]}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: severity === n }}
+                accessibilityLabel={`Severity ${n} of 5`}
               >
                 <Text
                   style={{
@@ -198,6 +204,9 @@ export default function SideEffectsScreen() {
                 setLinkToRecentDose((v) => !v);
               }}
               style={styles.linkRow}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: linkToRecentDose }}
+              accessibilityLabel="Link this side effect to the last logged dose"
             >
               <Ionicons
                 name={linkToRecentDose ? 'checkbox' : 'square-outline'}
@@ -227,9 +236,13 @@ export default function SideEffectsScreen() {
               {
                 backgroundColor: symptom.trim()
                   ? (t.colors.textPrimary as string)
-                  : 'rgba(0,0,0,0.2)',
+                  : (t.colors.textSecondary as string),
+                opacity: symptom.trim() ? 1 : 0.5,
               },
             ]}
+            accessibilityRole="button"
+            accessibilityLabel="Log side effect entry"
+            accessibilityState={{ disabled: !symptom.trim() }}
           >
             <Text
               style={{
@@ -276,7 +289,7 @@ export default function SideEffectsScreen() {
                 <View
                   style={[
                     styles.sevPill,
-                    { backgroundColor: SEVERITY_COLORS[e.severity] },
+                    { backgroundColor: severityColorFor(t, e.severity) },
                   ]}
                 >
                   <Text style={styles.sevPillText}>{e.severity}</Text>
@@ -312,6 +325,8 @@ export default function SideEffectsScreen() {
                     removeSideEffect(e.id);
                   }}
                   hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete ${e.symptom} side-effect entry`}
                 >
                   <Ionicons
                     name="trash-outline"

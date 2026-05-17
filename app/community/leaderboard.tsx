@@ -114,6 +114,8 @@ export default function LeaderboardScreen() {
               tapLight();
               router.push('/profile/community-prefs' as never);
             }}
+            accessibilityRole="button"
+            accessibilityLabel="Open public sharing settings to opt in"
           >
             <GlassCard style={styles.cardSpacing}>
               <Text

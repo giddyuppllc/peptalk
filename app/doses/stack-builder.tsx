@@ -227,11 +227,17 @@ export default function StackBuilderScreen() {
               {
                 backgroundColor:
                   conflicts.length > 0
-                    ? '#888'
+                    ? (t.colors.textSecondary as string)
                     : (t.colors.textPrimary as string),
                 opacity: conflicts.length > 0 ? 0.5 : 1,
               },
             ]}
+            accessibilityRole="button"
+            accessibilityLabel={
+              conflicts.length > 0
+                ? 'Resolve conflicts before scheduling'
+                : `Add ${selected.size} peptide stack to Tracker`
+            }
           >
             <Text
               style={{
@@ -252,14 +258,16 @@ export default function StackBuilderScreen() {
 
 function InteractionRow({ pair }: { pair: PairSummary }) {
   const t = useV3Theme();
+  const c = t.colors as any;
   const i = pair.interaction;
   const kind = i?.interactionType ?? 'undocumented';
+  // Tints come from v3 semantic tokens so both themes stay in palette.
   const palette: Record<string, { dot: string; label: string }> = {
-    synergistic: { dot: '#6FA891', label: 'Synergy' },
-    neutral: { dot: '#9AA3B5', label: 'Neutral' },
-    competitive: { dot: '#D08850', label: 'Competitive' },
-    contraindicated: { dot: '#D43A3A', label: 'Conflict' },
-    undocumented: { dot: '#9AA3B5', label: 'Undocumented' },
+    synergistic: { dot: c.semanticPositive, label: 'Synergy' },
+    neutral: { dot: c.semanticNeutral, label: 'Neutral' },
+    competitive: { dot: c.semanticWarn, label: 'Competitive' },
+    contraindicated: { dot: c.semanticDanger, label: 'Conflict' },
+    undocumented: { dot: c.semanticNeutral, label: 'Undocumented' },
   };
   const p = palette[kind];
   return (

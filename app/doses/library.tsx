@@ -85,6 +85,8 @@ export default function PeptideLibraryScreen() {
               tapLight();
               router.push(`/peptide/${p.id}` as never);
             }}
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${p.name} library entry`}
           >
             <GlassCard style={styles.card}>
               <View style={styles.row}>

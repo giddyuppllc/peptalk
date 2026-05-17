@@ -97,7 +97,15 @@ export default function NutritionScreen() {
     >
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         {/* §6.3 — Photo food log */}
-        <Pressable onPress={handlePhotoLog}>
+        <Pressable
+          onPress={handlePhotoLog}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isPro
+              ? 'Snap a photo to log a meal'
+              : 'Upgrade to Pro to log meals by photo'
+          }
+        >
           <GlassCard style={styles.cardSpacing}>
             <View style={styles.photoRow}>
               <View
@@ -205,7 +213,12 @@ export default function NutritionScreen() {
               />
             </View>
           </View>
-          <View style={styles.divider} />
+          <View
+            style={[
+              styles.divider,
+              { backgroundColor: (t.colors as any).divider as string },
+            ]}
+          />
           <View style={styles.calsRow}>
             <Text
               style={[
@@ -238,6 +251,8 @@ export default function NutritionScreen() {
               router.push('/nutrition/targets' as never);
             }}
             style={styles.targetsLink}
+            accessibilityRole="button"
+            accessibilityLabel="Adjust macro targets"
           >
             <Text
               style={{
@@ -294,6 +309,12 @@ export default function NutritionScreen() {
                     }
                   }}
                   hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    filled
+                      ? `Remove cup ${i + 1}`
+                      : `Add cup ${i + 1}`
+                  }
                 >
                   <Ionicons
                     name={filled ? 'water' : 'water-outline'}
@@ -302,7 +323,7 @@ export default function NutritionScreen() {
                       filled
                         ? t.isDark
                           ? ((t.colors as any).accentCognac as string)
-                          : '#7AA9C9'
+                          : ((t.colors as any).accentBabyBlue as string)
                         : (t.colors.textSecondary as string)
                     }
                   />
@@ -334,8 +355,13 @@ export default function NutritionScreen() {
                 onPress={() => handleAppetite(opt.state)}
                 style={[
                   styles.appetiteChip,
-                  { borderColor: opt.tint, backgroundColor: 'transparent' },
+                  {
+                    borderColor: (t.colors as any)[opt.tintKey] as string,
+                    backgroundColor: 'transparent',
+                  },
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Log ${opt.label.toLowerCase()} appetite`}
               >
                 <Text style={styles.appetiteEmoji}>{opt.emoji}</Text>
                 <Text
@@ -375,6 +401,12 @@ export default function NutritionScreen() {
             }
             router.push('/nutrition/meal-plan' as never);
           }}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isPro
+              ? 'Open AI meal plan'
+              : 'Upgrade to Pro to unlock AI meal plan'
+          }
         >
           <GlassCard style={styles.cardSpacing}>
             <View style={styles.rowBetween}>
@@ -449,6 +481,8 @@ export default function NutritionScreen() {
             styles.cta,
             { backgroundColor: t.colors.textPrimary as string },
           ]}
+          accessibilityRole="button"
+          accessibilityLabel="Log a meal"
         >
           <Ionicons
             name="add"
@@ -502,9 +536,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  // Divider color is theme-driven at the call site so it adapts to both
+  // palettes. Keep the layout-only styles here.
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(0,0,0,0.10)',
     marginVertical: 12,
   },
   calsRow: {

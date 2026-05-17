@@ -59,7 +59,15 @@ export default function ReportsListScreen() {
     >
       <ScrollView contentContainerStyle={{ paddingBottom: 80 }}>
         {/* Generate */}
-        <Pressable onPress={handleGenerate}>
+        <Pressable
+          onPress={handleGenerate}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isPro
+              ? "Generate this week's Aimee report"
+              : 'Upgrade to Pro to unlock reports'
+          }
+        >
           <GlassCard style={styles.cardSpacing}>
             <View style={styles.generateRow}>
               <Ionicons
@@ -106,8 +114,24 @@ export default function ReportsListScreen() {
                   color={t.colors.textSecondary as string}
                 />
               ) : (
-                <View style={styles.proPill}>
-                  <Text style={styles.proPillText}>PRO</Text>
+                <View
+                  style={[
+                    styles.proPill,
+                    {
+                      backgroundColor: t.isDark
+                        ? 'rgba(201,136,90,0.18)'
+                        : 'rgba(229,146,141,0.22)',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.proPillText,
+                      { color: t.colors.textPrimary as string },
+                    ]}
+                  >
+                    PRO
+                  </Text>
                 </View>
               )}
             </View>
@@ -206,6 +230,8 @@ export default function ReportsListScreen() {
                 tapLight();
                 router.push(`/aimee/report/${r.id}` as never);
               }}
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${r.kind} report — ${r.headline}`}
             >
               <GlassCard style={styles.reportCard}>
                 <View style={styles.reportRow}>
@@ -275,8 +301,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
+  // Background is theme-derived at the call site so the pill stays
+  // legible against both palettes; layout-only styles live here.
   proPill: {
-    backgroundColor: 'rgba(0,0,0,0.08)',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,

@@ -249,7 +249,7 @@ function VolumeTrend({ volumes }: { volumes: number[] }) {
           y1={height - padding}
           x2={width - padding}
           y2={height - padding}
-          stroke="rgba(0,0,0,0.10)"
+          stroke={(t.colors as any).divider as string}
           strokeWidth={1}
         />
         <Polyline

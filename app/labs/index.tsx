@@ -160,7 +160,12 @@ export default function LabsScreen() {
                 key={marker.id}
                 style={[
                   styles.cardSpacing,
-                  isOut ? { borderWidth: 1, borderColor: '#D43A3A' } : undefined,
+                  isOut
+                    ? {
+                        borderWidth: 1,
+                        borderColor: (t.colors as any).semanticDanger as string,
+                      }
+                    : undefined,
                 ]}
               >
                 <View style={styles.markerHeader}>
@@ -196,7 +201,9 @@ export default function LabsScreen() {
                       style={[
                         styles.markerValue,
                         {
-                          color: isOut ? '#D43A3A' : (t.colors.textPrimary as string),
+                          color: isOut
+                            ? ((t.colors as any).semanticDanger as string)
+                            : (t.colors.textPrimary as string),
                           fontFamily: t.isDark
                             ? t.typography.headlineMale
                             : t.typography.headlineFemale,
@@ -279,7 +286,8 @@ function MarkerTrend({
             y1={toY(refHigh)}
             x2={width - padding}
             y2={toY(refHigh)}
-            stroke="rgba(212,58,58,0.5)"
+            stroke={(t.colors as any).semanticDanger as string}
+            opacity={0.5}
             strokeWidth={1}
             strokeDasharray="3 3"
           />
@@ -290,7 +298,8 @@ function MarkerTrend({
             y1={toY(refLow)}
             x2={width - padding}
             y2={toY(refLow)}
-            stroke="rgba(212,58,58,0.5)"
+            stroke={(t.colors as any).semanticDanger as string}
+            opacity={0.5}
             strokeWidth={1}
             strokeDasharray="3 3"
           />

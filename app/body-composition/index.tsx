@@ -219,7 +219,9 @@ function TrendCard({
         {delta != null ? (
           <Text
             style={{
-              color: delta < 0 ? '#6FA891' : '#D08850',
+              color: (t.colors as any)[
+                delta < 0 ? 'semanticPositive' : 'semanticWarn'
+              ] as string,
               fontFamily: t.typography.bodyBold,
               fontSize: 12,
             }}

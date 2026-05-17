@@ -114,6 +114,8 @@ export default function DosesHubScreen() {
                 router.push(tile.href as never);
               }}
               style={{ width: '100%' }}
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${tile.title}. ${tile.subtitle}`}
             >
               <GlassCard style={styles.tile}>
                 <View style={styles.tileRow}>

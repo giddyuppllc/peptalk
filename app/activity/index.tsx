@@ -123,6 +123,8 @@ export default function ActivityScreen() {
             tapLight();
             router.push('/workouts' as never);
           }}
+          accessibilityRole="button"
+          accessibilityLabel="Open Workouts"
         >
           <GlassCard style={styles.cardSpacing}>
             <Tile
@@ -139,6 +141,8 @@ export default function ActivityScreen() {
             tapLight();
             router.push('/activity/performance' as never);
           }}
+          accessibilityRole="button"
+          accessibilityLabel="Open Performance metrics"
         >
           <GlassCard style={styles.cardSpacing}>
             <Tile
@@ -155,6 +159,8 @@ export default function ActivityScreen() {
             tapLight();
             router.push('/workouts/history' as never);
           }}
+          accessibilityRole="button"
+          accessibilityLabel="Open workout History"
         >
           <GlassCard style={styles.cardSpacing}>
             <Tile
@@ -172,6 +178,8 @@ export default function ActivityScreen() {
               tapLight();
               router.push('/settings/integrations' as never);
             }}
+            accessibilityRole="button"
+            accessibilityLabel="Connect a device for HealthKit or Health Connect"
           >
             <GlassCard style={styles.cardSpacing}>
               <Tile
@@ -206,7 +214,10 @@ function RingRow({
     if (t.isDark) {
       if (kind === 'move') return (t.colors as any).accentOxblood;
       if (kind === 'exercise') return (t.colors as any).accentCognac;
-      return (t.colors as any).accentBone ?? (t.colors as any).textPrimary;
+      // Stand-equivalent ring — tungsten-light to differentiate from
+      // the other two cognac/oxblood rings without going to bone (which
+      // is the primary text color and reads as "the foreground").
+      return (t.colors as any).accentTungstenLight;
     }
     if (kind === 'move') return (t.colors as any).accentRose;
     if (kind === 'exercise') return (t.colors as any).accentMint;

@@ -258,8 +258,17 @@ export default function CalculatorV2Screen() {
             </View>
             {meta?.diluentType === 'aceticAcid' ? (
               <View style={styles.aceticBanner}>
-                <Ionicons name="warning" size={14} color="#D43A3A" />
-                <Text style={styles.aceticBannerText}>
+                <Ionicons
+                  name="warning"
+                  size={14}
+                  color={(t.colors as any).semanticDanger as string}
+                />
+                <Text
+                  style={[
+                    styles.aceticBannerText,
+                    { color: (t.colors as any).semanticDanger as string },
+                  ]}
+                >
                   Acetic acid diluent — see modal warning
                 </Text>
               </View>
@@ -765,13 +774,14 @@ function ReconstituteCard({
   warnings: CalculatorWarning[];
 }) {
   const t = useV3Theme();
-  const accent = isAcetic ? '#D43A3A' : (t.colors.textPrimary as string);
+  const danger = (t.colors as any).semanticDanger as string;
+  const accent = isAcetic ? danger : (t.colors.textPrimary as string);
   return (
     <View style={[styles.cardSpacing]}>
       <GlassCard
         style={
           isAcetic
-            ? { borderWidth: 1, borderColor: '#D43A3A' }
+            ? { borderWidth: 1, borderColor: danger }
             : undefined
         }
       >
@@ -919,12 +929,13 @@ function WarningLine({ warning }: { warning: CalculatorWarning }) {
         return `Per-shot ${warning.gotMg.toFixed(2)} mg is outside the protocol range ${warning.minMg.toFixed(2)}–${warning.maxMg.toFixed(2)} mg.`;
     }
   })();
+  const danger = (t.colors as any).semanticDanger as string;
   return (
     <View style={styles.warningRow}>
-      <Ionicons name="alert-circle" size={14} color="#D43A3A" />
+      <Ionicons name="alert-circle" size={14} color={danger} />
       <Text
         style={{
-          color: '#D43A3A',
+          color: danger,
           fontFamily: t.typography.body,
           fontSize: 11,
           lineHeight: 15,
@@ -958,8 +969,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  // Color is theme-derived at the call site (semanticDanger token).
   aceticBannerText: {
-    color: '#D43A3A',
     fontSize: 11,
     fontWeight: '600',
   },
