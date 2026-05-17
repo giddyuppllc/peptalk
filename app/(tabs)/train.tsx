@@ -58,7 +58,10 @@ export default function TrainScreen() {
   const todayMeals = meals.filter((m) => m.date === todayDate);
   const todayWorkouts = workoutLogs.filter((w) => w.date === todayDate);
 
-  const calsToday = todayMeals.reduce((n, m) => n + (m.calories ?? 0), 0);
+  const calsToday = todayMeals.reduce((n, m) => {
+    if (m.quickLog) return n + m.quickLog.calories;
+    return n + m.foods.reduce((s, f) => s + f.calories, 0);
+  }, 0);
   const calsTarget = targets?.calories ?? 2000;
   const calsRemaining = Math.max(0, calsTarget - calsToday);
 

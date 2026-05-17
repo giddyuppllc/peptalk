@@ -212,7 +212,7 @@ function renderPreview(action: AimeePendingAction): React.ReactNode {
         <Text style={styles.previewTitle}>{name}</Text>
         {'  '}
         <Text style={styles.previewValue}>
-          {amount} {unit}
+          {amount != null ? String(amount) : ''} {unit}
         </Text>
         {route}
       </Text>
