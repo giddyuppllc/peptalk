@@ -29,6 +29,7 @@ import {
   type LabCategory,
 } from '../../src/store/useLabResultsStore';
 import { useAimeeReportsStore } from '../../src/store/useAimeeReportsStore';
+import { detectLabParser } from '../../src/services/labParsers';
 
 function todayKey(): string {
   const d = new Date();
@@ -55,6 +56,43 @@ export default function LabEntryScreen() {
   const [category, setCategory] = useState<LabCategory>('lipid');
   const [drawDate, setDrawDate] = useState(todayKey());
   const [values, setValues] = useState<Record<string, string>>({});
+  // §10.1 — paste raw text from a LabCorp / Quest report (OCR output,
+  // PDF text extraction, or copy-paste from the patient portal). The
+  // vendor adapter pattern auto-detects and pre-fills the form.
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pastedText, setPastedText] = useState('');
+  const [parseStatus, setParseStatus] = useState<string | null>(null);
+
+  const handleParsePasted = () => {
+    if (!pastedText.trim()) {
+      setParseStatus('Nothing to parse.');
+      return;
+    }
+    const parser = detectLabParser(pastedText);
+    if (!parser) {
+      setParseStatus(
+        'Could not auto-detect the vendor. Check the report header — LabCorp and Quest are supported today.',
+      );
+      return;
+    }
+    const result = parser.parseText(pastedText);
+    if (result.values.length === 0) {
+      setParseStatus(
+        `${parser.label} detected, but no markers matched. Add them manually below.`,
+      );
+      return;
+    }
+    const nextValues: Record<string, string> = {};
+    for (const v of result.values) {
+      nextValues[v.markerId] = String(v.value);
+    }
+    setValues((prev) => ({ ...prev, ...nextValues }));
+    if (result.drawDate) setDrawDate(result.drawDate);
+    setParseStatus(
+      `${parser.label}: pre-filled ${result.values.length} marker${result.values.length === 1 ? '' : 's'}.${result.unmappedLines.length ? ` ${result.unmappedLines.length} lines unmapped — add manually if needed.` : ''}`,
+    );
+    setPasteOpen(false);
+  };
 
   const markers = LAB_MARKERS.filter((m) => m.category === category);
 
@@ -133,6 +171,127 @@ export default function LabEntryScreen() {
             />
           </View>
         </GlassCard>
+
+        {/* §10.1 — paste-text parser. Reachable from this screen so the
+            vendor adapters in src/services/labParsers/ get used today
+            without a full OCR pipeline. */}
+        <Pressable
+          onPress={() => {
+            setPasteOpen((v) => !v);
+            setParseStatus(null);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={
+            pasteOpen
+              ? 'Close paste-from-report panel'
+              : 'Open paste-from-report panel'
+          }
+        >
+          <GlassCard style={styles.cardSpacing}>
+            <View style={styles.pasteRow}>
+              <Ionicons
+                name="document-text-outline"
+                size={18}
+                color={t.colors.textSecondary as string}
+              />
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.pasteTitle,
+                    {
+                      color: t.colors.textPrimary as string,
+                      fontFamily: t.isDark
+                        ? t.typography.headlineMale
+                        : t.typography.headlineFemale,
+                    },
+                  ]}
+                >
+                  Paste from a LabCorp or Quest report
+                </Text>
+                <Text
+                  style={[
+                    styles.pasteHint,
+                    {
+                      color: t.colors.textSecondary as string,
+                      fontFamily: t.typography.body,
+                    },
+                  ]}
+                >
+                  We pre-fill the form. You confirm the numbers before save.
+                </Text>
+              </View>
+              <Ionicons
+                name={pasteOpen ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={t.colors.textSecondary as string}
+              />
+            </View>
+          </GlassCard>
+        </Pressable>
+        {pasteOpen ? (
+          <GlassCard style={styles.cardSpacing}>
+            <View
+              style={[
+                styles.pasteBox,
+                {
+                  borderColor: t.colors.cardBorder as string,
+                  backgroundColor: t.isDark
+                    ? 'rgba(255,255,255,0.04)'
+                    : 'rgba(255,255,255,0.5)',
+                },
+              ]}
+            >
+              <TextInput
+                value={pastedText}
+                onChangeText={setPastedText}
+                placeholder="Paste your report text here…"
+                placeholderTextColor={t.colors.textSecondary as string}
+                multiline
+                style={{
+                  color: t.colors.textPrimary as string,
+                  fontFamily: t.typography.body,
+                  fontSize: 13,
+                  minHeight: 120,
+                  textAlignVertical: 'top',
+                }}
+                accessibilityLabel="Paste raw lab report text"
+              />
+            </View>
+            <Pressable
+              onPress={handleParsePasted}
+              style={[
+                styles.parseCta,
+                { backgroundColor: t.colors.textPrimary as string },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Parse pasted report and pre-fill the form"
+            >
+              <Text
+                style={{
+                  color: t.colors.bgBase1 as string,
+                  fontFamily: t.typography.bodyBold,
+                  fontSize: 12,
+                  letterSpacing: 0.3,
+                }}
+              >
+                Parse + pre-fill
+              </Text>
+            </Pressable>
+            {parseStatus ? (
+              <Text
+                style={[
+                  styles.parseStatus,
+                  {
+                    color: t.colors.textSecondary as string,
+                    fontFamily: t.typography.body,
+                  },
+                ]}
+              >
+                {parseStatus}
+              </Text>
+            ) : null}
+          </GlassCard>
+        ) : null}
 
         {/* Category picker */}
         <View style={styles.catRow}>
@@ -291,5 +450,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 14,
     borderRadius: 999,
+  },
+  pasteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  pasteTitle: {
+    fontSize: 14,
+  },
+  pasteHint: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  pasteBox: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+  },
+  parseCta: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 999,
+  },
+  parseStatus: {
+    marginTop: 10,
+    fontSize: 11,
+    lineHeight: 16,
   },
 });
