@@ -738,6 +738,22 @@ function RootLayout() {
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
           <Stack.Screen
+            name="tracker/weight"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="tracker/sleep"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="tracker/mood"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="tracker/photos"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
             name="peptide/[id]"
             options={{
               headerShown: true,
