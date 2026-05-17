@@ -29,6 +29,19 @@ export type ReferralSource =
   | 'Ad / Sponsored'
   | 'Other';
 
+/**
+ * Referral attribution code/name — captured at intake (§11.2).
+ * Free-text; the server resolves it against the user_referrals table at
+ * signup so any format (creator handle, promo code, friend's name) maps
+ * to the same backend slot.
+ */
+export interface ReferralClaim {
+  /** Verbatim string the user typed. */
+  raw: string;
+  /** Local timestamp when the user entered it. */
+  claimedAt: string;
+}
+
 export type Ethnicity =
   | 'white'
   | 'black'

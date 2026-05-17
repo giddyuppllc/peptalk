@@ -8,6 +8,7 @@ import {
   MaritalStatus,
   OnboardingProfile,
   PeptideCategory,
+  ReferralClaim,
   ReferralSource,
 } from '../types';
 import { secureStorage } from '../services/secureStorage';
@@ -42,6 +43,11 @@ interface OnboardingStore {
   setEthnicity: (ethnicity: Ethnicity) => void;
   setMaritalStatus: (status: MaritalStatus) => void;
   setReferralSource: (source: ReferralSource) => void;
+  /** Intake referral-claim string (§11.2). Free text — server resolves
+   *  it against the user_referrals table at signup. */
+  referralClaim: ReferralClaim | null;
+  setReferralClaim: (raw: string) => void;
+  clearReferralClaim: () => void;
   setHealthGoals: (goals: GoalType[]) => void;
   toggleHealthGoal: (goal: GoalType) => void;
   setInterestCategories: (categories: PeptideCategory[]) => void;
@@ -93,6 +99,14 @@ export const useOnboardingStore = create<OnboardingStore>()(
         set((state) => ({ profile: { ...state.profile, maritalStatus } })),
       setReferralSource: (referralSource) =>
         set((state) => ({ profile: { ...state.profile, referralSource } })),
+      referralClaim: null,
+      setReferralClaim: (raw) =>
+        set({
+          referralClaim: raw.trim()
+            ? { raw: raw.trim(), claimedAt: new Date().toISOString() }
+            : null,
+        }),
+      clearReferralClaim: () => set({ referralClaim: null }),
       setHealthGoals: (healthGoals) =>
         set((state) => ({ profile: { ...state.profile, healthGoals } })),
       toggleHealthGoal: (goal) => {
