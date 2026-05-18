@@ -24,6 +24,7 @@ import {
   BorderRadius,
 } from '../../../src/constants/theme';
 import { useTheme } from '../../../src/hooks/useTheme';
+import { LearnVideoCard } from '../../../src/components/LearnVideoCard';
 
 // Enable LayoutAnimation on Android
 if (
@@ -232,6 +233,16 @@ export default function TopicDetailScreen() {
             </View>
           </View>
         </View>
+
+        {/* ── How-to video (only on the How to Use Peptides topic) ─── */}
+        {topic.id === 'how-to-use' ? (
+          <LearnVideoCard
+            slug="reconstitution"
+            title="Watch: peptide reconstitution"
+            subtitle="A walkthrough of the same steps in Q1 — drawing BAC water, dissolving slowly, and storing the vial."
+            gradientColors={[topic.color, '#3E7CB1']}
+          />
+        ) : null}
 
         {/* ── FAQ Accordion ─────────────────────────────────────── */}
         <View style={styles.faqSection}>

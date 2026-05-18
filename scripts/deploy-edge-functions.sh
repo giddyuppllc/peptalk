@@ -79,6 +79,9 @@ FUNCTIONS=(
   get-workout-video
   transcribe-workout-video
 
+  # Learn / educational videos (auth-only, no tier gate)
+  get-learn-video
+
   # Push + CRM fanout (called by pg_net triggers w/ x-internal-key)
   community-push-fanout
   crm-event-fanout

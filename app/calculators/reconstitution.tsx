@@ -19,6 +19,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Colors, Spacing, FontSizes, BorderRadius, Gradients } from '../../src/constants/theme';
+import { LearnVideoCard } from '../../src/components/LearnVideoCard';
 
 const VIAL_PRESETS = [2, 5, 10, 15, 30];
 const WATER_PRESETS = [1, 2, 3, 5];
@@ -85,6 +86,18 @@ export default function ReconstitutionCalculatorScreen() {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
+        {/* How-to video — same clip used on the How to Use Peptides
+            FAQ. Sits above the inputs so a first-time user can watch
+            the technique before reconstituting their first vial. */}
+        <View style={styles.section}>
+          <LearnVideoCard
+            slug="reconstitution"
+            title="Watch: peptide reconstitution"
+            subtitle="See the BAC-water draw + slow-drip technique before you run the math below."
+            gradientColors={[t.primary, t.tint]}
+          />
+        </View>
+
         {/* Vial Size */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: t.text }]}>Peptide Vial Size</Text>
