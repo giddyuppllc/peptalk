@@ -74,26 +74,31 @@ export default function DosesHubScreen() {
   const t = useV3Theme();
   const router = useRouter();
 
-  const doseCount = useDoseLogStore((s) => s.doses.length);
-  const recentDose = useDoseLogStore((s) => s.doses[0]);
-  const recentSideEffects = useSideEffectStore((s) =>
-    s.entries.filter(
-      (e) => new Date(e.loggedAt).getTime() > Date.now() - 7 * 86400_000,
-    ),
-  );
+  // P0 fix: selectors must return stable references. The previous
+  // `s.entries.filter(...)` inside the selector created a new array on
+  // every render, and Zustand v5's Object.is comparison saw it as
+  // "changed" every time → infinite re-render loop → "Maximum update
+  // depth exceeded" crash. Pull raw refs, filter in useMemo.
+  const doses = useDoseLogStore((s) => s.doses);
+  const entries = useSideEffectStore((s) => s.entries);
 
   const observation = useMemo(() => {
-    if (doseCount === 0) {
+    if (doses.length === 0) {
       return 'No doses yet. Start in Calculator and I will pre-fill the math.';
     }
-    if (recentSideEffects.length >= 3) {
-      return `${recentSideEffects.length} side effects this week. Worth a check-in.`;
+    const weekAgo = Date.now() - 7 * 86400_000;
+    const recentCount = entries.filter(
+      (e) => new Date(e.loggedAt).getTime() > weekAgo,
+    ).length;
+    if (recentCount >= 3) {
+      return `${recentCount} side effects this week. Worth a check-in.`;
     }
+    const recentDose = doses[0];
     if (recentDose) {
       return `Last logged: ${recentDose.peptideId} · ${recentDose.amount} ${recentDose.unit}.`;
     }
     return 'Pace looks healthy.';
-  }, [doseCount, recentSideEffects.length, recentDose]);
+  }, [doses, entries]);
 
   return (
     <V3DetailShell

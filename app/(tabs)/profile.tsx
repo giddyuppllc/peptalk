@@ -476,31 +476,48 @@ function UserProfile() {
       <View style={styles.settingsSection}>
         <Text style={[styles.settingsSectionTitle, { color: t.text }]}>Settings</Text>
 
-        {/* Pro Status Toggle */}
-        <GlassCard style={styles.settingCard}>
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(227, 167, 161, 0.12)' }]}>
-                <Ionicons name="star-outline" size={18} color="#e3a7a1" />
+        {/* Pro Status — read-only badge.
+            Previously a Switch with onValueChange={() => {}}. Visually
+            looked interactive but did nothing — confusing UX and an
+            accessibility violation (announced as a togglable switch
+            but had no effect). Tap routes to the paywall for free
+            users; for Pro users it's a static "Active" badge. */}
+        <TouchableOpacity
+          activeOpacity={user.isPro ? 1 : 0.8}
+          disabled={user.isPro}
+          onPress={() => router.push('/subscription' as never)}
+          accessibilityRole={user.isPro ? 'text' : 'button'}
+          accessibilityLabel={
+            user.isPro
+              ? 'Pro plan active'
+              : 'Upgrade to Pro for advanced analysis features'
+          }
+        >
+          <GlassCard style={styles.settingCard}>
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(227, 167, 161, 0.12)' }]}>
+                  <Ionicons name="star-outline" size={18} color="#e3a7a1" />
+                </View>
+                <View style={styles.settingTextContainer}>
+                  <Text style={[styles.settingTitle, { color: t.text }]}>Pro Status</Text>
+                  <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
+                    {user.isPro
+                      ? 'Pro plan is active — all features unlocked'
+                      : 'Tap to upgrade and unlock advanced analysis'}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.settingTextContainer}>
-                <Text style={[styles.settingTitle, { color: t.text }]}>Pro Status</Text>
-                <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
-                  Access advanced analysis features
-                </Text>
-              </View>
+              {user.isPro ? (
+                <View style={[styles.proPill, { backgroundColor: 'rgba(227, 167, 161, 0.2)' }]}>
+                  <Text style={[styles.proPillText, { color: '#e3a7a1' }]}>Active</Text>
+                </View>
+              ) : (
+                <Ionicons name="chevron-forward" size={18} color={t.textSecondary} />
+              )}
             </View>
-            <Switch
-              value={user.isPro}
-              onValueChange={() => {}}
-              trackColor={{
-                false: 'rgba(0,0,0,0.08)',
-                true: 'rgba(227, 167, 161, 0.4)',
-              }}
-              thumbColor={user.isPro ? '#e3a7a1' : '#6B7280'}
-            />
-          </View>
-        </GlassCard>
+          </GlassCard>
+        </TouchableOpacity>
 
         {/* Advanced fitness inputs — RPE, tempo, %1RM, rest intervals.
             Off by default; the custom workout builder shows just sets ×
@@ -2107,6 +2124,16 @@ const styles = StyleSheet.create({
   settingCard: {
     marginBottom: Spacing.sm,
     paddingVertical: Spacing.xs,
+  },
+  proPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  proPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   settingRow: {
     flexDirection: 'row',

@@ -40,21 +40,31 @@ function todayLine(): string {
 
 export function Greeting({ variant = 'home', subline, proBadge }: Props) {
   const t = useV3Theme();
-  const firstName = useAuthStore((s) => s.user?.firstName) ?? 'there';
+  const rawFirstName = useAuthStore((s) => s.user?.firstName);
+  const firstName = rawFirstName ?? 'there';
+  const hasRealName = !!rawFirstName;
   const activeCycle = useActivePeptideCycle();
 
   const isHome = variant === 'home';
   const isDark = t.isDark;
 
-  // Male render — uppercase last initial form: "EDWARD H."
-  const maleGreeting = (firstName: string) => {
-    const last = (useAuthStore.getState().user?.lastName ?? '').slice(0, 1).toUpperCase();
-    return `${firstName.toUpperCase()}${last ? ` ${last}.` : ''}`;
+  // Male render — uppercase form. With a real first name we use
+  // "EDWARD H." (last initial); without one we render "HEY THERE" so
+  // the previous render of bare "THERE" on a missing-name account is
+  // gone for good.
+  const maleGreeting = (first: string) => {
+    if (!hasRealName) return 'HEY THERE';
+    const last = (useAuthStore.getState().user?.lastName ?? '')
+      .slice(0, 1)
+      .toUpperCase();
+    return `${first.toUpperCase()}${last ? ` ${last}.` : ''}`;
   };
 
   const greetingText = isDark
     ? maleGreeting(firstName)
-    : `Hi, ${firstName}`;
+    : hasRealName
+      ? `Hi, ${firstName}`
+      : 'Hi there';
 
   // §4.5 male subline = cycle line ("Retatrutide Gradual · Wk 6/12") when
   // an active protocol exists, otherwise the date keeps the row from being

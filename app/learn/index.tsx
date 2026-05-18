@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
+import { useTheme } from '../../src/hooks/useTheme';
 import { KNOWLEDGE_TOPICS } from '../../src/data/knowledgeTopics';
 import { EDUCATIONAL_ARTICLES } from '../../src/data/educationalArticles';
 import { GOAL_OPTIONS } from '../../src/constants/goals';
@@ -148,6 +149,14 @@ function FeaturedTopicCard({
 }) {
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
+      <FeaturedCardInner topic={topic} />
+    </TouchableOpacity>
+  );
+}
+
+function FeaturedCardInner({ topic }: { topic: KnowledgeTopic }) {
+  const t = useTheme();
+  return (
       <GlassCard
         variant="glow"
         glowColor={topic.color}
@@ -174,8 +183,8 @@ function FeaturedTopicCard({
                 Featured
               </Text>
             </View>
-            <Text style={styles.featuredTitle}>{topic.title}</Text>
-            <Text style={styles.featuredSubtitle} numberOfLines={2}>
+            <Text style={[styles.featuredTitle, { color: t.text }]}>{topic.title}</Text>
+            <Text style={[styles.featuredSubtitle, { color: t.textSecondary }]} numberOfLines={2}>
               {topic.subtitle}
             </Text>
             <View style={styles.featuredFooter}>
@@ -187,7 +196,6 @@ function FeaturedTopicCard({
           </View>
         </View>
       </GlassCard>
-    </TouchableOpacity>
   );
 }
 
@@ -200,11 +208,15 @@ function TopicCard({
   topic: KnowledgeTopic;
   onPress: () => void;
 }) {
+  const t = useTheme();
   return (
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={onPress}
-      style={[styles.topicCard, { borderColor: `${topic.color}30` }]}
+      style={[
+        styles.topicCard,
+        { backgroundColor: t.surface, borderColor: `${topic.color}30` },
+      ]}
     >
       <View
         style={[
@@ -214,10 +226,10 @@ function TopicCard({
       >
         <Ionicons name={topic.icon as any} size={24} color={topic.color} />
       </View>
-      <Text style={styles.topicTitle} numberOfLines={1}>
+      <Text style={[styles.topicTitle, { color: t.text }]} numberOfLines={1}>
         {topic.title}
       </Text>
-      <Text style={styles.topicSubtitle} numberOfLines={2}>
+      <Text style={[styles.topicSubtitle, { color: t.textSecondary }]} numberOfLines={2}>
         {topic.subtitle}
       </Text>
       <View style={styles.topicFooter}>
@@ -234,6 +246,7 @@ function TopicCard({
 
 export default function LearnHubScreen() {
   const router = useRouter();
+  const t = useTheme();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all');
   // Goal filter — narrows the Deep Dives feed to articles tagged with
@@ -279,7 +292,7 @@ export default function LearnHubScreen() {
   const isFiltering = search.trim().length > 0 || activeCategory !== 'all';
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -295,14 +308,23 @@ export default function LearnHubScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <Ionicons name="arrow-back" size={22} color={Colors.darkText} />
+            <Ionicons name="arrow-back" size={22} color={t.text} />
           </TouchableOpacity>
           <View style={styles.headerTextWrap}>
-            <Text style={styles.headerTitle}>Learn</Text>
-            <Text style={styles.headerSubtitle}>
+            <Text style={[styles.headerTitle, { color: t.text }]}>Learn</Text>
+            <Text style={[styles.headerSubtitle, { color: t.textSecondary }]}>
               Everything you need to know about peptides.
             </Text>
           </View>
+          <TouchableOpacity
+            onPress={() => router.replace('/(tabs)' as never)}
+            style={styles.headerBack}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel="Go to home"
+          >
+            <Ionicons name="home-outline" size={20} color={t.text} />
+          </TouchableOpacity>
         </View>
 
         {/* ── Search Bar ────────────────────────────────────────── */}
@@ -394,10 +416,10 @@ export default function LearnHubScreen() {
               size={18}
               color={Colors.pepBlue}
             />
-            <Text style={styles.sectionTitle}>
+            <Text style={[styles.sectionTitle, { color: t.text }]}>
               {isFiltering ? 'Results' : 'All Topics'}
             </Text>
-            <Text style={styles.sectionCount}>
+            <Text style={[styles.sectionCount, { color: t.textSecondary }]}>
               {filteredTopics.length}
             </Text>
           </View>

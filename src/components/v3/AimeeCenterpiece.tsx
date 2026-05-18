@@ -14,12 +14,14 @@
 import React, { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withTiming,
   withSequence,
+  withDelay,
   cancelAnimation,
   Easing,
 } from 'react-native-reanimated';
@@ -53,10 +55,22 @@ export function AimeeCenterpiece({
 
   // Pulse animation
   const pulse = useSharedValue(1);
+  // Sparkle twinkles — three offset opacity loops so they don't all
+  // peak at once. The user's feedback: "add three AI stars on it and a
+  // tap icon so people know" — make the orb visibly an AI affordance.
+  const sparkle1 = useSharedValue(0.4);
+  const sparkle2 = useSharedValue(0.4);
+  const sparkle3 = useSharedValue(0.4);
+  // Tap-hint ring: subtle expanding ripple every few seconds so the
+  // user notices the orb is interactive.
+  const tapHint = useSharedValue(0);
   const reduceMotion = useReduceMotion();
   useEffect(() => {
     if (reduceMotion) {
       pulse.value = 1;
+      sparkle1.value = 1;
+      sparkle2.value = 1;
+      sparkle3.value = 1;
       return;
     }
     const duration = t.isDark
@@ -70,15 +84,51 @@ export function AimeeCenterpiece({
       -1,
       false,
     );
+    const sparkleLoop = (sv: { value: number }, delay: number) => {
+      sv.value = withDelay(
+        delay,
+        withRepeat(
+          withSequence(
+            withTiming(1, { duration: 800, easing: Easing.out(Easing.quad) }),
+            withTiming(0.4, { duration: 800, easing: Easing.in(Easing.quad) }),
+          ),
+          -1,
+          false,
+        ),
+      );
+    };
+    sparkleLoop(sparkle1, 0);
+    sparkleLoop(sparkle2, 600);
+    sparkleLoop(sparkle3, 1200);
+    tapHint.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1500, easing: Easing.out(Easing.quad) }),
+        withTiming(0, { duration: 0 }),
+        withTiming(0, { duration: 2500 }),
+      ),
+      -1,
+      false,
+    );
     // 2026-05-17 perf fix: cancel the infinite worklet on unmount so
     // the orb doesn't keep ticking after the user navigates away.
     return () => {
       cancelAnimation(pulse);
+      cancelAnimation(sparkle1);
+      cancelAnimation(sparkle2);
+      cancelAnimation(sparkle3);
+      cancelAnimation(tapHint);
     };
-  }, [pulse, reduceMotion, t.isDark, t.motion.orbPulseDurationFemale, t.motion.orbPulseDurationMale]);
+  }, [pulse, sparkle1, sparkle2, sparkle3, tapHint, reduceMotion, t.isDark, t.motion.orbPulseDurationFemale, t.motion.orbPulseDurationMale]);
 
   const orbStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulse.value }],
+  }));
+  const sparkle1Style = useAnimatedStyle(() => ({ opacity: sparkle1.value }));
+  const sparkle2Style = useAnimatedStyle(() => ({ opacity: sparkle2.value }));
+  const sparkle3Style = useAnimatedStyle(() => ({ opacity: sparkle3.value }));
+  const tapHintStyle = useAnimatedStyle(() => ({
+    opacity: 1 - tapHint.value,
+    transform: [{ scale: 1 + tapHint.value * 0.3 }],
   }));
 
   const openSheet = (intent?: AimeeIntent) => {
@@ -104,32 +154,62 @@ export function AimeeCenterpiece({
         (t.colors as any).accentMint,
       ]) as [string, string, ...string[]];
 
+  const sparkleColor = t.isDark ? '#FFE3C0' : '#FFFFFF';
+
   return (
     <View style={styles.wrap}>
       <Pressable
         onPress={() => openSheet()}
         accessibilityRole="button"
-        accessibilityLabel="Open Aimee chat"
+        accessibilityLabel="Tap to chat with Aimee, or long-press the mic to talk"
       >
-        <Animated.View style={[styles.orbWrap, orbStyle]}>
-          <LinearGradient
-            colors={orbColors}
-            start={{ x: 0.3, y: 0.2 }}
-            end={{ x: 0.8, y: 1 }}
-            style={styles.orb}
-          />
-          {/* Inner glow */}
-          <View
+        <View style={styles.orbWrap}>
+          {/* Outer tap-hint ring — expanding pulse every ~4 s. */}
+          <Animated.View
             style={[
-              styles.glow,
-              {
-                backgroundColor: t.isDark
-                  ? 'rgba(201,136,90,0.18)'
-                  : 'rgba(255,255,255,0.4)',
-              },
+              styles.tapRing,
+              { borderColor: t.isDark ? '#C9885A' : '#E5928D' },
+              tapHintStyle,
             ]}
           />
-        </Animated.View>
+          <Animated.View style={[styles.orbInner, orbStyle]}>
+            <LinearGradient
+              colors={orbColors}
+              start={{ x: 0.3, y: 0.2 }}
+              end={{ x: 0.8, y: 1 }}
+              style={styles.orb}
+            />
+            {/* Inner glow */}
+            <View
+              style={[
+                styles.glow,
+                {
+                  backgroundColor: t.isDark
+                    ? 'rgba(201,136,90,0.18)'
+                    : 'rgba(255,255,255,0.4)',
+                },
+              ]}
+            />
+            {/* Three AI sparkles positioned around the orb */}
+            <Animated.View style={[styles.sparkleTopRight, sparkle1Style]}>
+              <Ionicons name="sparkles" size={18} color={sparkleColor} />
+            </Animated.View>
+            <Animated.View style={[styles.sparkleTopLeft, sparkle2Style]}>
+              <Ionicons name="sparkles" size={14} color={sparkleColor} />
+            </Animated.View>
+            <Animated.View style={[styles.sparkleBottom, sparkle3Style]}>
+              <Ionicons name="sparkles" size={12} color={sparkleColor} />
+            </Animated.View>
+            {/* Tap-affordance icon at the bottom edge */}
+            <View style={[styles.tapBadge, { backgroundColor: t.isDark ? '#1F1F1F' : '#FFFFFFEE' }]}>
+              <Ionicons
+                name="hand-left"
+                size={12}
+                color={t.isDark ? '#FFE3C0' : '#7A4B6B'}
+              />
+            </View>
+          </Animated.View>
+        </View>
       </Pressable>
 
       <Text
@@ -168,6 +248,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   orbWrap: {
+    width: 160,
+    height: 160,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orbInner: {
     width: 120,
     height: 120,
     alignItems: 'center',
@@ -186,6 +272,42 @@ const styles = StyleSheet.create({
     top: 20,
     left: 30,
     opacity: 0.5,
+  },
+  tapRing: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 2,
+  },
+  sparkleTopRight: {
+    position: 'absolute',
+    top: 4,
+    right: 8,
+  },
+  sparkleTopLeft: {
+    position: 'absolute',
+    top: 18,
+    left: 4,
+  },
+  sparkleBottom: {
+    position: 'absolute',
+    bottom: 18,
+    right: 18,
+  },
+  tapBadge: {
+    position: 'absolute',
+    bottom: -4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 3,
+    elevation: 2,
   },
   observation: {
     marginTop: 18,
