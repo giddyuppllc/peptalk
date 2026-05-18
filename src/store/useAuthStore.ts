@@ -250,7 +250,11 @@ export const useAuthStore = create<AuthStore>()(
           const { data: { session } } = await db.auth.getSession();
 
           if (!session?.user) {
-            set({ hasHydrated: true });
+            // No active server-side session. Clear any STALE persisted
+            // user/isAuthenticated so the app doesn't render as "logged in"
+            // while every authed call returns 401. P0 ghost-session fix
+            // from 2026-05-18 cold-boot audit.
+            set({ user: null, isAuthenticated: false, hasHydrated: true });
             return;
           }
 
@@ -282,7 +286,10 @@ export const useAuthStore = create<AuthStore>()(
 
           set({ user: appUser, isAuthenticated: true, hasHydrated: true });
         } catch {
-          set({ hasHydrated: true });
+          // Same ghost-session fix on the error path — if getSession()
+          // or the profile fetch threw, treat the user as signed out
+          // rather than leaving stale persisted credentials in place.
+          set({ user: null, isAuthenticated: false, hasHydrated: true });
         }
       },
 

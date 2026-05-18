@@ -594,11 +594,27 @@ function RootLayout() {
       ['cycle',      () => useCycleStore.getState().syncFromServer()],
       ['integrations', () => useIntegrationsStore.getState().syncFromServer()],
     ];
-    for (const [label, run] of bootHydrations) {
-      run().catch((err: unknown) => {
-        if (__DEV__) console.warn(`[boot] ${label} syncFromServer failed:`, err);
-      });
-    }
+    // 2026-05-18 cold-boot audit: gate boot syncs on a fresh session.
+    // Previously they fired unconditionally — if the user had a stale
+    // persisted token, ALL 11 stores would 401 in parallel and
+    // captureException would log 11 Sentry events for the same auth
+    // expiry, plus burn ~11 API requests on every cold boot of an
+    // unsigned-in user. Now we wait for the auth store to confirm
+    // there is actually a session before kicking the syncs.
+    (async () => {
+      try {
+        const { supabase } = await import('../src/services/supabase');
+        const { data: { session } } = await (supabase as any).auth.getSession();
+        if (!session?.access_token) return;
+        for (const [label, run] of bootHydrations) {
+          run().catch((err: unknown) => {
+            if (__DEV__) console.warn(`[boot] ${label} syncFromServer failed:`, err);
+          });
+        }
+      } catch (err) {
+        if (__DEV__) console.warn('[boot] hydrations gate failed:', err);
+      }
+    })();
 
     // Mark navigator as mounted on next frame so <Stack> is in the tree
     requestAnimationFrame(() => setNavReady(true));
