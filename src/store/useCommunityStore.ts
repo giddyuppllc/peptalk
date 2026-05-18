@@ -36,6 +36,12 @@ interface CommunityState {
   loadingFeed: boolean;
   loadingTopics: boolean;
   loadingDetail: Record<string, boolean>;
+  /** Last hydrateFeed error message, surfaced in the UI so a network
+   *  blip doesn't masquerade as an empty topic. Cleared at the start
+   *  of every refresh. P1 from the 2026-05-17 loading/error audit. */
+  feedError: string | null;
+  /** Per-post detail fetch error keyed by postId. */
+  detailError: Record<string, string | null>;
 
   // ── Reads ──
   hydrateTopics: () => Promise<void>;
@@ -245,6 +251,8 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
   loadingFeed: false,
   loadingTopics: false,
   loadingDetail: {},
+  feedError: null,
+  detailError: {},
 
   hydrateTopics: async () => {
     set({ loadingTopics: true });
@@ -279,7 +287,7 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
   },
 
   hydrateFeed: async (opts) => {
-    set({ loadingFeed: true });
+    set({ loadingFeed: true, feedError: null });
     try {
       const supabase = await getSupa();
       const sort = opts?.sort ?? 'new';
@@ -346,13 +354,19 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
       set({ posts });
     } catch (err) {
       if (__DEV__) console.warn('[community] hydrateFeed:', err);
+      const msg = (err as any)?.message
+        ?? 'Could not load the feed. Check your connection and try again.';
+      set({ feedError: msg });
     } finally {
       set({ loadingFeed: false });
     }
   },
 
   hydratePostDetail: async (postId) => {
-    set({ loadingDetail: { ...get().loadingDetail, [postId]: true } });
+    set({
+      loadingDetail: { ...get().loadingDetail, [postId]: true },
+      detailError: { ...get().detailError, [postId]: null },
+    });
     try {
       const supabase = await getSupa();
 
@@ -423,6 +437,9 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
       });
     } catch (err) {
       if (__DEV__) console.warn('[community] hydratePostDetail:', err);
+      const msg = (err as any)?.message
+        ?? 'Could not load this post. Pull to refresh or try again.';
+      set({ detailError: { ...get().detailError, [postId]: msg } });
     } finally {
       set({ loadingDetail: { ...get().loadingDetail, [postId]: false } });
     }

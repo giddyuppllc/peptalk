@@ -443,6 +443,16 @@ export default function CheckInScreen() {
       const parsed = Number(value);
       return Number.isFinite(parsed) ? parsed : undefined;
     };
+    // 2026-05-17 P1 fix: numeric inputs were unclamped — a stray
+    // "5e10" in the weight field would persist 50,000,000,000 lb and
+    // permanently break the weight trend chart's auto-scaling. Use
+    // sane physical maxes per field. Below zero is also blocked.
+    const clamp = (n: number | undefined, max: number) => {
+      if (n == null) return undefined;
+      if (n < 0) return 0;
+      if (n > max) return max;
+      return n;
+    };
 
     const entry = saveCheckIn({
       date: dateKey,
@@ -452,14 +462,18 @@ export default function CheckInScreen() {
       sleepQuality,
       recovery,
       appetite,
-      weightLbs: toNumber(weight),
-      restingHeartRate: toNumber(restingHeartRate),
-      steps: toNumber(steps),
-      hrvMs: toNumber(hrvMs),
-      vo2Max: toNumber(vo2Max),
-      spo2: toNumber(spo2),
-      respiratoryRate: toNumber(respiratoryRate),
-      activeCalories: toNumber(activeCalories),
+      // Sane physical caps so a typo can't corrupt the trend chart.
+      // Lower bounds are 0 via clamp(); upper bounds picked to be
+      // generous (heaviest recorded human ~1400 lb, world-record HR
+      // ~330 bpm, etc.) so they only catch typos, not real data.
+      weightLbs: clamp(toNumber(weight), 1500),
+      restingHeartRate: clamp(toNumber(restingHeartRate), 300),
+      steps: clamp(toNumber(steps), 200_000),
+      hrvMs: clamp(toNumber(hrvMs), 500),
+      vo2Max: clamp(toNumber(vo2Max), 100),
+      spo2: clamp(toNumber(spo2), 100),
+      respiratoryRate: clamp(toNumber(respiratoryRate), 80),
+      activeCalories: clamp(toNumber(activeCalories), 10_000),
       sleepStages: sleepStagesData,
       notes,
       emotionTags,

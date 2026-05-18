@@ -297,6 +297,11 @@ export default function NewJournalEntryScreen() {
             onChangeText={setContent}
             multiline
             textAlignVertical="top"
+            // 2026-05-17 cap journal body at 10k chars — same ceiling the
+            // edge-function moderator applies. Without this a pasted
+            // 10MB blob would bloat the persisted store + slow rehydrate
+            // to multi-second on every cold boot.
+            maxLength={10_000}
           />
         </GlassCard>
 
