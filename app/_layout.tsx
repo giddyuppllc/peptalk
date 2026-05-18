@@ -1076,6 +1076,20 @@ function RootLayout() {
             }}
           />
           <Stack.Screen
+            name="admin/video-tagger"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="admin/start-live"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
             name="settings/notifications"
             options={{
               headerShown: false,
