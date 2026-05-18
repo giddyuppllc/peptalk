@@ -56,11 +56,28 @@ export default function HomeScreen() {
   const router = useRouter();
   const t = useV3Theme();
   const activeCycle = useActivePeptideCycle();
+  // 2026-05-17 P0 fix: each of these selectors must return a STABLE
+  // reference. `useMealStore((s) => s.getDailyTotals(todayKey()))` was
+  // calling the computed accessor inside the selector, producing a
+  // brand-new totals object on every render — Zustand v5's Object.is
+  // comparison flagged that as "changed" and looped infinitely
+  // ("Maximum update depth exceeded" crash on HomeScreen). Same bug
+  // shape as the DosesHubScreen fix in Wave 76.18.
+  // Pull raw arrays / accessor function refs instead, compute in
+  // useMemo.
   const protocols = useDoseLogStore((s) => s.protocols);
   const checkins = useCheckinStore((s) => s.entries);
-  const mealTotals = useMealStore((s) => s.getDailyTotals(todayKey()));
+  const meals = useMealStore((s) => s.meals);
+  const getDailyTotals = useMealStore((s) => s.getDailyTotals);
   const macroTargets = useMealStore((s) => s.targets);
   const workouts = useWorkoutStore((s) => s.logs);
+
+  const todayDateKey = useMemo(() => todayKey(), []);
+  const mealTotals = useMemo(
+    () => getDailyTotals(todayDateKey),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [getDailyTotals, todayDateKey, meals],
+  );
 
   // Most recent check-in for the Weekly Tracker chips (mood / sleep / energy).
   const latestCheckin = useMemo(() => {

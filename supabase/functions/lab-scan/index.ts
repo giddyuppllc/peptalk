@@ -14,9 +14,17 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
-const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
-const VISION_MODEL = Deno.env.get('GROK_VISION_MODEL') ?? Deno.env.get('OPENAI_MODEL') ?? 'grok-4.3';
+// 2026-05-17 vision routing fix: see food-scan for full rationale.
+// Grok-4.3 doesn't accept image inputs; OpenAI gpt-4o-mini does and
+// reuses the OpenAI key already set for Whisper.
+const VISION_API_KEY =
+  Deno.env.get('OPENAI_VISION_API_KEY') ??
+  Deno.env.get('OPENAI_WHISPER_API_KEY') ??
+  '';
+const VISION_BASE_URL =
+  Deno.env.get('OPENAI_VISION_BASE_URL') ?? 'https://api.openai.com/v1';
+const VISION_MODEL =
+  Deno.env.get('OPENAI_VISION_MODEL') ?? 'gpt-4o-mini';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -135,15 +143,15 @@ Deno.serve(async (req) => {
       return jsonResp({ error: 'Image too large. Compress and retry.' }, 413);
     }
 
-    if (!OPENAI_API_KEY) {
+    if (!VISION_API_KEY) {
       return jsonResp({ error: 'AI service not configured' }, 500);
     }
 
     // 5. Vision call
-    const visionRes = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
+    const visionRes = await fetch(`${VISION_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${VISION_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

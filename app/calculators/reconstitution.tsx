@@ -20,6 +20,7 @@ import { GradientButton } from '../../src/components/GradientButton';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Colors, Spacing, FontSizes, BorderRadius, Gradients } from '../../src/constants/theme';
 import { LearnVideoCard } from '../../src/components/LearnVideoCard';
+import { SyringeSVG } from '../../src/components/v3';
 
 const VIAL_PRESETS = [2, 5, 10, 15, 30];
 const WATER_PRESETS = [1, 2, 3, 5];
@@ -35,7 +36,11 @@ export default function ReconstitutionCalculatorScreen() {
   const [vialUnit, setVialUnit] = useState<VialUnit>('mg');
   const [waterVolume, setWaterVolume] = useState('');
   const [desiredDose, setDesiredDose] = useState('');
-  const [doseUnit, setDoseUnit] = useState<DoseUnit>('mcg');
+  // Default to mg — the user feedback was that mcg-by-default forces
+  // every Selank / BPC / ipamorelin user to toggle on every visit. mg
+  // is the readable unit at human-scale doses; the toggle stays so
+  // mcg-thinking peptides still work.
+  const [doseUnit, setDoseUnit] = useState<DoseUnit>('mg');
   const [showResults, setShowResults] = useState(false);
 
   // Clamp at parse so a transient negative input (user typing "-5") can't
@@ -294,52 +299,31 @@ export default function ReconstitutionCalculatorScreen() {
               </GlassCard>
             </View>
 
-            {/* Syringe Diagram */}
+            {/* Syringe Diagram — uses the polished v3 horizontal U-100
+                SVG (same one on the home Doses card). The previous
+                vertical bar was harder to read at a glance; the
+                horizontal form mirrors how the user actually holds the
+                syringe. The red marker line shows EXACTLY where to
+                pull the plunger to. */}
             <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: t.text }]}>Syringe Diagram (1mL)</Text>
+              <Text style={[styles.sectionTitle, { color: t.text }]}>Draw your dose</Text>
               <GlassCard>
-                <View style={styles.syringeContainer}>
-                  {/* Syringe barrel */}
-                  <View style={[styles.syringeBarrel, { backgroundColor: t.isDark ? 'rgba(0,0,0,0.03)' : 'rgba(0,0,0,0.04)', borderColor: t.isDark ? 'rgba(0,0,0,0.10)' : 'rgba(0,0,0,0.15)' }]}>
-                    {/* Tick marks */}
-                    {Array.from({ length: 11 }, (_, i) => {
-                      const pct = (i / 10) * 100;
-                      const isMajor = i % 5 === 0;
-                      return (
-                        <View
-                          key={i}
-                          style={[
-                            styles.tick,
-                            isMajor && styles.tickMajor,
-                            { bottom: `${pct}%` },
-                          ]}
-                        >
-                          {isMajor && (
-                            <Text style={styles.tickLabel}>{(i / 10).toFixed(1)}</Text>
-                          )}
-                        </View>
-                      );
-                    })}
-                    {/* Fill level */}
-                    <LinearGradient
-                      colors={[Gradients.primary[0], Gradients.primary[1]]}
-                      start={{ x: 0, y: 1 }}
-                      end={{ x: 0, y: 0 }}
-                      style={[styles.syringeFill, { height: `${syringeFillPercent}%` }]}
-                    />
-                    {/* Draw-to indicator */}
-                    {syringeFillPercent > 0 && syringeFillPercent <= 100 && (
-                      <View
-                        style={[styles.drawLine, { bottom: `${syringeFillPercent}%` }]}
-                      >
-                        <Text style={styles.drawLineLabel}>
-                          Draw to here ({volumeToInject.toFixed(2)} mL)
-                        </Text>
-                      </View>
-                    )}
+                <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+                  <SyringeSVG
+                    fillMl={Math.min(1, Math.max(0, volumeToInject))}
+                    capacityMl={1}
+                    width={300}
+                    showMarker
+                  />
+                  <View style={{ marginTop: 14, alignItems: 'center', gap: 4 }}>
+                    <Text style={{ fontSize: 17, fontWeight: '700', color: t.text }}>
+                      Draw to {volumeToInject.toFixed(2)} mL
+                    </Text>
+                    <Text style={{ fontSize: 13, color: t.textSecondary }}>
+                      That's {(volumeToInject * 100).toFixed(0)} units on a U-100 insulin syringe
+                      ({(volumeToInject * 10).toFixed(1)} tick{(volumeToInject * 10) === 1 ? '' : 's'})
+                    </Text>
                   </View>
-                  {/* Needle tip */}
-                  <View style={[styles.needleTip, { backgroundColor: t.isDark ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.3)' }]} />
                 </View>
               </GlassCard>
             </View>
