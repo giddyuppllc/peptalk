@@ -39,7 +39,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
-const VISION_MODEL = 'grok-4-1-fast-reasoning';
+const VISION_MODEL = Deno.env.get('GROK_VISION_MODEL') ?? Deno.env.get('OPENAI_MODEL') ?? 'grok-4.3';
 
 const MODERATION_PROMPT = `You are an image moderation classifier for a peptide / health-tracking app called PepTalk. Users post photos in a community forum about peptide protocols, fitness, nutrition, and bloodwork.
 

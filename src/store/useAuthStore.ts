@@ -21,6 +21,7 @@ import {
   trackLoginSucceeded,
   trackLoginFailed,
 } from '../services/analyticsEvents';
+import { setUser as telemetrySetUser, captureException } from '../services/telemetry';
 
 const db = supabase as any;
 
@@ -143,9 +144,14 @@ export const useAuthStore = create<AuthStore>()(
           };
 
           set({ user: appUser, isAuthenticated: true, isLoading: false });
+          // Forward the user id (no email/PII — telemetry.setUser strips
+          // those in beforeSend) so Sentry groups events per-user and
+          // ops can see which user hit a given crash.
+          telemetrySetUser({ id: appUser.id });
           trackLoginSucceeded();
         } catch (error: any) {
           if (__DEV__) console.error('[useAuthStore] Login failed:', error);
+          captureException(error, { source: 'auth.login', errorName: error?.name });
           set({ isLoading: false });
           trackLoginFailed(error?.message ?? 'unknown');
           throw error;
@@ -272,6 +278,30 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       logout: async () => {
+        // Cancel every scheduled OS notification BEFORE signOut so
+        // User A's dose / check-in / workout reminders don't fire
+        // on the device after User B signs in. (Notifications carry
+        // user-typed content in the body — "Time to take BPC-157" —
+        // and would expose the prior user's data.) P0 from Wave
+        // 76.11 logout audit.
+        try {
+          const { cancelAllReminders } = await import(
+            '../services/notificationService'
+          );
+          await cancelAllReminders();
+        } catch {}
+
+        // Abort any in-flight Aimee SSE stream — otherwise a late
+        // text_delta lands in chat store post-logout. We do this
+        // before the chat store wipe.
+        try {
+          const w = globalThis as any;
+          if (w.__peptalkActiveAimeeAbort) {
+            w.__peptalkActiveAimeeAbort();
+            w.__peptalkActiveAimeeAbort = null;
+          }
+        } catch {}
+
         // Drop the device's push-token row BEFORE signOut — otherwise
         // a shared device keeps receiving pushes addressed to the
         // signed-out user. Best-effort; if it fails the cron-prune
@@ -309,7 +339,12 @@ export const useAuthStore = create<AuthStore>()(
         // HIPAA-style privacy since we track meals, doses, health profile,
         // check-ins, journal entries, body map, workouts, and chat history.
         try {
-          useSubscriptionStore.getState().setTier('free');
+          // clearSubscription() (vs setTier('free')) also drops
+          // productId / expiresAt / pendingPurchase / lastSyncedAt
+          // — without this, User A's subscription metadata (incl.
+          // expiry, last-validated time) lingered into User B's
+          // session. P0 from Wave 76.11 logout audit.
+          useSubscriptionStore.getState().clearSubscription();
           useOnboardingStore.getState().reset();
         } catch {}
 
@@ -328,7 +363,6 @@ export const useAuthStore = create<AuthStore>()(
             fn();
           } catch (err) {
             try {
-
               const { captureException } = require('../services/telemetry');
               captureException?.(err, { source: 'logout.wipe', store: label });
             } catch {
@@ -353,6 +387,29 @@ export const useAuthStore = create<AuthStore>()(
         safeClear('cycle', () => require('./useCycleStore').useCycleStore.getState().clearAll?.());
         safeClear('integrations', () => require('./useIntegrationsStore').useIntegrationsStore.getState().clearAll?.());
         safeClear('allergy', () => require('./useAllergyStore').useAllergyStore.getState().clearAll?.());
+
+        // Stores the original sweep missed — each one persists PII or
+        // user-correlated state that survived logout. P0 from
+        // Wave 76.11 logout audit.
+        safeClear('biometrics', () => require('./useBiometricsStore').useBiometricsStore.getState().clearAll?.());
+        safeClear('labResults', () => require('./useLabResultsStore').useLabResultsStore.getState().clearAll?.());
+        safeClear('plan', () => require('./usePlanStore').usePlanStore.getState().clearAll?.());
+        safeClear('grocery', () => require('./useGroceryStore').useGroceryStore.getState().clearAll?.());
+        safeClear('tutorial', () => require('./useTutorialStore').useTutorialStore.getState().resetTour?.());
+        safeClear('progressGoals', () => require('./useProgressGoalsStore').useProgressGoalsStore.getState().clearAll?.());
+        safeClear('featureWaitlist', () => require('./useFeatureWaitlistStore').useFeatureWaitlistStore.getState().clearAll?.());
+        safeClear('community', () => require('./useCommunityStore').useCommunityStore.getState().clearAll?.());
+        // Reset preferences to default + drop pushToken. Don't fully
+        // clear — notification preferences are device-pref-ish — but
+        // we don't want User B inheriting User A's reminder schedule.
+        safeClear('notification', () => require('./useNotificationStore').useNotificationStore.setState({ pushToken: null }));
+
+        // Reset Sentry user binding so subsequent crashes aren't
+        // attributed to the previous user.
+        safeClear('telemetry', () => {
+          const { setUser } = require('../services/telemetry');
+          setUser?.(null);
+        });
 
         set({
           user: null,

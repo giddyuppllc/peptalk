@@ -61,11 +61,15 @@ export function UpgradeDeltaWatcher() {
     if (seenDeltaTours[variant]) return;
 
     // Delay so the user sees the "you're now Plus/Pro" state first, then tour
-    // starts after the subscription screen dismisses
+    // starts after the subscription screen dismisses.
+    // Return the cleanup so the timer cancels if the component
+    // unmounts within the 1.2s window — earlier this fired
+    // startTour() on a dead consumer (Wave 76.10 render audit).
     if (!tourActive && hasSeenTour) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         startTour(variant as any);
       }, 1200);
+      return () => clearTimeout(timer);
     }
   }, [tier, subscriptionHasHydrated, lastKnownTier, setLastKnownTier, startTour, hasSeenTour, seenDeltaTours, tourActive]);
 

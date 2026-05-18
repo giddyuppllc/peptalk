@@ -715,9 +715,8 @@ export function execLogMeal(
   // would create (no read-back layer for meal_entries).
   const mealType = typeof input.mealType === 'string' ? input.mealType : 'snack';
   const title = typeof input.title === 'string' ? input.title : 'Meal';
-  const date = typeof input.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.date)
-    ? input.date
-    : new Date().toISOString().slice(0, 10);
+  // Date range guard — see sanitizeRecentDate() for rationale.
+  const date = sanitizeRecentDate(input.date);
   const items = Array.isArray(input.items) ? input.items : [];
 
   const totals = items.reduce(
@@ -826,9 +825,12 @@ export function execLogDose(
   const unit = typeof input.unit === 'string' ? input.unit : 'mcg';
   if (!['mcg', 'mg', 'iu'].includes(unit)) return { error: 'unit must be mcg/mg/iu' };
 
-  const date = typeof input.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.date)
-    ? input.date
-    : new Date().toISOString().slice(0, 10);
+  // Date range guard. Earlier this only validated the shape, so a
+  // coaxed model could log a dose for 2099-01-01 (or 1999) and
+  // pollute the dose log + future alert calculations. P1 from Wave
+  // 76.11 Aimee fuzzing audit. Allow yesterday, today, and tomorrow
+  // (timezone slop on the client side).
+  const date = sanitizeRecentDate(input.date);
   const time = typeof input.time === 'string' && /^\d{2}:\d{2}$/.test(input.time)
     ? input.time
     : new Date().toISOString().slice(11, 16);
@@ -858,12 +860,14 @@ export function execScheduleWorkout(
 ): Record<string, unknown> {
   // Returns a client_action payload — see execLogDose / execLogMeal for
   // why we don't write to Supabase directly here.
-  const name = typeof input.name === 'string' ? input.name : '';
+  const name = typeof input.name === 'string' ? input.name.slice(0, 80) : '';
   if (!name) return { error: 'name required' };
-  const date = typeof input.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.date)
-    ? input.date
-    : null;
-  if (!date) return { error: 'date (YYYY-MM-DD) required' };
+  // Schedule must be near-future: today through +365 days. Past dates
+  // are rejected — completed workouts use finishWorkout, not schedule.
+  const date = sanitizeFutureDate(input.date);
+  if (!date) {
+    return { error: 'date must be YYYY-MM-DD between today and one year out' };
+  }
   const time = typeof input.time === 'string' ? input.time : '12:00';
   const startedAtIso = `${date}T${time.length === 5 ? time : '12:00'}:00.000Z`;
 
@@ -1113,6 +1117,43 @@ export async function executeTool(
 }
 
 // ─── Small numeric helpers ────────────────────────────────────────────────
+
+/**
+ * Reject dates more than 1 day in the future (timezone slop) and
+ * more than 365 days in the past (don't let the model log doses for
+ * 2099-01-01 or 1999 just because the user phrased a prompt cleverly).
+ * Returns today's date in UTC when the input is missing or out of range.
+ */
+function sanitizeRecentDate(input: unknown): string {
+  if (typeof input !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(input)) {
+    return new Date().toISOString().slice(0, 10);
+  }
+  const parsed = new Date(`${input}T12:00:00Z`).getTime();
+  if (!Number.isFinite(parsed)) {
+    return new Date().toISOString().slice(0, 10);
+  }
+  const now = Date.now();
+  const dayMs = 86_400_000;
+  if (parsed > now + 1 * dayMs || parsed < now - 365 * dayMs) {
+    return new Date().toISOString().slice(0, 10);
+  }
+  return input;
+}
+
+/**
+ * Future-scheduled workouts can land up to 365 days ahead (annual
+ * meso-cycle planners) but never in the past (you don't "schedule"
+ * what's already happened — that's `finishWorkout`).
+ */
+function sanitizeFutureDate(input: unknown): string | null {
+  if (typeof input !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(input)) return null;
+  const parsed = new Date(`${input}T12:00:00Z`).getTime();
+  if (!Number.isFinite(parsed)) return null;
+  const now = Date.now();
+  const dayMs = 86_400_000;
+  if (parsed < now - 1 * dayMs || parsed > now + 365 * dayMs) return null;
+  return input;
+}
 
 function mean(arr: number[]): number {
   if (arr.length === 0) return 0;

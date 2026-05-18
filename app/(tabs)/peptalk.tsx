@@ -504,6 +504,14 @@ export default function PepTalkScreen() {
       streamAbortRef.current?.abort();
       const controller = new AbortController();
       streamAbortRef.current = controller;
+      // Stash on globalThis so useAuthStore.logout() can abort
+      // an in-flight stream even when the chat screen isn't
+      // mounted (e.g. logout fired from the Profile tab). Without
+      // this, late text_delta events would write into the chat
+      // store post-logout. P1 from Wave 76.11 logout audit.
+      try {
+        (globalThis as any).__peptalkActiveAimeeAbort = () => controller.abort();
+      } catch { /* ignore */ }
 
       try {
         for await (const ev of generateAIResponseStream(text, context, {
