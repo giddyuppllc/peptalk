@@ -104,11 +104,31 @@ async function authedFetch<T>(fn: string, body: unknown): Promise<T> {
   });
   if (error) {
     // supabase-js wraps function errors — try to read the body the function returned.
+    //
+    // 2026-05-17 P0 fix: the previous version did `await ctx.body` which
+    // doesn't work — supabase-js v2's FunctionsHttpError.context is a
+    // `Response`, and `body` is a ReadableStream that needs `.text()` to
+    // resolve to a string. Body parsing was silently failing on every
+    // 4xx, swallowing the function's real error message
+    // ("Set a community handle first", "Post contains language not
+    // allowed", etc.) and surfacing the generic
+    // "Edge Function returned a non-2xx status code" instead. Jamie's
+    // build-28 community-post failure traces back to here.
     try {
-      const ctx = (error as any)?.context;
-      const text = ctx?.body ? await ctx.body : null;
-      const parsed = text ? JSON.parse(text) : null;
-      if (parsed) return parsed as T;
+      const ctx: any = (error as any)?.context;
+      // Response shape (current supabase-js v2)
+      if (ctx && typeof ctx.text === 'function') {
+        const text = await ctx.text();
+        if (text) return JSON.parse(text) as T;
+      }
+      // Fallback for older shapes that embed { status, body } directly.
+      if (ctx?.body && typeof ctx.body === 'string') {
+        return JSON.parse(ctx.body) as T;
+      }
+      if (ctx?.body && typeof ctx.body.text === 'function') {
+        const text = await ctx.body.text();
+        if (text) return JSON.parse(text) as T;
+      }
     } catch { /* ignore */ }
     throw error;
   }

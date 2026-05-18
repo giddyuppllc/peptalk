@@ -1100,17 +1100,48 @@ export default function PepTalkScreen() {
             </View>
             <View>
               <Text style={[styles.headerTitle, { color: t.text }]}>Aimee</Text>
-              <View style={styles.headerSubRow}>
-                <View
-                  style={[
-                    styles.statusDot,
-                    { backgroundColor: useAI ? '#10b981' : t.textSecondary },
-                  ]}
-                />
-                <Text style={[styles.headerSub, { color: t.textSecondary }]}>
-                  {useAI ? 'Online' : 'Offline'}
-                </Text>
-              </View>
+              {/* 2026-05-17 P1: previously the header was binary
+                  Online/Offline based on (isAIAvailable && canSendToCloud).
+                  Users who hadn't accepted AI consent in their health
+                  profile saw "Offline" even though Supabase + Aimee
+                  were perfectly reachable — Jamie's TestFlight feedback.
+                  Now three states + a tappable hint for the consent
+                  case so users know exactly what to do. */}
+              {(() => {
+                const aiReachable = isAIAvailable();
+                const consented = canSendToCloud();
+                if (aiReachable && consented) {
+                  return (
+                    <View style={styles.headerSubRow}>
+                      <View style={[styles.statusDot, { backgroundColor: '#10b981' }]} />
+                      <Text style={[styles.headerSub, { color: t.textSecondary }]}>Online</Text>
+                    </View>
+                  );
+                }
+                if (aiReachable && !consented) {
+                  return (
+                    <TouchableOpacity
+                      onPress={() => router.push('/health-profile' as never)}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      accessibilityRole="button"
+                      accessibilityLabel="Enable AI in health profile"
+                    >
+                      <View style={styles.headerSubRow}>
+                        <View style={[styles.statusDot, { backgroundColor: '#f59e0b' }]} />
+                        <Text style={[styles.headerSub, { color: '#b45309' }]}>
+                          Tap to enable AI
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }
+                return (
+                  <View style={styles.headerSubRow}>
+                    <View style={[styles.statusDot, { backgroundColor: t.textSecondary }]} />
+                    <Text style={[styles.headerSub, { color: t.textSecondary }]}>Offline</Text>
+                  </View>
+                );
+              })()}
             </View>
           </View>
 

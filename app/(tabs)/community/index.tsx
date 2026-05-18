@@ -398,7 +398,11 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 18,
-    bottom: 22,
+    // Was 22 — sat directly on top of the tab bar so the user saw
+    // it overlapping the chip row. The (tabs) layout reserves ~49pt
+    // for the tab bar + the home-indicator inset; 96 puts the FAB
+    // cleanly above it on all iPhone sizes.
+    bottom: 96,
     width: 56,
     height: 56,
     borderRadius: 28,

@@ -15,6 +15,8 @@ import {
   Pressable,
   StyleSheet,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -106,7 +108,21 @@ export default function BodyCompositionEntryScreen() {
       title="Add scan"
       observation="Fill what you have. Anything left blank stays out of the trend."
     >
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+      {/* 2026-05-17 P1 fix: lower input fields (ECW/TBW, BMR, visceral
+          fat) were hidden behind the numeric keyboard so the user
+          couldn't see what they were typing. KeyboardAvoidingView with
+          a generous offset pushes the scroll view above the keyboard
+          on iOS; Android handles automatically via windowSoftInputMode. */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      >
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 300 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         <GlassCard style={styles.cardSpacing}>
           <Text
             style={[
@@ -243,6 +259,7 @@ export default function BodyCompositionEntryScreen() {
           </Text>
         </Pressable>
       </ScrollView>
+      </KeyboardAvoidingView>
     </V3DetailShell>
   );
 }
