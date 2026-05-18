@@ -80,8 +80,15 @@ export const useReactionsStore = create<ReactionsState & ReactionsActions>()(
         return nextCount;
       },
 
+      // 2026-05-17 P0 fix: previously returned `{ ...emptyCounts }` on
+      // cache miss — a fresh object literal every call. The consumer
+      // (MilestoneCard) pulled this via a Zustand selector, so Object.is
+      // saw "changed" each render and looped. Return the SINGLETON
+      // emptyCounts when there's no entry; consumers must treat the
+      // result as read-only (TS already enforces via the readonly-ish
+      // shape, but worth flagging).
       counts: (milestoneId) =>
-        get().byMilestone[milestoneId] ?? { ...emptyCounts },
+        get().byMilestone[milestoneId] ?? emptyCounts,
 
       hasReacted: (milestoneId, kind) =>
         (get().reactedKinds[milestoneId] ?? []).includes(kind),

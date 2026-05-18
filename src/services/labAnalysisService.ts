@@ -94,16 +94,25 @@ export async function interpretLatestLabs(): Promise<LabInterpretationResult> {
     });
     if (error) {
       // Surface upgrade hint if the function returned 403.
-      const ctx = (error as any)?.context;
+      // 2026-05-17 fix: same supabase-js v2 Response.body stream bug
+      // we fixed in useCommunityStore + referralService.
+      const ctx: any = (error as any)?.context;
       let parsed: any = null;
       try {
-        const text = ctx?.body ? await ctx.body : null;
-        parsed = text ? JSON.parse(text) : null;
+        if (ctx && typeof ctx.text === 'function') {
+          const text = await ctx.text();
+          if (text) parsed = JSON.parse(text);
+        } else if (ctx?.body && typeof ctx.body === 'string') {
+          parsed = JSON.parse(ctx.body);
+        } else if (ctx?.body && typeof ctx.body.text === 'function') {
+          const text = await ctx.body.text();
+          if (text) parsed = JSON.parse(text);
+        }
       } catch { /* ignore */ }
       if (parsed?.upgrade) {
         return { error: parsed.error ?? 'Lab interpretation requires PepTalk Pro.', upgrade: true };
       }
-      return { error: error.message ?? 'Lab interpretation failed.' };
+      return { error: parsed?.error ?? error.message ?? 'Lab interpretation failed.' };
     }
     const payload = data as { markdown?: string; error?: string; upgrade?: boolean };
     if (payload?.error) {

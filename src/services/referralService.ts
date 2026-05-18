@@ -43,11 +43,29 @@ export async function redeemReferralCode(rawCode: string): Promise<ReferralRedee
     });
     if (error) {
       // Try to read the structured error the function returned.
-      const ctx = (error as any)?.context;
+      // 2026-05-17 fix: supabase-js v2 FunctionsHttpError.context is a
+      // Response; its `body` is a ReadableStream that needs .text() to
+      // resolve. The old `await ctx.body` returned the stream itself
+      // and silently failed parsing — same bug we fixed in the
+      // community store's authedFetch.
+      const ctx: any = (error as any)?.context;
       try {
-        const text = ctx?.body ? await ctx.body : null;
-        const parsed = text ? JSON.parse(text) : null;
-        if (parsed?.error) return { ok: false, error: parsed.error };
+        if (ctx && typeof ctx.text === 'function') {
+          const text = await ctx.text();
+          if (text) {
+            const parsed = JSON.parse(text);
+            if (parsed?.error) return { ok: false, error: parsed.error };
+          }
+        } else if (ctx?.body && typeof ctx.body === 'string') {
+          const parsed = JSON.parse(ctx.body);
+          if (parsed?.error) return { ok: false, error: parsed.error };
+        } else if (ctx?.body && typeof ctx.body.text === 'function') {
+          const text = await ctx.body.text();
+          if (text) {
+            const parsed = JSON.parse(text);
+            if (parsed?.error) return { ok: false, error: parsed.error };
+          }
+        }
       } catch { /* ignore */ }
       return { ok: false, error: error.message ?? 'Could not redeem code.' };
     }

@@ -27,7 +27,17 @@ export default function BodyCompositionScreen() {
   const t = useV3Theme();
   const router = useRouter();
   const scans = useBodyCompositionStore((s) => s.scans);
-  const delta90d = useBodyCompositionStore((s) => s.deltaWindow(90));
+  // 2026-05-17 P0 fix: pulling `deltaWindow(90)` through the selector
+  // returned a fresh `{ weightLbDelta, bodyFatDelta, leanMassDelta }`
+  // literal on every render — Zustand Object.is saw it as changed and
+  // looped. Pull the accessor function (stable ref) and call it in
+  // useMemo keyed on the raw scans array.
+  const deltaWindow = useBodyCompositionStore((s) => s.deltaWindow);
+  const delta90d = useMemo(
+    () => deltaWindow(90),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [deltaWindow, scans],
+  );
   const sorted = useMemo(
     () =>
       [...scans].sort(
