@@ -45,11 +45,20 @@ function coerceProfileRow(
 } {
   const row = (raw && typeof raw === 'object') ? (raw as Record<string, unknown>) : {};
   const asString = (v: unknown): string => (typeof v === 'string' ? v : '');
-  const name = asString(row.name);
+  // 2026-05-18 defensive guard: older signup paths (since fixed) wrote
+  // the email into the first_name field, so Jamie + Edward saw
+  // "Good morning, edward@giddyupp.com" as their greeting. Treat any
+  // @-shaped string as missing so the email-prefix fallback kicks in.
+  const looksLikeEmail = (s: string) => s.includes('@') && s.includes('.');
+  const sanitize = (s: string) => (looksLikeEmail(s) ? '' : s);
+  const name = sanitize(asString(row.name));
   const parts = name.split(' ').filter(Boolean);
   const first =
-    asString(row.first_name) || parts[0] || fallbackEmail.split('@')[0] || '';
-  const last = asString(row.last_name) || parts.slice(1).join(' ');
+    sanitize(asString(row.first_name)) ||
+    parts[0] ||
+    fallbackEmail.split('@')[0] ||
+    '';
+  const last = sanitize(asString(row.last_name)) || parts.slice(1).join(' ');
   const tier = ['free', 'plus', 'pro'].includes(asString(row.subscription_tier))
     ? (asString(row.subscription_tier) as 'free' | 'plus' | 'pro')
     : 'free';
