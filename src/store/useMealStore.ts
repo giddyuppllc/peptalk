@@ -500,7 +500,12 @@ export const useMealStore = create<MealState & MealActions>()(
       // -----------------------------------------------------------------------
 
       addCustomMeal: (meal) =>
-        set({ customMeals: [meal, ...get().customMeals] }),
+        set({
+          customMeals: capNewestFirst(
+            [meal, ...get().customMeals],
+            STORE_LIMITS.CUSTOM_MEALS,
+          ),
+        }),
 
       updateCustomMeal: (mealId, updates) =>
         set({
@@ -517,7 +522,12 @@ export const useMealStore = create<MealState & MealActions>()(
       // -----------------------------------------------------------------------
 
       addMealTemplate: (template) =>
-        set({ mealTemplates: [template, ...get().mealTemplates] }),
+        set({
+          mealTemplates: capNewestFirst(
+            [template, ...get().mealTemplates],
+            STORE_LIMITS.MEAL_TEMPLATES,
+          ),
+        }),
 
       updateMealTemplate: (id, updates) =>
         set({

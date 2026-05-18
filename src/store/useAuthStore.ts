@@ -404,6 +404,28 @@ export const useAuthStore = create<AuthStore>()(
         // we don't want User B inheriting User A's reminder schedule.
         safeClear('notification', () => require('./useNotificationStore').useNotificationStore.setState({ pushToken: null }));
 
+        // Wave 76.27 — second-pass cross-user leak audit. These stores
+        // hold per-user PII / health data and persist via SecureStore
+        // but were missing from the original sweep.
+        safeClear('aimeeReports', () => require('./useAimeeReportsStore').useAimeeReportsStore.getState().clearAll?.());
+        safeClear('progressPhotos', () => require('./useProgressPhotosStore').useProgressPhotosStore.getState().clearAll?.());
+        safeClear('nutritionRequest', () => require('./useNutritionRequestStore').useNutritionRequestStore.getState().clearAll?.());
+        safeClear('appetiteLog', () => require('./useAppetiteLogStore').useAppetiteLogStore.getState().clearAll?.());
+        safeClear('workoutTemplate', () => require('./useWorkoutTemplateStore').useWorkoutTemplateStore.getState().clearAll?.());
+        safeClear('reactions', () => require('./useReactionsStore').useReactionsStore.getState().clearAll?.());
+        // Tears down the Supabase Realtime channel — without this, a
+        // live event the previous user subscribed to keeps delivering
+        // messages to this device after the next user signs in.
+        safeClear('liveEvent', () => require('./useLiveEventStore').useLiveEventStore.getState().reset?.());
+        // Raw AsyncStorage keys outside any Zustand store — user A's
+        // "don't ask me to review again" opt-out and last-prompt
+        // timestamp inherited to user B before this clear.
+        safeClear('reviewPrompt', () => {
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          AsyncStorage.removeItem('peptalk_last_review_prompt_ms');
+          AsyncStorage.removeItem('peptalk_review_prompt_disabled');
+        });
+
         // Reset Sentry user binding so subsequent crashes aren't
         // attributed to the previous user.
         safeClear('telemetry', () => {

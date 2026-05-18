@@ -64,8 +64,14 @@ function UpgradeNudgeCardImpl() {
   // Only show to free users
   if (tier !== 'free') return null;
 
-  // Rotate by day-of-year so everyone sees a different nudge each day
-  const dayIdx = Math.floor(Date.now() / 86400000) % NUDGES.length;
+  // Rotate by LOCAL day so everyone in the same local date sees the
+  // same nudge and rotation happens at local midnight. Previously
+  // used `Math.floor(Date.now() / 86400000) % NUDGES.length` which
+  // rotates at UTC midnight — JST/AEST users saw the next nudge
+  // 16-18 hours before Americas users. P2 from Wave 76.27 audit.
+  const d = new Date();
+  const localKey = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  const dayIdx = localKey % NUDGES.length;
   const nudge = NUDGES[dayIdx];
 
   // Pro: deep medical-blue gradient. Plus: muted orchid → ice melt

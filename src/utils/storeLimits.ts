@@ -25,6 +25,10 @@ export const STORE_LIMITS = {
   DOSES: 1500,
   /** Journal: most users write much less than meals. 800 ≈ many years. */
   JOURNAL_ENTRIES: 800,
+  /** Custom meals (user-saved recipes): ~5KB each. 200 ≈ 1MB persisted. */
+  CUSTOM_MEALS: 200,
+  /** Meal templates (My Meals saved batches): ~5KB each. 200 ≈ 1MB. */
+  MEAL_TEMPLATES: 200,
 } as const;
 
 /**
