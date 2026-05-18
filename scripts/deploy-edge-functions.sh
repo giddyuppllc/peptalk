@@ -33,8 +33,15 @@ FUNCTIONS=(
   aimee-lab-interpret
   aimee-pantry-meal
   aimee-pantry-parse
+  aimee-pantry-scan
   aimee-plan
   aimee-recipe
+  aimee-report-rewrite
+  aimee-voice
+
+  # Vision (scan endpoints)
+  food-scan
+  lab-scan
 
   # Referrals
   redeem-referral-code
@@ -46,6 +53,20 @@ FUNCTIONS=(
   community-block
   community-live-report-message
 
+  # Community CRUD
+  community-create-post
+  community-edit-post
+  community-delete-post
+  community-create-comment
+  community-edit-comment
+  community-delete-comment
+  community-react
+  community-follow
+  community-search
+  community-set-username
+  community-suggest-topic
+  community-upload-image
+
   # Community live chat
   community-live-start
   community-live-end
@@ -54,8 +75,13 @@ FUNCTIONS=(
   community-live-delete-message
   community-live-broadcast
 
-  # Push notifications
+  # Workout video (transcription + storage)
+  get-workout-video
+  transcribe-workout-video
+
+  # Push + CRM fanout (called by pg_net triggers w/ x-internal-key)
   community-push-fanout
+  crm-event-fanout
 )
 
 echo "Deploying ${#FUNCTIONS[@]} edge functions..."
