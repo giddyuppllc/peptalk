@@ -19,7 +19,7 @@
  * Phase A. Subsequent phases (B/D/E) wire real store reads.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -40,10 +40,93 @@ import {
   AimeeFAB,
 } from '../../src/components/v3';
 import { useV3Theme } from '../../src/theme/V3ThemeProvider';
+import { useActivePeptideCycle } from '../../src/hooks/useActivePeptideCycle';
+import { useDoseLogStore } from '../../src/store/useDoseLogStore';
+import { useCheckinStore } from '../../src/store/useCheckinStore';
+import { useMealStore } from '../../src/store/useMealStore';
+import { useWorkoutStore } from '../../src/store/useWorkoutStore';
+import { getPeptideById } from '../../src/data/peptides';
+
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 export default function HomeScreen() {
   const router = useRouter();
   const t = useV3Theme();
+  const activeCycle = useActivePeptideCycle();
+  const protocols = useDoseLogStore((s) => s.protocols);
+  const checkins = useCheckinStore((s) => s.entries);
+  const mealTotals = useMealStore((s) => s.getDailyTotals(todayKey()));
+  const macroTargets = useMealStore((s) => s.targets);
+  const workouts = useWorkoutStore((s) => s.logs);
+
+  // Most recent check-in for the Weekly Tracker chips (mood / sleep / energy).
+  const latestCheckin = useMemo(() => {
+    if (!checkins?.length) return null;
+    return [...checkins].sort(
+      (a, b) =>
+        new Date(b.date).getTime() - new Date(a.date).getTime(),
+    )[0];
+  }, [checkins]);
+
+  // Workouts logged in the last 7 days.
+  const recentWorkoutCount = useMemo(() => {
+    if (!workouts?.length) return 0;
+    const weekAgo = Date.now() - 7 * 86400_000;
+    return workouts.filter(
+      (w) => new Date(w.date ?? w.startedAt ?? 0).getTime() > weekAgo,
+    ).length;
+  }, [workouts]);
+
+  const moodLabel = latestCheckin?.mood
+    ? `Mood · ${
+        ['low', 'below', 'solid', 'good', 'great'][latestCheckin.mood - 1] ??
+        'logged'
+      }`
+    : 'Mood · log today';
+  const sleepHours = latestCheckin?.sleepStages?.total;
+  const sleepLabel =
+    sleepHours != null && sleepHours > 0
+      ? `Sleep · ${Math.floor(sleepHours)}h ${Math.round((sleepHours % 1) * 60)}m`
+      : 'Sleep · log today';
+  const energyLabel = latestCheckin?.energy
+    ? `Energy · ${latestCheckin.energy}/5`
+    : 'Energy · log today';
+
+  // Resolve the most recent active protocol's headline + draw figures for
+  // the Doses card preview. Falls back to friendly "no protocol yet" copy
+  // when the user hasn't started anything — was hardcoded "Retatrutide ·
+  // Wk 6 / 12" before, which made every new user wonder whose protocol
+  // they were looking at.
+  const dosePreview = useMemo(() => {
+    if (!activeCycle) {
+      return {
+        title: 'No active protocol',
+        detail: 'Tap to start one in the calculator',
+        fillMl: 0,
+      };
+    }
+    const protocol = protocols
+      .filter((p) => p.isActive && p.peptideId === activeCycle.peptideId)
+      .sort(
+        (a, b) =>
+          new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
+      )[0];
+    const peptide = getPeptideById(activeCycle.peptideId);
+    const totalWeeksLabel = activeCycle.totalWeeks
+      ? `Wk ${activeCycle.weekNumber} / ${activeCycle.totalWeeks}`
+      : `Wk ${activeCycle.weekNumber}`;
+    const title = `${peptide?.name ?? activeCycle.peptideName} · ${totalWeeksLabel}`;
+    const detail = protocol
+      ? `${protocol.dose} ${protocol.unit} · ${protocol.frequency.replace(/_/g, ' ')}`
+      : 'Open Doses for the draw math';
+    // Show a small fill so the syringe still reads as a syringe. The
+    // exact mL math lives in the Doses hub where vial concentration is
+    // known.
+    return { title, detail, fillMl: 0.2 };
+  }, [activeCycle, protocols]);
 
   return (
     <View style={styles.root}>
@@ -69,9 +152,9 @@ export default function HomeScreen() {
                   <WeekStrip />
                   <View style={{ height: 12 }} />
                   <ChipRow>
-                    <Chip label="Mood · solid" dotColor="#9B86A4" />
-                    <Chip label="Sleep · 7h 30m" dotColor="#7ABED0" />
-                    <Chip label="Energy · 8/10" dotColor="#E89672" />
+                    <Chip label={moodLabel} dotColor="#9B86A4" />
+                    <Chip label={sleepLabel} dotColor="#7ABED0" />
+                    <Chip label={energyLabel} dotColor="#E89672" />
                   </ChipRow>
                 </View>
               }
@@ -84,11 +167,28 @@ export default function HomeScreen() {
               onPress={() => router.push('/nutrition' as never)}
               preview={
                 <View style={styles.nutritionRow}>
-                  <MacroRing current={75} target={100} unit="g" label="PROTEIN" />
+                  <MacroRing
+                    current={Math.round(mealTotals.proteinGrams ?? 0)}
+                    target={macroTargets.proteinGrams ?? 100}
+                    unit="g"
+                    label="PROTEIN"
+                  />
                   <View style={styles.nutritionBars}>
-                    <MacroBar kind="carbs" current={120} target={220} />
-                    <MacroBar kind="fat" current={42} target={70} />
-                    <MacroBar kind="fiber" current={14} target={28} />
+                    <MacroBar
+                      kind="carbs"
+                      current={Math.round(mealTotals.carbsGrams ?? 0)}
+                      target={macroTargets.carbsGrams ?? 220}
+                    />
+                    <MacroBar
+                      kind="fat"
+                      current={Math.round(mealTotals.fatGrams ?? 0)}
+                      target={macroTargets.fatGrams ?? 70}
+                    />
+                    <MacroBar
+                      kind="fiber"
+                      current={Math.round(mealTotals.fiberGrams ?? 0)}
+                      target={macroTargets.fiberGrams ?? 28}
+                    />
                   </View>
                 </View>
               }
@@ -101,11 +201,33 @@ export default function HomeScreen() {
               onPress={() => router.push('/activity' as never)}
               preview={
                 <View style={styles.activityRow}>
-                  <ActivityRings move={72} exercise={56} stand={40} />
+                  <ActivityRings
+                    move={Math.min(100, Math.round(((latestCheckin?.activeCalories ?? 0) / 500) * 100))}
+                    exercise={Math.min(100, Math.round(((recentWorkoutCount ?? 0) / 5) * 100))}
+                    stand={Math.min(100, Math.round(((latestCheckin?.steps ?? 0) / 10000) * 100))}
+                  />
                   <View style={styles.activityStats}>
-                    <StatRow label="Steps" value="6,420" />
-                    <StatRow label="Active" value="380 cal" />
-                    <StatRow label="Workouts" value="3" hideSeparator />
+                    <StatRow
+                      label="Steps"
+                      value={
+                        latestCheckin?.steps != null
+                          ? latestCheckin.steps.toLocaleString()
+                          : '—'
+                      }
+                    />
+                    <StatRow
+                      label="Active"
+                      value={
+                        latestCheckin?.activeCalories != null
+                          ? `${Math.round(latestCheckin.activeCalories)} cal`
+                          : '—'
+                      }
+                    />
+                    <StatRow
+                      label="Workouts"
+                      value={String(recentWorkoutCount)}
+                      hideSeparator
+                    />
                   </View>
                 </View>
               }
@@ -118,7 +240,7 @@ export default function HomeScreen() {
               onPress={() => router.push('/doses' as never)}
               preview={
                 <View>
-                  <SyringeSVG fillMl={0.2} showMarker width={260} />
+                  <SyringeSVG fillMl={dosePreview.fillMl} showMarker width={260} />
                   <View style={styles.dosesRow}>
                     <Text
                       style={[
@@ -130,8 +252,9 @@ export default function HomeScreen() {
                             : t.typography.headlineFemale,
                         },
                       ]}
+                      numberOfLines={1}
                     >
-                      Retatrutide · Wk 6 / 12
+                      {dosePreview.title}
                     </Text>
                     <Text
                       style={[
@@ -141,8 +264,9 @@ export default function HomeScreen() {
                           fontFamily: t.typography.body,
                         },
                       ]}
+                      numberOfLines={1}
                     >
-                      2 mg per shot · 0.20 mL draw
+                      {dosePreview.detail}
                     </Text>
                   </View>
                 </View>
