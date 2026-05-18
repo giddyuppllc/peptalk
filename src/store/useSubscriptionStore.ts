@@ -110,6 +110,9 @@ const STALE_SYNC_MS = 24 * 60 * 60 * 1000;
 /** Seconds to wait between sync retries. Exponential-ish: 1.5s, 4s. */
 const SYNC_RETRY_DELAYS_MS = [1500, 4000];
 
+/** Single-flight guard for syncFromServer — see comment at the call site. */
+let syncInFlight = false;
+
 interface SubscriptionActions {
   hasFeature: (feature: string) => boolean;
   activate: (tier: SubscriptionTier, productId: string, expiresAt: string) => void;
@@ -363,6 +366,16 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
       },
 
       syncFromServer: async () => {
+        // 2026-05-18 in-flight dedup: boot + reconnect-handler +
+        // foreground-sync + post-auth-flip can all kick syncFromServer
+        // in the same 1-2 seconds. The earlier sync's response can
+        // arrive AFTER validatePurchase() updated tier locally,
+        // overwriting the just-confirmed Pro tier back to whatever
+        // the DB held when sync started. Single-flight via a module
+        // ref outside the store state so it survives re-runs.
+        if (syncInFlight) return;
+        syncInFlight = true;
+        try {
         // Retry transient failures so a flaky network during boot doesn't
         // leave users locked to the last-persisted tier for the session.
         const attempts = SYNC_RETRY_DELAYS_MS.length + 1;
@@ -517,6 +530,9 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
             { lastErr: lastErr instanceof Error ? lastErr.message : String(lastErr) },
           );
         } catch {}
+        } finally {
+          syncInFlight = false;
+        }
       },
     }),
     {

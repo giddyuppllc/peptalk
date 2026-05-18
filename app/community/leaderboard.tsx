@@ -46,7 +46,18 @@ export default function LeaderboardScreen() {
   const workoutStreak = useWorkoutStore((s) => s.getStreak());
   const doseStreak = useDoseStreak();
   const adherence = useDoseAdherence(14);
-  const bodyCompDelta = useBodyCompositionStore((s) => s.deltaWindow(90));
+  // 2026-05-18 P0 fix: deltaWindow(90) returns a fresh
+  // { weightLbDelta, bodyFatDelta, leanMassDelta } literal on every
+  // call, so calling it inside the selector breaks Object.is and
+  // loops the component infinitely (same bug class as DosesHub +
+  // HomeScreen). Pull the accessor + scans ref, compute in useMemo.
+  const scans = useBodyCompositionStore((s) => s.scans);
+  const deltaWindow = useBodyCompositionStore((s) => s.deltaWindow);
+  const bodyCompDelta = useMemo(
+    () => deltaWindow(90),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [deltaWindow, scans],
+  );
 
   const myStat = useMemo(() => {
     if (category === 'streak') {
