@@ -445,6 +445,9 @@ const PLUS_FEATURES: string[] = [
   // correctly regardless of which name a screen uses.
   'meal_scan',
   'ai_food_scanner',
+  // Lab-report photo parser — server-side lab-scan / lab-interpret edge
+  // functions both accept plus + pro. Client gate updated Wave 76.35.
+  'lab_scan',
   // Perks
   'ad_free',
   // Community live group chat — paying members can post & ask questions

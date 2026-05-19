@@ -90,6 +90,12 @@ export default function FoodScannerScreen() {
   const router = useRouter();
   const accent = useSectionAccent();
   const tier = useSubscriptionStore((s) => s.tier);
+  // Wave 76.35: use hasFeature instead of a hardcoded `tier !== 'pro'`.
+  // (1) Server-side food-scan allows plus + pro, client was stricter.
+  // (2) hasFeature() has the TestFlight preview-build bypass — without
+  // it, every TestFlight tester got the upgrade wall and never reached
+  // the camera, which is why testers reported "no camera features work".
+  const canUseFoodScanner = useSubscriptionStore((s) => s.hasFeature('ai_food_scanner'));
   const addMeal = useMealStore((s) => s.addMeal);
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
@@ -109,10 +115,10 @@ export default function FoodScannerScreen() {
   // Gate: Pro only — fire feature_gated analytics so paywall funnel data is
   // complete (matches what <PaywallGate> does for other Pro screens).
   React.useEffect(() => {
-    if (tier !== 'pro') trackFeatureGated('ai_food_scanner', tier);
-  }, [tier]);
+    if (!canUseFoodScanner) trackFeatureGated('ai_food_scanner', tier);
+  }, [canUseFoodScanner, tier]);
 
-  if (tier !== 'pro') {
+  if (!canUseFoodScanner) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>

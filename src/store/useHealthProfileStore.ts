@@ -74,7 +74,7 @@ const emptyProfile: HealthProfile = {
   peptideExperience: 'none',
   currentPeptides: [],
   pastPeptides: [],
-  aiDataConsent: false,
+  aiDataConsent: true,
   profileCompleteness: 0,
   lastUpdated: new Date().toISOString(),
   setupComplete: false,
@@ -517,6 +517,19 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
         profile: state.profile,
         currentStep: state.currentStep,
       }),
+      // Wave 76.35: existing testers all have aiDataConsent: false
+      // from the old opt-IN default. Onboarding never surfaced the
+      // toggle, so 100% were getting the local pattern-matching bot
+      // instead of Grok ("Aimee is dumb" — never worked). Bump the
+      // version + flip the persisted value once. Users who explicitly
+      // hit the opt-out toggle after this migration still get respect.
+      version: 2,
+      migrate: (persisted: any, fromVersion) => {
+        if (fromVersion < 2 && persisted?.profile) {
+          persisted.profile.aiDataConsent = true;
+        }
+        return persisted;
+      },
     }
   )
 );

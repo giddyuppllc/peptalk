@@ -61,6 +61,10 @@ export default function LabsScreen() {
   const [expandedCategory, setExpandedCategory] = useState<LabCategory | null>('lipid');
   const [scanning, setScanning] = useState(false);
   const tier = useSubscriptionStore((s) => s.tier);
+  // Wave 76.35: hasFeature() so plus + pro both unlock (matches server)
+  // and TestFlight preview builds bypass paywall. Testers reported lab
+  // scanning never worked — they got the PRO upsell wall.
+  const canUseLabScan = useSubscriptionStore((s) => s.hasFeature('lab_scan'));
 
   // Deep AI interpretation state — request, cached markdown, error.
   const [interpreting, setInterpreting] = useState(false);
@@ -106,10 +110,10 @@ export default function LabsScreen() {
    * prompt for non-Pro tiers.
    */
   const handleScanLabReport = async () => {
-    if (tier !== 'pro') {
+    if (!canUseLabScan) {
       Alert.alert(
-        'Pro feature',
-        'Photo / PDF lab parsing is a PepTalk Pro feature. You can still type values in below — that\'s available to everyone.',
+        'Plus / Pro feature',
+        'Photo / PDF lab parsing is available with PepTalk+ or Pro. You can still type values in below — that\'s available to everyone.',
         [
           { text: 'OK', style: 'cancel' },
           { text: 'See plans', onPress: () => router.push('/subscription' as any) },
@@ -292,9 +296,9 @@ export default function LabsScreen() {
           <Text style={styles.scanBtnText}>
             {scanning ? 'Parsing your lab report…' : 'Scan lab report photo'}
           </Text>
-          {tier !== 'pro' && !scanning && (
+          {!canUseLabScan && !scanning && (
             <View style={styles.proBadge}>
-              <Text style={styles.proBadgeText}>PRO</Text>
+              <Text style={styles.proBadgeText}>PLUS</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -379,9 +383,9 @@ export default function LabsScreen() {
             <Text style={styles.interpretBtnText}>
               {interpreting ? 'Aimee is reading your labs…' : 'Get AI interpretation'}
             </Text>
-            {tier !== 'pro' && !interpreting && (
+            {!canUseLabScan && !interpreting && (
               <View style={styles.proBadge}>
-                <Text style={styles.proBadgeText}>PRO</Text>
+                <Text style={styles.proBadgeText}>PLUS</Text>
               </View>
             )}
           </TouchableOpacity>

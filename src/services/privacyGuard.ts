@@ -52,10 +52,18 @@ const ANALYTICS_BLOCKLIST = new Set([
 
 /**
  * Check if the user has consented to sending health data to the cloud AI.
+ *
+ * Wave 76.35: flipped to opt-OUT semantics. The previous opt-IN gate
+ * (`=== true`) blocked 100% of users because the onboarding flow never
+ * surfaces the toggle (it lives only in the health-profile settings
+ * page). Testers reported "Aimee is dumb" — they were getting the
+ * local pattern-matching fallback bot, never Grok. Now anyone whose
+ * stored consent isn't explicitly `false` is treated as consented;
+ * the toggle in app/health-profile.tsx still works for opt-out.
  */
 export function canSendToCloud(): boolean {
   const { profile } = useHealthProfileStore.getState();
-  return profile.aiDataConsent === true;
+  return profile.aiDataConsent !== false;
 }
 
 // ---------------------------------------------------------------------------
