@@ -86,18 +86,27 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return jsonResp({ error: 'Method not allowed' }, 405);
 
   try {
-    // Admin-only.
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) return jsonResp({ error: 'Missing auth' }, 401);
-    const token = authHeader.replace('Bearer ', '');
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
-    if (authErr || !user) return jsonResp({ error: 'Invalid auth' }, 401);
-    const userEmail = (user.email ?? '').toLowerCase();
-    const adminEmails = (Deno.env.get('ADMIN_EMAILS') ?? '')
-      .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-    if (!adminEmails.includes(userEmail)) {
-      return jsonResp({ error: 'Admin only.' }, 403);
+    // Auth — internal-key fast path for orchestrator scripts, falls back
+    // to admin user JWT for interactive calls. See migrate-video-to-stream
+    // for the same pattern.
+    const INTERNAL_MIGRATION_KEY = Deno.env.get('INTERNAL_MIGRATION_KEY') ?? '';
+    const providedInternalKey = req.headers.get('x-internal-key') ?? '';
+    const isInternal =
+      !!INTERNAL_MIGRATION_KEY && providedInternalKey === INTERNAL_MIGRATION_KEY;
+
+    if (!isInternal) {
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) return jsonResp({ error: 'Missing auth' }, 401);
+      const token = authHeader.replace('Bearer ', '');
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+      const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+      if (authErr || !user) return jsonResp({ error: 'Invalid auth' }, 401);
+      const userEmail = (user.email ?? '').toLowerCase();
+      const adminEmails = (Deno.env.get('ADMIN_EMAILS') ?? '')
+        .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+      if (!adminEmails.includes(userEmail)) {
+        return jsonResp({ error: 'Admin only.' }, 403);
+      }
     }
     if (!WHISPER_KEY) return jsonResp({ error: 'OPENAI_WHISPER_API_KEY not set' }, 500);
 

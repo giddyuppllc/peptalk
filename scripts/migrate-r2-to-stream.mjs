@@ -52,6 +52,7 @@ const PROGRESS_PATH = MANIFEST_PATH.replace(/manifest\.json$/, 'manifest.migrate
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_TOKEN = process.env.SUPABASE_TOKEN;
 const SUPABASE_ANON = process.env.SUPABASE_ANON_KEY;
+const INTERNAL_KEY = process.env.INTERNAL_MIGRATION_KEY;
 const CONCURRENCY = Number(process.env.CONCURRENCY ?? '3');
 const SLEEP_BETWEEN_MS = Number(process.env.SLEEP_BETWEEN_MS ?? '250');
 
@@ -59,8 +60,11 @@ if (!SUPABASE_URL) {
   console.error('Missing SUPABASE_URL env. Set it to your project URL.');
   process.exit(1);
 }
-if (!SUPABASE_TOKEN) {
-  console.error('Missing SUPABASE_TOKEN env. Get it from the auth session of an admin user.');
+if (!INTERNAL_KEY && !SUPABASE_TOKEN) {
+  console.error(
+    'Need either INTERNAL_MIGRATION_KEY (preferred — same value as the Supabase secret) ' +
+    'or SUPABASE_TOKEN (access_token from an admin user session).',
+  );
   process.exit(1);
 }
 
@@ -80,9 +84,18 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function migrateOne(slug, name, objectKey) {
   const url = `${SUPABASE_URL}/functions/v1/migrate-video-to-stream`;
   const headers = {
-    Authorization: `Bearer ${SUPABASE_TOKEN}`,
     'Content-Type': 'application/json',
   };
+  // Internal-key path skips user JWT auth entirely. Need an Authorization
+  // header anyway because verify-jwt is enabled on the function (the JWT
+  // here just lets the gateway accept the request; the edge fn itself
+  // gates on x-internal-key).
+  if (INTERNAL_KEY) {
+    headers['x-internal-key'] = INTERNAL_KEY;
+    if (SUPABASE_ANON) headers.Authorization = `Bearer ${SUPABASE_ANON}`;
+  } else {
+    headers.Authorization = `Bearer ${SUPABASE_TOKEN}`;
+  }
   if (SUPABASE_ANON) headers.apikey = SUPABASE_ANON;
   const res = await fetch(url, {
     method: 'POST',

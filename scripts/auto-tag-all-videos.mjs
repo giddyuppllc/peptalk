@@ -54,6 +54,7 @@ const EXERCISES_PATH = resolve(__dirname, '..', 'src', 'data', 'jamieExercises.j
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_TOKEN = process.env.SUPABASE_TOKEN;
 const SUPABASE_ANON = process.env.SUPABASE_ANON_KEY;
+const INTERNAL_KEY = process.env.INTERNAL_MIGRATION_KEY;
 const AUTO_APPLY_THRESHOLD = Number(process.env.AUTO_APPLY_THRESHOLD ?? '0.8');
 const CONCURRENCY = Number(process.env.CONCURRENCY ?? '3');
 const SLEEP_BETWEEN_MS = Number(process.env.SLEEP_BETWEEN_MS ?? '250');
@@ -62,9 +63,9 @@ if (!SUPABASE_URL) {
   console.error('Missing SUPABASE_URL env. Set it to your project URL.');
   process.exit(1);
 }
-if (!SUPABASE_TOKEN) {
+if (!INTERNAL_KEY && !SUPABASE_TOKEN) {
   console.error(
-    'Missing SUPABASE_TOKEN env. Get it from the Supabase auth session of an admin email.',
+    'Need either INTERNAL_MIGRATION_KEY (preferred) or SUPABASE_TOKEN (admin user JWT).',
   );
   process.exit(1);
 }
@@ -95,9 +96,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function tagOne(slug, objectKey) {
   const url = `${SUPABASE_URL}/functions/v1/tag-workout-video`;
   const headers = {
-    Authorization: `Bearer ${SUPABASE_TOKEN}`,
     'Content-Type': 'application/json',
   };
+  if (INTERNAL_KEY) {
+    headers['x-internal-key'] = INTERNAL_KEY;
+    if (SUPABASE_ANON) headers.Authorization = `Bearer ${SUPABASE_ANON}`;
+  } else {
+    headers.Authorization = `Bearer ${SUPABASE_TOKEN}`;
+  }
   if (SUPABASE_ANON) headers.apikey = SUPABASE_ANON;
   const res = await fetch(url, {
     method: 'POST',
