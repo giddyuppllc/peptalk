@@ -34,6 +34,8 @@ interface ManifestEntry {
   posterKey?: string;
   durationSec?: number;
   captionKey?: string;
+  /** Cloudflare Stream UID after migration. */
+  streamUid?: string;
 }
 
 // Slug → objectKey allowlist built once at cold start. Same defense-in-
@@ -103,6 +105,20 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // Stream-first migration path. If the manifest entry has been
+    // copied to Cloudflare Stream, return the HLS signed URL — the
+    // client gets adaptive bitrate + faster startup. Otherwise fall
+    // back to the legacy R2 GET URL.
+    if (entry.streamUid) {
+      const { signStreamToken, streamHlsUrl } = await import('../_shared/streamSign.ts');
+      const token = await signStreamToken(entry.streamUid, SIGN_TTL_SEC);
+      return json({
+        url: streamHlsUrl(entry.streamUid, token),
+        source: 'cloudflare-stream',
+        durationSec: entry.durationSec,
+        expiresInSec: SIGN_TTL_SEC,
+      });
+    }
     const bucket = Deno.env.get('R2_BUCKET') ?? 'peptalktraining';
     const url = await getSignedUrl(
       s3(),
@@ -138,6 +154,7 @@ Deno.serve(async (req: Request) => {
       url,
       posterUrl,
       captionUrl,
+      source: 'r2',
       durationSec: entry.durationSec,
       expiresInSec: SIGN_TTL_SEC,
     });

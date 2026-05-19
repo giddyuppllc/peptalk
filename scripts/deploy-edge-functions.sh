@@ -75,10 +75,11 @@ FUNCTIONS=(
   community-live-delete-message
   community-live-broadcast
 
-  # Workout video (transcription + storage + auto-tag)
+  # Workout video (transcription + storage + auto-tag + Stream migration)
   get-workout-video
   transcribe-workout-video
   tag-workout-video
+  migrate-video-to-stream
 
   # Learn / educational videos (auth-only, no tier gate)
   get-learn-video
