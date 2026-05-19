@@ -16,7 +16,8 @@
     "verify:mealmath": "tsx scripts/verify-meal-math.ts",
     "verify:dosecalc": "tsx scripts/verify-dose-calculator.ts",
     "verify:inbody": "tsx scripts/verify-inbody-parser.ts",
-    "verify:all": "npm run verify:calc && npm run verify:sanitize && npm run verify:cycle && npm run verify:adherence && npm run verify:labparsers && npm run verify:mealmath && npm run verify:dosecalc && npm run verify:inbody",
+    "verify:stream-jwt": "tsx scripts/verify-stream-jwt.ts",
+    "verify:all": "npm run verify:calc && npm run verify:sanitize && npm run verify:cycle && npm run verify:adherence && npm run verify:labparsers && npm run verify:mealmath && npm run verify:dosecalc && npm run verify:inbody && npm run verify:stream-jwt",
     "lint": "expo lint"
   },
   "expo": {

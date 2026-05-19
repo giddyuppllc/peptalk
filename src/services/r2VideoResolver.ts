@@ -21,8 +21,15 @@ interface CachedUrl {
   url: string;
   /** Optional WebVTT captions URL — present when the video has been
    *  transcribed via transcribe-workout-video and the manifest entry
-   *  has captionKey set. */
+   *  has captionKey set. R2 path only; Stream videos use their own
+   *  captions API which we haven't wired through yet. */
   captionUrl?: string;
+  /** Stream's current display name (when the video is on Stream).
+   *  Authoritative over the bundled title — Jamie can rename in the
+   *  Cloudflare dashboard and it shows up here on next play. */
+  title?: string;
+  /** Stream-generated poster image URL. Present only for Stream videos. */
+  posterUrl?: string;
   /** Epoch ms when this signed URL stops being valid. */
   expiresAt: number;
 }
@@ -33,7 +40,16 @@ const cache = new Map<string, CachedUrl>();
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
 export type VideoResolveResult =
-  | { ok: true; url: string; captionUrl?: string }
+  | {
+      ok: true;
+      url: string;
+      captionUrl?: string;
+      /** Stream's display name if the video is on Stream — render this
+       *  over WorkoutVideo.title when present. */
+      title?: string;
+      /** Stream-generated poster URL for the loading state. */
+      posterUrl?: string;
+    }
   | { ok: false; reason: 'not_pro' | 'not_signed_in' | 'not_found' | 'network' };
 
 export async function resolveVideoUrl(slug: string): Promise<VideoResolveResult> {
@@ -45,7 +61,13 @@ export async function resolveVideoUrl(slug: string): Promise<VideoResolveResult>
   // 2. Cache hit?
   const cached = cache.get(slug);
   if (cached && cached.expiresAt - Date.now() > REFRESH_BUFFER_MS) {
-    return { ok: true, url: cached.url, captionUrl: cached.captionUrl };
+    return {
+      ok: true,
+      url: cached.url,
+      captionUrl: cached.captionUrl,
+      title: cached.title,
+      posterUrl: cached.posterUrl,
+    };
   }
 
   // 3. Auth — must be signed in to call the function.
@@ -74,8 +96,16 @@ export async function resolveVideoUrl(slug: string): Promise<VideoResolveResult>
     }
     const ttlMs = (data.expiresInSec ?? 6 * 60 * 60) * 1000;
     const captionUrl = typeof data.captionUrl === 'string' ? data.captionUrl : undefined;
-    cache.set(slug, { url: data.url, captionUrl, expiresAt: Date.now() + ttlMs });
-    return { ok: true, url: data.url, captionUrl };
+    const title = typeof data.title === 'string' && data.title.trim() ? data.title : undefined;
+    const posterUrl = typeof data.posterUrl === 'string' ? data.posterUrl : undefined;
+    cache.set(slug, {
+      url: data.url,
+      captionUrl,
+      title,
+      posterUrl,
+      expiresAt: Date.now() + ttlMs,
+    });
+    return { ok: true, url: data.url, captionUrl, title, posterUrl };
   } catch {
     return { ok: false, reason: 'network' };
   }

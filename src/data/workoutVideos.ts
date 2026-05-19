@@ -31,9 +31,19 @@ export type WorkoutVideoCategory =
 export interface WorkoutVideo {
   /** Stable slug — derived from the R2 object key, used in URLs. */
   slug: string;
-  /** R2 object key (path inside the bucket, including extension). */
+  /** R2 object key (path inside the bucket, including extension). The
+   *  R2 copy is kept as a cold backup even after Stream migration —
+   *  edge function only signs an R2 URL when streamUid is absent. */
   objectKey: string;
-  /** Human-readable title shown in the library. */
+  /** Cloudflare Stream video UID. When present, the edge function
+   *  returns a Stream HLS playback URL + signed JWT instead of an
+   *  R2 signed URL. Set by scripts/migrate-r2-to-stream.mjs. */
+  streamUid?: string;
+  /** Human-readable title shown in the library. Once a video is on
+   *  Stream, the edge function returns Stream's `meta.name` as the
+   *  authoritative title — Jamie can rename in the Stream dashboard
+   *  and changes flow into the app without a redeploy. This bundled
+   *  value is the fallback. */
   title: string;
   /** Optional short blurb under the title in the player. */
   description?: string;
