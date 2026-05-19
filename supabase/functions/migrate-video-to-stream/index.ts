@@ -88,27 +88,18 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const slug = String(body?.slug ?? '').trim();
     const name = String(body?.name ?? slug).trim();
+    // 2026-05-18 fix: cross-function manifest import resolves to a path
+    // outside the sandbox in Supabase edge runtime ("Module not found").
+    // Have the orchestrator pass the objectKey along with the slug
+    // so we don't need to read the manifest server-side at all.
+    const objectKey = String(body?.objectKey ?? '').trim();
     if (!slug || !/^[a-z0-9-]{1,80}$/.test(slug)) {
       return jsonResp({ error: 'Invalid slug' }, 400);
     }
-
-    // Look up the manifest entry to get the R2 objectKey.
-    const { default: manifest } = await import('../get-workout-video/manifest.json' as any, {
-      with: { type: 'json' },
-    });
-    const entry = (manifest as Array<{ slug: string; objectKey: string; streamUid?: string }>)
-      .find((v) => v.slug === slug);
-    if (!entry) return jsonResp({ error: 'Slug not in manifest' }, 404);
-    if (entry.streamUid) {
-      // Already migrated — return idempotently.
-      return jsonResp({
-        ok: true,
-        slug,
-        streamUid: entry.streamUid,
-        readyToStream: true,
-        status: 'already-migrated',
-      });
+    if (!objectKey || objectKey.length > 500) {
+      return jsonResp({ error: 'objectKey required' }, 400);
     }
+    const entry = { slug, objectKey };
 
     // 1. 7-day R2 presigned URL so Stream's async copier has time to pull.
     const bucket = Deno.env.get('R2_BUCKET') ?? 'peptalktraining';

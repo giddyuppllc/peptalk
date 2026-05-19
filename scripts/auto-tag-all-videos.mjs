@@ -92,7 +92,7 @@ try {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function tagOne(slug) {
+async function tagOne(slug, objectKey) {
   const url = `${SUPABASE_URL}/functions/v1/tag-workout-video`;
   const headers = {
     Authorization: `Bearer ${SUPABASE_TOKEN}`,
@@ -102,7 +102,7 @@ async function tagOne(slug) {
   const res = await fetch(url, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ slug, exerciseList }),
+    body: JSON.stringify({ slug, objectKey, exerciseList }),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
@@ -113,7 +113,7 @@ async function tagOne(slug) {
 
 const queue = manifest
   .filter((e) => !e.exerciseId && !progress[e.slug])
-  .map((e) => e.slug);
+  .map((e) => ({ slug: e.slug, objectKey: e.objectKey }));
 console.log(`Tagging ${queue.length} unmapped videos with concurrency=${CONCURRENCY}.`);
 
 let done = 0;
@@ -122,10 +122,11 @@ const startedAt = Date.now();
 
 async function worker() {
   while (queue.length > 0) {
-    const slug = queue.shift();
-    if (!slug) break;
+    const job = queue.shift();
+    if (!job) break;
+    const slug = job.slug;
     try {
-      const prediction = await tagOne(slug);
+      const prediction = await tagOne(slug, job.objectKey);
       progress[slug] = prediction;
       writeFileSync(PROGRESS_PATH, JSON.stringify(progress, null, 2));
       done++;

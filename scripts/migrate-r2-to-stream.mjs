@@ -77,7 +77,7 @@ try {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function migrateOne(slug, name) {
+async function migrateOne(slug, name, objectKey) {
   const url = `${SUPABASE_URL}/functions/v1/migrate-video-to-stream`;
   const headers = {
     Authorization: `Bearer ${SUPABASE_TOKEN}`,
@@ -87,7 +87,7 @@ async function migrateOne(slug, name) {
   const res = await fetch(url, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ slug, name }),
+    body: JSON.stringify({ slug, name, objectKey }),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
@@ -98,7 +98,7 @@ async function migrateOne(slug, name) {
 
 const queue = manifest
   .filter((e) => !e.streamUid && !progress[e.slug]?.streamUid)
-  .map((e) => ({ slug: e.slug, name: e.title || e.slug }));
+  .map((e) => ({ slug: e.slug, name: e.title || e.slug, objectKey: e.objectKey }));
 
 console.log(`Migrating ${queue.length} videos R2 → Cloudflare Stream (concurrency=${CONCURRENCY}).`);
 
@@ -111,7 +111,7 @@ async function worker() {
     const job = queue.shift();
     if (!job) break;
     try {
-      const result = await migrateOne(job.slug, job.name);
+      const result = await migrateOne(job.slug, job.name, job.objectKey);
       progress[job.slug] = result;
       writeFileSync(PROGRESS_PATH, JSON.stringify(progress, null, 2));
       done++;

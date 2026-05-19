@@ -107,15 +107,15 @@ Deno.serve(async (req) => {
       return jsonResp({ error: 'Invalid slug' }, 400);
     }
     const exerciseListJson = body?.exerciseList; // optional override (passed by orchestrator)
-
-    // Look up the manifest entry.
-    const { default: manifest } = await import('../get-workout-video/manifest.json' as any, {
-      with: { type: 'json' },
-    });
-    const entry = (manifest as Array<{ slug: string; objectKey: string }>).find(
-      (v) => v.slug === slug,
-    );
-    if (!entry) return jsonResp({ error: 'Slug not in manifest' }, 404);
+    // 2026-05-18 fix: same cross-function sandbox issue as
+    // migrate-video-to-stream — have the orchestrator pass objectKey
+    // alongside the slug instead of importing the sibling manifest
+    // (which resolves to a path outside this function's container).
+    const objectKey = String(body?.objectKey ?? '').trim();
+    if (!objectKey || objectKey.length > 500) {
+      return jsonResp({ error: 'objectKey required' }, 400);
+    }
+    const entry = { slug, objectKey };
 
     // 1. Sign + fetch the video bytes.
     const bucket = Deno.env.get('R2_BUCKET') ?? 'peptalktraining';
