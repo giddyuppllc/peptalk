@@ -26,9 +26,15 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// 2026-05-20 fix: don't fall back to OPENAI_API_KEY — on this project
+// that env var holds the Grok/xAI key (OPENAI_BASE_URL points to
+// api.x.ai). A Grok key calling api.openai.com/v1/audio/transcriptions
+// returns 401, which is why voice messages never worked. Fall back to
+// OPENAI_WHISPER_API_KEY instead — that's the real OpenAI key already
+// in secrets for the Whisper + food-scan vision paths.
 const WHISPER_API_KEY =
   Deno.env.get('OPENAI_TRANSCRIBE_API_KEY') ??
-  Deno.env.get('OPENAI_API_KEY') ??
+  Deno.env.get('OPENAI_WHISPER_API_KEY') ??
   '';
 const WHISPER_URL = 'https://api.openai.com/v1/audio/transcriptions';
 const WHISPER_MODEL = 'whisper-1';
