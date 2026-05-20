@@ -39,10 +39,10 @@ import { supabase } from './supabase';
  */
 // Auto-regenerated 2026-05-20 by
 // scripts/regen-video-service-maps.mjs (merge mode).
-// 141 exercises × 287 takes —
-// 251 from reviewed src/data/workoutVideos.json + 36 new
+// 141 exercises × 292 takes —
+// 251 from reviewed src/data/workoutVideos.json + 41 new
 // from the vision tagger for slugs with no prior manual tag.
-// 6 slugs still untagged (in UNTAGGED_VIDEO_SLUGS below).
+// 1 slugs still untagged (in UNTAGGED_VIDEO_SLUGS below).
 const EXERCISE_VIDEO_SLUG_MAP: Record<string, string> = {
   'alternating-bench-lower-leg-lifts-with-glute-raise-297': 'img-3872',
   'alternating-knee-to-elbow-towel-slides': 'img-6232-2',
@@ -195,7 +195,7 @@ const EXERCISE_VIDEO_SLUGS: Record<string, readonly string[]> = {
   'alternating-knee-to-elbow-towel-slides': ['img-6232-2'],
   'ball-glute-bridge-385': ['img-4654'],
   'ball-straight-leg-bridge': ['img-4652'],
-  'band-shuffle': ['img-6231-1', 'img-6231-2'],
+  'band-shuffle': ['img-6231-1', 'img-6231-2', 'img-4647', 'img-6181-4'],
   'banded-donkey-kicks': ['img-6232', 'img-6232-1', 'img-5783', 'img-5776-6', 'img-9654'],
   'banded-fire-hydrants': ['img-4315'],
   'banded-glute-kicks': ['img-5778-2'],
@@ -285,7 +285,7 @@ const EXERCISE_VIDEO_SLUGS: Record<string, readonly string[]> = {
   'plank-with-kettlebell-unilateral-slide': ['img-6813'],
   'prone-hamstring-machine': ['img-4784', 'img-4785', 'img-4810', 'img-4812'],
   'renegade-row': ['img-6810', 'img-6185'],
-  'sb-alt-dead-bug-312': ['img-5779-1', 'img-5786', 'img-6816-4'],
+  'sb-alt-dead-bug-312': ['img-5779-1', 'img-5786', 'img-6813-1', 'img-6816-4'],
   'sb-crunch-320': ['img-5779-4'],
   'sb-plank': ['img-4656', 'img-4655', 'img-5781'],
   'seated-cable-lat-pull-down': ['img-4632', 'img-4633', 'img-4777', 'img-4634'],
@@ -324,7 +324,7 @@ const EXERCISE_VIDEO_SLUGS: Record<string, readonly string[]> = {
   'superman': ['img-6233-2', 'img-6233-5', 'img-6233'],
   'supported-hip-dead-bug': ['img-5786-1'],
   'table-top-alternating-towel-arm-slides': ['img-5783-1'],
-  'table-top-knee-taps-305': ['img-5781-2'],
+  'table-top-knee-taps-305': ['img-5781-2', 'img-5778-1', 'img-5782'],
   'table-top-knee-taps-with-block-adduction': ['img-5784', 'img-5785-1'],
   'toe-touches-299': ['img-5776-5', 'img-5781-1'],
   'towel-pike': ['img-5783-2'],
@@ -334,11 +334,10 @@ const EXERCISE_VIDEO_SLUGS: Record<string, readonly string[]> = {
   'weighted-crunches-298': ['img-5781-3'],
 };
 
-// 6 videos still untagged — surfaced only via the in-app
+// 1 videos still untagged — surfaced only via the in-app
 // admin tagger so nothing in Stream sits orphaned.
 const UNTAGGED_VIDEO_SLUGS: readonly string[] = [
-  'img-4647', 'img-4667', 'img-5778-1', 'img-5782', 'img-6181-4',
-  'img-6813-1',
+  'img-4667',
 ];
 
 interface SignedUrlCacheEntry {

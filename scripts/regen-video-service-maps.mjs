@@ -73,6 +73,15 @@ for (const e of manifest) {
     source = 'vision';
     confidence = e._autoTag?.confidence ?? 0;
     fromVision++;
+  } else if (!exerciseId && e._autoTag?.exerciseId && (e._autoTag?.confidence ?? 0) >= 0.6) {
+    // Wave 76.41 widen: also accept sub-threshold vision predictions
+    // (0.6–0.8) for slugs neither reviewed nor auto-applied. These
+    // wouldn't pass the auto-apply bar but are better than no mapping
+    // at all when nothing else exists.
+    exerciseId = e._autoTag.exerciseId;
+    source = 'vision-lowconf';
+    confidence = e._autoTag.confidence ?? 0;
+    fromVision++;
   } else if (exerciseId) {
     fromReviewed++;
   }
