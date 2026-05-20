@@ -56,8 +56,9 @@ const SUPABASE_TOKEN = process.env.SUPABASE_TOKEN;
 const SUPABASE_ANON = process.env.SUPABASE_ANON_KEY;
 const INTERNAL_KEY = process.env.INTERNAL_MIGRATION_KEY;
 const AUTO_APPLY_THRESHOLD = Number(process.env.AUTO_APPLY_THRESHOLD ?? '0.8');
-const CONCURRENCY = Number(process.env.CONCURRENCY ?? '3');
-const SLEEP_BETWEEN_MS = Number(process.env.SLEEP_BETWEEN_MS ?? '250');
+const CONCURRENCY = Number(process.env.CONCURRENCY ?? '2');
+const SLEEP_BETWEEN_MS = Number(process.env.SLEEP_BETWEEN_MS ?? '600');
+const MAX_RETRIES = Number(process.env.MAX_RETRIES ?? '6');
 
 if (!SUPABASE_URL) {
   console.error('Missing SUPABASE_URL env. Set it to your project URL.');
@@ -93,7 +94,7 @@ try {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function tagOne(slug, objectKey) {
+async function tagOne(slug, objectKey, streamUid) {
   const url = `${SUPABASE_URL}/functions/v1/tag-workout-video`;
   const headers = {
     'Content-Type': 'application/json',
@@ -105,21 +106,55 @@ async function tagOne(slug, objectKey) {
     headers.Authorization = `Bearer ${SUPABASE_TOKEN}`;
   }
   if (SUPABASE_ANON) headers.apikey = SUPABASE_ANON;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ slug, objectKey, exerciseList }),
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`HTTP ${res.status}: ${text.slice(0, 300)}`);
+
+  // OpenAI 429s come back inside the edge fn's 200 body (as a "skip"
+  // with reason `classifier 429: ...`), not as an HTTP 429. Detect both
+  // and retry with exponential backoff so a brief TPM exhaust doesn't
+  // turn into 100 dropped tags.
+  let lastReason = '';
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ slug, objectKey, streamUid, exerciseList }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      const isRateLimit = res.status === 429 || /rate.?limit/i.test(text);
+      if (isRateLimit && attempt < MAX_RETRIES - 1) {
+        const waitMs = Math.min(60_000, 2000 * Math.pow(2, attempt));
+        await sleep(waitMs);
+        continue;
+      }
+      throw new Error(`HTTP ${res.status}: ${text.slice(0, 300)}`);
+    }
+    const data = await res.json();
+    const rateLimited = /classifier 429|rate.?limit/i.test(String(data?.reason ?? ''));
+    if (rateLimited && attempt < MAX_RETRIES - 1) {
+      lastReason = data.reason;
+      const waitMs = Math.min(60_000, 2000 * Math.pow(2, attempt));
+      await sleep(waitMs);
+      continue;
+    }
+    return data;
   }
-  return res.json();
+  throw new Error(`rate-limit retries exhausted: ${lastReason.slice(0, 200)}`);
+}
+
+// Drop progress entries that hit rate limits or other transient
+// errors — those should retry on the next run rather than count as
+// final predictions.
+for (const slug of Object.keys(progress)) {
+  const p = progress[slug];
+  const isTransient =
+    p?.error ||
+    /classifier 429|rate.?limit|HTTP 5\d\d|HTTP 4(29|02)/i.test(String(p?.reason ?? ''));
+  if (isTransient) delete progress[slug];
 }
 
 const queue = manifest
   .filter((e) => !e.exerciseId && !progress[e.slug])
-  .map((e) => ({ slug: e.slug, objectKey: e.objectKey }));
+  .map((e) => ({ slug: e.slug, objectKey: e.objectKey, streamUid: e.streamUid }));
 console.log(`Tagging ${queue.length} unmapped videos with concurrency=${CONCURRENCY}.`);
 
 let done = 0;
@@ -132,7 +167,7 @@ async function worker() {
     if (!job) break;
     const slug = job.slug;
     try {
-      const prediction = await tagOne(slug, job.objectKey);
+      const prediction = await tagOne(slug, job.objectKey, job.streamUid);
       progress[slug] = prediction;
       writeFileSync(PROGRESS_PATH, JSON.stringify(progress, null, 2));
       done++;

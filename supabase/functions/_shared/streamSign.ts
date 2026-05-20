@@ -154,3 +154,20 @@ export function streamHlsUrl(
   }
   return `https://videodelivery.net/${videoUid}/manifest/video.m3u8`;
 }
+
+/**
+ * Stream thumbnail URL — JPEG frame at a given time offset. Signed
+ * videos require the same RS256 JWT we mint for HLS; the token slots
+ * into the path the same way.
+ *
+ * @param timeSec — seconds into the video to sample (default 3s skips
+ *                  any intro slate / black frames)
+ */
+export function streamThumbnailUrl(
+  videoUid: string,
+  signedToken?: string,
+  timeSec = 3,
+): string {
+  const path = signedToken ?? videoUid;
+  return `https://videodelivery.net/${path}/thumbnails/thumbnail.jpg?time=${timeSec}s`;
+}
