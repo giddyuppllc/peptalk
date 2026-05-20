@@ -18,9 +18,19 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
-const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
-const VISION_MODEL = Deno.env.get('OPENAI_MODEL') ?? 'grok-4-1-fast-reasoning';
+// 2026-05-20 vision routing fix: Grok-4.x does not accept image inputs
+// (food-scan caught this 2026-05-17, this fn was missed). Route to
+// OpenAI gpt-4o-mini same as food-scan — same API shape, accurate
+// recognition, way cheaper than Grok vision would be even if it
+// existed. Reuses the OpenAI key already set for Whisper.
+const VISION_API_KEY =
+  Deno.env.get('OPENAI_VISION_API_KEY') ??
+  Deno.env.get('OPENAI_WHISPER_API_KEY') ??
+  '';
+const VISION_BASE_URL =
+  Deno.env.get('OPENAI_VISION_BASE_URL') ?? 'https://api.openai.com/v1';
+const VISION_MODEL =
+  Deno.env.get('OPENAI_VISION_MODEL') ?? 'gpt-4o-mini';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -214,10 +224,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    const visionRes = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
+    if (!VISION_API_KEY) {
+      return new Response(JSON.stringify({ error: 'Vision service not configured' }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const visionRes = await fetch(`${VISION_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${VISION_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
