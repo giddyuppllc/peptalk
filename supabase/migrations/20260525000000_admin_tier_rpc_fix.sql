@@ -17,6 +17,11 @@
 --     of which already pass the session_user check. If we ever need an
 --     in-app admin tier flipper, we'll add a small admins table and
 --     check membership there.
+--
+-- PostgreSQL won't let CREATE OR REPLACE change the OUT-parameter
+-- signature (SQLSTATE 42P13). DROP the prior definition first.
+DROP FUNCTION IF EXISTS public.admin_set_user_tier(TEXT, TEXT);
+
 CREATE OR REPLACE FUNCTION public.admin_set_user_tier(
   p_email TEXT,
   p_tier TEXT
