@@ -25,6 +25,7 @@ import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { V3ThemeProvider } from '../src/theme/V3ThemeProvider';
 import { OfflineBanner } from '../src/components/OfflineBanner';
+import { HomeFab } from '../src/components/HomeFab';
 import { CelebrationModal } from '../src/components/CelebrationModal';
 import { WorkoutRewardModal } from '../src/components/WorkoutRewardModal';
 import { PepTalkCharacter } from '../src/components/PepTalkCharacter';
@@ -1416,6 +1417,10 @@ function RootLayout() {
             it here too caused the FAB to render twice on tab screens. The
             (tabs) mount is the canonical one; non-tab routes don't get the
             FAB by design. */}
+        {/* Home button — mounted globally so it appears on EVERY screen
+            (including non-tab drill-ins), hidden by HomeFab's own
+            pathname allowlist on home / auth / focus surfaces. Wave 76.45. */}
+        <HomeFab />
       </View>
     </SafeAreaProvider>
     </V3ThemeProvider>
