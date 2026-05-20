@@ -160,10 +160,23 @@ export default function PantryScanScreen() {
           safe(setScanning)(false);
           return;
         }
-        Alert.alert(
-          'Scan failed',
-          (error as any)?.message ?? 'Try a clearer, well-lit photo.',
-        );
+        // Wave 76.47: the supabase-js invoke() error.message is a
+        // generic "non-2xx status" by default — the real server error
+        // is in the response body, which we have to await off the
+        // FunctionsHttpError context. Surface whatever we can find so
+        // testers can see "rate limit" / "missing key" / etc. instead
+        // of a useless "try a clearer photo".
+        let detail = (error as any)?.message ?? '';
+        try {
+          const ctx = (error as any)?.context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json().catch(() => null);
+            if (body?.error) detail = body.error;
+          }
+        } catch {
+          /* swallow — we still have the generic message */
+        }
+        Alert.alert('Scan failed', detail || 'Try a clearer, well-lit photo.');
         safe(setScanning)(false);
         return;
       }
@@ -171,13 +184,26 @@ export default function PantryScanScreen() {
         ? data.items
         : [];
       if (!mountedRef.current) return;
+      // Empty result is a real outcome — vision didn't find anything.
+      // Tell the user exactly that instead of leaving them on a blank
+      // checklist wondering if the call worked.
+      if (detected.length === 0) {
+        Alert.alert(
+          'Nothing detected',
+          data?.message ||
+            'The scanner didn\'t recognize any food items in this photo. Try a closer shot with better light, or use the Add Manually flow.',
+        );
+        setScanning(false);
+        return;
+      }
       setItems(detected);
       setSelected(detected.map((d) => (d.confidence ?? 1) >= 0.5));
       setScanning(false);
     } catch (err) {
       if (!mountedRef.current) return;
-      console.warn('[pantry-scan] failed:', err);
-      Alert.alert('Scan failed', 'Try again with a clearer photo.');
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn('[pantry-scan] failed:', msg);
+      Alert.alert('Scan failed', msg || 'Try again with a clearer photo.');
       setScanning(false);
     }
   };
