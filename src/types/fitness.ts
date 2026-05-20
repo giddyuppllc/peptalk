@@ -459,7 +459,6 @@ const PRO_FEATURES: string[] = [
   ...PLUS_FEATURES,
   // AI — unlimited
   'aimee_ai_unlimited',
-  'aimee_health_scheduler',
   'aimee_workout_plans',
   'aimee_meal_plans',
   // AI — premium features
@@ -472,13 +471,16 @@ const PRO_FEATURES: string[] = [
   // Reports
   'health_reports',
   'pdf_export',
-  'data_export',
   'research_feed_premium',
   // Perks
   'nutrition_planning',
   'grocery_from_plans',
   'early_access',
   'meal_plan',
+  // Wave 76.44: cut aimee_health_scheduler + data_export — both were
+  // listed but never implemented. Removed from copy + UI gates so the
+  // App Store reviewer doesn't bounce us for "advertised feature not
+  // available." Add back when actually shipped.
 ];
 
 /** What each tier can access */

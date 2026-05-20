@@ -208,15 +208,60 @@ export default function TrainScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ──── secondary hint row ──── */}
+        {/* ──── secondary hint rows — surface Aimee-powered features that
+                 backend supports but had no entry point pre-76.44. ──── */}
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => go('/nutrition/recipe-generator')}
           style={[styles.hintRow, { borderColor: t.cardBorder }]}
+          accessibilityRole="button"
+          accessibilityLabel="Ask Aimee for a recipe idea"
         >
           <Ionicons name="sparkles" size={16} color={accent.deep} />
           <Text style={[styles.hintText, { color: t.text }]}>
-            Ask Aimee for a meal idea
+            Ask Aimee for a recipe
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={t.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => go('/nutrition/meal-plan')}
+          style={[styles.hintRow, { borderColor: t.cardBorder }]}
+          accessibilityRole="button"
+          accessibilityLabel="Generate a multi-day meal plan with Aimee"
+        >
+          <Ionicons name="calendar" size={16} color={accent.deep} />
+          <Text style={[styles.hintText, { color: t.text }]}>
+            Generate a meal plan
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={t.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => go('/pantry/scan')}
+          style={[styles.hintRow, { borderColor: t.cardBorder }]}
+          accessibilityRole="button"
+          accessibilityLabel="Scan your fridge or pantry"
+        >
+          <Ionicons name="camera" size={16} color={accent.deep} />
+          <Text style={[styles.hintText, { color: t.text }]}>
+            Scan your fridge / pantry
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={t.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => go('/workouts/generate')}
+          style={[styles.hintRow, { borderColor: t.cardBorder }]}
+          accessibilityRole="button"
+          accessibilityLabel="Generate a custom workout"
+        >
+          <Ionicons name="flash" size={16} color={accent.deep} />
+          <Text style={[styles.hintText, { color: t.text }]}>
+            Generate a custom workout
           </Text>
           <Ionicons name="chevron-forward" size={16} color={t.textSecondary} />
         </TouchableOpacity>

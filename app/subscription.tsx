@@ -337,7 +337,6 @@ function tierForFeature(feature: string | undefined): SubscriptionTier | null {
     'generated_workout_tracker',
     'health_reports',
     'aimee_ai_unlimited',
-    'aimee_health_scheduler',
     'research_feed_premium',
   ];
   if (proOnly.includes(feature)) return 'pro';

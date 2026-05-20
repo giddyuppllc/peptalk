@@ -244,7 +244,20 @@ export default function PantryScanScreen() {
       });
     }
     tapMedium();
-    router.back();
+    // Wave 76.44: surface the pantry → meal-ideas flow. Before this,
+    // users added items and bounced back with no idea Aimee could
+    // turn the pantry into recipes.
+    Alert.alert(
+      'Added to pantry',
+      `${chosenWithIdx.length} item${chosenWithIdx.length === 1 ? '' : 's'} saved. Want Aimee to suggest meals from what you have?`,
+      [
+        { text: 'Maybe later', style: 'cancel', onPress: () => router.back() },
+        {
+          text: 'Get meal ideas',
+          onPress: () => router.replace('/nutrition/pantry-suggestions' as never),
+        },
+      ],
+    );
   };
 
   return (
