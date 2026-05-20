@@ -3,7 +3,7 @@
  * Pro tier only.
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -27,6 +28,8 @@ import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { useMealStore } from '../../src/store/useMealStore';
 import { supabase } from '../../src/services/supabase';
 import { trackFeatureGated } from '../../src/services/analyticsEvents';
+import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
+import { AskAimeeButton } from '../../src/components/AskAimeeButton';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 
@@ -39,6 +42,37 @@ interface FoodItem {
   fat: number;
   fiber: number;
 }
+
+// ─── Traffic-light scoring ────────────────────────────────────────────────
+// Plain-English signal pulled from the macro fields already on the scan
+// result — no new data. We only have calories / protein / carbs / fat /
+// fiber from the vision endpoint, so the heuristic is intentionally
+// conservative and defensible:
+//
+//   Green  → solid pick: protein dense (>=15g) OR (>=8g protein with >=3g fiber)
+//   Yellow → fine, in moderation: anything that isn't green and isn't red
+//   Red    → indulgence: low protein (<4g) AND high fat (>=15g)
+//                        OR very low protein (<2g) with high carbs (>=30g)
+//
+// "Reasonable default" maps to yellow so we never falsely label an item
+// green/red without a clear signal.
+type FoodSignal = 'green' | 'yellow' | 'red';
+
+function scoreFoodItem(item: FoodItem): FoodSignal {
+  const lowProtein = item.protein < 4;
+  const veryLowProtein = item.protein < 2;
+  const highFat = item.fat >= 15;
+  const highCarbs = item.carbs >= 30;
+  if ((lowProtein && highFat) || (veryLowProtein && highCarbs)) return 'red';
+  if (item.protein >= 15 || (item.protein >= 8 && item.fiber >= 3)) return 'green';
+  return 'yellow';
+}
+
+const SIGNAL_META: Record<FoodSignal, { color: string; label: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  green: { color: '#22c55e', label: 'Solid pick', icon: 'checkmark-circle' },
+  yellow: { color: '#F4B942', label: 'Fine, in moderation', icon: 'remove-circle' },
+  red: { color: '#ef4444', label: 'Save it for sometimes', icon: 'alert-circle' },
+};
 
 interface ScanResult {
   description: string;
@@ -56,6 +90,12 @@ export default function FoodScannerScreen() {
   const router = useRouter();
   const accent = useSectionAccent();
   const tier = useSubscriptionStore((s) => s.tier);
+  // Wave 76.35: use hasFeature instead of a hardcoded `tier !== 'pro'`.
+  // (1) Server-side food-scan allows plus + pro, client was stricter.
+  // (2) hasFeature() has the TestFlight preview-build bypass — without
+  // it, every TestFlight tester got the upgrade wall and never reached
+  // the camera, which is why testers reported "no camera features work".
+  const canUseFoodScanner = useSubscriptionStore((s) => s.hasFeature('ai_food_scanner'));
   const addMeal = useMealStore((s) => s.addMeal);
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
@@ -64,13 +104,21 @@ export default function FoodScannerScreen() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [selectedMealType, setSelectedMealType] = useState<string>('lunch');
 
+  // 30s vision round-trip can outlive the screen if the user navigates
+  // back mid-scan. Guard every post-await setState.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   // Gate: Pro only — fire feature_gated analytics so paywall funnel data is
   // complete (matches what <PaywallGate> does for other Pro screens).
   React.useEffect(() => {
-    if (tier !== 'pro') trackFeatureGated('ai_food_scanner', tier);
-  }, [tier]);
+    if (!canUseFoodScanner) trackFeatureGated('ai_food_scanner', tier);
+  }, [canUseFoodScanner, tier]);
 
-  if (tier !== 'pro') {
+  if (!canUseFoodScanner) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
@@ -111,9 +159,22 @@ export default function FoodScannerScreen() {
           <Text style={styles.lockedText}>
             Allow camera access to scan your meals and automatically calculate nutrition.
           </Text>
-          <AnimatedPress onPress={requestPermission}>
+          {/* 2026-05-17 a11y fix: route to Settings when OS won't prompt again. */}
+          <AnimatedPress
+            onPress={() => {
+              if (permission?.canAskAgain ?? true) {
+                requestPermission();
+              } else {
+                Linking.openSettings().catch(() => {});
+              }
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={(permission?.canAskAgain ?? true) ? 'Enable camera' : 'Open settings to enable camera'}
+          >
             <LinearGradient colors={[accent.deep, accent.deep]} style={styles.upgradeBtn}>
-              <Text style={styles.upgradeBtnText}>Enable Camera</Text>
+              <Text style={styles.upgradeBtnText}>
+                {(permission?.canAskAgain ?? true) ? 'Enable Camera' : 'Open Settings'}
+              </Text>
             </LinearGradient>
           </AnimatedPress>
         </View>
@@ -155,6 +216,7 @@ export default function FoodScannerScreen() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!mountedRef.current) return;
       if (!session?.access_token) {
         Alert.alert('Error', 'Please log in to use the food scanner.');
         setScanning(false);
@@ -170,6 +232,7 @@ export default function FoodScannerScreen() {
         },
         body: JSON.stringify({ imageBase64: base64 }),
       });
+      if (!mountedRef.current) return;
 
       if (!res.ok) {
         const data = await res.json();
@@ -179,11 +242,14 @@ export default function FoodScannerScreen() {
       }
 
       const data: ScanResult = await res.json();
+      if (!mountedRef.current) return;
       setResult(data);
     } catch (e) {
-      Alert.alert('Error', 'Network error. Please try again.');
+      if (mountedRef.current) {
+        Alert.alert('Error', 'Network error. Please try again.');
+      }
     } finally {
-      setScanning(false);
+      if (mountedRef.current) setScanning(false);
     }
   };
 
@@ -191,20 +257,24 @@ export default function FoodScannerScreen() {
     if (!result) return;
 
     const today = new Date().toISOString().slice(0, 10);
+    // Clamp every LLM-emitted item — vision model can hallucinate any
+    // value, and these foods land directly in the daily ring. Same
+    // per-row caps as sanitizeLogMeal so the scan surface can't bypass
+    // the chat sanitize pipeline.
     addMeal({
       id: `scan-${Date.now()}`,
       date: today,
       mealType: selectedMealType as any,
-      foods: result.items.map((item, i) => ({
+      foods: result.items.slice(0, 20).map((item, i) => ({
         foodId: `scan-${Date.now()}-${i}`,
-        foodName: item.name,
+        foodName: clampString(item.name, 200) || 'item',
         servings: 1,
-        calories: item.calories,
-        proteinGrams: item.protein,
-        carbsGrams: item.carbs,
-        fatGrams: item.fat,
+        calories: clamp(item.calories, 3000),
+        proteinGrams: clamp(item.protein, 300),
+        carbsGrams: clamp(item.carbs, 500),
+        fatGrams: clamp(item.fat, 300),
       })),
-      notes: `Scanned: ${result.description}`,
+      notes: `Scanned: ${clampString(result.description, 400)}`,
       timestamp: new Date().toISOString(),
     });
 
@@ -303,22 +373,49 @@ export default function FoodScannerScreen() {
               </GlassCard>
             </View>
 
-            {/* Individual items */}
+            {/* Individual items — leads with a traffic-light badge based
+                on the macro signal (see scoreFoodItem) so users get a
+                plain-English read on each item before the gram counts.
+                Macros drop to a smaller second line. */}
             <Text style={styles.sectionTitle}>Identified Foods</Text>
-            {result.items.map((item, i) => (
-              <GlassCard key={i} style={styles.itemCard}>
-                <View style={styles.itemHeader}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.itemGrams}>~{item.estimatedGrams}g</Text>
-                </View>
-                <View style={styles.itemMacros}>
-                  <Text style={styles.itemMacro}>{item.calories} cal</Text>
-                  <Text style={[styles.itemMacro, { color: accent.deep }]}>P {item.protein}g</Text>
-                  <Text style={[styles.itemMacro, { color: accent.pastel }]}>C {item.carbs}g</Text>
-                  <Text style={[styles.itemMacro, { color: '#ef4444' }]}>F {item.fat}g</Text>
-                </View>
-              </GlassCard>
-            ))}
+            {result.items.map((item, i) => {
+              const signal = scoreFoodItem(item);
+              const meta = SIGNAL_META[signal];
+              return (
+                <GlassCard key={i} style={styles.itemCard}>
+                  <View style={styles.itemHeader}>
+                    <View style={styles.itemHeaderLeft}>
+                      <View
+                        style={[styles.signalBadge, { backgroundColor: `${meta.color}1F`, borderColor: `${meta.color}55` }]}
+                        accessibilityLabel={`${meta.label} food`}
+                        accessibilityRole="text"
+                      >
+                        <Ionicons name={meta.icon} size={14} color={meta.color} />
+                        <Text style={[styles.signalText, { color: meta.color }]}>{meta.label}</Text>
+                      </View>
+                      <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
+                    </View>
+                    <Text style={styles.itemGrams}>~{item.estimatedGrams}g</Text>
+                  </View>
+                  <View style={styles.itemMacros}>
+                    <Text style={styles.itemMacro}>{item.calories} cal</Text>
+                    <Text style={[styles.itemMacro, { color: accent.deep }]}>P {item.protein}g</Text>
+                    <Text style={[styles.itemMacro, { color: accent.pastel }]}>C {item.carbs}g</Text>
+                    <Text style={[styles.itemMacro, { color: '#ef4444' }]}>F {item.fat}g</Text>
+                  </View>
+                </GlassCard>
+              );
+            })}
+
+            {/* Ask Aimee — escape hatch for "is this a good choice for my
+                goals?" Lives below the items list so the user has the
+                context of the scan results already in their head. */}
+            <View style={styles.aimeeRow}>
+              <AskAimeeButton
+                prefill="Is this a good choice for my goals?"
+                accessibilityLabel="Ask Aimee whether this meal fits your goals"
+              />
+            </View>
 
             {/* Meal type picker */}
             <Text style={styles.sectionTitle}>Log as</Text>
@@ -447,11 +544,32 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm, marginBottom: Spacing.sm,
   },
   itemCard: { marginBottom: Spacing.xs, paddingVertical: Spacing.sm },
-  itemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  itemName: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.darkText, flex: 1 },
-  itemGrams: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary },
+  itemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
+  itemHeaderLeft: { flex: 1, gap: 4 },
+  itemName: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.darkText },
+  itemGrams: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary, marginLeft: 8, marginTop: 4 },
   itemMacros: { flexDirection: 'row', gap: Spacing.md },
-  itemMacro: { fontSize: FontSizes.xs, fontWeight: '500', color: Colors.darkTextSecondary },
+  itemMacro: { fontSize: 11, fontWeight: '500', color: Colors.darkTextSecondary },
+  signalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  signalText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  aimeeRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginVertical: Spacing.md,
+  },
 
   // Meal type
   mealTypeRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },

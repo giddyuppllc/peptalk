@@ -1,6 +1,12 @@
 /**
  * ExerciseVideo — plays exercise demo videos from Cloudflare R2.
- * Falls back to a clean placeholder when no video is available.
+ *
+ * The R2 bucket is private (Pro-gated) so we fetch a signed URL from
+ * the get-workout-video Supabase edge function on play-press, then
+ * hand the URL to expo-av. Sync hasExerciseVideo() decides between
+ * rendering a player and the "video coming soon" placeholder up
+ * front; the async URL fetch only fires when the user actually wants
+ * to watch.
  */
 
 import React, { useState, useRef } from 'react';
@@ -16,7 +22,11 @@ import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from './GlassCard';
 import { Colors, FontSizes, BorderRadius } from '../constants/theme';
-import { getExerciseVideoUrl, getExerciseThumbnailUrl, hasExerciseVideo } from '../services/videoService';
+import {
+  fetchExerciseVideoUrl,
+  getExerciseThumbnailUrl,
+  hasExerciseVideo,
+} from '../services/videoService';
 
 interface ExerciseVideoProps {
   exerciseId: string;
@@ -24,22 +34,19 @@ interface ExerciseVideoProps {
 }
 
 export function ExerciseVideo({ exerciseId, compact = false }: ExerciseVideoProps) {
-  const videoUrl = getExerciseVideoUrl(exerciseId);
+  const hasVideo = hasExerciseVideo(exerciseId);
   const thumbnailUrl = getExerciseThumbnailUrl(exerciseId);
   const videoRef = useRef<Video>(null);
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle');
 
-  // No video available
-  if (!videoUrl) {
-    return (
-      <GlassCard style={compact ? styles.compactCard : styles.card}>
-        <View style={styles.placeholder}>
-          <Ionicons name="videocam-outline" size={28} color={Colors.pepTeal} />
-          <Text style={styles.placeholderText}>Video coming soon</Text>
-          <Text style={styles.subText}>Exercise demos are being added</Text>
-        </View>
-      </GlassCard>
-    );
+  // No video registered for this exercise — render nothing so the
+  // exercise detail page leads with the form instructions instead of
+  // a useless placeholder. Per Jamie's feedback ("Videos don't load
+  // still"). When videos land in the manifest the player surfaces
+  // automatically.
+  if (!hasVideo) {
+    return null;
   }
 
   const handlePlaybackUpdate = (playbackStatus: AVPlaybackStatus) => {
@@ -53,6 +60,19 @@ export function ExerciseVideo({ exerciseId, compact = false }: ExerciseVideoProp
   const handlePlay = async () => {
     setStatus('loading');
     try {
+      // First press: resolve the signed URL.
+      if (!resolvedUrl) {
+        const r = await fetchExerciseVideoUrl(exerciseId);
+        if (!r?.videoUrl) {
+          setStatus('error');
+          return;
+        }
+        setResolvedUrl(r.videoUrl);
+        // Don't auto-play here; expo-av re-mounts the source which
+        // can race with playAsync. The Video below picks up the new
+        // source and the user can hit native controls.
+        return;
+      }
       await videoRef.current?.playAsync();
     } catch {
       setStatus('error');
@@ -62,17 +82,20 @@ export function ExerciseVideo({ exerciseId, compact = false }: ExerciseVideoProp
   return (
     <GlassCard style={compact ? styles.compactCard : styles.card}>
       <View style={styles.videoContainer}>
-        <Video
-          ref={videoRef}
-          source={{ uri: videoUrl }}
-          style={styles.video}
-          resizeMode={ResizeMode.CONTAIN}
-          useNativeControls
-          isLooping
-          onPlaybackStatusUpdate={handlePlaybackUpdate}
-          posterSource={thumbnailUrl ? { uri: thumbnailUrl } : undefined}
-          usePoster={!!thumbnailUrl}
-        />
+        {resolvedUrl && (
+          <Video
+            ref={videoRef}
+            source={{ uri: resolvedUrl }}
+            style={styles.video}
+            resizeMode={ResizeMode.CONTAIN}
+            useNativeControls
+            shouldPlay
+            isLooping
+            onPlaybackStatusUpdate={handlePlaybackUpdate}
+            posterSource={thumbnailUrl ? { uri: thumbnailUrl } : undefined}
+            usePoster={!!thumbnailUrl}
+          />
+        )}
 
         {status === 'idle' && (
           <TouchableOpacity style={styles.playOverlay} activeOpacity={0.8} onPress={handlePlay}>

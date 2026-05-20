@@ -90,7 +90,8 @@ export function DaySummarySheet({ visible, dateKey, onClose }: DaySummarySheetPr
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
+      <View style={styles.overlay} accessibilityViewIsModal={true}>
         <View style={[styles.sheet, { backgroundColor: t.bg }]}>
           <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
             {/* Handle + header */}

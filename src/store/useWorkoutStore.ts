@@ -42,6 +42,12 @@ interface WorkoutState {
   inProgress: WorkoutLog | null;
   /** User-generated custom workouts (from the generator sheet) */
   savedGeneratedWorkouts: SavedGeneratedWorkout[];
+  /**
+   * Log IDs whose Supabase upsert failed (offline, transient network,
+   * RLS race). Flushed on boot + reconnect. 2026-05-17 P1 fix — same
+   * pattern as useDoseLogStore / useChatStore.
+   */
+  pendingSyncs: string[];
 }
 
 interface ExerciseHistory {
@@ -77,6 +83,14 @@ interface WorkoutActions {
   deleteGeneratedWorkout: (id: string) => void;
   getGeneratedWorkoutById: (id: string) => SavedGeneratedWorkout | null;
 
+  /**
+   * Insert a pre-built WorkoutLog row. Used by Aimee's schedule_workout
+   * client action — the workout is "planned" (completedAt left
+   * undefined) and shows up on the calendar / logs UI immediately.
+   * Pushes to Supabase via syncRecord, same as finishWorkout does.
+   */
+  addPlannedLog: (log: WorkoutLog) => void;
+
   // History & analytics
   getLogsByDate: (date: string) => WorkoutLog[];
   getLogsByProgram: (programId: string) => WorkoutLog[];
@@ -88,6 +102,8 @@ interface WorkoutActions {
   clearAll: () => void;
   /** Hydrate from Supabase on boot / device switch. Server wins on id conflict. */
   syncFromServer: () => Promise<void>;
+  /** Offline retry queue (mirrors useDoseLogStore / useChatStore). */
+  flushPendingSyncs: () => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +117,31 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
       logs: [],
       inProgress: null,
       savedGeneratedWorkouts: [],
+      pendingSyncs: [],
+
+      flushPendingSyncs: async () => {
+        const ids = get().pendingSyncs;
+        if (ids.length === 0) return;
+        const stillFailing: string[] = [];
+        for (const id of ids) {
+          const log = get().logs.find((l) => l.id === id);
+          if (!log) continue;
+          const ok = await syncRecord('workout_logs', {
+            id: log.id,
+            started_at: log.startedAt,
+            completed_at: log.completedAt ?? null,
+            duration_minutes: log.durationMinutes,
+            program_id: log.programId ?? null,
+            day_id: log.dayId ?? null,
+            sets: log.sets ?? [],
+            rating: log.rating ?? null,
+            notes: log.notes ?? null,
+            workout_name: log.workoutName ?? null,
+          });
+          if (!ok) stillFailing.push(id);
+        }
+        set({ pendingSyncs: stillFailing });
+      },
 
       // -----------------------------------------------------------------------
       // Generated workouts
@@ -127,6 +168,36 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
 
       getGeneratedWorkoutById: (id) => {
         return get().savedGeneratedWorkouts.find((w) => w.id === id) ?? null;
+      },
+
+      addPlannedLog: (log) => {
+        set({ logs: [log, ...get().logs] });
+        syncRecord('workout_logs', {
+          id: log.id,
+          started_at: log.startedAt,
+          completed_at: log.completedAt ?? null,
+          duration_minutes: log.durationMinutes,
+          program_id: log.programId ?? null,
+          day_id: log.dayId ?? null,
+          sets: log.sets ?? [],
+          rating: log.rating ?? null,
+          notes: log.notes ?? null,
+          workout_name: log.workoutName ?? null,
+        }).then((ok) => {
+          if (!ok) {
+            set((state) => ({
+              pendingSyncs: state.pendingSyncs.includes(log.id)
+                ? state.pendingSyncs
+                : [...state.pendingSyncs, log.id],
+            }));
+          }
+        }).catch(() => {
+          set((state) => ({
+            pendingSyncs: state.pendingSyncs.includes(log.id)
+              ? state.pendingSyncs
+              : [...state.pendingSyncs, log.id],
+          }));
+        });
       },
 
       // -----------------------------------------------------------------------
@@ -224,7 +295,7 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
           activeProgram: updatedProgram,
         });
 
-        // Cloud sync (fire and forget)
+        // Cloud sync — enqueue for retry if offline / RLS race.
         syncRecord('workout_logs', {
           id: completed.id,
           started_at: completed.startedAt,
@@ -236,7 +307,21 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
           rating: completed.rating ?? null,
           notes: completed.notes ?? null,
           workout_name: completed.workoutName ?? null,
-        }).catch(() => {});
+        }).then((ok) => {
+          if (!ok) {
+            set((state) => ({
+              pendingSyncs: state.pendingSyncs.includes(completed.id)
+                ? state.pendingSyncs
+                : [...state.pendingSyncs, completed.id],
+            }));
+          }
+        }).catch(() => {
+          set((state) => ({
+            pendingSyncs: state.pendingSyncs.includes(completed.id)
+              ? state.pendingSyncs
+              : [...state.pendingSyncs, completed.id],
+          }));
+        });
       },
 
       cancelWorkout: () => set({ inProgress: null }),
@@ -288,9 +373,9 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
           weeks.push({
             weekStart,
             totalSets: allSets.length,
-            totalReps: allSets.reduce((s, set) => s + set.reps, 0),
+            totalReps: allSets.reduce((s, set) => s + (set.reps ?? 0), 0),
             totalWeightLbs: allSets.reduce(
-              (s, set) => s + (set.weightLbs ?? 0) * set.reps,
+              (s, set) => s + (set.weightLbs ?? 0) * (set.reps ?? 0),
               0,
             ),
             workoutCount: weekLogs.length,
@@ -303,9 +388,9 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
         const allSets = get().logs.flatMap((l) => l.sets);
         return {
           sets: allSets.length,
-          reps: allSets.reduce((s, set) => s + set.reps, 0),
+          reps: allSets.reduce((s, set) => s + (set.reps ?? 0), 0),
           weightLbs: allSets.reduce(
-            (s, set) => s + (set.weightLbs ?? 0) * set.reps,
+            (s, set) => s + (set.weightLbs ?? 0) * (set.reps ?? 0),
             0,
           ),
         };
@@ -353,7 +438,15 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
       },
 
       clearAll: () =>
-        set({ activeProgram: null, logs: [], inProgress: null, savedGeneratedWorkouts: [] }),
+        set({
+          activeProgram: null,
+          logs: [],
+          inProgress: null,
+          savedGeneratedWorkouts: [],
+          // Wipe offline retry queue on logout (same reason as
+          // useDoseLogStore / useChatStore).
+          pendingSyncs: [],
+        }),
 
       syncFromServer: async () => {
         type Row = {
@@ -397,6 +490,8 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
         activeProgram: state.activeProgram,
         logs: state.logs,
         savedGeneratedWorkouts: state.savedGeneratedWorkouts,
+        // Persist the retry queue across cold launches.
+        pendingSyncs: state.pendingSyncs,
       }),
     },
   ),

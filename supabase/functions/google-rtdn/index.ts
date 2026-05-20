@@ -97,9 +97,16 @@ Deno.serve(async (req) => {
     //   2. `aud` claim must match the GOOGLE_RTDN_AUDIENCE secret
     //      (set to this function's URL when configuring the Pub/Sub
     //      push subscription with "Enable authentication" ticked).
-    // If GOOGLE_RTDN_AUDIENCE is unset, fall back to bearer-presence
-    // only — protects against accidentally locking out the deploy
-    // before the secret is configured.
+    //
+    // CRITICAL: GOOGLE_RTDN_AUDIENCE is REQUIRED. Earlier versions of
+    // this code fell back to bearer-presence-only when the secret was
+    // unset; that's an unauthenticated path — any caller could forge
+    // subscription state transitions for arbitrary purchaseTokens. We
+    // now refuse to start without the secret.
+    if (!GOOGLE_RTDN_AUDIENCE) {
+      console.error('[google-rtdn] FATAL: GOOGLE_RTDN_AUDIENCE not configured');
+      return new Response('Service Unavailable: missing audience config', { status: 503 });
+    }
     const authz = req.headers.get('authorization') ?? '';
     if (!authz.startsWith('Bearer ')) {
       console.warn('[google-rtdn] missing bearer token');
@@ -107,16 +114,14 @@ Deno.serve(async (req) => {
     }
 
     const idToken = authz.slice('Bearer '.length).trim();
-    if (GOOGLE_RTDN_AUDIENCE) {
-      try {
-        await jwtVerify(idToken, JWKS, {
-          issuer: [GOOGLE_OIDC_ISSUER, 'accounts.google.com'],
-          audience: GOOGLE_RTDN_AUDIENCE,
-        });
-      } catch (verifyErr) {
-        console.warn('[google-rtdn] OIDC verify failed:', verifyErr);
-        return new Response('Unauthorized', { status: 401 });
-      }
+    try {
+      await jwtVerify(idToken, JWKS, {
+        issuer: [GOOGLE_OIDC_ISSUER, 'accounts.google.com'],
+        audience: GOOGLE_RTDN_AUDIENCE,
+      });
+    } catch (verifyErr) {
+      console.warn('[google-rtdn] OIDC verify failed:', verifyErr);
+      return new Response('Unauthorized', { status: 401 });
     }
 
     const envelope = (await req.json()) as PubSubEnvelope;
@@ -157,15 +162,30 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // Look up the user by purchaseToken (stored at validate-purchase time
-    // in the subscriptions.receipt_data column, up to 500 chars — Play
-    // tokens fit comfortably).
-    const { data: existing } = await admin
+    // Look up the user by purchaseToken via the dedicated `purchase_token`
+    // column (migration 20260517000001). Previously matched against
+    // `receipt_data.substring(0,500)` which mixed polymorphic Apple
+    // receipts with Google tokens and risked collisions on
+    // refunds/regrants where different tokens share a 500-char prefix.
+    // Backfill in the same migration so legacy rows still resolve.
+    let { data: existing } = await admin
       .from('subscriptions')
       .select('user_id, product_id')
-      .eq('receipt_data', purchaseToken.substring(0, 500))
+      .eq('purchase_token', purchaseToken)
       .limit(1)
       .maybeSingle();
+    // Backstop: if migration backfill hasn't run yet, fall back to
+    // the legacy receipt_data lookup so we don't drop events during
+    // the cutover window.
+    if (!existing) {
+      const fallback = await admin
+        .from('subscriptions')
+        .select('user_id, product_id')
+        .eq('receipt_data', purchaseToken.substring(0, 500))
+        .limit(1)
+        .maybeSingle();
+      existing = fallback.data ?? null;
+    }
     const userId = existing?.user_id ?? null;
 
     const eventType = GOOGLE_EVENT_MAP[notificationType] ?? 'unknown';

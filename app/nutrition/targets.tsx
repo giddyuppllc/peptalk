@@ -151,7 +151,7 @@ export default function MacroTargetsScreen() {
                   { k: 'maintenance', label: 'Maintain' },
                   { k: 'body_recomp', label: 'Recomp' },
                   { k: 'muscle_gain', label: 'Muscle' },
-                ] as Array<{ k: GoalType; label: string }>
+                ] as { k: GoalType; label: string }[]
               ).map(({ k, label }) => (
                 <TouchableOpacity
                   key={k}
@@ -176,7 +176,7 @@ export default function MacroTargetsScreen() {
                   { k: 'light', label: 'Light' },
                   { k: 'moderate', label: 'Moderate' },
                   { k: 'very_active', label: 'High' },
-                ] as Array<{ k: ActivityLevel; label: string }>
+                ] as { k: ActivityLevel; label: string }[]
               ).map(({ k, label }) => (
                 <TouchableOpacity
                   key={k}

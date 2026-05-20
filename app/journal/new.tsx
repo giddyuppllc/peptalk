@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -221,6 +223,11 @@ export default function NewJournalEntryScreen() {
         </Pressable>
       </View>
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      >
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -290,6 +297,11 @@ export default function NewJournalEntryScreen() {
             onChangeText={setContent}
             multiline
             textAlignVertical="top"
+            // 2026-05-17 cap journal body at 10k chars — same ceiling the
+            // edge-function moderator applies. Without this a pasted
+            // 10MB blob would bloat the persisted store + slow rehydrate
+            // to multi-second on every cold boot.
+            maxLength={10_000}
           />
         </GlassCard>
 
@@ -473,6 +485,7 @@ export default function NewJournalEntryScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

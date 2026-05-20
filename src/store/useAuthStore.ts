@@ -13,6 +13,7 @@ import { secureStorage } from '../services/secureStorage';
 import { supabase } from '../services/supabase';
 import { useSubscriptionStore } from './useSubscriptionStore';
 import { useOnboardingStore } from './useOnboardingStore';
+import { isAdminEmail } from '../hooks/useIsAdmin';
 import {
   trackSignupStarted,
   trackSignupCompleted,
@@ -20,6 +21,7 @@ import {
   trackLoginSucceeded,
   trackLoginFailed,
 } from '../services/analyticsEvents';
+import { setUser as telemetrySetUser, captureException } from '../services/telemetry';
 
 const db = supabase as any;
 
@@ -43,11 +45,20 @@ function coerceProfileRow(
 } {
   const row = (raw && typeof raw === 'object') ? (raw as Record<string, unknown>) : {};
   const asString = (v: unknown): string => (typeof v === 'string' ? v : '');
-  const name = asString(row.name);
+  // 2026-05-18 defensive guard: older signup paths (since fixed) wrote
+  // the email into the first_name field, so Jamie + Edward saw
+  // "Good morning, edward@giddyupp.com" as their greeting. Treat any
+  // @-shaped string as missing so the email-prefix fallback kicks in.
+  const looksLikeEmail = (s: string) => s.includes('@') && s.includes('.');
+  const sanitize = (s: string) => (looksLikeEmail(s) ? '' : s);
+  const name = sanitize(asString(row.name));
   const parts = name.split(' ').filter(Boolean);
   const first =
-    asString(row.first_name) || parts[0] || fallbackEmail.split('@')[0] || '';
-  const last = asString(row.last_name) || parts.slice(1).join(' ');
+    sanitize(asString(row.first_name)) ||
+    parts[0] ||
+    fallbackEmail.split('@')[0] ||
+    '';
+  const last = sanitize(asString(row.last_name)) || parts.slice(1).join(' ');
   const tier = ['free', 'plus', 'pro'].includes(asString(row.subscription_tier))
     ? (asString(row.subscription_tier) as 'free' | 'plus' | 'pro')
     : 'free';
@@ -92,54 +103,10 @@ export const useAuthStore = create<AuthStore>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true });
 
-        // Dev account bypass — skip Supabase for test/dev emails
-        const DEV_EMAILS: Record<string, { firstName: string; lastName: string; tier: string }> = {
-          'burnsnoho@gmail.com': { firstName: 'Burns', lastName: '', tier: 'pro' },
-          'free@test.com': { firstName: 'Free', lastName: 'Tester', tier: 'free' },
-          'plus@test.com': { firstName: 'Plus', lastName: 'Tester', tier: 'plus' },
-          'pro@test.com': { firstName: 'Pro', lastName: 'Tester', tier: 'pro' },
-          'jamie@test.com': { firstName: 'Jamie', lastName: '', tier: 'pro' },
-          'jake@test.com': { firstName: 'Jake', lastName: '', tier: 'pro' },
-          'sophia@test.com': { firstName: 'Sophia', lastName: '', tier: 'plus' },
-          'marcus@test.com': { firstName: 'Marcus', lastName: '', tier: 'pro' },
-          'sarah@test.com': { firstName: 'Sarah', lastName: '', tier: 'plus' },
-          'richard@test.com': { firstName: 'Richard', lastName: '', tier: 'pro' },
-          'diana@test.com': { firstName: 'Diana', lastName: '', tier: 'pro' },
-          'walter@test.com': { firstName: 'Walter', lastName: '', tier: 'free' },
-          'margaret@test.com': { firstName: 'Margaret', lastName: '', tier: 'pro' },
-        };
-
         const _email = email.toLowerCase().trim();
-        const devAccount = DEV_EMAILS[_email];
 
-        // Dev backdoor gate — requires BOTH __DEV__ AND an explicit env
-        // flag. `__DEV__` alone isn't safe because it can be flipped by
-        // non-obvious build settings (e.g. a prod build with sourcemaps
-        // enabled); requiring an opt-in env var means a TestFlight / App
-        // Store build can never accidentally grant tester backdoors.
-        const devModeEnabled =
-          __DEV__ && process.env.EXPO_PUBLIC_DEV_MODE === 'true';
-        if (devModeEnabled && devAccount) {
-          useSubscriptionStore.getState().setTier(devAccount.tier as any);
-
-          const appUser: User = {
-            id: `dev-${Date.now()}`,
-            email: _email,
-            firstName: devAccount.firstName,
-            lastName: devAccount.lastName,
-            savedStacks: [],
-            favoritePeptides: [],
-            isPro: devAccount.tier === 'pro',
-            createdAt: new Date().toISOString(),
-          };
-
-          set({ user: appUser, isAuthenticated: true, isLoading: false });
-          return;
-        }
-
-        // Real Supabase auth for non-dev emails — use the normalized form
-        // computed above so trailing whitespace / caps don't produce a
-        // client-validates-but-server-rejects mismatch.
+        // Use the normalized email so trailing whitespace / caps don't
+        // produce a client-validates-but-server-rejects mismatch.
         try {
           const { data, error } = await db.auth.signInWithPassword({
             email: _email,
@@ -164,7 +131,14 @@ export const useAuthStore = create<AuthStore>()(
             .maybeSingle();
 
           const safe = coerceProfileRow(profile, _email);
-          useSubscriptionStore.getState().setTier(safe.tier as any);
+          // Admin override: admins are upgraded to 'pro' on every login so
+          // they can test paid features + approve video tags without
+          // needing a real subscription. Source of truth is ADMIN_EMAILS
+          // in useIsAdmin.ts.
+          const effectiveTier = isAdminEmail(_email) ? 'pro' : safe.tier;
+          // Use mirror-aware setter — won't clobber a more-recent
+          // syncFromServer write. 2026-05-17 IAP P0 fix.
+          useSubscriptionStore.getState().setTierFromProfileMirror(effectiveTier as any);
 
           const appUser: User = {
             id: data.user.id,
@@ -174,14 +148,19 @@ export const useAuthStore = create<AuthStore>()(
             avatarUri: safe.avatarUri,
             savedStacks: [],
             favoritePeptides: safe.favoritePeptides,
-            isPro: safe.tier === 'pro',
+            isPro: effectiveTier === 'pro',
             createdAt: data.user.created_at,
           };
 
           set({ user: appUser, isAuthenticated: true, isLoading: false });
+          // Forward the user id (no email/PII — telemetry.setUser strips
+          // those in beforeSend) so Sentry groups events per-user and
+          // ops can see which user hit a given crash.
+          telemetrySetUser({ id: appUser.id });
           trackLoginSucceeded();
         } catch (error: any) {
           if (__DEV__) console.error('[useAuthStore] Login failed:', error);
+          captureException(error, { source: 'auth.login', errorName: error?.name });
           set({ isLoading: false });
           trackLoginFailed(error?.message ?? 'unknown');
           throw error;
@@ -271,7 +250,11 @@ export const useAuthStore = create<AuthStore>()(
           const { data: { session } } = await db.auth.getSession();
 
           if (!session?.user) {
-            set({ hasHydrated: true });
+            // No active server-side session. Clear any STALE persisted
+            // user/isAuthenticated so the app doesn't render as "logged in"
+            // while every authed call returns 401. P0 ghost-session fix
+            // from 2026-05-18 cold-boot audit.
+            set({ user: null, isAuthenticated: false, hasHydrated: true });
             return;
           }
 
@@ -282,7 +265,12 @@ export const useAuthStore = create<AuthStore>()(
             .maybeSingle();
 
           const safe = coerceProfileRow(profile, session.user.email ?? '');
-          useSubscriptionStore.getState().setTier(safe.tier as any);
+          // Admin override: same rule as login — admins always get 'pro'
+          // tier so session restore can't drop them back to free.
+          const effectiveTier = isAdminEmail(session.user.email) ? 'pro' : safe.tier;
+          // Use mirror-aware setter — won't clobber a more-recent
+          // syncFromServer write. 2026-05-17 IAP P0 fix.
+          useSubscriptionStore.getState().setTierFromProfileMirror(effectiveTier as any);
 
           const appUser: User = {
             id: session.user.id,
@@ -292,17 +280,44 @@ export const useAuthStore = create<AuthStore>()(
             avatarUri: safe.avatarUri,
             savedStacks: [],
             favoritePeptides: safe.favoritePeptides,
-            isPro: safe.tier === 'pro',
+            isPro: effectiveTier === 'pro',
             createdAt: session.user.created_at,
           };
 
           set({ user: appUser, isAuthenticated: true, hasHydrated: true });
         } catch {
-          set({ hasHydrated: true });
+          // Same ghost-session fix on the error path — if getSession()
+          // or the profile fetch threw, treat the user as signed out
+          // rather than leaving stale persisted credentials in place.
+          set({ user: null, isAuthenticated: false, hasHydrated: true });
         }
       },
 
       logout: async () => {
+        // Cancel every scheduled OS notification BEFORE signOut so
+        // User A's dose / check-in / workout reminders don't fire
+        // on the device after User B signs in. (Notifications carry
+        // user-typed content in the body — "Time to take BPC-157" —
+        // and would expose the prior user's data.) P0 from Wave
+        // 76.11 logout audit.
+        try {
+          const { cancelAllReminders } = await import(
+            '../services/notificationService'
+          );
+          await cancelAllReminders();
+        } catch {}
+
+        // Abort any in-flight Aimee SSE stream — otherwise a late
+        // text_delta lands in chat store post-logout. We do this
+        // before the chat store wipe.
+        try {
+          const w = globalThis as any;
+          if (w.__peptalkActiveAimeeAbort) {
+            w.__peptalkActiveAimeeAbort();
+            w.__peptalkActiveAimeeAbort = null;
+          }
+        } catch {}
+
         // Drop the device's push-token row BEFORE signOut — otherwise
         // a shared device keeps receiving pushes addressed to the
         // signed-out user. Best-effort; if it fails the cron-prune
@@ -340,68 +355,99 @@ export const useAuthStore = create<AuthStore>()(
         // HIPAA-style privacy since we track meals, doses, health profile,
         // check-ins, journal entries, body map, workouts, and chat history.
         try {
-          useSubscriptionStore.getState().setTier('free');
+          // clearSubscription() (vs setTier('free')) also drops
+          // productId / expiresAt / pendingPurchase / lastSyncedAt
+          // — without this, User A's subscription metadata (incl.
+          // expiry, last-validated time) lingered into User B's
+          // session. P0 from Wave 76.11 logout audit.
+          useSubscriptionStore.getState().clearSubscription();
           useOnboardingStore.getState().reset();
         } catch {}
 
         // Lazy-require the rest so this file doesn't force early
         // initialization of every store on app boot.
-        try {
-          const { useMealStore } = require('./useMealStore');
-          useMealStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useDoseLogStore } = require('./useDoseLogStore');
-          useDoseLogStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useHealthProfileStore } = require('./useHealthProfileStore');
-          useHealthProfileStore.getState().resetProfile?.();
-        } catch {}
-        try {
-          const { useCheckinStore } = require('./useCheckinStore');
-          useCheckinStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useStackStore } = require('./useStackStore');
-          useStackStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useJournalStore } = require('./useJournalStore');
-          useJournalStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useBodyMapStore } = require('./useBodyMapStore');
-          useBodyMapStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useWorkoutStore } = require('./useWorkoutStore');
-          useWorkoutStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useChatStore } = require('./useChatStore');
-          useChatStore.getState().clearChat?.();
-        } catch {}
-        try {
-          const { useAchievementStore } = require('./useAchievementStore');
-          useAchievementStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { usePantryStore } = require('./usePantryStore');
-          usePantryStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useCycleStore } = require('./useCycleStore');
-          useCycleStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useIntegrationsStore } = require('./useIntegrationsStore');
-          useIntegrationsStore.getState().clearAll?.();
-        } catch {}
-        try {
-          const { useAllergyStore } = require('./useAllergyStore');
-          useAllergyStore.getState().clearAll?.();
-        } catch {}
+        //
+        // 2026-05-17 P1 fix: every previous `catch {}` was silent. If
+        // a store's clear method threw (e.g. corrupt state, native
+        // module hang), the next user logging in on the same device
+        // would silently inherit the previous user's data — and we'd
+        // never know. Centralize the pattern so every failure lands
+        // in telemetry. HIPAA-adjacent app — cross-user leaks deserve
+        // a Sentry event.
+        const safeClear = (label: string, fn: () => void) => {
+          try {
+            fn();
+          } catch (err) {
+            try {
+              const { captureException } = require('../services/telemetry');
+              captureException?.(err, { source: 'logout.wipe', store: label });
+            } catch {
+              // Telemetry itself failed — don't recurse.
+            }
+          }
+        };
+        safeClear('meal', () => require('./useMealStore').useMealStore.getState().clearAll?.());
+        safeClear('dose', () => require('./useDoseLogStore').useDoseLogStore.getState().clearAll?.());
+        safeClear('healthProfile', () => require('./useHealthProfileStore').useHealthProfileStore.getState().resetProfile?.());
+        safeClear('checkin', () => require('./useCheckinStore').useCheckinStore.getState().clearAll?.());
+        safeClear('stack', () => require('./useStackStore').useStackStore.getState().clearAll?.());
+        safeClear('journal', () => require('./useJournalStore').useJournalStore.getState().clearAll?.());
+        safeClear('bodyMap', () => require('./useBodyMapStore').useBodyMapStore.getState().clearAll?.());
+        safeClear('workout', () => require('./useWorkoutStore').useWorkoutStore.getState().clearAll?.());
+        // Use the hard-reset variant — `clearChat` only drops the
+        // active thread and leaves pendingSyncs intact, which would
+        // replay user A's queued messages under user B's auth.
+        safeClear('chat', () => require('./useChatStore').useChatStore.getState().resetForLogout?.());
+        safeClear('achievement', () => require('./useAchievementStore').useAchievementStore.getState().clearAll?.());
+        safeClear('pantry', () => require('./usePantryStore').usePantryStore.getState().clearAll?.());
+        safeClear('cycle', () => require('./useCycleStore').useCycleStore.getState().clearAll?.());
+        safeClear('integrations', () => require('./useIntegrationsStore').useIntegrationsStore.getState().clearAll?.());
+        safeClear('allergy', () => require('./useAllergyStore').useAllergyStore.getState().clearAll?.());
+
+        // Stores the original sweep missed — each one persists PII or
+        // user-correlated state that survived logout. P0 from
+        // Wave 76.11 logout audit.
+        safeClear('biometrics', () => require('./useBiometricsStore').useBiometricsStore.getState().clearAll?.());
+        safeClear('labResults', () => require('./useLabResultsStore').useLabResultsStore.getState().clearAll?.());
+        safeClear('plan', () => require('./usePlanStore').usePlanStore.getState().clearAll?.());
+        safeClear('grocery', () => require('./useGroceryStore').useGroceryStore.getState().clearAll?.());
+        safeClear('tutorial', () => require('./useTutorialStore').useTutorialStore.getState().resetTour?.());
+        safeClear('progressGoals', () => require('./useProgressGoalsStore').useProgressGoalsStore.getState().clearAll?.());
+        safeClear('featureWaitlist', () => require('./useFeatureWaitlistStore').useFeatureWaitlistStore.getState().clearAll?.());
+        safeClear('community', () => require('./useCommunityStore').useCommunityStore.getState().clearAll?.());
+        // Reset preferences to default + drop pushToken. Don't fully
+        // clear — notification preferences are device-pref-ish — but
+        // we don't want User B inheriting User A's reminder schedule.
+        safeClear('notification', () => require('./useNotificationStore').useNotificationStore.setState({ pushToken: null }));
+
+        // Wave 76.27 — second-pass cross-user leak audit. These stores
+        // hold per-user PII / health data and persist via SecureStore
+        // but were missing from the original sweep.
+        safeClear('aimeeReports', () => require('./useAimeeReportsStore').useAimeeReportsStore.getState().clearAll?.());
+        safeClear('progressPhotos', () => require('./useProgressPhotosStore').useProgressPhotosStore.getState().clearAll?.());
+        safeClear('nutritionRequest', () => require('./useNutritionRequestStore').useNutritionRequestStore.getState().clearAll?.());
+        safeClear('appetiteLog', () => require('./useAppetiteLogStore').useAppetiteLogStore.getState().clearAll?.());
+        safeClear('workoutTemplate', () => require('./useWorkoutTemplateStore').useWorkoutTemplateStore.getState().clearAll?.());
+        safeClear('reactions', () => require('./useReactionsStore').useReactionsStore.getState().clearAll?.());
+        // Tears down the Supabase Realtime channel — without this, a
+        // live event the previous user subscribed to keeps delivering
+        // messages to this device after the next user signs in.
+        safeClear('liveEvent', () => require('./useLiveEventStore').useLiveEventStore.getState().reset?.());
+        // Raw AsyncStorage keys outside any Zustand store — user A's
+        // "don't ask me to review again" opt-out and last-prompt
+        // timestamp inherited to user B before this clear.
+        safeClear('reviewPrompt', () => {
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          AsyncStorage.removeItem('peptalk_last_review_prompt_ms');
+          AsyncStorage.removeItem('peptalk_review_prompt_disabled');
+        });
+
+        // Reset Sentry user binding so subsequent crashes aren't
+        // attributed to the previous user.
+        safeClear('telemetry', () => {
+          const { setUser } = require('../services/telemetry');
+          setUser?.(null);
+        });
 
         set({
           user: null,

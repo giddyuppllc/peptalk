@@ -41,7 +41,7 @@ import {
 } from '../../src/constants/theme';
 import { useMealStore, type RecentFood, type CustomMeal, type MealTemplate } from '../../src/store/useMealStore';
 import { computeSafetyStatus, statusBadge, DEFAULT_SAFETY_WINDOWS } from '../../src/data/foodSafety';
-import type { FoodItem } from '../../src/types/fitness';
+import type { FoodItem , MealType } from '../../src/types/fitness';
 import { useFeatureGate } from '../../src/hooks/useFeatureGate';
 import { PaywallModal } from '../../src/components/PaywallModal';
 import { LockBadge } from '../../src/components/LockBadge';
@@ -53,7 +53,6 @@ import {
   lookupBarcode,
   type UnifiedFood,
 } from '../../src/services/foodSearchService';
-import type { MealType } from '../../src/types/fitness';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -171,7 +170,14 @@ function PortionPickerModal({
   onLog,
   initialMealType = 'lunch',
 }: PortionPickerProps) {
-  const [selectedServing, setSelectedServing] = useState(0);
+  // Default to the food's natural household serving when the API gave
+  // us one (e.g. "1 salad", "1 strip"). Falls back to index 0 if the
+  // food doesn't have an explicit defaultServingIdx. Previously this
+  // was hardcoded to 0, which made USDA branded foods open on "1 gram"
+  // because the universal weight units were the only entries the
+  // picker could find.
+  const initialIdx = food?.defaultServingIdx ?? 0;
+  const [selectedServing, setSelectedServing] = useState(initialIdx);
   const [servingQty, setServingQty] = useState('1');
   const [mealType, setMealType] = useState<MealType>(initialMealType);
   const [showServingPicker, setShowServingPicker] = useState(false);
@@ -179,7 +185,7 @@ function PortionPickerModal({
 
   useEffect(() => {
     if (food) {
-      setSelectedServing(0);
+      setSelectedServing(food.defaultServingIdx ?? 0);
       setServingQty('1');
       setShowServingPicker(false);
       setShowNutritionInfo(false);
@@ -188,7 +194,14 @@ function PortionPickerModal({
 
   let effectiveGrams = 0;
   if (food && food.servings[selectedServing]) {
-    effectiveGrams = food.servings[selectedServing].grams * (parseFloat(servingQty) || 0);
+    // Clamp serving quantity to a sane range. `-3 servings` was
+    // accepted and produced negative calories in daily totals; `99999`
+    // hung the UI rendering. P0 from input validation audit.
+    const rawQty = parseFloat(servingQty);
+    const safeQty = Number.isFinite(rawQty) && rawQty > 0
+      ? Math.min(rawQty, 50)
+      : 0;
+    effectiveGrams = food.servings[selectedServing].grams * safeQty;
   }
   const displayGrams = Math.round(effectiveGrams * 10) / 10;
 
@@ -537,12 +550,16 @@ function CustomFoodModal({ visible, onClose, onSave }: CustomFoodModalProps) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { minHeight: '80%' }]}>
+        <KeyboardAvoidingView
+          style={[styles.modalContent, { minHeight: '80%' }]}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+        >
           <View style={styles.modalHandle} />
 
           <View style={styles.modalHeader}>
             <Text style={styles.modalFoodName}>Create Custom Food</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="Close create custom food">
               <Ionicons name="close" size={22} color={Colors.darkText} />
             </TouchableOpacity>
           </View>
@@ -687,7 +704,7 @@ function CustomFoodModal({ visible, onClose, onSave }: CustomFoodModalProps) {
           <View style={styles.logBtnWrapper}>
             <GradientButton label="Save Custom Food" onPress={handleSave} />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -953,12 +970,27 @@ export default function FoodSearchScreen() {
     setLoading(true);
     setHasSearched(true);
 
-    searchAllFoods(debouncedQuery).then((foods) => {
-      if (!cancelled) {
+    // Both .then AND .catch — earlier audit caught that a network drop
+    // or 5xx left the spinner spinning forever because the catch path
+    // never fired setLoading(false). Now: every terminal state flips
+    // loading off and surfaces an explicit error message when the
+    // search itself threw.
+    searchAllFoods(debouncedQuery)
+      .then((foods) => {
+        if (cancelled) return;
         setResults(foods);
         setLoading(false);
-      }
-    });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (__DEV__) console.warn('[food-search] searchAllFoods failed:', err);
+        setResults([]);
+        setLoading(false);
+        Alert.alert(
+          'Search failed',
+          'Couldn\'t reach the food database. Check your connection and try again.',
+        );
+      });
 
     return () => { cancelled = true; };
   }, [debouncedQuery]);

@@ -25,6 +25,21 @@ import { getProtocolsByPeptide } from '../../src/data/protocols';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { getPeptideTiming } from '../../src/data/peptideTiming';
 
+/**
+ * Unit conversion helpers — every dose shown in BOTH mcg and mg so users
+ * never have to do the math in their head. 1 mg = 1,000 mcg.
+ */
+function toMcg(value: number, unit: string): number {
+  return unit === 'mg' ? value * 1000 : value;
+}
+function toMg(value: number, unit: string): number {
+  return unit === 'mg' ? value : value / 1000;
+}
+function fmt(n: number, max = 3): string {
+  // Strip trailing zeros: 0.250 → 0.25, 250.0 → 250
+  return Number(n.toFixed(max)).toString();
+}
+
 export default function QuickDoseScreen() {
   const router = useRouter();
   const weightLbs = useHealthProfileStore((s) => s.profile?.bodyMetrics?.weightLbs);
@@ -183,6 +198,11 @@ export default function QuickDoseScreen() {
                   <Text style={styles.doseValue}>
                     {reconInfo.doseMin}-{reconInfo.doseMax} {reconInfo.doseUnit}
                   </Text>
+                  <Text style={styles.doseConversion}>
+                    = {fmt(toMg(reconInfo.doseMin, reconInfo.doseUnit))}-{fmt(toMg(reconInfo.doseMax, reconInfo.doseUnit))} mg
+                    {' · '}
+                    {fmt(toMcg(reconInfo.doseMin, reconInfo.doseUnit), 0)}-{fmt(toMcg(reconInfo.doseMax, reconInfo.doseUnit), 0)} mcg
+                  </Text>
                 </View>
                 <View style={styles.doseItem}>
                   <Text style={styles.doseLabel}>Route</Text>
@@ -235,19 +255,34 @@ export default function QuickDoseScreen() {
                   <Text style={styles.stepNum}>4</Text>
                   <Text style={styles.stepText}>
                     Your concentration: {reconInfo.concentrationMcgPerMl.toLocaleString()} mcg/ml
+                    {' '}({fmt(reconInfo.concentrationMcgPerMl / 1000)} mg/ml)
                   </Text>
                 </View>
               </View>
 
               <GlassCard style={styles.injectionCard}>
-                <Text style={styles.injectionTitle}>Injection Volume</Text>
+                <Text style={styles.injectionTitle}>Draw this much</Text>
                 <Text style={styles.injectionValue}>
-                  {reconInfo.volumeMinMl}-{reconInfo.volumeMaxMl} ml
+                  {reconInfo.volumeMinUnits}-{reconInfo.volumeMaxUnits} ticks
                 </Text>
                 <Text style={styles.injectionUnits}>
-                  = {reconInfo.volumeMinUnits}-{reconInfo.volumeMaxUnits} units on an insulin syringe
+                  on a U-100 insulin syringe
+                </Text>
+                <Text style={styles.injectionDetail}>
+                  = {reconInfo.volumeMinMl}-{reconInfo.volumeMaxMl} mL of liquid
+                </Text>
+                <Text style={styles.injectionDetail}>
+                  Each tick delivers {fmt(reconInfo.concentrationMcgPerMl / 100, 1)} mcg of peptide
                 </Text>
               </GlassCard>
+
+              {/* Plain-English conversion footer — same two sentences every time */}
+              <View style={styles.conversionNote}>
+                <Ionicons name="information-circle-outline" size={16} color={Colors.darkTextSecondary} />
+                <Text style={styles.conversionNoteText}>
+                  1 mg = 1,000 mcg.  One tick on a U-100 insulin syringe = 0.01 mL of liquid.
+                </Text>
+              </View>
             </GlassCard>
 
             {/* How to inject */}
@@ -526,9 +561,31 @@ const styles = StyleSheet.create({
 
   // Injection card
   injectionCard: { marginTop: Spacing.md, alignItems: 'center' },
-  injectionTitle: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary },
+  injectionTitle: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary, textTransform: 'uppercase', letterSpacing: 1 },
   injectionValue: { fontSize: FontSizes.xxl, fontWeight: '800', color: Colors.darkText, marginVertical: 4 },
   injectionUnits: { fontSize: FontSizes.sm, color: Colors.iceMeltDeep, fontWeight: '600' },
+  injectionDetail: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary, marginTop: 4, textAlign: 'center' },
+  conversionNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    backgroundColor: 'rgba(122,190,208,0.08)',
+    borderRadius: BorderRadius.md,
+  },
+  conversionNoteText: {
+    flex: 1,
+    fontSize: FontSizes.xs,
+    color: Colors.darkTextSecondary,
+    lineHeight: 16,
+  },
+  doseConversion: {
+    fontSize: FontSizes.xs,
+    color: Colors.darkTextSecondary,
+    marginTop: 2,
+  },
 
   // Duration
   durationText: { fontSize: FontSizes.sm, color: Colors.iceMeltDeep, marginTop: Spacing.sm, fontWeight: '500' },

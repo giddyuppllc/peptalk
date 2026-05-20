@@ -18,13 +18,15 @@ interface TabConfig {
   activeIcon: TabIconName;
 }
 
-// Tab order — Jamie wants peptides before nutrition (peps come first since the
-// app is peptide-led). Aimee anchors the center.
+// Tab order (5 tabs — restructured 2026-05-16 per user direction):
 //
-// 6 tabs is at the upper end of what fits comfortably on iPhone SE-class
-// screens. Tab font is dropped to 9.5 + label margin tightened in the
-// styles below to give each tab ~62px on a 375px-wide screen without
-// clipping. On Pro / Pro Max the layout breathes more.
+//   Home  ·  Train  ·  Aimee  ·  Peptides  ·  Profile
+//
+// Train is the new unified surface — Nutrition + Workouts merged into one
+// landing screen with 4 big buttons (Log Workout / Log Meal / Jamie's
+// Program / Your Workouts). Community moves off the bottom bar into a
+// card inside Profile. Profile gets promoted from the hidden routes list
+// to a primary tab.
 const TAB_CONFIG: TabConfig[] = [
   {
     name: 'index',
@@ -33,10 +35,10 @@ const TAB_CONFIG: TabConfig[] = [
     activeIcon: 'home',
   },
   {
-    name: 'my-stacks',
-    title: 'Peptides',
-    icon: 'flask-outline',
-    activeIcon: 'flask',
+    name: 'train',
+    title: 'Train',
+    icon: 'fitness-outline',
+    activeIcon: 'fitness',
   },
   {
     name: 'peptalk',
@@ -45,22 +47,16 @@ const TAB_CONFIG: TabConfig[] = [
     activeIcon: 'chatbubbles',
   },
   {
-    name: 'community',
-    title: 'Community',
-    icon: 'people-outline',
-    activeIcon: 'people',
+    name: 'my-stacks',
+    title: 'Peptides',
+    icon: 'flask-outline',
+    activeIcon: 'flask',
   },
   {
-    name: 'nutrition',
-    title: 'Nutrition',
-    icon: 'nutrition-outline',
-    activeIcon: 'nutrition',
-  },
-  {
-    name: 'workouts',
-    title: 'Workouts',
-    icon: 'barbell-outline',
-    activeIcon: 'barbell',
+    name: 'profile',
+    title: 'Profile',
+    icon: 'person-outline',
+    activeIcon: 'person',
   },
 ];
 
@@ -79,19 +75,15 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        // v3.1 §4.1 + §20.1 — "No bottom tab bar (4 cards are the nav)."
+        // The Tabs navigator stays so existing routes (peptalk, my-stacks,
+        // train, profile) still resolve for deep links + back navigation,
+        // but the bar itself is hidden. The v3 home renders the 4 drill
+        // cards as the actual navigation surface.
+        tabBarStyle: { display: 'none' },
         tabBarActiveTintColor: accent.deep,
         tabBarInactiveTintColor: t.textSecondary,
-        tabBarStyle: [
-          styles.tabBar,
-          {
-            backgroundColor: t.tabBar,
-            borderTopColor: t.glassBorder,
-            height: tabBarHeight,
-            paddingBottom: Math.max(insets.bottom, 6),
-          },
-        ],
         tabBarLabelStyle: styles.tabBarLabel,
-        // Slightly smaller icons so 6 tabs fit comfortably on iPhone SE width.
         tabBarItemStyle: { paddingTop: 4 },
       }}
     >
@@ -119,11 +111,19 @@ export default function TabsLayout() {
           }}
         />
       ))}
-      {/* Hidden tabs — still routable but not in tab bar */}
+      {/* Hidden tabs — still routable but not in tab bar.
+          Nutrition / Workouts / Community moved here after the
+          tab restructure 2026-05-16. Train is the new entry
+          point that surfaces "Log Meal / Log Workout / Jamie's
+          Program / Your Workouts" buttons; existing /(tabs)/
+          nutrition and /(tabs)/workouts still resolve so deep
+          links from notifications / Aimee actions don't break. */}
       <Tabs.Screen name="stack-builder" options={{ href: null }} />
       <Tabs.Screen name="check-in" options={{ href: null }} />
       <Tabs.Screen name="calendar" options={{ href: null }} />
-      <Tabs.Screen name="profile" options={{ href: null }} />
+      <Tabs.Screen name="nutrition" options={{ href: null }} />
+      <Tabs.Screen name="workouts" options={{ href: null }} />
+      <Tabs.Screen name="community" options={{ href: null }} />
     </Tabs>
     {/* Top-right shortcut menu — hidden on Home; gives one-tap access to
         Profile, Calendar, Check-in, Community from any other tab. */}
@@ -143,12 +143,13 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     elevation: 0,
   },
-  // Smaller label so all 6 tabs fit horizontally on iPhone SE-class widths
-  // without label truncation. Pro / Pro Max have more breathing room.
+  // 5 tabs (down from 6) — labels breathe at the normal size now. The
+  // previous 9.5px font was a workaround for the 6-tab cram. Bumped to
+  // 11 with a slightly looser letter-spacing for better legibility.
   tabBarLabel: {
-    fontSize: 9.5,
+    fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
     marginTop: 2,
   },
 });

@@ -46,6 +46,17 @@ function jsonResp(body: unknown, status = 200): Response {
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return jsonResp({ error: 'Method not allowed' }, 405);
 
+  // 2026-05-17 security fix: this entrypoint was unauthenticated. The
+  // function URL is public — anyone with the project ref could POST any
+  // eventId and fan out pushes to every tier-matched user (push spam +
+  // cost door open). The trigger that actually invokes us passes a
+  // shared secret via pg_net.http_post; require it here.
+  const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET') ?? '';
+  const providedSecret = req.headers.get('x-internal-key') ?? '';
+  if (!internalSecret || providedSecret !== internalSecret) {
+    return jsonResp({ error: 'Unauthorized' }, 401);
+  }
+
   try {
     const { eventId } = await req.json().catch(() => ({}));
     if (!eventId || typeof eventId !== 'string') {

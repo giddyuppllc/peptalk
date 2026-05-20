@@ -16,14 +16,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useStackStore } from '../../src/store/useStackStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
-import { getPeptideById } from '../../src/data/peptides';
-import { PEPTIDES } from '../../src/data/peptides';
+import { getPeptideById , PEPTIDES } from '../../src/data/peptides';
 import { PROTOCOL_TEMPLATES } from '../../src/data/protocols';
+import { getDosingReference } from '../../src/data/peptideDosingReference';
 import { GlassCard } from '../../src/components/GlassCard';
 import { CoachMark } from '../../src/components/tutorial/CoachMark';
 import { getCategoryColor } from '../../src/constants/categories';
-import { Colors } from '../../src/constants/theme';
-import { PeptideStack, PeptideCategory, GoalType, Peptide } from '../../src/types';
+import { Colors, Spacing, BorderRadius } from '../../src/constants/theme';
+import { PeptideStack, PeptideCategory, GoalType, Peptide, DoseLogEntry } from '../../src/types';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { PeptideDisclaimerModal } from '../../src/components/PeptideDisclaimerModal';
@@ -33,6 +33,12 @@ import {
 } from '../../src/services/doseCalculator';
 import { mlToTsp } from '../../src/utils/unitConversions';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
+import { AdherenceDial, CycleProgressBar, DoseStrip } from '../../src/components/peptides';
+import { notifySuccess, selectionTick } from '../../src/utils/haptics';
+import {
+  resolveActiveCycle,
+  doseLoggedAt,
+} from '../../src/utils/doseAdherence';
 
 // ─── Category meta-groups (for the educational browsing grid) ─────────────
 interface CategoryMeta {
@@ -941,7 +947,479 @@ const calcStyles = StyleSheet.create({
   },
 });
 
-type PeptideTab = 'library' | 'stacks' | 'calculator';
+// ═══════════════════════════════════════════════════════════════════════════
+// Today / Active-cycle landing view — Phase 4 redesign
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Lead with LOGGING, not stack-building. Renders:
+//   1. AdherenceDial — % of expected doses logged across the active cycle
+//   2. Cycle progress strip — day-by-day dot row, current day highlighted
+//   3. Today's doses — one-tap LOG buttons per scheduled peptide
+//   4. 7-day dose history strip — tap a day to expand
+//
+// "Active cycle" picks the most recent active protocol (highest startDate)
+// and, when ties exist, falls back to the protocol with the best adherence.
+// Falls back to a curated empty-state when the user has no active protocol.
+
+// Shared adherence helpers live in `src/utils/doseAdherence.ts` so
+// the Home tab can re-use the same calculation. See that module for
+// the `resolveActiveCycle`, `doseLoggedAt`, and `dosesPerWeekFor`
+// implementations.
+
+/** Did the user already log this protocol today? */
+function loggedToday(loggedDoses: DoseLogEntry[]): DoseLogEntry | null {
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, '0');
+  const d = String(today.getDate()).padStart(2, '0');
+  const key = `${y}-${m}-${d}`;
+  return loggedDoses.find((dose) => dose.date === key) ?? null;
+}
+
+interface TodayCycleViewProps {
+  onJumpToStacks: () => void;
+}
+
+function TodayCycleView({ onJumpToStacks }: TodayCycleViewProps) {
+  const t = useTheme();
+  const accent = useSectionAccent();
+  const protocols = useDoseLogStore((s) => s.protocols);
+  const doses = useDoseLogStore((s) => s.doses);
+  const logDose = useDoseLogStore((s) => s.logDose);
+
+  const active = useMemo(
+    () => resolveActiveCycle(protocols, doses),
+    [protocols, doses],
+  );
+
+  // 7-day window of doses for the bottom strip — ALL peptides, so users
+  // see their complete recent history, not just the featured cycle.
+  const recentWindow = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setHours(0, 0, 0, 0);
+    cutoff.setDate(cutoff.getDate() - 6);
+    return doses.filter((d) => {
+      const dt = doseLoggedAt(d);
+      return dt.getTime() >= cutoff.getTime();
+    });
+  }, [doses]);
+
+  const stripEntries = useMemo(
+    () =>
+      recentWindow.map((d) => {
+        const peptide = getPeptideById(d.peptideId);
+        return {
+          id: d.id,
+          peptideName: peptide?.name ?? d.peptideId,
+          amount: d.amount,
+          unit: d.unit,
+          loggedAt: doseLoggedAt(d),
+        };
+      }),
+    [recentWindow],
+  );
+
+  // Today's planned doses — for the active cycle's peptide. Uses Edward's
+  // dosing reference when it exists; otherwise falls back to the protocol's
+  // own dose/unit. Twice-daily protocols get a Morning + Evening row.
+  const todaysPlan = useMemo(() => {
+    if (!active) return [];
+    const ref = getDosingReference(active.protocol.peptideId);
+    const phase = ref?.schedule?.[0];
+    const dose = phase?.doseMcg
+      ? { amount: phase.doseMcg, unit: 'mcg' as const }
+      : { amount: active.protocol.dose, unit: active.protocol.unit };
+
+    const slots: { slot: string; time: string }[] =
+      active.protocol.frequency === 'twice_daily'
+        ? [
+            { slot: 'Morning', time: '08:00' },
+            { slot: 'Evening', time: '20:00' },
+          ]
+        : [{ slot: 'Today', time: '08:00' }];
+
+    return slots.map((s) => ({
+      ...s,
+      peptideName: active.peptideName,
+      amount: dose.amount,
+      unit: dose.unit,
+    }));
+  }, [active]);
+
+  const handleQuickLog = (slot: {
+    slot: string;
+    time: string;
+    peptideName: string;
+    amount: number;
+    unit: string;
+  }) => {
+    if (!active) return;
+    logDose({
+      peptideId: active.protocol.peptideId,
+      amount: slot.amount,
+      unit: slot.unit as DoseLogEntry['unit'],
+      route: active.protocol.route,
+      time: slot.time,
+    });
+    notifySuccess();
+  };
+
+  // ── Empty state — no active protocol ──
+  if (!active) {
+    return (
+      <View style={todayStyles.wrap}>
+        <View style={[todayStyles.emptyCard, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
+          <View style={[todayStyles.emptyIcon, { backgroundColor: `${accent.deep}18` }]}>
+            <Ionicons name="leaf-outline" size={28} color={accent.deep} />
+          </View>
+          <Text style={[todayStyles.emptyTitle, { color: t.text }]}>No active cycle yet</Text>
+          <Text style={[todayStyles.emptySub, { color: t.textSecondary }]}>
+            Start a protocol below and we'll show your adherence dial, daily progress, and one-tap logging here.
+          </Text>
+          <TouchableOpacity
+            style={[todayStyles.emptyCta, { backgroundColor: accent.deep }]}
+            onPress={() => {
+              selectionTick();
+              onJumpToStacks();
+            }}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Browse stacks to start a protocol"
+          >
+            <Ionicons name="layers-outline" size={16} color="#FFFFFF" />
+            <Text style={todayStyles.emptyCtaText}>Browse stacks</Text>
+          </TouchableOpacity>
+
+          {/* Still show the 7-day strip so first-time users understand
+              what the visualization will look like once they log doses. */}
+          {stripEntries.length > 0 && (
+            <View style={{ width: '100%', marginTop: 18 }}>
+              <Text style={[todayStyles.sectionLabel, { color: t.textSecondary, textAlign: 'left' }]}>
+                YOUR RECENT DOSES
+              </Text>
+              <DoseStrip
+                entries={stripEntries}
+                accentColor={accent.deep}
+                trackColor={t.cardBorder}
+                labelColor={t.textSecondary}
+                textColor={t.text}
+                expandedBg={t.surface}
+              />
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  // ── Active cycle ──
+  return (
+    <View style={todayStyles.wrap}>
+      <Text style={[todayStyles.sectionLabel, { color: t.textSecondary }]}>
+        ACTIVE CYCLE
+      </Text>
+
+      {/* Adherence dial hero */}
+      <View style={[todayStyles.heroCard, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
+        <View style={todayStyles.dialWrap}>
+          <AdherenceDial
+            percent={active.adherencePct}
+            centerLabel={`${active.adherencePct}%`}
+            subLabel="adherence"
+            size={170}
+            color={accent.deep}
+            gradientEnd={accent.darker}
+            trackColor={t.cardBorder}
+            centerLabelColor={t.text}
+            subLabelColor={t.textSecondary}
+          />
+        </View>
+        <Text style={[todayStyles.cycleTitle, { color: t.text }]}>
+          {active.peptideName}
+        </Text>
+        <Text style={[todayStyles.cycleSubtitle, { color: t.textSecondary }]}>
+          Day {active.currentDay} of {active.totalDays} ·{' '}
+          {active.loggedDoses.length} of {active.expectedDoses} doses logged
+        </Text>
+
+        <View style={todayStyles.progressBarWrap}>
+          <CycleProgressBar
+            totalDays={active.totalDays}
+            currentDay={active.currentDay}
+            dosesLogged={active.loggedDoses.map((d) => doseLoggedAt(d))}
+            accentColor={accent.deep}
+            trackColor={t.cardBorder}
+            captionColor={t.textMuted}
+            startDate={active.startDate}
+          />
+        </View>
+      </View>
+
+      {/* Today's doses */}
+      <Text style={[todayStyles.sectionLabel, { color: t.textSecondary, marginTop: 22 }]}>
+        TODAY'S DOSES
+      </Text>
+      {todaysPlan.map((slot, idx) => {
+        const todayDose = loggedToday(active.loggedDoses);
+        // Twice-daily: naïvely treat any dose-today as "AM logged" until a
+        // future iteration splits by AM/PM time-window.
+        const alreadyLogged = idx === 0 ? !!todayDose : false;
+
+        return (
+          <View
+            key={`${slot.slot}-${idx}`}
+            style={[todayStyles.doseRow, { backgroundColor: t.card, borderColor: t.cardBorder }]}
+          >
+            <View style={[todayStyles.doseTimeBlock, { backgroundColor: `${accent.deep}15` }]}>
+              <Ionicons
+                name={slot.slot === 'Evening' ? 'moon-outline' : 'sunny-outline'}
+                size={14}
+                color={accent.deep}
+              />
+              <Text style={[todayStyles.doseSlot, { color: accent.deep }]}>
+                {slot.slot}
+              </Text>
+            </View>
+
+            <View style={todayStyles.doseInfo}>
+              <Text style={[todayStyles.doseName, { color: t.text }]} numberOfLines={1}>
+                {slot.peptideName}
+              </Text>
+              <Text style={[todayStyles.doseAmount, { color: t.textSecondary }]} numberOfLines={1}>
+                {slot.amount} {slot.unit}
+              </Text>
+            </View>
+
+            {alreadyLogged && todayDose ? (
+              <View
+                style={[todayStyles.loggedBadge, { backgroundColor: `${accent.deep}15`, borderColor: `${accent.deep}40` }]}
+                accessibilityLabel={`Logged at ${todayDose.time}`}
+              >
+                <Ionicons name="checkmark" size={14} color={accent.deep} />
+                <Text style={[todayStyles.loggedText, { color: accent.deep }]}>
+                  {todayDose.time}
+                </Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[todayStyles.logBtn, { backgroundColor: accent.deep }]}
+                onPress={() => handleQuickLog(slot)}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={`Log ${slot.slot} ${slot.peptideName} ${slot.amount} ${slot.unit}`}
+              >
+                <Text style={todayStyles.logBtnText}>LOG</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        );
+      })}
+
+      {/* Dose history strip */}
+      <Text style={[todayStyles.sectionLabel, { color: t.textSecondary, marginTop: 22 }]}>
+        DOSE HISTORY
+      </Text>
+      <View style={[todayStyles.stripCard, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
+        <DoseStrip
+          entries={stripEntries}
+          accentColor={accent.deep}
+          trackColor={t.cardBorder}
+          labelColor={t.textSecondary}
+          textColor={t.text}
+          expandedBg={t.surface}
+        />
+      </View>
+
+      {/* Footer CTA → go to Stacks/Library to manage protocols */}
+      <TouchableOpacity
+        style={[todayStyles.manageRow, { borderColor: t.cardBorder }]}
+        onPress={() => {
+          selectionTick();
+          onJumpToStacks();
+        }}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Manage stacks and protocols"
+      >
+        <Ionicons name="layers-outline" size={14} color={t.textSecondary} />
+        <Text style={[todayStyles.manageText, { color: t.textSecondary }]}>
+          Manage stacks & protocols
+        </Text>
+        <Ionicons name="chevron-forward" size={14} color={t.textMuted} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const todayStyles = StyleSheet.create({
+  wrap: {
+    paddingTop: 4,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    letterSpacing: 0.8,
+    marginBottom: 10,
+    marginLeft: 2,
+  },
+  heroCard: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  dialWrap: {
+    marginBottom: 12,
+  },
+  cycleTitle: {
+    fontSize: 22,
+    fontFamily: 'Playfair-Black',
+    letterSpacing: -0.3,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  cycleSubtitle: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Medium',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  progressBarWrap: {
+    width: '100%',
+    marginTop: 18,
+  },
+
+  doseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  doseTimeBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  doseSlot: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    letterSpacing: 0.3,
+  },
+  doseInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  doseName: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Bold',
+  },
+  doseAmount: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Regular',
+    marginTop: 2,
+  },
+  logBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  logBtnText: {
+    color: '#FFFFFF',
+    fontFamily: 'DMSans-Bold',
+    fontSize: 12,
+    letterSpacing: 0.8,
+  },
+  loggedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  loggedText: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Bold',
+    letterSpacing: 0.3,
+  },
+
+  stripCard: {
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+  },
+
+  manageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    marginTop: 22,
+  },
+  manageText: {
+    fontSize: 12,
+    fontFamily: 'DMSans-SemiBold',
+    letterSpacing: 0.3,
+  },
+
+  emptyCard: {
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontFamily: 'Playfair-Black',
+    letterSpacing: -0.2,
+    textAlign: 'center',
+  },
+  emptySub: {
+    fontSize: 13,
+    fontFamily: 'DMSans-Regular',
+    lineHeight: 18,
+    textAlign: 'center',
+    marginTop: 6,
+    paddingHorizontal: 8,
+  },
+  emptyCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 999,
+    marginTop: 16,
+  },
+  emptyCtaText: {
+    color: '#FFFFFF',
+    fontFamily: 'DMSans-Bold',
+    fontSize: 13,
+    letterSpacing: 0.4,
+  },
+});
+
+type PeptideTab = 'today' | 'library' | 'stacks' | 'calculator';
 
 export default function MyStacksScreen() {
   const t = useTheme();
@@ -951,7 +1429,10 @@ export default function MyStacksScreen() {
   const protocols = useDoseLogStore((s) => s.protocols);
   const activeProtocols = useMemo(() => protocols.filter((p) => p.isActive), [protocols]);
   const [selectedGoal, setSelectedGoal] = useState<GoalType | null>(null);
-  const [activeTab, setActiveTab] = useState<PeptideTab>('library');
+  // Default to "today" — the Phase 4 redesign leads with active-cycle
+  // visualization + one-tap logging. Library/Stacks/Calculator are still
+  // reachable in the same tab bar but no longer the entry surface.
+  const [activeTab, setActiveTab] = useState<PeptideTab>('today');
   const peptideTabBarRef = useTourTarget('peptide_tab_bar');
 
   const curatedStacks = useMemo(() => {
@@ -1046,11 +1527,15 @@ export default function MyStacksScreen() {
           </Text>
         </View>
 
-        {/* ── 3-Tab bar (Library / Stacks / Calculator) ── */}
+        {/* ── 4-Tab bar (Today / Library / Stacks / Calculator) ── */}
+        {/* Phase 4 redesign: "Today" leads — adherence dial, cycle bar,
+            one-tap logging, 7-day dose strip. Library / Stacks /
+            Calculator remain reachable so users with no protocol yet
+            can browse + start one. */}
         <View ref={peptideTabBarRef} style={[styles.peptideTabBar, { borderBottomColor: t.cardBorder }]}>
-          {(['library', 'stacks', 'calculator'] as const).map((tab) => {
-            const labels = { library: 'Library', stacks: 'Stacks', calculator: 'Calculator' };
-            const icons = { library: 'book-outline', stacks: 'layers-outline', calculator: 'calculator-outline' } as const;
+          {(['today', 'library', 'stacks', 'calculator'] as const).map((tab) => {
+            const labels = { today: 'Today', library: 'Library', stacks: 'Stacks', calculator: 'Calculator' };
+            const icons = { today: 'pulse-outline', library: 'book-outline', stacks: 'layers-outline', calculator: 'calculator-outline' } as const;
             const active = activeTab === tab;
             return (
               <TouchableOpacity
@@ -1078,6 +1563,12 @@ export default function MyStacksScreen() {
             );
           })}
         </View>
+
+        {/* ─────────────────── TODAY TAB (Phase 4) ─────────────────── */}
+        {activeTab === 'today' && (
+          <TodayCycleView onJumpToStacks={() => setActiveTab('stacks')} />
+        )}
+        {/* ───────────────── END TODAY TAB ───────────────── */}
 
         {/* ─────────────────── LIBRARY TAB ─────────────────── */}
         {activeTab === 'library' && <>

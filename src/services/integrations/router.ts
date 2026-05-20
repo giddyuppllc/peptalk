@@ -160,7 +160,7 @@ export async function routeSyncResult(result: SyncResult): Promise<RouteStats> {
     // Sleep → totalMinutes + deep + rem (3 readings per night)
     for (const sleep of result.sleeps) {
       const dateKey = toLocalDateKey(sleep.endIso); // sleep "belongs" to wake date
-      const writes: Array<{ scope: any; value?: number }> = [
+      const writes: { scope: any; value?: number }[] = [
         { scope: 'sleep_minutes', value: sleep.totalMinutes },
         { scope: 'sleep_deep_minutes', value: sleep.deepMinutes },
         { scope: 'sleep_rem_minutes', value: sleep.remMinutes },

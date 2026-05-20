@@ -29,7 +29,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
-const MODEL = 'grok-4-1-fast-reasoning';
+const MODEL = Deno.env.get('OPENAI_MODEL') ?? 'grok-4.3';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -114,11 +114,34 @@ Deno.serve(async (req) => {
     const { data: profile } = await supabase
       .from('profiles').select('subscription_tier').eq('id', user.id).single();
     const effectiveTier = isBetaTester ? 'pro' : (profile?.subscription_tier ?? 'free');
-    if (effectiveTier !== 'pro') {
+    if (effectiveTier !== 'pro' && effectiveTier !== 'plus') {
       return jsonResp({
-        error: 'Lab interpretation requires PepTalk Pro.',
+        error: 'Lab interpretation requires PepTalk+ or Pro.',
         upgrade: true,
       }, 403);
+    }
+
+    // Tiered cap — Plus 5/day, Pro 20/day. Atomic via bump_ai_usage RPC.
+    const dailyLimit = effectiveTier === 'pro' ? 20 : 5;
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: bumpData, error: bumpErr } = await supabase.rpc('bump_ai_usage', {
+        p_user_id: user.id,
+        p_function_name: 'aimee-lab-interpret',
+        p_date: today,
+      });
+      if (bumpErr) throw bumpErr;
+      const used = Array.isArray(bumpData) && bumpData[0]
+        ? (bumpData[0] as any).count ?? 0
+        : 0;
+      if (used > dailyLimit) {
+        return jsonResp({
+          error: `Daily lab-interpret limit reached (${dailyLimit}/day).`,
+        }, 429);
+      }
+    } catch (rlErr) {
+      console.error('[aimee-lab-interpret] rate-limit check failed; failing closed:', rlErr);
+      return jsonResp({ error: 'Rate-limit check unavailable.' }, 429);
     }
 
     const body = await req.json().catch(() => ({}));

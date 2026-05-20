@@ -32,6 +32,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { compactVerify, importX509, decodeProtectedHeader } from 'https://esm.sh/jose@5.9.6';
+import { X509Certificate } from 'https://esm.sh/@peculiar/x509@1.9.7';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -173,18 +174,112 @@ Deno.serve(async (req) => {
         console.warn('[apple-notifications] unknown productId, skipping subscriptions upsert:', productId);
       } else {
         const stillActive = !['expiration', 'refund', 'revoked'].includes(eventType);
-        await admin.from('subscriptions').upsert(
-          {
-            user_id: userId,
-            product_id: productId,
-            tier,
-            platform: 'ios',
-            expires_at: expiresAt,
-            is_active: stillActive,
-            last_validated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id,product_id' },
-        );
+
+        // 2026-05-17 ordering fix: Apple does NOT guarantee notification
+        // delivery order. A late `EXPIRED` for period N arriving after
+        // `DID_RENEW` for period N+1 used to flip is_active=false and
+        // rewrite expires_at backward. Compare against the existing row's
+        // expires_at and only overwrite if the incoming event is for a
+        // strictly newer period (OR the user lacks a row at all). Refund
+        // / revoke events are terminal and always apply regardless of
+        // expires_at — those are authoritative downgrades.
+        const isTerminalDowngrade = eventType === 'refund' || eventType === 'revoked';
+        const { data: existing } = await admin
+          .from('subscriptions')
+          .select('expires_at, is_active')
+          .eq('user_id', userId)
+          .eq('product_id', productId)
+          .maybeSingle();
+
+        const existingExpiresMs = existing?.expires_at
+          ? new Date(existing.expires_at).getTime()
+          : 0;
+        const incomingExpiresMs = expiresAt
+          ? new Date(expiresAt).getTime()
+          : 0;
+
+        const eventIsStale =
+          !isTerminalDowngrade &&
+          existing &&
+          existingExpiresMs > 0 &&
+          incomingExpiresMs > 0 &&
+          incomingExpiresMs < existingExpiresMs;
+
+        if (eventIsStale) {
+          console.warn(
+            '[apple-notifications] stale event ignored (incoming expires_at',
+            expiresAt,
+            'older than stored',
+            existing.expires_at,
+            ') user_id=',
+            userId,
+            'product_id=',
+            productId,
+          );
+        } else {
+          await admin.from('subscriptions').upsert(
+            {
+              user_id: userId,
+              product_id: productId,
+              tier,
+              platform: 'ios',
+              expires_at: expiresAt,
+              is_active: stillActive,
+              // Also persist the original transaction id so future
+              // notifications carrying only originalTxId (legacy receipts,
+              // family-share fallback) can still resolve the row.
+              original_transaction_id: originalTxId ?? null,
+              last_validated_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id,product_id' },
+          );
+        }
+
+        // Gate the profile mirror on whether we actually applied the
+        // subscriptions row. If the event was ignored as stale, the
+        // profile would otherwise be flipped to a state that doesn't
+        // match the (newer) subscription row, falsely downgrading the
+        // user.
+        if (!eventIsStale) {
+          // ALSO mirror the tier into `profiles.subscription_tier` so the
+          // server-side feature gates (aimee-chat-stream, aimee-lab-
+          // interpret, community-create-post, etc.) reflect the new
+          // state. Without this, a refunded/expired/revoked user keeps
+          // server-side Pro access forever — they get blocked from
+          // upgrading (already have access) but the feature still serves
+          // them, so the only "downgrade" is when they buy something new
+          // (which they won't, since it's free). P0 from Wave 76.7 audit.
+          const profileTier = stillActive ? tier : 'free';
+          const isPro = stillActive && tier === 'pro';
+          const isPlus = stillActive && tier === 'plus';
+          const { error: profileErr } = await admin
+            .from('profiles')
+            .update({
+              subscription_tier: profileTier,
+              is_pro: isPro,
+              is_plus: isPlus,
+            })
+            .eq('id', userId);
+          if (profileErr) {
+            console.warn(
+              '[apple-notifications] profiles.subscription_tier update failed:',
+              profileErr.message,
+            );
+          }
+
+          // If a Plus→Pro upgrade just happened, deactivate any sibling
+          // subscription rows for the same user (different product_id)
+          // that are still flagged is_active. Otherwise syncFromServer's
+          // "most recent wins" query could later pick a stale Plus row
+          // and downgrade the user. P1 from the same audit.
+          if (stillActive) {
+            await admin
+              .from('subscriptions')
+              .update({ is_active: false })
+              .eq('user_id', userId)
+              .neq('product_id', productId);
+          }
+        }
       }
     }
 
@@ -198,12 +293,28 @@ Deno.serve(async (req) => {
 /**
  * Verify a JWS produced by Apple and return the decoded payload.
  *
- * Apple embeds the signing certificate chain in the JWS `x5c` header; we
- * import the leaf cert's public key and verify the signature against it.
- * The chain SHOULD be verified up to "Apple Root CA - G3" for full
- * protection against a leaked sub-CA; that's a TODO (see below) — without
- * it we're still protected against corrupted / truncated payloads and
- * casual forgery, which is the bar 99% of production apps ship at.
+ * The previous implementation pinned the ROOT cert by SHA-256
+ * fingerprint and trusted the JWS signature against the LEAF cert's
+ * public key — but never verified the cryptographic chain between
+ * leaf → intermediate → root. An attacker could construct a chain
+ * like [forged_leaf, forged_intermediate, real_apple_root_g3_der]
+ * where the fingerprint pin passes but the JWS is signed by the
+ * attacker's key. Per audit finding (Wave 76.7), this was a
+ * subscription-grant forgery vector.
+ *
+ * Fix (Wave 76.8):
+ *   1. Pin the root by SHA-256 fingerprint (unchanged — Apple Root G3).
+ *   2. For each link cert[i] → cert[i+1], cryptographically verify
+ *      that cert[i+1]'s public key actually signed cert[i]. Uses
+ *      @peculiar/x509 over WebCrypto.
+ *   3. Validate every cert's notBefore / notAfter window.
+ *   4. Then (and only then) use the leaf's public key to verify the
+ *      JWS payload itself.
+ *
+ * Forgery now requires producing a cert whose chain terminates at
+ * Apple Root G3 AND whose every link is cryptographically signed by
+ * the next — same trust anchor every Apple device ships with, only
+ * Apple's CA can produce it.
  */
 async function verifyAppleJWS(jws: string): Promise<any> {
   const header = decodeProtectedHeader(jws) as any;
@@ -212,19 +323,14 @@ async function verifyAppleJWS(jws: string): Promise<any> {
     throw new Error('JWS missing x5c header');
   }
 
-  // 1. Pin the chain's root to Apple Root CA G3 by SHA-256 fingerprint.
-  //    The cert at x5c[x5c.length - 1] should be Apple's Root CA G3.
-  //    Without this check, ANY Apple-issued leaf cert could forge
-  //    payloads — Apple signs leaves for many partners, not just ASN.
+  // 1. Pin root by fingerprint (rejects unknown root substitutions).
   await assertChainRootedAtApple(x5c);
 
-  // 2. Verify the JWS signature using the leaf cert's public key.
-  //    Combined with the root pin above, this means: the cert is real,
-  //    chains to Apple's published Root CA G3, AND the JWS payload is
-  //    signed by the leaf. Forging requires a cert whose chain
-  //    terminates at Apple Root G3 — the same trust anchor every Apple
-  //    device ships with — which only Apple's own CA infrastructure
-  //    can produce.
+  // 2. Cryptographically verify every link in the chain.
+  await verifyX509Chain(x5c);
+
+  // 3. Verify the JWS signature using the leaf cert's public key.
+  //    Safe now: we've proven the leaf was issued by Apple.
   const leafPem =
     '-----BEGIN CERTIFICATE-----\n' +
     x5c[0].replace(/(.{64})/g, '$1\n') +
@@ -248,16 +354,60 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
     .join('');
 }
 
+function base64ToBytes(b64: string): Uint8Array {
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+}
+
 async function assertChainRootedAtApple(x5c: string[]): Promise<void> {
   if (x5c.length < 2) {
     throw new Error('JWS x5c chain must include at least leaf + intermediate + root');
   }
-  const rootBase64 = x5c[x5c.length - 1];
-  const rootDer = Uint8Array.from(atob(rootBase64), (c) => c.charCodeAt(0));
+  const rootDer = base64ToBytes(x5c[x5c.length - 1]);
   const rootHash = await sha256Hex(rootDer);
   if (rootHash !== APPLE_ROOT_G3_SHA256) {
     throw new Error(
       `Untrusted root cert in x5c chain (sha256=${rootHash} expected=${APPLE_ROOT_G3_SHA256})`,
     );
+  }
+}
+
+/**
+ * For each adjacent pair (child, issuer) in the x5c chain:
+ *   - parse both with @peculiar/x509
+ *   - verify child.signature was produced by issuer.publicKey
+ *   - check child.notBefore ≤ now ≤ child.notAfter
+ *
+ * Also verifies that the root cert is properly self-signed (defense
+ * in depth — the fingerprint pin already rejects unknown roots, but
+ * a malformed self-signature would surface here).
+ *
+ * @peculiar/x509's `verify({ publicKey })` uses WebCrypto under the
+ * hood and handles ECDSA r||s ↔ DER signature conversion automatically.
+ */
+async function verifyX509Chain(x5c: string[]): Promise<void> {
+  const certs = x5c.map((b64) => new X509Certificate(base64ToBytes(b64)));
+  const now = new Date();
+
+  for (let i = 0; i < certs.length; i++) {
+    const cert = certs[i];
+
+    // Validity window.
+    if (now < cert.notBefore || now > cert.notAfter) {
+      throw new Error(
+        `Cert ${i} (${cert.subject}) outside validity window: ` +
+        `notBefore=${cert.notBefore.toISOString()} notAfter=${cert.notAfter.toISOString()}`,
+      );
+    }
+
+    // Verify signature against issuer's public key. For the last cert
+    // (root) the issuer IS the cert itself — confirms self-signature.
+    const issuer = certs[i + 1] ?? certs[i];
+    const ok = await cert.verify({ publicKey: issuer.publicKey });
+    if (!ok) {
+      throw new Error(
+        `Cert ${i} (${cert.subject}) signature does not verify against ` +
+        `issuer ${i + 1 < certs.length ? '(intermediate/root)' : '(self)'}`,
+      );
+    }
   }
 }

@@ -11,9 +11,19 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
-const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
-const VISION_MODEL = 'grok-4-1-fast-reasoning';
+// 2026-05-17 vision routing fix: Grok-4.3 (the current default OPENAI_MODEL
+// on this project) does not accept image inputs. Routing vision endpoints
+// to OpenAI gpt-4o-mini instead — same API shape, accurate food
+// recognition, and much cheaper than Grok vision would be even if it
+// were available. Reuses the OpenAI key already set for Whisper.
+const VISION_API_KEY =
+  Deno.env.get('OPENAI_VISION_API_KEY') ??
+  Deno.env.get('OPENAI_WHISPER_API_KEY') ??
+  '';
+const VISION_BASE_URL =
+  Deno.env.get('OPENAI_VISION_BASE_URL') ?? 'https://api.openai.com/v1';
+const VISION_MODEL =
+  Deno.env.get('OPENAI_VISION_MODEL') ?? 'gpt-4o-mini';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -120,9 +130,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Rate limit — 20 vision calls/day. Grok Vision is the priciest call
-    // in the app; even Pro users shouldn't be able to burn through it.
-    const rateLimit = await checkRateLimit(supabase, user.id, 'food-scan', 20);
+    // Tiered rate limit — Plus gets a daily sample, Pro the full allowance.
+    // Grok Vision is the priciest call in the app; even Pro users
+    // shouldn't be able to burn through it.
+    const dailyLimit = effectiveTier === 'pro' ? 20 : 5;
+    const rateLimit = await checkRateLimit(supabase, user.id, 'food-scan', dailyLimit);
     if (!rateLimit.allowed) {
       return new Response(JSON.stringify({
         error: `Daily food-scan limit reached (${rateLimit.limit}/day). Resets tomorrow.`,
@@ -134,6 +146,18 @@ Deno.serve(async (req) => {
     }
 
     // 3. Get image from request
+    // 2026-05-17 security fix: pre-parse size guard so an attacker
+    // can't stream a 100MB body and OOM the worker before the 6MB
+    // base64 check below fires. Content-Length is advisory but Supabase
+    // edge runtime trusts it.
+    const contentLength = Number(req.headers.get('content-length') ?? 0);
+    if (contentLength > 10_000_000) {
+      return new Response(JSON.stringify({ error: 'Request too large' }), {
+        status: 413,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { imageBase64 } = await req.json();
 
     if (!imageBase64 || typeof imageBase64 !== 'string') {
@@ -156,11 +180,18 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 4. Call Grok vision
-    const openaiResponse = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
+    // 4. Call vision API (OpenAI gpt-4o-mini)
+    if (!VISION_API_KEY) {
+      console.error('[food-scan] No VISION_API_KEY set');
+      return new Response(JSON.stringify({ error: 'Vision service not configured' }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const openaiResponse = await fetch(`${VISION_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${VISION_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -232,43 +263,32 @@ async function checkRateLimit(
   userId: string,
   functionName: string,
   limit: number,
-): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number }> {
-  const today = new Date().toISOString().slice(0, 10);
+): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number; failedClosed?: boolean }> {
+  // Atomic increment via `bump_ai_usage` RPC. The previous
+  // read-modify-write pattern on ai_usage_log could leak one extra call
+  // per concurrent same-user request (two reads see count=4, two upserts
+  // both write count=5; one increment lost). Caller still pays vendor
+  // cost. P0 fix from the 2026-05-17 security audit.
   try {
-    const { data: existing } = await supabase
-      .from('ai_usage_log')
-      .select('count')
-      .eq('user_id', userId)
-      .eq('function_name', functionName)
-      .eq('date', today)
-      .maybeSingle();
-    const count = existing?.count ?? 0;
-    if (count >= limit) {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data, error } = await supabase.rpc('bump_ai_usage', {
+      p_user_id: userId,
+      p_function_name: functionName,
+      p_date: today,
+    });
+    if (error) throw error;
+    const newCount = Array.isArray(data) && data[0]
+      ? (data[0] as any).count ?? 0
+      : 0;
+    if (newCount > limit) {
       const now = new Date();
       const tomorrow = new Date(now);
       tomorrow.setUTCHours(24, 0, 0, 0);
       const retryAfter = Math.max(1, Math.round((tomorrow.getTime() - now.getTime()) / 1000));
-      return { allowed: false, limit, count, retryAfter };
+      return { allowed: false, limit, count: newCount, retryAfter };
     }
-    await supabase
-      .from('ai_usage_log')
-      .upsert(
-        {
-          user_id: userId,
-          function_name: functionName,
-          date: today,
-          count: count + 1,
-          last_called_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,function_name,date' },
-      );
-    return { allowed: true, limit, count: count + 1 };
+    return { allowed: true, limit, count: newCount };
   } catch (err) {
-    // Fail CLOSED. If we can't reach ai_usage_log we cannot enforce the
-    // per-user cap, and the function fans out to the LLM/vision provider —
-    // unlimited spam quickly translates to real money. Better to return
-    // a 503 to the caller and let them retry once the DB recovers than
-    // to leave the cost door wide open.
     console.error(`[${functionName}] rate-limit check failed; failing closed:`, err);
     return { allowed: false, limit, count: 0, retryAfter: 60, failedClosed: true };
   }

@@ -13,24 +13,10 @@ import { STORE_LIMITS, capNewestFirst } from '../utils/storeLimits';
 // Types
 // ---------------------------------------------------------------------------
 
-interface DailyTotals {
-  calories: number;
-  proteinGrams: number;
-  carbsGrams: number;
-  fatGrams: number;
-  fiberGrams: number;
-  // Micronutrients
-  sodiumMg: number;
-  sugarGrams: number;
-  cholesterolMg: number;
-  saturatedFatGrams: number;
-  transFatGrams: number;
-  potassiumMg: number;
-  calciumMg: number;
-  ironMg: number;
-  vitaminAMcg: number;
-  vitaminCMg: number;
-}
+// Re-export from the pure module so existing callers keep working.
+// The math lives there now (testable in plain Node).
+import { computeDailyTotals, type DailyTotals } from '../utils/mealMath';
+export type { DailyTotals };
 
 export interface RecentFood {
   /** Unique key for dedup (normalized food name + brand) */
@@ -383,41 +369,10 @@ export const useMealStore = create<MealState & MealActions>()(
       getMealsByDate: (date) => get().meals.filter((m) => m.date === date),
 
       getDailyTotals: (date) => {
-        const dayMeals = get().meals.filter((m) => m.date === date);
-        const totals: DailyTotals = {
-          calories: 0, proteinGrams: 0, carbsGrams: 0, fatGrams: 0, fiberGrams: 0,
-          sodiumMg: 0, sugarGrams: 0, cholesterolMg: 0, saturatedFatGrams: 0, transFatGrams: 0,
-          potassiumMg: 0, calciumMg: 0, ironMg: 0, vitaminAMcg: 0, vitaminCMg: 0,
-        };
-
-        for (const meal of dayMeals) {
-          if (meal.quickLog) {
-            totals.calories += meal.quickLog.calories;
-            totals.proteinGrams += meal.quickLog.proteinGrams;
-            totals.carbsGrams += meal.quickLog.carbsGrams;
-            totals.fatGrams += meal.quickLog.fatGrams;
-          } else {
-            for (const food of meal.foods) {
-              totals.calories += food.calories;
-              totals.proteinGrams += food.proteinGrams;
-              totals.carbsGrams += food.carbsGrams;
-              totals.fatGrams += food.fatGrams;
-              totals.fiberGrams += food.fiberGrams ?? 0;
-              totals.sodiumMg += food.sodiumMg ?? 0;
-              totals.sugarGrams += food.sugarGrams ?? 0;
-              totals.cholesterolMg += food.cholesterolMg ?? 0;
-              totals.saturatedFatGrams += food.saturatedFatGrams ?? 0;
-              totals.transFatGrams += food.transFatGrams ?? 0;
-              totals.potassiumMg += food.potassiumMg ?? 0;
-              totals.calciumMg += food.calciumMg ?? 0;
-              totals.ironMg += food.ironMg ?? 0;
-              totals.vitaminAMcg += food.vitaminAMcg ?? 0;
-              totals.vitaminCMg += food.vitaminCMg ?? 0;
-            }
-          }
-        }
-
-        return totals;
+        // Delegated to a pure function in src/utils/mealMath.ts so the
+        // math is unit-testable without zustand/react. NaN + missing-
+        // field guards live there. See scripts/verify-meal-math.ts.
+        return computeDailyTotals(get().meals, date);
       },
 
       getDailyProgress: (date) => {
@@ -452,13 +407,19 @@ export const useMealStore = create<MealState & MealActions>()(
       // Water
       // -----------------------------------------------------------------------
 
-      logWater: (date, oz) =>
+      logWater: (date, oz) => {
+        // Guard against NaN / Infinity / negative — the sanitize layer
+        // already does this for Aimee, but direct callers (manual log
+        // dialog) used to bypass it.
+        const n = Number(oz);
+        if (!Number.isFinite(n)) return;
         set({
           waterLog: {
             ...get().waterLog,
-            [date]: (get().waterLog[date] ?? 0) + oz,
+            [date]: Math.max(0, (get().waterLog[date] ?? 0) + n),
           },
-        }),
+        });
+      },
 
       getWater: (date) => get().waterLog[date] ?? 0,
 
@@ -539,7 +500,12 @@ export const useMealStore = create<MealState & MealActions>()(
       // -----------------------------------------------------------------------
 
       addCustomMeal: (meal) =>
-        set({ customMeals: [meal, ...get().customMeals] }),
+        set({
+          customMeals: capNewestFirst(
+            [meal, ...get().customMeals],
+            STORE_LIMITS.CUSTOM_MEALS,
+          ),
+        }),
 
       updateCustomMeal: (mealId, updates) =>
         set({
@@ -556,7 +522,12 @@ export const useMealStore = create<MealState & MealActions>()(
       // -----------------------------------------------------------------------
 
       addMealTemplate: (template) =>
-        set({ mealTemplates: [template, ...get().mealTemplates] }),
+        set({
+          mealTemplates: capNewestFirst(
+            [template, ...get().mealTemplates],
+            STORE_LIMITS.MEAL_TEMPLATES,
+          ),
+        }),
 
       updateMealTemplate: (id, updates) =>
         set({
@@ -594,6 +565,19 @@ export const useMealStore = create<MealState & MealActions>()(
               : t,
           ),
         });
+        // Best-effort: also decrement matching pantry items so the
+        // kitchen list reflects reality after this meal. Never blocks
+        // the meal log on a pantry hit-rate miss.
+        try {
+          // Lazy-require usePantryStore to avoid a circular import at
+          // module init (both stores reference each other's types).
+          const { usePantryStore } = require('./usePantryStore');
+          usePantryStore.getState().decrementForFoods(
+            template.foods.map((f) => ({ name: f.foodName, qty: f.servings })),
+          );
+        } catch {
+          // Pantry store unavailable — swallow.
+        }
       },
 
       logMealTemplateServings: (id, date, mealType, servings) => {
@@ -635,6 +619,14 @@ export const useMealStore = create<MealState & MealActions>()(
               : t,
           ),
         });
+        try {
+          const { usePantryStore } = require('./usePantryStore');
+          usePantryStore.getState().decrementForFoods(
+            scaledFoods.map((f) => ({ name: f.foodName, qty: f.servings })),
+          );
+        } catch {
+          // Pantry store unavailable — swallow.
+        }
       },
 
       saveMealAsTemplate: (mealId, opts) => {

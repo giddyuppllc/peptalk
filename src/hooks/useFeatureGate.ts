@@ -60,44 +60,52 @@ export const PaywallGate: React.FC<{ feature: string; children: React.ReactNode 
     }
   }, [hasAccess, feature, currentTier]);
 
-  // When the paywall is dismissed (Maybe Later), pop back to the previous
-  // screen synchronously so there's no blank-render frame. Defer with
-  // requestAnimationFrame so the modal close animation can finish, then
-  // navigate. If we can't pop (deep link landed here), fall back to home.
+  // When the paywall is dismissed (Maybe Later), navigate AWAY
+  // immediately. The modal close animation plays on top of the new
+  // screen. Earlier code deferred navigation inside
+  // requestAnimationFrame which produced a "blank page → force quit"
+  // bug in TestFlight (recipe-generator → Maybe Later → stuck on the
+  // gate's fallback render until the user killed the app).
+  //
+  // We still keep `dismissed` as a fallback state in case navigation
+  // is slow or fails — the user sees a tappable "Tap to continue"
+  // surface, not a frozen blank.
   const handleDismiss = useCallback(() => {
-    setDismissed(true);
-    requestAnimationFrame(() => {
-      try {
-        if (router.canGoBack()) {
-          router.back();
-        } else {
-          router.replace('/(tabs)');
-        }
-      } catch {
-        // Last-resort hard-route to home — never leave the user stranded.
-        try { router.replace('/(tabs)'); } catch {}
+    try {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)');
       }
-    });
+    } catch {
+      try { router.replace('/(tabs)'); } catch {}
+    }
+    setDismissed(true);
   }, []);
 
   if (hasAccess) {
     return React.createElement(React.Fragment, null, children);
   }
 
-  // While the dismiss navigation animates, fall back to a parent-shaped
-  // wrapper rather than a blank null. If for any reason navigation fails,
-  // user sees a tap-anywhere recovery prompt instead of a frozen screen.
+  // After dismiss the navigation should already be in flight — but if
+  // anything went sideways the user sees a tappable "Tap to continue"
+  // surface instead of a frozen screen. Tapping forces home.
   if (dismissed) {
     return React.createElement(
       View,
       {
-        style: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+        style: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
         accessibilityRole: 'button',
+        accessibilityLabel: 'Tap to return home',
         onTouchEnd: () => {
           try { router.replace('/(tabs)'); } catch {}
         },
       },
-      React.createElement(Text, { style: { color: '#9ca3af', fontSize: 13 } }, 'Returning…'),
+      React.createElement(
+        Text,
+        { style: { color: '#6B7280', fontSize: 14, textAlign: 'center' } },
+        'Tap anywhere to return',
+      ),
     );
   }
 

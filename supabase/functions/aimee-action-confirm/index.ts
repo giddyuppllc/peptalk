@@ -1,0 +1,364 @@
+/**
+ * Aimee Pending Action Confirm — Supabase Edge Function.
+ *
+ * The streaming chat endpoint emits `pending_action` events when a tool
+ * proposes a write (draft_meal_template, propose_log_field). The client
+ * shows the user a Confirm/Edit/Cancel modal. This endpoint executes the
+ * commit when the user taps Confirm.
+ *
+ * Flow:
+ *   1. Verify the action row exists, belongs to the caller, is 'pending'.
+ *   2. Branch by tool_name and write to the appropriate user table.
+ *   3. Flip the action's status to 'confirmed' (or 'cancelled' for cancel).
+ *
+ * Auth: required (user must own the action). Action ids are UUIDs and
+ * RLS prevents cross-user access even with a leaked id.
+ *
+ * POST body:
+ *   { action_id: "uuid", decision: "confirm" | "cancel", edits?: {...} }
+ *
+ * Returns:
+ *   { ok: true, status: "confirmed"|"cancelled", written?: {...} }
+ *
+ * Deploy: supabase functions deploy aimee-action-confirm
+ */
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
+const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  // 1. Auth ----------------------------------------------------------------
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) {
+    return jsonError(401, 'Missing auth token');
+  }
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) {
+    return jsonError(401, 'Invalid auth token');
+  }
+
+  // 2. Parse body ---------------------------------------------------------
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return jsonError(400, 'Invalid JSON');
+  }
+  const actionId = typeof body.action_id === 'string' ? body.action_id : null;
+  const decision = body.decision === 'confirm' ? 'confirm' : 'cancel';
+  const edits = (body.edits && typeof body.edits === 'object')
+    ? (body.edits as Record<string, unknown>)
+    : null;
+
+  if (!actionId) return jsonError(400, 'action_id required');
+
+  // 3. Load the pending action --------------------------------------------
+  const { data: action, error: loadErr } = await supabase
+    .from('aimee_pending_actions')
+    .select('id, user_id, tool_name, input, output, status, expires_at')
+    .eq('id', actionId)
+    .single();
+  if (loadErr || !action) {
+    return jsonError(404, 'Action not found');
+  }
+  if (action.user_id !== user.id) {
+    // RLS would normally catch this, but be defensive: never leak existence.
+    return jsonError(404, 'Action not found');
+  }
+  if (action.status !== 'pending') {
+    return jsonError(409, `Action already ${action.status}`);
+  }
+  if (action.expires_at && new Date(action.expires_at) < new Date()) {
+    // Auto-expire.
+    await supabase
+      .from('aimee_pending_actions')
+      .update({ status: 'expired', resolved_at: new Date().toISOString() })
+      .eq('id', actionId);
+    return jsonError(410, 'Action expired');
+  }
+
+  // 4. Branch on decision -------------------------------------------------
+  if (decision === 'cancel') {
+    await supabase
+      .from('aimee_pending_actions')
+      .update({ status: 'cancelled', resolved_at: new Date().toISOString() })
+      .eq('id', actionId);
+    return ok({ status: 'cancelled' });
+  }
+
+  // 5. Confirm — write to the target table --------------------------------
+  const output = mergeEdits(action.output, edits);
+  let written: Record<string, unknown> = {};
+  try {
+    if (action.tool_name === 'draft_meal_template') {
+      written = await commitMealTemplate(supabase, user.id, output);
+    } else if (action.tool_name === 'propose_log_field') {
+      written = await commitLogField(supabase, user.id, output);
+    } else {
+      // For read-only tools that somehow ended up here, just mark confirmed.
+      written = { note: 'no-op for non-write tool' };
+    }
+  } catch (e) {
+    console.error('[aimee-action-confirm] commit failed:', e);
+    return jsonError(500, 'Commit failed');
+  }
+
+  await supabase
+    .from('aimee_pending_actions')
+    .update({
+      status: 'confirmed',
+      resolved_at: new Date().toISOString(),
+      output, // persist user edits for audit trail
+    })
+    .eq('id', actionId);
+
+  return ok({ status: 'confirmed', written });
+});
+
+// ─── Commit handlers ──────────────────────────────────────────────────────
+
+/**
+ * Insert a meal template into `meal_entries` as a saved-template-style entry.
+ * Marks it as "from_aimee" so the user's history can filter.
+ */
+async function commitMealTemplate(
+  supabase: any,
+  userId: string,
+  output: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const totals = (output.totals as Record<string, number>) ?? {};
+  const items = Array.isArray(output.items) ? (output.items as any[]) : [];
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Re-validate every LLM-emitted value at commit time. The propose-time
+  // validators in aimee-chat-stream/_tools.ts::execDraftMealTemplate run
+  // on the model's first draft, but the confirm UI lets the user edit
+  // `title` / `totals` / `items` before this handler fires, and those
+  // edited values land here verbatim. Without these clamps a hostile or
+  // sloppy edit could ship `calories: 9999999` or a 1MB title into
+  // meal_entries, then poison every future Aimee prompt via the daily
+  // macro summary. Mirrors the client sanitize module
+  // (src/utils/aimeeActionSanitize.ts) so server + client agree.
+  const ALLOWED_MEAL_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
+  const clampNum = (v: unknown, max: number): number => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 0;
+    return Math.max(0, Math.min(max, Math.round(n)));
+  };
+  const clampStr = (v: unknown, max: number): string => {
+    if (typeof v !== 'string') return '';
+    return v.trim().slice(0, max);
+  };
+  const rawMealType = typeof output.mealType === 'string' ? output.mealType.toLowerCase() : 'snack';
+  const mealType = ALLOWED_MEAL_TYPES.has(rawMealType) ? rawMealType : 'snack';
+  const title = clampStr(output.title, 120) || 'Aimee meal template';
+  const notes = clampStr(output.notes, 500) || null;
+  // Per-item magnitude clamp — items[] is summed alongside the totals
+  // in some downstream contexts, so an unclamped item poisons the
+  // ring even if `totals` is bounded. Mirrors client per-row caps.
+  const safeItems = items.slice(0, 20).map((it: any) => ({
+    ...it,
+    foodName: clampStr(it?.foodName ?? it?.name, 200) || 'item',
+    calories: clampNum(it?.calories, 3000),
+    proteinGrams: clampNum(it?.proteinGrams ?? it?.protein, 300),
+    carbsGrams: clampNum(it?.carbsGrams ?? it?.carbs, 500),
+    fatGrams: clampNum(it?.fatGrams ?? it?.fat, 300),
+  }));
+
+  const row: Record<string, unknown> = {
+    user_id: userId,
+    date: today,
+    meal_type: mealType,
+    title,
+    foods: safeItems, // jsonb in meal_entries
+    calories: clampNum(totals.calories, 5000),
+    protein_grams: clampNum(totals.protein, 500),
+    carbs_grams: clampNum(totals.carbs, 1000),
+    fat_grams: clampNum(totals.fat, 500),
+    source: 'aimee', // immutable — never honour a user/LLM override
+    notes,
+  };
+  // Some meal_entries deployments have different column names. Try the
+  // strict shape first; if it fails on a missing column, retry with the
+  // minimal set.
+  const tryInsert = async (rowToInsert: Record<string, unknown>) =>
+    supabase.from('meal_entries').insert(rowToInsert).select('id').single();
+
+  let { data, error } = await tryInsert(row);
+  if (error && /column .* does not exist/i.test(error.message ?? '')) {
+    // Retry with a minimal shape.
+    const minimal = {
+      user_id: userId,
+      date: today,
+      meal_type: row.meal_type,
+      foods: safeItems,
+      source: 'aimee',
+    };
+    ({ data, error } = await tryInsert(minimal));
+  }
+  if (error) {
+    throw new Error(`meal_entries insert failed: ${error.message}`);
+  }
+  return { meal_entry_id: data?.id, totals };
+}
+
+/**
+ * Upsert a single field into TODAY's check_in row.
+ */
+async function commitLogField(
+  supabase: any,
+  userId: string,
+  output: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const field = String(output.field ?? '');
+  let value = output.value;
+  const today = output.date ?? new Date().toISOString().slice(0, 10);
+
+  const fieldMap: Record<string, string> = {
+    mood: 'mood',
+    energy: 'energy',
+    sleepHours: 'sleep_hours',
+    weightLbs: 'weight_lbs',
+    symptoms: 'symptoms',
+    notes: 'notes',
+  };
+  const dbField = fieldMap[field];
+  if (!dbField) {
+    throw new Error(`unknown log field: ${field}`);
+  }
+
+  // Re-validate at commit time. The propose-time validators ran in
+  // aimee-chat-stream/_tools.ts::execProposeLogField, but `mergeEdits`
+  // above lets the user overwrite `value` from the confirm UI, and
+  // the LLM-suggested input could also be edge-case junk. Apply the
+  // same range checks + length caps server-side so a malicious or
+  // sloppy edit can't ship 99,999 lb or a 5 MB notes string back into
+  // the check_ins row (which then poisons future Aimee prompts via
+  // healthProfileSummary). This is the second-order-prompt-injection
+  // defense; without it the action-confirm path was a write-anything
+  // hole.
+  if (field === 'mood' || field === 'energy') {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 1 || n > 5) {
+      throw new Error(`${field} must be 1-5`);
+    }
+    value = n;
+  } else if (field === 'sleepHours') {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 0 || n > 24) {
+      throw new Error('sleepHours must be 0-24');
+    }
+    value = n;
+  } else if (field === 'weightLbs') {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 40 || n > 800) {
+      throw new Error('weightLbs out of plausible range');
+    }
+    value = n;
+  } else if (field === 'symptoms') {
+    if (!Array.isArray(value) || !value.every((s) => typeof s === 'string')) {
+      throw new Error('symptoms must be an array of strings');
+    }
+    value = (value as string[])
+      .map((s) => s.slice(0, 50))
+      .slice(0, 10);
+  } else if (field === 'notes') {
+    if (typeof value !== 'string') {
+      throw new Error('notes must be a string');
+    }
+    value = value.slice(0, 500);
+  }
+
+  // Read-modify-write. Avoid clobbering other fields the user set today.
+  const { data: existing } = await supabase
+    .from('check_ins')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('date', today)
+    .maybeSingle();
+
+  if (existing?.id) {
+    const { error } = await supabase
+      .from('check_ins')
+      .update({ [dbField]: value })
+      .eq('id', existing.id);
+    if (error) throw new Error(`check_ins update failed: ${error.message}`);
+    return { check_in_id: existing.id, field: dbField, value };
+  }
+
+  const { data: inserted, error: insertErr } = await supabase
+    .from('check_ins')
+    .insert({
+      user_id: userId,
+      date: today,
+      [dbField]: value,
+    })
+    .select('id')
+    .single();
+  if (insertErr) {
+    throw new Error(`check_ins insert failed: ${insertErr.message}`);
+  }
+  return { check_in_id: inserted?.id, field: dbField, value, created: true };
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+
+function jsonError(status: number, message: string): Response {
+  return new Response(
+    JSON.stringify({ error: message }),
+    {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    },
+  );
+}
+
+function ok(body: Record<string, unknown>): Response {
+  return new Response(
+    JSON.stringify({ ok: true, ...body }),
+    {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    },
+  );
+}
+
+/** Keys the client is NEVER allowed to overwrite via the confirm
+ *  edit payload — these define WHAT the action is. The user can
+ *  edit the VALUE of a proposed log field, not the field itself.
+ *  (Otherwise a propose for `mood: 4` could be confirmed as
+ *  `weightLbs: 9999` — bypassing the propose-time validator.) */
+const IMMUTABLE_ACTION_KEYS = new Set(['field', 'mealType', 'tool_name', 'date']);
+
+function mergeEdits(
+  original: Record<string, unknown> | unknown,
+  edits: Record<string, unknown> | null,
+): Record<string, unknown> {
+  const base = (original && typeof original === 'object')
+    ? (original as Record<string, unknown>)
+    : {};
+  if (!edits) return base;
+  // Shallow merge — clients can only overwrite existing keys, and even
+  // among those, fields that define the action's identity stay frozen.
+  const out: Record<string, unknown> = { ...base };
+  for (const k of Object.keys(base)) {
+    if (IMMUTABLE_ACTION_KEYS.has(k)) continue;
+    if (k in edits) out[k] = edits[k];
+  }
+  return out;
+}

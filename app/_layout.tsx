@@ -8,7 +8,7 @@ import {
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Animated, Text, AppState } from 'react-native';
+import { View, StyleSheet, Animated, Text, AppState , Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts } from 'expo-font';
@@ -19,11 +19,14 @@ import { DMSans_400Regular } from '@expo-google-fonts/dm-sans/400Regular';
 import { DMSans_500Medium } from '@expo-google-fonts/dm-sans/500Medium';
 import { DMSans_600SemiBold } from '@expo-google-fonts/dm-sans/600SemiBold';
 import { DMSans_700Bold } from '@expo-google-fonts/dm-sans/700Bold';
+import { Newsreader_600SemiBold } from '@expo-google-fonts/newsreader/600SemiBold';
+import { Newsreader_700Bold } from '@expo-google-fonts/newsreader/700Bold';
 import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
+import { V3ThemeProvider } from '../src/theme/V3ThemeProvider';
 import { OfflineBanner } from '../src/components/OfflineBanner';
+import { HomeFab } from '../src/components/HomeFab';
 import { CelebrationModal } from '../src/components/CelebrationModal';
-import { ProfileShortcutFab } from '../src/components/ProfileShortcutFab';
 import { WorkoutRewardModal } from '../src/components/WorkoutRewardModal';
 import { PepTalkCharacter } from '../src/components/PepTalkCharacter';
 import { SpotlightTour } from '../src/components/tutorial/SpotlightTour';
@@ -49,13 +52,13 @@ import { usePantryStore } from '../src/store/usePantryStore';
 import { useCycleStore } from '../src/store/useCycleStore';
 import { useIntegrationsStore } from '../src/store/useIntegrationsStore';
 import { subscribeToReconnect } from '../src/hooks/useNetworkStatus';
-import { initTelemetry } from '../src/services/telemetry';
+import { initTelemetry, installGlobalErrorHandler, captureException } from '../src/services/telemetry';
+import { useTheme } from '../src/hooks/useTheme';
 
 // Boot-time telemetry init (no-op if no DSN). Done at module scope so it
 // fires before any component renders or stores hydrate.
 initTelemetry();
-import { Platform } from 'react-native';
-import { useTheme } from '../src/hooks/useTheme';
+installGlobalErrorHandler();
 
 function RootLayout() {
   const router = useRouter();
@@ -65,6 +68,7 @@ function RootLayout() {
   const hasHydrated = useOnboardingStore((state) => state.hasHydrated);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const authHydrated = useAuthStore((state) => state.hasHydrated);
+  const subscriptionHasHydrated = useSubscriptionStore((state) => state.hasHydrated);
   const t = useTheme();
 
   // Load custom fonts
@@ -76,6 +80,11 @@ function RootLayout() {
     'DMSans-Medium': DMSans_500Medium,
     'DMSans-SemiBold': DMSans_600SemiBold,
     'DMSans-Bold': DMSans_700Bold,
+    // v3 male theme — Newsreader is the masculine serif counterpart to
+    // Playfair on the female side (§3 / §10 of Master Refactor Plan v3.1).
+    // EDWARD H. greeting + male glass-card headlines use these weights.
+    'Newsreader-SemiBold': Newsreader_600SemiBold,
+    'Newsreader-Bold': Newsreader_700Bold,
   });
 
   // Safety net: if @expo-google-fonts can't reach its CDN (captive wifi,
@@ -91,6 +100,36 @@ function RootLayout() {
   }, [fontsLoaded]);
   const fontsReady = fontsLoaded || fontsTimedOut || !!fontsError;
 
+  // 2026-05-17 P0 fix: splash deadlock if any persistence store fails
+  // to rehydrate (corrupted blob, encryption module link broken, OS
+  // keychain locked). Fonts had a timeout but the hydration flags did
+  // not — user saw the gradient + logo with no path forward. Now an
+  // 8s ceiling forces the splash to dismiss even with stuck hydration.
+  // Telemetry breadcrumb fires once so engineering can spot it.
+  const [hydrationTimedOut, setHydrationTimedOut] = useState(false);
+  useEffect(() => {
+    if (hasHydrated && authHydrated && subscriptionHasHydrated) return;
+    const timer = setTimeout(() => {
+      setHydrationTimedOut(true);
+      try {
+
+        const { captureMessage } = require('../src/services/telemetry');
+        captureMessage?.(
+          'Splash hydration timeout — proceeding with stuck stores',
+          'warning',
+          {
+            hasHydrated,
+            authHydrated,
+            subscriptionHasHydrated,
+          },
+        );
+      } catch {}
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [hasHydrated, authHydrated, subscriptionHasHydrated]);
+  const hydrationReady =
+    (hasHydrated && authHydrated && subscriptionHasHydrated) || hydrationTimedOut;
+
   // Wait for the navigator (<Stack>) to mount before attempting navigation
   const [navReady, setNavReady] = useState(false);
 
@@ -104,12 +143,64 @@ function RootLayout() {
   // can flip as stores hydrate, and without this guard the effect re-fires
   // and layers animations.
   const splashStarted = useRef(false);
+  // Holds a deep-link route from a notification tap that arrived before
+  // auth was ready. Drained by the effect below once the user is
+  // authenticated. P0 cold-tap intent-loss fix.
+  const pendingDeepLinkRef = useRef<string | null>(null);
+
+  // Drain the stashed deep-link once auth flips authenticated.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const route = pendingDeepLinkRef.current;
+    if (!route) return;
+    pendingDeepLinkRef.current = null;
+    // Defer one frame so the navigator is definitely mounted.
+    requestAnimationFrame(() => {
+      import('expo-router').then(({ router }) => router.push(route as any));
+    });
+  }, [isAuthenticated]);
+
+  // 2026-05-17 P0 fix (IAP audit): when the signed-in user id changes
+  // (logout-then-login as a different user on the same device),
+  // re-cycle the IAP connection so any stale purchase listener bound
+  // to the previous user's context is torn down and a fresh one
+  // captures the new user's uid for the cross-user mismatch check.
+  const currentUserId = useAuthStore((s) => s.user?.id ?? null);
+  const lastIapUserIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!currentUserId) return;
+    if (lastIapUserIdRef.current === currentUserId) return;
+    // Only fire on actual user changes after first boot binding.
+    if (lastIapUserIdRef.current !== null) {
+      try { endIAP(); } catch {}
+      try {
+        initIAP({
+          onPurchase: async ({ productId, transactionReceipt }) => {
+            const liveUserId = useAuthStore.getState().user?.id ?? null;
+            if (liveUserId && currentUserId !== liveUserId) return;
+            const platform: 'ios' | 'android' = Platform.OS === 'ios' ? 'ios' : 'android';
+            try {
+              await useSubscriptionStore
+                .getState()
+                .validatePurchase(platform, productId, transactionReceipt);
+            } catch {}
+          },
+          onPending: ({ productId }) => {
+            useSubscriptionStore.getState().setPendingPurchase({ productId });
+          },
+        });
+      } catch {}
+    }
+    lastIapUserIdRef.current = currentUserId;
+  }, [currentUserId]);
 
   useEffect(() => {
-    // Wait for fonts AND hydrated auth/onboarding state before deciding
-    // which splash path to play. Otherwise returning users briefly get the
-    // full welcome animation before we know they've seen it already.
-    if (!fontsReady || !hasHydrated || !authHydrated) return;
+    // Wait for fonts AND hydrated auth/onboarding/subscription state before
+    // deciding which splash path to play. Otherwise returning users briefly
+    // get the full welcome animation before we know they've seen it already,
+    // and cold-install Pro users flash the paywall on first frame while the
+    // subscription store rehydrates from default tier='free'.
+    if (!fontsReady || !hydrationReady) return;
     if (splashStarted.current) return;
     splashStarted.current = true;
 
@@ -163,7 +254,7 @@ function RootLayout() {
     return () => {
       cancelled = true;
     };
-  }, [fontsReady, hasHydrated, authHydrated, isComplete, isAuthenticated]);
+  }, [fontsReady, hasHydrated, authHydrated, subscriptionHasHydrated, isComplete, isAuthenticated]);
 
   // Initialize notifications and restore session — no-ops gracefully in Expo Go
   useEffect(() => {
@@ -177,6 +268,23 @@ function RootLayout() {
       if (__DEV__) console.warn('[boot] configureNotificationHandler threw:', err);
     }
 
+    // Register the tap-routing listener once at boot so any scheduled
+    // reminder (with `data.route`) or push fan-out (with `data.kind`)
+    // routes to the right screen when tapped. Without this, every
+    // notification just opens the app to its last screen — the `route:`
+    // fields we wrote on each scheduled reminder were dead data. P0
+    // from Wave 76.9 push audit.
+    (async () => {
+      try {
+        const { registerNotificationResponseHandler } = await import(
+          '../src/services/notificationService'
+        );
+        registerNotificationResponseHandler(router);
+      } catch (err) {
+        if (__DEV__) console.warn('[boot] notif response handler failed:', err);
+      }
+    })();
+
     // First-run notification permission + daily check-in reminder.
     // Tester feedback: users want a morning nudge so the habit forms even
     // on days they're not actively dosing. Default-on in preferences,
@@ -185,32 +293,196 @@ function RootLayout() {
     // OS short-circuits if permission already granted.
     (async () => {
       try {
-        const { registerForPushNotifications, scheduleDailyCheckInReminder } =
-          await import('../src/services/notificationService');
+        const {
+          registerForPushNotifications,
+          scheduleDailyCheckInReminder,
+          scheduleWeeklyReport,
+          cancelWeeklyReport,
+          scheduleMealSafetyChecks,
+          cancelRemindersByTag,
+        } = await import('../src/services/notificationService');
         const token = await registerForPushNotifications();
         if (!token) return; // user denied, or notifications unavailable
+        // Wait for the notification store to rehydrate before scheduling.
+        // Otherwise the in-memory default `dailyCheckInReminder=true`
+        // schedules a reminder the user previously disabled — they get
+        // a spurious 9 AM push and we never cancelled it.
+        let waited = 0;
+        while (!useNotificationStore.getState().hasHydrated && waited < 5000) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          waited += 50;
+        }
         const prefs = useNotificationStore.getState().preferences;
         if (prefs.dailyCheckInReminder && prefs.enabled) {
           await scheduleDailyCheckInReminder(prefs.checkInReminderTime);
+        }
+        // §9.3 — Aimee weekly report. Schedule a Sunday 9 AM local push
+        // when notifications + weeklyReport are on; cancel cleanly when
+        // either is off so a previously-scheduled Sunday push doesn't
+        // keep firing for a user who turned the feature off.
+        if (prefs.enabled && prefs.weeklyReport) {
+          await scheduleWeeklyReport();
+        } else {
+          await cancelWeeklyReport();
+        }
+        // Food-safety reminder — daily local notification that points at
+        // the nutrition tab so the user can check which preps are stale.
+        // Default-on safety feature, not paywall-gated.
+        if (prefs.enabled && prefs.mealSafetyReminders) {
+          const [hh, mm] = (prefs.mealSafetyReminderTime ?? '09:00')
+            .split(':')
+            .map((s) => Number(s));
+          await scheduleMealSafetyChecks(
+            Number.isFinite(hh) ? hh : 9,
+            Number.isFinite(mm) ? mm : 0,
+          );
+        } else {
+          await cancelRemindersByTag('meal-safety-');
         }
       } catch (err) {
         if (__DEV__) console.warn('[boot] notification registration failed:', err);
       }
     })();
+
+    // §9.3 — refresh the weekly report on every cold boot when the last
+    // refresh is older than 6 days. This way the report the user lands
+    // on after tapping a Sunday push is the current one, even though
+    // the notification itself can't run code. Dynamic import keeps boot
+    // cheap when the reports surface is never opened.
+    (async () => {
+      try {
+        let waited = 0;
+        // Wait for stores to hydrate so the report sees real data.
+        while (waited < 5000) {
+          const ready =
+            useDoseLogStore.getState().doses != null &&
+            useMealStore.getState().meals != null;
+          if (ready) break;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          waited += 50;
+        }
+        // §17 — Reports + Insights are Pro features; skip the work for
+        // free-tier users entirely. Wait for subscription hydration
+        // first; previously this read `tier` before the store rehydrated
+        // from disk, defaulting Pro users to 'free' on cold boot and
+        // skipping their weekly refresh (2026-05-17 correctness audit).
+        let subWait = 0;
+        while (!useSubscriptionStore.getState().hasHydrated && subWait < 5000) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          subWait += 50;
+        }
+        const subTier = useSubscriptionStore.getState().tier;
+        if (subTier === 'free') return;
+        const { useAimeeReportsStore } = await import(
+          '../src/store/useAimeeReportsStore'
+        );
+        const state = useAimeeReportsStore.getState();
+        const lastAt = state.lastWeeklyAt
+          ? new Date(state.lastWeeklyAt).getTime()
+          : 0;
+        if (Date.now() - lastAt > 6 * 86400_000) {
+          const r = state.refreshWeekly();
+          // Pro users get the LLM rewrite kicked off after the templated
+          // weekly lands. Silent fail-soft on rate-limit or network.
+          state.rewriteReportBody(r.id).catch(() => {});
+        }
+        state.refreshInsights();
+      } catch (err) {
+        if (__DEV__) console.warn('[boot] weekly report refresh failed:', err);
+      }
+    })();
+
+    // Tap-to-deep-link for push notifications. Until this listener
+    // was added, tapping any scheduled notification (check-in reminder,
+    // dose reminder, motivation, community broadcast) was a no-op
+    // route-wise — the `data.route` payload was set everywhere but
+    // never read. Audit fix (Wave 76.8).
+    //
+    // Handles BOTH cold-start (getLastNotificationResponseAsync) and
+    // warm-foreground (addNotificationResponseReceivedListener) cases.
+    //
+    // 2026-05-17 P0 fix: previously the unauthenticated branch dropped
+    // the route and just bounced to /auth — the comment claimed to
+    // "stash the intent" but no stash existed. Cold-start taps before
+    // auth rehydrated were always lost. Now we keep the pending route
+    // in module state and a separate effect (below) drains it once
+    // auth flips authenticated.
+    let notificationSub: any = null;
+    (async () => {
+      try {
+        const Notifications = await import('expo-notifications');
+        const handleResponse = (
+          response: { notification: { request: { content: { data: any } } } } | null,
+        ) => {
+          if (!response) return;
+          const data = response.notification.request.content.data ?? {};
+          const route = typeof data.route === 'string' ? data.route : null;
+          if (!route) return;
+          try {
+            const authState = useAuthStore.getState();
+            const hydrated = authState.hasHydrated === true;
+            const isAuthed = authState.isAuthenticated;
+            if (!hydrated || !isAuthed) {
+              // Stash the intent — drained by the post-auth effect.
+              pendingDeepLinkRef.current = route;
+              if (!hydrated || !isAuthed) {
+                import('expo-router').then(({ router }) => router.replace('/auth'));
+              }
+              return;
+            }
+            import('expo-router').then(({ router }) => router.push(route as any));
+          } catch (err) {
+            if (__DEV__) console.warn('[boot] notification route failed:', err);
+          }
+        };
+        // Cold-start tap (app launched from a notification).
+        const cold = await Notifications.getLastNotificationResponseAsync();
+        if (cold) handleResponse(cold);
+        // Subsequent taps while the app is alive.
+        notificationSub = Notifications.addNotificationResponseReceivedListener(handleResponse);
+      } catch (err) {
+        if (__DEV__) console.warn('[boot] notification response listener failed:', err);
+      }
+    })();
+
     useAuthStore
       .getState()
       .restoreSession()
       ?.catch?.((err: unknown) => {
         if (__DEV__) console.warn('[boot] restoreSession failed:', err);
+      captureException(err, { source: 'boot.restoreSession' });
       });
 
     // Hook IAP into the app so purchase events flow into subscription
     // validation. `onPending` surfaces Ask-to-Buy / SCA / parental-consent
     // flows so the UI can show a "waiting for approval" state instead of
     // silently hanging.
+    //
+    // 2026-05-17 P0 fix: capture the authenticated user id at init time
+    // so a delayed Ask-to-Buy approval (Apple can deliver this hours or
+    // days later, possibly after a logout/login cycle on the same
+    // device) doesn't run validatePurchase under user B's session and
+    // credit them with user A's purchase. We compare the boot-time uid
+    // against the live session uid at delivery; mismatch → drop the
+    // event, telemetry breadcrumb so support can correlate.
+    const iapBootUserId = useAuthStore.getState().user?.id ?? null;
     try {
       initIAP({
         onPurchase: async ({ productId, transactionReceipt }) => {
+          const liveUserId = useAuthStore.getState().user?.id ?? null;
+          if (iapBootUserId && liveUserId && iapBootUserId !== liveUserId) {
+            // Cross-user purchase event — drop it.
+            try {
+
+              const { captureMessage } = require('../src/services/telemetry');
+              captureMessage?.(
+                'IAP purchase event mismatched user — dropping',
+                'warning',
+                { bootUid: iapBootUserId, liveUid: liveUserId, productId },
+              );
+            } catch {}
+            return;
+          }
           const platform: 'ios' | 'android' = Platform.OS === 'ios' ? 'ios' : 'android';
           try {
             await useSubscriptionStore
@@ -218,6 +490,7 @@ function RootLayout() {
               .validatePurchase(platform, productId, transactionReceipt);
           } catch (err) {
             if (__DEV__) console.warn('[boot] validatePurchase failed:', err);
+            captureException(err, { source: 'boot.validatePurchase' });
           }
         },
         onPending: ({ productId }) => {
@@ -226,6 +499,7 @@ function RootLayout() {
       });
     } catch (err) {
       if (__DEV__) console.warn('[boot] initIAP threw:', err);
+      captureException(err, { source: 'boot.initIAP' });
     }
 
     // Pull the authoritative tier from the server once session is ready
@@ -234,6 +508,7 @@ function RootLayout() {
       .syncFromServer()
       ?.catch?.((err: unknown) => {
         if (__DEV__) console.warn('[boot] subscription syncFromServer failed:', err);
+        captureException(err, { source: 'boot.subscription.syncFromServer' });
       });
 
     // Pull health profile from server (overwrites local on login)
@@ -256,12 +531,48 @@ function RootLayout() {
     // Drain any chat messages whose cloud sync failed on a previous
     // session (offline send, flaky network). Without this, chat history
     // silently diverges across the user's devices.
-    useChatStore
-      .getState()
-      .flushPendingSyncs()
-      ?.catch?.((err: unknown) => {
-        if (__DEV__) console.warn('[boot] chat sync flush failed:', err);
-      });
+    //
+    // 2026-05-17 race fix: chat store uses async storage. Calling
+    // flushPendingSyncs() before `hasHydrated` flips means pendingSyncs
+    // is still empty — the flush was a no-op and queued messages stayed
+    // queued until the user happened to send another message. Now we
+    // wait (up to 5s) for the rehydrate, same pattern as the subscription
+    // store wait above.
+    (async () => {
+      const start = Date.now();
+      while (!useChatStore.getState().hasHydrated && Date.now() - start < 5000) {
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      useChatStore
+        .getState()
+        .flushPendingSyncs()
+        ?.catch?.((err: unknown) => {
+          if (__DEV__) console.warn('[boot] chat sync flush failed:', err);
+        });
+      // Same drain for offline doses (2026-05-17 P1 fix). A dose
+      // logged offline used to stay local-only forever; now the boot
+      // path retries any queued upserts.
+      useDoseLogStore
+        .getState()
+        .flushPendingSyncs()
+        ?.catch?.((err: unknown) => {
+          if (__DEV__) console.warn('[boot] dose sync flush failed:', err);
+        });
+      // And the workout retry queue — same pattern for gym data.
+      useWorkoutStore
+        .getState()
+        .flushPendingSyncs()
+        ?.catch?.((err: unknown) => {
+          if (__DEV__) console.warn('[boot] workout sync flush failed:', err);
+        });
+      // And journal entries.
+      useJournalStore
+        .getState()
+        .flushPendingSyncs?.()
+        ?.catch?.((err: unknown) => {
+          if (__DEV__) console.warn('[boot] journal sync flush failed:', err);
+        });
+    })();
 
     // Hydrate user-owned data from the server so a reinstall / new device
     // picks up the full history instead of a blank slate. Each store
@@ -271,7 +582,7 @@ function RootLayout() {
     // Also re-runs below in a separate effect when isAuthenticated flips
     // from false → true so signup/login flows correctly hydrate without
     // requiring a restart or network disconnect.
-    const bootHydrations: Array<[string, () => Promise<void>]> = [
+    const bootHydrations: [string, () => Promise<void>][] = [
       ['meals',      () => useMealStore.getState().syncFromServer()],
       ['check-ins',  () => useCheckinStore.getState().syncFromServer()],
       ['dose logs',  () => useDoseLogStore.getState().syncFromServer()],
@@ -284,11 +595,27 @@ function RootLayout() {
       ['cycle',      () => useCycleStore.getState().syncFromServer()],
       ['integrations', () => useIntegrationsStore.getState().syncFromServer()],
     ];
-    for (const [label, run] of bootHydrations) {
-      run().catch((err: unknown) => {
-        if (__DEV__) console.warn(`[boot] ${label} syncFromServer failed:`, err);
-      });
-    }
+    // 2026-05-18 cold-boot audit: gate boot syncs on a fresh session.
+    // Previously they fired unconditionally — if the user had a stale
+    // persisted token, ALL 11 stores would 401 in parallel and
+    // captureException would log 11 Sentry events for the same auth
+    // expiry, plus burn ~11 API requests on every cold boot of an
+    // unsigned-in user. Now we wait for the auth store to confirm
+    // there is actually a session before kicking the syncs.
+    (async () => {
+      try {
+        const { supabase } = await import('../src/services/supabase');
+        const { data: { session } } = await (supabase as any).auth.getSession();
+        if (!session?.access_token) return;
+        for (const [label, run] of bootHydrations) {
+          run().catch((err: unknown) => {
+            if (__DEV__) console.warn(`[boot] ${label} syncFromServer failed:`, err);
+          });
+        }
+      } catch (err) {
+        if (__DEV__) console.warn('[boot] hydrations gate failed:', err);
+      }
+    })();
 
     // Mark navigator as mounted on next frame so <Stack> is in the tree
     requestAnimationFrame(() => setNavReady(true));
@@ -297,7 +624,15 @@ function RootLayout() {
     // recovery routines so queued work catches up without any user action.
     const unsubReconnect = subscribeToReconnect(() => {
       if (__DEV__) console.log('[net] back online — running recovery syncs');
-      useChatStore.getState().flushPendingSyncs()?.catch?.(() => {});
+      // Reconnect can fire before the chat store rehydrates (rare —
+      // device goes from offline at cold boot back to online inside
+      // the first ~50ms — but it happens). Gate on hasHydrated.
+      if (useChatStore.getState().hasHydrated) {
+        useChatStore.getState().flushPendingSyncs()?.catch?.(() => {});
+      }
+      useDoseLogStore.getState().flushPendingSyncs()?.catch?.(() => {});
+      useWorkoutStore.getState().flushPendingSyncs()?.catch?.(() => {});
+      useJournalStore.getState().flushPendingSyncs?.()?.catch?.(() => {});
       useSubscriptionStore.getState().syncFromServer()?.catch?.(() => {});
       useMealStore.getState().syncFromServer()?.catch?.(() => {});
       useCheckinStore.getState().syncFromServer()?.catch?.(() => {});
@@ -382,12 +717,115 @@ function RootLayout() {
         .catch((err: unknown) => {
           if (__DEV__) console.warn('[foreground-sync] push-token sync failed:', err);
         });
+
+      // §6.4 — mid-day macro deficit nudge. Reads notification prefs +
+      // today's totals + targets; fires a one-off local notification per
+      // enabled macro tracking below 60% of target after 14:00 local.
+      // Single-fire per day per macro is enforced inside the service.
+      try {
+        const dateKey = (() => {
+          const d = new Date();
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        })();
+        const mealState = useMealStore.getState();
+        const totals = mealState.getDailyTotals(dateKey);
+        const targets = mealState.targets;
+        const prefs = useNotificationStore.getState().preferences;
+        import('../src/services/notificationService').then((mod) =>
+          mod
+            .checkMidDayMacroDeficit({
+              totalsByMacro: {
+                protein: totals.proteinGrams,
+                carbs: totals.carbsGrams,
+                fat: totals.fatGrams,
+                fiber: totals.fiberGrams ?? 0,
+              },
+              targetsByMacro: {
+                protein: targets.proteinGrams,
+                carbs: targets.carbsGrams,
+                fat: targets.fatGrams,
+                fiber: targets.fiberGrams ?? 30,
+              },
+              prefs: {
+                proteinDeficitNudge: prefs.proteinDeficitNudge,
+                carbsDeficitNudge: prefs.carbsDeficitNudge,
+                fatDeficitNudge: prefs.fatDeficitNudge,
+                fiberDeficitNudge: prefs.fiberDeficitNudge,
+              },
+            })
+            .catch((err: unknown) => {
+              if (__DEV__) console.warn('[foreground-sync] macro nudge failed:', err);
+            }),
+        );
+      } catch (err) {
+        if (__DEV__) console.warn('[foreground-sync] macro nudge setup failed:', err);
+      }
+
+      // §16 — missed-dose nudges. Both checks run on foreground so
+      // dynamic "did the user log this today" content is correct at
+      // fire time (local scheduled notifications can't compute that).
+      try {
+        const dateKey = (() => {
+          const d = new Date();
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        })();
+        const doseState = useDoseLogStore.getState();
+        const todayLogged = doseState.doses.filter(
+          (d) => d.date === dateKey && !d.planned,
+        );
+        const todayPlanned = doseState.doses.filter(
+          (d) => d.date === dateKey && d.planned,
+        );
+        // Unconfirmed planned doses today, mapped to the shape the
+        // notification service expects.
+        const peptideNameFor = (id: string) => {
+          try {
+             
+            const { getPeptideById } = require('../src/data/peptides');
+            return getPeptideById(id)?.name ?? id;
+          } catch {
+            return id;
+          }
+        };
+        const missedCandidates = todayPlanned
+          .filter(
+            (p) =>
+              !todayLogged.some(
+                (l) => l.peptideId === p.peptideId && !l.planned,
+              ),
+          )
+          .map((p) => ({
+            peptideId: p.peptideId,
+            peptideName: peptideNameFor(p.peptideId),
+            date: p.date,
+            time: p.time,
+          }));
+        import('../src/services/notificationService').then((mod) => {
+          mod
+            .checkMissedDosesTwoHourNudge(missedCandidates)
+            .catch((err: unknown) => {
+              if (__DEV__) console.warn('[foreground-sync] 2hr nudge failed:', err);
+            });
+          mod
+            .checkMissedDosesEndOfDay({
+              hasUnconfirmedPlannedToday: missedCandidates.length > 0,
+              dateKey,
+            })
+            .catch((err: unknown) => {
+              if (__DEV__) console.warn('[foreground-sync] eod nudge failed:', err);
+            });
+        });
+      } catch (err) {
+        if (__DEV__)
+          console.warn('[foreground-sync] missed-dose check setup failed:', err);
+      }
     });
 
     return () => {
       try { endIAP(); } catch {}
       try { unsubReconnect?.(); } catch {}
       try { appStateSub?.remove(); } catch {}
+      try { notificationSub?.remove(); } catch {}
     };
   }, []);
 
@@ -448,6 +886,7 @@ function RootLayout() {
   return (
     <ErrorBoundary>
     <GluestackUIProvider colorMode="light">
+    <V3ThemeProvider>
     <SafeAreaProvider>
       <View style={[styles.container, { backgroundColor: t.bg }]}>
         <StatusBar style={t.statusBar} />
@@ -489,6 +928,99 @@ function RootLayout() {
         >
           <Stack.Screen name="onboarding" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          {/* v3 detail screens — drill-ins from the 4-card home (§2 / §4). */}
+          <Stack.Screen
+            name="tracker/index"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="activity/index"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="doses/index"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="doses/calculator"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="doses/stack-builder"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="doses/library"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="doses/tracker"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="doses/side-effects"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="profile/appearance"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="activity/performance"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="aimee/reports"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="aimee/report/[id]"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="labs/index"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="labs/entry"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="body-composition/index"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="body-composition/entry"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="profile/community-prefs"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="community/leaderboard"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="community/milestones"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="tracker/weight"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="tracker/sleep"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="tracker/mood"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="tracker/photos"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
           <Stack.Screen
             name="peptide/[id]"
             options={{
@@ -539,6 +1071,20 @@ function RootLayout() {
               removed in the same commit. */}
           <Stack.Screen
             name="admin/community-queue"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="admin/video-tagger"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="admin/start-live"
             options={{
               headerShown: false,
               animation: 'slide_from_right',
@@ -646,14 +1192,30 @@ function RootLayout() {
             }}
           />
           <Stack.Screen
-            name="workouts/program"
+            name="workouts/program/[programId]"
             options={{
               headerShown: false,
               animation: 'slide_from_right',
             }}
           />
           <Stack.Screen
+            name="workouts/new"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_bottom',
+              presentation: 'modal',
+            }}
+          />
+          <Stack.Screen
             name="workouts/player"
+            options={{
+              headerShown: false,
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="workouts/player-v2"
             options={{
               headerShown: false,
               presentation: 'modal',
@@ -762,10 +1324,6 @@ function RootLayout() {
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
           <Stack.Screen
-            name="calculators/dosing"
-            options={{ headerShown: false, animation: 'slide_from_right' }}
-          />
-          <Stack.Screen
             name="calculators/reconstitution"
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
@@ -797,15 +1355,6 @@ function RootLayout() {
           <Stack.Screen
             name="nutrition/meal-plan"
             options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }}
-          />
-          {/* Dev / Testing */}
-          <Stack.Screen
-            name="dev-accounts"
-            options={{
-              headerShown: false,
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
-            }}
           />
           {/* Subscription */}
           <Stack.Screen
@@ -864,12 +1413,17 @@ function RootLayout() {
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
         </Stack>
-        {/* Profile shortcut overlay — sits OUTSIDE the Stack so it's
-            visible above whichever screen is rendered. The component
-            itself decides via usePathname whether to render. */}
-        <ProfileShortcutFab />
+        {/* Profile shortcut overlay lives in the (tabs) layout — mounting
+            it here too caused the FAB to render twice on tab screens. The
+            (tabs) mount is the canonical one; non-tab routes don't get the
+            FAB by design. */}
+        {/* Home button — mounted globally so it appears on EVERY screen
+            (including non-tab drill-ins), hidden by HomeFab's own
+            pathname allowlist on home / auth / focus surfaces. Wave 76.45. */}
+        <HomeFab />
       </View>
     </SafeAreaProvider>
+    </V3ThemeProvider>
     </GluestackUIProvider>
     </ErrorBoundary>
   );

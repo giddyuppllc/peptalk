@@ -19,8 +19,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
+import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 import { usePantryStore, type PantryItem, type StorageLocation } from '../../src/store/usePantryStore';
+
+type ExpiryColorKey = 'danger' | 'caution' | 'positive' | 'muted';
 
 const LOCATION_LABELS: Record<StorageLocation, string> = {
   fridge:  'Fridge',
@@ -44,20 +47,29 @@ function daysUntil(date?: string): number | null {
   return Math.round((target.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
 }
 
-function expiryLabel(date?: string): { label: string; color: string } | null {
+function expiryLabel(date?: string): { label: string; key: ExpiryColorKey } | null {
   const d = daysUntil(date);
   if (d === null) return null;
-  if (d < 0)  return { label: `Expired ${Math.abs(d)}d ago`, color: '#B91C1C' };
-  if (d === 0) return { label: 'Expires today',               color: '#B91C1C' };
-  if (d === 1) return { label: 'Expires tomorrow',            color: '#B45309' };
-  if (d <= 3)  return { label: `${d}d left`,                  color: '#B45309' };
-  if (d <= 7)  return { label: `${d}d left`,                  color: '#15803D' };
-  return { label: `${d}d left`, color: '#6B7280' };
+  if (d < 0)  return { label: `Expired ${Math.abs(d)}d ago`, key: 'danger' };
+  if (d === 0) return { label: 'Expires today',               key: 'danger' };
+  if (d === 1) return { label: 'Expires tomorrow',            key: 'caution' };
+  if (d <= 3)  return { label: `${d}d left`,                  key: 'caution' };
+  if (d <= 7)  return { label: `${d}d left`,                  key: 'positive' };
+  return { label: `${d}d left`, key: 'muted' };
+}
+
+function resolveExpiryColor(key: ExpiryColorKey, v3: ReturnType<typeof useV3Theme>): string {
+  const c = v3.colors as any;
+  if (key === 'danger') return c.semanticDanger ?? '#B91C1C';
+  if (key === 'caution') return c.semanticCaution ?? '#B45309';
+  if (key === 'positive') return c.semanticPositive ?? '#15803D';
+  return c.textSecondary ?? '#6B7280';
 }
 
 export default function PantryScreen() {
   const router = useRouter();
   const t = useTheme();
+  const v3 = useV3Theme();
   const items = usePantryStore((s) => s.items);
   const removeItem = usePantryStore((s) => s.removeItem);
   const [query, setQuery] = useState('');
@@ -107,12 +119,22 @@ export default function PantryScreen() {
           <Ionicons name="chevron-back" size={24} color={t.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: t.text }]}>My Pantry</Text>
-        <TouchableOpacity
-          onPress={() => router.push('/pantry/add' as any)}
-          style={styles.iconBtn}
-        >
-          <Ionicons name="add-circle" size={28} color={t.primary} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => router.push('/pantry/scan' as any)}
+            style={styles.iconBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Scan kitchen with camera"
+          >
+            <Ionicons name="scan" size={24} color={t.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push('/pantry/add' as any)}
+            style={styles.iconBtn}
+          >
+            <Ionicons name="add-circle" size={28} color={t.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.searchWrap}>
@@ -193,6 +215,7 @@ export default function PantryScreen() {
 
               {groupItems.map((item) => {
                 const exp = expiryLabel(item.expiryDate);
+                const expColor = exp ? resolveExpiryColor(exp.key, v3) : undefined;
                 return (
                   <GlassCard key={item.id} style={styles.itemCard}>
                     <View style={styles.itemRow}>
@@ -208,10 +231,10 @@ export default function PantryScreen() {
                         <Text style={[styles.itemQty, { color: t.textSecondary }]}>
                           {item.quantity} {item.unit}
                         </Text>
-                        {exp && (
-                          <View style={[styles.expiryPill, { borderColor: exp.color }]}>
-                            <View style={[styles.expiryDot, { backgroundColor: exp.color }]} />
-                            <Text style={[styles.expiryText, { color: exp.color }]}>
+                        {exp && expColor && (
+                          <View style={[styles.expiryPill, { borderColor: expColor }]}>
+                            <View style={[styles.expiryDot, { backgroundColor: expColor }]} />
+                            <Text style={[styles.expiryText, { color: expColor }]}>
                               {exp.label}
                             </Text>
                           </View>
@@ -221,7 +244,13 @@ export default function PantryScreen() {
                         onPress={() => confirmRemove(item)}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
-                        <Ionicons name="trash-outline" size={18} color={Colors.error} />
+                        <Ionicons
+                          name="trash-outline"
+                          size={18}
+                          color={
+                            ((v3.colors as any).semanticDanger as string) ?? Colors.error
+                          }
+                        />
                       </TouchableOpacity>
                     </View>
                   </GlassCard>

@@ -169,7 +169,8 @@ export function MealBuilder({ visible, onClose, editMeal }: MealBuilderProps) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={s.overlay}>
+      {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
+      <View style={s.overlay} accessibilityViewIsModal={true}>
         <View style={s.container}>
           <View style={s.handle} />
 
@@ -184,12 +185,15 @@ export function MealBuilder({ visible, onClose, editMeal }: MealBuilderProps) {
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
             {/* Meal Name */}
             <Text style={s.label}>Meal Name</Text>
+            {/* 2026-05-17 a11y: explicit label for VoiceOver */}
             <TextInput
               style={s.input}
               value={mealName}
               onChangeText={setMealName}
               placeholder="e.g. Chicken Salad, Meal Prep Bowl"
               placeholderTextColor={Colors.darkTextSecondary}
+              accessibilityLabel="Meal name"
+              accessibilityHint="Enter a name for this custom meal"
             />
 
             {/* Ingredients List */}
@@ -223,15 +227,19 @@ export function MealBuilder({ visible, onClose, editMeal }: MealBuilderProps) {
                       {ing.brand && <Text style={s.ingredientBrand}>{ing.brand}</Text>}
                       <Text style={s.ingredientMacro}>{ingCal} cal · {ingPro}g protein</Text>
                     </View>
+                    {/* 2026-05-17 a11y: explicit label for VoiceOver */}
                     <TextInput
                       style={s.ingredientWeight}
                       value={String(ing.grams)}
                       onChangeText={(v) => handleUpdateIngredientWeight(idx, v)}
                       keyboardType="decimal-pad"
                       selectTextOnFocus
+                      accessibilityLabel={`Weight in grams for ${ing.foodName}`}
+                      accessibilityHint="Enter the weight in grams for this ingredient"
                     />
                     <Text style={s.gramLabel}>g</Text>
-                    <TouchableOpacity onPress={() => handleRemoveIngredient(idx)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Close">
+                    {/* 2026-05-17 a11y */}
+                    <TouchableOpacity onPress={() => handleRemoveIngredient(idx)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Remove ingredient">
                       <Ionicons name="close-circle" size={22} color={Colors.error + '88'} />
                     </TouchableOpacity>
                   </View>
@@ -300,6 +308,7 @@ export function MealBuilder({ visible, onClose, editMeal }: MealBuilderProps) {
                     {addingFood.brand && <Text style={s.addingFoodBrand}>{addingFood.brand}</Text>}
                   </View>
                   <Text style={s.label}>Weight (grams)</Text>
+                  {/* 2026-05-17 a11y: explicit label for VoiceOver */}
                   <TextInput
                     style={[s.input, { fontSize: 24, fontWeight: '800', textAlign: 'center' }]}
                     value={addingGrams}
@@ -309,6 +318,8 @@ export function MealBuilder({ visible, onClose, editMeal }: MealBuilderProps) {
                     placeholderTextColor={Colors.darkTextSecondary}
                     autoFocus
                     selectTextOnFocus
+                    accessibilityLabel="Weight in grams"
+                    accessibilityHint="Enter the weight in grams of this ingredient"
                   />
                   {parseFloat(addingGrams) > 0 && (
                     <View style={s.addingPreview}>
@@ -331,6 +342,7 @@ export function MealBuilder({ visible, onClose, editMeal }: MealBuilderProps) {
                   </View>
                   <View style={s.searchBar}>
                     <Ionicons name="search" size={18} color={Colors.darkTextSecondary} />
+                    {/* 2026-05-17 a11y: explicit label for VoiceOver */}
                     <TextInput
                       style={s.searchInput}
                       value={searchQuery}
@@ -339,9 +351,12 @@ export function MealBuilder({ visible, onClose, editMeal }: MealBuilderProps) {
                       placeholderTextColor={Colors.darkTextSecondary}
                       autoFocus
                       returnKeyType="search"
+                      accessibilityLabel="Search foods"
+                      accessibilityHint="Type to search for ingredients to add to the meal"
                     />
                     {searchQuery.length > 0 && (
-                      <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityRole="button" accessibilityLabel="Close">
+                      // 2026-05-17 a11y
+                      <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityRole="button" accessibilityLabel="Clear search">
                         <Ionicons name="close-circle" size={18} color={Colors.darkTextSecondary} />
                       </TouchableOpacity>
                     )}

@@ -10,6 +10,8 @@ import {
   Alert,
   Animated,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -219,12 +221,18 @@ function TodayGlow() {
   const glow = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
-    Animated.loop(
+    // Stop the animation on unmount — earlier this leaked an
+    // infinite loop on every remount of the Calendar tab. Mirrors
+    // the cleanup pattern in app/(tabs)/index.tsx and
+    // src/components/LiveEventBanner.tsx.
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(glow, { toValue: 1, duration: 1500, useNativeDriver: true }),
         Animated.timing(glow, { toValue: 0.4, duration: 1500, useNativeDriver: true }),
       ])
-    ).start();
+    );
+    loop.start();
+    return () => loop.stop();
   }, []);
 
   return (
@@ -414,7 +422,27 @@ export default function CalendarScreen() {
       return;
     }
 
-    const safety = checkDoseSafety(logSubstanceName.trim(), amount, logUnit);
+    // Magnitude sanity check — peptide doses don't legitimately
+    // exceed ~50,000 (in any unit). A 9,999,999 entry is a
+    // copy-paste fat-finger or unit slip. Refuse so the dose log
+    // doesn't store implausible values that poison the detect-alerts
+    // engine + Aimee context. P0 from input validation audit.
+    if (
+      (logUnit === 'mcg' && amount > 100000) ||
+      (logUnit === 'mg' && amount > 100) ||
+      (logUnit === 'IU' && amount > 10000)
+    ) {
+      Alert.alert(
+        'Dose too large',
+        `${amount} ${logUnit} is outside the plausible range for any peptide. Did you mean a different unit? Re-enter to confirm.`,
+      );
+      return;
+    }
+
+    // Substance name length cap so a paste-bomb doesn't bloat the row.
+    const trimmedName = logSubstanceName.trim().slice(0, 80);
+
+    const safety = checkDoseSafety(trimmedName, amount, logUnit);
 
     // Pregnancy contraindication check — lookup the peptide's protocol and
     // if its `contraindications` mentions pregnancy/nursing and the user
@@ -436,13 +464,13 @@ export default function CalendarScreen() {
 
     const persist = () => {
       logDose({
-        peptideId: logSubstanceName.trim(),
+        peptideId: trimmedName,
         amount,
         unit: logUnit,
         route: logRoute,
         date: selectedDate,
-        injectionSite: logSite || undefined,
-        notes: logNotes || undefined,
+        injectionSite: logSite ? logSite.slice(0, 60) : undefined,
+        notes: logNotes ? logNotes.slice(0, 500) : undefined,
       });
     };
 
@@ -646,7 +674,8 @@ export default function CalendarScreen() {
               >
                 <View style={styles.alertHeader}>
                   <Text style={[styles.alertTitle, { color: t.text }]}>{alert.title}</Text>
-                  <TouchableOpacity onPress={() => dismissAlert(alert.id)}>
+                  {/* 2026-05-17 a11y */}
+                  <TouchableOpacity onPress={() => dismissAlert(alert.id)} accessibilityRole="button" accessibilityLabel="Dismiss alert">
                     <Ionicons name="close" size={18} color={t.textSecondary} />
                   </TouchableOpacity>
                 </View>
@@ -712,6 +741,18 @@ export default function CalendarScreen() {
                 cyclePhase === 'follicular' ? 'rgba(127, 179, 216, 0.10)' :  // very light blue for fertile-side follicular
                 undefined;
 
+              // 2026-05-17 a11y — build VoiceOver label from active indicators
+              const a11yParts: string[] = [];
+              if (hasDose) a11yParts.push('dose');
+              if (hasCheckin) a11yParts.push('check-in');
+              if (hasJournal) a11yParts.push('journal');
+              if (hasWorkout) a11yParts.push('workout');
+              if (hasMeal) a11yParts.push('meal');
+              const a11yDateStr = `${MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+              const a11yLabel = a11yParts.length > 0
+                ? `${a11yDateStr} — ${a11yParts.join(', ')}`
+                : a11yDateStr;
+
               return (
                 <TouchableOpacity
                   key={idx}
@@ -722,6 +763,9 @@ export default function CalendarScreen() {
                   onPress={() => setSelectedDate(key)}
                   onLongPress={() => { setSelectedDate(key); setDaySummaryOpen(true); }}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={a11yLabel}
+                  accessibilityState={{ selected: isSelected }}
                 >
                   {/* Today pulsing glow */}
                   {isToday && !isSelected && <TodayGlow />}
@@ -1209,11 +1253,22 @@ export default function CalendarScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowLogModal(false)}
       >
-        <SafeAreaView style={[styles.modalSafe, { backgroundColor: t.bg }]}>
-          <ScrollView contentContainerStyle={styles.modalContent}>
+        {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
+        <SafeAreaView style={[styles.modalSafe, { backgroundColor: t.bg }]} accessibilityViewIsModal={true}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+          >
+          <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: t.text }]}>Add Entry</Text>
-              <TouchableOpacity onPress={() => setShowLogModal(false)} style={[styles.modalCloseBtn, { backgroundColor: t.glass }]}>
+              <TouchableOpacity
+                onPress={() => setShowLogModal(false)}
+                style={[styles.modalCloseBtn, { backgroundColor: t.glass }]}
+                accessibilityRole="button"
+                accessibilityLabel="Close add entry"
+              >
                 <Ionicons name="close" size={22} color={t.text} />
               </TouchableOpacity>
             </View>
@@ -1228,6 +1283,7 @@ export default function CalendarScreen() {
 
             {/* Substance / supplement -- free text */}
             <Text style={[styles.fieldLabel, { color: t.textSecondary }]}>Substance / Supplement</Text>
+            {/* 2026-05-17 a11y: explicit label for VoiceOver */}
             <TextInput
               style={[styles.textInput, { backgroundColor: t.card, color: t.text }]}
               value={logSubstanceName}
@@ -1235,11 +1291,14 @@ export default function CalendarScreen() {
               placeholder="Type what you took..."
               placeholderTextColor={t.textSecondary}
               autoCapitalize="words"
+              accessibilityLabel="Substance or supplement"
+              accessibilityHint="Enter the name of the substance or supplement you took"
             />
 
             {/* Amount + Unit */}
             <Text style={[styles.fieldLabel, { color: t.textSecondary }]}>Amount Noted</Text>
             <View style={styles.amountRow}>
+              {/* 2026-05-17 a11y: explicit label for VoiceOver */}
               <TextInput
                 style={[styles.textInput, { flex: 1, backgroundColor: t.card, color: t.text }]}
                 value={logAmount}
@@ -1247,6 +1306,8 @@ export default function CalendarScreen() {
                 placeholder="e.g. 250"
                 placeholderTextColor={t.textSecondary}
                 keyboardType="decimal-pad"
+                accessibilityLabel="Amount noted"
+                accessibilityHint={`Enter dose amount in ${logUnit}`}
               />
               <View style={styles.unitRow}>
                 {UNITS.map((u) => (
@@ -1302,16 +1363,20 @@ export default function CalendarScreen() {
 
             {/* Injection site */}
             <Text style={[styles.fieldLabel, { color: t.textSecondary }]}>Injection Site (optional)</Text>
+            {/* 2026-05-17 a11y: explicit label for VoiceOver */}
             <TextInput
               style={[styles.textInput, { backgroundColor: t.card, color: t.text }]}
               value={logSite}
               onChangeText={setLogSite}
               placeholder="e.g. abdomen left, deltoid right"
               placeholderTextColor={t.textSecondary}
+              accessibilityLabel="Injection site, optional"
+              accessibilityHint="Enter the body location where you injected, for example abdomen left or deltoid right"
             />
 
             {/* Notes */}
             <Text style={[styles.fieldLabel, { color: t.textSecondary }]}>Notes (optional)</Text>
+            {/* 2026-05-17 a11y: explicit label for VoiceOver */}
             <TextInput
               style={[styles.textInput, { minHeight: 60, backgroundColor: t.card, color: t.text }]}
               value={logNotes}
@@ -1319,6 +1384,8 @@ export default function CalendarScreen() {
               placeholder="How did you feel? Any effects?"
               placeholderTextColor={t.textSecondary}
               multiline
+              accessibilityLabel="Notes, optional"
+              accessibilityHint="Add any notes about how you felt or any effects you experienced"
             />
 
             {/* Journal disclaimer in modal */}
@@ -1341,6 +1408,7 @@ export default function CalendarScreen() {
               </LinearGradient>
             </TouchableOpacity>
           </ScrollView>
+          </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
 
@@ -1359,10 +1427,12 @@ export default function CalendarScreen() {
         transparent
         onRequestClose={() => setShowAddSheet(false)}
       >
+        {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
         <TouchableOpacity
           style={styles.addSheetOverlay}
           activeOpacity={1}
           onPress={() => setShowAddSheet(false)}
+          accessibilityViewIsModal={true}
         >
           <View style={[styles.addSheet, { backgroundColor: t.bg }]}>
             <SafeAreaView edges={['bottom']}>

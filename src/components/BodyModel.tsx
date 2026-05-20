@@ -11,9 +11,11 @@ import Animated, {
   useAnimatedStyle,
   withRepeat,
   withTiming,
+  cancelAnimation,
   Easing,
 } from 'react-native-reanimated';
 import { tapLight } from '../utils/haptics';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const SVG_W = Math.min(SCREEN_W - 48, 300);
@@ -76,14 +78,23 @@ const REGION_PATHS: Record<string, { d: string; cx: number; cy: number }> = {
 
 export function BodyModel({ selectedRegion, onSelectRegion, regionColors }: BodyModelProps) {
   const pulse = useSharedValue(0.6);
+  const reduceMotion = useReduceMotion();
 
+  // 2026-05-17 perf+a11y: cancel worklet on unmount + honor Reduce Motion
   React.useEffect(() => {
+    if (reduceMotion) {
+      pulse.value = 0.6;
+      return;
+    }
     pulse.value = withRepeat(
       withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
       -1,
       true
     );
-  }, []);
+    return () => {
+      cancelAnimation(pulse);
+    };
+  }, [pulse, reduceMotion]);
 
   const pulseStyle = useAnimatedStyle(() => ({
     opacity: pulse.value,

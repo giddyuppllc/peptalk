@@ -27,6 +27,27 @@ export interface PantryItem {
   openedDate?: string;    // YYYY-MM-DD
   barcode?: string;
   notes?: string;
+  /**
+   * Optional per-unit nutrition snapshot. Filled when the item is added
+   * via aimee-pantry-scan (vision) or aimee-pantry-parse (text) — both
+   * already have the model context to estimate it cheaply. Lets the
+   * custom-meal-from-pantry flow compute meal macros without a second
+   * food-search round-trip. `serving` describes what 1 unit means
+   * (e.g. "1 egg", "100 g", "1 cup") so we scale correctly when the
+   * user picks a partial quantity. Missing snapshots fall back to a
+   * searchAllFoods lookup at meal-build time.
+   */
+  nutrition?: {
+    perServing: {
+      calories: number;
+      proteinGrams: number;
+      carbsGrams: number;
+      fatGrams: number;
+      fiberGrams?: number;
+    };
+    /** Plain-English label for one serving, e.g. "1 egg", "100 g". */
+    servingLabel?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -40,6 +61,16 @@ interface PantryActions {
   updateItem: (id: string, patch: Partial<PantryItem>) => void;
   removeItem: (id: string) => void;
   consumeQuantity: (id: string, amount: number) => void;
+  /**
+   * Best-effort: for each food name, find a matching pantry item by
+   * case-insensitive substring match and decrement it by 1 unit
+   * (or by `qty` if a per-food qty is provided in matching units).
+   * Returns the number of pantry items that were actually decremented.
+   * Never throws — meal logging never blocks on a pantry hit-rate miss.
+   */
+  decrementForFoods: (
+    foods: { name?: string | null; qty?: number | null; unit?: string | null }[],
+  ) => number;
   getItemsByLocation: (loc: StorageLocation) => PantryItem[];
   /** Items that expire within the next N days (or are already expired). */
   getExpiringItems: (daysAhead: number) => PantryItem[];
@@ -107,13 +138,43 @@ export const usePantryStore = create<PantryState & PantryActions>()(
       consumeQuantity: (id, amount) => {
         const item = get().items.find((i) => i.id === id);
         if (!item) return;
-        const next = Math.max(0, item.quantity - amount);
+        // Guard against NaN/Infinity/negative — without this a bad
+        // amount poisons the row's quantity to NaN, which then breaks
+        // every downstream math (display + decrement). 2026-05-17 fix.
+        const a = Number(amount);
+        if (!Number.isFinite(a) || a <= 0) return;
+        const next = Math.max(0, (item.quantity ?? 0) - a);
         // Auto-delete when quantity hits zero so the list doesn't grow forever
         if (next === 0) {
           get().removeItem(id);
         } else {
           get().updateItem(id, { quantity: next });
         }
+      },
+
+      decrementForFoods: (foods) => {
+        let hits = 0;
+        const current = get().items;
+        for (const f of foods ?? []) {
+          const raw = (f?.name ?? '').toLowerCase().trim();
+          if (!raw) continue;
+          // Substring match either direction — handles "greek yogurt" vs
+          // "yogurt", "chicken breast" vs "chicken", etc.
+          const match = current.find(
+            (p) =>
+              p.name.toLowerCase().includes(raw) ||
+              raw.includes(p.name.toLowerCase()),
+          );
+          if (!match) continue;
+          const sameUnit =
+            f?.unit && match.unit &&
+            String(f.unit).toLowerCase() === match.unit.toLowerCase();
+          const qty = typeof f?.qty === 'number' ? f.qty : null;
+          const amount = sameUnit && qty && qty > 0 ? qty : 1;
+          get().consumeQuantity(match.id, amount);
+          hits++;
+        }
+        return hits;
       },
 
       getItemsByLocation: (loc) =>

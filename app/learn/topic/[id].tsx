@@ -23,6 +23,8 @@ import {
   Spacing,
   BorderRadius,
 } from '../../../src/constants/theme';
+import { useTheme } from '../../../src/hooks/useTheme';
+import { LearnVideoCard } from '../../../src/components/LearnVideoCard';
 
 // Enable LayoutAnimation on Android
 if (
@@ -49,12 +51,14 @@ function AccordionItem({
   accentColor: string;
   index: number;
 }) {
+  const t = useTheme();
   return (
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={onToggle}
       style={[
         styles.accordionItem,
+        { backgroundColor: t.surface, borderColor: t.glassBorder },
         isOpen && { borderColor: `${accentColor}40` },
       ]}
     >
@@ -63,6 +67,7 @@ function AccordionItem({
           <Text
             style={[
               styles.accordionNumber,
+              { color: t.textSecondary },
               isOpen && { color: accentColor },
             ]}
           >
@@ -70,7 +75,11 @@ function AccordionItem({
           </Text>
         </View>
         <Text
-          style={[styles.questionText, isOpen && { color: accentColor }]}
+          style={[
+            styles.questionText,
+            { color: t.text },
+            isOpen && { color: accentColor },
+          ]}
         >
           {question}
         </Text>
@@ -83,16 +92,23 @@ function AccordionItem({
           <Ionicons
             name={isOpen ? 'chevron-up' : 'chevron-down'}
             size={16}
-            color={isOpen ? accentColor : Colors.darkTextSecondary}
+            color={isOpen ? accentColor : t.textSecondary}
           />
         </View>
       </View>
       {isOpen && (
-        <View style={styles.answerContainer}>
+        <View
+          style={[
+            styles.answerContainer,
+            { borderTopColor: t.glassBorder },
+          ]}
+        >
           <View
             style={[styles.answerBar, { backgroundColor: accentColor }]}
           />
-          <Text style={styles.answerText}>{answer}</Text>
+          <Text style={[styles.answerText, { color: t.textSecondary }]}>
+            {answer}
+          </Text>
         </View>
       )}
     </TouchableOpacity>
@@ -104,6 +120,7 @@ function AccordionItem({
 export default function TopicDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const t = useTheme();
   const topic = getTopicById(id as any);
 
   const [openIndex, setOpenIndex] = useState<number | null>(0);
@@ -123,16 +140,16 @@ export default function TopicDetailScreen() {
   // ── Not Found ───────────────────────────────────────────
   if (!topic) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
         <View style={styles.errorContainer}>
           <Ionicons
             name="alert-circle-outline"
             size={48}
-            color={Colors.darkTextSecondary}
+            color={t.textSecondary}
           />
-          <Text style={styles.errorText}>Topic not found</Text>
+          <Text style={[styles.errorText, { color: t.textSecondary }]}>Topic not found</Text>
           <TouchableOpacity
-            style={styles.backButton}
+            style={[styles.backButton, { backgroundColor: t.surface }]}
             onPress={() => router.back()}
           >
             <Text style={styles.backButtonText}>Go Back</Text>
@@ -151,7 +168,7 @@ export default function TopicDetailScreen() {
     .filter(Boolean);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
       {/* ── Header ────────────────────────────────────────────── */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -161,12 +178,20 @@ export default function TopicDetailScreen() {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Ionicons name="arrow-back" size={22} color={Colors.darkText} />
+          <Ionicons name="arrow-back" size={22} color={t.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
+        <Text style={[styles.headerTitle, { color: t.text }]} numberOfLines={1}>
           {topic.title}
         </Text>
-        <View style={{ width: 22 }} />
+        <TouchableOpacity
+          onPress={() => router.replace('/(tabs)' as never)}
+          style={styles.headerBack}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Go to home"
+        >
+          <Ionicons name="home-outline" size={20} color={t.text} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -188,8 +213,8 @@ export default function TopicDetailScreen() {
               color={topic.color}
             />
           </View>
-          <Text style={styles.heroTitle}>{topic.title}</Text>
-          <Text style={styles.heroSubtitle}>{topic.subtitle}</Text>
+          <Text style={[styles.heroTitle, { color: t.text }]}>{topic.title}</Text>
+          <Text style={[styles.heroSubtitle, { color: t.textSecondary }]}>{topic.subtitle}</Text>
           <View style={styles.heroMeta}>
             <View
               style={[
@@ -209,6 +234,16 @@ export default function TopicDetailScreen() {
           </View>
         </View>
 
+        {/* ── How-to video (only on the How to Use Peptides topic) ─── */}
+        {topic.id === 'how-to-use' ? (
+          <LearnVideoCard
+            slug="reconstitution"
+            title="Watch: peptide reconstitution"
+            subtitle="A walkthrough of the same steps in Q1 — drawing BAC water, dissolving slowly, and storing the vial."
+            gradientColors={[topic.color, '#3E7CB1']}
+          />
+        ) : null}
+
         {/* ── FAQ Accordion ─────────────────────────────────────── */}
         <View style={styles.faqSection}>
           <View style={styles.faqHeader}>
@@ -217,7 +252,7 @@ export default function TopicDetailScreen() {
               size={18}
               color={topic.color}
             />
-            <Text style={styles.faqTitle}>Frequently Asked Questions</Text>
+            <Text style={[styles.faqTitle, { color: t.text }]}>Frequently Asked Questions</Text>
           </View>
           <View style={styles.accordionContainer}>
             {topic.sections.map((section, index) => (
@@ -243,7 +278,7 @@ export default function TopicDetailScreen() {
                 size={16}
                 color={Colors.sage}
               />
-              <Text style={styles.relatedTitle}>Related Guides</Text>
+              <Text style={[styles.relatedTitle, { color: t.textSecondary }]}>Related Guides</Text>
             </View>
             {relatedGuides.map((guide) => (
               <TouchableOpacity
@@ -262,17 +297,17 @@ export default function TopicDetailScreen() {
                   />
                 </View>
                 <View style={styles.relatedItemContent}>
-                  <Text style={styles.relatedItemText}>
+                  <Text style={[styles.relatedItemText, { color: t.text }]}>
                     {guide!.title}
                   </Text>
-                  <Text style={styles.relatedItemMeta}>
+                  <Text style={[styles.relatedItemMeta, { color: t.textSecondary }]}>
                     {guide!.steps.length} steps
                   </Text>
                 </View>
                 <Ionicons
                   name="chevron-forward"
                   size={14}
-                  color={Colors.darkTextSecondary}
+                  color={t.textSecondary}
                 />
               </TouchableOpacity>
             ))}
@@ -288,7 +323,7 @@ export default function TopicDetailScreen() {
                 size={16}
                 color={Colors.rose}
               />
-              <Text style={styles.relatedTitle}>Related Articles</Text>
+              <Text style={[styles.relatedTitle, { color: t.textSecondary }]}>Related Articles</Text>
             </View>
             {relatedArticles.map((article) => (
               <TouchableOpacity
@@ -312,14 +347,14 @@ export default function TopicDetailScreen() {
                   />
                 </View>
                 <View style={styles.relatedItemContent}>
-                  <Text style={styles.relatedItemText}>
+                  <Text style={[styles.relatedItemText, { color: t.text }]}>
                     {article!.title}
                   </Text>
                 </View>
                 <Ionicons
                   name="chevron-forward"
                   size={14}
-                  color={Colors.darkTextSecondary}
+                  color={t.textSecondary}
                 />
               </TouchableOpacity>
             ))}
@@ -346,10 +381,10 @@ export default function TopicDetailScreen() {
                   color={topic.color}
                 />
               </View>
-              <Text style={styles.askCardTitle}>
+              <Text style={[styles.askCardTitle, { color: t.text }]}>
                 Want to learn more about {topic.title.toLowerCase()}?
               </Text>
-              <Text style={styles.askCardSubtitle}>
+              <Text style={[styles.askCardSubtitle, { color: t.textSecondary }]}>
                 Get personalized answers from Aimee — ask anything.
               </Text>
             </View>
@@ -373,9 +408,9 @@ export default function TopicDetailScreen() {
           <Ionicons
             name="arrow-back"
             size={16}
-            color={Colors.darkTextSecondary}
+            color={t.textSecondary}
           />
-          <Text style={styles.backToLearnText}>Back to Learn Hub</Text>
+          <Text style={[styles.backToLearnText, { color: t.textSecondary }]}>Back to Learn Hub</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

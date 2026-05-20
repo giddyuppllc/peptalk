@@ -164,6 +164,29 @@ function TierCard({
     // pressable; a double-tap would otherwise fire the native purchase
     // sheet twice.
     if (purchasing) return;
+    // Don't trigger a real App Store purchase for users who already have
+    // entitlement equal-or-better than the target tier. This includes:
+    //   - Beta-grant users (preview build / BETA_TESTER_EMAILS) whose
+    //     productId is `beta_tester_grant`. Without this guard, tapping
+    //     "Subscribe" on Plus while already on a beta Pro grant fires a
+    //     REAL App Store purchase sheet. P0 from Wave 76.7 IAP audit.
+    //   - Real Pro users tapping the Plus card — same problem.
+    const { useSubscriptionStore: subStore } = await import(
+      '../src/store/useSubscriptionStore'
+    );
+    const currentTier = subStore.getState().tier;
+    const currentProductId = subStore.getState().productId;
+    const tierRank: Record<string, number> = { free: 0, plus: 1, pro: 2 };
+    if (
+      currentProductId === 'beta_tester_grant' ||
+      (tierRank[currentTier] ?? 0) >= (tierRank[info.tier] ?? 0)
+    ) {
+      // Don't even start a purchase flow — the user already has it.
+      // The CTA *should* be hidden in this case (isActive prop), but
+      // the visible-CTA bug doesn't have to be fixable for the
+      // server-charge bug to be unreachable from here.
+      return;
+    }
     trackUpgradeInitiated(plan.productId, info.tier);
     try {
       setPurchasing(true);
@@ -314,7 +337,6 @@ function tierForFeature(feature: string | undefined): SubscriptionTier | null {
     'generated_workout_tracker',
     'health_reports',
     'aimee_ai_unlimited',
-    'aimee_health_scheduler',
     'research_feed_premium',
   ];
   if (proOnly.includes(feature)) return 'pro';

@@ -39,7 +39,7 @@ const STEP_TITLES = [
   'Peptide Experience',
 ];
 
-const GOALS: Array<{ id: GoalType; label: string; icon: string }> = [
+const GOALS: { id: GoalType; label: string; icon: string }[] = [
   { id: 'weight_loss', label: 'Weight Loss', icon: 'trending-down' },
   { id: 'muscle_gain', label: 'Muscle Gain', icon: 'barbell' },
   { id: 'body_recomp', label: 'Body Recomp', icon: 'body' },
@@ -55,7 +55,7 @@ const GOALS: Array<{ id: GoalType; label: string; icon: string }> = [
   { id: 'general_wellness', label: 'General Wellness', icon: 'heart' },
 ];
 
-const DIET_OPTIONS: Array<{ id: DietType; label: string }> = [
+const DIET_OPTIONS: { id: DietType; label: string }[] = [
   { id: 'no_restriction', label: 'No Restrictions' },
   { id: 'keto', label: 'Keto' },
   { id: 'paleo', label: 'Paleo' },
@@ -67,7 +67,7 @@ const DIET_OPTIONS: Array<{ id: DietType; label: string }> = [
   { id: 'other', label: 'Other' },
 ];
 
-const ACTIVITY_OPTIONS: Array<{ id: ActivityLevel; label: string; desc: string }> = [
+const ACTIVITY_OPTIONS: { id: ActivityLevel; label: string; desc: string }[] = [
   { id: 'sedentary', label: 'Sedentary', desc: 'Desk job, little exercise' },
   { id: 'light', label: 'Light', desc: '1-2 days/week' },
   { id: 'moderate', label: 'Moderate', desc: '3-4 days/week' },
@@ -75,14 +75,14 @@ const ACTIVITY_OPTIONS: Array<{ id: ActivityLevel; label: string; desc: string }
   { id: 'very_active', label: 'Very Active', desc: 'Daily + physically demanding' },
 ];
 
-const SLEEP_PATTERNS: Array<{ id: SleepPattern; label: string }> = [
+const SLEEP_PATTERNS: { id: SleepPattern; label: string }[] = [
   { id: 'early_bird', label: 'Early Bird (asleep by 10pm)' },
   { id: 'night_owl', label: 'Night Owl (past midnight)' },
   { id: 'irregular', label: 'Irregular Schedule' },
   { id: 'shift_work', label: 'Shift Worker' },
 ];
 
-const DEVICES: Array<{ id: ConnectedDevice; label: string }> = [
+const DEVICES: { id: ConnectedDevice; label: string }[] = [
   { id: 'apple_watch', label: 'Apple Watch' },
   { id: 'apple_health', label: 'Apple Health' },
   { id: 'google_fit', label: 'Google Fit' },
@@ -195,32 +195,38 @@ export default function HealthProfileScreen() {
     }
   };
 
+  // Clamp helpers — anything out-of-range gets dropped to undefined
+  // rather than persisted, so a stray 99999 doesn't poison macro calc
+  // or Aimee context. P0 from input validation audit (Wave 76.8).
+  const clamp = (v: number, lo: number, hi: number): number | undefined =>
+    !Number.isFinite(v) || v < lo || v > hi ? undefined : v;
+
   const saveCurrentStep = () => {
     switch (step) {
       case 0: { // Body
         const w = parseFloat(weightInput);
         const ft = parseInt(heightFeet) || 0;
         const inches = parseInt(heightIn) || 0;
-        const totalInches = ft * 12 + inches;
+        const totalInches = ft >= 1 && ft <= 8 ? ft * 12 + (inches >= 0 && inches < 12 ? inches : 0) : 0;
         const bf = parseFloat(bodyFatInput);
         const gw = parseFloat(goalWeightInput);
         store.setBodyMetrics({
-          weightLbs: isNaN(w) ? undefined : w,
-          heightInches: totalInches || undefined,
-          bodyFatPercent: isNaN(bf) ? undefined : bf,
-          goalWeightLbs: isNaN(gw) ? undefined : gw,
+          weightLbs: clamp(w, 50, 1000),
+          heightInches: totalInches > 0 ? totalInches : undefined,
+          bodyFatPercent: clamp(bf, 1, 80),
+          goalWeightLbs: clamp(gw, 50, 1000),
         });
         break;
       }
       case 4: { // Sleep
         const hrs = parseFloat(sleepHoursInput);
-        store.setSleep({ averageHours: isNaN(hrs) ? undefined : hrs });
+        store.setSleep({ averageHours: clamp(hrs, 0, 24) });
         break;
       }
       case 3: { // Nutrition
         const protein = parseInt(proteinInput);
         store.setNutrition({
-          dailyProteinGrams: isNaN(protein) ? undefined : protein,
+          dailyProteinGrams: clamp(protein, 0, 500),
         });
         break;
       }

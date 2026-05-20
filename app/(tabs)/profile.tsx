@@ -1,5 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import * as ImagePicker from 'expo-image-picker';
+// 2026-05-17 perf fix: lazy-required inside the pickAvatar handler
+// instead of statically imported. expo-image-picker pulls in a
+// non-trivial native bridge surface; the profile tab loads at app
+// boot and only ~5% of users ever tap the avatar. Save the parse +
+// bridge init for users who actually need it.
 import {
   View,
   Text,
@@ -12,6 +16,8 @@ import {
   StyleSheet,
   Animated,
   Image,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,8 +32,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { Disclaimer } from '../../src/components/Disclaimer';
 import { trackConsentUpdated } from '../../src/services/analyticsEvents';
 import { useNotificationStore } from '../../src/store/useNotificationStore';
-import { notificationsAvailable } from '../../src/services/notificationService';
-import {
+import { notificationsAvailable ,
   scheduleDailyCheckInReminder,
   cancelAllReminders,
   scheduleWorkoutReminder,
@@ -161,6 +166,7 @@ const tierStyles = StyleSheet.create({
 function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { login, isLoading } = useAuthStore();
   const t = useTheme();
@@ -189,7 +195,16 @@ function LoginForm() {
   };
 
   return (
-    <View style={styles.loginContainer}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+    >
+    <ScrollView
+      contentContainerStyle={styles.loginContainer}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       {/* Branding */}
       <View style={styles.brandingSection}>
         <LinearGradient
@@ -236,9 +251,23 @@ function LoginForm() {
               onChangeText={setPassword}
               placeholder="Enter password"
               placeholderTextColor={t.placeholder}
-              secureTextEntry
+              secureTextEntry={!showPw}
+              autoComplete="current-password"
+              textContentType="password"
               selectionColor="#e3a7a1"
             />
+            <TouchableOpacity
+              onPress={() => setShowPw(!showPw)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={showPw ? 'Hide password' : 'Show password'}
+            >
+              <Ionicons
+                name={showPw ? 'eye-off' : 'eye'}
+                size={18}
+                color={t.textSecondary}
+              />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -272,7 +301,8 @@ function LoginForm() {
           </LinearGradient>
         </TouchableOpacity>
       </GlassCard>
-    </View>
+    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -289,6 +319,8 @@ function UserProfile() {
   const darkMode = t.isDark;
 
   const pickAvatar = useCallback(async () => {
+    // Lazy-load the native module so boot doesn't pay for it.
+    const ImagePicker = await import('expo-image-picker');
     Alert.alert('Profile Photo', 'Choose a photo', [
       {
         text: 'Take Photo',
@@ -444,36 +476,94 @@ function UserProfile() {
       <View style={styles.settingsSection}>
         <Text style={[styles.settingsSectionTitle, { color: t.text }]}>Settings</Text>
 
-        {/* Pro Status Toggle */}
-        <GlassCard style={styles.settingCard}>
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(227, 167, 161, 0.12)' }]}>
-                <Ionicons name="star-outline" size={18} color="#e3a7a1" />
+        {/* Pro Status — read-only badge.
+            Previously a Switch with onValueChange={() => {}}. Visually
+            looked interactive but did nothing — confusing UX and an
+            accessibility violation (announced as a togglable switch
+            but had no effect). Tap routes to the paywall for free
+            users; for Pro users it's a static "Active" badge. */}
+        <TouchableOpacity
+          activeOpacity={user.isPro ? 1 : 0.8}
+          disabled={user.isPro}
+          onPress={() => router.push('/subscription' as never)}
+          accessibilityRole={user.isPro ? 'text' : 'button'}
+          accessibilityLabel={
+            user.isPro
+              ? 'Pro plan active'
+              : 'Upgrade to Pro for advanced analysis features'
+          }
+        >
+          <GlassCard style={styles.settingCard}>
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(227, 167, 161, 0.12)' }]}>
+                  <Ionicons name="star-outline" size={18} color="#e3a7a1" />
+                </View>
+                <View style={styles.settingTextContainer}>
+                  <Text style={[styles.settingTitle, { color: t.text }]}>Pro Status</Text>
+                  <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
+                    {user.isPro
+                      ? 'Pro plan is active — all features unlocked'
+                      : 'Tap to upgrade and unlock advanced analysis'}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.settingTextContainer}>
-                <Text style={[styles.settingTitle, { color: t.text }]}>Pro Status</Text>
-                <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
-                  Access advanced analysis features
-                </Text>
-              </View>
+              {user.isPro ? (
+                <View style={[styles.proPill, { backgroundColor: 'rgba(227, 167, 161, 0.2)' }]}>
+                  <Text style={[styles.proPillText, { color: '#e3a7a1' }]}>Active</Text>
+                </View>
+              ) : (
+                <Ionicons name="chevron-forward" size={18} color={t.textSecondary} />
+              )}
             </View>
-            <Switch
-              value={user.isPro}
-              onValueChange={() => {}}
-              trackColor={{
-                false: 'rgba(0,0,0,0.08)',
-                true: 'rgba(227, 167, 161, 0.4)',
-              }}
-              thumbColor={user.isPro ? '#e3a7a1' : '#6B7280'}
-            />
-          </View>
-        </GlassCard>
+          </GlassCard>
+        </TouchableOpacity>
+
+        {/* Advanced fitness inputs — RPE, tempo, %1RM, rest intervals.
+            Off by default; the custom workout builder shows just sets ×
+            reps. Power users can flip this on for the full prescription
+            form. */}
+        <AdvancedFitnessToggle t={t} />
 
         {/* Dark Mode removed — app uses gender-based light themes only */}
       </View>
 
     </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Advanced Fitness Toggle
+// ---------------------------------------------------------------------------
+function AdvancedFitnessToggle({ t }: { t: ReturnType<typeof useTheme> }) {
+  const showAdvancedFitness = useOnboardingStore((st) => st.showAdvancedFitness);
+  const setShowAdvancedFitness = useOnboardingStore((st) => st.setShowAdvancedFitness);
+
+  return (
+    <GlassCard style={styles.settingCard}>
+      <View style={styles.settingRow}>
+        <View style={styles.settingInfo}>
+          <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(122, 190, 208, 0.14)' }]}>
+            <Ionicons name="options-outline" size={18} color="#5BA9A7" />
+          </View>
+          <View style={styles.settingTextContainer}>
+            <Text style={[styles.settingTitle, { color: t.text }]}>Advanced fitness inputs</Text>
+            <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
+              Show RPE, tempo, and rest intervals in the workout builder
+            </Text>
+          </View>
+        </View>
+        <Switch
+          value={showAdvancedFitness}
+          onValueChange={setShowAdvancedFitness}
+          trackColor={{
+            false: 'rgba(0,0,0,0.08)',
+            true: 'rgba(122, 190, 208, 0.5)',
+          }}
+          thumbColor={showAdvancedFitness ? '#5BA9A7' : '#6B7280'}
+        />
+      </View>
+    </GlassCard>
   );
 }
 
@@ -933,7 +1023,14 @@ function NotificationSettings() {
     if (value && notifEnabled) {
       await rescheduleAllMeals(preferences.mealReminderTimes);
     } else {
-      await cancelRemindersByTag('meal');
+      // Cancel the meal-time reminders (breakfast/lunch/dinner). Do NOT
+      // use `'meal'` as the tag — that would also sweep the
+      // `meal-safety-...` identifiers from scheduleMealSafetyChecks
+      // (the leftovers / fridge-check reminders), which is a separate
+      // toggle. P1 from Wave 76.9 push audit.
+      await cancelRemindersByTag('meal-breakfast-');
+      await cancelRemindersByTag('meal-lunch-');
+      await cancelRemindersByTag('meal-dinner-');
     }
   };
 
@@ -1406,8 +1503,19 @@ export default function ProfileScreen() {
     // would keep getting charged until they manually cancel in iOS
     // Settings. We want to surface that clearly so we don't end up with
     // a refund-request support ticket.
-    const tier = useSubscriptionStore.getState().tier;
-    const hasActiveSubscription = tier === 'plus' || tier === 'pro';
+    //
+    // Use getStatus() rather than raw tier, so we don't fire the
+    // "will keep renewing" scare on users whose subscription is
+    // already expired/cancelled. P1 from Wave 76.7 IAP audit.
+    const subState = useSubscriptionStore.getState();
+    const tier = subState.tier;
+    const status = typeof subState.getStatus === 'function'
+      ? subState.getStatus()
+      : (tier === 'free' ? 'none' : 'active');
+    // Only the states where Apple will keep billing show the warning.
+    const willKeepBilling = status === 'active' || status === 'expiring' || status === 'trial';
+    const hasActiveSubscription =
+      (tier === 'plus' || tier === 'pro') && willKeepBilling;
 
     const runDestructiveConfirm = () => {
       Alert.alert(
@@ -1439,9 +1547,13 @@ export default function ProfileScreen() {
     };
 
     if (hasActiveSubscription) {
+      const tierName = tier === 'pro' ? 'PepTalk Pro' : 'PepTalk+';
+      const message = status === 'expiring'
+        ? `Your ${tierName} subscription is set to renew soon through your Apple ID. Deleting your PepTalk account does NOT cancel that renewal — Apple owns billing.\n\nTap "Manage subscription" first to turn off auto-renew, then come back to delete.`
+        : `Your ${tierName} subscription will keep renewing through your Apple ID unless you cancel it FIRST.\n\nDeleting your PepTalk account does NOT cancel your Apple subscription — Apple owns billing.\n\nWe recommend you tap "Manage subscription" first to cancel through Apple, then come back to delete the account.`;
       Alert.alert(
         'Subscription still active',
-        `Your ${tier === 'pro' ? 'PepTalk Pro' : 'PepTalk+'} subscription will keep renewing through your Apple ID unless you cancel it FIRST.\n\nDeleting your PepTalk account does NOT cancel your Apple subscription — Apple owns billing.\n\nWe recommend you tap "Manage subscription" first to cancel through Apple, then come back to delete the account.`,
+        message,
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -1497,6 +1609,12 @@ export default function ProfileScreen() {
               <ProfileRow icon="library-outline" label="Sources & references" onPress={() => router.push('/resources' as any)} color={t.text} />
               <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
               <ProfileRow icon="people-outline" label="Community" onPress={() => router.push('/community' as any)} color={t.text} />
+              <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+              {/* §4.6 — manually pin a v3 theme variant regardless of sex. */}
+              <ProfileRow icon="color-palette-outline" label="Appearance" onPress={() => router.push('/profile/appearance' as any)} color={t.text} />
+              <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+              {/* §12 + §13.5 — opt-in public-tracking categories. */}
+              <ProfileRow icon="people-circle-outline" label="Public sharing" onPress={() => router.push('/profile/community-prefs' as any)} color={t.text} />
             </View>
           </View>
         )}
@@ -1680,6 +1798,8 @@ const styles = StyleSheet.create({
   // -- Login Form
   loginContainer: {
     marginTop: Spacing.md,
+    paddingBottom: 40,
+    flexGrow: 1,
   },
   brandingSection: {
     alignItems: 'center',
@@ -2004,6 +2124,16 @@ const styles = StyleSheet.create({
   settingCard: {
     marginBottom: Spacing.sm,
     paddingVertical: Spacing.xs,
+  },
+  proPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  proPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   settingRow: {
     flexDirection: 'row',

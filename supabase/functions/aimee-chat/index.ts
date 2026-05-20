@@ -17,7 +17,7 @@ const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 // Default to Grok — matches the other edge functions. If secrets aren't set
 // for this function, at least we're calling the same provider consistently.
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
-const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL') ?? 'grok-4-1-fast-reasoning';
+const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL') ?? 'grok-4.3';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -275,34 +275,32 @@ async function checkRateLimit(
 ): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number; failedClosed?: boolean }> {
   const today = new Date().toISOString().slice(0, 10);
   try {
-    const { data: existing } = await supabase
-      .from('ai_usage_log')
-      .select('count')
-      .eq('user_id', userId)
-      .eq('function_name', functionName)
-      .eq('date', today)
-      .maybeSingle();
-    const count = existing?.count ?? 0;
-    if (count >= limit) {
+    // 2026-05-17 security fix: migrated from read-modify-write to the
+    // atomic `bump_ai_usage` RPC. The previous pattern leaked one extra
+    // call past the limit under concurrent same-user requests. Other
+    // edge fns (aimee-chat-stream, aimee-voice, food-scan, lab-scan,
+    // aimee-pantry-scan, aimee-pantry-meal, aimee-recipe, aimee-plan,
+    // aimee-lab-interpret, aimee-pantry-parse, community-moderate-image)
+    // all use the same RPC; this one was the last hold-out.
+    const { data, error } = await supabase.rpc('bump_ai_usage', {
+      p_user_id: userId,
+      p_function_name: functionName,
+      p_date: today,
+    });
+    if (error) throw error;
+
+    const newCount = Array.isArray(data) && data[0]
+      ? (data[0] as any).count ?? 0
+      : 0;
+
+    if (newCount > limit) {
       const now = new Date();
       const tomorrow = new Date(now);
       tomorrow.setUTCHours(24, 0, 0, 0);
       const retryAfter = Math.max(1, Math.round((tomorrow.getTime() - now.getTime()) / 1000));
-      return { allowed: false, limit, count, retryAfter };
+      return { allowed: false, limit, count: newCount, retryAfter };
     }
-    await supabase
-      .from('ai_usage_log')
-      .upsert(
-        {
-          user_id: userId,
-          function_name: functionName,
-          date: today,
-          count: count + 1,
-          last_called_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,function_name,date' },
-      );
-    return { allowed: true, limit, count: count + 1 };
+    return { allowed: true, limit, count: newCount };
   } catch (err) {
     // Fail CLOSED. If we can't reach ai_usage_log we cannot enforce the
     // per-user cap, and the function fans out to the LLM provider —

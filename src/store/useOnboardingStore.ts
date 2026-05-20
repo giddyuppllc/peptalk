@@ -8,6 +8,7 @@ import {
   MaritalStatus,
   OnboardingProfile,
   PeptideCategory,
+  ReferralClaim,
   ReferralSource,
 } from '../types';
 import { secureStorage } from '../services/secureStorage';
@@ -23,11 +24,30 @@ interface OnboardingStore {
    *  Shown the first time they enter any /community/live/[eventId] room. */
   acceptedLiveChatDisclaimer: boolean;
   setAcceptedLiveChatDisclaimer: (accepted: boolean) => void;
+  /** Dosing calculator "Simple mode" preference. When true the
+   *  calculator hides advanced inputs (intensity picker, titration
+   *  ladder, weight-based dosing, supplies estimator) and shows just
+   *  peptide → dose → frequency → BAC water → Calculate. Defaults to
+   *  true for new accounts — most users don't need the deep-research
+   *  surface and the previous default was overwhelming. */
+  simpleCalculatorMode: boolean;
+  setSimpleCalculatorMode: (simple: boolean) => void;
+  /** Advanced workout inputs (RPE, tempo, %1RM, rest interval). Off by
+   *  default — the simplified custom builder only captures sets × reps.
+   *  Power users can flip this on in Profile → Settings to expose the
+   *  full set-prescription form. */
+  showAdvancedFitness: boolean;
+  setShowAdvancedFitness: (show: boolean) => void;
   setGender: (gender: Gender) => void;
   setAgeRange: (ageRange: AgeRange) => void;
   setEthnicity: (ethnicity: Ethnicity) => void;
   setMaritalStatus: (status: MaritalStatus) => void;
   setReferralSource: (source: ReferralSource) => void;
+  /** Intake referral-claim string (§11.2). Free text — server resolves
+   *  it against the user_referrals table at signup. */
+  referralClaim: ReferralClaim | null;
+  setReferralClaim: (raw: string) => void;
+  clearReferralClaim: () => void;
   setHealthGoals: (goals: GoalType[]) => void;
   toggleHealthGoal: (goal: GoalType) => void;
   setInterestCategories: (categories: PeptideCategory[]) => void;
@@ -62,6 +82,12 @@ export const useOnboardingStore = create<OnboardingStore>()(
       acceptedLiveChatDisclaimer: false,
       setAcceptedLiveChatDisclaimer: (acceptedLiveChatDisclaimer) =>
         set({ acceptedLiveChatDisclaimer }),
+      simpleCalculatorMode: true,
+      setSimpleCalculatorMode: (simpleCalculatorMode) =>
+        set({ simpleCalculatorMode }),
+      showAdvancedFitness: false,
+      setShowAdvancedFitness: (showAdvancedFitness) =>
+        set({ showAdvancedFitness }),
 
       setGender: (gender) =>
         set((state) => ({ profile: { ...state.profile, gender } })),
@@ -73,6 +99,14 @@ export const useOnboardingStore = create<OnboardingStore>()(
         set((state) => ({ profile: { ...state.profile, maritalStatus } })),
       setReferralSource: (referralSource) =>
         set((state) => ({ profile: { ...state.profile, referralSource } })),
+      referralClaim: null,
+      setReferralClaim: (raw) =>
+        set({
+          referralClaim: raw.trim()
+            ? { raw: raw.trim(), claimedAt: new Date().toISOString() }
+            : null,
+        }),
+      clearReferralClaim: () => set({ referralClaim: null }),
       setHealthGoals: (healthGoals) =>
         set((state) => ({ profile: { ...state.profile, healthGoals } })),
       toggleHealthGoal: (goal) => {
@@ -113,6 +147,8 @@ export const useOnboardingStore = create<OnboardingStore>()(
         isComplete: state.isComplete,
         acceptedPeptideDisclaimer: state.acceptedPeptideDisclaimer,
         acceptedLiveChatDisclaimer: state.acceptedLiveChatDisclaimer,
+        simpleCalculatorMode: state.simpleCalculatorMode,
+        showAdvancedFitness: state.showAdvancedFitness,
       }),
       onRehydrateStorage: () => (state) => {
         const safeProfile = {
@@ -126,6 +162,8 @@ export const useOnboardingStore = create<OnboardingStore>()(
           isComplete: state?.isComplete ?? false,
           acceptedPeptideDisclaimer: state?.acceptedPeptideDisclaimer ?? false,
           acceptedLiveChatDisclaimer: state?.acceptedLiveChatDisclaimer ?? false,
+          simpleCalculatorMode: state?.simpleCalculatorMode ?? true,
+          showAdvancedFitness: state?.showAdvancedFitness ?? false,
           hasHydrated: true,
         });
       },

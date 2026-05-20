@@ -25,6 +25,7 @@ import { PaywallGate } from '../../src/hooks/useFeatureGate';
 import { useMealStore } from '../../src/store/useMealStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import type { MealType } from '../../src/types/fitness';
+import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
 
 interface PlannedMeal {
   type: string;
@@ -118,8 +119,13 @@ function MealPlanScreen() {
   const handleLogDay = (pd: PlannedDay) => {
     const today = new Date().toISOString().slice(0, 10);
     const now = new Date().toISOString();
-    for (const meal of pd.meals) {
-      const mealType = MEAL_TYPE_MAP[meal.type.toLowerCase()] ?? 'snack';
+    // Cap meals/day at 8 so a runaway plan can't insert 1000 rows.
+    for (const meal of pd.meals.slice(0, 8)) {
+      const rawType = typeof meal.type === 'string' ? meal.type.toLowerCase() : '';
+      const mealType = MEAL_TYPE_MAP[rawType] ?? 'snack';
+      // Clamp every LLM-emitted field. Mirrors sanitizeLogMeal quickLog
+      // caps so this entry point can't bypass the daily-ring guard.
+      const description = `${clampString(meal.name, 100) || 'Planned meal'} — ${clampString(meal.description, 200)}`.slice(0, 300);
       addMeal({
         id: `plan-${pd.day}-${mealType}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         date: today,
@@ -127,15 +133,15 @@ function MealPlanScreen() {
         mealType,
         foods: [],
         quickLog: {
-          description: `${meal.name} — ${meal.description}`,
-          calories: meal.calories,
-          proteinGrams: meal.proteinGrams,
-          carbsGrams: meal.carbsGrams,
-          fatGrams: meal.fatGrams,
+          description,
+          calories: clamp(meal.calories, 5000),
+          proteinGrams: clamp(meal.proteinGrams, 500),
+          carbsGrams: clamp(meal.carbsGrams, 1000),
+          fatGrams: clamp(meal.fatGrams, 500),
         },
       });
     }
-    Alert.alert('Logged', `All ${pd.meals.length} meals from Day ${pd.day} added to today.`);
+    Alert.alert('Logged', `All ${Math.min(pd.meals.length, 8)} meals from Day ${pd.day} added to today.`);
   };
 
   return (

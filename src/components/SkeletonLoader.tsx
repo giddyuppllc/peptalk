@@ -12,8 +12,10 @@ import Animated, {
   useAnimatedStyle,
   withRepeat,
   withTiming,
+  cancelAnimation,
   Easing,
 } from 'react-native-reanimated';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 interface SkeletonProps {
   width: number | string;
@@ -29,14 +31,23 @@ export function Skeleton({
   style,
 }: SkeletonProps) {
   const opacity = useSharedValue(0.3);
+  const reduceMotion = useReduceMotion();
 
+  // 2026-05-17 perf+a11y: cancel worklet on unmount + honor Reduce Motion
   useEffect(() => {
+    if (reduceMotion) {
+      opacity.value = 0.5;
+      return;
+    }
     opacity.value = withRepeat(
       withTiming(0.7, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
       -1,
       true,
     );
-  }, [opacity]);
+    return () => {
+      cancelAnimation(opacity);
+    };
+  }, [opacity, reduceMotion]);
 
   const animStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

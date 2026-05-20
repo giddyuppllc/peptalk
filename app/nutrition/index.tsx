@@ -1,2430 +1,754 @@
 /**
- * Nutrition Dashboard — macro tracking, meal log, water intake.
- * Supports quick-log, food-search logging, and inline meal editing.
+ * Nutrition — Master Refactor Plan v3.1 §6.
+ *
+ * Protein-focal home for the vertical:
+ *   1. Photo food log (top, Pro-gated) — §6.3
+ *   2. Protein ring + secondary macro bars — §6.1
+ *   3. Water tracker (cup-tap) — §6.5
+ *   4. Appetite log chips — §6.6
+ *   5. AI meal plan ribbon (Pro) — §6.7
+ *   6. Macro target settings shortcut — §6.2
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
+  ScrollView,
   View,
   Text,
-  TouchableOpacity,
-  ScrollView,
+  Pressable,
   StyleSheet,
-  TextInput,
-  Modal,
   Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { GlassCard } from '../../src/components/GlassCard';
-import { GradientButton } from '../../src/components/GradientButton';
-import { CoachMark } from '../../src/components/tutorial/CoachMark';
-import { useTheme } from '../../src/hooks/useTheme';
-import { useSectionAccent } from '../../src/hooks/useSectionAccent';
-import { Colors, Gradients, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
-import { useMealStore, type MealTemplate } from '../../src/store/useMealStore';
 import {
-  computeSafetyStatus,
-  DEFAULT_SAFETY_WINDOWS,
-  type SafetyStatusInfo,
-} from '../../src/data/foodSafety';
-import type { MealEntry, MealType } from '../../src/types/fitness';
-import { tapLight } from '../../src/utils/haptics';
+  V3DetailShell,
+  GlassCard,
+  MacroRing,
+  MacroBar,
+} from '../../src/components/v3';
+import { useV3Theme } from '../../src/theme/V3ThemeProvider';
+import { tapLight, tapMedium } from '../../src/utils/haptics';
+import { useMealStore } from '../../src/store/useMealStore';
+import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
+import {
+  useAppetiteLogStore,
+  APPETITE_OPTIONS,
+  type AppetiteState,
+} from '../../src/store/useAppetiteLogStore';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+const CUP_OZ = 8;
 
-const today = () => new Date().toISOString().slice(0, 10);
-
-const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
-function dateKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate(),
+  ).padStart(2, '0')}`;
 }
-
-function getWeekDays(referenceDate: Date): Date[] {
-  const day = referenceDate.getDay();
-  const start = new Date(referenceDate);
-  start.setDate(start.getDate() - day);
-  const days: Date[] = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i);
-    days.push(d);
-  }
-  return days;
-}
-
-const MAIN_MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
-
-const MEAL_ICONS: Record<MealType, string> = {
-  breakfast:    'sunny-outline',
-  lunch:        'restaurant-outline',
-  dinner:       'moon-outline',
-  snack:        'cafe-outline',
-  pre_workout:  'flash-outline',
-  post_workout: 'fitness-outline',
-};
-
-const MEAL_LABELS: Record<MealType, string> = {
-  breakfast:    'Breakfast',
-  lunch:        'Lunch',
-  dinner:       'Dinner',
-  snack:        'Snack',
-  pre_workout:  'Pre-Workout',
-  post_workout: 'Post-Workout',
-};
-
-/** Derive a display calorie total from a meal entry (quickLog or itemized foods). */
-function mealCalories(meal: MealEntry): number {
-  if (meal.quickLog) return meal.quickLog.calories;
-  return meal.foods.reduce((sum, f) => sum + f.calories, 0);
-}
-
-/** Derive a display description from a meal entry. */
-function mealDescription(meal: MealEntry): string {
-  if (meal.quickLog?.description) return meal.quickLog.description;
-  if (meal.foods.length > 0) {
-    return meal.foods.map((f) => f.foodName).join(', ');
-  }
-  return 'Itemized meal';
-}
-
-// ---------------------------------------------------------------------------
-// Macro Bar
-// ---------------------------------------------------------------------------
-
-function MacroBar({
-  label,
-  current,
-  target,
-  color,
-  unit,
-}: {
-  label: string;
-  current: number;
-  target: number;
-  color: string;
-  unit: string;
-}) {
-  const t = useTheme();
-  const accent = useSectionAccent();
-  const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
-
-  return (
-    <View style={styles.macroBar}>
-      <View style={styles.macroBarHeader}>
-        <Text style={[styles.macroBarLabel, { color: t.text }]}>{label}</Text>
-        <Text style={[styles.macroBarValue, { color: t.text }]}>
-          {Math.round(current)}{unit}{' '}
-          <Text style={[styles.macroBarTarget, { color: t.textSecondary }]}>/ {target}{unit}</Text>
-        </Text>
-      </View>
-      <View style={styles.macroBarTrack}>
-        <View
-          style={[
-            styles.macroBarFill,
-            { width: `${pct}%`, backgroundColor: color },
-          ]}
-        />
-      </View>
-    </View>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Quick Log Modal
-// ---------------------------------------------------------------------------
-
-function QuickLogModal({
-  visible,
-  onClose,
-  onSave,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  onSave: (data: {
-    mealType: MealType;
-    description: string;
-    calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-  }) => void;
-}) {
-  const [mealType, setMealType] = useState<MealType>('lunch');
-  const [desc, setDesc] = useState('');
-  const [cal, setCal] = useState('');
-  const [protein, setProtein] = useState('');
-  const [carbs, setCarbs] = useState('');
-  const [fat, setFat] = useState('');
-
-  const handleSave = () => {
-    if (!desc.trim()) {
-      Alert.alert('Missing Info', 'Please describe what you ate.');
-      return;
-    }
-    // Sanity caps on per-meal macros. These are deliberately loose enough
-    // to accommodate a big-day bulk meal but tight enough to catch typos
-    // like dropping an extra zero ("5000 cal" vs "500 cal").
-    const CAPS = { calories: 5000, protein: 500, carbs: 1000, fat: 500 };
-    const parsed = {
-      calories: Math.max(0, Math.min(CAPS.calories, parseInt(cal, 10) || 0)),
-      protein:  Math.max(0, Math.min(CAPS.protein,  parseInt(protein, 10) || 0)),
-      carbs:    Math.max(0, Math.min(CAPS.carbs,    parseInt(carbs, 10) || 0)),
-      fat:      Math.max(0, Math.min(CAPS.fat,      parseInt(fat, 10) || 0)),
-    };
-    // Warn before saving anything that looks like a typo. Keep the
-    // threshold well under the hard cap so most legitimate entries pass.
-    const suspicious =
-      parsed.calories >= 2500 ||
-      parsed.protein >= 250 ||
-      parsed.carbs >= 500 ||
-      parsed.fat >= 250;
-    const commit = () => {
-      onSave({ mealType, description: desc.trim(), ...parsed });
-      setDesc('');
-      setCal('');
-      setProtein('');
-      setCarbs('');
-      setFat('');
-      onClose();
-    };
-    if (suspicious) {
-      Alert.alert(
-        'Double-check macros',
-        `These numbers look high for one meal:\n${parsed.calories} cal · ${parsed.protein}P · ${parsed.carbs}C · ${parsed.fat}F`,
-        [
-          { text: 'Edit', style: 'cancel' },
-          { text: 'Save anyway', onPress: commit },
-        ],
-      );
-      return;
-    }
-    commit();
-  };
-
-  return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.modalOverlay}
-      >
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Quick Log Meal</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color={Colors.darkText} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Meal type selector */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mealTypeRow}>
-            {(Object.keys(MEAL_LABELS) as MealType[]).map((mt) => (
-              <TouchableOpacity
-                key={mt}
-                style={[styles.mealTypeChip, mealType === mt && styles.mealTypeChipActive]}
-                onPress={() => setMealType(mt)}
-              >
-                <Ionicons
-                  name={MEAL_ICONS[mt] as any}
-                  size={14}
-                  color={mealType === mt ? '#fff' : Colors.darkTextSecondary}
-                />
-                <Text style={[styles.mealTypeText, mealType === mt && styles.mealTypeTextActive]}>
-                  {MEAL_LABELS[mt]}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Description */}
-          <Text style={styles.fieldLabel}>What did you eat?</Text>
-          <TextInput
-            style={styles.input}
-            value={desc}
-            onChangeText={setDesc}
-            placeholder="e.g. Grilled chicken salad"
-            placeholderTextColor={Colors.darkTextSecondary}
-            accessibilityLabel="Meal description"
-            maxLength={140}
-          />
-
-          {/* Macros row */}
-          <Text style={styles.fieldLabel}>Estimated Macros</Text>
-          <View style={styles.macroInputRow}>
-            <View style={styles.macroInput}>
-              <Text style={styles.macroInputLabel}>Cal</Text>
-              <TextInput
-                style={styles.macroInputField}
-                value={cal}
-                onChangeText={setCal}
-                keyboardType="numeric"
-                placeholder="0"
-                placeholderTextColor={Colors.darkTextSecondary}
-                maxLength={4}
-                accessibilityLabel="Calories"
-              />
-            </View>
-            <View style={styles.macroInput}>
-              <Text style={styles.macroInputLabel}>Pro (g)</Text>
-              <TextInput
-                style={styles.macroInputField}
-                value={protein}
-                onChangeText={setProtein}
-                keyboardType="numeric"
-                placeholder="0"
-                placeholderTextColor={Colors.darkTextSecondary}
-                maxLength={3}
-                accessibilityLabel="Protein in grams"
-              />
-            </View>
-            <View style={styles.macroInput}>
-              <Text style={styles.macroInputLabel}>Carb (g)</Text>
-              <TextInput
-                style={styles.macroInputField}
-                value={carbs}
-                onChangeText={setCarbs}
-                keyboardType="numeric"
-                placeholder="0"
-                placeholderTextColor={Colors.darkTextSecondary}
-                maxLength={4}
-                accessibilityLabel="Carbs in grams"
-              />
-            </View>
-            <View style={styles.macroInput}>
-              <Text style={styles.macroInputLabel}>Fat (g)</Text>
-              <TextInput
-                style={styles.macroInputField}
-                value={fat}
-                onChangeText={setFat}
-                keyboardType="numeric"
-                placeholder="0"
-                placeholderTextColor={Colors.darkTextSecondary}
-                maxLength={3}
-                accessibilityLabel="Fat in grams"
-              />
-            </View>
-          </View>
-
-          <GradientButton label="Log Meal" onPress={handleSave} accessibilityLabel="Save logged meal" />
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Edit Meal Modal
-// ---------------------------------------------------------------------------
-
-const PORTION_MULTIPLIERS: { label: string; value: number }[] = [
-  { label: '0.5x',  value: 0.5 },
-  { label: '0.75x', value: 0.75 },
-  { label: '1x',    value: 1 },
-  { label: '1.25x', value: 1.25 },
-  { label: '1.5x',  value: 1.5 },
-  { label: '2x',    value: 2 },
-];
-
-interface EditMealModalProps {
-  meal: MealEntry | null;
-  visible: boolean;
-  onClose: () => void;
-  onSave:   (mealId: string, updates: Partial<MealEntry>) => void;
-  onDelete: (mealId: string) => void;
-}
-
-function EditMealModal({ meal, visible, onClose, onSave, onDelete }: EditMealModalProps) {
-  const addMealTemplate = useMealStore((s) => s.addMealTemplate);
-  // Double-tap guard for template save — addMealTemplate generates a fresh
-  // `Date.now()`-based id each call, so two rapid taps create two duplicate
-  // template rows before the confirmation alert tears down.
-  const savingTemplateRef = React.useRef(false);
-  const [desc,    setDesc]    = useState('');
-  const [cal,     setCal]     = useState('');
-  const [protein, setProtein] = useState('');
-  const [carbs,   setCarbs]   = useState('');
-  const [fat,     setFat]     = useState('');
-  const [notes,   setNotes]   = useState('');
-  // Save-as-template / meal-prep state
-  const [saveSectionOpen, setSaveSectionOpen] = useState(false);
-  const [templateName,    setTemplateName]    = useState('');
-  const [isMealPrep,      setIsMealPrep]      = useState(false);
-  const [totalServings,   setTotalServings]   = useState('8');
-  const [servingUnit,     setServingUnit]     = useState('serving');
-  // Food-safety state (only shown for meal preps)
-  const [dateMade,        setDateMade]        = useState(''); // YYYY-MM-DD; '' = today
-  const [primaryProtein,  setPrimaryProtein]  = useState<
-    'chicken' | 'beef' | 'pork' | 'fish' | 'eggs' | 'vegetarian' | 'other'
-  >('chicken');
-  const [storageMethod,   setStorageMethod]   = useState<'fridge' | 'freezer' | 'pantry'>('fridge');
-
-  // Seed form when meal changes
-  React.useEffect(() => {
-    if (!meal) return;
-    const foods = meal.foods ?? [];
-    const baseCal     = meal.quickLog?.calories     ?? foods.reduce((s, f) => s + f.calories, 0);
-    const baseProt    = meal.quickLog?.proteinGrams  ?? foods.reduce((s, f) => s + f.proteinGrams, 0);
-    const baseCarbs   = meal.quickLog?.carbsGrams    ?? foods.reduce((s, f) => s + f.carbsGrams, 0);
-    const baseFat     = meal.quickLog?.fatGrams      ?? foods.reduce((s, f) => s + f.fatGrams, 0);
-    const baseDesc    = meal.quickLog?.description   ?? foods.map((f) => f.foodName).join(', ') ?? '';
-    setDesc(baseDesc);
-    setCal(String(baseCal));
-    setProtein(String(baseProt));
-    setCarbs(String(baseCarbs));
-    setFat(String(baseFat));
-    setNotes(meal.notes ?? '');
-    setTemplateName(baseDesc.slice(0, 50));
-    setSaveSectionOpen(false);
-    setIsMealPrep(false);
-    setTotalServings('8');
-    setServingUnit('serving');
-    setDateMade('');
-    setPrimaryProtein('chicken');
-    setStorageMethod('fridge');
-    savingTemplateRef.current = false;
-  }, [meal?.id]);
-
-  const applyMultiplier = (mult: number) => {
-    if (!meal) return;
-    const baseCal   = meal.quickLog?.calories     ?? meal.foods.reduce((s, f) => s + f.calories, 0);
-    const baseProt  = meal.quickLog?.proteinGrams  ?? meal.foods.reduce((s, f) => s + f.proteinGrams, 0);
-    const baseCarbs = meal.quickLog?.carbsGrams    ?? meal.foods.reduce((s, f) => s + f.carbsGrams, 0);
-    const baseFat   = meal.quickLog?.fatGrams      ?? meal.foods.reduce((s, f) => s + f.fatGrams, 0);
-    setCal(String(Math.round(baseCal * mult)));
-    setProtein(String(Math.round(baseProt * mult * 10) / 10));
-    setCarbs(String(Math.round(baseCarbs * mult * 10) / 10));
-    setFat(String(Math.round(baseFat * mult * 10) / 10));
-  };
-
-  const handleSave = () => {
-    if (!meal) return;
-    const calNum     = parseFloat(cal)     || 0;
-    const proteinNum = parseFloat(protein) || 0;
-    const carbsNum   = parseFloat(carbs)   || 0;
-    const fatNum     = parseFloat(fat)     || 0;
-
-    // Always persist as quickLog so the existing display logic works regardless of origin
-    const updates: Partial<MealEntry> = {
-      quickLog: {
-        description:  desc.trim() || mealDescription(meal),
-        calories:     calNum,
-        proteinGrams: proteinNum,
-        carbsGrams:   carbsNum,
-        fatGrams:     fatNum,
-      },
-      notes: notes.trim() || undefined,
-    };
-    onSave(meal.id, updates);
-    onClose();
-  };
-
-  const handleDelete = () => {
-    if (!meal) return;
-    Alert.alert(
-      'Delete Meal',
-      'Remove this entry permanently?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            onDelete(meal.id);
-            onClose();
-          },
-        },
-      ],
-    );
-  };
-
-  const handleSaveAsTemplate = () => {
-    if (!meal) return;
-    if (savingTemplateRef.current) return;
-    const name = templateName.trim();
-    if (!name) {
-      Alert.alert('Name required', 'Give your meal a name before saving.');
-      return;
-    }
-    savingTemplateRef.current = true;
-    const calNum     = parseFloat(cal)     || 0;
-    const proteinNum = parseFloat(protein) || 0;
-    const carbsNum   = parseFloat(carbs)   || 0;
-    const fatNum     = parseFloat(fat)     || 0;
-    // If it's a meal prep the stored macros represent the FULL batch.
-    // We use the currently-displayed macros as the batch total.
-    const parsedServings = Math.max(1, Math.round(parseFloat(totalServings) || 1));
-    const now = new Date().toISOString();
-    addMealTemplate({
-      id: `tpl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      name,
-      defaultMealType: meal.mealType,
-      foods: [{
-        foodId: `template-${Date.now()}`,
-        foodName: desc.trim() || name,
-        servings: 1,
-        calories: calNum,
-        proteinGrams: proteinNum,
-        carbsGrams: carbsNum,
-        fatGrams: fatNum,
-      }],
-      totalCalories: calNum,
-      totalProteinGrams: proteinNum,
-      totalCarbsGrams: carbsNum,
-      totalFatGrams: fatNum,
-      totalServings: isMealPrep ? parsedServings : 1,
-      servingUnit: isMealPrep ? (servingUnit.trim() || 'serving') : undefined,
-      // Food-safety — only meaningful for preps since a single-meal template
-      // doesn't have leftovers to worry about.
-      dateMade: isMealPrep
-        ? (dateMade.trim() || new Date().toISOString().slice(0, 10))
-        : undefined,
-      primaryProtein: isMealPrep ? primaryProtein : undefined,
-      storageMethod: isMealPrep ? storageMethod : undefined,
-      logCount: 0,
-      createdAt: now,
-      updatedAt: now,
-    });
-    const perUnit = isMealPrep ? Math.round(calNum / parsedServings) : calNum;
-    const message = isMealPrep
-      ? `Saved "${name}" as a meal prep (${parsedServings} ${servingUnit || 'servings'}, ~${perUnit} cal each).`
-      : `Saved "${name}" to your meals.`;
-    Alert.alert('Saved', message, [
-      { text: 'OK', onPress: () => { savingTemplateRef.current = false; } },
-    ]);
-    setSaveSectionOpen(false);
-  };
-
-  if (!meal) return null;
-
-  return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.modalOverlay}
-      >
-        <View style={styles.editModalContent}>
-          {/* Handle */}
-          <View style={styles.modalHandle} />
-
-          {/* Header */}
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Edit Meal</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={22} color={Colors.darkText} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            {/* Meal type badge (read-only) */}
-            <View style={styles.editMealTypeBadge}>
-              <Ionicons name={MEAL_ICONS[meal.mealType] as any} size={16} color="#E89672" />
-              <Text style={styles.editMealTypeLabel}>{MEAL_LABELS[meal.mealType]}</Text>
-            </View>
-
-            {/* Description */}
-            <Text style={styles.fieldLabel}>Description</Text>
-            <TextInput
-              style={[styles.input, { marginBottom: 12 }]}
-              value={desc}
-              onChangeText={setDesc}
-              placeholder="What did you eat?"
-              placeholderTextColor={Colors.darkTextSecondary}
-            />
-
-            {/* Macros */}
-            <Text style={styles.fieldLabel}>Macros</Text>
-            <View style={styles.macroInputRow}>
-              <View style={styles.macroInput}>
-                <Text style={styles.macroInputLabel}>Cal</Text>
-                <TextInput
-                  style={styles.macroInputField}
-                  value={cal}
-                  onChangeText={setCal}
-                  keyboardType="decimal-pad"
-                  placeholder="0"
-                  placeholderTextColor={Colors.darkTextSecondary}
-                />
-              </View>
-              <View style={styles.macroInput}>
-                <Text style={styles.macroInputLabel}>Pro (g)</Text>
-                <TextInput
-                  style={styles.macroInputField}
-                  value={protein}
-                  onChangeText={setProtein}
-                  keyboardType="decimal-pad"
-                  placeholder="0"
-                  placeholderTextColor={Colors.darkTextSecondary}
-                />
-              </View>
-              <View style={styles.macroInput}>
-                <Text style={styles.macroInputLabel}>Carb (g)</Text>
-                <TextInput
-                  style={styles.macroInputField}
-                  value={carbs}
-                  onChangeText={setCarbs}
-                  keyboardType="decimal-pad"
-                  placeholder="0"
-                  placeholderTextColor={Colors.darkTextSecondary}
-                />
-              </View>
-              <View style={styles.macroInput}>
-                <Text style={styles.macroInputLabel}>Fat (g)</Text>
-                <TextInput
-                  style={styles.macroInputField}
-                  value={fat}
-                  onChangeText={setFat}
-                  keyboardType="decimal-pad"
-                  placeholder="0"
-                  placeholderTextColor={Colors.darkTextSecondary}
-                />
-              </View>
-            </View>
-
-            {/* Portion multipliers */}
-            <Text style={[styles.fieldLabel, { marginTop: 4 }]}>Portion Multiplier</Text>
-            <Text style={styles.fieldHint}>Applies to all macros proportionally</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.multRow}
-            >
-              {PORTION_MULTIPLIERS.map((m) => (
-                <TouchableOpacity
-                  key={m.label}
-                  style={styles.multChip}
-                  onPress={() => applyMultiplier(m.value)}
-                >
-                  <Text style={styles.multChipText}>{m.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            {/* Notes */}
-            <Text style={[styles.fieldLabel, { marginTop: 8 }]}>Notes (optional)</Text>
-            <TextInput
-              style={[styles.input, styles.notesInput]}
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="e.g. substituted Greek yogurt for sour cream"
-              placeholderTextColor={Colors.darkTextSecondary}
-              multiline
-              numberOfLines={2}
-            />
-
-            {/* Save as Template / Meal Prep */}
-            <TouchableOpacity
-              style={styles.saveAsTplToggle}
-              onPress={() => setSaveSectionOpen((s) => !s)}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={saveSectionOpen ? 'chevron-down' : 'chevron-forward'}
-                size={16}
-                color={Colors.darkText}
-              />
-              <Text style={styles.saveAsTplToggleText}>
-                Save as my meal / meal prep
-              </Text>
-            </TouchableOpacity>
-
-            {saveSectionOpen && (
-              <View style={styles.saveAsTplBox}>
-                <Text style={styles.fieldLabel}>Name</Text>
-                <TextInput
-                  style={[styles.input, { marginBottom: 12 }]}
-                  value={templateName}
-                  onChangeText={setTemplateName}
-                  placeholder="e.g. Chicken Rice Bowl"
-                  placeholderTextColor={Colors.darkTextSecondary}
-                />
-
-                <TouchableOpacity
-                  style={styles.prepToggleRow}
-                  onPress={() => setIsMealPrep((v) => !v)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.prepCheckbox, isMealPrep && styles.prepCheckboxOn]}>
-                    {isMealPrep && (
-                      <Ionicons name="checkmark" size={14} color="#fff" />
-                    )}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.prepToggleTitle}>This is a meal prep batch</Text>
-                    <Text style={styles.prepToggleHint}>
-                      You made multiple servings at once
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                {isMealPrep && (
-                  <View style={styles.prepFieldsRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.fieldLabel}>Total servings</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={totalServings}
-                        onChangeText={setTotalServings}
-                        keyboardType="number-pad"
-                        placeholder="8"
-                        placeholderTextColor={Colors.darkTextSecondary}
-                      />
-                    </View>
-                    <View style={{ flex: 1.2 }}>
-                      <Text style={styles.fieldLabel}>Unit</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={servingUnit}
-                        onChangeText={setServingUnit}
-                        placeholder="bowl, container, 100g"
-                        placeholderTextColor={Colors.darkTextSecondary}
-                        autoCapitalize="none"
-                      />
-                    </View>
-                  </View>
-                )}
-
-                {isMealPrep && (() => {
-                  const calNum = parseFloat(cal) || 0;
-                  const servs = Math.max(1, Math.round(parseFloat(totalServings) || 1));
-                  const perServing = Math.round(calNum / servs);
-                  return (
-                    <Text style={styles.prepPerServing}>
-                      ~{perServing} cal per {servingUnit.trim() || 'serving'}
-                    </Text>
-                  );
-                })()}
-
-                {isMealPrep && (
-                  <>
-                    <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Date made</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={dateMade}
-                      onChangeText={setDateMade}
-                      placeholder={new Date().toISOString().slice(0, 10)}
-                      placeholderTextColor={Colors.darkTextSecondary}
-                      autoCapitalize="none"
-                    />
-                    <Text style={styles.fieldHint}>
-                      Optional — defaults to today. YYYY-MM-DD.
-                    </Text>
-
-                    <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Primary protein</Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      style={{ marginBottom: 8 }}
-                    >
-                      {(['chicken', 'beef', 'pork', 'fish', 'eggs', 'vegetarian', 'other'] as const).map((p) => (
-                        <TouchableOpacity
-                          key={p}
-                          onPress={() => setPrimaryProtein(p)}
-                          style={[
-                            styles.proteinChip,
-                            primaryProtein === p && styles.proteinChipOn,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.proteinChipText,
-                              primaryProtein === p && styles.proteinChipTextOn,
-                            ]}
-                          >
-                            {p}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-
-                    <Text style={[styles.fieldLabel, { marginTop: 4 }]}>Storage</Text>
-                    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
-                      {(['fridge', 'freezer', 'pantry'] as const).map((s) => (
-                        <TouchableOpacity
-                          key={s}
-                          onPress={() => setStorageMethod(s)}
-                          style={[
-                            styles.storageChip,
-                            storageMethod === s && styles.storageChipOn,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.storageChipText,
-                              storageMethod === s && styles.storageChipTextOn,
-                            ]}
-                          >
-                            {s}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </>
-                )}
-
-                <TouchableOpacity
-                  style={styles.saveAsTplBtn}
-                  onPress={handleSaveAsTemplate}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="bookmark" size={16} color="#fff" />
-                  <Text style={styles.saveAsTplBtnText}>
-                    {isMealPrep ? 'Save as meal prep' : 'Save as my meal'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* Save */}
-            <GradientButton label="Save Changes" onPress={handleSave} style={{ marginTop: 12 }} />
-
-            {/* Delete */}
-            <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
-              <Ionicons name="trash-outline" size={16} color={Colors.error} />
-              <Text style={styles.deleteBtnText}>Delete Meal</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Water Tracker — big glass that fills vertically
-// ---------------------------------------------------------------------------
-
-const GLASS_OZ = 8;
-const CUSTOM_PRESETS = [4, 12, 16, 20];
-
-function WaterTracker() {
-  const t = useTheme();
-  const accent = useSectionAccent();
-  const { logWater, getWater, targets } = useMealStore();
-  const dateKey  = today();
-  const current  = getWater(dateKey);
-  const target   = targets.waterOz ?? 100;
-  const pct      = target > 0 ? Math.round((current / target) * 100) : 0;
-  const fillPct  = Math.min(100, pct);
-  const overOz   = Math.max(0, current - target);
-  const reached  = current >= target;
-  const [showCustom, setShowCustom] = useState(false);
-
-  const adjust = (oz: number) => {
-    const delta = oz > 0 ? oz : Math.max(oz, -current); // don't go below 0
-    if (delta === 0) return;
-    logWater(dateKey, delta);
-    tapLight();
-  };
-
-  const addCustom = (oz: number) => {
-    logWater(dateKey, oz);
-    tapLight();
-    setShowCustom(false);
-  };
-
-  return (
-    <GlassCard>
-      {/* Header */}
-      <View style={styles.hydHeader}>
-        <View style={styles.hydHeaderLeft}>
-          <View style={[styles.hydIcon, { backgroundColor: `${accent.deep}18` }]}>
-            <Ionicons name="water" size={16} color={accent.deep} />
-          </View>
-          <Text style={[styles.hydTitle, { color: t.text }]}>Hydration</Text>
-        </View>
-        <Text style={[styles.hydAmount, { color: t.text }]}>
-          {current}
-          <Text style={[styles.hydTarget, { color: t.textSecondary }]}> oz of {target}</Text>
-        </Text>
-      </View>
-
-      {/* Big glass visual */}
-      <View style={styles.glassWrap}>
-        {/* Overflow droplet badge when over 100% */}
-        {overOz > 0 && (
-          <View style={[styles.glassOverflowBadge, { backgroundColor: accent.deep }]}>
-            <Ionicons name="arrow-up" size={11} color="#FFFFFF" />
-            <Text style={styles.glassOverflowText}>+{overOz} oz</Text>
-          </View>
-        )}
-        <View
-          style={[
-            styles.glassBody,
-            {
-              borderColor: accent.deep,
-              borderWidth: overOz > 0 ? 4 : 3,
-            },
-          ]}
-        >
-          {/* Fill from bottom (capped at 100% — the glass is physically full) */}
-          <View
-            style={[
-              styles.glassFill,
-              {
-                height: `${fillPct}%`,
-                backgroundColor: accent.deep,
-              },
-            ]}
-          />
-          {/* Subtle tick marks overlay (quarters) */}
-          <View style={[styles.glassTick, { top: '25%', backgroundColor: `${accent.deep}30` }]} />
-          <View style={[styles.glassTick, { top: '50%', backgroundColor: `${accent.deep}30` }]} />
-          <View style={[styles.glassTick, { top: '75%', backgroundColor: `${accent.deep}30` }]} />
-          {/* Center percent label */}
-          <View style={styles.glassLabel}>
-            <Text
-              style={[
-                styles.glassPct,
-                { color: fillPct >= 50 ? '#FFFFFF' : accent.deep },
-              ]}
-            >
-              {pct}%
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* − / + controls */}
-      <View style={styles.hydControls}>
-        <TouchableOpacity
-          style={[
-            styles.hydCtrlBtn,
-            { borderColor: `${accent.deep}55`, opacity: current > 0 ? 1 : 0.4 },
-          ]}
-          onPress={() => adjust(-GLASS_OZ)}
-          disabled={current <= 0}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="remove" size={16} color={accent.deep} />
-          <Text style={[styles.hydCtrlText, { color: accent.deep }]}>{GLASS_OZ} oz</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.hydCtrlBtnPrimary, { backgroundColor: accent.deep }]}
-          onPress={() => adjust(GLASS_OZ)}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="add" size={16} color="#FFFFFF" />
-          <Text style={styles.hydCtrlTextPrimary}>{GLASS_OZ} oz</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Status / hint */}
-      {reached && (
-        <Text style={[styles.hydHint, { color: accent.deep, textAlign: 'center' }]}>
-          {overOz > 0
-            ? `${current} oz logged — ${overOz} oz over target`
-            : `Daily target reached — ${current} oz logged`}
-        </Text>
-      )}
-
-      {/* Custom amount */}
-      {!showCustom ? (
-        <TouchableOpacity
-          style={[styles.hydCustomBtn, { borderColor: `${accent.deep}55` }]}
-          onPress={() => setShowCustom(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="options-outline" size={15} color={accent.deep} />
-          <Text style={[styles.hydCustomBtnText, { color: accent.deep }]}>
-            Custom amount
-          </Text>
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.hydCustomRow}>
-          {CUSTOM_PRESETS.map((oz) => (
-            <TouchableOpacity
-              key={oz}
-              style={[styles.hydCustomChip, { borderColor: `${accent.deep}55` }]}
-              onPress={() => addCustom(oz)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.hydCustomChipText, { color: accent.deep }]}>
-                +{oz} oz
-              </Text>
-            </TouchableOpacity>
-          ))}
-          <TouchableOpacity
-            style={styles.hydCustomClose}
-            onPress={() => setShowCustom(false)}
-            activeOpacity={0.7}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="close" size={16} color={t.textSecondary} />
-          </TouchableOpacity>
-        </View>
-      )}
-    </GlassCard>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Add Food Sheet — opens from + Add button, routes to appropriate logger
-// ---------------------------------------------------------------------------
-
-interface AddFoodSheetProps {
-  visible: boolean;
-  mealType: MealType | null;
-  onClose: () => void;
-  onPickOption: (option: 'search' | 'my_meals' | 'barcode' | 'ai_scanner' | 'quick') => void;
-}
-
-function AddFoodSheet({ visible, mealType, onClose, onPickOption }: AddFoodSheetProps) {
-  const t = useTheme();
-  const accent = useSectionAccent();
-  if (!mealType) return null;
-
-  const options = [
-    { key: 'search' as const,     icon: 'search-outline' as const,    color: '#E89672', label: 'Search Foods',     sub: 'USDA & common items' },
-    { key: 'my_meals' as const,   icon: 'bookmark-outline' as const,  color: '#A4D9D1', label: 'My Meals',         sub: 'Recently logged' },
-    { key: 'barcode' as const,    icon: 'barcode-outline' as const,   color: '#F4ECC2', label: 'Scan Barcode',     sub: 'Packaged foods' },
-    { key: 'ai_scanner' as const, icon: 'camera-outline' as const,    color: '#e3a7a1', label: 'Food Scanner',  sub: 'Snap a plate → macros' },
-    { key: 'quick' as const,      icon: 'create-outline' as const,    color: '#8faa8b', label: 'Quick Log',        sub: 'Enter macros manually' },
-  ];
-
-  return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={onClose}>
-        <TouchableOpacity activeOpacity={1} style={[styles.sheetContent, { backgroundColor: t.bg }]}>
-          <View style={styles.sheetHandle} />
-          <Text style={[styles.sheetTitle, { color: t.text }]}>
-            Log {MEAL_LABELS[mealType]}
-          </Text>
-          <Text style={[styles.sheetSub, { color: t.textSecondary }]}>
-            Choose how you'd like to add food
-          </Text>
-          <View style={{ marginTop: 16 }}>
-            {options.map((opt) => (
-              <TouchableOpacity
-                key={opt.key}
-                style={[styles.sheetRow, { backgroundColor: t.surface, borderColor: t.cardBorder }]}
-                onPress={() => onPickOption(opt.key)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.sheetIcon, { backgroundColor: `${opt.color}20` }]}>
-                  <Ionicons name={opt.icon} size={20} color={opt.color} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.sheetRowLabel, { color: t.text }]}>{opt.label}</Text>
-                  <Text style={[styles.sheetRowSub, { color: t.textSecondary }]}>{opt.sub}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={t.textSecondary} />
-              </TouchableOpacity>
-            ))}
-          </View>
-          <TouchableOpacity style={styles.sheetCancel} onPress={onClose}>
-            <Text style={[styles.sheetCancelText, { color: t.textSecondary }]}>Cancel</Text>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </TouchableOpacity>
-    </Modal>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main Screen
-// ---------------------------------------------------------------------------
 
 export default function NutritionScreen() {
+  const t = useV3Theme();
   const router = useRouter();
-  const t = useTheme();
-  const accent = useSectionAccent();
-  const { meals, addMeal, removeMeal, updateMeal, getDailyProgress, targets } = useMealStore();
-  const mealTemplates = useMealStore((s) => s.mealTemplates);
-  const foodSafetyOverrides = useMealStore((s) => s.foodSafetyOverrides);
-  const syncMealsFromServer = useMealStore((s) => s.syncFromServer);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await syncMealsFromServer();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [syncMealsFromServer]);
-
-  // Urgent food-safety alerts — preps that are expiring today or expired.
-  const urgentSafetyAlerts = useMemo(() => {
-    const alerts: { template: MealTemplate; status: SafetyStatusInfo }[] = [];
-    for (const tpl of mealTemplates) {
-      if (!tpl.dateMade || !tpl.primaryProtein) continue;
-      const storage = tpl.storageMethod ?? 'fridge';
-      const override = foodSafetyOverrides[tpl.primaryProtein];
-      const defaults = DEFAULT_SAFETY_WINDOWS[tpl.primaryProtein];
-      const window = {
-        fridgeDays: override?.fridgeDays ?? defaults.fridgeDays,
-        freezerMonths: override?.freezerMonths ?? defaults.freezerMonths,
-        highRisk: defaults.highRisk,
-      };
-      const status = computeSafetyStatus(tpl.dateMade, tpl.primaryProtein, storage, window);
-      if (status.status === 'expired' || status.status === 'expiring') {
-        alerts.push({ template: tpl, status });
-      }
-    }
-    return alerts;
-  }, [mealTemplates, foodSafetyOverrides]);
-
-  const [showLog,        setShowLog]        = useState(false);
-  const [editingMeal,    setEditingMeal]    = useState<MealEntry | null>(null);
-  const [selectedDay,    setSelectedDay]    = useState(today());
-  const [weekOffset,     setWeekOffset]     = useState(0);
-  const [addSheetMeal,   setAddSheetMeal]   = useState<MealType | null>(null);
-
-  const selectedProgress = getDailyProgress(selectedDay);
-  const dayMeals = useMemo(() => meals.filter((m) => m.date === selectedDay), [meals, selectedDay]);
-
-  const mealsByType = useMemo(() => {
-    const grouped: Record<MealType, MealEntry[]> = {
-      breakfast: [], lunch: [], dinner: [], snack: [], pre_workout: [], post_workout: [],
-    };
-    dayMeals.forEach((m) => {
-      const key = MAIN_MEAL_TYPES.includes(m.mealType) ? m.mealType : 'snack';
-      grouped[key].push(m);
-    });
-    return grouped;
-  }, [dayMeals]);
-
-  const weekDays = useMemo(() => {
-    const ref = new Date();
-    ref.setDate(ref.getDate() + weekOffset * 7);
-    return getWeekDays(ref);
-  }, [weekOffset]);
-
-  const handleQuickLog = useCallback(
-    (data: {
-      mealType: MealType;
-      description: string;
-      calories: number;
-      protein: number;
-      carbs: number;
-      fat: number;
-    }) => {
-      addMeal({
-        id:       `meal-${Date.now()}`,
-        date:     selectedDay,
-        mealType: data.mealType,
-        foods:    [],
-        quickLog: {
-          description:  data.description,
-          calories:     data.calories,
-          proteinGrams: data.protein,
-          carbsGrams:   data.carbs,
-          fatGrams:     data.fat,
-        },
-        timestamp: new Date().toISOString(),
-      });
-    },
-    [addMeal, selectedDay],
+  const today = todayKey();
+  const targets = useMealStore((s) => s.targets);
+  // Select primitives only — `getDailyTotals(today)` and `getByDate(today)`
+  // returned a fresh object/array on every call, which made Zustand's
+  // useSyncExternalStore see a new reference each render → infinite loop.
+  const meals = useMealStore((s) => s.meals);
+  const waterOz = useMealStore((s) => s.getWater(today));
+  const logWater = useMealStore((s) => s.logWater);
+  const getDailyTotals = useMealStore((s) => s.getDailyTotals);
+  const totals = useMemo(
+    () => getDailyTotals(today),
+    [getDailyTotals, today, meals],
+  );
+  const tier = useSubscriptionStore((s) => s.tier);
+  const isPro = tier !== 'free';
+  const logAppetite = useAppetiteLogStore((s) => s.logAppetite);
+  const appetiteEntries = useAppetiteLogStore((s) => s.entries);
+  const recentAppetite = useMemo(
+    () => appetiteEntries.filter((e) => e.loggedAt.slice(0, 10) === today),
+    [appetiteEntries, today],
   );
 
-  const handleAddOption = useCallback(
-    (option: 'search' | 'my_meals' | 'barcode' | 'ai_scanner' | 'quick') => {
-      const mt = addSheetMeal;
-      setAddSheetMeal(null);
-      if (!mt) return;
-      const params = { mealType: mt, date: selectedDay } as any;
-      if (option === 'search')     router.push({ pathname: '/nutrition/food-search' as any, params });
-      if (option === 'my_meals')   router.push({ pathname: '/nutrition/food-search' as any, params: { ...params, tab: 'my_meals' } });
-      if (option === 'barcode')    router.push({ pathname: '/nutrition/food-search' as any, params: { ...params, scan: '1' } });
-      if (option === 'ai_scanner') router.push({ pathname: '/nutrition/food-scanner' as any, params });
-      if (option === 'quick')      setShowLog(true);
-    },
-    [addSheetMeal, router, selectedDay],
-  );
+  const proteinDeficit = useMemo(() => {
+    if (!targets.proteinGrams) return null;
+    const gap = targets.proteinGrams - totals.proteinGrams;
+    if (gap <= 0) return null;
+    return Math.round(gap);
+  }, [totals.proteinGrams, targets.proteinGrams]);
 
-  const selectedDayLabel = useMemo(() => {
-    if (selectedDay === today()) return 'Today';
-    const d = new Date(selectedDay + 'T12:00:00');
-    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-  }, [selectedDay]);
+  const observation =
+    proteinDeficit !== null
+      ? `Protein is ${proteinDeficit}g short of target. I can suggest meals.`
+      : "You're tracking on protein. Nice.";
+
+  const cups = Math.floor(waterOz / CUP_OZ);
+  const cupTarget = Math.max(1, Math.round((targets.waterOz ?? 64) / CUP_OZ));
+
+  const handlePhotoLog = () => {
+    tapMedium();
+    if (!isPro) {
+      router.push('/subscription' as never);
+      return;
+    }
+    // Pro path uses the existing photo meal-scan flow.
+    router.push('/nutrition/meal-scan' as never);
+  };
+
+  const handleAppetite = (state: AppetiteState) => {
+    tapLight();
+    logAppetite(state);
+  };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
-          <Ionicons name="chevron-back" size={24} color={t.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: t.text }]}>Nutrition</Text>
-        <View style={{ flexDirection: 'row', gap: 4 }}>
-          <TouchableOpacity
-            onPress={() => router.push('/pantry' as any)}
-            style={styles.backBtn}
-            accessibilityRole="button"
-            accessibilityLabel="My pantry"
-          >
-            <Ionicons name="basket-outline" size={20} color={accent.deep} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push('/nutrition/meal-plan' as any)}
-            style={styles.backBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Meal plan"
-          >
-            <Ionicons name="calendar-outline" size={20} color={accent.deep} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push('/nutrition/recipe-generator' as any)}
-            style={styles.backBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Recipes"
-          >
-            <Ionicons name="sparkles-outline" size={20} color={accent.deep} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push('/nutrition/targets' as any)}
-            style={styles.backBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Nutrition targets"
-          >
-            <Ionicons name="settings-outline" size={22} color={t.text} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        overScrollMode="never"
-        contentContainerStyle={styles.scroll}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={accent.deep}
-            colors={[accent.deep]}
-          />
-        }
-      >
-        <CoachMark
-          id="first_nutrition_visit"
-          title="Track everything you eat"
-          body="Tap the 🔍 search, 📷 scan, or 🎤 voice buttons to quickly log any meal."
-          icon="nutrition-outline"
-        />
-
-        {/* Food safety alerts — expiring or expired meal preps */}
-        {urgentSafetyAlerts.length > 0 && (
-          <View style={styles.section}>
-            {urgentSafetyAlerts.map(({ template, status }) => {
-              const expired = status.status === 'expired';
-              return (
-                <View
-                  key={template.id}
+    <V3DetailShell
+      title="Nutrition"
+      observation={observation}
+      intent="nutrition_overview"
+    >
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* §6.3 — Photo food log */}
+        <Pressable
+          onPress={handlePhotoLog}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isPro
+              ? 'Snap a photo to log a meal'
+              : 'Upgrade to Pro to log meals by photo'
+          }
+        >
+          <GlassCard style={styles.cardSpacing}>
+            <View style={styles.photoRow}>
+              <View
+                style={[
+                  styles.cameraBubble,
+                  {
+                    backgroundColor: isPro
+                      ? t.isDark
+                        ? 'rgba(201,136,90,0.22)'
+                        : 'rgba(229,146,141,0.22)'
+                      : 'rgba(0,0,0,0.06)',
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="camera-outline"
+                  size={26}
+                  color={
+                    t.isDark
+                      ? ((t.colors as any).accentCognac as string)
+                      : ((t.colors as any).accentRose as string)
+                  }
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
                   style={[
-                    styles.safetyBanner,
-                    expired ? styles.safetyBannerRed : styles.safetyBannerYellow,
+                    styles.cardTitle,
+                    {
+                      color: t.colors.textPrimary as string,
+                      fontFamily: t.isDark
+                        ? t.typography.headlineMale
+                        : t.typography.headlineFemale,
+                    },
                   ]}
+                >
+                  {isPro ? 'Snap to log a meal' : 'Photo log — Pro feature'}
+                </Text>
+                <Text
+                  style={[
+                    styles.cardSub,
+                    {
+                      color: t.colors.textSecondary as string,
+                      fontFamily: t.typography.body,
+                    },
+                  ]}
+                >
+                  {isPro
+                    ? 'Aimee estimates macros, you confirm before it writes.'
+                    : 'Upgrade to log meals by photo — Aimee estimates macros.'}
+                </Text>
+              </View>
+              {!isPro ? (
+                <View
+                  style={[
+                    styles.proPill,
+                    {
+                      backgroundColor: t.isDark
+                        ? 'rgba(201,136,90,0.30)'
+                        : 'rgba(229,146,141,0.25)',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      color: t.colors.textPrimary as string,
+                      fontFamily: t.typography.label,
+                      fontSize: 9,
+                      letterSpacing: 1.4,
+                    }}
+                  >
+                    PRO
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </GlassCard>
+        </Pressable>
+
+        {/* Scan fridge / pantry — drill into the kitchen-inventory flow. */}
+        <Pressable
+          onPress={() => {
+            tapMedium();
+            if (!isPro) {
+              router.push('/subscription' as never);
+              return;
+            }
+            router.push('/pantry/scan' as never);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isPro
+              ? 'Scan your fridge or pantry to keep your inventory current'
+              : 'Upgrade to Pro to scan your fridge'
+          }
+        >
+          <GlassCard style={styles.cardSpacing}>
+            <View style={styles.photoRow}>
+              <View
+                style={[
+                  styles.cameraBubble,
+                  {
+                    backgroundColor: isPro
+                      ? t.isDark
+                        ? 'rgba(201,136,90,0.22)'
+                        : 'rgba(229,146,141,0.22)'
+                      : 'rgba(0,0,0,0.06)',
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="scan-outline"
+                  size={26}
+                  color={
+                    t.isDark
+                      ? ((t.colors as any).accentCognac as string)
+                      : ((t.colors as any).accentRose as string)
+                  }
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.cardTitle,
+                    {
+                      color: t.colors.textPrimary as string,
+                      fontFamily: t.isDark
+                        ? t.typography.headlineMale
+                        : t.typography.headlineFemale,
+                    },
+                  ]}
+                >
+                  {isPro ? 'Scan your kitchen' : 'Scan kitchen — Pro feature'}
+                </Text>
+                <Text
+                  style={[
+                    styles.cardSub,
+                    {
+                      color: t.colors.textSecondary as string,
+                      fontFamily: t.typography.body,
+                    },
+                  ]}
+                >
+                  {isPro
+                    ? 'Snap your fridge or pantry — Aimee identifies items, you confirm before they save.'
+                    : 'Upgrade to Pro to keep your kitchen inventory current with one photo.'}
+                </Text>
+              </View>
+              {!isPro ? (
+                <View
+                  style={[
+                    styles.proPill,
+                    {
+                      backgroundColor: t.isDark
+                        ? 'rgba(201,136,90,0.30)'
+                        : 'rgba(229,146,141,0.25)',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      color: t.colors.textPrimary as string,
+                      fontFamily: t.typography.label,
+                      fontSize: 9,
+                      letterSpacing: 1.4,
+                    }}
+                  >
+                    PRO
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </GlassCard>
+        </Pressable>
+
+        {/* §6.1 — Protein-focal macros */}
+        <GlassCard style={styles.cardSpacing}>
+          <View style={styles.macroLayout}>
+            <MacroRing
+              current={totals.proteinGrams}
+              target={targets.proteinGrams}
+              unit="g"
+              label="PROTEIN"
+              size={128}
+            />
+            <View style={{ flex: 1, marginLeft: 18 }}>
+              <MacroBar
+                kind="carbs"
+                current={totals.carbsGrams}
+                target={targets.carbsGrams}
+              />
+              <MacroBar
+                kind="fat"
+                current={totals.fatGrams}
+                target={targets.fatGrams}
+              />
+              <MacroBar
+                kind="fiber"
+                current={totals.fiberGrams ?? 0}
+                target={targets.fiberGrams ?? 30}
+              />
+            </View>
+          </View>
+          <View
+            style={[
+              styles.divider,
+              { backgroundColor: (t.colors as any).divider as string },
+            ]}
+          />
+          <View style={styles.calsRow}>
+            <Text
+              style={[
+                styles.calsLabel,
+                {
+                  color: t.colors.textSecondary as string,
+                  fontFamily: t.typography.body,
+                },
+              ]}
+            >
+              CALORIES
+            </Text>
+            <Text
+              style={[
+                styles.calsValue,
+                {
+                  color: t.colors.textPrimary as string,
+                  fontFamily: t.isDark
+                    ? t.typography.headlineMale
+                    : t.typography.headlineFemale,
+                },
+              ]}
+            >
+              {Math.round(totals.calories)} / {Math.round(targets.calories)}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => {
+              tapLight();
+              router.push('/nutrition/targets' as never);
+            }}
+            style={styles.targetsLink}
+            accessibilityRole="button"
+            accessibilityLabel="Adjust macro targets"
+          >
+            <Text
+              style={{
+                color: t.colors.textSecondary as string,
+                fontFamily: t.typography.body,
+                fontSize: 12,
+                textDecorationLine: 'underline',
+              }}
+            >
+              Adjust targets
+            </Text>
+          </Pressable>
+        </GlassCard>
+
+        {/* §6.5 — Water tracker */}
+        <GlassCard style={styles.cardSpacing}>
+          <View style={styles.rowBetween}>
+            <Text
+              style={[
+                styles.cardTitle,
+                {
+                  color: t.colors.textPrimary as string,
+                  fontFamily: t.isDark
+                    ? t.typography.headlineMale
+                    : t.typography.headlineFemale,
+                },
+              ]}
+            >
+              Water
+            </Text>
+            <Text
+              style={{
+                color: t.colors.textSecondary as string,
+                fontFamily: t.typography.body,
+                fontSize: 12,
+              }}
+            >
+              {cups} / {cupTarget} cups
+            </Text>
+          </View>
+          <View style={styles.cupRow}>
+            {Array.from({ length: cupTarget }).map((_, i) => {
+              const filled = i < cups;
+              return (
+                <Pressable
+                  key={i}
+                  onPress={() => {
+                    tapLight();
+                    if (i < cups) {
+                      // Tap a filled cup to remove
+                      logWater(today, -CUP_OZ);
+                    } else {
+                      logWater(today, CUP_OZ);
+                    }
+                  }}
+                  hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    filled
+                      ? `Remove cup ${i + 1}`
+                      : `Add cup ${i + 1}`
+                  }
                 >
                   <Ionicons
-                    name={expired ? 'warning' : 'time-outline'}
-                    size={20}
-                    color={expired ? '#B91C1C' : '#B45309'}
+                    name={filled ? 'water' : 'water-outline'}
+                    size={26}
+                    color={
+                      filled
+                        ? t.isDark
+                          ? ((t.colors as any).accentCognac as string)
+                          : ((t.colors as any).accentBabyBlue as string)
+                        : (t.colors.textSecondary as string)
+                    }
                   />
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={[
-                        styles.safetyBannerTitle,
-                        { color: expired ? '#B91C1C' : '#B45309' },
-                      ]}
-                    >
-                      {expired ? 'Throw out' : 'Eat or freeze today'}: {template.name}
-                    </Text>
-                    <Text style={styles.safetyBannerBody}>{status.message}</Text>
-                  </View>
-                </View>
+                </Pressable>
               );
             })}
           </View>
-        )}
-        {/* Week strip */}
-        <View style={styles.section}>
-          <View style={styles.weekHeader}>
-            <TouchableOpacity onPress={() => setWeekOffset(weekOffset - 1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Go back">
-              <Ionicons name="chevron-back" size={18} color={t.textSecondary} />
-            </TouchableOpacity>
-            <Text style={[styles.weekLabel, { color: t.text }]}>{selectedDayLabel}</Text>
-            <TouchableOpacity
-              onPress={() => weekOffset < 0 && setWeekOffset(weekOffset + 1)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              disabled={weekOffset >= 0}
-            >
-              <Ionicons name="chevron-forward" size={18} color={weekOffset >= 0 ? 'transparent' : t.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          <View style={[styles.weekStrip, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
-            {weekDays.map((d) => {
-              const key = dateKey(d);
-              const isToday = key === today();
-              const isSelected = key === selectedDay;
-              const isFuture = d > new Date();
-              return (
-                <TouchableOpacity
-                  key={key}
-                  style={[
-                    styles.weekDayCell,
-                    isSelected && { backgroundColor: accent.deep },
-                  ]}
-                  onPress={() => !isFuture && setSelectedDay(key)}
-                  activeOpacity={isFuture ? 1 : 0.7}
+        </GlassCard>
+
+        {/* §6.6 — Appetite log */}
+        <GlassCard style={styles.cardSpacing}>
+          <Text
+            style={[
+              styles.cardTitle,
+              {
+                color: t.colors.textPrimary as string,
+                fontFamily: t.isDark
+                  ? t.typography.headlineMale
+                  : t.typography.headlineFemale,
+              },
+            ]}
+          >
+            How's your appetite?
+          </Text>
+          <View style={styles.appetiteRow}>
+            {APPETITE_OPTIONS.map((opt) => (
+              <Pressable
+                key={opt.state}
+                onPress={() => handleAppetite(opt.state)}
+                style={[
+                  styles.appetiteChip,
+                  {
+                    borderColor: (t.colors as any)[opt.tintKey] as string,
+                    backgroundColor: 'transparent',
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Log ${opt.label.toLowerCase()} appetite`}
+              >
+                <Text style={styles.appetiteEmoji}>{opt.emoji}</Text>
+                <Text
+                  style={{
+                    color: t.colors.textPrimary as string,
+                    fontFamily: t.typography.bodyMedium,
+                    fontSize: 12,
+                  }}
                 >
-                  <Text style={[
-                    styles.weekDayLabel,
-                    { color: isSelected ? '#fff' : t.textSecondary },
-                    isToday && !isSelected && { color: accent.deep, fontFamily: 'DMSans-Bold' },
-                  ]}>
-                    {DAY_LABELS[d.getDay()]}
-                  </Text>
-                  <Text style={[
-                    styles.weekDayNumber,
-                    { color: isSelected ? '#fff' : isFuture ? '#D1D5DB' : t.text },
-                    isToday && !isSelected && { color: accent.deep },
-                  ]}>
-                    {d.getDate()}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Calorie + macros summary */}
-        <View style={styles.section}>
-          <View style={[styles.summaryCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
-            <View style={styles.summaryTopRow}>
-              <View>
-                <Text style={[styles.summaryLabel, { color: t.textSecondary }]}>CALORIES</Text>
-                <Text style={[styles.summaryValue, { color: t.text }]}>
-                  {Math.round(selectedProgress.totals.calories)}
+                  {opt.label}
                 </Text>
-                <Text style={[styles.summaryTarget, { color: t.textSecondary }]}>
-                  of {targets.calories} goal
+              </Pressable>
+            ))}
+          </View>
+          {recentAppetite.length > 0 ? (
+            <Text
+              style={{
+                marginTop: 10,
+                color: t.colors.textSecondary as string,
+                fontFamily: t.typography.body,
+                fontSize: 11,
+              }}
+            >
+              {recentAppetite.length} entr
+              {recentAppetite.length === 1 ? 'y' : 'ies'} logged today.
+            </Text>
+          ) : null}
+        </GlassCard>
+
+        {/* §6.7 — AI meal plan (Pro) */}
+        <Pressable
+          onPress={() => {
+            tapLight();
+            if (!isPro) {
+              router.push('/subscription' as never);
+              return;
+            }
+            router.push('/nutrition/meal-plan' as never);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isPro
+              ? 'Open AI meal plan'
+              : 'Upgrade to Pro to unlock AI meal plan'
+          }
+        >
+          <GlassCard style={styles.cardSpacing}>
+            <View style={styles.rowBetween}>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.cardTitle,
+                    {
+                      color: t.colors.textPrimary as string,
+                      fontFamily: t.isDark
+                        ? t.typography.headlineMale
+                        : t.typography.headlineFemale,
+                    },
+                  ]}
+                >
+                  AI meal plan
+                </Text>
+                <Text
+                  style={[
+                    styles.cardSub,
+                    {
+                      color: t.colors.textSecondary as string,
+                      fontFamily: t.typography.body,
+                    },
+                  ]}
+                >
+                  {isPro
+                    ? '7-day meals + grocery list, from your targets.'
+                    : 'Pro: weekly plan from your targets, dietary prefs, and cycle.'}
                 </Text>
               </View>
-              <View style={styles.summaryRingWrap}>
-                <View style={[styles.summaryRing, { borderColor: `${accent.deep}20` }]}>
-                  <View
-                    style={[
-                      styles.summaryRingFill,
-                      {
-                        borderColor: accent.deep,
-                        borderTopColor:    selectedProgress.caloriePercent >= 25 ? accent.deep : `${accent.deep}20`,
-                        borderRightColor:  selectedProgress.caloriePercent >= 50 ? accent.deep : `${accent.deep}20`,
-                        borderBottomColor: selectedProgress.caloriePercent >= 75 ? accent.deep : `${accent.deep}20`,
-                        borderLeftColor:   selectedProgress.caloriePercent >  0  ? accent.deep : `${accent.deep}20`,
-                      },
-                    ]}
-                  />
-                  <Text style={[styles.summaryRingPct, { color: t.text }]}>{selectedProgress.caloriePercent}%</Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={[styles.summaryDivider, { backgroundColor: t.cardBorder }]} />
-
-            <MacroBar label="Protein" current={selectedProgress.totals.proteinGrams} target={targets.proteinGrams} color="#E89672" unit="g" />
-            <MacroBar label="Carbs"   current={selectedProgress.totals.carbsGrams}   target={targets.carbsGrams}   color="#A4D9D1" unit="g" />
-            <MacroBar label="Fat"     current={selectedProgress.totals.fatGrams}     target={targets.fatGrams}     color="#e3a7a1" unit="g" />
-            <MacroBar label="Fiber"   current={selectedProgress.totals.fiberGrams}   target={targets.fiberGrams ?? 25} color="#8faa8b" unit="g" />
-          </View>
-        </View>
-
-        {/* Hydration (slim) */}
-        <View style={styles.section}>
-          <WaterTracker />
-        </View>
-
-        {/* Meal sections */}
-        {MAIN_MEAL_TYPES.map((mealType) => {
-          const items = mealsByType[mealType];
-          const subtotal = items.reduce((sum, m) => sum + mealCalories(m), 0);
-          return (
-            <View key={mealType} style={styles.section}>
-              <View style={[styles.mealSectionCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
-                {/* Meal header */}
-                <View style={styles.mealSectionHeader}>
-                  <View style={[styles.mealSectionIcon, { backgroundColor: `${accent.deep}18` }]}>
-                    <Ionicons name={MEAL_ICONS[mealType] as any} size={18} color={accent.deep} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.mealSectionTitle, { color: t.text }]}>{MEAL_LABELS[mealType]}</Text>
-                    {items.length > 0 && (
-                      <Text style={[styles.mealSectionSub, { color: t.textSecondary }]}>
-                        {subtotal} cal · {items.length} item{items.length !== 1 ? 's' : ''}
-                      </Text>
-                    )}
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.mealAddBtn, { backgroundColor: accent.deep }]}
-                    onPress={() => setAddSheetMeal(mealType)}
-                    activeOpacity={0.85}
+              {!isPro ? (
+                <View
+                  style={[
+                    styles.proPill,
+                    {
+                      backgroundColor: t.isDark
+                        ? 'rgba(201,136,90,0.30)'
+                        : 'rgba(229,146,141,0.25)',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      color: t.colors.textPrimary as string,
+                      fontFamily: t.typography.label,
+                      fontSize: 9,
+                      letterSpacing: 1.4,
+                    }}
                   >
-                    <Ionicons name="add" size={16} color="#fff" />
-                    <Text style={styles.mealAddBtnText}>Add</Text>
-                  </TouchableOpacity>
+                    PRO
+                  </Text>
                 </View>
-
-                {/* Items or empty state */}
-                {items.length === 0 ? (
-                  <View style={[styles.mealSectionEmpty, { borderColor: t.cardBorder }]}>
-                    <Text style={[styles.mealSectionEmptyText, { color: t.textSecondary }]}>
-                      Nothing logged yet
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.mealItemList}>
-                    {items.map((meal, i) => (
-                      <TouchableOpacity
-                        key={meal.id}
-                        style={[
-                          styles.mealItemRow,
-                          i < items.length - 1 && { borderBottomWidth: 1, borderBottomColor: t.cardBorder },
-                        ]}
-                        onPress={() => setEditingMeal(meal)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text style={[styles.mealItemName, { color: t.text }]} numberOfLines={1}>
-                            {mealDescription(meal)}
-                          </Text>
-                          {meal.notes ? (
-                            <Text style={[styles.mealItemNotes, { color: t.textSecondary }]} numberOfLines={1}>
-                              {meal.notes}
-                            </Text>
-                          ) : null}
-                        </View>
-                        <Text style={[styles.mealItemCal, { color: t.text }]}>{mealCalories(meal)}</Text>
-                        <Text style={[styles.mealItemCalUnit, { color: t.textSecondary }]}>cal</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
+              ) : (
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={t.colors.textSecondary as string}
+                />
+              )}
             </View>
-          );
-        })}
+          </GlassCard>
+        </Pressable>
 
-        <View style={{ height: 40 }} />
+        {/* Build a meal from pantry — drill into the inventory-based composer. */}
+        <Pressable
+          onPress={() => {
+            tapLight();
+            router.push('/nutrition/custom-meal-from-pantry' as never);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Build a meal from your pantry"
+        >
+          <GlassCard style={styles.cardSpacing}>
+            <View style={styles.rowBetween}>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.cardTitle,
+                    {
+                      color: t.colors.textPrimary as string,
+                      fontFamily: t.isDark
+                        ? t.typography.headlineMale
+                        : t.typography.headlineFemale,
+                    },
+                  ]}
+                >
+                  Build from your pantry
+                </Text>
+                <Text
+                  style={[
+                    styles.cardSub,
+                    {
+                      color: t.colors.textSecondary as string,
+                      fontFamily: t.typography.body,
+                    },
+                  ]}
+                >
+                  Pick what you're cooking — macros auto-tally and pantry quantities decrement.
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={t.colors.textSecondary as string}
+              />
+            </View>
+          </GlassCard>
+        </Pressable>
+
+        {/* Quick logger entry — sends user to existing food search */}
+        <Pressable
+          onPress={() => {
+            tapMedium();
+            router.push('/nutrition/food-search' as never);
+          }}
+          style={[
+            styles.cta,
+            { backgroundColor: t.colors.textPrimary as string },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Log a meal"
+        >
+          <Ionicons
+            name="add"
+            size={18}
+            color={t.colors.bgBase1 as string}
+          />
+          <Text
+            style={{
+              color: t.colors.bgBase1 as string,
+              fontFamily: t.typography.bodyBold,
+              fontSize: 13,
+              letterSpacing: 0.3,
+            }}
+          >
+            Log a meal
+          </Text>
+        </Pressable>
       </ScrollView>
-
-      {/* Add Food Sheet */}
-      <AddFoodSheet
-        visible={addSheetMeal !== null}
-        mealType={addSheetMeal}
-        onClose={() => setAddSheetMeal(null)}
-        onPickOption={handleAddOption}
-      />
-
-      {/* Quick Log Modal */}
-      <QuickLogModal
-        visible={showLog}
-        onClose={() => setShowLog(false)}
-        onSave={handleQuickLog}
-      />
-
-      {/* Edit Meal Modal */}
-      <EditMealModal
-        meal={editingMeal}
-        visible={editingMeal !== null}
-        onClose={() => setEditingMeal(null)}
-        onSave={(id, updates) => updateMeal(id, updates)}
-        onDelete={(id) => removeMeal(id)}
-      />
-    </SafeAreaView>
+    </V3DetailShell>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.darkBg },
-
-  header: {
+  cardSpacing: { marginTop: 12 },
+  cardTitle: {
+    fontSize: 17,
+  },
+  cardSub: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  photoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    gap: 12,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
+  cameraBubble: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: '900',
-    letterSpacing: -0.5,
-    color: '#2D2D2D',
+  proPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
   },
-
-  scroll: { paddingBottom: 40 },
-
-  section: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-    gap: 8,
-  },
-  sectionHeader: {
+  macroLayout: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  // Divider color is theme-driven at the call site so it adapts to both
+  // palettes. Keep the layout-only styles here.
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: 12,
+  },
+  calsRow: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  sectionTitle: {
-    fontSize: FontSizes.lg,
-    fontWeight: '700',
-    color: Colors.darkText,
-    marginBottom: 4,
-  },
-
-  // ── Week strip ─────────────────────────────────────────────────────────
-  weekHeader: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 4,
-    marginBottom: 10,
   },
-  weekLabel: {
-    fontSize: 16,
-    fontFamily: 'DMSans-SemiBold',
-  },
-  weekStrip: {
-    flexDirection: 'row',
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 6,
-  },
-  weekDayCell: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderRadius: 12,
-    gap: 2,
-  },
-  weekDayLabel: {
-    fontSize: 11,
-    fontFamily: 'DMSans-Medium',
+  calsLabel: {
+    fontSize: 10,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  weekDayNumber: {
-    fontSize: 17,
-    fontFamily: 'DMSans-Bold',
+  calsValue: {
+    fontSize: 18,
   },
-
-  // ── Summary card ───────────────────────────────────────────────────────
-  summaryCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 20,
+  targetsLink: {
+    marginTop: 10,
+    alignSelf: 'flex-end',
   },
-  summaryTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  summaryLabel: {
-    fontSize: 11,
-    fontFamily: 'DMSans-Bold',
-    letterSpacing: 0.8,
-    marginBottom: 4,
-  },
-  summaryValue: {
-    fontSize: 42,
-    fontFamily: 'Playfair-Black',
-    letterSpacing: -1,
-    lineHeight: 46,
-  },
-  summaryTarget: {
-    fontSize: 13,
-    fontFamily: 'DMSans-Medium',
-    marginTop: 2,
-  },
-  summaryRingWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  summaryRing: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
-    borderWidth: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  summaryRingFill: {
-    position: 'absolute',
-    width: 86,
-    height: 86,
-    borderRadius: 43,
-    borderWidth: 8,
-    transform: [{ rotate: '-90deg' }],
-  },
-  summaryRingPct: {
-    fontSize: 16,
-    fontFamily: 'DMSans-Bold',
-  },
-  summaryDivider: {
-    height: 1,
-    marginBottom: 12,
-  },
-
-  // ── Meal sections ──────────────────────────────────────────────────────
-  mealSectionCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 14,
-  },
-  mealSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-  },
-  mealSectionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mealSectionTitle: {
-    fontSize: 16,
-    fontFamily: 'DMSans-Bold',
-  },
-  mealSectionSub: {
-    fontSize: 12,
-    fontFamily: 'DMSans-Medium',
-    marginTop: 2,
-  },
-  mealAddBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
-  },
-  mealAddBtnText: {
-    fontSize: 13,
-    fontFamily: 'DMSans-Bold',
-    color: '#fff',
-  },
-  mealSectionEmpty: {
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  mealSectionEmptyText: {
-    fontSize: 13,
-    fontFamily: 'DMSans-Regular',
-  },
-  mealItemList: {
-    // rows get their own borders
-  },
-  mealItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    gap: 8,
-  },
-  mealItemName: {
-    fontSize: 14,
-    fontFamily: 'DMSans-SemiBold',
-  },
-  mealItemNotes: {
-    fontSize: 12,
-    fontFamily: 'DMSans-Regular',
-    marginTop: 2,
-  },
-  mealItemCal: {
-    fontSize: 15,
-    fontFamily: 'DMSans-Bold',
-  },
-  mealItemCalUnit: {
-    fontSize: 11,
-    fontFamily: 'DMSans-Medium',
-  },
-
-  // ── Add Food Sheet ─────────────────────────────────────────────────────
-  sheetBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  sheetContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 32,
-  },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    alignSelf: 'center',
-    marginTop: 6,
-    marginBottom: 14,
-  },
-  sheetTitle: {
-    fontSize: 22,
-    fontFamily: 'Playfair-Black',
-    letterSpacing: -0.3,
-  },
-  sheetSub: {
-    fontSize: 14,
-    fontFamily: 'DMSans-Regular',
-    marginTop: 4,
-  },
-  sheetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 10,
-  },
-  sheetIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sheetRowLabel: {
-    fontSize: 15,
-    fontFamily: 'DMSans-Bold',
-  },
-  sheetRowSub: {
-    fontSize: 12,
-    fontFamily: 'DMSans-Regular',
-    marginTop: 2,
-  },
-  sheetCancel: {
-    alignItems: 'center',
-    paddingVertical: 12,
-    marginTop: 4,
-  },
-  sheetCancelText: {
-    fontSize: 14,
-    fontFamily: 'DMSans-SemiBold',
-  },
-
-  // Hero image
-  heroImage: {
-    width: '100%',
-    height: 160,
-    borderRadius: 16,
-    marginBottom: 16,
-    opacity: 0.8,
-  },
-
-  // Calorie card
-  calHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  calLabel: {
-    fontSize: FontSizes.sm,
-    color: Colors.darkTextSecondary,
-  },
-  calValue: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: Colors.darkText,
-    marginTop: 4,
-  },
-  calTarget: {
-    fontSize: FontSizes.lg,
-    fontWeight: '500',
-    color: Colors.darkTextSecondary,
-  },
-  calCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(6, 182, 212, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Colors.pepTeal,
-  },
-  calPct: {
-    fontSize: FontSizes.md,
-    fontWeight: '800',
-    color: Colors.pepTeal,
-  },
-
-  // Macro bar
-  macroBar: { marginBottom: 12 },
-  macroBarHeader: {
+  rowBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    alignItems: 'center',
   },
-  macroBarLabel: {
-    fontSize: FontSizes.sm,
-    fontWeight: '600',
-    color: Colors.darkText,
-  },
-  macroBarValue: {
-    fontSize: FontSizes.sm,
-    fontWeight: '700',
-    color: Colors.darkText,
-  },
-  macroBarTarget: {
-    fontWeight: '400',
-    color: Colors.darkTextSecondary,
-  },
-  macroBarTrack: {
-    height: 6,
-    backgroundColor: 'rgba(0,0,0,0.06)',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  macroBarFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-
-  // Hydration (glass grid)
-  hydHeader: {
+  cupRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-  hydHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  hydIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  hydTitle: {
-    fontSize: FontSizes.md,
-    fontWeight: '700',
-  },
-  hydAmount: {
-    fontSize: FontSizes.md,
-    fontWeight: '800',
-  },
-  hydTarget: {
-    fontSize: FontSizes.sm,
-    fontWeight: '500',
-  },
-  // Big glass visual
-  glassWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 8,
-    position: 'relative',
-  },
-  glassOverflowBadge: {
-    position: 'absolute',
-    top: -4,
-    right: '30%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    zIndex: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  glassOverflowText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  glassBody: {
-    width: 110,
-    height: 150,
-    borderWidth: 3,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
-  },
-  glassFill: {
-    width: '100%',
-  },
-  glassTick: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1,
-  },
-  glassLabel: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  glassPct: {
-    fontSize: 24,
-    fontWeight: '900',
-    fontFamily: 'Playfair-Black',
-    letterSpacing: -0.5,
-  },
-  // Controls
-  hydControls: {
-    flexDirection: 'row',
-    gap: 10,
+    flexWrap: 'wrap',
+    gap: 6,
     marginTop: 14,
-    marginBottom: 10,
   },
-  hydCtrlBtn: {
-    flex: 1,
+  appetiteRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  appetiteChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderWidth: 1.5,
-    borderRadius: 12,
-  },
-  hydCtrlBtnPrimary: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  hydCtrlText: {
-    fontSize: FontSizes.sm,
-    fontWeight: '700',
-  },
-  hydCtrlTextPrimary: {
-    fontSize: FontSizes.sm,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
-  },
-  hydHint: {
-    fontSize: FontSizes.xs,
-    marginBottom: 10,
-    fontStyle: 'italic',
-  },
-  hydCustomBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderRadius: 10,
-    borderStyle: 'dashed',
-  },
-  hydCustomBtnText: {
-    fontSize: FontSizes.xs,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  hydCustomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  hydCustomChip: {
-    flex: 1,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  hydCustomChipText: {
-    fontSize: FontSizes.xs,
-    fontWeight: '700',
-  },
-  hydCustomClose: {
-    padding: 6,
-  },
-
-  // Meals section header actions
-  mealHeaderActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  addFoodBtn: {
-    borderRadius: BorderRadius.full,
-    overflow: 'hidden',
-  },
-  addFoodBtnGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-  },
-  addFoodBtnText: {
-    fontSize: FontSizes.xs,
-    fontWeight: '700',
-    color: '#fff',
-  },
-
-  // Meal card
-  mealCard: {
-    marginBottom: 0,
-  },
-  mealRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  mealIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(6, 182, 212, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mealInfo: { flex: 1 },
-  mealTypeLabel: {
-    fontSize: FontSizes.sm,
-    fontWeight: '600',
-    color: Colors.darkText,
-  },
-  mealDesc: {
-    fontSize: FontSizes.xs,
-    color: Colors.darkTextSecondary,
-    marginTop: 1,
-  },
-  mealNotes: {
-    fontSize: FontSizes.xs,
-    color: Colors.pepTeal,
-    marginTop: 2,
-    fontStyle: 'italic',
-  },
-  mealCal: { alignItems: 'center' },
-  mealCalNum: {
-    fontSize: FontSizes.lg,
-    fontWeight: '800',
-    color: Colors.pepTeal,
-  },
-  mealCalLabel: {
-    fontSize: FontSizes.xs,
-    color: Colors.darkTextSecondary,
-  },
-  editBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: Colors.glassWhite,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 4,
-  },
-
-  // Empty meals
-  emptyMeals: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    gap: 6,
-  },
-  emptyTitle: {
-    fontSize: FontSizes.md,
-    fontWeight: '600',
-    color: Colors.darkText,
-  },
-  emptyDesc: {
-    fontSize: FontSizes.sm,
-    color: Colors.darkTextSecondary,
-    textAlign: 'center',
-  },
-
-  // AI row
-  aiRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  aiIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  aiInfo: { flex: 1 },
-  aiTitle: {
-    fontSize: FontSizes.md,
-    fontWeight: '700',
-    color: Colors.darkText,
-  },
-  aiDesc: {
-    fontSize: FontSizes.xs,
-    color: Colors.darkTextSecondary,
-    marginTop: 2,
-    lineHeight: 16,
-  },
-
-  // Shared modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: Colors.darkCard,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-    paddingBottom: 40,
-    gap: 12,
-  },
-  editModalContent: {
-    backgroundColor: Colors.darkCard,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: 12,
-    paddingBottom: 40,
-    maxHeight: '88%',
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(0,0,0,0.10)',
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  modalTitle: {
-    fontSize: FontSizes.xl,
-    fontWeight: '800',
-    color: Colors.darkText,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.glassWhite,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mealTypeRow: { marginBottom: 8 },
-  mealTypeChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.glassBlue,
-    borderRadius: 20,
+    paddingVertical: 8,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginRight: 8,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: Colors.glassBlueBorder,
-  },
-  mealTypeChipActive: {
-    backgroundColor: Colors.pepTeal,
-    borderColor: Colors.pepTeal,
-  },
-  mealTypeText: {
-    fontSize: FontSizes.xs,
-    color: Colors.darkTextSecondary,
-    fontWeight: '500',
-  },
-  mealTypeTextActive: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  fieldLabel: {
-    fontSize: FontSizes.sm,
-    fontWeight: '600',
-    color: Colors.darkText,
-    marginBottom: 6,
-  },
-  fieldHint: {
-    fontSize: FontSizes.xs,
-    color: Colors.darkTextSecondary,
-    marginTop: -4,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: Colors.glassBlue,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.glassBlueBorder,
-    paddingHorizontal: 14,
-    height: 44,
-    fontSize: FontSizes.md,
-    color: Colors.darkText,
-  },
-  notesInput: {
-    height: 72,
-    paddingTop: 12,
-    textAlignVertical: 'top',
-  },
-  macroInputRow: {
-    flexDirection: 'row',
     gap: 8,
-    marginBottom: 8,
   },
-  macroInput: { flex: 1 },
-  macroInputLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: Colors.darkTextSecondary,
-    marginBottom: 4,
-    textAlign: 'center',
+  appetiteEmoji: {
+    fontSize: 14,
   },
-  macroInputField: {
-    backgroundColor: Colors.glassBlue,
-    borderRadius: BorderRadius.sm,
-    borderWidth: 1,
-    borderColor: Colors.glassBlueBorder,
-    height: 40,
-    fontSize: FontSizes.md,
-    fontWeight: '700',
-    color: Colors.darkText,
-    textAlign: 'center',
-  },
-
-  // Edit meal badge
-  editMealTypeBadge: {
+  cta: {
+    marginTop: 18,
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.glassBlue,
-    borderRadius: BorderRadius.full,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: Colors.glassBlueBorder,
-    marginBottom: 14,
-  },
-  editMealTypeLabel: {
-    fontSize: FontSizes.xs,
-    fontWeight: '700',
-    color: Colors.pepTeal,
-  },
-
-  // Portion multipliers
-  multRow: { marginBottom: 12 },
-  multChip: {
-    backgroundColor: Colors.glassWhite,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: Colors.glassBorder,
-  },
-  multChipText: {
-    fontSize: FontSizes.sm,
-    fontWeight: '700',
-    color: Colors.darkText,
-  },
-
-  // Delete button
-  deleteBtn: {
-    flexDirection: 'row',
+    alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 999,
     gap: 8,
-    marginTop: 12,
-    paddingVertical: 12,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.error + '44',
-    backgroundColor: Colors.error + '11',
-  },
-  deleteBtnText: {
-    fontSize: FontSizes.md,
-    fontWeight: '700',
-    color: Colors.error,
-  },
-
-  // Save as template / meal prep
-  saveAsTplToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 16,
-    paddingVertical: 8,
-  },
-  saveAsTplToggleText: {
-    fontSize: FontSizes.sm,
-    fontWeight: '700',
-    color: Colors.darkText,
-  },
-  saveAsTplBox: {
-    marginTop: 4,
-    padding: 12,
-    borderRadius: BorderRadius.md,
-    backgroundColor: 'rgba(127, 179, 194, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(127, 179, 194, 0.18)',
-  },
-  prepToggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  prepCheckbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: Colors.darkTextSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  prepCheckboxOn: {
-    backgroundColor: Colors.almostAquaDeep,
-    borderColor: Colors.almostAquaDeep,
-  },
-  prepToggleTitle: {
-    fontSize: FontSizes.sm,
-    fontWeight: '700',
-    color: Colors.darkText,
-  },
-  prepToggleHint: {
-    fontSize: FontSizes.xs,
-    color: Colors.darkTextSecondary,
-  },
-  prepFieldsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 4,
-  },
-  prepPerServing: {
-    fontSize: FontSizes.xs,
-    color: Colors.darkTextSecondary,
-    marginTop: 6,
-    fontStyle: 'italic',
-  },
-  saveAsTplBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 12,
-    paddingVertical: 11,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.almostAquaDeep,
-  },
-  saveAsTplBtnText: {
-    fontSize: FontSizes.sm,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  proteinChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.md,
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
-    marginRight: 6,
-  },
-  proteinChipOn: {
-    backgroundColor: Colors.almostAquaDeep,
-    borderColor: Colors.almostAquaDeep,
-  },
-  proteinChipText: {
-    fontSize: FontSizes.xs,
-    color: Colors.darkText,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  proteinChipTextOn: {
-    color: '#fff',
-  },
-  storageChip: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.md,
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
-    alignItems: 'center',
-  },
-  storageChipOn: {
-    backgroundColor: Colors.almostAquaDeep,
-    borderColor: Colors.almostAquaDeep,
-  },
-  storageChipText: {
-    fontSize: FontSizes.sm,
-    color: Colors.darkText,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  storageChipTextOn: {
-    color: '#fff',
-  },
-  safetyBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    padding: 12,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    marginBottom: 8,
-  },
-  safetyBannerRed: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-  },
-  safetyBannerYellow: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FDE68A',
-  },
-  safetyBannerTitle: {
-    fontSize: FontSizes.sm,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  safetyBannerBody: {
-    fontSize: FontSizes.xs,
-    color: Colors.darkTextSecondary,
-    lineHeight: 16,
   },
 });

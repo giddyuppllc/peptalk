@@ -98,7 +98,23 @@ export interface Exercise {
   videoUrl?: string;
   /** Thumbnail image URL */
   thumbnailUrl?: string;
-  /** Brief cue or instruction */
+
+  // ── Coaching content (Grok-generated, Jamie-reviewable) ──────────────
+  // Populated from src/data/exerciseInstructions.json at build time.
+  // Empty/undefined when content hasn't been generated for an exercise.
+
+  /** One-sentence description: what this exercise is + primary target. */
+  description?: string;
+  /** Ordered "how to perform" steps. 3-5 numbered actions, plain English. */
+  steps?: string[];
+  /** 2-3 short coaching cues (form points). Each ≤ 80 chars. */
+  cues?: string[];
+  /** 1-2 safety notes — what to avoid, common injury pitfalls. */
+  safetyNotes?: string[];
+  /**
+   * Legacy single-string instructions field — kept for back-compat with
+   * any callers that haven't migrated to the structured `steps` array.
+   */
   instructions?: string;
 }
 
@@ -429,6 +445,9 @@ const PLUS_FEATURES: string[] = [
   // correctly regardless of which name a screen uses.
   'meal_scan',
   'ai_food_scanner',
+  // Lab-report photo parser — server-side lab-scan / lab-interpret edge
+  // functions both accept plus + pro. Client gate updated Wave 76.35.
+  'lab_scan',
   // Perks
   'ad_free',
   // Community live group chat — paying members can post & ask questions
@@ -440,7 +459,6 @@ const PRO_FEATURES: string[] = [
   ...PLUS_FEATURES,
   // AI — unlimited
   'aimee_ai_unlimited',
-  'aimee_health_scheduler',
   'aimee_workout_plans',
   'aimee_meal_plans',
   // AI — premium features
@@ -453,13 +471,16 @@ const PRO_FEATURES: string[] = [
   // Reports
   'health_reports',
   'pdf_export',
-  'data_export',
   'research_feed_premium',
   // Perks
   'nutrition_planning',
   'grocery_from_plans',
   'early_access',
   'meal_plan',
+  // Wave 76.44: cut aimee_health_scheduler + data_export — both were
+  // listed but never implemented. Removed from copy + UI gates so the
+  // App Store reviewer doesn't bounce us for "advertised feature not
+  // available." Add back when actually shipped.
 ];
 
 /** What each tier can access */

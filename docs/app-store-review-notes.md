@@ -12,7 +12,7 @@ PepTalk is an educational + tracking app for adults researching peptide
 therapeutics. The app **does not sell, distribute, or facilitate the
 purchase of any peptides, supplements, pharmaceuticals, or controlled
 substances** — it is informational + tracking only (Privacy Policy:
-[your-privacy-url]).
+https://peptalk.bio/privacy).
 
 ### Test account
 - Email: [TODO: create a test account before submission]

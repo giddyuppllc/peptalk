@@ -18,6 +18,8 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,6 +44,32 @@ import {
   predictionModeFor,
 } from '../src/types/cycle';
 import { useCycleStore } from '../src/store/useCycleStore';
+import {
+  useCommunityPrefsStore,
+  type CommunityPreset,
+} from '../src/store/useCommunityPrefsStore';
+
+const COMMUNITY_PRESETS: {
+  value: CommunityPreset;
+  label: string;
+  body: string;
+}[] = [
+  {
+    value: 'all_in',
+    label: 'All in',
+    body: 'Share streak, adherence, body-comp deltas, and milestones.',
+  },
+  {
+    value: 'picky',
+    label: 'Picky',
+    body: 'Streak and milestones only. Edit per-category later.',
+  },
+  {
+    value: 'nothing',
+    label: 'Nothing',
+    body: 'Stay completely private. No public surfaces.',
+  },
+];
 
 const { width: SW } = Dimensions.get('window');
 
@@ -138,6 +166,12 @@ export default function OnboardingScreen() {
   const [accountError, setAccountError] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'plus' | 'pro'>('free');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  // §11.2 + §11.4 — referral-claim string + community public-tracking
+  // opt-in preset. Both committed at handleNext() on the account step.
+  const [referralClaimRaw, setReferralClaimRaw] = useState('');
+  const [communityPreset, setCommunityPreset] = useState<
+    'all_in' | 'picky' | 'nothing'
+  >('nothing');
 
   // Stores
   const login = useAuthStore((s) => s.login);
@@ -148,7 +182,9 @@ export default function OnboardingScreen() {
   const {
     profile, setGender, setAgeRange, toggleHealthGoal,
     setAcceptedSafety, completeOnboarding,
+    setReferralClaim,
   } = useOnboardingStore();
+  const applyCommunityPreset = useCommunityPrefsStore((s) => s.applyPreset);
   const {
     setBodyMetrics,
     setLifestyle,
@@ -165,10 +201,29 @@ export default function OnboardingScreen() {
   const passwordCheck = useMemo(() => validatePassword(accountPassword), [accountPassword]);
   const emailOk = useMemo(() => isValidEmail(accountEmail), [accountEmail]);
 
+  // Required questions — gender, age, weight, height, primary goal (5).
+  // Everything else (activity, workout days, cycle, goal notes, feature
+  // wish, account creation) is reachable but marked "Set up later in
+  // Profile" and gated only on Step 3 (account screen itself).
+  const weightValid = useMemo(() => {
+    const w = parseFloat(weightLbs);
+    return !isNaN(w) && w >= 50 && w <= 1000;
+  }, [weightLbs]);
+
+  const heightValid = useMemo(() => {
+    const f = parseInt(heightFeet, 10);
+    const i = parseInt(heightInches, 10);
+    return !isNaN(f) && f >= 3 && f <= 8 && (isNaN(i) || (i >= 0 && i < 12));
+  }, [heightFeet, heightInches]);
+
   const canContinue = useMemo(() => {
     if (step === 0) return true; // Welcome — always can continue
+    // Step 1: gender + age + at least 1 goal (3 of 5 required questions).
     if (step === 1) return Boolean(profile.gender && selectedAge >= 18 && profile.healthGoals.length > 0);
-    if (step === 2) return true; // Health basics is optional
+    // Step 2: weight + height now required (the remaining 2 of 5). All
+    // other Step 2 inputs (activity, workout days, cycle, notes) stay
+    // optional and are flagged "Set up later in Profile."
+    if (step === 2) return weightValid && heightValid;
     if (step === 3) {
       return (
         accountFirstName.trim().length > 0 &&
@@ -179,7 +234,32 @@ export default function OnboardingScreen() {
       );
     }
     return true;
-  }, [step, profile.gender, profile.ageRange, profile.healthGoals.length, accountFirstName, accountLastName, emailOk, passwordCheck.valid, acceptedTerms]);
+  }, [step, profile.gender, selectedAge, profile.healthGoals.length, weightValid, heightValid, accountFirstName, accountLastName, emailOk, passwordCheck.valid, acceptedTerms]);
+
+  // Skip-and-Explore — lands the user on Home (tabs) with whatever
+  // defaults they've filled in so far. We mark onboarding complete so
+  // the route gate doesn't bounce them back, but DON'T set isComplete
+  // until we've at least preserved what they entered. This is the
+  // consumer escape hatch from the questionnaire.
+  const handleSkipAndExplore = () => {
+    // Persist any partial answers the user has entered before bouncing
+    // them to home. None of these are required to display tabs, but
+    // saving means a returning user picks up where they left off.
+    if (profile.gender && selectedAge >= 18) {
+      setAgeRange(ageToRange(selectedAge));
+    }
+    if (weightValid) setBodyMetrics({ weightLbs: parseFloat(weightLbs) });
+    if (heightValid) {
+      const f = parseInt(heightFeet, 10);
+      const i = parseInt(heightInches, 10) || 0;
+      setBodyMetrics({ heightInches: f * 12 + i });
+    }
+    // Default plan: free. User can upgrade from Profile → Subscription.
+    setTier('free');
+    completeOnboarding();
+    trackOnboardingComplete(step);
+    router.replace('/(tabs)');
+  };
 
   const handleNext = async () => {
     if (!canContinue) return;
@@ -209,9 +289,16 @@ export default function OnboardingScreen() {
       const weight = parseFloat(weightLbs);
       const feet = parseInt(heightFeet, 10);
       const inches = parseInt(heightInches, 10);
-      if (!isNaN(weight) && weight > 0) setBodyMetrics({ weightLbs: weight });
-      if (!isNaN(feet) && feet > 0) {
-        setBodyMetrics({ heightInches: feet * 12 + (isNaN(inches) ? 0 : inches) });
+      // Clamp to plausible adult ranges. Without this, a 999999 lb /
+      // 99 ft 99 in entry was silently persisted to the health profile
+      // and downstream poisoned macro calc + Aimee context. P0 from
+      // input validation audit (Wave 76.8).
+      if (!isNaN(weight) && weight >= 50 && weight <= 1000) {
+        setBodyMetrics({ weightLbs: weight });
+      }
+      if (!isNaN(feet) && feet >= 1 && feet <= 8) {
+        const safeInches = !isNaN(inches) && inches >= 0 && inches < 12 ? inches : 0;
+        setBodyMetrics({ heightInches: feet * 12 + safeInches });
       }
       setLifestyle({
         activityLevel,
@@ -269,6 +356,15 @@ export default function OnboardingScreen() {
         const trimmedFeatureWish = featureWish.trim();
         if (trimmedFeatureWish) persistFeatureWish(trimmedFeatureWish);
 
+        // §11.2 — persist the referral claim so signup-time attribution
+        // can pick it up server-side.
+        const trimmedRef = referralClaimRaw.trim();
+        if (trimmedRef) setReferralClaim(trimmedRef);
+
+        // §11.4 — apply the community public-tracking preset chosen at
+        // intake. User can fine-tune per-category later in Profile.
+        applyCommunityPreset(communityPreset);
+
         completeOnboarding();
         trackOnboardingComplete(0);
         router.replace('/(tabs)');
@@ -288,6 +384,11 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={s.container} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+      >
       {/* Progress bar */}
       {step > 0 && (
         <View style={s.progressWrap}>
@@ -350,6 +451,20 @@ export default function OnboardingScreen() {
             <TouchableOpacity style={s.signInLink} onPress={() => router.push('/auth')} activeOpacity={0.7}>
               <Text style={s.signInLinkText}>Already have an account? <Text style={{ color: HIGHLIGHT, fontWeight: '700' }}>Sign In</Text></Text>
             </TouchableOpacity>
+
+            {/* Skip-and-Explore — lands the user on Home with defaults
+                applied. The consumer escape hatch from the questionnaire. */}
+            <TouchableOpacity
+              style={s.exploreLink}
+              onPress={handleSkipAndExplore}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Skip onboarding and explore PepTalk"
+            >
+              <Text style={s.exploreLinkText}>
+                Or <Text style={{ color: '#2D2D2D', fontWeight: '700', textDecorationLine: 'underline' }}>Skip and explore</Text>
+              </Text>
+            </TouchableOpacity>
           </Animated.View>
 
           {/* Trust badges — fade in last */}
@@ -387,11 +502,11 @@ export default function OnboardingScreen() {
             contentContainerStyle={s.scrollPadding}
             renderItem={() => (
               <View>
-                <Text style={s.stepTitle}>About You</Text>
-                <Text style={s.stepSub}>Help us personalize your experience</Text>
+                <Text style={s.stepTitle}>About you</Text>
+                <Text style={s.stepSub}>Three answers. Direct. The numbers depend on them.</Text>
 
-                {/* Gender */}
-                <Text style={s.label}>I am</Text>
+                {/* Sex */}
+                <Text style={s.label}>Sex <Text style={s.requiredMark}>*</Text></Text>
                 <View style={s.genderRow}>
                   {GENDER_OPTIONS.map((g) => {
                     const active = profile.gender === g.value;
@@ -410,7 +525,7 @@ export default function OnboardingScreen() {
                 </View>
 
                 {/* Age */}
-                <Text style={s.label}>Your age</Text>
+                <Text style={s.label}>Age <Text style={s.requiredMark}>*</Text></Text>
                 <TextInput
                   style={s.ageInput}
                   placeholder="e.g. 30"
@@ -431,8 +546,8 @@ export default function OnboardingScreen() {
                 )}
 
                 {/* Goals */}
-                <Text style={s.label}>What are your goals?</Text>
-                <Text style={s.labelSub}>Select all that apply</Text>
+                <Text style={s.label}>Your goal <Text style={s.requiredMark}>*</Text></Text>
+                <Text style={s.labelSub}>Pick one or more.</Text>
                 <View style={s.chipGrid}>
                   {GOAL_OPTIONS.map((goal) => {
                     const active = profile.healthGoals.includes(goal.value);
@@ -459,21 +574,32 @@ export default function OnboardingScreen() {
               <Ionicons name="arrow-back" size={20} color="#6B7280" />
               <Text style={s.footerBackText}>Back</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.footerNextBtn, !canContinue && { opacity: 0.4 }]}
-              onPress={handleNext}
-              disabled={!canContinue}
-              activeOpacity={0.85}
-            >
-              <Text style={s.footerNextText}>Continue</Text>
-              <Ionicons name="arrow-forward" size={18} color="#fff" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={s.footerSkipBtn}
+                onPress={handleSkipAndExplore}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Skip and explore PepTalk with defaults"
+              >
+                <Text style={s.footerSkipText}>Skip & explore</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.footerNextBtn, !canContinue && { opacity: 0.4 }]}
+                onPress={handleNext}
+                disabled={!canContinue}
+                activeOpacity={0.85}
+              >
+                <Text style={s.footerNextText}>Continue</Text>
+                <Ionicons name="arrow-forward" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
           </View>
         </Animated.View>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
-          SCREEN 2: HEALTH BASICS (optional)
+          SCREEN 2: HEALTH BASICS — weight + height required, rest deferred
       ═══════════════════════════════════════════════════════════════════ */}
       {step === 2 && (
         <Animated.View entering={FadeIn.duration(400)} style={{ flex: 1 }}>
@@ -486,10 +612,10 @@ export default function OnboardingScreen() {
             keyboardShouldPersistTaps="handled"
             renderItem={() => (
               <View>
-                <Text style={s.stepTitle}>Health Basics</Text>
-                <Text style={s.stepSub}>Optional — helps us calculate your targets</Text>
+                <Text style={s.stepTitle}>Basics</Text>
+                <Text style={s.stepSub}>Weight and height. The rest lives in Profile.</Text>
 
-                <Text style={s.label}>Weight (lbs)</Text>
+                <Text style={s.label}>Weight today (lb) <Text style={s.requiredMark}>*</Text></Text>
                 <TextInput
                   style={s.input}
                   placeholder="e.g. 165"
@@ -497,16 +623,24 @@ export default function OnboardingScreen() {
                   value={weightLbs}
                   onChangeText={setWeightLbs}
                   keyboardType="numeric"
+                  accessibilityLabel="Weight in pounds, required"
                 />
 
-                <Text style={s.label}>Height</Text>
+                <Text style={s.label}>Height <Text style={s.requiredMark}>*</Text></Text>
                 <View style={s.heightRow}>
                   <View style={{ flex: 1 }}>
-                    <TextInput style={s.input} placeholder="Feet" placeholderTextColor="#9CA3AF" value={heightFeet} onChangeText={setHeightFeet} keyboardType="numeric" />
+                    <TextInput style={s.input} placeholder="Feet" placeholderTextColor="#9CA3AF" value={heightFeet} onChangeText={setHeightFeet} keyboardType="numeric" accessibilityLabel="Height in feet, required" />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <TextInput style={s.input} placeholder="Inches" placeholderTextColor="#9CA3AF" value={heightInches} onChangeText={setHeightInches} keyboardType="numeric" />
+                    <TextInput style={s.input} placeholder="Inches" placeholderTextColor="#9CA3AF" value={heightInches} onChangeText={setHeightInches} keyboardType="numeric" accessibilityLabel="Height inches" />
                   </View>
+                </View>
+
+                <View style={s.laterBanner}>
+                  <Ionicons name="time-outline" size={14} color="#9CA3AF" />
+                  <Text style={s.laterBannerText}>
+                    Activity level, workout days, cycle tracking, and goal notes are all set up later in Profile.
+                  </Text>
                 </View>
 
                 <Text style={s.label}>Activity Level</Text>
@@ -635,10 +769,21 @@ export default function OnboardingScreen() {
               <Text style={s.footerBackText}>Back</Text>
             </TouchableOpacity>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <TouchableOpacity style={s.footerSkipBtn} onPress={() => setStep(3)} activeOpacity={0.7}>
-                <Text style={s.footerSkipText}>Skip</Text>
+              <TouchableOpacity
+                style={s.footerSkipBtn}
+                onPress={handleSkipAndExplore}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Skip and explore PepTalk with defaults"
+              >
+                <Text style={s.footerSkipText}>Skip & explore</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.footerNextBtn} onPress={handleNext} activeOpacity={0.85}>
+              <TouchableOpacity
+                style={[s.footerNextBtn, !canContinue && { opacity: 0.4 }]}
+                onPress={handleNext}
+                disabled={!canContinue}
+                activeOpacity={0.85}
+              >
                 <Text style={s.footerNextText}>Continue</Text>
                 <Ionicons name="arrow-forward" size={18} color="#fff" />
               </TouchableOpacity>
@@ -702,6 +847,84 @@ export default function OnboardingScreen() {
                 )}
 
                 {!!accountError && <Text style={s.errorText}>{accountError}</Text>}
+
+                {/* §11.2 — Referral claim. Optional. */}
+                <Text style={[s.label, { marginTop: 20 }]}>Did someone refer you?</Text>
+                <Text style={s.labelSub}>Their code, handle, or name. Optional.</Text>
+                <TextInput
+                  style={s.input}
+                  placeholder="e.g. JAMIE10"
+                  placeholderTextColor="#9CA3AF"
+                  value={referralClaimRaw}
+                  onChangeText={setReferralClaimRaw}
+                  autoCapitalize="characters"
+                  accessibilityLabel="Referral code, handle, or name (optional)"
+                />
+
+                {/* §11.4 — Community public-tracking opt-in. */}
+                <Text style={[s.label, { marginTop: 20 }]}>Public progress sharing</Text>
+                <Text style={s.labelSub}>Off by default. You can change this in Profile any time.</Text>
+                <View style={{ gap: 8, marginBottom: 12 }}>
+                  {COMMUNITY_PRESETS.map((p) => {
+                    const active = communityPreset === p.value;
+                    return (
+                      <TouchableOpacity
+                        key={p.value}
+                        style={[
+                          s.chip,
+                          {
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'flex-start',
+                            gap: 10,
+                            paddingVertical: 12,
+                            paddingHorizontal: 14,
+                          },
+                          active && {
+                            backgroundColor: `${HIGHLIGHT}18`,
+                            borderColor: HIGHLIGHT,
+                          },
+                        ]}
+                        onPress={() => setCommunityPreset(p.value)}
+                        activeOpacity={0.7}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: active }}
+                        accessibilityLabel={`${p.label}. ${p.body}`}
+                      >
+                        <View
+                          style={[
+                            s.radio,
+                            { width: 18, height: 18, borderRadius: 9 },
+                            active && { borderColor: ACCENT },
+                          ]}
+                        >
+                          {active ? (
+                            <View
+                              style={[
+                                s.radioDot,
+                                { width: 8, height: 8, borderRadius: 4, backgroundColor: ACCENT },
+                              ]}
+                            />
+                          ) : null}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={[
+                              s.chipText,
+                              { fontWeight: '700' },
+                              active && { color: ACCENT },
+                            ]}
+                          >
+                            {p.label}
+                          </Text>
+                          <Text style={[s.labelSub, { marginTop: 2 }]}>
+                            {p.body}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
 
                 <Text style={[s.label, { marginTop: 20 }]}>Choose your plan</Text>
                 {PLANS.map((plan) => {
@@ -796,18 +1019,30 @@ export default function OnboardingScreen() {
               <Ionicons name="arrow-back" size={20} color="#6B7280" />
               <Text style={s.footerBackText}>Back</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.footerNextBtn, (!canContinue || isLoggingIn) && { opacity: 0.4 }]}
-              onPress={handleNext}
-              disabled={!canContinue || isLoggingIn}
-              activeOpacity={0.85}
-            >
-              <Text style={s.footerNextText}>{isLoggingIn ? 'Creating…' : 'Create Account'}</Text>
-              <Ionicons name={isLoggingIn ? 'hourglass' : 'checkmark'} size={18} color="#fff" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={s.footerSkipBtn}
+                onPress={handleSkipAndExplore}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Skip account creation and explore PepTalk with defaults"
+              >
+                <Text style={s.footerSkipText}>Skip & explore</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.footerNextBtn, (!canContinue || isLoggingIn) && { opacity: 0.4 }]}
+                onPress={handleNext}
+                disabled={!canContinue || isLoggingIn}
+                activeOpacity={0.85}
+              >
+                <Text style={s.footerNextText}>{isLoggingIn ? 'Creating…' : 'Create Account'}</Text>
+                <Ionicons name={isLoggingIn ? 'hourglass' : 'checkmark'} size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
           </View>
         </Animated.View>
       )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -972,6 +1207,37 @@ const s = StyleSheet.create({
     color: '#9CA3AF',
     marginBottom: 12,
     marginTop: -6,
+  },
+  requiredMark: {
+    color: '#E89672',
+    fontFamily: 'DMSans-Bold',
+  },
+  laterBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    marginTop: 20,
+    marginBottom: 4,
+  },
+  laterBannerText: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Regular',
+    color: '#6B7280',
+    flex: 1,
+    lineHeight: 17,
+  },
+  exploreLink: {
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  exploreLinkText: {
+    fontSize: 14,
+    fontFamily: 'DMSans-Medium',
+    color: '#6B7280',
   },
 
   // ── Gender cards ─────────────────────────────────────────────────────────

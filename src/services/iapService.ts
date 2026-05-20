@@ -15,6 +15,7 @@
 
 import { Platform } from 'react-native';
 import type { SubscriptionTier } from '../types/fitness';
+import { captureException } from './telemetry';
 
 // Product IDs — must match App Store Connect / Play Console exactly.
 //
@@ -85,7 +86,7 @@ const ANDROID_PENDING = 2;
  *  `restorePurchases` + `waitForPendingValidations` can cleanly block until
  *  background receipt validation has reconciled with the server. */
 const pendingValidations = new Set<string>();
-let idleResolvers: Array<() => void> = [];
+let idleResolvers: (() => void)[] = [];
 
 function purchaseKey(purchase: any): string {
   return (
@@ -154,13 +155,19 @@ export interface InitIAPCallbacks {
   onPending?: (info: { productId: string }) => void;
 }
 
+// Module-scope holder so non-listener entry points (e.g. restorePurchases)
+// can call the same validator. Set inside initIAP() when the host wires up
+// the listener. Never read before initIAP runs; guarded by isAvailable +
+// initialized everywhere it matters.
+let callbacks: InitIAPCallbacks | null = null;
+
 export async function initIAP(
   onPurchaseOrCallbacks:
     | InitIAPCallbacks['onPurchase']
     | InitIAPCallbacks,
 ): Promise<void> {
   if (!isAvailable() || initialized) return;
-  const callbacks: InitIAPCallbacks =
+  callbacks =
     typeof onPurchaseOrCallbacks === 'function'
       ? { onPurchase: onPurchaseOrCallbacks }
       : onPurchaseOrCallbacks;
@@ -171,6 +178,9 @@ export async function initIAP(
 
     // Listen for successful purchases (including pending + restored)
     purchaseListener = IAP.purchaseUpdatedListener(async (purchase: any) => {
+      // Capture into a local so TS narrows across awaits below.
+      const cb = callbacks;
+      if (!cb) return;
       // Android pending state — parental consent, SCA, slow wallet.
       // Don't finish or validate yet; a follow-up update fires once it
       // clears. If we acknowledged now we'd lose the receipt forever.
@@ -178,7 +188,7 @@ export async function initIAP(
         Platform.OS === 'android' &&
         purchase?.purchaseStateAndroid === ANDROID_PENDING
       ) {
-        callbacks.onPending?.({ productId: purchase.productId });
+        cb.onPending?.({ productId: purchase.productId });
         return;
       }
 
@@ -191,13 +201,20 @@ export async function initIAP(
       trackValidationStart(key);
       let validated = false;
       try {
-        await callbacks.onPurchase({
+        await cb.onPurchase({
           productId: purchase.productId,
           transactionReceipt: receipt,
         });
         validated = true;
       } catch (err) {
         if (__DEV__) console.warn('[iapService] Purchase validation failed:', err);
+        // Money path — ops needs visibility on these. The user has
+        // paid Apple/Google but our validate-purchase didn't grant
+        // entitlement, which generates a refund-request support ticket.
+        captureException(err, {
+          source: 'iap.validate',
+          productId: purchase.productId,
+        });
         // On validation failure, intentionally do NOT finish the
         // transaction. Leaving it un-acknowledged means the store will
         // replay the purchase on the next launch / restore so the user
@@ -216,9 +233,26 @@ export async function initIAP(
 
     errorListener = IAP.purchaseErrorListener((error: any) => {
       if (__DEV__) console.warn('[iapService] Purchase error:', error);
+      // 2026-05-17 P1 fix: previously dropped silently. User-cancelled
+      // is normal flow — skip those. Everything else is a money-path
+      // failure worth surfacing to Sentry so support can correlate
+      // "I bought Pro but the app didn't unlock" reports with the
+      // underlying storekit failure mode.
+      const code = error?.code ?? error?.errorCode;
+      const isUserCancel =
+        code === 'E_USER_CANCELLED' ||
+        code === 'E_USER_CANCELED' ||
+        /cancel/i.test(error?.message ?? '');
+      if (!isUserCancel) {
+        captureException(error, {
+          source: 'iap.purchase_error',
+          code: code ?? 'unknown',
+        });
+      }
     });
   } catch (err) {
     if (__DEV__) console.warn('[iapService] initConnection failed:', err);
+    captureException(err, { source: 'iap.init' });
   }
 }
 
@@ -354,15 +388,64 @@ export async function purchaseProduct(
 
 /**
  * Restores any previous purchases (for users switching devices or
- * reinstalling). Triggers purchaseUpdatedListener for each.
+ * reinstalling).
+ *
+ * react-native-iap's getAvailablePurchases() returns past entitlements
+ * but does NOT reliably re-fire purchaseUpdatedListener on iOS — so we
+ * cannot rely on the listener path alone to re-validate receipts on
+ * restore. A paying user reinstalling on a fresh Supabase account
+ * (e.g. their old account was deleted, or they signed up with a new
+ * email) would otherwise land on Free tier with their original
+ * purchase orphaned. P0 fix from Wave 76.7 audit.
+ *
+ * Now: iterate every returned purchase and explicitly call
+ * callbacks.onPurchase (which hits the validate-purchase edge fn,
+ * which is idempotent on originalTransactionId). Returns the count of
+ * SUCCESSFULLY validated receipts so the UI can say "Restored N
+ * purchases" honestly.
  */
 export async function restorePurchases(): Promise<number> {
-  if (!isAvailable() || !initialized) return 0;
+  if (!isAvailable() || !initialized || !callbacks) return 0;
+  // Capture into a local so TS narrows the nullability across the await
+  // boundary inside the loop.
+  const cb = callbacks;
   try {
-    const purchases = await IAP.getAvailablePurchases();
-    return purchases.length;
+    const purchases: any[] = await IAP.getAvailablePurchases();
+    if (!Array.isArray(purchases) || purchases.length === 0) return 0;
+
+    let validated = 0;
+    for (const purchase of purchases) {
+      const receipt = Platform.OS === 'ios'
+        ? purchase.transactionReceipt
+        : purchase.purchaseToken;
+      if (!receipt || !purchase.productId) continue;
+
+      const key = purchaseKey(purchase);
+      trackValidationStart(key);
+      try {
+        await cb.onPurchase({
+          productId: purchase.productId,
+          transactionReceipt: receipt,
+        });
+        validated += 1;
+      } catch (err) {
+        if (__DEV__) {
+          console.warn(
+            '[iapService] restorePurchases: validation failed for',
+            purchase.productId,
+            err,
+          );
+        }
+        // Don't finishTransaction on validation failure — same
+        // contract as the live listener. The store can replay later.
+      } finally {
+        trackValidationEnd(key);
+      }
+    }
+    return validated;
   } catch (err) {
     if (__DEV__) console.warn('[iapService] restorePurchases failed:', err);
+    captureException(err, { source: 'iap.restore' });
     return 0;
   }
 }

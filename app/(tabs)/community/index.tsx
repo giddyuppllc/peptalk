@@ -54,6 +54,7 @@ export default function CommunityFeedScreen() {
   const topics = useCommunityStore((s) => s.topics);
   const posts = useCommunityStore((s) => s.posts);
   const loadingFeed = useCommunityStore((s) => s.loadingFeed);
+  const feedError = useCommunityStore((s) => s.feedError);
   const loadingTopics = useCommunityStore((s) => s.loadingTopics);
 
   const hydrateTopics = useCommunityStore((s) => s.hydrateTopics);
@@ -284,6 +285,28 @@ export default function CommunityFeedScreen() {
             <View style={styles.center}>
               <ActivityIndicator color={t.textSecondary} />
             </View>
+          ) : feedError ? (
+            // Distinct error state — was indistinguishable from "topic
+            // empty" before, so a transient network blip looked like a
+            // dead feature. Tap the card to retry the same query.
+            <TouchableOpacity
+              onPress={() => hydrateFeed({ topicSlug: activeSlug, sort, followingOnly: feedMode === 'following' })}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading the feed"
+            >
+              <GlassCard style={styles.heroCard}>
+                <View style={[styles.heroIcon, { backgroundColor: '#D43A3A22' }]}>
+                  <Ionicons name="cloud-offline-outline" size={28} color="#D43A3A" />
+                </View>
+                <Text style={[styles.heroTitle, { color: t.text }]}>Couldn't load feed</Text>
+                <Text style={[styles.heroBody, { color: t.textSecondary }]}>
+                  {feedError}
+                </Text>
+                <View style={[styles.upsellBtn, { backgroundColor: t.primary }]}>
+                  <Text style={styles.upsellBtnText}>Tap to retry</Text>
+                </View>
+              </GlassCard>
+            </TouchableOpacity>
           ) : (
             <GlassCard style={styles.heroCard}>
               <View style={[styles.heroIcon, { backgroundColor: t.primary + '22' }]}>
@@ -398,7 +421,11 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 18,
-    bottom: 22,
+    // Was 22 — sat directly on top of the tab bar so the user saw
+    // it overlapping the chip row. The (tabs) layout reserves ~49pt
+    // for the tab bar + the home-indicator inset; 96 puts the FAB
+    // cleanly above it on all iPhone sizes.
+    bottom: 96,
     width: 56,
     height: 56,
     borderRadius: 28,

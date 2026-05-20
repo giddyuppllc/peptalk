@@ -17,7 +17,8 @@ import { useStackStore } from '../../src/store/useStackStore';
 import { GlassCard } from '../../src/components/GlassCard';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
 import { ProtocolPlanCard } from '../../src/components/ProtocolPlanCard';
-import { intensityToDoseRangeMcg } from '../../src/components/ProtocolIntensityPicker';
+import { intensityToDoseRangeMcg, intensityToDoseMcg } from '../../src/components/ProtocolIntensityPicker';
+import { ActivateProtocolButton } from '../../src/components/ActivateProtocolButton';
 import { SuppliesEstimatorCard } from '../../src/components/SuppliesEstimatorCard';
 import { PeptideTrendCard } from '../../src/components/PeptideTrendCard';
 import { PeptideCyclePhaseCard } from '../../src/components/PeptideCyclePhaseCard';
@@ -35,6 +36,24 @@ import { getPeptideNutrition } from '../../src/data/peptideNutrition';
 import { getVideosByPeptideId } from '../../src/data/videos';
 import { getGuidesByPeptideId } from '../../src/data/howToGuides';
 import { getInteractionsByPeptideId } from '../../src/data/interactions';
+import { CollapsibleSection } from '../../src/components/CollapsibleSection';
+import { AskAimeeButton } from '../../src/components/AskAimeeButton';
+
+// ── Plain-English join — "a, b, c" → "a, b, and c" / "a and b" / "a". ──
+// Used by the "What this does for you" lead card. Lower-cases when the
+// items aren't proper nouns so the sentence reads naturally; the data
+// in peptide.uses.commonGoals is already in sentence-case (e.g. "Lean
+// muscle gain"), so we just lower-case the first letter of each item.
+function naturalJoin(items: string[]): string {
+  const clean = items
+    .map((it) => it.trim())
+    .filter((it) => it.length > 0)
+    .map((it) => it[0].toLowerCase() + it.slice(1));
+  if (clean.length === 0) return '';
+  if (clean.length === 1) return clean[0];
+  if (clean.length === 2) return `${clean[0]} and ${clean[1]}`;
+  return `${clean.slice(0, -1).join(', ')}, and ${clean[clean.length - 1]}`;
+}
 
 // ── Helper Functions ──────────────────────────────────────────────
 
@@ -89,6 +108,22 @@ export default function PeptideDetailScreen() {
 
   const peptide = getPeptideById(id ?? '');
 
+  // ── Data lookups (memoized — these scan large in-memory tables and were
+  //    blocking the JS thread on every render, causing the MOTSC freeze).
+  //    Hooks MUST be called before the early-return below or React's hook
+  //    order trips when `peptide` flips from undefined → defined during
+  //    a refetch (rules-of-hooks). Pre-2026-05-17 these sat after the
+  //    early return and would crash on rebind.
+  const peptideKey = peptide?.id ?? '';
+  const safetyProfile = useMemo(() => peptideKey ? getSafetyProfileByPeptideId(peptideKey) : null, [peptideKey]);
+  const clinicalTrials = useMemo(() => peptideKey ? getTrialsByPeptideId(peptideKey) : [], [peptideKey]);
+  const protocols = useMemo(() => peptideKey ? getProtocolsByPeptide(peptideKey) : [], [peptideKey]);
+  const curatedSources = useMemo(() => peptideKey ? getSourcesByPeptide(peptideKey) : [], [peptideKey]);
+  const relatedStacks = useMemo(() => peptideKey ? getCuratedStacksByPeptideId(peptideKey) : [], [peptideKey]);
+  const nutritionGuidance = useMemo(() => peptideKey ? getPeptideNutrition(peptideKey) : null, [peptideKey]);
+  const relatedVideos = useMemo(() => peptideKey ? getVideosByPeptideId(peptideKey) : [], [peptideKey]);
+  const relatedGuides = useMemo(() => peptideKey ? getGuidesByPeptideId(peptideKey) : [], [peptideKey]);
+
   useEffect(() => {
     if (!peptide) return;
     trackPeptideView(peptide.id, peptide.name);
@@ -113,17 +148,6 @@ export default function PeptideDetailScreen() {
       </SafeAreaView>
     );
   }
-
-  // ── Data lookups (memoized — these scan large in-memory tables and were
-  //    blocking the JS thread on every render, causing the MOTSC freeze) ──
-  const safetyProfile = useMemo(() => getSafetyProfileByPeptideId(peptide.id), [peptide.id]);
-  const clinicalTrials = useMemo(() => getTrialsByPeptideId(peptide.id), [peptide.id]);
-  const protocols = useMemo(() => getProtocolsByPeptide(peptide.id), [peptide.id]);
-  const curatedSources = useMemo(() => getSourcesByPeptide(peptide.id), [peptide.id]);
-  const relatedStacks = useMemo(() => getCuratedStacksByPeptideId(peptide.id), [peptide.id]);
-  const nutritionGuidance = useMemo(() => getPeptideNutrition(peptide.id), [peptide.id]);
-  const relatedVideos = useMemo(() => getVideosByPeptideId(peptide.id), [peptide.id]);
-  const relatedGuides = useMemo(() => getGuidesByPeptideId(peptide.id), [peptide.id]);
 
   const isInStack = currentStack.includes(peptide.id);
   const stackFull = currentStack.length >= 5;
@@ -173,9 +197,41 @@ export default function PeptideDetailScreen() {
           )}
         </View>
 
-        {/* Plain-language "what is this for" — top of page so user gets
-            the answer before any technical content. */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
+        {/* Ask Aimee escape hatch — small chip under the title gives the
+            user a way out of the technical content into a conversational
+            explanation pre-loaded with the peptide name. */}
+        <View style={{ marginBottom: 12 }}>
+          <AskAimeeButton
+            prefill={`Tell me more about ${peptide.name}.`}
+            accessibilityLabel={`Ask Aimee about ${peptide.name}`}
+          />
+        </View>
+
+        {/* Plain-English "What this does for you" — front-and-center so
+            the user gets a natural-language answer before any technical
+            content. Pulls directly from peptide.uses.commonGoals (no
+            fabrication) and joins with sentence-case grammar. */}
+        {peptide.uses && peptide.uses.commonGoals && peptide.uses.commonGoals.length > 0 && (
+          <View style={plainLeadStyles.card}>
+            <View style={plainLeadStyles.header}>
+              <View style={plainLeadStyles.iconWrap}>
+                <Ionicons name="heart" size={14} color="#E89672" />
+              </View>
+              <Text style={plainLeadStyles.title}>What this does for you</Text>
+            </View>
+            <Text style={plainLeadStyles.body}>
+              Helps with {naturalJoin(peptide.uses.commonGoals)}.
+            </Text>
+            <Text style={plainLeadStyles.subhint}>
+              Based on the goals this peptide is researched for. Not a guarantee — actual results vary.
+            </Text>
+          </View>
+        )}
+
+        {/* Plain-language matrix card — still shown as a secondary
+            "Keep it simple" surface where the goalPeptideMatrix has
+            structured goal coverage with reasons. */}
+        <View style={{ marginBottom: 8 }}>
           <KeepItSimpleCard peptideId={peptide.id} />
         </View>
 
@@ -315,11 +371,14 @@ export default function PeptideDetailScreen() {
                     const pairPeptide = getPeptideById(pairId);
                     if (!pairPeptide) return null;
                     return (
+                      // 2026-05-17 a11y
                       <TouchableOpacity
                         key={pairId}
                         style={styles.usesPairChip}
                         onPress={() => router.push(`/peptide/${pairId}` as any)}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`View ${pairPeptide.name}`}
                       >
                         <Ionicons name="link-outline" size={14} color="#7ABED0" />
                         <Text style={styles.usesPairChipText}>{pairPeptide.name}</Text>
@@ -342,54 +401,8 @@ export default function PeptideDetailScreen() {
           <Text style={styles.sectionText}>{peptide.researchSummary}</Text>
         </GlassCard>
 
-        {/* Mechanism of Action */}
-        <GlassCard style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="git-branch-outline" size={18} color="#7ABED0" />
-            <Text style={styles.sectionTitle}>Mechanism of Action</Text>
-          </View>
-          <Text style={styles.sectionText}>{peptide.mechanismOfAction}</Text>
-        </GlassCard>
-
-        {/* Receptor Targets */}
-        {peptide.receptorTargets && peptide.receptorTargets.length > 0 && (
-          <GlassCard style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="radio-outline" size={18} color="#7ABED0" />
-              <Text style={styles.sectionTitle}>Receptor Targets</Text>
-            </View>
-            <View style={styles.pillsRow}>
-              {peptide.receptorTargets.map((target, index) => (
-                <View key={index} style={styles.targetPill}>
-                  <Text style={styles.targetPillText}>{target}</Text>
-                </View>
-              ))}
-            </View>
-          </GlassCard>
-        )}
-
-        {/* Signaling Pathways */}
-        {peptide.signalingPathways && peptide.signalingPathways.length > 0 && (
-          <GlassCard style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons
-                name="git-network-outline"
-                size={18}
-                color="#7ABED0"
-              />
-              <Text style={styles.sectionTitle}>Signaling Pathways</Text>
-            </View>
-            <View style={styles.pillsRow}>
-              {peptide.signalingPathways.map((pathway, index) => (
-                <View key={index} style={styles.pathwayPill}>
-                  <Text style={styles.pathwayPillText}>{pathway}</Text>
-                </View>
-              ))}
-            </View>
-          </GlassCard>
-        )}
-
-        {/* Stability Notes */}
+        {/* Stability Notes — kept up-top because storage/handling is a
+            practical concern, not a "go deep" detail. */}
         <GlassCard style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="shield-outline" size={18} color="#7ABED0" />
@@ -398,100 +411,157 @@ export default function PeptideDetailScreen() {
           <Text style={styles.sectionText}>{peptide.stabilityNotes}</Text>
         </GlassCard>
 
-        {/* Molecular Data */}
-        <GlassCard style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="analytics-outline" size={18} color="#7ABED0" />
-            <Text style={styles.sectionTitle}>Molecular Data</Text>
-          </View>
-          <View style={styles.dataGrid}>
-            {peptide.molecularWeight && (
-              <View style={styles.dataItem}>
-                <Text style={styles.dataLabel}>Molecular Weight</Text>
-                <Text style={styles.dataValue}>{peptide.molecularWeight}</Text>
+        {/* Learn more — collapses Mechanism / Receptor / Signaling /
+            Molecular Data / Additional Information into one expandable
+            section so the technical content is one tap away without
+            dominating the page for first-time users. */}
+        <View style={styles.section}>
+          <CollapsibleSection
+            id="learn-more"
+            title="Learn more"
+            hint="Mechanism, receptor targets, molecular data, and the science of how this peptide works."
+            icon="school-outline"
+            defaultExpanded={false}
+          >
+            {/* Mechanism of Action */}
+            <View style={{ marginBottom: 14 }}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="git-branch-outline" size={18} color="#7ABED0" />
+                <Text style={styles.sectionTitle}>Mechanism of Action</Text>
               </View>
-            )}
-            {peptide.sequenceLength && (
-              <View style={styles.dataItem}>
-                <Text style={styles.dataLabel}>Sequence Length</Text>
-                <Text style={styles.dataValue}>
-                  {peptide.sequenceLength} amino acids
-                </Text>
-              </View>
-            )}
-            {peptide.halfLife && (
-              <View style={styles.dataItem}>
-                <Text style={styles.dataLabel}>Half-Life</Text>
-                <Text style={styles.dataValue}>{peptide.halfLife}</Text>
-              </View>
-            )}
-            {peptide.storageTemp && (
-              <View style={styles.dataItem}>
-                <Text style={styles.dataLabel}>Storage Temperature</Text>
-                <Text style={styles.dataValue}>{peptide.storageTemp}</Text>
-              </View>
-            )}
-            {peptide.reconstitution && (
-              <View style={styles.dataItem}>
-                <Text style={styles.dataLabel}>Reconstitution</Text>
-                <Text style={styles.dataValue}>{peptide.reconstitution}</Text>
-              </View>
-            )}
-          </View>
-        </GlassCard>
+              <Text style={styles.sectionText}>{peptide.mechanismOfAction}</Text>
+            </View>
 
-        {/* NEW: Chemical Structure Image */}
-        {peptide.structureImageUrl && (
-          <GlassCard style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="flask-outline" size={18} color="#7ABED0" />
-              <Text style={styles.sectionTitle}>Chemical Structure</Text>
-            </View>
-            <Image source={{ uri: peptide.structureImageUrl }} style={styles.structureImage} resizeMode="contain" />
-          </GlassCard>
-        )}
-
-        {/* NEW: Additional Information */}
-        {(peptide.bioavailability || peptide.routeOfAdministration?.length || peptide.naturalSources || peptide.yearDiscovered || peptide.aminoAcidSequence) && (
-          <GlassCard style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="information-circle-outline" size={18} color="#7ABED0" />
-              <Text style={styles.sectionTitle}>Additional Information</Text>
-            </View>
-            <View style={styles.dataGrid}>
-              {peptide.yearDiscovered && (
-                <View style={styles.dataItem}>
-                  <Text style={styles.dataLabel}>Year Discovered</Text>
-                  <Text style={styles.dataValue}>{peptide.yearDiscovered}</Text>
+            {/* Receptor Targets */}
+            {peptide.receptorTargets && peptide.receptorTargets.length > 0 && (
+              <View style={{ marginBottom: 14 }}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="radio-outline" size={18} color="#7ABED0" />
+                  <Text style={styles.sectionTitle}>Receptor Targets</Text>
                 </View>
-              )}
-              {peptide.bioavailability && (
-                <View style={styles.dataItem}>
-                  <Text style={styles.dataLabel}>Bioavailability</Text>
-                  <Text style={styles.dataValue}>{peptide.bioavailability}</Text>
+                <View style={styles.pillsRow}>
+                  {peptide.receptorTargets.map((target, index) => (
+                    <View key={index} style={styles.targetPill}>
+                      <Text style={styles.targetPillText}>{target}</Text>
+                    </View>
+                  ))}
                 </View>
-              )}
-              {peptide.routeOfAdministration && peptide.routeOfAdministration.length > 0 && (
-                <View style={styles.dataItem}>
-                  <Text style={styles.dataLabel}>Route(s)</Text>
-                  <Text style={styles.dataValue}>{peptide.routeOfAdministration.join(', ')}</Text>
-                </View>
-              )}
-              {peptide.naturalSources && (
-                <View style={styles.dataItem}>
-                  <Text style={styles.dataLabel}>Natural Source</Text>
-                  <Text style={styles.dataValue}>{peptide.naturalSources}</Text>
-                </View>
-              )}
-            </View>
-            {peptide.aminoAcidSequence && (
-              <View style={styles.sequenceContainer}>
-                <Text style={styles.dataLabel}>Amino Acid Sequence</Text>
-                <Text style={styles.sequenceText}>{peptide.aminoAcidSequence}</Text>
               </View>
             )}
-          </GlassCard>
-        )}
+
+            {/* Signaling Pathways */}
+            {peptide.signalingPathways && peptide.signalingPathways.length > 0 && (
+              <View style={{ marginBottom: 14 }}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="git-network-outline" size={18} color="#7ABED0" />
+                  <Text style={styles.sectionTitle}>Signaling Pathways</Text>
+                </View>
+                <View style={styles.pillsRow}>
+                  {peptide.signalingPathways.map((pathway, index) => (
+                    <View key={index} style={styles.pathwayPill}>
+                      <Text style={styles.pathwayPillText}>{pathway}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Molecular Data */}
+            <View style={{ marginBottom: 14 }}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="analytics-outline" size={18} color="#7ABED0" />
+                <Text style={styles.sectionTitle}>Molecular Data</Text>
+              </View>
+              <View style={styles.dataGrid}>
+                {peptide.molecularWeight && (
+                  <View style={styles.dataItem}>
+                    <Text style={styles.dataLabel}>Molecular Weight</Text>
+                    <Text style={styles.dataValue}>{peptide.molecularWeight}</Text>
+                  </View>
+                )}
+                {peptide.sequenceLength && (
+                  <View style={styles.dataItem}>
+                    <Text style={styles.dataLabel}>Sequence Length</Text>
+                    <Text style={styles.dataValue}>
+                      {peptide.sequenceLength} amino acids
+                    </Text>
+                  </View>
+                )}
+                {peptide.halfLife && (
+                  <View style={styles.dataItem}>
+                    <Text style={styles.dataLabel}>Half-Life</Text>
+                    <Text style={styles.dataValue}>{peptide.halfLife}</Text>
+                  </View>
+                )}
+                {peptide.storageTemp && (
+                  <View style={styles.dataItem}>
+                    <Text style={styles.dataLabel}>Storage Temperature</Text>
+                    <Text style={styles.dataValue}>{peptide.storageTemp}</Text>
+                  </View>
+                )}
+                {peptide.reconstitution && (
+                  <View style={styles.dataItem}>
+                    <Text style={styles.dataLabel}>Reconstitution</Text>
+                    <Text style={styles.dataValue}>{peptide.reconstitution}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Chemical Structure Image */}
+            {peptide.structureImageUrl && (
+              <View style={{ marginBottom: 14 }}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="flask-outline" size={18} color="#7ABED0" />
+                  <Text style={styles.sectionTitle}>Chemical Structure</Text>
+                </View>
+                <Image source={{ uri: peptide.structureImageUrl }} style={styles.structureImage} resizeMode="contain" />
+              </View>
+            )}
+
+            {/* Additional Information */}
+            {(peptide.bioavailability || peptide.routeOfAdministration?.length || peptide.naturalSources || peptide.yearDiscovered || peptide.aminoAcidSequence) && (
+              <View>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="information-circle-outline" size={18} color="#7ABED0" />
+                  <Text style={styles.sectionTitle}>Additional Information</Text>
+                </View>
+                <View style={styles.dataGrid}>
+                  {peptide.yearDiscovered && (
+                    <View style={styles.dataItem}>
+                      <Text style={styles.dataLabel}>Year Discovered</Text>
+                      <Text style={styles.dataValue}>{peptide.yearDiscovered}</Text>
+                    </View>
+                  )}
+                  {peptide.bioavailability && (
+                    <View style={styles.dataItem}>
+                      <Text style={styles.dataLabel}>Bioavailability</Text>
+                      <Text style={styles.dataValue}>{peptide.bioavailability}</Text>
+                    </View>
+                  )}
+                  {peptide.routeOfAdministration && peptide.routeOfAdministration.length > 0 && (
+                    <View style={styles.dataItem}>
+                      <Text style={styles.dataLabel}>Route(s)</Text>
+                      <Text style={styles.dataValue}>{peptide.routeOfAdministration.join(', ')}</Text>
+                    </View>
+                  )}
+                  {peptide.naturalSources && (
+                    <View style={styles.dataItem}>
+                      <Text style={styles.dataLabel}>Natural Source</Text>
+                      <Text style={styles.dataValue}>{peptide.naturalSources}</Text>
+                    </View>
+                  )}
+                </View>
+                {peptide.aminoAcidSequence && (
+                  <View style={styles.sequenceContainer}>
+                    <Text style={styles.dataLabel}>Amino Acid Sequence</Text>
+                    <Text style={styles.sequenceText}>{peptide.aminoAcidSequence}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </CollapsibleSection>
+        </View>
 
         {/* NEW: Adverse Effects */}
         {peptide.adverseEffects && peptide.adverseEffects.length > 0 && (
@@ -684,7 +754,12 @@ export default function PeptideDetailScreen() {
                   <Text style={styles.trialFindings}>{trial.keyFindings}</Text>
                 )}
                 {trial.nctId && (
-                  <TouchableOpacity onPress={() => handlePubMedLink(`https://clinicaltrials.gov/study/${trial.nctId}`)}>
+                  // 2026-05-17 a11y
+                  <TouchableOpacity
+                    onPress={() => handlePubMedLink(`https://clinicaltrials.gov/study/${trial.nctId}`)}
+                    accessibilityRole="link"
+                    accessibilityLabel={`Open clinical trial ${trial.nctId} on ClinicalTrials.gov`}
+                  >
                     <Text style={styles.trialLink}>{trial.nctId}</Text>
                   </TouchableOpacity>
                 )}
@@ -702,7 +777,7 @@ export default function PeptideDetailScreen() {
             protocol={protocols[0]}
             onPick={(intensity) =>
               router.push({
-                pathname: '/calculators/dosing',
+                pathname: '/doses/calculator',
                 params: { peptideId: peptide.id, intensity },
               } as any)
             }
@@ -748,6 +823,15 @@ export default function PeptideDetailScreen() {
           <View style={styles.section}>
             <ProtocolPlanCard peptide={peptide} protocol={protocols[0]} />
           </View>
+        )}
+
+        {/* One-tap protocol activation — the Selank-style card. Plain-
+            language summary line over a big Activate button. Pre-fills
+            with the mild/starter dose because a one-tap flow should
+            err cautious; the calculator is the place to escalate to
+            standard/aggressive. */}
+        {protocols.length > 0 && (
+          <ActivationCard peptide={peptide} protocol={protocols[0]} />
         )}
 
         {/* Supplies estimator — concrete shopping list per planning horizon. */}
@@ -815,11 +899,12 @@ export default function PeptideDetailScreen() {
               <Text style={styles.sectionTitle}>Featured In Stacks</Text>
             </View>
             {relatedStacks.map((stack) => (
+              // 2026-05-17 a11y
               <TouchableOpacity key={stack.id} style={styles.relatedStackCard} onPress={() => {
                 const { loadStack } = useStackStore.getState();
                 loadStack(stack);
                 router.push('/(tabs)/stack-builder');
-              }} activeOpacity={0.7}>
+              }} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`Open stack ${stack.name}, ${stack.peptideIds.length} peptides`}>
                 <View style={styles.relatedStackHeader}>
                   <Text style={styles.relatedStackName}>{stack.name}</Text>
                   <Text style={styles.relatedStackCount}>{stack.peptideIds.length} peptides</Text>
@@ -840,7 +925,8 @@ export default function PeptideDetailScreen() {
               <Text style={styles.sectionTitle}>Related Videos</Text>
             </View>
             {relatedVideos.map((video) => (
-              <TouchableOpacity key={video.id} style={styles.videoCard} onPress={() => router.push(`/learn/videos/${video.slug}`)} activeOpacity={0.7}>
+              // 2026-05-17 a11y
+              <TouchableOpacity key={video.id} style={styles.videoCard} onPress={() => router.push(`/learn/videos/${video.slug}`)} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`Play video: ${video.title}${video.duration ? `, ${video.duration}` : ''}`}>
                 <Ionicons name="play-circle-outline" size={32} color="#7ABED0" />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.videoTitle}>{video.title}</Text>
@@ -859,7 +945,8 @@ export default function PeptideDetailScreen() {
               <Text style={styles.sectionTitle}>How-To Guides</Text>
             </View>
             {relatedGuides.map((guide) => (
-              <TouchableOpacity key={guide.id} style={styles.guideCard} onPress={() => router.push(`/learn/guides/${guide.slug}`)} activeOpacity={0.7}>
+              // 2026-05-17 a11y
+              <TouchableOpacity key={guide.id} style={styles.guideCard} onPress={() => router.push(`/learn/guides/${guide.slug}`)} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`Open guide: ${guide.title}`}>
                 <Ionicons name="list-outline" size={20} color="#7ABED0" />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.guideTitle}>{guide.title}</Text>
@@ -899,14 +986,18 @@ export default function PeptideDetailScreen() {
 
         {/* Quick Actions */}
         <View style={styles.quickActionRow}>
+          {/* 2026-05-17 a11y */}
           <TouchableOpacity
             style={styles.quickActionBtn}
             onPress={() => router.push('/(tabs)/calendar')}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`Log dose of ${peptide.name}`}
           >
             <Ionicons name="add-circle-outline" size={18} color="#7ABED0" />
             <Text style={styles.quickActionText}>Log Dose</Text>
           </TouchableOpacity>
+          {/* 2026-05-17 a11y */}
           <TouchableOpacity
             style={styles.quickActionBtn}
             onPress={() =>
@@ -916,6 +1007,8 @@ export default function PeptideDetailScreen() {
               } as any)
             }
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`Ask Aimee about ${peptide.name} dosing`}
           >
             <Ionicons name="chatbubble-outline" size={18} color="#A4D9D1" />
             <Text style={styles.quickActionText}>Ask Aimee</Text>
@@ -1009,7 +1102,15 @@ export default function PeptideDetailScreen() {
               <Text style={styles.sectionTitle}>DOI Citations</Text>
             </View>
             {peptide.doiLinks.map((doi, index) => (
-              <TouchableOpacity key={index} style={styles.pubmedLink} onPress={() => handlePubMedLink(doi.startsWith('http') ? doi : `https://doi.org/${doi}`)} activeOpacity={0.7}>
+              // 2026-05-17 a11y
+              <TouchableOpacity
+                key={index}
+                style={styles.pubmedLink}
+                onPress={() => handlePubMedLink(doi.startsWith('http') ? doi : `https://doi.org/${doi}`)}
+                activeOpacity={0.7}
+                accessibilityRole="link"
+                accessibilityLabel={`Open DOI ${doi}`}
+              >
                 <Ionicons name="open-outline" size={14} color="#7ABED0" />
                 <Text style={styles.pubmedLinkText} numberOfLines={1}>{doi}</Text>
               </TouchableOpacity>
@@ -1028,7 +1129,7 @@ export default function PeptideDetailScreen() {
 // Derives two range pills from the peptide's protocol research bounds.
 // Beginner = lower-third (matches `intensityToDoseRangeMcg('mild')`);
 // Advanced = upper-third (`intensityToDoseRangeMcg('aggressive')`). Tapping
-// a pill deep-links into /calculators/dosing pre-pointed at that intensity.
+// a pill deep-links into /doses/calculator pre-pointed at that intensity.
 
 function formatDoseMcg(value: number): string {
   if (value >= 1000) {
@@ -1036,6 +1137,118 @@ function formatDoseMcg(value: number): string {
   }
   return `${Math.round(value)} mcg`;
 }
+
+// One-tap protocol activation card. Modelled after the Selank
+// activation screen Edward called out — plain-language summary in big
+// type, target dose + frequency below it, and the existing
+// ActivateProtocolButton at the bottom. Auto-fills the dose at the
+// mild (starter) end of the protocol's range so a one-tap activate
+// can't accidentally pick aggressive numbers.
+function ActivationCard({
+  peptide,
+  protocol,
+}: {
+  peptide: ReturnType<typeof getPeptideById> & { id: string; name: string };
+  protocol: ReturnType<typeof getProtocolsByPeptide>[number];
+}) {
+  const { mcg: starterMcg, displayUnit } = intensityToDoseMcg(protocol, 'mild');
+  const doseLabel =
+    displayUnit === 'mg'
+      ? `${(starterMcg / 1000).toFixed(2).replace(/\.?0+$/, '')} mg`
+      : `${Math.round(starterMcg)} mcg`;
+
+  // Frequency string mapped from the protocol enum to the 5-key set the
+  // ActivateProtocolButton expects. Unknown freqs (twice_daily, biweekly,
+  // monthly, custom) collapse to daily for the scheduler — accurate one is
+  // entered manually via the dosing calculator afterwards.
+  const calcFrequency: 'daily' | 'eod' | '2x_week' | '3x_week' | 'weekly' =
+    protocol.frequency === 'daily' ? 'daily' :
+    protocol.frequency === 'eod'   ? 'eod' :
+    protocol.frequency === 'biw'   ? '2x_week' :
+    protocol.frequency === 'tiw'   ? '3x_week' :
+    protocol.frequency === 'weekly' ? 'weekly' :
+    'daily';
+
+  const plainSummary = `Take ${doseLabel} ${protocol.frequencyLabel?.toLowerCase() ?? 'daily'}.${protocol.timing ? ` ${protocol.timing}.` : ''}`;
+
+  return (
+    <GlassCard style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Ionicons name="play-circle-outline" size={18} color="#7ABED0" />
+        <Text style={styles.sectionTitle}>Start tracking this peptide</Text>
+      </View>
+
+      <Text style={activationStyles.plainSummary}>{plainSummary}</Text>
+
+      <View style={activationStyles.statRow}>
+        <View style={activationStyles.statCell}>
+          <Text style={activationStyles.statLabel}>TARGET DOSE</Text>
+          <Text style={activationStyles.statValue}>{doseLabel}</Text>
+        </View>
+        <View style={[activationStyles.statCell, { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: '#E5E7EB' }]}>
+          <Text style={activationStyles.statLabel}>FREQUENCY</Text>
+          <Text style={activationStyles.statValue}>{protocol.frequencyLabel ?? 'Daily'}</Text>
+        </View>
+      </View>
+
+      <ActivateProtocolButton
+        peptideId={peptide.id}
+        peptideName={peptide.name}
+        protocol={protocol}
+        doseMcg={starterMcg}
+        frequency={calcFrequency}
+      />
+
+      <Text style={activationStyles.fineprint}>
+        Starts you at the cautious end of the published range. Fine-tune
+        dose, syringe, and schedule from the calculator anytime.
+      </Text>
+    </GlassCard>
+  );
+}
+
+const activationStyles = StyleSheet.create({
+  plainSummary: {
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '500',
+    color: '#2D2D2D',
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  statRow: {
+    flexDirection: 'row',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E5E7EB',
+    marginBottom: 16,
+  },
+  statCell: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#2D2D2D',
+  },
+  fineprint: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 10,
+    fontStyle: 'italic',
+  },
+});
 
 function BeginnerAdvancedDoseCard({
   peptideId: _peptideId,
@@ -1098,6 +1311,52 @@ function BeginnerAdvancedDoseCard({
     </GlassCard>
   );
 }
+
+const plainLeadStyles = StyleSheet.create({
+  card: {
+    backgroundColor: '#FAF5EF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(232, 150, 114, 0.20)',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  iconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E8967220',
+  },
+  title: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Bold',
+    color: '#6B7280',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  body: {
+    fontSize: 17,
+    lineHeight: 24,
+    fontFamily: 'DMSans-SemiBold',
+    color: '#2D2D2D',
+  },
+  subhint: {
+    fontSize: 12,
+    fontFamily: 'DMSans-Regular',
+    color: '#9CA3AF',
+    marginTop: 8,
+    lineHeight: 17,
+    fontStyle: 'italic',
+  },
+});
 
 const dosePillStyles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10, marginTop: 4 },

@@ -176,7 +176,7 @@ export default function LiveEventChatScreen() {
   };
 
   const promptReport = (messageId: string) => {
-    const reasons: Array<{ key: 'spam' | 'harassment' | 'unsafe_medical_advice' | 'misinformation' | 'off_topic' | 'other'; label: string }> = [
+    const reasons: { key: 'spam' | 'harassment' | 'unsafe_medical_advice' | 'misinformation' | 'off_topic' | 'other'; label: string }[] = [
       { key: 'spam',                  label: 'Spam' },
       { key: 'harassment',            label: 'Harassment' },
       { key: 'unsafe_medical_advice', label: 'Unsafe medical advice' },

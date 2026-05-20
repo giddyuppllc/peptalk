@@ -64,17 +64,47 @@ Deno.serve(async (req) => {
       // FTS query parse error — fall back to plain ILIKE so the user
       // gets results from a malformed query (e.g. just punctuation)
       // instead of an error toast.
-      const escaped = q.replace(/[%_\\]/g, '');
-      let fb = supabase
+      //
+      // 2026-05-17 security fix: the previous `.or(\`title.ilike.%${escaped}%,…\`)`
+      // path interpolated the user query into a PostgREST `or()` filter
+      // string. The escape regex stripped `%_\` but NOT commas, parens
+      // or dots, so a crafted q like `x),user_id.eq.<uuid>,title.ilike.%(x`
+      // could inject arbitrary filters and pull other users' drafts.
+      // Two-call approach: run separate `.ilike()` queries per column
+      // and union in code. PostgREST escapes parameterised ilike values
+      // automatically, so the user input never reaches the filter DSL.
+      const pattern = `%${q.replace(/[%_\\]/g, (m) => `\\${m}`)}%`;
+      let titleQ = supabase
         .from('community_posts')
         .select('id, user_id, topic_slug, title, body, reaction_count, comment_count, is_anonymous, created_at')
         .eq('is_deleted', false)
-        .or(`title.ilike.%${escaped}%,body.ilike.%${escaped}%`)
+        .ilike('title', pattern)
         .order('created_at', { ascending: false })
         .limit(30);
-      if (topicSlug) fb = fb.eq('topic_slug', topicSlug);
-      const { data: fbData } = await fb;
-      return json({ posts: fbData ?? [] });
+      let bodyQ = supabase
+        .from('community_posts')
+        .select('id, user_id, topic_slug, title, body, reaction_count, comment_count, is_anonymous, created_at')
+        .eq('is_deleted', false)
+        .ilike('body', pattern)
+        .order('created_at', { ascending: false })
+        .limit(30);
+      if (topicSlug) {
+        titleQ = titleQ.eq('topic_slug', topicSlug);
+        bodyQ = bodyQ.eq('topic_slug', topicSlug);
+      }
+      const [titleRes, bodyRes] = await Promise.all([titleQ, bodyQ]);
+      const seen = new Set<string>();
+      const merged = [...(titleRes.data ?? []), ...(bodyRes.data ?? [])]
+        .filter((p) => {
+          if (seen.has(p.id)) return false;
+          seen.add(p.id);
+          return true;
+        })
+        .sort((a, b) =>
+          (b.created_at ?? '').localeCompare(a.created_at ?? ''),
+        )
+        .slice(0, 30);
+      return json({ posts: merged });
     }
 
     return json({ posts: data ?? [] });

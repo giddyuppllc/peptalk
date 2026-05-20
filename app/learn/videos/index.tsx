@@ -265,7 +265,7 @@ export default function VideoGalleryScreen() {
                             </Text>
                           </View>
                         )}
-                        {/PLACEHOLDER/i.test(video.videoUrl) && (
+                        {(video.comingSoon || /PLACEHOLDER/i.test(video.videoUrl)) && (
                           <View style={styles.durationBadgeSmall}>
                             <Text style={styles.durationSmallText}>Coming soon</Text>
                           </View>

@@ -44,10 +44,18 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
     if (authErr || !user) return json({ error: 'Invalid session' }, 401);
 
-    // Admin gate — BETA_TESTER_EMAILS doubles as admin list for now.
+    // Admin gate — reads ADMIN_EMAILS secret (separate from
+    // BETA_TESTER_EMAILS). The previous version conflated the two,
+    // which meant any beta tester added for free Grok access could
+    // also soft-delete arbitrary community posts. P0 from Wave 76.10
+    // schema audit.
+    //
+    // Falls back to BETA_TESTER_EMAILS only if ADMIN_EMAILS is unset
+    // (transitional grace period during rollout). Once Edward sets
+    // ADMIN_EMAILS in prod, the fallback path is dead code.
+    const adminCsv = Deno.env.get('ADMIN_EMAILS') ?? Deno.env.get('BETA_TESTER_EMAILS') ?? '';
     const ADMIN_EMAILS = new Set<string>(
-      (Deno.env.get('BETA_TESTER_EMAILS') ?? '')
-        .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+      adminCsv.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
     );
     const isAdmin = !!user.email && ADMIN_EMAILS.has(user.email.toLowerCase());
     if (!isAdmin) return json({ error: 'Admin only' }, 403);

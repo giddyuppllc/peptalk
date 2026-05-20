@@ -13,10 +13,16 @@
  * - System prompt is built fresh per request from local stores
  */
 
-import OpenAI from 'openai';
+// NOTE: `openai` SDK is intentionally NOT imported at the top of this
+// file. It's a ~200KB SDK used only by the dev fallback below, and a
+// top-level static import would let Metro bundle it into production
+// even though every call site is __DEV__-gated. Lazy `require()`
+// inside getClient() makes the import unreachable in prod and
+// drops the SDK from the release bundle entirely.
 import { ChatMessage, EnhancedBotContext } from '../types';
 import { sanitizeForLLM } from './privacyGuard';
 import { supabase } from './supabase';
+import { captureException } from './telemetry';
 
 // ---------------------------------------------------------------------------
 // Config
@@ -35,8 +41,8 @@ const MODEL = 'grok-4-1-fast-reasoning';
 const TIMEOUT_MS = 30_000;
 
 // Lazy-init the OpenAI client (avoid creating at import time)
-let _client: OpenAI | null = null;
-function getClient(): OpenAI {
+let _client: any = null;
+function getClient(): any {
   // Hard-stop: never instantiate the direct-API client off a dev build.
   // If we ever get here in production, the fallback gate has been
   // bypassed and we want to fail loudly rather than leak a key.
@@ -44,6 +50,8 @@ function getClient(): OpenAI {
     throw new Error('[llmService] Direct XAI client is dev-only; route via Supabase Edge Function in production.');
   }
   if (!_client) {
+     
+    const OpenAI = require('openai').default ?? require('openai');
     _client = new OpenAI({
       apiKey: XAI_API_KEY || 'dummy',
       baseURL: 'https://api.x.ai/v1',
@@ -527,7 +535,7 @@ RESPONSE FORMAT:
 
 APP NAVIGATION (Pro tier only):
 - If a user wants to go somewhere in the app, include a line: ---NAV_ACTION--- /route/path
-- Available routes: /nutrition, /workouts, /workouts/exercises, /calculators, /calculators/dosing, /calculators/reconstitution, /body-map, /journal, /health-profile, /health-report, /subscription, /(tabs)/calendar, /(tabs)/check-in, /(tabs)/my-stacks, /(tabs)/peptalk
+- Available routes: /nutrition, /workouts, /workouts/exercises, /calculators, /doses/calculator, /calculators/reconstitution, /body-map, /journal, /health-profile, /health-report, /subscription, /(tabs)/calendar, /(tabs)/check-in, /(tabs)/my-stacks, /(tabs)/peptalk
 - Example: "Let me take you to the workout builder. ---NAV_ACTION--- /workouts/exercises"
 
 DATA ACTIONS (Pro tier only):
@@ -576,7 +584,7 @@ function describeRoute(route: string): { label: string; icon: string } {
     '/workouts/exercises': { label: 'Browse exercises', icon: 'list-outline' },
     '/workouts/library': { label: 'Workout library', icon: 'play-circle-outline' },
     '/calculators': { label: 'Calculators', icon: 'calculator-outline' },
-    '/calculators/dosing': { label: 'Dosing calculator', icon: 'calculator-outline' },
+    '/doses/calculator': { label: 'Dosing calculator', icon: 'calculator-outline' },
     '/calculators/reconstitution': { label: 'Reconstitution', icon: 'flask-outline' },
     '/calculators/plan': { label: 'Plan a cycle', icon: 'compass-outline' },
     '/cycle': { label: 'Cycle dashboard', icon: 'flower-outline' },
@@ -712,7 +720,7 @@ export async function generateAIResponse(
         model: MODEL,
         messages: [
           { role: 'system', content: devSystemPrompt },
-          ...conversationMessages as OpenAI.ChatCompletionMessageParam[],
+          ...(conversationMessages as any[]),
         ],
         max_tokens: 1024,
         temperature: 0.7,
@@ -759,7 +767,7 @@ export async function generateRecipe(params: {
   targets: { calories: number; proteinGrams: number; carbsGrams: number; fatGrams: number };
   /** User's allergens — pushed into the constraints list so the AI avoids them. */
   allergens?: string[];
-}): Promise<Array<{
+}): Promise<{
   name: string;
   description: string;
   prepMinutes: number;
@@ -768,7 +776,7 @@ export async function generateRecipe(params: {
   ingredients: string[];
   instructions: string[];
   macros: { calories: number; protein: number; carbs: number; fat: number };
-}> | null> {
+}[] | null> {
   const { diet, mealType, preferences, targets, allergens } = params;
 
   // ── Try server edge function first (production path — key stays server-side) ──
@@ -916,8 +924,306 @@ Include: weekly workout schedule, meal plan framework, and any protocol/suppleme
 }
 
 /**
- * Check if the AI service is available (has API key configured).
+ * Whether the Aimee chat backend is reachable.
+ *
+ * Production builds ship WITHOUT a client-side XAI key — the
+ * server-side `aimee-chat` Supabase edge function holds it and
+ * authenticates every call. So the only thing the client needs to
+ * know is that the Supabase URL is configured.
+ *
+ * Including XAI_API_KEY in this check was misleading: the chat works
+ * fine in production via the edge function, but the header label was
+ * showing "Offline" because the client-side key is intentionally
+ * empty (see XAI_API_KEY definition above — DEV ONLY).
  */
 export function isAIAvailable(): boolean {
-  return SUPABASE_URL.length > 0 || XAI_API_KEY.length > 0;
+  return SUPABASE_URL.length > 0;
+}
+
+// ---------------------------------------------------------------------------
+// Streaming API (Claude / aimee-chat-stream)
+// ---------------------------------------------------------------------------
+//
+// The new aimee-chat-stream edge function returns SSE. We parse events
+// incrementally and yield them so the UI can render text as it arrives,
+// surface tool-call cards inline, and trigger pending-action confirm modals.
+//
+// Wire format (one event per `data: ` line):
+//   {"type":"text_delta","text":"..."}
+//   {"type":"tool_use_start","name":"...","id":"..."}
+//   {"type":"tool_use","name":"...","input":{...},"id":"..."}
+//   {"type":"tool_result","tool_use_id":"...","tool":"...","output":{...}}
+//   {"type":"pending_action","id":"...","tool":"...","preview":{...}}
+//   {"type":"done","usage":{...},"cost_microcents":1234,"pending_actions":[...]}
+//   {"type":"error","message":"..."}
+//
+// Falls back automatically to the non-streaming aimee-chat endpoint when:
+//   - no Supabase URL configured
+//   - no auth session
+//   - streaming fetch isn't supported in this RN runtime (older Hermes)
+//   - the stream HTTP call fails with 4xx other than 429/403 (those still
+//     surface their JSON error body to the user)
+
+export interface AimeeStreamEvent {
+  type:
+    | 'text_delta'
+    | 'tool_use_start'
+    | 'tool_use'
+    | 'tool_result'
+    | 'pending_action'
+    | 'client_action'
+    | 'warning'
+    | 'done'
+    | 'error'
+    | 'denied';
+  text?: string;
+  name?: string;
+  id?: string;
+  input?: Record<string, unknown>;
+  output?: Record<string, unknown>;
+  tool?: string;
+  preview?: Record<string, unknown>;
+  /** Deep-link action emitted by client-action tools (navigate, open_dosing_calculator). */
+  action?: { type: string; path?: string; [k: string]: unknown };
+  message?: string;
+  pending_actions?: {
+    id: string;
+    tool: string;
+    preview: Record<string, unknown>;
+  }[];
+  client_actions?: {
+    tool: string;
+    action: { type: string; path?: string; [k: string]: unknown };
+  }[];
+  upgrade?: boolean;
+  /** Status code from the edge fn for error/denied events. */
+  status?: number;
+}
+
+/**
+ * Stream an Aimee response. Yields events as they arrive. The caller is
+ * responsible for accumulating text deltas and tool results.
+ *
+ * The async generator pattern lets the chat screen write a `for await` loop:
+ *
+ *   for await (const ev of generateAIResponseStream(text, ctx)) {
+ *     if (ev.type === 'text_delta') accumulate(ev.text);
+ *     if (ev.type === 'tool_result') showToolCard(ev);
+ *     if (ev.type === 'done') finalize();
+ *   }
+ */
+export async function* generateAIResponseStream(
+  userMessage: string,
+  context: EnhancedBotContext,
+  options?: { conversationId?: string; signal?: AbortSignal },
+): AsyncGenerator<AimeeStreamEvent, void, unknown> {
+  if (!SUPABASE_URL) {
+    yield { type: 'error', message: 'No backend configured' };
+    return;
+  }
+
+  let session;
+  try {
+    const result = await supabase.auth.getSession();
+    session = result.data?.session;
+  } catch (e) {
+    if (__DEV__) console.warn('[llmService] getSession failed:', e);
+  }
+  if (!session?.access_token) {
+    yield { type: 'error', message: 'Not authenticated' };
+    return;
+  }
+
+  const serverContext = buildServerContext(context);
+  const conversationMessages = context.conversationHistory.slice(-10).map((msg) => ({
+    role: msg.role === 'bot' ? ('assistant' as const) : ('user' as const),
+    content: msg.content,
+  }));
+  conversationMessages.push({ role: 'user' as const, content: userMessage });
+
+  let res: Response;
+  try {
+    res = await fetch(`${SUPABASE_URL}/functions/v1/aimee-chat-stream`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+        apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        Accept: 'text/event-stream',
+      },
+      body: JSON.stringify({
+        messages: conversationMessages,
+        context: serverContext,
+        conversationId: options?.conversationId ?? null,
+      }),
+      // Honor caller-supplied abort signal so the chat screen can
+      // cancel an in-flight stream when the user navigates away.
+      // Without this, late SSE events fire client_action handlers
+      // (router.push, store writes) on dead components — visible
+      // bug: yanked to an unrelated screen mid-task.
+      signal: options?.signal,
+    });
+  } catch (e) {
+    if (options?.signal?.aborted) {
+      // Caller aborted intentionally — silent close, no error event.
+      return;
+    }
+    if (__DEV__) console.warn('[llmService] stream fetch threw:', e);
+    captureException(e, { source: 'aimee-stream', stage: 'fetch' });
+    yield { type: 'error', message: 'Network error' };
+    return;
+  }
+
+  if (!res.ok) {
+    // Try to parse a JSON error body — the streaming endpoint returns JSON
+    // for early failures (auth, rate limit, cap hit).
+    let errBody: any = {};
+    try {
+      errBody = await res.json();
+    } catch {
+      /* non-JSON */
+    }
+    if (res.status === 403 || res.status === 429) {
+      yield {
+        type: 'denied',
+        message: errBody?.error ?? 'AI unavailable',
+        upgrade: errBody?.upgrade === true,
+        status: res.status,
+      };
+      return;
+    }
+    yield {
+      type: 'error',
+      message: errBody?.error ?? `HTTP ${res.status}`,
+      status: res.status,
+    };
+    return;
+  }
+
+  // RN fetch: response.body may or may not be a stream depending on engine.
+  // Hermes on RN 0.81 supports response.body.getReader(). If it's not
+  // available, fall back to res.text() + parse-all-at-once (loses streaming
+  // UX but still works).
+  const body: any = (res as any).body;
+  if (body && typeof body.getReader === 'function') {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    try {
+      while (true) {
+        // Bail immediately if the caller aborted (component unmount,
+        // user navigated away). Without this, late client_action
+        // events from a backgrounded stream fire router.push and
+        // store writes on a dead screen.
+        if (options?.signal?.aborted) {
+          try { await reader.cancel(); } catch { /* already closed */ }
+          return;
+        }
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let nlIdx = buf.indexOf('\n\n');
+        while (nlIdx !== -1) {
+          const block = buf.slice(0, nlIdx);
+          buf = buf.slice(nlIdx + 2);
+          nlIdx = buf.indexOf('\n\n');
+          for (const evt of parseSseBlock(block)) {
+            yield evt;
+          }
+        }
+      }
+    } catch (e) {
+      if (options?.signal?.aborted) return; // intentional cancel, silent
+      if (__DEV__) console.warn('[llmService] stream read failed:', e);
+      captureException(e, { source: 'aimee-stream', stage: 'read' });
+      yield { type: 'error', message: 'Stream interrupted' };
+      return;
+    }
+    // Flush any trailing partial event.
+    if (buf.trim()) {
+      for (const evt of parseSseBlock(buf)) yield evt;
+    }
+  } else {
+    // No streaming API on this runtime — read the whole thing.
+    if (__DEV__) console.warn('[llmService] response.body.getReader unavailable, reading full text');
+    let fullText = '';
+    try {
+      fullText = await res.text();
+    } catch (e) {
+      yield { type: 'error', message: 'Failed to read response' };
+      return;
+    }
+    for (const chunk of fullText.split('\n\n')) {
+      for (const evt of parseSseBlock(chunk)) yield evt;
+    }
+  }
+}
+
+function parseSseBlock(block: string): AimeeStreamEvent[] {
+  const out: AimeeStreamEvent[] = [];
+  const lines = block.split('\n');
+  let dataStr = '';
+  // SSE spec: multi-line `data:` payloads join with literal '\n', not
+  // empty string. Concatenating without the newline corrupts any
+  // payload whose JSON contained a real newline — JSON.parse fails
+  // silently and the entire event is dropped. (Previously: the
+  // user saw a text reply but never the tool card.)
+  for (const line of lines) {
+    if (line.startsWith('data: ')) dataStr += (dataStr ? '\n' : '') + line.slice(6);
+    else if (line.startsWith('data:')) dataStr += (dataStr ? '\n' : '') + line.slice(5);
+  }
+  if (!dataStr.trim()) return out;
+  try {
+    const parsed = JSON.parse(dataStr);
+    if (parsed && typeof parsed === 'object') {
+      out.push(parsed as AimeeStreamEvent);
+    }
+  } catch {
+    /* unparseable — skip */
+  }
+  return out;
+}
+
+/**
+ * Confirm or cancel a pending action proposed by Aimee.
+ *
+ * Calls supabase/functions/aimee-action-confirm. Returns the server's reply
+ * so the UI can show "Saved" / "Cancelled" feedback.
+ */
+export async function resolveAimeeAction(args: {
+  actionId: string;
+  decision: 'confirm' | 'cancel';
+  edits?: Record<string, unknown>;
+}): Promise<{ ok: boolean; status?: string; error?: string }> {
+  if (!SUPABASE_URL) return { ok: false, error: 'No backend configured' };
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return { ok: false, error: 'Not authenticated' };
+
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/aimee-action-confirm`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        },
+        body: JSON.stringify({
+          action_id: args.actionId,
+          decision: args.decision,
+          edits: args.edits ?? null,
+        }),
+      },
+    );
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, error: json?.error ?? `HTTP ${res.status}` };
+    }
+    return { ok: true, status: json?.status };
+  } catch (e) {
+    if (__DEV__) console.warn('[llmService] resolveAimeeAction failed:', e);
+    return { ok: false, error: 'Network error' };
+  }
 }

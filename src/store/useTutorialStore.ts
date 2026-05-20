@@ -17,6 +17,11 @@ export interface TargetRect {
 export type TourVariant = 'intro' | 'free_to_plus' | 'plus_to_pro';
 
 interface TutorialState {
+  /** Whether persist has finished rehydrating. UI MUST gate any
+   *  auto-start-tour decision on this — otherwise the in-memory
+   *  default `hasSeenTour=false` fires the intro tour to a returning
+   *  user before secureStorage finishes loading. */
+  hasHydrated: boolean;
   /** Whether the user has completed or skipped the main first-run tour */
   hasSeenTour: boolean;
   /** Per-feature one-off coach-mark flags (e.g. `first_nutrition_visit`) */
@@ -58,6 +63,7 @@ interface TutorialActions {
 export const useTutorialStore = create<TutorialState & TutorialActions>()(
   persist(
     (set, get) => ({
+      hasHydrated: false,
       hasSeenTour: false,
       seenCoachMarks: {},
       tourActive: false,
@@ -138,6 +144,9 @@ export const useTutorialStore = create<TutorialState & TutorialActions>()(
         lastKnownTier: state.lastKnownTier,
         seenDeltaTours: state.seenDeltaTours,
       }),
+      onRehydrateStorage: () => () => {
+        useTutorialStore.setState({ hasHydrated: true });
+      },
     },
   ),
 );

@@ -116,10 +116,6 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
     name: 'Aimee Workout Plans',
     description: 'Aimee builds custom workout programs based on your level and equipment.',
   },
-  aimee_health_scheduler: {
-    name: 'Aimee Health Scheduler',
-    description: 'Aimee schedules your workouts, meals, and protocols automatically.',
-  },
   workout_programs: {
     name: 'Workout Programs',
     description: 'Follow structured multi-week workout programs.',
@@ -155,10 +151,6 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
   pdf_export: {
     name: 'PDF Export',
     description: 'Export health reports and data as professional PDFs.',
-  },
-  data_export: {
-    name: 'Data Export',
-    description: 'Export all your data for your records.',
   },
   ad_free: {
     name: 'Ad-Free',

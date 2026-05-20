@@ -86,6 +86,8 @@ export default function NotificationSettingsScreen() {
   const setMealRemindersEnabled = useNotificationStore((s) => s.setMealRemindersEnabled);
   const setMealReminderTime = useNotificationStore((s) => s.setMealReminderTime);
   const toggleWeeklyReport = useNotificationStore((s) => s.toggleWeeklyReport);
+  const setMealSafetyReminders = useNotificationStore((s) => s.setMealSafetyReminders);
+  const setMealSafetyReminderTime = useNotificationStore((s) => s.setMealSafetyReminderTime);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
@@ -245,6 +247,33 @@ export default function NotificationSettingsScreen() {
                   thumbColor={prefs.weeklyReportEnabled ? t.primary : '#fff'}
                 />
               </View>
+            </GlassCard>
+
+            {/* Food-safety reminder */}
+            <GlassCard style={styles.section}>
+              <View style={styles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.rowTitle, { color: t.text }]}>Food-safety check</Text>
+                  <Text style={[styles.rowSub, { color: t.textSecondary }]}>
+                    Daily reminder to glance at your kitchen — meal preps that
+                    are past their safe fridge window (or pantry items
+                    expiring soon).
+                  </Text>
+                </View>
+                <Switch
+                  value={prefs.mealSafetyReminders}
+                  onValueChange={setMealSafetyReminders}
+                  trackColor={{ true: t.primary + '88', false: t.cardBorder }}
+                  thumbColor={prefs.mealSafetyReminders ? t.primary : '#fff'}
+                />
+              </View>
+              {prefs.mealSafetyReminders && (
+                <TimeRow
+                  label="Reminder time"
+                  value={prefs.mealSafetyReminderTime}
+                  onCommit={setMealSafetyReminderTime}
+                />
+              )}
             </GlassCard>
 
             <Text style={[styles.disclaimer, { color: t.textSecondary }]}>

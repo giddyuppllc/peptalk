@@ -58,6 +58,17 @@ async function hmacSha256Hex(secret: string, body: string): Promise<string> {
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return jsonResp({ error: 'Method not allowed' }, 405);
 
+  // 2026-05-17 security fix: HMAC is applied to outbound webhooks but
+  // the inbound entrypoint had no auth. Anyone POSTing eventKind +
+  // subscriptionEventId could spam the CRM and flip a real redemption's
+  // attribution_state to 'attributed' (L101-109). Require internal-
+  // secret header — pg_net trigger passes x-internal-key.
+  const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET') ?? '';
+  const providedSecret = req.headers.get('x-internal-key') ?? '';
+  if (!internalSecret || providedSecret !== internalSecret) {
+    return jsonResp({ error: 'Unauthorized' }, 401);
+  }
+
   try {
     const body = await req.json().catch(() => ({}));
     const eventKind: string = String(body?.eventKind ?? '');

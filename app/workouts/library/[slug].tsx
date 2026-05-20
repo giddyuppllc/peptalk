@@ -36,7 +36,15 @@ export default function LibraryPlayerScreen() {
     setUrl(null);
     setCaptionUrl(null);
     setError(null);
-    resolveVideoUrl(video.slug).then((res) => {
+    // Capture the slug into a closure and check it on resolve.
+    // Without this, rapid-tap between videos lets an earlier slug's
+    // resolve land AFTER a later one and overwrite the URL with stale
+    // data → user watches the wrong video. P1 from Wave 76.10
+    // render-safety audit.
+    let cancelled = false;
+    const targetSlug = video.slug;
+    resolveVideoUrl(targetSlug).then((res) => {
+      if (cancelled || targetSlug !== video.slug) return;
       if (res.ok) {
         setUrl(res.url);
         setCaptionUrl(res.captionUrl ?? null);
@@ -52,6 +60,7 @@ export default function LibraryPlayerScreen() {
         );
       }
     });
+    return () => { cancelled = true; };
   }, [video?.slug]);
 
   if (!video) {

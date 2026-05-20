@@ -11,9 +11,11 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withDelay,
+  cancelAnimation,
   Easing,
   runOnJS,
 } from 'react-native-reanimated';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const PARTICLE_COUNT = 40;
@@ -49,9 +51,20 @@ function ConfettiParticle({
   const opacity = useSharedValue(0);
   const rotate = useSharedValue(0);
   const translateX = useSharedValue(particle.x);
+  const reduceMotion = useReduceMotion();
 
+  // 2026-05-17 perf+a11y: cancel worklet on unmount + honor Reduce Motion
   useEffect(() => {
     if (visible) {
+      if (reduceMotion) {
+        // Skip the animated fall — keep particles invisible so the
+        // celebration is silent for vestibular-sensitive users.
+        opacity.value = 0;
+        translateY.value = -20;
+        translateX.value = particle.x;
+        rotate.value = 0;
+        return;
+      }
       opacity.value = withDelay(
         particle.delay,
         withTiming(1, { duration: 200 }),
@@ -74,7 +87,13 @@ function ConfettiParticle({
         withTiming(particle.rotation, { duration: 2500 }),
       );
     }
-  }, [visible, particle, translateY, opacity, rotate, translateX]);
+    return () => {
+      cancelAnimation(opacity);
+      cancelAnimation(translateY);
+      cancelAnimation(translateX);
+      cancelAnimation(rotate);
+    };
+  }, [visible, particle, translateY, opacity, rotate, translateX, reduceMotion]);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [

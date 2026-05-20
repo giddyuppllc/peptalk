@@ -479,7 +479,7 @@ export async function fetchTodayActiveEnergy(): Promise<number | null> {
 
 type HealthDataCallback = () => void;
 
-let observerSubscriptions: Array<() => void> = [];
+let observerSubscriptions: (() => void)[] = [];
 
 /**
  * Register background observers for key Apple Watch metrics.

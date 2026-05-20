@@ -19,7 +19,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-} from 'react-native';
+ Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -36,7 +36,6 @@ import { GOAL_PEPTIDE_MATRIX, recommendPeptidesForGoal } from '../../src/data/go
 import { getPeptideById } from '../../src/data/peptides';
 import { getProtocolsByPeptide } from '../../src/data/protocols';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
-import { Alert } from 'react-native';
 import type { GoalType, ActivityLevel } from '../../src/types';
 
 const ACTIVITY_OPTIONS: { value: ActivityLevel; label: string }[] = [
@@ -483,7 +482,7 @@ export default function PlanCycleScreen() {
                 <Text style={[styles.calcLinkText, { color: t.text }]}>Quick Dose Guide</Text>
               </AnimatedPress>
               <AnimatedPress
-                onPress={() => router.push('/calculators/dosing')}
+                onPress={() => router.push('/doses/calculator')}
                 style={[styles.calcLink, { borderColor: t.cardBorder, backgroundColor: t.card }]}
               >
                 <Ionicons name="calculator" size={18} color={accent.deep} />

@@ -432,6 +432,8 @@ export default function JournalFeedScreen() {
       />
 
       {/* Entry list */}
+      {/* 2026-05-17 perf: virtualization hints for users with long journal
+          histories. renderEntry is already hoisted (good). */}
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
@@ -440,12 +442,18 @@ export default function JournalFeedScreen() {
         ListEmptyComponent={renderEmpty}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={9}
+        removeClippedSubviews
       />
 
       {/* FAB */}
       <Pressable
         style={styles.fab}
         onPress={() => router.push('/journal/new')}
+        accessibilityRole="button"
+        accessibilityLabel="New journal entry"
       >
         <Ionicons name="add" size={28} color={Colors.darkBg} />
       </Pressable>

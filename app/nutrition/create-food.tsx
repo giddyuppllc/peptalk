@@ -120,16 +120,26 @@ export default function CreateFoodScreen() {
 
     const fullName = brand.trim() ? `${brand.trim()} — ${description.trim()}` : description.trim();
 
+    // Clamp macros to non-negative + sane upper bounds. Negative
+    // values (-50 g protein) propagated into daily totals and broke
+    // the nutrition ring; uncapped values polluted the food cache.
+    // P0 from input validation audit.
+    const clampMacro = (v: string, max: number): number => {
+      const n = parseFloat(v);
+      if (!Number.isFinite(n) || n < 0) return 0;
+      return Math.min(n, max);
+    };
+
     addCustomFood({
       id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      name: fullName,
-      servingSize: servingSize.trim(),
+      name: fullName.slice(0, 120),
+      servingSize: servingSize.trim().slice(0, 40),
       servingGrams,
-      calories: cals,
-      proteinGrams: parseFloat(protein) || 0,
-      carbsGrams: parseFloat(carbs) || 0,
-      fatGrams: parseFloat(fat) || 0,
-      fiberGrams: parseFloat(fiber) || 0,
+      calories: Math.min(Math.max(cals, 0), 5000),
+      proteinGrams: clampMacro(protein, 1000),
+      carbsGrams: clampMacro(carbs, 1000),
+      fatGrams: clampMacro(fat, 1000),
+      fiberGrams: clampMacro(fiber, 200),
       isCustom: true,
     });
 

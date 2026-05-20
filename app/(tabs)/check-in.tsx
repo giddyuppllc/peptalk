@@ -100,10 +100,15 @@ const RatingRow: React.FC<{
 }> = ({ label, value, onChange, lowLabel, highLabel }) => {
   const t = useTheme();
   const useEndpoints = !!(lowLabel && highLabel);
+  const endpointHint = useEndpoints ? `, 1 is ${lowLabel}, 5 is ${highLabel}` : '';
   return (
     <View style={styles.ratingRow}>
-      <Text style={[styles.ratingLabel, { color: t.tint }]}>{label}</Text>
-      <View style={styles.ratingPills}>
+      <Text style={[styles.ratingLabel, { color: t.tint }]} accessibilityRole="header">{label}</Text>
+      <View
+        style={styles.ratingPills}
+        accessibilityRole="radiogroup"
+        accessibilityLabel={`${label} rating, 1 to 5${endpointHint}`}
+      >
         {ratingValues.map((rating) => (
           <AnimatedPress
             key={rating}
@@ -114,6 +119,9 @@ const RatingRow: React.FC<{
             ]}
             onPress={() => { selectionTick(); onChange(rating); }}
             scaleTo={0.85}
+            accessibilityRole="radio"
+            accessibilityLabel={`${rating} out of 5`}
+            accessibilityState={{ selected: value === rating, checked: value === rating }}
           >
             <Text
               style={[
@@ -151,7 +159,11 @@ const SeverityPicker: React.FC<{
   return (
     <View style={styles.severityRow}>
       <Text style={[styles.severityLabel, { color: t.textSecondary }]}>Severity</Text>
-      <View style={styles.severityPills}>
+      <View
+        style={styles.severityPills}
+        accessibilityRole="radiogroup"
+        accessibilityLabel="Severity, 1 to 5"
+      >
         {ratingValues.map((v) => (
           <TouchableOpacity
             key={v}
@@ -162,6 +174,9 @@ const SeverityPicker: React.FC<{
               value === v && styles.severityPillActive,
             ]}
             activeOpacity={0.7}
+            accessibilityRole="radio"
+            accessibilityLabel={`Severity ${v} out of 5`}
+            accessibilityState={{ selected: value === v, checked: value === v }}
           >
             <Text
               style={[
@@ -428,6 +443,16 @@ export default function CheckInScreen() {
       const parsed = Number(value);
       return Number.isFinite(parsed) ? parsed : undefined;
     };
+    // 2026-05-17 P1 fix: numeric inputs were unclamped — a stray
+    // "5e10" in the weight field would persist 50,000,000,000 lb and
+    // permanently break the weight trend chart's auto-scaling. Use
+    // sane physical maxes per field. Below zero is also blocked.
+    const clamp = (n: number | undefined, max: number) => {
+      if (n == null) return undefined;
+      if (n < 0) return 0;
+      if (n > max) return max;
+      return n;
+    };
 
     const entry = saveCheckIn({
       date: dateKey,
@@ -437,14 +462,18 @@ export default function CheckInScreen() {
       sleepQuality,
       recovery,
       appetite,
-      weightLbs: toNumber(weight),
-      restingHeartRate: toNumber(restingHeartRate),
-      steps: toNumber(steps),
-      hrvMs: toNumber(hrvMs),
-      vo2Max: toNumber(vo2Max),
-      spo2: toNumber(spo2),
-      respiratoryRate: toNumber(respiratoryRate),
-      activeCalories: toNumber(activeCalories),
+      // Sane physical caps so a typo can't corrupt the trend chart.
+      // Lower bounds are 0 via clamp(); upper bounds picked to be
+      // generous (heaviest recorded human ~1400 lb, world-record HR
+      // ~330 bpm, etc.) so they only catch typos, not real data.
+      weightLbs: clamp(toNumber(weight), 1500),
+      restingHeartRate: clamp(toNumber(restingHeartRate), 300),
+      steps: clamp(toNumber(steps), 200_000),
+      hrvMs: clamp(toNumber(hrvMs), 500),
+      vo2Max: clamp(toNumber(vo2Max), 100),
+      spo2: clamp(toNumber(spo2), 100),
+      respiratoryRate: clamp(toNumber(respiratoryRate), 80),
+      activeCalories: clamp(toNumber(activeCalories), 10_000),
       sleepStages: sleepStagesData,
       notes,
       emotionTags,
@@ -592,6 +621,8 @@ export default function CheckInScreen() {
           onPress={() => router.back()}
           style={styles.stepCloseBtn}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel check-in"
         >
           <Ionicons name="close" size={24} color={t.text} />
         </TouchableOpacity>

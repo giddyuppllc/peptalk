@@ -42,10 +42,16 @@ interface ManifestEntry {
   slug: string;
   objectKey: string;
   captionKey?: string;
+  /** Cloudflare Stream UID — set once the video has been migrated to
+   *  Stream via migrate-video-to-stream. When present, this signer
+   *  mints a Stream HLS signed URL and ignores objectKey. */
+  streamUid?: string;
 }
 const ALLOWED_KEYS = new Map<string, ManifestEntry>();
 for (const v of manifest as ManifestEntry[]) {
-  if (v.slug && v.objectKey) ALLOWED_KEYS.set(v.slug, v);
+  // Accept either an objectKey (R2 legacy path) OR a streamUid (Stream
+  // migrated). At least one must be present for the entry to be playable.
+  if (v.slug && (v.objectKey || v.streamUid)) ALLOWED_KEYS.set(v.slug, v);
 }
 
 const SIGN_TTL_SEC = 6 * 60 * 60; // 6 hours
@@ -113,7 +119,19 @@ Deno.serve(async (req: Request) => {
       .filter(Boolean)
       .includes(userEmail);
 
-  if (!isPro && !taggerOverride) {
+  // Beta-tester bypass — same pattern as food-scan / aimee-pantry-scan.
+  // Test users on free tier get video access so they can validate the
+  // player + content without paying. Set BETA_TESTER_EMAILS in secrets
+  // as a comma-separated list.
+  const isBetaTester =
+    !!userEmail &&
+    (Deno.env.get('BETA_TESTER_EMAILS') ?? '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean)
+      .includes(userEmail);
+
+  if (!isPro && !taggerOverride && !isBetaTester) {
     return json({ error: 'Workout videos require PepTalk Pro' }, 403);
   }
 
@@ -136,8 +154,22 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Unknown video slug' }, 404);
   }
 
-  // 4. Sign — main video URL + optional captions URL.
+  // 4. Sign — Stream HLS URL when available, else legacy R2 GET URL.
   try {
+    // Stream-first: if the entry has been migrated to Cloudflare Stream,
+    // mint a signed JWT and return the HLS manifest URL. expo-av plays
+    // HLS natively, and Stream gives us adaptive bitrate + thumbnails.
+    if (entry.streamUid) {
+      const { signStreamToken, streamHlsUrl } = await import('../_shared/streamSign.ts');
+      const token = await signStreamToken(entry.streamUid, SIGN_TTL_SEC);
+      return json({
+        url: streamHlsUrl(entry.streamUid, token),
+        source: 'cloudflare-stream',
+        expiresInSec: SIGN_TTL_SEC,
+      });
+    }
+
+    // Legacy R2 path — kept until every manifest entry has streamUid.
     const bucket = Deno.env.get('R2_BUCKET') ?? 'peptalktraining';
     const url = await getSignedUrl(
       s3(),
@@ -157,7 +189,12 @@ Deno.serve(async (req: Request) => {
         console.warn('[get-workout-video] caption sign failed:', err);
       }
     }
-    return json({ url, captionUrl, expiresInSec: SIGN_TTL_SEC });
+    return json({
+      url,
+      captionUrl,
+      source: 'r2',
+      expiresInSec: SIGN_TTL_SEC,
+    });
   } catch (err) {
     console.error('[get-workout-video] sign failed:', err);
     return json({ error: 'Failed to sign URL' }, 500);

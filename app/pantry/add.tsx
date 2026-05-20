@@ -10,7 +10,7 @@
  * "voice input" is a text field the user can dictate into.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,12 @@ import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/th
 import { usePantryStore, type StorageLocation } from '../../src/store/usePantryStore';
 import { useFeatureGate } from '../../src/hooks/useFeatureGate';
 import { supabase } from '../../src/services/supabase';
+import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
+
+const NL_ALLOWED_PANTRY_UNITS = new Set([
+  'each', 'oz', 'g', 'lb', 'kg', 'cup', 'tbsp', 'tsp', 'ml', 'l',
+]);
+const NL_ALLOWED_STORAGE = new Set<StorageLocation>(['fridge', 'freezer', 'pantry']);
 
 type Mode = 'manual' | 'voice' | 'barcode';
 
@@ -58,6 +64,14 @@ export default function AddPantryScreen() {
   // Voice/NL state
   const [nlText, setNlText] = useState('');
   const [nlLoading, setNlLoading] = useState(false);
+
+  // aimee-pantry-parse can take 5-15s. Guard post-await setState so the
+  // screen can be backed out mid-call without leaking state.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const resetManual = () => {
     setName('');
@@ -104,8 +118,9 @@ export default function AddPantryScreen() {
       const { data, error } = await supabase.functions.invoke('aimee-pantry-parse', {
         body: { text },
       });
+      if (!mountedRef.current) return;
       if (error) throw error;
-      const items = (data?.items ?? []) as Array<{
+      const items = (data?.items ?? []) as {
         name?: string;
         brand?: string | null;
         quantity?: number;
@@ -114,28 +129,74 @@ export default function AddPantryScreen() {
         storageLocation?: StorageLocation;
         expiryDate?: string | null;
         notes?: string | null;
-      }>;
+        nutrition?: {
+          perServing: {
+            calories: number;
+            proteinGrams: number;
+            carbsGrams: number;
+            fatGrams: number;
+            fiberGrams?: number;
+          };
+          servingLabel?: string;
+        };
+      }[];
       if (items.length === 0) {
         Alert.alert('Nothing parsed', 'Try rephrasing — include quantity, name, and where it\'s stored.');
         setNlLoading(false);
         return;
       }
       let added = 0;
-      for (const item of items) {
-        if (!item.name) continue;
+      // Cap LLM-emitted items array at 50 (same as the chat add_to_pantry
+      // path). Clamp each field — natural-language parsing is just as
+      // hallucination-prone as the chat tool, so this surface gets the
+      // same defense.
+      for (const item of items.slice(0, 50)) {
+        const name = clampString(item.name, 120);
+        if (!name) continue;
+        const rawQty = Number(item.quantity);
+        const quantity = Number.isFinite(rawQty) && rawQty > 0
+          ? Math.min(Math.round(rawQty * 100) / 100, 10000)
+          : 1;
+        const unitRaw = typeof item.unit === 'string' ? item.unit.toLowerCase() : '';
+        const unit = NL_ALLOWED_PANTRY_UNITS.has(unitRaw) ? unitRaw : 'each';
+        const storageRaw = typeof item.storageLocation === 'string'
+          ? item.storageLocation.toLowerCase()
+          : '';
+        const storageLocation: StorageLocation = NL_ALLOWED_STORAGE.has(storageRaw as StorageLocation)
+          ? (storageRaw as StorageLocation)
+          : 'pantry';
+        const safeNutrition = item.nutrition?.perServing
+          ? {
+              perServing: {
+                calories: clamp(item.nutrition.perServing.calories, 3000),
+                proteinGrams: clamp(item.nutrition.perServing.proteinGrams, 300),
+                carbsGrams: clamp(item.nutrition.perServing.carbsGrams, 500),
+                fatGrams: clamp(item.nutrition.perServing.fatGrams, 300),
+                fiberGrams: clamp(item.nutrition.perServing.fiberGrams, 100),
+              },
+              servingLabel: item.nutrition.servingLabel
+                ? clampString(item.nutrition.servingLabel, 40)
+                : undefined,
+            }
+          : undefined;
+        const expiryRaw = typeof item.expiryDate === 'string' ? item.expiryDate : '';
+        const expiryDate = /^\d{4}-\d{2}-\d{2}$/.test(expiryRaw) ? expiryRaw : undefined;
         addItem({
-          name: item.name,
-          brand: item.brand ?? undefined,
-          quantity: item.quantity && item.quantity > 0 ? item.quantity : 1,
-          unit: item.unit ?? 'each',
-          category: item.category ?? undefined,
-          storageLocation: (['fridge', 'freezer', 'pantry'] as const).includes(
-            item.storageLocation as StorageLocation,
-          )
-            ? (item.storageLocation as StorageLocation)
-            : 'pantry',
-          expiryDate: item.expiryDate ?? undefined,
-          notes: item.notes ?? undefined,
+          name,
+          brand: typeof item.brand === 'string'
+            ? clampString(item.brand, 80) || undefined
+            : undefined,
+          quantity,
+          unit,
+          category: typeof item.category === 'string'
+            ? clampString(item.category, 40) || undefined
+            : undefined,
+          storageLocation,
+          expiryDate,
+          notes: typeof item.notes === 'string'
+            ? clampString(item.notes, 200) || undefined
+            : undefined,
+          nutrition: safeNutrition,
         });
         added++;
       }
@@ -143,6 +204,7 @@ export default function AddPantryScreen() {
         { text: 'Done', onPress: () => router.back() },
       ]);
     } catch (err: any) {
+      if (!mountedRef.current) return;
       const msg = err?.message ?? 'Could not parse. Try manual entry.';
       if (msg.includes('Pro tier') || msg.includes('Plus or Pro')) {
         Alert.alert(
@@ -153,7 +215,7 @@ export default function AddPantryScreen() {
         Alert.alert('Parse failed', msg);
       }
     } finally {
-      setNlLoading(false);
+      if (mountedRef.current) setNlLoading(false);
     }
   };
 

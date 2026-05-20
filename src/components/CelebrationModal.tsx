@@ -69,7 +69,8 @@ export function CelebrationModal() {
 
   return (
     <Modal visible transparent animationType="fade">
-      <View style={styles.overlay}>
+      {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
+      <View style={styles.overlay} accessibilityViewIsModal={true}>
         <Confetti
           visible
           onComplete={() => {

@@ -23,7 +23,7 @@ type NetInfoModule = {
 
 let NetInfo: NetInfoModule | null = null;
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   const mod = require('@react-native-community/netinfo');
   NetInfo = (mod?.default ?? mod) as NetInfoModule;
 } catch {

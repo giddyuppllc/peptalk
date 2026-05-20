@@ -11,7 +11,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
-const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL') ?? 'grok-4-1-fast-reasoning';
+const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL') ?? 'grok-4.3';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -64,8 +64,8 @@ Deno.serve(async (req) => {
       return json({ error: 'Pro tier required', upgrade: true }, 403);
     }
 
-    // Rate limit — 20 recipes/day per user. Cost control against spam.
-    const rateLimit = await checkRateLimit(supabase, user.id, 'aimee-recipe', 20);
+    // Rate limit — 10 recipes/day per user (locked). ~$0.0015/call.
+    const rateLimit = await checkRateLimit(supabase, user.id, 'aimee-recipe', 10);
     if (!rateLimit.allowed) {
       return json({
         error: `Daily recipe limit reached (${rateLimit.limit}/day). Resets tomorrow.`,
@@ -178,48 +178,27 @@ async function checkRateLimit(
   functionName: string,
   limit: number,
 ): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number }> {
-  const today = new Date().toISOString().slice(0, 10);
+  // Atomic via bump_ai_usage RPC (2026-05-17 audit fix).
   try {
-    const { data: existing } = await supabase
-      .from('ai_usage_log')
-      .select('count')
-      .eq('user_id', userId)
-      .eq('function_name', functionName)
-      .eq('date', today)
-      .maybeSingle();
-
-    const count = existing?.count ?? 0;
-    if (count >= limit) {
-      // Seconds until midnight UTC — good-enough retry-after hint.
+    const today = new Date().toISOString().slice(0, 10);
+    const { data, error } = await supabase.rpc('bump_ai_usage', {
+      p_user_id: userId,
+      p_function_name: functionName,
+      p_date: today,
+    });
+    if (error) throw error;
+    const newCount = Array.isArray(data) && data[0]
+      ? (data[0] as any).count ?? 0
+      : 0;
+    if (newCount > limit) {
       const now = new Date();
       const tomorrow = new Date(now);
       tomorrow.setUTCHours(24, 0, 0, 0);
       const retryAfter = Math.max(1, Math.round((tomorrow.getTime() - now.getTime()) / 1000));
-      return { allowed: false, limit, count, retryAfter };
+      return { allowed: false, limit, count: newCount, retryAfter };
     }
-
-    // Increment — upsert with count+1
-    await supabase
-      .from('ai_usage_log')
-      .upsert(
-        {
-          user_id: userId,
-          function_name: functionName,
-          date: today,
-          count: count + 1,
-          last_called_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,function_name,date' },
-      );
-    return { allowed: true, limit, count: count + 1 };
+    return { allowed: true, limit, count: newCount };
   } catch (err) {
-    // Fail open — if the rate-limit table is unreachable, we'd rather
-    // serve the call than strand a paying user. Log and proceed.
-    // Fail CLOSED. If we can't reach ai_usage_log we cannot enforce the
-    // per-user cap, and the function fans out to the LLM/vision provider —
-    // unlimited spam quickly translates to real money. Better to return
-    // a 503 to the caller and let them retry once the DB recovers than
-    // to leave the cost door wide open.
     console.error(`[${functionName}] rate-limit check failed; failing closed:`, err);
     return { allowed: false, limit, count: 0, retryAfter: 60, failedClosed: true };
   }

@@ -32,8 +32,13 @@ export function PeptideDisclaimerModal() {
   if (!hasHydrated || accepted) return null;
 
   return (
-    <Modal visible transparent animationType="fade">
-      <View style={styles.backdrop}>
+    // 2026-05-18 belt+suspenders: bind `visible` to the derived
+    // !accepted so a parent re-render between setAccepted(true) and
+    // this component's next render can't leave the Modal stuck
+    // mid-animation (Android RN Modal z-order edge case).
+    <Modal visible={!accepted} transparent animationType="fade" onRequestClose={() => { /* gate dismiss to the button */ }}>
+      {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
+      <View style={styles.backdrop} accessibilityViewIsModal={true}>
         <View style={[styles.card, { backgroundColor: t.bg }]}>
           {/* Icon */}
           <LinearGradient

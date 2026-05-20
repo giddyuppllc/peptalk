@@ -6,6 +6,13 @@ import { NotificationPreferences } from '../types';
 // ─── Store Interface ─────────────────────────────────────────────────────────
 
 interface NotificationStore {
+  /** Whether persist has finished rehydrating. The boot-time
+   *  scheduler at app/_layout.tsx MUST gate any
+   *  scheduleNotificationAsync call on this — otherwise the in-memory
+   *  defaults (e.g. dailyCheckInReminder=true) schedule notifications
+   *  the user previously turned OFF, because the actual preferences
+   *  haven't been loaded from secureStorage yet. */
+  hasHydrated: boolean;
   preferences: NotificationPreferences;
   pushToken: string | null;
   setEnabled: (enabled: boolean) => void;
@@ -20,6 +27,8 @@ interface NotificationStore {
   setMealRemindersEnabled: (enabled: boolean) => void;
   setMealReminderTime: (meal: string, time: string) => void;
   toggleWeeklyReport: () => void;
+  setMealSafetyReminders: (enabled: boolean) => void;
+  setMealSafetyReminderTime: (time: string) => void;
 }
 
 // ─── Default Preferences ─────────────────────────────────────────────────────
@@ -36,6 +45,14 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   mealRemindersEnabled: false,
   mealReminderTimes: { breakfast: '07:00', lunch: '12:00', dinner: '18:00' },
   weeklyReportEnabled: false,
+  // §6.4 — protein nudge on by default; others off.
+  proteinDeficitNudge: true,
+  carbsDeficitNudge: false,
+  fatDeficitNudge: false,
+  fiberDeficitNudge: false,
+  // Food-safety reminder — daily 09:00 by default; safety feature, not paywall.
+  mealSafetyReminders: true,
+  mealSafetyReminderTime: '09:00',
 };
 
 // ─── Store ───────────────────────────────────────────────────────────────────
@@ -44,6 +61,7 @@ export const useNotificationStore = create<NotificationStore>()(
   persist(
     (set) => ({
       // ── Initial State ──────────────────────────────────────────────────────
+      hasHydrated: false,
       preferences: { ...DEFAULT_PREFERENCES },
       pushToken: null,
 
@@ -112,6 +130,16 @@ export const useNotificationStore = create<NotificationStore>()(
             weeklyReportEnabled: !state.preferences.weeklyReportEnabled,
           },
         })),
+
+      setMealSafetyReminders: (enabled: boolean) =>
+        set((state) => ({
+          preferences: { ...state.preferences, mealSafetyReminders: enabled },
+        })),
+
+      setMealSafetyReminderTime: (time: string) =>
+        set((state) => ({
+          preferences: { ...state.preferences, mealSafetyReminderTime: time },
+        })),
     }),
     {
       name: 'peptalk-notifications',
@@ -121,11 +149,13 @@ export const useNotificationStore = create<NotificationStore>()(
         pushToken: state.pushToken,
       }),
       onRehydrateStorage: () => (state) => {
-        if (!state) return;
         // Ensure all preference keys exist after rehydration (handles
         // migrations when new fields are added in future updates).
         useNotificationStore.setState({
-          preferences: { ...DEFAULT_PREFERENCES, ...state.preferences },
+          hasHydrated: true,
+          preferences: state
+            ? { ...DEFAULT_PREFERENCES, ...state.preferences }
+            : { ...DEFAULT_PREFERENCES },
         });
       },
     },

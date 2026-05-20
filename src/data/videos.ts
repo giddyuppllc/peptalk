@@ -3,7 +3,14 @@ import { VideoContent, VideoCategory } from '../types';
 /**
  * Video content for the Learn & Watch section.
  * Videos are hosted externally (YouTube, Vimeo) — only metadata is stored here.
- * Add entries as videos are created/sourced.
+ *
+ * Entries with `videoUrl` containing the `PLACEHOLDER_*` token are
+ * pre-release stubs (script + thumbnail + metadata are ready, the
+ * filming is in progress). They're marked `comingSoon: true` so the
+ * Learn index shows a badge and the detail screen surfaces a friendly
+ * "Coming soon" message rather than dropping the user into a broken
+ * YouTube link. Once a video ships, set `comingSoon: false` (or remove
+ * the field) and replace the URL.
  */
 export const VIDEOS: VideoContent[] = [
   {
@@ -18,6 +25,7 @@ export const VIDEOS: VideoContent[] = [
     tags: ['reconstitution', 'bac water', 'mixing', 'beginner', 'how-to'],
     relatedPeptideIds: ['bpc-157', 'tb-500', 'ipamorelin', 'cjc-1295'],
     featured: true,
+    comingSoon: true,
     publishedAt: '2025-02-10',
   },
   {
@@ -32,6 +40,7 @@ export const VIDEOS: VideoContent[] = [
     tags: ['injection', 'subcutaneous', 'technique', 'beginner', 'safety'],
     relatedPeptideIds: ['semaglutide', 'bpc-157', 'tirzepatide'],
     featured: false,
+    comingSoon: true,
     publishedAt: '2025-02-18',
   },
   {
@@ -46,6 +55,7 @@ export const VIDEOS: VideoContent[] = [
     tags: ['peptides', 'beginner', 'introduction', 'amino acids', 'education'],
     relatedPeptideIds: ['bpc-157', 'semaglutide', 'ghk-cu', 'epithalon'],
     featured: true,
+    comingSoon: true,
     publishedAt: '2025-01-20',
   },
   {
@@ -60,6 +70,7 @@ export const VIDEOS: VideoContent[] = [
     tags: ['GLP-1', 'semaglutide', 'tirzepatide', 'weight loss', 'metabolic health'],
     relatedPeptideIds: ['semaglutide', 'tirzepatide'],
     featured: true,
+    comingSoon: true,
     publishedAt: '2025-03-01',
   },
   {
@@ -73,6 +84,7 @@ export const VIDEOS: VideoContent[] = [
     duration: '14:18',
     tags: ['growth hormone', 'CJC-1295', 'ipamorelin', 'GHRP', 'secretagogues'],
     relatedPeptideIds: ['cjc-1295', 'ipamorelin'],
+    comingSoon: true,
     publishedAt: '2025-02-05',
   },
   {
@@ -86,6 +98,7 @@ export const VIDEOS: VideoContent[] = [
     duration: '20:41',
     tags: ['clinical trials', 'research', 'FDA', 'therapeutics', '2025'],
     relatedPeptideIds: ['semaglutide', 'tirzepatide', 'thymosin-alpha-1', 'bpc-157'],
+    comingSoon: true,
     publishedAt: '2025-03-05',
   },
   {
@@ -99,6 +112,7 @@ export const VIDEOS: VideoContent[] = [
     duration: '16:53',
     tags: ['lab testing', 'HPLC', 'mass spectrometry', 'COA', 'purity'],
     relatedPeptideIds: ['bpc-157', 'tb-500', 'semaglutide'],
+    comingSoon: true,
     publishedAt: '2025-01-28',
   },
   {
@@ -112,6 +126,7 @@ export const VIDEOS: VideoContent[] = [
     duration: '22:10',
     tags: ['weight loss', 'GLP-1', 'success story', 'journey', 'personal experience'],
     relatedPeptideIds: ['semaglutide', 'tirzepatide'],
+    comingSoon: true,
     publishedAt: '2025-02-22',
   },
   {
@@ -125,6 +140,7 @@ export const VIDEOS: VideoContent[] = [
     duration: '17:36',
     tags: ['recovery', 'BPC-157', 'TB-500', 'injury', 'athlete', 'healing'],
     relatedPeptideIds: ['bpc-157', 'tb-500', 'ghk-cu'],
+    comingSoon: true,
     publishedAt: '2025-01-15',
   },
 ];

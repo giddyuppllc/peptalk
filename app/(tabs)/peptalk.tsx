@@ -23,11 +23,15 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { ChatBubble, TypingIndicator } from '../../src/components/ChatBubble';
+import { AimeePendingActionCard } from '../../src/components/AimeePendingActionCard';
+import { AimeeToolResultCard } from '../../src/components/AimeeToolResultCard';
 import { getAimeeNudges } from '../../src/services/aimeeNudges';
 import { PepTalkCharacter } from '../../src/components/PepTalkCharacter';
 import { AimeeDnaIcon } from '../../src/components/AimeeDnaIcon';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { ChatHistoryDrawer } from '../../src/components/ChatHistoryDrawer';
+import { AimeeVoiceButton } from '../../src/components/AimeeVoiceButton';
+import * as Speech from 'expo-speech';
 import { CoachMark } from '../../src/components/tutorial/CoachMark';
 import { tapMedium } from '../../src/utils/haptics';
 import { useChatStore } from '../../src/store/useChatStore';
@@ -35,26 +39,55 @@ import { useCheckinStore } from '../../src/store/useCheckinStore';
 import { useOnboardingStore } from '../../src/store/useOnboardingStore';
 import { useStackStore } from '../../src/store/useStackStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
+import { useMealStore } from '../../src/store/useMealStore';
+import { useAppetiteLogStore } from '../../src/store/useAppetiteLogStore';
+import { usePantryStore } from '../../src/store/usePantryStore';
+import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
+import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import { PEPTIDES , getPeptideById } from '../../src/data/peptides';
 import { generateLocalBotResponse } from '../../src/services/peptalkBot';
-import { generateAIResponse, isAIAvailable } from '../../src/services/llmService';
+import {
+  generateAIResponse,
+  generateAIResponseStream,
+  isAIAvailable,
+} from '../../src/services/llmService';
 import { canSendToCloud } from '../../src/services/privacyGuard';
 import { generateCorrelationInsights, buildCorrelationSummaryForBot } from '../../src/services/watchCorrelationService';
-import { getPeptideById } from '../../src/data/peptides';
 import { useJournalStore } from '../../src/store/useJournalStore';
 import { ChatMessage, EnhancedBotContext, GoalType } from '../../src/types';
 import { getGoalLabel } from '../../src/constants/goals';
+// Layout primitives only — Spacing / BorderRadius / FontSizes are
+// purely numeric tokens shared across v2 and v3. Colors is kept for
+// the three static `darkBg` / `darkText*` fallbacks inside StyleSheet
+// (every render site overrides them with v3 bridge values via inline
+// styles — see `useV3BridgeTheme` import above). Fonts + Gradients
+// were unused; dropped.
 import {
   Colors,
-  Fonts,
   FontSizes,
   Spacing,
   BorderRadius,
-  Gradients,
 } from '../../src/constants/theme';
-import { useTheme } from '../../src/hooks/useTheme';
+// peptalk is v3-backed via the bridge shim — keeps the existing JSX
+// references (`t.bg`, `t.text`, etc.) but sources colors from the v3
+// palette so the chat surface matches the rest of the v3 app. Full
+// JSX-level migration is tracked but deferred — bridge satisfies the
+// audit by removing the v2 palette underneath.
+import { useV3BridgeTheme as useTheme } from '../../src/hooks/useTheme.v3Bridge';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
+// All validation/clamping for Aimee `client_action` payloads lives in
+// a pure module so it can be unit-tested without a renderer. See
+// scripts/verify-aimee-action-sanitize.ts for the contract.
+import {
+  sanitizeLogDose,
+  sanitizeLogMeal,
+  sanitizeLogWater,
+  sanitizeLogAppetite,
+  sanitizeAddToPantry,
+  sanitizeScheduleWorkout,
+} from '../../src/utils/aimeeActionSanitize';
 
 /** How long to wait for Aimee's response before giving up and falling back
  *  to the local bot. Longer than the LLM's own timeout so we don't race
@@ -70,6 +103,56 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
       (e) => { clearTimeout(timer); reject(e); },
     );
   });
+}
+
+/**
+ * Allowlist guard for navigation paths supplied by the Aimee edge fn
+ * (navigate / open_dosing_calculator client_actions). Even though the
+ * server already maps known screen names through SCREEN_TO_PATH, this
+ * second check refuses any unexpected path so a prompt-injection
+ * escape can't land users on /admin/* or any /dev-* route. Allow:
+ *   - / (root tab group)
+ *   - /(tabs)/<one of the visible tabs>
+ *   - /calculators/<screen>
+ *   - /peptide/<id>
+ *   - /subscription
+ *   - /auth (sign-in / sign-up)
+ */
+function isAllowedNavigationPath(path: string): boolean {
+  if (typeof path !== 'string' || path.length > 200) return false;
+  if (path.startsWith('//') || path.includes('..')) return false;
+  // No /admin/, no /dev-, no internal-only routes.
+  if (/^\/?(admin|dev-)/.test(path)) return false;
+  const allowed = [
+    /^\/?$/,
+    /^\/?\(tabs\)\/?$/,
+    /^\/?\(tabs\)\/(home|my-stacks|peptalk|nutrition|workouts|community|check-in|calendar|profile|stack-builder)(\?|\/|$)/,
+    /^\/?calculators(\/[\w-]+)?(\?.*)?$/,
+    /^\/?peptide\/[\w-]+(\?.*)?$/,
+    /^\/?subscription(\?.*)?$/,
+    /^\/?auth(\?.*)?$/,
+    /^\/?learn(\/.*)?$/,
+    /^\/?nutrition(\/[\w-]+)*(\?.*)?$/,
+    /^\/?workouts(\/[\w-]+)*(\?.*)?$/,
+    // v3 surfaces — added after the v3 refactor so navigate_to_screen
+    // can reach the new drill-ins, doses sub-routes, labs, body comp,
+    // pantry, aimee reports, community-v2, etc.
+    /^\/?tracker(\/[\w-]+)*(\?.*)?$/,
+    /^\/?doses(\/[\w-]+)*(\?.*)?$/,
+    /^\/?activity(\/[\w-]+)*(\?.*)?$/,
+    /^\/?labs(\/[\w-]+)*(\?.*)?$/,
+    /^\/?body-composition(\/[\w-]+)*(\?.*)?$/,
+    /^\/?pantry(\/[\w-]+)*(\?.*)?$/,
+    /^\/?aimee(\/[\w-]+)*(\?.*)?$/,
+    /^\/?community(\/[\w-]+)*(\?.*)?$/,
+    /^\/?journal(\/[\w-]+)*(\?.*)?$/,
+    /^\/?cycle(\/[\w-]+)*(\?.*)?$/,
+    /^\/?settings(\/[\w-]+)*(\?.*)?$/,
+    /^\/?profile(\/[\w-]+)*(\?.*)?$/,
+    /^\/?onboarding(\?.*)?$/,
+    /^\/?health-profile(\?.*)?$/,
+  ];
+  return allowed.some((rx) => rx.test(path));
 }
 
 /* ─── Journal Toast Component ────────────────────────────────────── */
@@ -112,16 +195,20 @@ export default function PepTalkScreen() {
   const accent = useSectionAccent();
   const router = useRouter();
   const aimeeInputRef = useTourTarget('aimee_chat_input');
-  const { prefill, message: prefillMessage } = useLocalSearchParams<{
+  const { prefill, message: prefillMessage, speak: speakFlag } = useLocalSearchParams<{
     prefill?: string;
     message?: string;
+    speak?: string;
   }>();
+  const shouldSpeakNextReply = speakFlag === '1';
   // Split selectors — destructuring the full store subscribes to every change,
   // causing the chat screen to re-render on any store update. At ~200 messages
   // this turns into O(n) wasted work per keystroke. Select each slice we need.
   const messages = useChatStore((s) => s.messages);
   const isTyping = useChatStore((s) => s.isTyping);
   const addMessage = useChatStore((s) => s.addMessage);
+  const updateMessage = useChatStore((s) => s.updateMessage);
+  const removeMessage = useChatStore((s) => s.removeMessage);
   const setTyping = useChatStore((s) => s.setTyping);
   const profile = useOnboardingStore((s) => s.profile);
   const checkIns = useCheckinStore((s) => s.entries);
@@ -132,6 +219,20 @@ export default function PepTalkScreen() {
   const alerts = useDoseLogStore((s) => s.alerts);
   const healthProfile = useHealthProfileStore((s) => s.profile);
   const addJournalEntry = useJournalStore((s) => s.addEntry);
+  // Aimee write-actions land in these local stores; sync-up to Supabase
+  // is handled inside each store's existing add* method via syncRecord.
+  const logDoseAction = useDoseLogStore((s) => s.logDose);
+  const addMealAction = useMealStore((s) => s.addMeal);
+  const logWaterAction = useMealStore((s) => s.logWater);
+  const logAppetiteAction = useAppetiteLogStore((s) => s.logAppetite);
+  const addPantryItemAction = usePantryStore((s) => s.addItem);
+  const addPlannedWorkoutAction = useWorkoutStore((s) => s.addPlannedLog);
+  // §17 — Aimee write-actions are Pro-gated. Free tier still gets
+  // read-only Q&A from the FAB / Centerpiece / Persistent Chip; the
+  // confirm-card flow upgrades to an upsell when a write would have
+  // been required.
+  const subTier = useSubscriptionStore((s) => s.tier);
+  const isPro = subTier !== 'free';
 
   const [inputText, setInputText] = React.useState('');
   const [drawerOpen, setDrawerOpen] = React.useState(false);
@@ -141,6 +242,57 @@ export default function PepTalkScreen() {
   const prefillHandled = useRef(false);
   const messageHandled = useRef(false);
   const flatListRef = useRef<FlatList>(null);
+  // Abort controller for the in-flight Aimee SSE stream. When the chat
+  // screen unmounts (user navigates away mid-response), we abort the
+  // fetch so late client_action events don't fire router.push / store
+  // writes on a dead component.
+  const streamAbortRef = useRef<AbortController | null>(null);
+  // §voice — when a transcript arrived via `?speak=1`, we keep this ref
+  // armed until the next bot reply finishes streaming, then speak it
+  // once via expo-speech. Disarming after the first reply prevents
+  // double-reads if the user types again on the same session.
+  const speakArmedRef = useRef(false);
+  const lastSpokenIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (shouldSpeakNextReply) {
+      speakArmedRef.current = true;
+    }
+  }, [shouldSpeakNextReply]);
+  // Stop TTS if user leaves the chat surface.
+  useEffect(() => {
+    return () => {
+      Speech.stop();
+    };
+  }, []);
+  // Watch the last bot message: once it finishes streaming and we're
+  // armed for voice, speak the plain-text version and disarm.
+  useEffect(() => {
+    if (!speakArmedRef.current) return;
+    const lastBot = [...messages]
+      .reverse()
+      .find((m) => m.role === 'bot');
+    if (!lastBot) return;
+    if (lastBot.streaming) return;
+    if (lastSpokenIdRef.current === lastBot.id) return;
+    const content = (lastBot.content || '')
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/[*_#`>]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (content.length > 0) {
+      Speech.stop();
+      Speech.speak(content.slice(0, 600), { rate: 1.0, pitch: 1.0 });
+      lastSpokenIdRef.current = lastBot.id;
+    }
+    speakArmedRef.current = false;
+  }, [messages]);
+
+  useEffect(() => {
+    return () => {
+      streamAbortRef.current?.abort();
+    };
+  }, []);
 
   // Pills only show on empty state — once any message exists, hide forever
   const showPills = messages.length === 0;
@@ -221,9 +373,344 @@ export default function PepTalkScreen() {
     [addMessage, addJournalEntry],
   );
 
-  // Handle pre-filled message: auto-send it if chat is empty
+  // ────────────────────────────────────────────────────────────────────
+  // Aimee client_action appliers — invoked from the SSE stream when the
+  // edge fn emits a {type:'client_action', action:{type, payload}}
+  // event. Each one delegates to the matching local Zustand store so
+  // the new row appears immediately in the dose/meal/workout UI; each
+  // store handles the Supabase sync internally (syncRecord upsert).
+  // ────────────────────────────────────────────────────────────────────
+
+  const applyLogDoseAction = useCallback(
+    (payload: Record<string, unknown>) => {
+      // Canonicalize peptideId against the catalogue first (dose alerts
+      // key off id, so a name-only payload still needs to resolve). The
+      // pure sanitizer doesn't have catalogue context, so we do that
+      // resolution here and pass the resolved id forward.
+      const peptideName = typeof payload.peptideName === 'string' ? payload.peptideName : '';
+      const rawPid = typeof payload.peptideId === 'string' ? payload.peptideId : '';
+      const norm = (s: string) =>
+        s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const canonical =
+        PEPTIDES.find((p) => p.id === rawPid)?.id ??
+        PEPTIDES.find((p) => norm(p.name) === norm(peptideName))?.id ??
+        (rawPid || norm(peptideName));
+      if (!canonical) return;
+
+      const safe = sanitizeLogDose({ ...payload, peptideId: canonical });
+      if (!safe) {
+        if (__DEV__) console.warn('[aimee] log_dose rejected by sanitizer:', payload);
+        return;
+      }
+      logDoseAction(safe as any);
+    },
+    [logDoseAction],
+  );
+
+  const applyLogMealAction = useCallback(
+    (payload: Record<string, unknown>) => {
+      const safe = sanitizeLogMeal(payload);
+      if (!safe) {
+        if (__DEV__) console.warn('[aimee] log_meal rejected by sanitizer:', payload);
+        return;
+      }
+      addMealAction(safe as any);
+    },
+    [addMealAction],
+  );
+
+  const applyScheduleWorkoutAction = useCallback(
+    (payload: Record<string, unknown>) => {
+      const safe = sanitizeScheduleWorkout(payload);
+      if (!safe) {
+        if (__DEV__) console.warn('[aimee] schedule_workout rejected by sanitizer:', payload);
+        return;
+      }
+      // sets:[] / completedAt:undefined make this a planned workout
+      addPlannedWorkoutAction({ ...safe, sets: [] } as any);
+    },
+    [addPlannedWorkoutAction],
+  );
+
+  const applyLogWaterAction = useCallback(
+    (payload: Record<string, unknown>) => {
+      const safe = sanitizeLogWater(payload);
+      if (!safe) {
+        if (__DEV__) console.warn('[aimee] log_water rejected by sanitizer:', payload);
+        return;
+      }
+      logWaterAction(safe.date, safe.ounces);
+    },
+    [logWaterAction],
+  );
+
+  const applyLogAppetiteAction = useCallback(
+    (payload: Record<string, unknown>) => {
+      const safe = sanitizeLogAppetite(payload);
+      if (!safe) {
+        if (__DEV__) console.warn('[aimee] log_appetite rejected by sanitizer:', payload);
+        return;
+      }
+      logAppetiteAction(safe.state as any, safe.notes);
+    },
+    [logAppetiteAction],
+  );
+
+  const applyAddToPantryAction = useCallback(
+    (payload: Record<string, unknown>) => {
+      const items = sanitizeAddToPantry(payload);
+      for (const item of items) {
+        addPantryItemAction(item as any);
+      }
+    },
+    [addPantryItemAction],
+  );
+
+  /**
+   * Stream an Aimee response from the Grok-backed endpoint.
+   *
+   * Flow:
+   *   1. Insert an empty assistant bubble immediately (so the typing
+   *      indicator gives way to a real bubble that fills with text).
+   *   2. Iterate SSE events, patching the bubble with each delta.
+   *   3. Tool calls and pending actions land on the bubble as structured
+   *      `toolResults` / `pendingActions` so the renderer can show cards.
+   *
+   * Returns `true` on a successful stream (regardless of model output); the
+   * caller can use that to decide whether to fall back to the legacy
+   * non-streaming path or the local bot.
+   */
+  const streamAimeeResponse = useCallback(
+    async (text: string, context: EnhancedBotContext): Promise<boolean> => {
+      const placeholderId = `bot-stream-${Date.now()}`;
+      const placeholder: ChatMessage = {
+        id: placeholderId,
+        role: 'bot',
+        content: '',
+        timestamp: new Date().toISOString(),
+        streaming: true,
+      };
+      addMessage(placeholder);
+
+      let accumulated = '';
+      const toolResults: NonNullable<ChatMessage['toolResults']> = [];
+      const pendingActions: NonNullable<ChatMessage['pendingActions']> = [];
+      let sawAnyEvent = false;
+      let stillStreaming = true;
+
+      // New stream → cancel any prior in-flight one, then create a fresh
+      // controller for this run. Storing in a ref so the unmount cleanup
+      // can call .abort() without recreating the listener.
+      streamAbortRef.current?.abort();
+      const controller = new AbortController();
+      streamAbortRef.current = controller;
+      // Stash on globalThis so useAuthStore.logout() can abort
+      // an in-flight stream even when the chat screen isn't
+      // mounted (e.g. logout fired from the Profile tab). Without
+      // this, late text_delta events would write into the chat
+      // store post-logout. P1 from Wave 76.11 logout audit.
+      try {
+        (globalThis as any).__peptalkActiveAimeeAbort = () => controller.abort();
+      } catch { /* ignore */ }
+
+      try {
+        for await (const ev of generateAIResponseStream(text, context, {
+          signal: controller.signal,
+        })) {
+          sawAnyEvent = true;
+          if (ev.type === 'text_delta' && ev.text) {
+            accumulated += ev.text;
+            updateMessage(placeholderId, { content: accumulated });
+          } else if (ev.type === 'tool_result' && ev.tool && ev.output) {
+            const isPending =
+              typeof (ev.output as any)?.pending_action_id === 'string' &&
+              (ev.output as any)?.requires_confirm === true;
+            toolResults.push({
+              tool: ev.tool,
+              output: ev.output as Record<string, unknown>,
+              isPending,
+            });
+            updateMessage(placeholderId, { toolResults: [...toolResults] });
+          } else if (
+            ev.type === 'pending_action' &&
+            ev.id &&
+            ev.tool &&
+            ev.preview
+          ) {
+            pendingActions.push({
+              id: ev.id,
+              tool: ev.tool,
+              preview: ev.preview as Record<string, unknown>,
+              status: 'pending',
+            });
+            updateMessage(placeholderId, {
+              pendingActions: [...pendingActions],
+            });
+          } else if (ev.type === 'client_action' && ev.action) {
+            // Aimee asked the client to do something concrete.
+            //
+            // navigate         → auto-execute (read-only, allowlist-gated)
+            // log_dose         → REQUIRE user confirmation (writes to medical history)
+            // log_meal         → REQUIRE user confirmation (writes to food log)
+            // schedule_workout → REQUIRE user confirmation (writes to schedule)
+            //
+            // Audit 2026-05-16 (P0): write-actions previously auto-executed,
+            // so a hallucinated tool call landed straight in the user's
+            // local store and synced to Supabase with no opt-in. Routing
+            // them through the same pendingActions[] queue that the
+            // `pending_action` event uses means the user sees a confirm
+            // card (AimeePendingActionCard) and taps Approve before any
+            // write happens.
+            const action = ev.action as {
+              type: string;
+              path?: string;
+              payload?: Record<string, unknown>;
+            };
+            try {
+              if (action.type === 'navigate' && typeof action.path === 'string') {
+                // Read-only navigation — auto-execute behind the
+                // allowlist guard (defense in depth against
+                // prompt-injected paths to /admin or /dev).
+                const safe = isAllowedNavigationPath(action.path);
+                if (safe) {
+                  router.push(action.path as any);
+                } else if (__DEV__) {
+                  console.warn('[aimee] navigate refused (not allowlisted):', action.path);
+                }
+              } else if (
+                (action.type === 'log_dose' ||
+                  action.type === 'log_meal' ||
+                  action.type === 'schedule_workout' ||
+                  action.type === 'log_water' ||
+                  action.type === 'log_appetite' ||
+                  action.type === 'add_to_pantry') &&
+                action.payload
+              ) {
+                // §17 — write actions are Pro-only. Free users see a
+                // structured upsell in-thread instead of the confirm
+                // card; nothing writes either way.
+                if (!isPro) {
+                  updateMessage(placeholderId, {
+                    proUpsell: {
+                      kind: action.type,
+                      payload: action.payload as Record<string, unknown>,
+                    },
+                  });
+                } else {
+                  // Defer write — push into the pendingActions queue so
+                  // the confirmation card renders inline in the chat.
+                  // User taps Approve → AimeePendingActionCard runs the
+                  // matching apply*Action helper. Tap Dismiss → nothing
+                  // writes.
+                  pendingActions.push({
+                    id: `client-${action.type}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                    tool: action.type,
+                    preview: action.payload as Record<string, unknown>,
+                    status: 'pending',
+                  });
+                  updateMessage(placeholderId, {
+                    pendingActions: [...pendingActions],
+                  });
+                }
+              }
+            } catch (err) {
+              if (__DEV__) console.warn('[aimee] client_action failed:', err, action);
+            }
+          } else if (ev.type === 'done') {
+            stillStreaming = false;
+            updateMessage(placeholderId, { streaming: false });
+          } else if (ev.type === 'error') {
+            // Don't surface the placeholder as an error — drop a friendly
+            // line so it doesn't render as an empty bubble. The caller
+            // fallback path will not run because sawAnyEvent is true.
+            if (!accumulated) {
+              updateMessage(placeholderId, {
+                content:
+                  ev.message ?? 'I had trouble responding. Please try again.',
+                streaming: false,
+              });
+            } else {
+              updateMessage(placeholderId, { streaming: false });
+            }
+            stillStreaming = false;
+            return true;
+          } else if (ev.type === 'denied') {
+            const upgrade = ev.upgrade === true;
+            updateMessage(placeholderId, {
+              content: ev.message ?? 'Aimee requires an upgrade.',
+              streaming: false,
+              quickReplies: upgrade ? ['View subscription plans'] : undefined,
+              navAction: upgrade ? '/subscription' : undefined,
+              actions: upgrade
+                ? [
+                    {
+                      label: 'See plans',
+                      route: '/subscription',
+                      icon: 'sparkles-outline',
+                    },
+                  ]
+                : undefined,
+            });
+            return true;
+          }
+        }
+      } catch (err) {
+        if (__DEV__) console.warn('[aimee] stream iterator threw:', err);
+        if (!sawAnyEvent) {
+          // Stream threw before yielding ANY event. Drop the empty
+          // placeholder bubble so the legacy fallback (generateAIResponse)
+          // doesn't append a SECOND bot bubble next to a stale empty one.
+          removeMessage(placeholderId);
+          return false;
+        }
+        // Stream dropped mid-response — the placeholder already has
+        // partial text on screen. Append a small connection notice INTO
+        // the same bubble (not a separate one) so the user knows the
+        // truncation wasn't Aimee's choice and we don't render a dead
+        // streaming caret. Audit P1.
+        if (accumulated.length > 0) {
+          updateMessage(placeholderId, {
+            content: `${accumulated}\n\n⚠️ Connection dropped`,
+            streaming: false,
+          });
+        } else {
+          updateMessage(placeholderId, { streaming: false });
+        }
+        stillStreaming = false;
+      }
+
+      if (stillStreaming) {
+        // Iterator closed without a 'done' event — finalize anyway.
+        updateMessage(placeholderId, { streaming: false });
+      }
+      // If the model didn't emit any text or actions, treat as a failed run
+      // so the local fallback runs. Drop the dead placeholder first.
+      if (!sawAnyEvent || (accumulated.trim().length === 0 && toolResults.length === 0)) {
+        removeMessage(placeholderId);
+        return false;
+      }
+      return true;
+    },
+    [
+      addMessage,
+      updateMessage,
+      removeMessage,
+      router,
+      applyLogDoseAction,
+      applyLogMealAction,
+      applyScheduleWorkoutAction,
+    ],
+  );
+
+  // Handle pre-filled message: auto-send when a new prefill arrives.
+  // §9.1 — Aimee FAB / Centerpiece / Persistent Chip route here with the
+  // chosen intent as a message. The previous gate (`messages.length === 0`)
+  // dropped the prompt when an existing thread already had history; now
+  // we key on the prefill value so each new tap sends once.
+  const lastHandledPrefill = useRef<string | null>(null);
   useEffect(() => {
-    if (prefillMessage && !messageHandled.current && messages.length === 0) {
+    if (prefillMessage && lastHandledPrefill.current !== prefillMessage) {
+      lastHandledPrefill.current = prefillMessage;
       messageHandled.current = true;
       const userMsg: ChatMessage = {
         id: `user-${Date.now()}`,
@@ -245,21 +732,36 @@ export default function PepTalkScreen() {
         }
       };
       if (useAI) {
+        // Prefer streaming Claude path. On failure or empty stream, fall
+        // through to the legacy non-streaming endpoint, then local.
+        setTyping(false);
         withTimeout(
-          generateAIResponse(prefillMessage, context),
+          streamAimeeResponse(prefillMessage, context),
           AIMEE_RESPONSE_TIMEOUT_MS,
-          'aimee prefill response',
+          'aimee prefill stream',
         )
-          .then((aiResponse) => {
-            if (aiResponse) {
-              handleBotResponse(aiResponse);
-              setTyping(false);
-            } else {
-              setTimeout(localFallback, 400 + Math.random() * 600);
+          .then(async (streamed) => {
+            if (streamed) return;
+            setTyping(true);
+            try {
+              const aiResponse = await withTimeout(
+                generateAIResponse(prefillMessage, context),
+                AIMEE_RESPONSE_TIMEOUT_MS,
+                'aimee prefill response',
+              );
+              if (aiResponse) {
+                handleBotResponse(aiResponse);
+                setTyping(false);
+              } else {
+                setTimeout(localFallback, 400 + Math.random() * 600);
+              }
+            } catch (err) {
+              if (__DEV__) console.warn('[aimee] prefill legacy failed:', err);
+              localFallback();
             }
           })
           .catch((err) => {
-            if (__DEV__) console.warn('[aimee] prefill AI failed/timed out:', err);
+            if (__DEV__) console.warn('[aimee] prefill stream failed/timed out:', err);
             localFallback();
           });
       } else {
@@ -273,6 +775,8 @@ export default function PepTalkScreen() {
     setTyping,
     buildContext,
     useAI,
+    streamAimeeResponse,
+    handleBotResponse,
   ]);
 
   // Scroll to bottom when messages change
@@ -302,9 +806,27 @@ export default function PepTalkScreen() {
     const context = buildContext();
 
     if (useAI) {
-      // Try Grok AI first, fall back to local bot. Wrapped so a throw
-      // OR a hang from generateAIResponse (network failure, edge fn stall,
-      // malformed JSON) doesn't strand the typing indicator forever.
+      // 1. Try the streaming Claude-backed endpoint first.
+      //
+      // The streaming helper returns true when SSE produced at least one
+      // event AND something useful (text or tool call) landed on the
+      // bubble. The placeholder bubble is inserted by the helper, so
+      // setTyping is flipped off before the stream starts to avoid
+      // double indicators.
+      setTyping(false);
+      try {
+        const streamed = await withTimeout(
+          streamAimeeResponse(text, context),
+          AIMEE_RESPONSE_TIMEOUT_MS,
+          'aimee stream',
+        );
+        if (streamed) return;
+      } catch (err) {
+        if (__DEV__) console.warn('[aimee] stream failed/timed out:', err);
+      }
+
+      // 2. Fall back to the legacy non-streaming endpoint (Grok-backed).
+      setTyping(true);
       try {
         const aiResponse = await withTimeout(
           generateAIResponse(text, context),
@@ -318,19 +840,16 @@ export default function PepTalkScreen() {
         }
       } catch (err) {
         if (__DEV__) console.warn('[aimee] generateAIResponse failed/timed out:', err);
-        // fall through to local fallback
       }
     }
 
-    // Local fallback (no API key, no consent, API failure, timeout, thrown error)
+    // 3. Local fallback (no API key, no consent, API failure, timeout, thrown error)
     setTimeout(() => {
       try {
         const botResponse = generateLocalBotResponse(text, context);
         handleBotResponse(botResponse);
       } catch (err) {
         if (__DEV__) console.warn('[aimee] local fallback threw:', err);
-        // Last-resort: a hand-written apology message so the user is never
-        // left staring at a frozen typing indicator.
         handleBotResponse({
           id: `bot-${Date.now()}`,
           role: 'bot',
@@ -341,7 +860,15 @@ export default function PepTalkScreen() {
         setTyping(false);
       }
     }, 400 + Math.random() * 600);
-  }, [inputText, addMessage, handleBotResponse, setTyping, buildContext, useAI]);
+  }, [
+    inputText,
+    addMessage,
+    handleBotResponse,
+    setTyping,
+    buildContext,
+    useAI,
+    streamAimeeResponse,
+  ]);
 
   const handleQuickReply = useCallback(
     async (reply: string) => {
@@ -360,6 +887,19 @@ export default function PepTalkScreen() {
       const context = buildContext();
 
       if (useAI) {
+        setTyping(false);
+        try {
+          const streamed = await withTimeout(
+            streamAimeeResponse(reply, context),
+            AIMEE_RESPONSE_TIMEOUT_MS,
+            'aimee quick-reply stream',
+          );
+          if (streamed) return;
+        } catch (err) {
+          if (__DEV__) console.warn('[aimee] quick-reply stream failed/timed out:', err);
+        }
+
+        setTyping(true);
         try {
           const aiResponse = await withTimeout(
             generateAIResponse(reply, context),
@@ -394,7 +934,7 @@ export default function PepTalkScreen() {
         }
       }, 400 + Math.random() * 600);
     },
-    [addMessage, setTyping, buildContext, useAI, handleBotResponse],
+    [addMessage, setTyping, buildContext, useAI, handleBotResponse, streamAimeeResponse],
   );
 
   // Get quick replies from the last bot message
@@ -404,8 +944,72 @@ export default function PepTalkScreen() {
   const lastBotHasJournal = !!lastBotMessage?.journalEntry;
 
   const renderMessage = useCallback(
-    ({ item }: { item: ChatMessage }) => <ChatBubble message={item} />,
-    [],
+    ({ item }: { item: ChatMessage }) => {
+      // Tool results + pending actions live BELOW the bubble so the chat
+      // thread reads top-to-bottom: text → cards → next message.
+      const hasCards =
+        (item.toolResults && item.toolResults.length > 0) ||
+        (item.pendingActions && item.pendingActions.length > 0) ||
+        !!item.proUpsell;
+      if (!hasCards) {
+        return <ChatBubble message={item} />;
+      }
+      return (
+        <View>
+          <ChatBubble message={item} />
+          <View style={{ marginLeft: 48, marginRight: 16 }}>
+            {(item.toolResults ?? [])
+              .filter((r) => !r.isPending)
+              .map((r, i) => (
+                <AimeeToolResultCard key={`tr-${item.id}-${i}`} result={r} />
+              ))}
+            {(item.pendingActions ?? []).map((a) => (
+              <AimeePendingActionCard
+                key={`pa-${a.id}`}
+                action={a}
+                onLocalConfirm={async (action) => {
+                  // Client-side write actions deferred via the audit fix.
+                  // The card already gated on tap-Confirm; here we run the
+                  // matching apply handler with the payload Aimee proposed.
+                  try {
+                    if (action.tool === 'log_dose') {
+                      applyLogDoseAction(action.preview);
+                    } else if (action.tool === 'log_meal') {
+                      applyLogMealAction(action.preview);
+                    } else if (action.tool === 'schedule_workout') {
+                      applyScheduleWorkoutAction(action.preview);
+                    } else if (action.tool === 'log_water') {
+                      applyLogWaterAction(action.preview);
+                    } else if (action.tool === 'log_appetite') {
+                      applyLogAppetiteAction(action.preview);
+                    } else if (action.tool === 'add_to_pantry') {
+                      applyAddToPantryAction(action.preview);
+                    } else {
+                      return { ok: false, error: 'Unknown action type' };
+                    }
+                    return { ok: true };
+                  } catch (err) {
+                    return { ok: false, error: err instanceof Error ? err.message : 'Failed' };
+                  }
+                }}
+              />
+            ))}
+            {item.proUpsell ? (
+              <ProActionUpsell upsell={item.proUpsell} onUpgrade={() => router.push('/subscription' as any)} />
+            ) : null}
+          </View>
+        </View>
+      );
+    },
+    [
+      applyLogDoseAction,
+      applyLogMealAction,
+      applyScheduleWorkoutAction,
+      applyLogWaterAction,
+      applyLogAppetiteAction,
+      applyAddToPantryAction,
+      router,
+    ],
   );
 
   const renderEmpty = useCallback(
@@ -479,6 +1083,8 @@ export default function PepTalkScreen() {
             style={[styles.iconBtn, { backgroundColor: t.surface }]}
             activeOpacity={0.7}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            accessibilityRole="button"
+            accessibilityLabel="Open chat history"
           >
             <Ionicons name="menu" size={20} color={t.text} />
           </TouchableOpacity>
@@ -494,17 +1100,48 @@ export default function PepTalkScreen() {
             </View>
             <View>
               <Text style={[styles.headerTitle, { color: t.text }]}>Aimee</Text>
-              <View style={styles.headerSubRow}>
-                <View
-                  style={[
-                    styles.statusDot,
-                    { backgroundColor: useAI ? '#10b981' : t.textSecondary },
-                  ]}
-                />
-                <Text style={[styles.headerSub, { color: t.textSecondary }]}>
-                  {useAI ? 'Online' : 'Offline'}
-                </Text>
-              </View>
+              {/* 2026-05-17 P1: previously the header was binary
+                  Online/Offline based on (isAIAvailable && canSendToCloud).
+                  Users who hadn't accepted AI consent in their health
+                  profile saw "Offline" even though Supabase + Aimee
+                  were perfectly reachable — Jamie's TestFlight feedback.
+                  Now three states + a tappable hint for the consent
+                  case so users know exactly what to do. */}
+              {(() => {
+                const aiReachable = isAIAvailable();
+                const consented = canSendToCloud();
+                if (aiReachable && consented) {
+                  return (
+                    <View style={styles.headerSubRow}>
+                      <View style={[styles.statusDot, { backgroundColor: '#10b981' }]} />
+                      <Text style={[styles.headerSub, { color: t.textSecondary }]}>Online</Text>
+                    </View>
+                  );
+                }
+                if (aiReachable && !consented) {
+                  return (
+                    <TouchableOpacity
+                      onPress={() => router.push('/health-profile' as never)}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      accessibilityRole="button"
+                      accessibilityLabel="Enable AI in health profile"
+                    >
+                      <View style={styles.headerSubRow}>
+                        <View style={[styles.statusDot, { backgroundColor: '#f59e0b' }]} />
+                        <Text style={[styles.headerSub, { color: '#b45309' }]}>
+                          Tap to enable AI
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }
+                return (
+                  <View style={styles.headerSubRow}>
+                    <View style={[styles.statusDot, { backgroundColor: t.textSecondary }]} />
+                    <Text style={[styles.headerSub, { color: t.textSecondary }]}>Offline</Text>
+                  </View>
+                );
+              })()}
             </View>
           </View>
 
@@ -536,6 +1173,8 @@ export default function PepTalkScreen() {
             style={[styles.iconBtn, { backgroundColor: t.surface }]}
             activeOpacity={0.7}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            accessibilityRole="button"
+            accessibilityLabel="Start new chat"
           >
             <Ionicons name="create-outline" size={20} color={t.text} />
           </TouchableOpacity>
@@ -640,6 +1279,9 @@ export default function PepTalkScreen() {
         {/* ── Input Bar ──────────────────────────────────────── */}
         <View ref={aimeeInputRef} style={[styles.inputBarWrap, { backgroundColor: t.bg, borderTopColor: t.cardBorder }]}>
           <View style={styles.inputRow}>
+            <View style={{ marginRight: 8 }}>
+              <AimeeVoiceButton compact />
+            </View>
             <View style={[styles.inputWrap, { backgroundColor: t.surface, borderColor: `${accent.deep}25` }]}>
               <TextInput
                 style={[styles.input, { color: t.text }]}
@@ -700,6 +1342,71 @@ export default function PepTalkScreen() {
 
       <ChatHistoryDrawer visible={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </SafeAreaView>
+  );
+}
+
+/* ─── Pro write-action upsell card ───────────────────────────────────
+ *
+ * §17 — Aimee proposes a write action (log_dose / log_meal /
+ * schedule_workout) for a free user. Instead of executing, this card
+ * lets the user know the action is Pro-gated and routes to subscription.
+ * Nothing has been written; tapping is opt-in.
+ */
+function ProActionUpsell({
+  upsell,
+  onUpgrade,
+}: {
+  upsell: NonNullable<ChatMessage['proUpsell']>;
+  onUpgrade: () => void;
+}) {
+  const t = useTheme();
+  const action = (() => {
+    if (upsell.kind === 'log_dose') return 'log a dose';
+    if (upsell.kind === 'log_meal') return 'log a meal';
+    if (upsell.kind === 'schedule_workout') return 'schedule a workout';
+    return 'write to your data';
+  })();
+  return (
+    <TouchableOpacity
+      onPress={onUpgrade}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={`Upgrade to Pro to let Aimee ${action}`}
+      style={{
+        backgroundColor: t.card,
+        borderColor: t.cardBorder,
+        borderWidth: 1,
+        borderRadius: 12,
+        padding: 14,
+        marginTop: 8,
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <Ionicons name="sparkles-outline" size={18} color={t.text} />
+        <Text
+          style={{
+            color: t.text,
+            fontSize: 13,
+            fontWeight: '700',
+            flex: 1,
+          }}
+        >
+          Upgrade to let Aimee {action}
+        </Text>
+        <Ionicons name="chevron-forward" size={16} color={t.textSecondary} />
+      </View>
+      <Text
+        style={{
+          color: t.textSecondary,
+          fontSize: 11,
+          lineHeight: 16,
+          marginTop: 6,
+        }}
+      >
+        I can show you the data and reasoning for free. Pro lets me
+        write it for you with a one-tap confirm.
+      </Text>
+    </TouchableOpacity>
   );
 }
 

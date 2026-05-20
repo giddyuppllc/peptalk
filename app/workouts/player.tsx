@@ -174,10 +174,16 @@ function useRestTimer() {
   const [active, setActive] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // 2026-05-17 fix: previously deps were [active, remaining] — the
+  // effect mutated `remaining` via setInterval, which triggered the
+  // effect to clear + recreate the interval EVERY SECOND. The timer
+  // drifted and occasionally double-fired. Now the effect only
+  // depends on `active`; the interval runs continuously while active
+  // is true and self-terminates via setActive(false) inside the
+  // functional setRemaining update when it hits zero.
   useEffect(() => {
-    if (!active || remaining <= 0) {
+    if (!active) {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      if (remaining <= 0) setActive(false);
       return;
     }
     intervalRef.current = setInterval(() => {
@@ -192,7 +198,7 @@ function useRestTimer() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [active, remaining]);
+  }, [active]);
 
   const startCountdown = (seconds: number) => {
     setRemaining(seconds);

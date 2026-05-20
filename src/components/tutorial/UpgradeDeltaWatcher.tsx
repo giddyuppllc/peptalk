@@ -17,6 +17,7 @@ import { useTutorialStore } from '../../store/useTutorialStore';
 
 export function UpgradeDeltaWatcher() {
   const tier = useSubscriptionStore((s) => s.tier);
+  const subscriptionHasHydrated = useSubscriptionStore((s) => s.hasHydrated);
   const lastKnownTier = useTutorialStore((s) => s.lastKnownTier);
   const setLastKnownTier = useTutorialStore((s) => s.setLastKnownTier);
   const startTour = useTutorialStore((s) => s.startTour);
@@ -25,6 +26,12 @@ export function UpgradeDeltaWatcher() {
   const tourActive = useTutorialStore((s) => s.tourActive);
 
   useEffect(() => {
+    // Don't seed lastKnownTier (or fire a delta) until the subscription
+    // store has actually rehydrated. Otherwise on first boot we record
+    // tier='free' (the default), then the persisted tier='pro' lands
+    // and we fire a spurious free→pro upgrade tour.
+    if (!subscriptionHasHydrated) return;
+
     // On first run, just record the current tier so we don't fire a delta
     // for a tier that was set during onboarding.
     if (lastKnownTier === null) {
@@ -54,13 +61,17 @@ export function UpgradeDeltaWatcher() {
     if (seenDeltaTours[variant]) return;
 
     // Delay so the user sees the "you're now Plus/Pro" state first, then tour
-    // starts after the subscription screen dismisses
+    // starts after the subscription screen dismisses.
+    // Return the cleanup so the timer cancels if the component
+    // unmounts within the 1.2s window — earlier this fired
+    // startTour() on a dead consumer (Wave 76.10 render audit).
     if (!tourActive && hasSeenTour) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         startTour(variant as any);
       }, 1200);
+      return () => clearTimeout(timer);
     }
-  }, [tier, lastKnownTier, setLastKnownTier, startTour, hasSeenTour, seenDeltaTours, tourActive]);
+  }, [tier, subscriptionHasHydrated, lastKnownTier, setLastKnownTier, startTour, hasSeenTour, seenDeltaTours, tourActive]);
 
   return null;
 }

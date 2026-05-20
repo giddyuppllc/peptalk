@@ -46,6 +46,7 @@ export default function PostDetailScreen() {
 
   const detail = useCommunityStore((s) => s.postDetails[postId]);
   const loading = useCommunityStore((s) => !!s.loadingDetail[postId]);
+  const detailError = useCommunityStore((s) => s.detailError[postId] ?? null);
   const hydrate = useCommunityStore((s) => s.hydratePostDetail);
   const createComment = useCommunityStore((s) => s.createComment);
   const reportContent = useCommunityStore((s) => s.reportContent);
@@ -154,7 +155,7 @@ export default function PostDetailScreen() {
 
   const showActions = (target: { postId?: string; commentId?: string; userId: string }) => {
     const isOwn = !!currentUserId && target.userId === currentUserId;
-    const buttons: Array<{ text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }> = [];
+    const buttons: { text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }[] = [];
 
     if (isOwn) {
       buttons.push({
@@ -263,6 +264,44 @@ export default function PostDetailScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
         <View style={styles.center}>
           <ActivityIndicator color={t.textSecondary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Error state — previously the loading spinner stuck forever when
+  // the post fetch failed because `post` stayed null. Now show a
+  // retry CTA + a way back.
+  if (detailError && !post) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={24} color={t.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: t.text }]}>Post</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.center}>
+          <Ionicons name="cloud-offline-outline" size={32} color={t.textSecondary} />
+          <Text style={{ color: t.text, fontWeight: '700', marginTop: 12 }}>Couldn't load this post</Text>
+          <Text style={{ color: t.textSecondary, marginTop: 4, textAlign: 'center', paddingHorizontal: 24 }}>
+            {detailError}
+          </Text>
+          <TouchableOpacity
+            onPress={() => hydrate(postId)}
+            style={{
+              marginTop: 18,
+              paddingHorizontal: 18,
+              paddingVertical: 10,
+              borderRadius: 999,
+              backgroundColor: t.primary,
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading post"
+          >
+            <Text style={{ color: '#fff', fontWeight: '600' }}>Try again</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );

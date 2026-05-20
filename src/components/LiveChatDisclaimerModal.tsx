@@ -49,8 +49,14 @@ export function LiveChatDisclaimerModal({ visible, onAccepted }: Props) {
   };
 
   return (
-    <Modal visible transparent animationType="fade">
-      <View style={styles.backdrop}>
+    // 2026-05-18 belt+suspenders: bind `visible` to derived `shouldShow`
+    // so an intermediate re-render between setAccepted(true) and the
+    // early-return guard above can't leave the Modal mounted with
+    // visible={true} mid-animation (Android Modal z-order race that
+    // sandwiched the user with a tap-eating overlay).
+    <Modal visible={shouldShow} transparent animationType="fade">
+      {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
+      <View style={styles.backdrop} accessibilityViewIsModal={true}>
         <View style={[styles.card, { backgroundColor: t.bg }]}>
           <LinearGradient
             colors={['#3E7CB1', '#7FB3D8']}

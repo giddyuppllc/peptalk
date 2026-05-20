@@ -22,7 +22,7 @@ const COOLDOWN_MS = 120 * 24 * 60 * 60 * 1000; // 120 days
 
 let StoreReview: any = null;
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   StoreReview = require('expo-store-review');
 } catch {
   // Module unavailable in Expo Go / web / jest — all calls no-op.
