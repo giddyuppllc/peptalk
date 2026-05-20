@@ -120,15 +120,23 @@ export default function PantryScanScreen() {
         );
         return;
       }
+      // Wave 76.48: dropped quality from 0.6 → 0.35. Modern Android
+      // phones (Pixel 8 / Galaxy S24) shoot at 50MP+ natively; even
+      // at 0.6 the JPEG could land at 5-8MB which exploded into a 6.6-
+      // 10.5MB base64 string — server rejects anything over 6MB and
+      // surfaces "Image too large" which the client mis-translated to
+      // "Try a clearer photo". At 0.35 a typical fridge shot is ~600KB
+      // JPEG = ~800KB base64 — well under cap, vision model still
+      // reads labels fine.
       const res =
         source === 'camera'
           ? await ImagePicker.launchCameraAsync({
-              quality: 0.6,
+              quality: 0.35,
               allowsEditing: false,
               base64: false,
             })
           : await ImagePicker.launchImageLibraryAsync({
-              quality: 0.6,
+              quality: 0.35,
               allowsEditing: false,
               base64: false,
               mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -145,6 +153,19 @@ export default function PantryScanScreen() {
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: 'base64',
       });
+
+      // Pre-flight size check — if even quality 0.35 produced a base64
+      // string over the server's 6MB cap, bail with a clear error
+      // instead of letting the upload eat 30s on a slow connection
+      // before the server rejects it.
+      if (base64.length > 5_500_000) {
+        Alert.alert(
+          'Photo too large',
+          `Your phone produced a ${Math.round(base64.length / 1024 / 1024)}MB image — too large to scan. Try a closer shot of just the area you want to log.`,
+        );
+        setScanning(false);
+        return;
+      }
 
       const { data, error } = await (supabase as any).functions.invoke(
         'aimee-pantry-scan',
