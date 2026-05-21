@@ -48,10 +48,15 @@ export function Chip({ label, dotColor, onPress, primary, style }: ChipProps) {
         <View style={[styles.dot, { backgroundColor: dotColor }]} />
       ) : null}
       <Text
+        numberOfLines={1}
         style={{
           fontFamily: t.typography.bodyMedium,
           fontSize: 11,
           color: t.colors.textPrimary as string,
+          // Wave 76.49: keep label on one line + don't let one long
+          // chip blow out the row layout. flexShrink lets it tighten
+          // before the parent ChipRow wraps to a new line.
+          flexShrink: 1,
         }}
       >
         {label}

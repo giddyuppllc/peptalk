@@ -50,10 +50,17 @@ export function MacroBar({ kind, current, target, unit = 'g' }: Props) {
           {kind}
         </Text>
         <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
           style={{
             fontFamily: t.typography.bodyMedium,
             fontSize: 11,
             color: t.colors.textPrimary as string,
+            // Wave 76.49: give the value text a tiny bit of right padding
+            // so the trailing "g" isn't kissing the card border on narrow
+            // screens. Previously "200 g" / "30 g" got clipped to "200" /
+            // "30" on Pixel/Galaxy.
+            paddingRight: 2,
           }}
         >
           {Math.round(current)} / {Math.round(target)} {unit}

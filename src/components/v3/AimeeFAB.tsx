@@ -15,6 +15,7 @@
 
 import React from 'react';
 import { Pressable, Text, View, StyleSheet, type ViewStyle, type StyleProp } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
@@ -41,6 +42,7 @@ interface Props {
 
 export function AimeeFAB({ intent = 'open_chat', style }: Props) {
   const t = useV3Theme();
+  const insets = useSafeAreaInsets();
   const openAimee = useAimeeRouter();
   const { status, start, stop } = useAimeeVoice();
   const scale = useSharedValue(1);
@@ -95,7 +97,16 @@ export function AimeeFAB({ intent = 'open_chat', style }: Props) {
         if (isRecording) stop();
       }}
       delayLongPress={350}
-      style={[styles.wrap, aStyle, style]}
+      style={[
+        styles.wrap,
+        // Wave 76.49: lift the FAB above whatever the OS reserves at the
+        // bottom — iPhone home indicator (~34) or Android 3-button nav
+        // (~48). Without this the gradient circle was half-covered by
+        // the Galaxy/Pixel nav pill on testers' phones.
+        { bottom: Math.max(insets.bottom, 12) + 18 },
+        aStyle,
+        style,
+      ]}
       accessibilityRole="button"
       accessibilityLabel={
         isRecording ? 'Release to send to Aimee' : 'Open Aimee chat. Long-press to talk.'
@@ -151,7 +162,7 @@ const styles = StyleSheet.create({
   wrap: {
     position: 'absolute',
     right: 18,
-    bottom: 24,
+    // bottom is overridden in the component via safe-area insets.
     zIndex: 50,
   },
   gradient: {

@@ -234,6 +234,18 @@ export function generateWeeklyReport(weekStartISO?: string): Report {
   // The structured data here is the contract; the rewrite is a pure
   // transform on top.
 
+  // Wave 76.49: format headline date as "May 12" instead of "2026-05-12".
+  // Previously the YYYY-MM-DD date could disappear when the ReportRibbon
+  // pill ran out of horizontal room (reported by testers: bottom ribbon
+  // showed just "Week of ›" with no date). A short human-readable date
+  // both reads better AND fits comfortably in the ribbon width.
+  const headlineDate = (() => {
+    const [y, mo, d] = start.split('-').map(Number);
+    if (!y || !mo || !d) return start;
+    const dt = new Date(y, mo - 1, d, 12, 0, 0, 0);
+    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  })();
+
   return {
     id: uid('weekly'),
     kind: 'weekly',
@@ -241,7 +253,7 @@ export function generateWeeklyReport(weekStartISO?: string): Report {
     periodStart: start,
     periodEnd: end,
     body: paragraphs.join('\n\n'),
-    headline: `Week of ${start}`,
+    headline: `Week of ${headlineDate}`,
     charts: [
       {
         kind: 'protein_trend',

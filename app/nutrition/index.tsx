@@ -107,7 +107,7 @@ export default function NutritionScreen() {
       observation={observation}
       intent="nutrition_overview"
     >
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 160 }}>
         {/* §6.3 — Photo food log */}
         <Pressable
           onPress={handlePhotoLog}

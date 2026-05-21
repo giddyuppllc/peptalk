@@ -71,17 +71,23 @@ export function MacroRing({ current, target, unit = 'g', label = 'PROTEIN', size
         </View>
       </View>
       <Text
+        numberOfLines={1}
         style={{
           marginTop: 6,
           fontFamily: t.typography.label,
           fontSize: 9,
-          letterSpacing: 1.4,
+          // Wave 76.49: letterSpacing 1.4 was clipping "PROTEIN" -> "PROTEI"
+          // on Android. The wrap width was being pulled to ~96 by the ring
+          // and the spaced-out label couldn't fit. Dropped to 0.8 — still
+          // reads as a small-caps label without busting the box.
+          letterSpacing: 0.8,
           color: t.colors.textSecondary as string,
         }}
       >
         {label}
       </Text>
       <Text
+        numberOfLines={1}
         style={{
           marginTop: 2,
           fontFamily: t.typography.bodyMedium,
@@ -98,6 +104,10 @@ export function MacroRing({ current, target, unit = 'g', label = 'PROTEIN', size
 const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
+    // Give the label + value text a bit of horizontal slack beyond the
+    // ring's diameter. Default ring is 96; minWidth 112 lets "PROTEIN"
+    // and "0 / 150 g" render without truncation on narrow phones.
+    minWidth: 112,
   },
   center: {
     alignItems: 'center',

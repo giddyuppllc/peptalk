@@ -97,20 +97,24 @@ export default function HomeScreen() {
     ).length;
   }, [workouts]);
 
+  // Wave 76.49: dropped the verbose "· log today" suffix that was
+  // overflowing the chip pills on narrow Android screens ("Sleep · log
+  // toda...y"). Empty state now just says "Log mood" / "Log sleep" /
+  // "Log energy" — shorter, fits cleanly in the chip.
   const moodLabel = latestCheckin?.mood
     ? `Mood · ${
         ['low', 'below', 'solid', 'good', 'great'][latestCheckin.mood - 1] ??
         'logged'
       }`
-    : 'Mood · log today';
+    : 'Log mood';
   const sleepHours = latestCheckin?.sleepStages?.total;
   const sleepLabel =
     sleepHours != null && sleepHours > 0
       ? `Sleep · ${Math.floor(sleepHours)}h ${Math.round((sleepHours % 1) * 60)}m`
-      : 'Sleep · log today';
+      : 'Log sleep';
   const energyLabel = latestCheckin?.energy
     ? `Energy · ${latestCheckin.energy}/5`
-    : 'Energy · log today';
+    : 'Log energy';
 
   // Resolve the most recent active protocol's headline + draw figures for
   // the Doses card preview. Falls back to friendly "no protocol yet" copy
@@ -305,7 +309,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    paddingBottom: 30,
+    // Wave 76.49: was 30. Bumped to 140 to clear the FAB (~80px tall
+    // including the bottom inset) + Android system nav bar — testers
+    // reported the "Week of" ribbon and the Water card getting
+    // cut off behind the nav pill.
+    paddingBottom: 140,
   },
   cards: {
     paddingHorizontal: 20,

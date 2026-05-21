@@ -31,13 +31,18 @@ export function ReportRibbon({ label, onPress }: Props) {
   const latestReport = useAimeeReportsStore((s) => s.reports[0]);
   const insightCount = useAimeeReportsStore((s) => s.insights.length);
 
+  // Wave 76.49: dropped the trailing `›` from the label — the Ionicons
+  // chevron-forward at the end of the row already serves that purpose.
+  // Having both produced a double-chevron look on iOS and made labels
+  // longer than they needed to be (worsening truncation on narrow
+  // Android screens).
   const resolvedLabel =
     label ??
     (latestReport
-      ? `${latestReport.headline} ›`
+      ? latestReport.headline
       : insightCount > 0
-        ? `${insightCount} new insight${insightCount === 1 ? '' : 's'} ›`
-        : 'See your Aimee reports ›');
+        ? `${insightCount} new insight${insightCount === 1 ? '' : 's'}`
+        : 'See your Aimee reports');
 
   const handlePress = () => {
     tapLight();
