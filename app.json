@@ -161,6 +161,7 @@
         "backgroundColor": "#F0EEE9"
       },
       "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize",
       "package": "com.peptalkapp.peptalk",
       "permissions": [
         "android.permission.CAMERA",
