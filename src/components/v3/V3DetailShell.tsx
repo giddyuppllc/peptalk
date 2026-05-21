@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { V3Background } from './V3Background';
 import { Greeting } from './Greeting';
 import { AimeePersistentChip } from './AimeePersistentChip';
-import { AimeeFAB } from './AimeeFAB';
+// AimeeFAB import removed Wave 76.52 — now mounted globally.
 import { useV3Theme } from '../../theme/V3ThemeProvider';
 import { tapLight } from '../../utils/haptics';
 import type { AimeeIntent } from '../../hooks/useAimeeRouter';
@@ -62,7 +62,8 @@ export function V3DetailShell({
       </View>
       <AimeePersistentChip observation={observation} intent={intent} />
       <View style={[styles.body, contentStyle]}>{children}</View>
-      <AimeeFAB />
+      {/* AimeeFAB removed Wave 76.52 — mounted globally in app/_layout.tsx
+          via GlobalAimeeFab so it appears on every screen. */}
     </View>
   );
 }

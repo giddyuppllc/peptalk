@@ -37,7 +37,6 @@ import {
   StatRow,
   SyringeSVG,
   ReportRibbon,
-  AimeeFAB,
 } from '../../src/components/v3';
 import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 import { useActivePeptideCycle } from '../../src/hooks/useActivePeptideCycle';
@@ -299,7 +298,9 @@ export default function HomeScreen() {
         <ReportRibbon />
       </ScrollView>
 
-      <AimeeFAB />
+      {/* AimeeFAB removed Wave 76.52 — mounted globally in app/_layout.tsx
+          via GlobalAimeeFab so it appears on every screen, not just home
+          + V3 details. */}
     </View>
   );
 }

@@ -26,6 +26,7 @@ import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { V3ThemeProvider } from '../src/theme/V3ThemeProvider';
 import { OfflineBanner } from '../src/components/OfflineBanner';
 import { HomeFab } from '../src/components/HomeFab';
+import { GlobalAimeeFab } from '../src/components/GlobalAimeeFab';
 import { CelebrationModal } from '../src/components/CelebrationModal';
 import { WorkoutRewardModal } from '../src/components/WorkoutRewardModal';
 import { PepTalkCharacter } from '../src/components/PepTalkCharacter';
@@ -1421,6 +1422,10 @@ function RootLayout() {
             (including non-tab drill-ins), hidden by HomeFab's own
             pathname allowlist on home / auth / focus surfaces. Wave 76.45. */}
         <HomeFab />
+        {/* Aimee chat button — same idea but for the bottom-right
+            "A" shortcut. GlobalAimeeFab handles pathname hide-logic.
+            Wave 76.52. */}
+        <GlobalAimeeFab />
       </View>
     </SafeAreaProvider>
     </V3ThemeProvider>
