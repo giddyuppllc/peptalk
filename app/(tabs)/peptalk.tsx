@@ -1073,7 +1073,12 @@ export default function PepTalkScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: t.bg }]}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        // Wave 76.51: was behavior={undefined} on Android, which is a
+        // no-op — the keyboard would cover the text box. Set both
+        // platforms to push content above the keyboard. iOS uses
+        // 'padding' (smooth resize), Android uses 'height' (re-lays
+        // out the container above the keyboard).
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         {/* ── Header ─────────────────────────────────────────── */}

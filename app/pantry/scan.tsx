@@ -149,7 +149,12 @@ export default function PantryScanScreen() {
       setSelected([]);
       setScanning(true);
 
-      const FileSystem: any = await import('expo-file-system');
+      // Wave 76.51: Expo SDK 54's expo-file-system v19 made
+      // readAsStringAsync a hard error from the root export — must
+      // import from the /legacy entry to keep the old API working.
+      // (Migrating to the new File class is the long-term move but
+      // not blocking this scan flow.)
+      const FileSystem: any = await import('expo-file-system/legacy');
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: 'base64',
       });

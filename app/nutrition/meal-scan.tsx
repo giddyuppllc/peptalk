@@ -53,7 +53,8 @@ async function detectFoodsFromPhoto(photoUri: string): Promise<string[]> {
   try {
     const { supabase } = await import('../../src/services/supabase');
     // Convert file URI → base64 for the edge function
-    const FileSystem: any = await import('expo-file-system');
+    // Wave 76.51: import from /legacy — see app/pantry/scan.tsx for context.
+    const FileSystem: any = await import('expo-file-system/legacy');
     const base64 = await FileSystem.readAsStringAsync(photoUri, { encoding: 'base64' });
 
     const { data, error } = await (supabase as any).functions.invoke('food-scan', {

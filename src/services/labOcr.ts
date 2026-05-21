@@ -37,7 +37,8 @@ export async function recognizeLabPhoto(uri: string): Promise<LabOcrResult> {
     // and POST it to the edge function. PDFs require a render-to-image
     // step first which is out of scope here — manual paste-text is the
     // fall-through for PDF inputs.
-    const FileSystem: any = await import('expo-file-system');
+    // Wave 76.51: import from /legacy — see app/pantry/scan.tsx for context.
+    const FileSystem: any = await import('expo-file-system/legacy');
     const base64 = await FileSystem.readAsStringAsync(uri, {
       encoding: 'base64',
     });
