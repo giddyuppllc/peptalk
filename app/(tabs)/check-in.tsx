@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -615,6 +616,15 @@ export default function CheckInScreen() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        // Wave 76.53: weight / metric inputs were getting covered by
+        // the soft keyboard on Android; 76.50's softwareKeyboardLayoutMode
+        // resize handles most cases but the bottom nav (Back / Next)
+        // wasn't lifting above the keyboard, leaving inputs hidden.
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
       {/* ── Top bar: X + progress ── */}
       <View style={styles.stepTopBar}>
         <TouchableOpacity
@@ -940,6 +950,7 @@ export default function CheckInScreen() {
           {isLastStep && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
         </TouchableOpacity>
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

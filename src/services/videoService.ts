@@ -33,9 +33,13 @@ import { supabase } from './supabase';
  *
  * REGENERATION
  * ------------
- * scripts/build-video-manifest.ts (TODO) walks workoutVideos.json and
- * emits this block. For now it's checked in by hand whenever the
- * tagger output changes.
+ * Run `node scripts/regen-video-service-maps.mjs` from the repo root
+ * after the vision tagger lands new exerciseId mappings in
+ * supabase/functions/get-workout-video/manifest.json. The script
+ * walks the manifest, merges in manually-reviewed tags from
+ * src/data/workoutVideos.json (which always win when both have a
+ * tag for the same slug), sorts each exercise's takes by confidence,
+ * and splices the new block into this file in place. Wave 76.40+.
  */
 // Auto-regenerated 2026-05-20 by
 // scripts/regen-video-service-maps.mjs (merge mode).
