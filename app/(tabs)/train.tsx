@@ -208,8 +208,45 @@ export default function TrainScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ──── secondary hint rows — surface Aimee-powered features that
-                 backend supports but had no entry point pre-76.44. ──── */}
+        {/* ──── Workout planning — explicit row so both manual AND AI
+                 paths are visible. Pre-76.54 the manual create surface
+                 was hidden behind a tile labeled "LOG WORKOUT" + the AI
+                 surface was the last hint row. Testers couldn't find
+                 either. ──── */}
+        <Text style={[styles.sectionLabel, { color: t.textSecondary }]}>
+          Build a workout
+        </Text>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => go('/workouts/new')}
+          style={[styles.hintRow, { borderColor: t.cardBorder }]}
+          accessibilityRole="button"
+          accessibilityLabel="Build a custom workout manually"
+        >
+          <Ionicons name="construct" size={16} color={accent.deep} />
+          <Text style={[styles.hintText, { color: t.text }]}>
+            Build a workout manually
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={t.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => go('/workouts/generate')}
+          style={[styles.hintRow, { borderColor: t.cardBorder }]}
+          accessibilityRole="button"
+          accessibilityLabel="Generate a custom workout with Aimee"
+        >
+          <Ionicons name="flash" size={16} color={accent.deep} />
+          <Text style={[styles.hintText, { color: t.text }]}>
+            Generate a workout with Aimee
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={t.textSecondary} />
+        </TouchableOpacity>
+
+        <Text style={[styles.sectionLabel, { color: t.textSecondary }]}>
+          Aimee shortcuts
+        </Text>
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => go('/nutrition/recipe-generator')}
@@ -252,19 +289,6 @@ export default function TrainScreen() {
           <Ionicons name="chevron-forward" size={16} color={t.textSecondary} />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => go('/workouts/generate')}
-          style={[styles.hintRow, { borderColor: t.cardBorder }]}
-          accessibilityRole="button"
-          accessibilityLabel="Generate a custom workout"
-        >
-          <Ionicons name="flash" size={16} color={accent.deep} />
-          <Text style={[styles.hintText, { color: t.text }]}>
-            Generate a custom workout
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color={t.textSecondary} />
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -370,5 +394,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: FontSizes.sm,
     fontFamily: 'DMSans-Medium',
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.xs,
+    marginLeft: Spacing.xs,
   },
 });
