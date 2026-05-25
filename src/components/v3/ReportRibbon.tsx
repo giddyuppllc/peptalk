@@ -36,13 +36,39 @@ export function ReportRibbon({ label, onPress }: Props) {
   // Having both produced a double-chevron look on iOS and made labels
   // longer than they needed to be (worsening truncation on narrow
   // Android screens).
+  //
+  // Wave 76.55: tester saw the ribbon as "Week of" with no date because
+  // their stored report headline came from a pre-76.49 build that
+  // saved `Week of {YYYY-MM-DD}` and the date string somehow lost.
+  // Rather than trust the stored headline, reformat at render time from
+  // the report's periodStart. Both old + new reports now render the
+  // same human-friendly "Week of May 12" label.
+  const formattedHeadline = (() => {
+    if (!latestReport) return null;
+    const start = latestReport.periodStart;
+    if (start) {
+      const [y, mo, d] = start.split('-').map(Number);
+      if (y && mo && d) {
+        const dt = new Date(y, mo - 1, d, 12, 0, 0, 0);
+        const datePart = dt.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        });
+        return latestReport.kind === 'weekly'
+          ? `Week of ${datePart}`
+          : (latestReport.headline ?? `Report from ${datePart}`);
+      }
+    }
+    // Fallback to stored headline if periodStart parse fails.
+    return latestReport.headline || 'Latest report';
+  })();
+
   const resolvedLabel =
     label ??
-    (latestReport
-      ? latestReport.headline
-      : insightCount > 0
+    (formattedHeadline ??
+      (insightCount > 0
         ? `${insightCount} new insight${insightCount === 1 ? '' : 's'}`
-        : 'See your Aimee reports');
+        : 'See your Aimee reports'));
 
   const handlePress = () => {
     tapLight();

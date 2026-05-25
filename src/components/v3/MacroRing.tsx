@@ -104,10 +104,12 @@ export function MacroRing({ current, target, unit = 'g', label = 'PROTEIN', size
 const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
-    // Give the label + value text a bit of horizontal slack beyond the
-    // ring's diameter. Default ring is 96; minWidth 112 lets "PROTEIN"
-    // and "0 / 150 g" render without truncation on narrow phones.
-    minWidth: 112,
+    // Wave 76.55: 112 wasn't enough on Galaxy S24 (Samsung One UI's
+    // system font rendered DM Sans wider than expected). Bumped to
+    // 132 and added flexShrink:0 so the parent row layout can't
+    // squeeze it below this width.
+    minWidth: 132,
+    flexShrink: 0,
   },
   center: {
     alignItems: 'center',
