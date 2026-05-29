@@ -14,7 +14,7 @@
       "backgroundColor": "#F0EEE9"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.peptalkapp.peptalk",
       "infoPlist": {
         "NSCameraUsageDescription": "PepTalk needs camera access to scan barcodes and meals for automatic nutrition tracking.",
