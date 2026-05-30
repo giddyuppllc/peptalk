@@ -73,7 +73,19 @@ export default function AuthScreen() {
     if (!acceptedTerms) { setError('You must accept the terms to continue'); return; }
     setError('');
     try {
-      await signup(firstName.trim(), lastName.trim(), normalizedEmail, password);
+      const result = await signup(firstName.trim(), lastName.trim(), normalizedEmail, password);
+      if (result.requiresEmailConfirmation) {
+        // Email-confirmation mode: Supabase returned the user but no
+        // session. We can't drop them into tabs (authed calls would
+        // 401). Surface a friendly note + switch this screen back to
+        // the login mode so they can sign in once they tap the link.
+        Alert.alert(
+          'Check your email',
+          `We sent a confirmation link to ${normalizedEmail}. Tap the link, then sign in here.`,
+          [{ text: 'OK', onPress: () => switchMode('login') }],
+        );
+        return;
+      }
       completeOnboarding();
       router.replace('/(tabs)');
     } catch (err: any) {

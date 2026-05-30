@@ -175,6 +175,7 @@ export default function OnboardingScreen() {
 
   // Stores
   const login = useAuthStore((s) => s.login);
+  const signup = useAuthStore((s) => s.signup);
   const isLoggingIn = useAuthStore((s) => s.isLoading);
   const setTier = useSubscriptionStore((s) => s.setTier);
   const setMealTargets = useMealStore((s) => s.setTargets);
@@ -328,8 +329,22 @@ export default function OnboardingScreen() {
     if (step === 3) {
       setAccountError('');
       try {
-        await login(accountEmail, accountPassword);
-        setTier(selectedPlan);
+        // Create the account. signup() returns
+        // `{ requiresEmailConfirmation: true }` when Supabase is in
+        // email-verification mode (no session granted yet) — in that case
+        // we surface a "check your email" alert + route to the login
+        // screen instead of routing into tabs (the user can't actually
+        // use the app until they confirm + log in).
+        const result = await signup(
+          accountFirstName.trim(),
+          accountLastName.trim(),
+          accountEmail,
+          accountPassword,
+        );
+        // Don't grant a paid tier locally — the IAP receipt validator
+        // (Apple/Google webhook → validate-purchase edge fn → profile
+        // subscription_tier) owns that. Default everyone to free here.
+        setTier('free');
 
         // Auto-calculate macros
         const body = useHealthProfileStore.getState().profile.bodyMetrics;
@@ -367,9 +382,28 @@ export default function OnboardingScreen() {
 
         completeOnboarding();
         trackOnboardingComplete(0);
+
+        if (result.requiresEmailConfirmation) {
+          // Email-confirmation flow. The auth.users row exists + the
+          // confirmation email is on its way, but the user has no session
+          // yet so we can't drop them into tabs (every authed call would
+          // 401). Send them to the login screen with a friendly note;
+          // their saved onboarding answers persist locally so re-login
+          // just unlocks the app.
+          Alert.alert(
+            'Check your email',
+            `We sent a confirmation link to ${accountEmail.trim()}. Tap the link, then come back and sign in.`,
+            [{ text: 'OK', onPress: () => router.replace('/auth') }],
+          );
+          return;
+        }
         router.replace('/(tabs)');
-      } catch {
-        setAccountError('Something went wrong. Try again.');
+      } catch (err: any) {
+        // Surface the real error rather than swallowing it into a
+        // generic message — silent catches hid the login-vs-signup bug
+        // for weeks. Falls back to a friendly default if the error
+        // arrived without a message.
+        setAccountError(err?.message ?? 'Could not create account. Try again.');
       }
     }
   };

@@ -82,7 +82,12 @@ interface AuthStore {
   hasHydrated: boolean;
 
   login: (email: string, password: string) => Promise<void>;
-  signup: (firstName: string, lastName: string, email: string, password: string) => Promise<void>;
+  /** Returns `{ requiresEmailConfirmation: true }` when Supabase Auth is in
+   *  email-confirmation mode (no session granted on signup). Callers should
+   *  show a "check your email" UI and NOT route into the authed app in that
+   *  case. Returns `{ requiresEmailConfirmation: false }` when signup
+   *  granted a session immediately. */
+  signup: (firstName: string, lastName: string, email: string, password: string) => Promise<{ requiresEmailConfirmation: boolean }>;
   logout: () => Promise<void>;
   /** Permanently delete the current user's account (server-side + local wipe). */
   deleteAccount: () => Promise<void>;
@@ -192,17 +197,25 @@ export const useAuthStore = create<AuthStore>()(
             throw new Error('Signup failed');
           }
 
-          // Profile is auto-created by DB trigger (handle_new_user). As a
-          // safety net we upsert here in case the trigger failed. With
-          // onConflict: 'id' a pre-existing row from the trigger just
-          // gets updated — so the ONLY reason upsert fails is a genuine
-          // DB/RLS problem, not a benign duplicate.
-          //
-          // If upsert fails the auth user exists but has no profile row,
-          // which means the next login will hit a null profile and fall
-          // back to email-derived names. That's a broken state. Sign the
-          // user back out so we don't leave a half-created account, and
-          // surface the error so they can retry (or flag it to support).
+          // Email-confirmation flow: Supabase returns the user but NO session
+          // when the project requires email verification. In that mode any
+          // authed call we make (incl. the profile upsert) would RLS-deny
+          // because auth.uid() is null. The DB trigger `handle_new_user`
+          // already created the public.profiles row under SECURITY DEFINER,
+          // so the upsert is also redundant. Skip it, keep the user signed
+          // out locally, and signal to the caller that the user needs to
+          // verify their email before they can log in.
+          if (!data.session) {
+            set({ isLoading: false });
+            trackSignupCompleted();
+            return { requiresEmailConfirmation: true } as const;
+          }
+
+          // Session-present (email-confirmation OFF) path. Profile is
+          // auto-created by DB trigger (handle_new_user). Safety-net upsert
+          // in case the trigger failed; onConflict:'id' means a pre-existing
+          // row just gets updated. Only the genuine DB/RLS-error case will
+          // fail here, and we now have a session so RLS will pass.
           const { error: upsertErr } = await db
             .from('profiles')
             .upsert(
@@ -237,6 +250,7 @@ export const useAuthStore = create<AuthStore>()(
 
           set({ user: appUser, isAuthenticated: true, isLoading: false });
           trackSignupCompleted();
+          return { requiresEmailConfirmation: false } as const;
         } catch (error: any) {
           if (__DEV__) console.error('[useAuthStore] Signup failed:', error);
           set({ isLoading: false });
