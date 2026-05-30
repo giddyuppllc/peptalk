@@ -8,7 +8,7 @@ import {
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Animated, Text, AppState , Platform } from 'react-native';
+import { View, StyleSheet, Animated, Text, AppState , Platform, Linking, Alert } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts } from 'expo-font';
@@ -829,6 +829,83 @@ function RootLayout() {
       try { notificationSub?.remove(); } catch {}
     };
   }, []);
+
+  // Auth deep-link handler — peptalk://auth/callback?code=... lands here
+  // when a user taps the email-confirmation link (or password-reset link)
+  // from their inbox. Without this, the link opens the Supabase-hosted
+  // page in a browser and the user has to come back to the app and sign
+  // in manually. With this, the link reopens the app, we exchange the
+  // PKCE code for a session, restore auth state, and drop them straight
+  // into tabs.
+  //
+  // The matching emailRedirectTo: 'peptalk://auth/callback' is set in
+  // useAuthStore.signup(). The same URL must be whitelisted in the
+  // Supabase dashboard (Auth → URL Configuration → Redirect URLs) or
+  // Supabase will refuse to embed it in the email link.
+  useEffect(() => {
+    let cancelled = false;
+
+    const handleAuthUrl = async (url: string | null) => {
+      if (!url) return;
+      // Match peptalk:// scheme + /auth path. Anything else (peptalk://
+      // links into other surfaces) is ignored here so we don't double-
+      // handle deep links the rest of the app already routes.
+      if (!url.startsWith('peptalk://auth')) return;
+      try {
+        const { supabase } = await import('../src/services/supabase');
+        // Two URL shapes covered:
+        //   1. PKCE flow (default modern Supabase): ?code=...
+        //   2. OTP flow: ?token_hash=...&type=signup|recovery|invite
+        // Parse without depending on URL polyfill (RN ships an incomplete
+        // one); a regex pull is sufficient for query strings.
+        const codeMatch = url.match(/[?&]code=([^&#]+)/);
+        const tokenHashMatch = url.match(/[?&]token_hash=([^&#]+)/);
+        const typeMatch = url.match(/[?&]type=([^&#]+)/);
+
+        if (codeMatch?.[1]) {
+          const { error } = await (supabase as any).auth.exchangeCodeForSession(
+            decodeURIComponent(codeMatch[1]),
+          );
+          if (error) throw error;
+        } else if (tokenHashMatch?.[1] && typeMatch?.[1]) {
+          const { error } = await (supabase as any).auth.verifyOtp({
+            token_hash: decodeURIComponent(tokenHashMatch[1]),
+            type: decodeURIComponent(typeMatch[1]) as any,
+          });
+          if (error) throw error;
+        } else {
+          if (__DEV__) console.warn('[auth-link] missing code/token_hash in', url);
+          return;
+        }
+
+        // Pull the just-granted session into local state + route.
+        await useAuthStore.getState().restoreSession();
+        if (!cancelled) router.replace('/(tabs)');
+      } catch (err: any) {
+        if (__DEV__) console.warn('[auth-link] handling failed:', err);
+        captureException(err, { source: 'auth.deepLink', url });
+        Alert.alert(
+          'Couldn’t verify that link',
+          err?.message ??
+            'The confirmation link is expired or already used. Sign in again, or request a new confirmation email.',
+        );
+      }
+    };
+
+    // Cold-start: app launched directly by tapping the email link.
+    Linking.getInitialURL()
+      .then((url) => { if (!cancelled) handleAuthUrl(url); })
+      .catch((err) => {
+        if (__DEV__) console.warn('[auth-link] getInitialURL failed:', err);
+      });
+
+    // Warm: app already running when the link is tapped.
+    const sub = Linking.addEventListener('url', ({ url }) => handleAuthUrl(url));
+    return () => {
+      cancelled = true;
+      try { sub.remove(); } catch {}
+    };
+  }, [router]);
 
   // When auth flips from logged-out → logged-in (signup flow, or a
   // sign-in after the boot hydrations already no-op'd with no session),

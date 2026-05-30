@@ -184,6 +184,13 @@ export const useAuthStore = create<AuthStore>()(
             password,
             options: {
               data: { name: fullName, first_name: firstName, last_name: lastName },
+              // Deep-link the confirmation email back into the app. The
+              // app/_layout.tsx Linking handler picks this up, calls
+              // supabase.auth.exchangeCodeForSession(code) and drops the
+              // user into tabs without a manual sign-in. The redirect URL
+              // must also be whitelisted in the Supabase dashboard:
+              //   Auth → URL Configuration → Redirect URLs.
+              emailRedirectTo: 'peptalk://auth/callback',
             },
           });
 
