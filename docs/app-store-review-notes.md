@@ -17,10 +17,16 @@ https://peptalk.bio/privacy).
 ### Test account
 - Email: [TODO: create a test account before submission]
 - Password: [TODO]
-- Tier: Plus (granted manually for review)
+- Tier: **Free** — do NOT pre-grant Plus/Pro. The reviewer must be on Free so
+  they can tap Subscribe and complete the StoreKit purchase via the sandbox.
+  (A pre-entitled account makes the Subscribe buttons no-op, which reads as an
+  "unresponsive button" — the 2.1a finding.)
 
-### Subscriptions (StoreKit / IAP)
-- We offer two auto-renewing subscriptions, monthly only:
+### Subscriptions (StoreKit / IAP) — Guideline 2.1(b)
+- The two auto-renewing subscriptions BELOW must be added to this app version's
+  In-App Purchases section, with an App Review screenshot, and **submitted
+  together with the binary** — otherwise StoreKit has no product to sell in
+  review and the Subscribe button can't present a purchase sheet.
   - peptalk_plus_monthly ($9.99/mo)
   - peptalk_pro_monthly ($49.99/mo)
 - Receipt validation: server-side via Supabase edge function
@@ -29,6 +35,15 @@ https://peptalk.bio/privacy).
   Purchases" is supported (Profile → Subscription).
 - Manage Subscription button (Profile → Subscription) deep-links to
   https://apps.apple.com/account/subscriptions per Apple guidelines.
+
+### HealthKit / Apple Health (Guideline 2.5.1)
+- PepTalk's Apple Health integration is at **Profile → Apple Health &
+  Integrations**. Tap **Connect** on the "Apple Health" card to grant access;
+  the screen explains that PepTalk reads steps, heart rate, HRV, VO₂ max,
+  sleep, weight, body composition, and cycle data, and writes check-ins,
+  weight, and symptom logs back to Apple Health.
+- Synced metrics surface on the Activity, Sleep, and Weight trackers and in the
+  daily summary. HealthKit data is encrypted on-device and never sold.
 
 ### Live community chat (UGC)
 - Plus and Pro members can post in admin-hosted live events. Free users

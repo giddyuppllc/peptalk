@@ -177,14 +177,25 @@ function TierCard({
     const currentTier = subStore.getState().tier;
     const currentProductId = subStore.getState().productId;
     const tierRank: Record<string, number> = { free: 0, plus: 1, pro: 2 };
-    if (
-      currentProductId === 'beta_tester_grant' ||
-      (tierRank[currentTier] ?? 0) >= (tierRank[info.tier] ?? 0)
-    ) {
-      // Don't even start a purchase flow — the user already has it.
-      // The CTA *should* be hidden in this case (isActive prop), but
-      // the visible-CTA bug doesn't have to be fixable for the
-      // server-charge bug to be unreachable from here.
+    if (currentProductId === 'beta_tester_grant') {
+      // Complimentary/beta grant — no App Store purchase to make. Tell the
+      // user instead of leaving the button looking unresponsive (App Review
+      // 2.1a: a tap must always do something visible).
+      Alert.alert(
+        'You already have access',
+        "You're on a complimentary PepTalk grant, so there's nothing to buy. Manage your access from your Profile.",
+      );
+      return;
+    }
+    if ((tierRank[currentTier] ?? 0) >= (tierRank[info.tier] ?? 0)) {
+      // Already on an equal-or-higher tier — acknowledge the tap rather than
+      // silently returning.
+      Alert.alert(
+        'Already subscribed',
+        currentTier === 'pro'
+          ? "You're on PepTalk Pro, which already includes everything in this plan."
+          : `You're already on ${currentTier === 'plus' ? 'PepTalk+' : 'this plan'}.`,
+      );
       return;
     }
     trackUpgradeInitiated(plan.productId, info.tier);
@@ -228,11 +239,26 @@ function TierCard({
       await purchaseProduct(plan.productId, { appAccountToken, appleOfferCode });
     } catch (err: any) {
       const msg = err?.message ?? 'Purchase could not be completed.';
-      const cancelled =
-        msg.toLowerCase().includes('cancelled') || msg.toLowerCase().includes('canceled');
+      const lower = msg.toLowerCase();
+      const cancelled = lower.includes('cancelled') || lower.includes('canceled');
       trackUpgradeFailed(plan.productId, cancelled ? 'user_cancelled' : msg);
       if (!cancelled) {
-        Alert.alert('Purchase Failed', msg);
+        // Map "product not available" (StoreKit can't find the SKU — e.g. the
+        // IAP isn't approved yet, or a transient store hiccup) to a clear
+        // message instead of a raw error code, so the button never appears
+        // broken.
+        const unavailable =
+          lower.includes('unavailable') ||
+          lower.includes('not available') ||
+          lower.includes('invalid product') ||
+          lower.includes('e_item_unavailable') ||
+          lower.includes('not initialized');
+        Alert.alert(
+          unavailable ? 'Subscriptions unavailable' : 'Purchase Failed',
+          unavailable
+            ? "We couldn't reach the App Store for this subscription. Please try again in a moment."
+            : msg,
+        );
       }
     } finally {
       setPurchasing(false);

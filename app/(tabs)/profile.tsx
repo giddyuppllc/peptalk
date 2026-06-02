@@ -1652,7 +1652,7 @@ export default function ProfileScreen() {
         <View style={profileStyles.section}>
           <Text style={[profileStyles.sectionTitle, { color: t.textSecondary }]}>SETTINGS</Text>
           <View style={[profileStyles.card, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
-            <ProfileRow icon="link-outline" label="Integrations" onPress={() => router.push('/settings/integrations' as any)} color={t.text} />
+            <ProfileRow icon="heart-outline" label={Platform.OS === 'ios' ? 'Apple Health & Integrations' : 'Health Connect & Integrations'} onPress={() => router.push('/settings/integrations' as any)} color={t.text} />
             <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
             <ProfileRow icon="gift-outline" label="Referral code" onPress={() => router.push('/settings/referral' as any)} color={t.text} />
             <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
