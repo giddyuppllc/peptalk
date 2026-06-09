@@ -113,12 +113,12 @@ Go to https://appstoreconnect.apple.com/apps/6760955746
   `docs/app-store-review-notes.md`. Specifically replace the
   `[TODO: create test account]` placeholders with a real account.
 - [ ] **Demo account**: sign up a fresh account through TestFlight
-  (e.g. `applereviewer@peptalk.app`), then run this SQL in Supabase:
+  (e.g. `applereviewer@peptalk.bio`), then run this SQL in Supabase:
   ```sql
   UPDATE subscriptions SET tier='plus', is_active=true
-  WHERE user_id = (SELECT id FROM auth.users WHERE email = 'applereviewer@peptalk.app');
+  WHERE user_id = (SELECT id FROM auth.users WHERE email = 'applereviewer@peptalk.bio');
   UPDATE profiles SET subscription_tier='plus'
-  WHERE id = (SELECT id FROM auth.users WHERE email = 'applereviewer@peptalk.app');
+  WHERE id = (SELECT id FROM auth.users WHERE email = 'applereviewer@peptalk.bio');
   ```
   Paste the email + password into the App Review Notes.
 

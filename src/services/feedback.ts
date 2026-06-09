@@ -10,7 +10,7 @@
 import { Alert, Linking, Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-const FEEDBACK_EMAIL = 'support@peptalk.app';
+const FEEDBACK_EMAIL = 'support@peptalk.bio';
 
 export async function sendFeedback(options: {
   kind: 'bug' | 'feedback' | 'question';
