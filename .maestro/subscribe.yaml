@@ -11,7 +11,7 @@
 # purchase must be smoke-tested manually in the StoreKit sandbox.
 #
 #   maestro test .maestro/subscribe.yaml \
-#     -e EMAIL=reviewer@peptalk.bio -e PASSWORD=PeptalkReview!2026
+#     -e EMAIL=reviewer@peptalk.bio -e PASSWORD=<reviewer-password>
 appId: com.peptalkapp.peptalk
 tags:
   - smoke

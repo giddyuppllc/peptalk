@@ -7,7 +7,7 @@
 # build installed (e.g. `eas build -p ios --profile preview`, then install):
 #
 #   maestro test .maestro/login.yaml \
-#     -e EMAIL=reviewer@peptalk.bio -e PASSWORD=PeptalkReview!2026
+#     -e EMAIL=reviewer@peptalk.bio -e PASSWORD=<reviewer-password>
 #
 # Creds are passed as env vars so they never live in git. Refine any selector
 # live with `maestro studio` if the app's copy changes.

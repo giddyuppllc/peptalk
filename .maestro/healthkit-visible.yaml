@@ -5,7 +5,7 @@
 # ("Apple Health is at Profile → Apple Health & Integrations").
 #
 #   maestro test .maestro/healthkit-visible.yaml \
-#     -e EMAIL=reviewer@peptalk.bio -e PASSWORD=PeptalkReview!2026
+#     -e EMAIL=reviewer@peptalk.bio -e PASSWORD=<reviewer-password>
 #
 # Refine selectors with `maestro studio` against a running build.
 appId: com.peptalkapp.peptalk

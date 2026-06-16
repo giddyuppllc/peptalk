@@ -22,7 +22,7 @@ eas build -p ios --profile preview        # or a local dev client
 
 maestro test .maestro/ \
   -e EMAIL=reviewer@peptalk.bio \
-  -e PASSWORD=PeptalkReview!2026
+  -e PASSWORD=<reviewer-password>
 ```
 Run a single flow: `maestro test .maestro/login.yaml -e EMAIL=… -e PASSWORD=…`
 
