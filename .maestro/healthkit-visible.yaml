@@ -8,29 +8,56 @@
 #     -e EMAIL=reviewer@peptalk.bio -e PASSWORD=<reviewer-password>
 #
 # Refine selectors with `maestro studio` against a running build.
+#
+# Verified against build 1.9.8 on the iOS Simulator (2026-06-16): the profile
+# screen opens via the "Open profile" button; row labels are exposed as
+# ", <label>, " so we match with .* on both sides; the Integrations screen shows
+# "Apple Health" + a "Connect Apple Health" CTA. The login block is conditional
+# because Maestro's clearState does NOT clear the Supabase session (it lives in
+# the iOS Keychain), so a relaunch may already be authenticated — we sign in only
+# when the welcome screen is showing.
 appId: com.peptalkapp.peptalk
 tags:
   - smoke
 ---
 - launchApp:
     clearState: true
-- tapOn: "Sign In"
-- tapOn: "Email address"
-- inputText: ${EMAIL}
-- tapOn: "Password"
-- inputText: ${PASSWORD}
-- hideKeyboard
-- tapOn:
-    text: "Log in"
-    index: 0
+# Wait for the first screen to render (JS bundle load on dev builds). "PepTalk"
+# is present on both the welcome screen and the logged-in home, so it is a safe
+# "app is ready" anchor before we branch on auth state.
 - extendedWaitUntil:
-    notVisible: "Email address"
-    timeout: 20000
+    visible: "PepTalk"
+    timeout: 60000
+# Sign in only if we are logged out (welcome screen visible).
+- runFlow:
+    when:
+      visible: "Get Started.*"
+    commands:
+      - tapOn: ".*Sign In"
+      - assertVisible: "Email address"
+      - tapOn: "Email address"
+      - inputText: ${EMAIL}
+      - tapOn: "Enter password"
+      - inputText: ${PASSWORD}
+      - hideKeyboard
+      - tapOn:
+          text: "Log in"
+          index: 0
+      - tapOn:
+          text: "Not Now"
+          optional: true
+      - extendedWaitUntil:
+          notVisible: "Email address"
+          timeout: 20000
 
-# Profile tab → Apple Health & Integrations
-- tapOn: "Profile"
-- tapOn:
-    text: "Apple Health.*Integrations"   # regex — matches the row label
+# Profile → Apple Health & Integrations
+- tapOn: "Open profile"
+- scrollUntilVisible:
+    element:
+      text: ".*Apple Health.*Integrations.*"
+    direction: DOWN
+    waitToSettleTimeoutMs: 1000
+- tapOn: ".*Apple Health.*Integrations.*"
 - assertVisible: "Apple Health"
-- assertVisible: "Connect"
+- assertVisible: "Connect Apple Health"
 - takeScreenshot: healthkit-screen
