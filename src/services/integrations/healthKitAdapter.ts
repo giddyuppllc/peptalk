@@ -50,6 +50,23 @@ try {
   AppleHealthKit = null;
 }
 
+// HealthKit links into the binary on iPad too, but the DATA layer is
+// unavailable there (iPadOS has no Health app). The native isAvailable() result
+// is the only reliable signal — Platform.isPad is wrong when an iPhone-only app
+// runs on iPad in compatibility mode. Cache the async result; `null` = not yet
+// resolved (treat as available so a normal iPhone cold-start doesn't briefly
+// hide the card), self-correcting to false on iPad.
+let hkDataAvailable: boolean | null = null;
+if (AppleHealthKit?.isAvailable) {
+  try {
+    AppleHealthKit.isAvailable((err: any, avail: boolean) => {
+      hkDataAvailable = err ? false : !!avail;
+    });
+  } catch {
+    hkDataAvailable = false;
+  }
+}
+
 const PERMS = AppleHealthKit?.Constants?.Permissions ?? {};
 
 /** Map our scope names to HealthKit read-permission constants. */
@@ -220,7 +237,10 @@ export const healthKitAdapter: BiomarkerAdapter = {
   source: 'apple_health',
 
   available() {
-    return Platform.OS === 'ios' && AppleHealthKit != null;
+    // iPad has no HealthKit data layer — gate on the native availability check
+    // so the Apple Health card shows as unavailable (not a dead "Connect") on
+    // iPad, the device Apple reviews on. `null` (pending) counts as available.
+    return Platform.OS === 'ios' && AppleHealthKit != null && hkDataAvailable !== false;
   },
 
   async isAuthorized() {
