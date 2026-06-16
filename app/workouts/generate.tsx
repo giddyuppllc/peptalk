@@ -38,7 +38,10 @@ import {
   GOAL_LABELS,
   getTemplatesForUser,
   generateWorkout,
+  type ProgramTemplate,
 } from '../../src/services/workoutGenerator';
+import { generateAiWorkout, AiWorkoutError } from '../../src/services/aimeeWorkout';
+import type { ExerciseGender } from '../../src/types/fitness';
 import { tapMedium, selectionTick } from '../../src/utils/haptics';
 import { PaywallModal } from '../../src/components/PaywallModal';
 
@@ -56,15 +59,16 @@ export default function GenerateWorkoutScreen() {
   const saveGenerated = useWorkoutStore((s) => s.saveGeneratedWorkout);
   const biologicalSex = useHealthProfileStore((s) => s.profile.biologicalSex);
 
-  const userGender: 'male' | 'female' =
-    biologicalSex === 'male' ? 'male' : 'female';
+  // Gender for the exercise library (filters move suitability). Unknown sex
+  // maps to 'anyone' so non-male users aren't silently forced into the female
+  // template set (old bug) — AI + library both handle 'anyone'.
+  const aiGender: ExerciseGender =
+    biologicalSex === 'male' ? 'men' : biologicalSex === 'female' ? 'women' : 'anyone';
+  const templateGender: 'male' | 'female' | 'anyone' =
+    biologicalSex === 'male' ? 'male' : biologicalSex === 'female' ? 'female' : 'anyone';
 
-  // Goals available given the user's sex (templates differ slightly per gender)
-  const availableGoals = useMemo(() => {
-    const seen = new Set<string>();
-    for (const t of getTemplatesForUser({ gender: userGender })) seen.add(t.goal);
-    return [...seen];
-  }, [userGender]);
+  // Aimee can build any goal; offer the full goal set (not gender-restricted).
+  const availableGoals = useMemo(() => Object.keys(GOAL_LABELS), []);
 
   const [goal, setGoal] = useState<string | null>(availableGoals[0] ?? null);
   const [daysPerWeek, setDaysPerWeek] = useState<number>(4);
@@ -72,7 +76,44 @@ export default function GenerateWorkoutScreen() {
   const [generating, setGenerating] = useState(false);
   const [paywallVisible, setPaywallVisible] = useState(false);
 
-  const handleGenerate = () => {
+  /** Best-effort deterministic template when the AI path is unavailable. */
+  const pickFallbackTemplate = (g: string, days: number): ProgramTemplate | null => {
+    const nearest = (list: ProgramTemplate[]) =>
+      list.length
+        ? list.reduce((best, t) =>
+            Math.abs(t.daysPerWeek - days) < Math.abs(best.daysPerWeek - days) ? t : best)
+        : null;
+    return (
+      getTemplatesForUser({ gender: templateGender, goal: g, daysPerWeek: days })[0] ??
+      nearest(getTemplatesForUser({ gender: templateGender, goal: g })) ??
+      nearest(getTemplatesForUser({ goal: g })) ??
+      nearest(getTemplatesForUser({}))
+    );
+  };
+
+  const saveAndGo = (workout: ReturnType<typeof generateWorkout>) => {
+    if (!workout || !goal) return false;
+    const id = saveGenerated({
+      name: `${GOAL_LABELS[goal]?.label ?? goal} — ${daysPerWeek}-day`,
+      goal,
+      daysPerWeek,
+      location,
+      level: 'intermediate',
+      workout,
+    });
+    router.replace(`/workouts/my-workouts?highlight=${id}` as never);
+    return true;
+  };
+
+  const generateDeterministic = (): boolean => {
+    if (!goal) return false;
+    const template = pickFallbackTemplate(goal, daysPerWeek);
+    if (!template) return false;
+    const generated = generateWorkout(template.id, { location, gender: aiGender });
+    return saveAndGo(generated);
+  };
+
+  const handleGenerate = async () => {
     if (!canUse) {
       setPaywallVisible(true);
       return;
@@ -84,50 +125,38 @@ export default function GenerateWorkoutScreen() {
     tapMedium();
     setGenerating(true);
 
-    // Slight delay so the user sees the spinner — the generator itself
-    // is synchronous and would otherwise feel like the button did nothing.
-    setTimeout(() => {
-      try {
-        const candidates = getTemplatesForUser({
-          gender: userGender,
-          goal,
-          daysPerWeek,
-        });
-        const template =
-          candidates[0] ??
-          getTemplatesForUser({ gender: userGender, goal })[0];
-        if (!template) {
-          Alert.alert(
-            'No template found',
-            'No matching workout template — try a different goal.',
-          );
-          setGenerating(false);
-          return;
-        }
-        const generated = generateWorkout(template.id, {
-          location,
-          gender: userGender === 'male' ? 'men' : 'women',
-        });
-        if (!generated) {
-          Alert.alert('Generation failed', 'Try a different goal or location.');
-          setGenerating(false);
-          return;
-        }
-        const id = saveGenerated({
-          name: `${GOAL_LABELS[goal]?.label ?? goal} — ${daysPerWeek}-day`,
-          goal,
-          daysPerWeek,
-          location,
-          level: 'intermediate',
-          workout: generated,
-        });
-        setGenerating(false);
-        router.replace(`/workouts/my-workouts?highlight=${id}` as never);
-      } catch (e) {
-        setGenerating(false);
-        Alert.alert('Generation failed', 'Try again.');
+    try {
+      // Primary path: Aimee designs a targeted program, grounded in Jamie's
+      // P1–P4 library + stacking rules; exercises are filled on-device.
+      const aiWorkout = await generateAiWorkout({
+        goal,
+        daysPerWeek,
+        location,
+        gender: aiGender,
+        level: 'intermediate',
+      });
+      if (saveAndGo(aiWorkout)) return;
+      // AI produced an empty program — fall through to deterministic.
+      if (generateDeterministic()) return;
+      Alert.alert('Generation failed', 'Try a different goal or location.');
+    } catch (err) {
+      // Pro gate is the one case we surface instead of silently falling back.
+      if (err instanceof AiWorkoutError && err.code === 'upgrade') {
+        setPaywallVisible(true);
+        return;
       }
-    }, 400);
+      // Rate-limit or any AI/network failure → instant offline fallback so the
+      // user still gets a workout.
+      const ok = generateDeterministic();
+      if (!ok) {
+        Alert.alert(
+          'Generation failed',
+          err instanceof AiWorkoutError ? err.message : 'Try again in a moment.',
+        );
+      }
+    } finally {
+      setGenerating(false);
+    }
   };
 
   return (

@@ -1,0 +1,37 @@
+# PepTalk — verify the workout generator actually produces a workout.
+# Deep-links to the generator, taps Generate, confirms it lands on
+# "Your Workouts" with a saved workout (proves AI path or deterministic
+# fallback both end-to-end). Dev/sim build, logged in.
+appId: com.peptalkapp.peptalk
+tags:
+  - smoke
+---
+- launchApp
+- tapOn:
+    text: "Cancel"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Hi, reviewer|Welcome|Home"
+    timeout: 30000
+- openLink:
+    link: "peptalk://workouts/generate"
+- tapOn:
+    text: "Open"
+    optional: true
+- extendedWaitUntil:
+    visible: "Generate workout"
+    timeout: 15000
+- takeScreenshot: wkt-generate-before
+# NB: tap the button by coordinate — text "Generate workout" also matches the
+# screen HEADER "Generate Workout", which is higher up and would win.
+- tapOn:
+    point: "50%,80%"
+# AI call (if deployed) or instant fallback — wait for the My Workouts screen.
+- extendedWaitUntil:
+    visible:
+      text: "My Workouts|saved workout|DAY 1"
+    timeout: 50000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: wkt-generate-result

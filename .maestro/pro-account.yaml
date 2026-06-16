@@ -1,0 +1,50 @@
+# PepTalk — capture the PRO account screens.
+#
+# In any non-production build (EXPO_PUBLIC_ENV != 'production') useSubscriptionStore
+# auto-grants Pro to every signed-in user, so a dev/sim build is the easiest way
+# to capture clean "Pro account" marketing/QA shots. Assumes a session already
+# exists (Supabase session persists in the Keychain across launches); if not,
+# run login.yaml first with -e EMAIL=... -e PASSWORD=...
+#
+# NOTE: the dev "Open debugger to view warnings" banner is a NATIVE overlay that
+# is NOT in the RN accessibility tree, so Maestro can't see/dismiss it by text and
+# it covers the bottom tab bar. We reach Profile via the top-right avatar instead.
+#
+#   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+#     maestro --device <sim-udid> test .maestro/pro-account.yaml
+appId: com.peptalkapp.peptalk
+tags:
+  - screenshots
+---
+- launchApp
+
+# Dev build loads JS from Metro on launch — wait for the home screen to settle.
+- extendedWaitUntil:
+    visible:
+      text: "Hi, reviewer|Welcome"
+    timeout: 30000
+
+# 1) Open Profile via the top-right account avatar (avoids the covered tab bar).
+- tapOn:
+    point: "92%,11%"
+- extendedWaitUntil:
+    visible:
+      text: "PRO|PepTalk Pro Active|Pro Status"
+    timeout: 15000
+- takeScreenshot: pro-profile
+
+# 3) Open the Plans screen via the "Pro Status" settings row. The RN list rows
+#    don't expose accessibility text, so tap by coordinate (row sits ~78% down).
+- tapOn:
+    point: "50%,78%"
+- extendedWaitUntil:
+    visible:
+      text: "Choose Your Plan|Plans|Free|Pro"
+    timeout: 15000
+- takeScreenshot: pro-plans-top
+
+# 4) Scroll through the plan cards (Pro shows as the current plan).
+- scroll
+- takeScreenshot: pro-plans-mid
+- scroll
+- takeScreenshot: pro-plans-bottom
