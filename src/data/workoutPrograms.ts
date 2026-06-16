@@ -1851,4 +1851,28 @@ export function getProgramById(programId: string): WorkoutProgram | undefined {
   return _ALL_PROGRAMS.find((p) => p.id === programId);
 }
 
+/**
+ * Jamie's recommended marquee program for a user's biological sex.
+ * Men → Men's BUILD, women → Lusciously Lean. Returns null when sex is unset
+ * so callers can offer a "choose your track" pick rather than defaulting
+ * everyone into the female program (opt-in, not automatic on upgrade).
+ */
+export function getRecommendedProgramId(sex?: string | null): string | null {
+  if (sex === 'male') return 'mens-build';
+  if (sex === 'female') return 'll-body-recomp-1';
+  return null;
+}
+
+/** Short tile/row label per program. */
+export const PROGRAM_SHORT_LABEL: Record<string, string> = {
+  'mens-build': "Men's BUILD",
+  'll-body-recomp-1': 'Lusciously Lean',
+};
+
+/** One-line tagline per program. */
+export const PROGRAM_TAGLINE: Record<string, string> = {
+  'mens-build': 'Strength & size · men',
+  'll-body-recomp-1': "Jamie's signature recomp · women",
+};
+
 export default WORKOUT_PROGRAMS;

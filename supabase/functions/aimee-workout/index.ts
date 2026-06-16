@@ -147,6 +147,11 @@ Deno.serve(async (req) => {
 
 ${PROGRAM_RULES}
 
+CRITICAL: You do NOT choose specific exercises and you must NEVER name one. The
+app fills every slot from its own vetted exercise library. Your job is ONLY to
+choose, per slot, a muscle group + priority tier + set type + sets/reps/tempo/
+rest. Do not put exercise names anywhere in the output.
+
 ${availabilityLine}
 ${focusLine}
 

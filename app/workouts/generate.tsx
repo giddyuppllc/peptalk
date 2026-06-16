@@ -51,6 +51,20 @@ const LOCATION_OPTIONS = [
   { id: 'home', label: 'Home / minimal', icon: 'home' as const },
 ];
 
+// Gendered builder goals — men and women get tailored tracks; unset sex sees
+// all goals. Keys are real goal keys (so AI + deterministic templates resolve);
+// only the display label is gendered for the flagship goals.
+const GENDERED_GOALS: Record<'men' | 'women' | 'anyone', string[]> = {
+  women: ['transformation', 'weight_loss', 'circuit', 'body_recomp'],
+  men: ['body_recomp', 'strength', 'hypertrophy', 'aerobic'],
+  anyone: ['transformation', 'weight_loss', 'circuit', 'hypertrophy', 'strength', 'aerobic', 'body_recomp'],
+};
+const GENDERED_GOAL_LABEL: Record<string, Partial<Record<'men' | 'women', string>>> = {
+  transformation: { women: 'Lusciously Lean' },
+  body_recomp: { men: 'BUILD', women: 'Recomp' },
+  circuit: { women: 'Circuit' },
+};
+
 export default function GenerateWorkoutScreen() {
   const router = useRouter();
   const t = useTheme();
@@ -67,8 +81,15 @@ export default function GenerateWorkoutScreen() {
   const templateGender: 'male' | 'female' | 'anyone' =
     biologicalSex === 'male' ? 'male' : biologicalSex === 'female' ? 'female' : 'anyone';
 
-  // Aimee can build any goal; offer the full goal set (not gender-restricted).
-  const availableGoals = useMemo(() => Object.keys(GOAL_LABELS), []);
+  // Gendered goal set (men/women tailored, unset = all).
+  const availableGoals = useMemo(() => GENDERED_GOALS[aiGender], [aiGender]);
+  const goalLabel = (g: string): string => {
+    if (aiGender === 'men' || aiGender === 'women') {
+      const override = GENDERED_GOAL_LABEL[g]?.[aiGender];
+      if (override) return override;
+    }
+    return GOAL_LABELS[g]?.label ?? g;
+  };
 
   const [goal, setGoal] = useState<string | null>(availableGoals[0] ?? null);
   const [daysPerWeek, setDaysPerWeek] = useState<number>(4);
@@ -94,7 +115,7 @@ export default function GenerateWorkoutScreen() {
   const saveAndGo = (workout: ReturnType<typeof generateWorkout>) => {
     if (!workout || !goal) return false;
     const id = saveGenerated({
-      name: `${GOAL_LABELS[goal]?.label ?? goal} — ${daysPerWeek}-day`,
+      name: `${goalLabel(goal)} — ${daysPerWeek}-day`,
       goal,
       daysPerWeek,
       location,
@@ -206,7 +227,7 @@ export default function GenerateWorkoutScreen() {
                     { color: selected ? accent.deep : t.text },
                   ]}
                 >
-                  {meta?.label ?? g}
+                  {goalLabel(g)}
                 </Text>
               </TouchableOpacity>
             );

@@ -36,16 +36,20 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { Spacing, BorderRadius } from '../../src/constants/theme';
-import { getProgramById } from '../../src/data/workoutPrograms';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import {
   useWorkoutTemplateStore,
   type WorkoutTemplate,
 } from '../../src/store/useWorkoutTemplateStore';
 import { getExerciseById } from '../../src/data/exercises';
+import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import {
+  getProgramById,
+  getRecommendedProgramId,
+  PROGRAM_SHORT_LABEL,
+  PROGRAM_TAGLINE,
+} from '../../src/data/workoutPrograms';
 import { tapMedium, selectionTick } from '../../src/utils/haptics';
-
-const JAMIE_PROGRAM_ID = 'll-body-recomp-1';
 
 // ---------------------------------------------------------------------------
 // Active program banner
@@ -157,6 +161,14 @@ export default function WorkoutsScreen() {
   const templates = useWorkoutTemplateStore((st) => st.templates);
   const deleteTemplate = useWorkoutTemplateStore((st) => st.deleteTemplate);
 
+  // Gendered marquee program: men → Men's BUILD, women → Lusciously Lean.
+  // Unset sex → offer BOTH so the user opts into a track (no female default).
+  const biologicalSex = useHealthProfileStore((st) => st.profile.biologicalSex);
+  const recommendedProgramId = getRecommendedProgramId(biologicalSex);
+  const programRowIds = recommendedProgramId
+    ? [recommendedProgramId]
+    : ['ll-body-recomp-1', 'mens-build'];
+
   const go = (path: string) => {
     selectionTick();
     router.push(path as never);
@@ -256,32 +268,39 @@ export default function WorkoutsScreen() {
           </View>
         )}
 
-        {/* Jamie's program — single row back to the marquee program */}
+        {/* Jamie's programs — gendered marquee row(s). Tap to opt in. */}
         <View style={s.section}>
           <Text style={[s.sectionTitle, { color: t.text }]}>Following a program?</Text>
-          <TouchableOpacity
-            style={[s.programRow, { backgroundColor: t.surface, borderColor: `${accent.deep}30` }]}
-            onPress={() => go(`/workouts/program/${JAMIE_PROGRAM_ID}`)}
-            activeOpacity={0.85}
-          >
-            <LinearGradient
-              colors={['#7ABED0', '#5BA9A7']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={s.programIcon}
-            >
-              <Ionicons name="star" size={20} color="#fff" />
-            </LinearGradient>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.programTitle, { color: t.text }]}>
-                Lusciously Lean BODYreCOMP
-              </Text>
-              <Text style={[s.programSub, { color: t.textSecondary }]}>
-                Jamie's signature program · 12 weeks
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={t.textSecondary} />
-          </TouchableOpacity>
+          {programRowIds.map((pid) => {
+            const program = getProgramById(pid);
+            if (!program) return null;
+            return (
+              <TouchableOpacity
+                key={pid}
+                style={[s.programRow, { backgroundColor: t.surface, borderColor: `${accent.deep}30` }]}
+                onPress={() => go(`/workouts/program/${pid}`)}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={['#7ABED0', '#5BA9A7']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={s.programIcon}
+                >
+                  <Ionicons name="star" size={20} color="#fff" />
+                </LinearGradient>
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.programTitle, { color: t.text }]}>
+                    {PROGRAM_SHORT_LABEL[pid] ?? program.name}
+                  </Text>
+                  <Text style={[s.programSub, { color: t.textSecondary }]}>
+                    {PROGRAM_TAGLINE[pid] ?? `${program.durationWeeks}-week program`}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={t.textSecondary} />
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <View style={{ height: 60 }} />
