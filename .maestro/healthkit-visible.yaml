@@ -1,0 +1,36 @@
+# PepTalk — Apple Health is clearly identified in the UI (Guideline 2.5.1).
+#
+# Proves the HealthKit screen is reachable + labeled, so 2.5.1 can't be
+# re-flagged. Also serves as the navigation reference for the App Review notes
+# ("Apple Health is at Profile → Apple Health & Integrations").
+#
+#   maestro test .maestro/healthkit-visible.yaml \
+#     -e EMAIL=reviewer@peptalk.bio -e PASSWORD=PeptalkReview!2026
+#
+# Refine selectors with `maestro studio` against a running build.
+appId: com.peptalkapp.peptalk
+tags:
+  - smoke
+---
+- launchApp:
+    clearState: true
+- tapOn: "Sign In"
+- tapOn: "Email address"
+- inputText: ${EMAIL}
+- tapOn: "Password"
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn:
+    text: "Log in"
+    index: 0
+- extendedWaitUntil:
+    notVisible: "Email address"
+    timeout: 20000
+
+# Profile tab → Apple Health & Integrations
+- tapOn: "Profile"
+- tapOn:
+    text: "Apple Health.*Integrations"   # regex — matches the row label
+- assertVisible: "Apple Health"
+- assertVisible: "Connect"
+- takeScreenshot: healthkit-screen

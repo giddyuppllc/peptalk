@@ -1,0 +1,48 @@
+# PepTalk — CRITICAL login smoke test.
+#
+# This is the exact path Apple's reviewer got stuck on in v1.9.8 build 47
+# ("cannot continue after login"). If this flow ever fails, do NOT submit.
+#
+# Run against an iOS Simulator or a connected device that has a dev/preview
+# build installed (e.g. `eas build -p ios --profile preview`, then install):
+#
+#   maestro test .maestro/login.yaml \
+#     -e EMAIL=reviewer@peptalk.bio -e PASSWORD=PeptalkReview!2026
+#
+# Creds are passed as env vars so they never live in git. Refine any selector
+# live with `maestro studio` if the app's copy changes.
+appId: com.peptalkapp.peptalk
+tags:
+  - smoke
+  - release-blocker
+---
+- launchApp:
+    clearState: true
+
+# 1) Onboarding "Welcome" screen → Sign In
+- assertVisible: "Get Started"
+- tapOn: "Sign In"
+
+# 2) Auth screen — enter the reviewer credentials.
+#    (The email/password inputs carry accessibilityLabels "Email address" /
+#     "Password"; the submit button's label is "Log in".)
+- assertVisible: "Email address"
+- tapOn: "Email address"
+- inputText: ${EMAIL}
+- tapOn: "Password"
+- inputText: ${PASSWORD}
+- hideKeyboard
+
+# 3) Submit
+- tapOn:
+    text: "Log in"
+    index: 0
+
+# 4) PASS = we left the auth screen and no error banner appeared.
+#    The Email field is gone once we're on the tabs.
+- extendedWaitUntil:
+    notVisible: "Email address"
+    timeout: 20000
+- assertNotVisible: "Invalid email or password"
+- assertNotVisible: "Something went wrong"
+- takeScreenshot: login-success

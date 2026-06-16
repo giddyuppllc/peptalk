@@ -1,0 +1,40 @@
+# PepTalk — Subscribe button is present + responsive (Guideline 2.1a).
+#
+# The original 2.1a finding was an "unresponsive Subscribe button" — which
+# happens when (a) the reviewer account is pre-entitled (so tapping no-ops), or
+# (b) the IAP products aren't attached to the version (StoreKit has nothing to
+# sell). This flow catches case (a): the reviewer account must be FREE so the
+# Subscribe button is live.
+#
+# NOTE: the StoreKit purchase sheet is a SYSTEM overlay Maestro can't inspect,
+# so this verifies the paywall + Subscribe affordance render — the actual
+# purchase must be smoke-tested manually in the StoreKit sandbox.
+#
+#   maestro test .maestro/subscribe.yaml \
+#     -e EMAIL=reviewer@peptalk.bio -e PASSWORD=PeptalkReview!2026
+appId: com.peptalkapp.peptalk
+tags:
+  - smoke
+---
+- launchApp:
+    clearState: true
+- tapOn: "Sign In"
+- tapOn: "Email address"
+- inputText: ${EMAIL}
+- tapOn: "Password"
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn:
+    text: "Log in"
+    index: 0
+- extendedWaitUntil:
+    notVisible: "Email address"
+    timeout: 20000
+
+# Profile → Subscription paywall
+- tapOn: "Profile"
+- tapOn:
+    text: "Subscription|Upgrade|Plus|Pro"   # regex — whichever the row says
+- assertVisible:
+    text: "Subscribe|Upgrade|Start"          # the live CTA must be present
+- takeScreenshot: paywall
