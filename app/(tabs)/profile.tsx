@@ -306,6 +306,13 @@ function LoginForm() {
 function UserProfile() {
   const { user, logout, setAvatar } = useAuthStore();
   const { tier } = useSubscriptionStore();
+  // Single source of truth for Pro status: the subscription store's `tier`
+  // (what the badge, the Pro-Active banner, and feature gating all use).
+  // Previously the Plan stat + Pro-Status row read `user.isPro` from the auth
+  // store, which can drift from `tier` (e.g. when the subscription store
+  // rehydrates a tier the auth profile mirror hasn't caught up to) — that's
+  // what produced the "PRO badge + Pro-Active banner but Plan: Free" mismatch.
+  const isPro = tier === 'pro';
   const t = useTheme();
   const router = useRouter();
   const themeMode = useThemeStore((s) => s.mode);
@@ -402,8 +409,8 @@ function UserProfile() {
           </View>
           <View style={[styles.statDivider, { backgroundColor: t.glassBorder }]} />
           <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: t.text }, user.isPro && styles.proActive]}>
-              {user.isPro ? 'Active' : 'Free'}
+            <Text style={[styles.statValue, { color: t.text }, isPro && styles.proActive]}>
+              {isPro ? 'Active' : 'Free'}
             </Text>
             <Text style={[styles.statLabel, { color: t.textSecondary }]}>Plan</Text>
           </View>
@@ -477,12 +484,12 @@ function UserProfile() {
             but had no effect). Tap routes to the paywall for free
             users; for Pro users it's a static "Active" badge. */}
         <TouchableOpacity
-          activeOpacity={user.isPro ? 1 : 0.8}
-          disabled={user.isPro}
+          activeOpacity={isPro ? 1 : 0.8}
+          disabled={isPro}
           onPress={() => router.push('/subscription' as never)}
-          accessibilityRole={user.isPro ? 'text' : 'button'}
+          accessibilityRole={isPro ? 'text' : 'button'}
           accessibilityLabel={
-            user.isPro
+            isPro
               ? 'Pro plan active'
               : 'Upgrade to Pro for advanced analysis features'
           }
@@ -496,13 +503,13 @@ function UserProfile() {
                 <View style={styles.settingTextContainer}>
                   <Text style={[styles.settingTitle, { color: t.text }]}>Pro Status</Text>
                   <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
-                    {user.isPro
+                    {isPro
                       ? 'Pro plan is active — all features unlocked'
                       : 'Tap to upgrade and unlock advanced analysis'}
                   </Text>
                 </View>
               </View>
-              {user.isPro ? (
+              {isPro ? (
                 <View style={[styles.proPill, { backgroundColor: 'rgba(227, 167, 161, 0.2)' }]}>
                   <Text style={[styles.proPillText, { color: '#e3a7a1' }]}>Active</Text>
                 </View>
