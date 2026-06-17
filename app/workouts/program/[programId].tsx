@@ -28,7 +28,12 @@ import { Colors, Spacing, FontSizes } from '../../../src/constants/theme';
 import { getProgramById } from '../../../src/data/workoutPrograms';
 import { getExerciseById } from '../../../src/data/exercises';
 import { useWorkoutStore } from '../../../src/store/useWorkoutStore';
-import type { WorkoutDay } from '../../../src/types/fitness';
+import { useHealthProfileStore } from '../../../src/store/useHealthProfileStore';
+import {
+  buildPlanFromProgram,
+  workoutForPlannedDay,
+} from '../../../src/services/monthlyPlan';
+import type { WorkoutDay, ExerciseGender, WorkoutLog } from '../../../src/types/fitness';
 
 // ---------------------------------------------------------------------------
 // Day Preview
@@ -71,7 +76,13 @@ export default function ProgramDetailScreen() {
   const programId = params.programId ?? '';
   const program = getProgramById(programId);
   const { activeProgram, startProgram } = useWorkoutStore();
+  const setMonthlyPlan = useWorkoutStore((st) => st.setMonthlyPlan);
+  const addPlannedLog = useWorkoutStore((st) => st.addPlannedLog);
+  const biologicalSex = useHealthProfileStore((st) => st.profile.biologicalSex);
   const isActive = activeProgram?.programId === programId;
+
+  const aiGender: ExerciseGender =
+    biologicalSex === 'male' ? 'men' : biologicalSex === 'female' ? 'women' : 'anyone';
 
   if (!program) {
     return (
@@ -86,6 +97,37 @@ export default function ProgramDetailScreen() {
 
   const handleStart = () => {
     startProgram(program.id);
+
+    // Opt-in to a pre-programmed series (e.g. Lusciously Lean 8-week) builds a
+    // calendar plan and auto-populates the calendar with the program's
+    // workouts as planned (not-yet-completed) logs, then opens the plan view.
+    const plan = buildPlanFromProgram(program.id, {
+      location: 'gym',
+      gender: aiGender,
+    });
+    if (plan) {
+      setMonthlyPlan(plan);
+      // Seed one planned log per training day so the workouts land on the
+      // calendar tab immediately. completedAt is left undefined = "planned".
+      plan.calendar.forEach((planned) => {
+        const day = workoutForPlannedDay(plan, planned);
+        if (!day) return;
+        const log: WorkoutLog = {
+          id: `plan-${program.id}-${planned.dayOffset}-${Date.now()}`,
+          date: planned.date,
+          programId: program.id,
+          dayId: day.name,
+          sets: [],
+          durationMinutes: 0,
+          workoutName: `${program.name} · ${day.name}`,
+          startedAt: `${planned.date}T08:00:00.000Z`,
+        };
+        addPlannedLog(log);
+      });
+      router.push('/workouts/plan' as never);
+      return;
+    }
+
     router.push(`/workouts/player-v2?programId=${program.id}` as never);
   };
 
