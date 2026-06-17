@@ -68,6 +68,36 @@ function pickRandom<T>(arr: T[]): T {
 }
 
 /**
+ * Jamie's signature: every workout ends with 2 core exercises as a finisher.
+ * Pull from the on-device core pool (relaxing gender→location like the slot
+ * filler), skipping moves already used in the day so the finisher is fresh.
+ * Never invents a move — finishers come straight from the library.
+ */
+function pickCoreFinishers(
+  location: ExerciseLocation,
+  gender: ExerciseGender,
+  used: Set<string>,
+  n: number,
+): Exercise[] {
+  const tries: Parameters<typeof filterExercises>[0][] = [
+    { muscle: 'core', location, gender },
+    { muscle: 'core', location },
+    { muscle: 'core' },
+  ];
+  let pool: Exercise[] = [];
+  for (const f of tries) {
+    pool = filterExercises(f).filter((e) => !used.has(e.id));
+    if (pool.length >= n) break;
+  }
+  const avail = [...pool];
+  const out: Exercise[] = [];
+  while (out.length < n && avail.length) {
+    out.push(avail.splice(Math.floor(Math.random() * avail.length), 1)[0]);
+  }
+  return out;
+}
+
+/**
  * For each muscle, which priorities actually have ≥1 exercise given the
  * user's location/gender. Sent to the edge fn so it only emits fillable slots.
  */
@@ -140,6 +170,20 @@ function fillProgram(
         tempo: slot.tempo,
         rest: slot.rest,
         timeSeconds: slot.timeSeconds,
+      });
+    }
+
+    // ── Core finisher ────────────────────────────────────────────────────
+    // Jamie caps every workout with 2 core exercises. Append them after the
+    // AI's slots (drawn from the on-device core pool, deduped within the day).
+    const finishers = pickCoreFinishers(location, gender, usedIds, 2);
+    for (const fin of finishers) {
+      usedIds.add(fin.id);
+      exercises.push({
+        exercise: fin,
+        reps: fin.isTimeBased ? '1' : expandReps('15-20', 3),
+        setType: 'normal',
+        timeSeconds: fin.isTimeBased ? 40 : undefined,
       });
     }
 
