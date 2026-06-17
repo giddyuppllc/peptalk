@@ -279,18 +279,16 @@ async function verifyAppleReceipt(
     return { valid: false, expiresAt: null, originalTransactionId: null };
   }
 
-  // Reject sandbox receipts in a production build. The function reads
-  // EXPO_PUBLIC_ENV at boot (defaults to 'production' so a missing flag
-  // fails closed). TestFlight + development builds set this to 'staging'
-  // or 'development' so sandbox testers continue to work there.
-  const envFlag = (Deno.env.get('EXPO_PUBLIC_ENV') ?? 'production').toLowerCase();
-  const isProdRuntime = envFlag === 'production' || envFlag === 'prod';
+  // Do NOT blanket-reject sandbox receipts in prod. Apple App Review purchases
+  // with a SANDBOX Apple ID even against the production binary, so rejecting
+  // sandbox here turns the reviewer's Subscribe into a no-op and re-triggers
+  // the Guideline 2.1a rejection. Self-grant abuse (replaying a sandbox
+  // receipt) is bounded by the original_transaction_id dedup downstream — that
+  // is the real guard, not a blanket environment reject. We still record which
+  // environment validated so abuse can be monitored.
   const receiptEnv = (res.environment ?? validatedEnvironment) as string;
-  if (isProdRuntime && receiptEnv === 'Sandbox') {
-    console.warn(
-      '[validate-purchase] rejected sandbox receipt in prod runtime — possible self-grant attempt',
-    );
-    return { valid: false, expiresAt: null, originalTransactionId: null };
+  if (receiptEnv === 'Sandbox') {
+    console.warn('[validate-purchase] accepting sandbox receipt (App Review / testing path)');
   }
 
   // Apple can return multiple in-app entries (renewals, upgrades, etc.).
