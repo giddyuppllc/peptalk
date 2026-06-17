@@ -174,18 +174,22 @@ function fillProgram(
     }
 
     // ── Core finisher ────────────────────────────────────────────────────
-    // Jamie caps every workout with 2 core exercises. Append them after the
-    // AI's slots (drawn from the on-device core pool, deduped within the day).
+    // Jamie caps every workout with 2 core exercises, run as a paired superset:
+    // move A straight into move B (no rest between), then rest after the pair.
+    // Tagged super_set / super_set_2 so the player renders them as a pair.
     const finishers = pickCoreFinishers(location, gender, usedIds, 2);
-    for (const fin of finishers) {
+    finishers.forEach((fin, idx) => {
       usedIds.add(fin.id);
+      const isFirst = idx === 0;
       exercises.push({
         exercise: fin,
         reps: fin.isTimeBased ? '1' : expandReps('15-20', 3),
-        setType: 'normal',
+        setType: isFirst ? 'super_set' : 'super_set_2',
+        // A flows straight into B (no rest chip); rest only after the pair.
+        rest: isFirst ? undefined : '60s',
         timeSeconds: fin.isTimeBased ? 40 : undefined,
       });
-    }
+    });
 
     days.push({ name: day.name, exercises });
   }
