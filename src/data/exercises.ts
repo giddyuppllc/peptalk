@@ -1,5 +1,11 @@
 /**
- * Master exercise library — 289 exercises curated by Jamie Esposito.
+ * Master exercise library — 384 moves curated by Jamie Esposito.
+ *
+ * Re-synced 2026-06-16 from Jamie's "Custom Workout" workbook (the
+ * "Exercises and Muscle Group" sheet). That sheet is the source of truth
+ * for each move's muscle group, P1–P4 priority, location, and gender —
+ * the workout machine (aimee-workout) and the custom builder both filter
+ * on those tags, so they must match the sheet exactly.
  *
  * Taxonomy: Priority (P1-P4), Level, Location, Gender, Metrics.
  * Equipment inferred from exercise name at build time.
