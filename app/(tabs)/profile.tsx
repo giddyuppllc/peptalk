@@ -29,6 +29,7 @@ import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { useTutorialStore } from '../../src/store/useTutorialStore';
 import { GlassCard } from '../../src/components/GlassCard';
+import { PasswordToggle } from '../../src/components/PasswordToggle';
 import { Disclaimer } from '../../src/components/Disclaimer';
 import { trackConsentUpdated } from '../../src/services/analyticsEvents';
 import { useNotificationStore } from '../../src/store/useNotificationStore';
@@ -256,18 +257,11 @@ function LoginForm() {
               textContentType="password"
               selectionColor="#e3a7a1"
             />
-            <TouchableOpacity
-              onPress={() => setShowPw(!showPw)}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={showPw ? 'Hide password' : 'Show password'}
-            >
-              <Ionicons
-                name={showPw ? 'eye-off' : 'eye'}
-                size={18}
-                color={t.textSecondary}
-              />
-            </TouchableOpacity>
+            <PasswordToggle
+              visible={showPw}
+              onToggle={() => setShowPw(!showPw)}
+              color={t.textSecondary}
+            />
           </View>
         </View>
 

@@ -35,6 +35,7 @@ import { isValidEmail, validatePassword, PASSWORD_MIN_LENGTH } from '../src/util
 import { useMealStore } from '../src/store/useMealStore';
 import { useProgressGoalsStore } from '../src/store/useProgressGoalsStore';
 import { trackOnboardingComplete } from '../src/services/analyticsEvents';
+import { PasswordToggle } from '../src/components/PasswordToggle';
 import { AgeRange, Gender, ActivityLevel } from '../src/types';
 import { GOAL_OPTIONS } from '../src/constants/goals';
 import {
@@ -872,9 +873,12 @@ export default function OnboardingScreen() {
                     autoComplete="password-new"
                     textContentType="newPassword"
                   />
-                  <TouchableOpacity style={s.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
-                    <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#6B7280" />
-                  </TouchableOpacity>
+                  <PasswordToggle
+                    visible={showPassword}
+                    onToggle={() => setShowPassword(!showPassword)}
+                    size={20}
+                    color="#6B7280"
+                  />
                 </View>
                 {accountPassword.length > 0 && !passwordCheck.valid && (
                   <Text style={s.inlineHint}>{passwordCheck.message}</Text>
@@ -1352,9 +1356,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginBottom: 12,
-  },
-  eyeBtn: {
-    padding: 8,
   },
   errorText: {
     fontSize: 13,
