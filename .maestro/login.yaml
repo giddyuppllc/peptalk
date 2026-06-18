@@ -11,6 +11,20 @@
 #
 # Creds are passed as env vars so they never live in git. Refine any selector
 # live with `maestro studio` if the app's copy changes.
+#
+# Selector notes (verified against build 1.9.8 on the iOS Simulator, 2026-06-16):
+#   - The welcome CTA's accessibility label is "Get Started, " (trailing icon),
+#     and Maestro text selectors are FULL-match regexes — hence "Get Started.*".
+#   - "Sign In" is part of the row "Already have an account? Sign In" → ".*Sign In".
+#   - The password field is reached via its placeholder "Enter password" (tapping
+#     the "Password" section label does NOT focus the input).
+#   - A dev build loads its JS bundle from Metro on launch, so we wait for the
+#     first screen to render ("PepTalk" anchor) before asserting.
+#   - iOS may show a system "Save Password?" sheet after submit — dismissed below.
+#   - clearState does NOT clear the Supabase session (it lives in the Keychain),
+#     so if a prior run left us logged in we sign out first to exercise a real
+#     login. On a fresh App Store review install the app starts logged out and
+#     this sign-out branch is simply skipped.
 appId: com.peptalkapp.peptalk
 tags:
   - smoke
@@ -18,18 +32,36 @@ tags:
 ---
 - launchApp:
     clearState: true
+- extendedWaitUntil:
+    visible: "PepTalk"
+    timeout: 60000
+
+# If a persisted session left us on the home screen, sign out to reach welcome.
+- runFlow:
+    when:
+      visible: "Open profile"
+    commands:
+      - tapOn: "Open profile"
+      - scrollUntilVisible:
+          element:
+            text: ".*Sign Out"
+          direction: DOWN
+          centerElement: true
+          waitToSettleTimeoutMs: 1000
+      - tapOn: ".*Sign Out"
+      - extendedWaitUntil:
+          visible: "Get Started.*"
+          timeout: 20000
 
 # 1) Onboarding "Welcome" screen → Sign In
-- assertVisible: "Get Started"
-- tapOn: "Sign In"
+- assertVisible: "Get Started.*"
+- tapOn: ".*Sign In"
 
 # 2) Auth screen — enter the reviewer credentials.
-#    (The email/password inputs carry accessibilityLabels "Email address" /
-#     "Password"; the submit button's label is "Log in".)
 - assertVisible: "Email address"
 - tapOn: "Email address"
 - inputText: ${EMAIL}
-- tapOn: "Password"
+- tapOn: "Enter password"
 - inputText: ${PASSWORD}
 - hideKeyboard
 
@@ -37,6 +69,11 @@ tags:
 - tapOn:
     text: "Log in"
     index: 0
+
+# Dismiss the iOS "Save Password?" system sheet if it appears.
+- tapOn:
+    text: "Not Now"
+    optional: true
 
 # 4) PASS = we left the auth screen and no error banner appeared.
 #    The Email field is gone once we're on the tabs.

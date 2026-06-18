@@ -6,35 +6,67 @@
 # sell). This flow catches case (a): the reviewer account must be FREE so the
 # Subscribe button is live.
 #
+# ⚠️ REVIEWER ACCOUNT MUST BE ON THE FREE TIER. Verified 2026-06-16:
+# reviewer@peptalk.bio was on PepTalk Pro (active), so the Plans screen showed
+# "PepTalk Pro … Current Plan" with NO purchasable button for the Pro tier
+# (only PepTalk+ still showed a live Subscribe CTA). Apple reviewing the Pro
+# tier in that state reproduces the exact 2.1a "unresponsive Subscribe button"
+# finding. Downgrade the reviewer account to Free before submitting.
+#
 # NOTE: the StoreKit purchase sheet is a SYSTEM overlay Maestro can't inspect,
 # so this verifies the paywall + Subscribe affordance render — the actual
 # purchase must be smoke-tested manually in the StoreKit sandbox.
 #
 #   maestro test .maestro/subscribe.yaml \
 #     -e EMAIL=reviewer@peptalk.bio -e PASSWORD=<reviewer-password>
+#
+# Login is conditional: clearState does not clear the Keychain session, so a
+# relaunch may already be authenticated — we sign in only when logged out.
 appId: com.peptalkapp.peptalk
 tags:
   - smoke
 ---
 - launchApp:
     clearState: true
-- tapOn: "Sign In"
-- tapOn: "Email address"
-- inputText: ${EMAIL}
-- tapOn: "Password"
-- inputText: ${PASSWORD}
-- hideKeyboard
-- tapOn:
-    text: "Log in"
-    index: 0
 - extendedWaitUntil:
-    notVisible: "Email address"
-    timeout: 20000
+    visible: "PepTalk"
+    timeout: 60000
+- runFlow:
+    when:
+      visible: "Get Started.*"
+    commands:
+      - tapOn: ".*Sign In"
+      - assertVisible: "Email address"
+      - tapOn: "Email address"
+      - inputText: ${EMAIL}
+      - tapOn: "Enter password"
+      - inputText: ${PASSWORD}
+      - hideKeyboard
+      - tapOn:
+          text: "Log in"
+          index: 0
+      - tapOn:
+          text: "Not Now"
+          optional: true
+      - extendedWaitUntil:
+          notVisible: "Email address"
+          timeout: 20000
 
-# Profile → Subscription paywall
-- tapOn: "Profile"
-- tapOn:
-    text: "Subscription|Upgrade|Plus|Pro"   # regex — whichever the row says
-- assertVisible:
-    text: "Subscribe|Upgrade|Start"          # the live CTA must be present
+# Profile → Subscription → Plans
+- tapOn: "Open profile"
+- scrollUntilVisible:
+    element:
+      text: ".*Subscription.*"
+    direction: DOWN
+    waitToSettleTimeoutMs: 1000
+- tapOn: ".*Subscription.*"
+- assertVisible: "Choose Your Plan"
+# The live purchase CTA must be present (a pre-entitled tier shows "Current Plan"
+# instead — see the Free-tier warning above). It sits below the fold, so scroll
+# to it: this both asserts it exists and frames it for the screenshot.
+- scrollUntilVisible:
+    element:
+      text: "Subscribe to PepTalk.*"
+    direction: DOWN
+    waitToSettleTimeoutMs: 1000
 - takeScreenshot: paywall
