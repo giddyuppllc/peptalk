@@ -156,6 +156,25 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['health_profiles']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['health_profiles']['Insert']>;
       };
+      // Runtime overrides for the workout-video manifest
+      // (src/data/workoutVideos.json), keyed by slug. Read by the app and
+      // merged over the bundled JSON; written only by the
+      // save-workout-overrides edge function (service_role).
+      workout_video_overrides: {
+        Row: {
+          slug: string;
+          title: string | null;
+          description: string | null;
+          exercise_id: string | null;
+          category: string | null;
+          duration_sec: number | null;
+          needs_review: boolean | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: Omit<Database['public']['Tables']['workout_video_overrides']['Row'], 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['workout_video_overrides']['Insert']>;
+      };
     };
   };
 }

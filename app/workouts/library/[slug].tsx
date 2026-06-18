@@ -10,7 +10,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Video, ResizeMode } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { CATEGORY_LABELS, getVideoBySlug } from '../../../src/data/workoutVideos';
-import { useVideoTaggerStore, applyEdits } from '../../../src/store/useVideoTaggerStore';
+import { useVideoTaggerStore, combineEdits } from '../../../src/store/useVideoTaggerStore';
 import { resolveVideoUrl } from '../../../src/services/r2VideoResolver';
 import EXERCISES from '../../../src/data/exercises';
 import { useTheme } from '../../../src/hooks/useTheme';
@@ -22,9 +22,11 @@ export default function LibraryPlayerScreen() {
   const t = useTheme();
   const accent = useSectionAccent('workouts');
   const edits = useVideoTaggerStore((s) => s.edits);
+  const remoteEdits = useVideoTaggerStore((s) => s.remoteEdits);
+  const combined = combineEdits(remoteEdits, edits);
 
   const baseVideo = getVideoBySlug(slug ?? '');
-  const video = baseVideo ? { ...baseVideo, ...(edits[baseVideo.slug] ?? {}) } : null;
+  const video = baseVideo ? { ...baseVideo, ...(combined[baseVideo.slug] ?? {}) } : null;
   const exercise = video?.exerciseId ? EXERCISES.find((e) => e.id === video.exerciseId) : null;
 
   const [url, setUrl] = useState<string | null>(null);

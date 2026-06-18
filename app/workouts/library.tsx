@@ -17,7 +17,7 @@ import {
   WORKOUT_VIDEOS,
   type WorkoutVideoCategory,
 } from '../../src/data/workoutVideos';
-import { useVideoTaggerStore, applyEdits } from '../../src/store/useVideoTaggerStore';
+import { useVideoTaggerStore, applyEdits, combineEdits } from '../../src/store/useVideoTaggerStore';
 import EXERCISES from '../../src/data/exercises';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
@@ -30,8 +30,12 @@ export default function WorkoutLibraryScreen() {
   const accent = useSectionAccent('workouts');
   const hasAccess = useFeatureGate('workout_videos');
   const edits = useVideoTaggerStore((s) => s.edits);
+  const remoteEdits = useVideoTaggerStore((s) => s.remoteEdits);
 
-  const merged = useMemo(() => applyEdits(WORKOUT_VIDEOS, edits), [edits]);
+  const merged = useMemo(
+    () => applyEdits(WORKOUT_VIDEOS, combineEdits(remoteEdits, edits)),
+    [remoteEdits, edits]
+  );
   const ready = useMemo(() => merged.filter((v) => !v.needsReview && v.exerciseId), [merged]);
 
   const [filter, setFilter] = useState<WorkoutVideoCategory | null>(null);

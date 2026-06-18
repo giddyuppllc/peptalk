@@ -40,6 +40,7 @@ import { configureNotificationHandler } from '../src/services/notificationServic
 import { useNotificationStore } from '../src/store/useNotificationStore';
 import { initIAP, endIAP } from '../src/services/iapService';
 import { warmKnowledgeBase } from '../src/services/llmService';
+import { fetchWorkoutOverrides } from '../src/services/workoutOverrides';
 import { useChatStore } from '../src/store/useChatStore';
 import { useMealStore } from '../src/store/useMealStore';
 import { useCheckinStore } from '../src/store/useCheckinStore';
@@ -521,6 +522,15 @@ function RootLayout() {
       if (__DEV__) console.warn('[boot] syncHealthProfileFromServer threw:', err);
     }
 
+    // Pull workout-video overrides (Jamie's tags) from Supabase and merge
+    // them over the bundled manifest at runtime, so tags go live without a
+    // rebuild. Fails soft — keeps the last cached overrides offline.
+    try {
+      fetchWorkoutOverrides()?.catch?.(() => {});
+    } catch (err) {
+      if (__DEV__) console.warn('[boot] fetchWorkoutOverrides threw:', err);
+    }
+
     // Pre-build the Aimee knowledge base in the background so the first
     // chat message doesn't pay the build cost. No-op on subsequent calls.
     try {
@@ -935,6 +945,7 @@ function RootLayout() {
       syncHealthProfileFromServer()?.catch?.((err: unknown) => {
         if (__DEV__) console.warn('[auth] syncHealthProfileFromServer failed:', err);
       });
+      fetchWorkoutOverrides()?.catch?.(() => {});
       useChatStore.getState().flushPendingSyncs()?.catch?.(() => {});
 
       // Register the device's Expo push token so server-side fanout
