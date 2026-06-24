@@ -192,9 +192,8 @@ export async function initIAP(
         return;
       }
 
-      const receipt = Platform.OS === 'ios'
-        ? purchase.transactionReceipt
-        : purchase.purchaseToken;
+      // v15 delivers a unified token: iOS JWS / Android purchaseToken.
+      const receipt = purchase.purchaseToken;
       if (!receipt) return;
 
       const key = purchaseKey(purchase);
@@ -283,16 +282,18 @@ export interface IAPProduct {
 export async function getProducts(): Promise<IAPProduct[]> {
   if (!isAvailable()) return [];
   try {
-    // getSubscriptions is for recurring products (what PepTalk uses)
-    const products = await IAP.getSubscriptions({ skus: ALL_PRODUCT_IDS });
-    return products.map((p: any) => ({
-      productId: p.productId,
-      title: p.title ?? p.productId,
+    // v15: fetchProducts replaces getSubscriptions. type 'subs' = the
+    // auto-renewing subscriptions PepTalk sells. Product id/price field
+    // names changed: productId -> id, localizedPrice -> displayPrice.
+    const products = await IAP.fetchProducts({ skus: ALL_PRODUCT_IDS, type: 'subs' });
+    return (products ?? []).map((p: any) => ({
+      productId: p.id ?? p.productId,
+      title: p.title ?? p.displayName ?? p.id,
       description: p.description ?? '',
-      price: p.localizedPrice ?? `${p.currency} ${p.price}`,
-      localizedPrice: p.localizedPrice ?? '',
+      price: p.displayPrice ?? `${p.currency ?? ''} ${p.price ?? ''}`.trim(),
+      localizedPrice: p.displayPrice ?? '',
       currency: p.currency ?? 'USD',
-      subscriptionPeriod: p.subscriptionPeriodAndroid ?? p.subscriptionPeriodUnitIOS,
+      subscriptionPeriod: undefined,
     }));
   } catch (err) {
     if (__DEV__) console.warn('[iapService] getProducts failed:', err);
@@ -343,19 +344,21 @@ export async function purchaseProduct(
   const appleOfferCode = options?.appleOfferCode?.trim() || undefined;
 
   if (Platform.OS === 'ios') {
-    await IAP.requestSubscription({
-      sku: productId,
-      ...(appAccountToken ? { appAccountToken } : {}),
-      // The Apple offer code is applied via StoreKit's withOffer
-      // identifier mechanism. react-native-iap exposes it as
-      // `withOffer` (older) or via `discountIdentifier` (newer). We
-      // pass both shapes so the call works across versions.
-      ...(appleOfferCode
-        ? {
-            withOffer: { identifier: appleOfferCode, keyIdentifier: '', nonce: '', signature: '', timestamp: 0 },
-            discountIdentifier: appleOfferCode,
-          }
-        : {}),
+    // v15: requestSubscription -> requestPurchase({ request:{ ios:{...} }, type:'subs' }).
+    // NOTE: the old `withOffer` path passed empty signature fields, so the
+    // promotional offer-code discount was never actually applied by StoreKit.
+    // Offer codes need a server-signed offer (keyId/nonce/signature) — tracked
+    // separately; appleOfferCode is accepted but intentionally not applied here
+    // rather than sending a malformed offer that StoreKit would reject.
+    void appleOfferCode;
+    await IAP.requestPurchase({
+      request: {
+        ios: {
+          sku: productId,
+          ...(appAccountToken ? { appAccountToken } : {}),
+        },
+      },
+      type: 'subs',
     } as any);
     return;
   }
@@ -367,9 +370,12 @@ export async function purchaseProduct(
   // the prior behavior rather than breaking existing testers.
   let offerToken = '';
   try {
-    const products = await IAP.getSubscriptions({ skus: [productId] });
+    const products = await IAP.fetchProducts({ skus: [productId], type: 'subs' });
     const android = products?.[0];
-    offerToken = android?.subscriptionOfferDetails?.[0]?.offerToken ?? '';
+    offerToken =
+      android?.subscriptionOfferDetailsAndroid?.[0]?.offerToken ??
+      android?.subscriptionOfferDetails?.[0]?.offerToken ??
+      '';
     if (__DEV__ && !offerToken) {
       if (__DEV__) console.warn('[iapService] No subscriptionOfferDetails for', productId);
     }
@@ -380,10 +386,16 @@ export async function purchaseProduct(
   // appAccountToken plays — it's echoed back on RTDN subscription
   // notifications so the webhook can map events to users without having
   // to index by purchaseToken.
-  await IAP.requestSubscription({
-    subscriptionOffers: [{ sku: productId, offerToken }],
-    ...(appAccountToken ? { obfuscatedAccountIdAndroid: appAccountToken } : {}),
-  });
+  await IAP.requestPurchase({
+    request: {
+      android: {
+        skus: [productId],
+        subscriptionOffers: [{ sku: productId, offerToken }],
+        ...(appAccountToken ? { obfuscatedAccountIdAndroid: appAccountToken } : {}),
+      },
+    },
+    type: 'subs',
+  } as any);
 }
 
 /**
@@ -415,9 +427,7 @@ export async function restorePurchases(): Promise<number> {
 
     let validated = 0;
     for (const purchase of purchases) {
-      const receipt = Platform.OS === 'ios'
-        ? purchase.transactionReceipt
-        : purchase.purchaseToken;
+      const receipt = purchase.purchaseToken; // v15 unified token (iOS JWS / Android)
       if (!receipt || !purchase.productId) continue;
 
       const key = purchaseKey(purchase);
