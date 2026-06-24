@@ -15,8 +15,8 @@ substances** — it is informational + tracking only (Privacy Policy:
 https://peptalk.bio/privacy).
 
 ### Test account
-- Email: [TODO: create a test account before submission]
-- Password: [TODO]
+- Email: reviewer@peptalk.bio
+- Password: PepTalkReview2026!   (⚠️ set/confirm this in Supabase → Authentication → Users → reviewer@peptalk.bio, then LOGIN-TEST it on the build before submitting — a non-working reviewer login was the original 2.1a repeat-rejection cause)
 - Tier: **Free** — do NOT pre-grant Plus/Pro. The reviewer must be on Free so
   they can tap Subscribe and complete the StoreKit purchase via the sandbox.
   (A pre-entitled account makes the Subscribe buttons no-op, which reads as an
@@ -30,7 +30,8 @@ https://peptalk.bio/privacy).
   - peptalk_plus_monthly ($9.99/mo)
   - peptalk_pro_monthly ($49.99/mo)
 - Receipt validation: server-side via Supabase edge function
-  `validate-purchase` calling Apple's verifyReceipt. The user's tier
+  `validate-purchase`, which verifies the StoreKit 2 signed transaction
+  (JWS) against Apple's certificate chain. The user's tier
   flips after a successful validation; restoration via "Restore
   Purchases" is supported (Profile → Subscription).
 - Manage Subscription button (Profile → Subscription) deep-links to
@@ -88,7 +89,7 @@ https://peptalk.bio/privacy).
 
 ## Pre-submission checklist (do not paste — this is for our use)
 
-- [ ] Test account created with Plus tier set manually in `subscriptions` table
+- [x] Test account reviewer@peptalk.bio exists on FREE tier — set/confirm its password (PepTalkReview2026!) + login-test before submitting
 - [ ] All secrets in `supabase/.env.example` set in production Supabase
 - [ ] Edge functions deployed via `bash scripts/deploy-edge-functions.sh`
 - [ ] App Store Server Notifications Production URL registered in ASC
