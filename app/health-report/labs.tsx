@@ -19,6 +19,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -121,8 +122,11 @@ export default function LabsScreen() {
       );
       return;
     }
+    // Android uses the system Photo Picker (no permission needed), so a
+    // non-granted result must NOT block the picker there. iOS still
+    // requires the library permission.
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
+    if (!perm.granted && Platform.OS !== 'android') {
       Alert.alert('Photo library access denied', 'Allow photos so we can pick your lab report image.');
       return;
     }

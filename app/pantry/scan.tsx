@@ -25,6 +25,7 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -113,7 +114,11 @@ export default function PantryScanScreen() {
         source === 'camera'
           ? await ImagePicker.requestCameraPermissionsAsync()
           : await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
+      // On Android the library picker uses the system Photo Picker, which
+      // needs no permission — a non-granted result there must NOT block.
+      // Camera still requires its permission everywhere; iOS library too.
+      const isAndroidLibrary = source === 'library' && Platform.OS === 'android';
+      if (!perm.granted && !isAndroidLibrary) {
         Alert.alert(
           source === 'camera' ? 'Camera permission needed' : 'Photos permission needed',
           'Enable access in Settings to scan your kitchen.',
