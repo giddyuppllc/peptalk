@@ -90,7 +90,8 @@ let idleResolvers: (() => void)[] = [];
 
 function purchaseKey(purchase: any): string {
   return (
-    purchase?.transactionId ??
+    purchase?.id ??              // v15 unified transaction id (preferred)
+    purchase?.transactionId ??   // legacy fallback (kept)
     purchase?.purchaseToken ??
     purchase?.productId ??
     String(Date.now())
@@ -184,9 +185,14 @@ export async function initIAP(
       // Android pending state — parental consent, SCA, slow wallet.
       // Don't finish or validate yet; a follow-up update fires once it
       // clears. If we acknowledged now we'd lose the receipt forever.
+      // v15: pending is a cross-platform string on purchaseState (Android
+      // slow-wallet/parental-consent, iOS Ask-to-Buy). The old numeric
+      // purchaseStateAndroid field no longer exists in v15, so this path
+      // never fired — accept the new string OR the legacy field so the
+      // "waiting for approval" flow actually works.
       if (
-        Platform.OS === 'android' &&
-        purchase?.purchaseStateAndroid === ANDROID_PENDING
+        purchase?.purchaseState === 'pending' ||
+        (Platform.OS === 'android' && purchase?.purchaseStateAndroid === ANDROID_PENDING)
       ) {
         cb.onPending?.({ productId: purchase.productId });
         return;
