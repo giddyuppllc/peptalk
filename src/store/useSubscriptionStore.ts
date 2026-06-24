@@ -477,13 +477,63 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
               // a future sync to converge.
               const prevTier = get().tier;
               if (prevTier === 'free') {
-                set({
-                  tier: 'free',
-                  productId: null,
-                  expiresAt: null,
-                  isActive: false,
-                  lastSyncedAt: Date.now(),
-                });
+                // Even when the cached tier reads 'free', the local store
+                // can be lying during a boot race: hydration from
+                // secureStorage may not have restored a genuinely-paid
+                // tier yet (or it was just cleared on a transient logout
+                // flap). Before committing the downgrade, consult the
+                // `profiles.subscription_tier` mirror — a cheaper, eventually-
+                // consistent copy of the subscriptions truth. If the profile
+                // says the user is paid (plus/pro), DON'T write 'free':
+                // keep the paid tier and let a future sync (once the
+                // subscriptions row reappears) reconcile authoritatively.
+                let mirrorTier: SubscriptionTier | null = null;
+                try {
+                  const { data: profile } = await (supabase as any)
+                    .from('profiles')
+                    .select('subscription_tier')
+                    .eq('id', user.id)
+                    .single();
+                  const raw = profile?.subscription_tier;
+                  if (raw === 'plus' || raw === 'pro' || raw === 'free') {
+                    mirrorTier = raw;
+                  }
+                } catch (mirrorErr) {
+                  // Mirror lookup failed (network / RLS) — treat as unknown
+                  // and fall through to the conservative behaviour below.
+                  if (__DEV__) {
+                    console.warn(
+                      '[useSubscriptionStore] profile mirror lookup failed during empty-row sync:',
+                      mirrorErr,
+                    );
+                  }
+                }
+                if (mirrorTier === 'plus' || mirrorTier === 'pro') {
+                  // Profile mirror says paid — the subscriptions row is
+                  // momentarily missing/transient. Promote to the mirror
+                  // tier and await reconciliation instead of downgrading.
+                  // NOTE: deliberately do NOT set lastSyncedAt — this is an
+                  // optimistic mirror read, not an authoritative subscriptions
+                  // sync, so a real sync should still run / not be suppressed.
+                  set({
+                    tier: mirrorTier,
+                    isActive: true,
+                  });
+                  if (__DEV__) {
+                    console.warn(
+                      `[useSubscriptionStore] empty subscription row but profile mirror=${mirrorTier} — keeping paid, awaiting reconciliation`,
+                    );
+                  }
+                } else {
+                  // Mirror also free (or unknown) — genuine free user.
+                  set({
+                    tier: 'free',
+                    productId: null,
+                    expiresAt: null,
+                    isActive: false,
+                    lastSyncedAt: Date.now(),
+                  });
+                }
               } else if (__DEV__) {
                 console.warn(
                   `[useSubscriptionStore] empty subscription row but cached tier=${prevTier} — keeping cached state, awaiting webhook signal`,
