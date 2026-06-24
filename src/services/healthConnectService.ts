@@ -6,13 +6,16 @@
  *
  * IMPORTANT NOTES:
  * ----------------
- * - This service ONLY works on Android in a development build (EAS Build).
- *   It will gracefully return null / false when running in Expo Go or on iOS.
- * - The native module (react-native-health-connect) must be installed and
- *   linked via a custom dev client (`npx expo run:android` or EAS Build).
- * - Currently uses a stub/mock layer. To swap in the real SDK, replace the
- *   HCModule loading block and the function bodies below — the public API
- *   shape stays identical.
+ * - This service ONLY works on Android in a development / production build
+ *   that bundles the native module (`npx expo run:android` or EAS Build).
+ *   It gracefully returns null / false when running in Expo Go or on iOS,
+ *   so importing it is always safe.
+ * - The native module is `react-native-health-connect`. It is loaded via a
+ *   dynamic require wrapped in try/catch so the app never crashes when the
+ *   module isn't linked.
+ * - Reads are normalized to the same units HealthKit returns (steps as a
+ *   count, weight in lbs, heart rate in BPM, sleep in hours) so downstream
+ *   code doesn't need to know which platform produced the value.
  */
 
 import { Platform } from 'react-native';
@@ -23,16 +26,77 @@ import { Platform } from 'react-native';
 // Mirrors the HealthKit approach: dynamic require wrapped in try/catch so the
 // app never crashes when the native module isn't available.
 
-let HCModule: any = null;
+type HealthConnectModule = typeof import('react-native-health-connect');
+
+let HCModule: HealthConnectModule | null = null;
 
 try {
   if (Platform.OS === 'android') {
-    // Uncomment when react-native-health-connect is installed:
-    // HCModule = require('react-native-health-connect');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    HCModule = require('react-native-health-connect') as HealthConnectModule;
   }
 } catch {
   // Module not available — running in Expo Go, on iOS, or the native module
   // hasn't been linked. All public functions below will return null / false.
+  HCModule = null;
+}
+
+// SdkAvailabilityStatus.SDK_AVAILABLE === 3. Hard-coded so we don't depend on
+// the constant being present when the module failed to load.
+const SDK_AVAILABLE = 3;
+
+// SleepStageType values that represent actual sleep (vs awake / out-of-bed):
+//   2 = SLEEPING, 4 = LIGHT, 5 = DEEP, 6 = REM
+const ASLEEP_STAGES = new Set<number>([2, 4, 5, 6]);
+
+// The read permissions PepTalk requests. These mirror the
+// `android.permission.health.READ_*` entries declared in app.json.
+const READ_PERMISSIONS = [
+  { accessType: 'read', recordType: 'Steps' },
+  { accessType: 'read', recordType: 'SleepSession' },
+  { accessType: 'read', recordType: 'HeartRate' },
+  { accessType: 'read', recordType: 'ActiveCaloriesBurned' },
+  { accessType: 'read', recordType: 'TotalCaloriesBurned' },
+  { accessType: 'read', recordType: 'Weight' },
+  { accessType: 'read', recordType: 'BodyFat' },
+] as const;
+
+// ---------------------------------------------------------------------------
+// Initialization (idempotent)
+// ---------------------------------------------------------------------------
+
+let initPromise: Promise<boolean> | null = null;
+
+/**
+ * Lazily initialize the Health Connect SDK. Safe to call repeatedly — the
+ * underlying init only runs once and the result is cached. Returns `false`
+ * when the module is missing, the SDK isn't installed/available on the
+ * device, or initialization fails.
+ */
+async function ensureInitialized(): Promise<boolean> {
+  if (!HCModule) return false;
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
+    try {
+      const status = await HCModule!.getSdkStatus();
+      if (status !== SDK_AVAILABLE) {
+        if (__DEV__) {
+          console.warn(
+            `[HealthConnect] SDK not available (status ${status}). ` +
+              'Health Connect may need to be installed/updated on this device.',
+          );
+        }
+        return false;
+      }
+      return await HCModule!.initialize();
+    } catch (error) {
+      if (__DEV__) console.warn('[HealthConnect] initialize failed:', error);
+      return false;
+    }
+  })();
+
+  return initPromise;
 }
 
 // ---------------------------------------------------------------------------
@@ -42,6 +106,10 @@ try {
 /**
  * Returns `true` only when running on Android AND the native Health Connect
  * module was successfully loaded. Safe to call on any platform.
+ *
+ * Note: this is a cheap, synchronous "is the module linked?" check. Whether
+ * the SDK is actually installed/available on the device is resolved lazily
+ * inside the async readers via `ensureInitialized()`.
  */
 export function isHealthConnectAvailable(): boolean {
   return HCModule !== null && Platform.OS === 'android';
@@ -56,10 +124,12 @@ export function isHealthConnectAvailable(): boolean {
  *
  * Requested data types:
  *  - Steps
- *  - Weight
- *  - Heart Rate
  *  - Sleep Session
+ *  - Heart Rate
  *  - Active Calories Burned
+ *  - Total Calories Burned
+ *  - Weight
+ *  - Body Fat
  *
  * @returns `true` if permissions were granted (or previously granted),
  *          `false` if the module is unavailable or the user denied access.
@@ -68,18 +138,20 @@ export async function requestHealthConnectPermissions(): Promise<boolean> {
   if (!HCModule) return false;
 
   try {
-    // When the real SDK is wired up, this will look something like:
-    //
-    // const granted = await HCModule.requestPermission([
-    //   { accessType: 'read', recordType: 'Steps' },
-    //   { accessType: 'read', recordType: 'Weight' },
-    //   { accessType: 'read', recordType: 'HeartRate' },
-    //   { accessType: 'read', recordType: 'SleepSession' },
-    //   { accessType: 'read', recordType: 'ActiveCaloriesBurned' },
-    // ]);
-    // return granted.length > 0;
+    const ready = await ensureInitialized();
+    if (!ready) return false;
 
-    return false;
+    // If we already hold the permissions (granted in a previous session or
+    // via the OS settings) skip the prompt and report success.
+    try {
+      const existing = await HCModule.getGrantedPermissions();
+      if (existing && existing.length > 0) return true;
+    } catch {
+      // Non-fatal — fall through to the request below.
+    }
+
+    const granted = await HCModule.requestPermission(READ_PERMISSIONS as any);
+    return Array.isArray(granted) && granted.length > 0;
   } catch (error) {
     if (__DEV__) console.warn('[HealthConnect] Permission request failed:', error);
     return false;
@@ -99,20 +171,23 @@ export async function fetchTodaySteps(): Promise<number | null> {
   if (!HCModule) return null;
 
   try {
+    const ready = await ensureInitialized();
+    if (!ready) return null;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Real SDK usage:
-    // const result = await HCModule.readRecords('Steps', {
-    //   timeRangeFilter: {
-    //     operator: 'between',
-    //     startTime: today.toISOString(),
-    //     endTime: new Date().toISOString(),
-    //   },
-    // });
-    // return result.reduce((sum: number, r: any) => sum + r.count, 0) || null;
+    const { records } = await HCModule.readRecords('Steps', {
+      timeRangeFilter: {
+        operator: 'between',
+        startTime: today.toISOString(),
+        endTime: new Date().toISOString(),
+      },
+    });
 
-    return null;
+    if (!records || records.length === 0) return null;
+    const total = records.reduce((sum, r) => sum + (r.count ?? 0), 0);
+    return total > 0 ? total : null;
   } catch (error) {
     if (__DEV__) console.warn('[HealthConnect] Failed to fetch steps:', error);
     return null;
@@ -128,22 +203,23 @@ export async function fetchLatestWeight(): Promise<number | null> {
   if (!HCModule) return null;
 
   try {
-    // Real SDK usage:
-    // const result = await HCModule.readRecords('Weight', {
-    //   timeRangeFilter: {
-    //     operator: 'between',
-    //     startTime: new Date(Date.now() - 30 * 86400000).toISOString(),
-    //     endTime: new Date().toISOString(),
-    //   },
-    //   limit: 1,
-    //   ascending: false,
-    // });
-    // if (result.length > 0) {
-    //   const kg = result[0].weight.inKilograms;
-    //   return Math.round(kg * 2.20462 * 10) / 10;
-    // }
+    const ready = await ensureInitialized();
+    if (!ready) return null;
 
-    return null;
+    const { records } = await HCModule.readRecords('Weight', {
+      timeRangeFilter: {
+        operator: 'between',
+        startTime: new Date(Date.now() - 30 * 86400000).toISOString(),
+        endTime: new Date().toISOString(),
+      },
+      ascendingOrder: false,
+      pageSize: 1,
+    });
+
+    if (!records || records.length === 0) return null;
+    const lbs = records[0].weight?.inPounds;
+    if (typeof lbs !== 'number') return null;
+    return Math.round(lbs * 10) / 10;
   } catch (error) {
     if (__DEV__) console.warn('[HealthConnect] Failed to fetch weight:', error);
     return null;
@@ -159,21 +235,26 @@ export async function fetchLatestHeartRate(): Promise<number | null> {
   if (!HCModule) return null;
 
   try {
-    // Real SDK usage:
-    // const result = await HCModule.readRecords('HeartRate', {
-    //   timeRangeFilter: {
-    //     operator: 'between',
-    //     startTime: new Date(Date.now() - 86400000).toISOString(),
-    //     endTime: new Date().toISOString(),
-    //   },
-    //   limit: 1,
-    //   ascending: false,
-    // });
-    // if (result.length > 0 && result[0].samples?.length > 0) {
-    //   return Math.round(result[0].samples[0].beatsPerMinute);
-    // }
+    const ready = await ensureInitialized();
+    if (!ready) return null;
 
-    return null;
+    const { records } = await HCModule.readRecords('HeartRate', {
+      timeRangeFilter: {
+        operator: 'between',
+        startTime: new Date(Date.now() - 86400000).toISOString(),
+        endTime: new Date().toISOString(),
+      },
+      ascendingOrder: false,
+      pageSize: 1,
+    });
+
+    if (!records || records.length === 0) return null;
+    const samples = records[0].samples;
+    if (!samples || samples.length === 0) return null;
+    // Samples within a record are time-ordered; take the most recent one.
+    const latest = samples[samples.length - 1];
+    if (typeof latest.beatsPerMinute !== 'number') return null;
+    return Math.round(latest.beatsPerMinute);
   } catch (error) {
     if (__DEV__) console.warn('[HealthConnect] Failed to fetch heart rate:', error);
     return null;
@@ -192,6 +273,9 @@ export async function fetchLastNightSleep(): Promise<number | null> {
   if (!HCModule) return null;
 
   try {
+    const ready = await ensureInitialized();
+    if (!ready) return null;
+
     const now = new Date();
     const sleepWindowEnd = new Date(now);
     sleepWindowEnd.setHours(12, 0, 0, 0);
@@ -200,38 +284,36 @@ export async function fetchLastNightSleep(): Promise<number | null> {
     sleepWindowStart.setDate(sleepWindowStart.getDate() - 1);
     sleepWindowStart.setHours(18, 0, 0, 0);
 
-    // Real SDK usage:
-    // const result = await HCModule.readRecords('SleepSession', {
-    //   timeRangeFilter: {
-    //     operator: 'between',
-    //     startTime: sleepWindowStart.toISOString(),
-    //     endTime: sleepWindowEnd.toISOString(),
-    //   },
-    // });
-    //
-    // let totalMinutes = 0;
-    // for (const session of result) {
-    //   if (session.stages) {
-    //     for (const stage of session.stages) {
-    //       // stage types: 1=awake, 2=sleeping, 3=out_of_bed, 4=light, 5=deep, 6=rem
-    //       if ([2, 4, 5, 6].includes(stage.stage)) {
-    //         const start = new Date(stage.startTime).getTime();
-    //         const end = new Date(stage.endTime).getTime();
-    //         totalMinutes += (end - start) / (1000 * 60);
-    //       }
-    //     }
-    //   } else {
-    //     // No stages — use full session duration
-    //     const start = new Date(session.startTime).getTime();
-    //     const end = new Date(session.endTime).getTime();
-    //     totalMinutes += (end - start) / (1000 * 60);
-    //   }
-    // }
-    //
-    // if (totalMinutes === 0) return null;
-    // return Math.round((totalMinutes / 60) * 10) / 10;
+    const { records } = await HCModule.readRecords('SleepSession', {
+      timeRangeFilter: {
+        operator: 'between',
+        startTime: sleepWindowStart.toISOString(),
+        endTime: sleepWindowEnd.toISOString(),
+      },
+    });
 
-    return null;
+    if (!records || records.length === 0) return null;
+
+    let totalMinutes = 0;
+    for (const session of records) {
+      if (session.stages && session.stages.length > 0) {
+        for (const stage of session.stages) {
+          if (ASLEEP_STAGES.has(stage.stage)) {
+            const start = new Date(stage.startTime).getTime();
+            const end = new Date(stage.endTime).getTime();
+            if (end > start) totalMinutes += (end - start) / 60000;
+          }
+        }
+      } else {
+        // No stage breakdown — use the full session duration.
+        const start = new Date(session.startTime).getTime();
+        const end = new Date(session.endTime).getTime();
+        if (end > start) totalMinutes += (end - start) / 60000;
+      }
+    }
+
+    if (totalMinutes === 0) return null;
+    return Math.round((totalMinutes / 60) * 10) / 10;
   } catch (error) {
     if (__DEV__) console.warn('[HealthConnect] Failed to fetch sleep data:', error);
     return null;
@@ -294,6 +376,9 @@ export async function fetchCycleData(): Promise<CycleData | null> {
   if (!HCModule) return null;
 
   try {
+    const ready = await ensureInitialized();
+    if (!ready) return null;
+
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -302,26 +387,39 @@ export async function fetchCycleData(): Promise<CycleData | null> {
 
     // Read menstruation flow records
     try {
-      const records = await HCModule.readRecords('MenstruationFlow', {
-        timeRangeFilter: { operator: 'between', startTime: thirtyDaysAgo.toISOString(), endTime: new Date().toISOString() },
+      const { records } = await HCModule.readRecords('MenstruationFlow', {
+        timeRangeFilter: {
+          operator: 'between',
+          startTime: thirtyDaysAgo.toISOString(),
+          endTime: new Date().toISOString(),
+        },
       });
-      if (records?.length > 0) {
+      if (records && records.length > 0) {
         const latest = records[records.length - 1];
         const flowMap: Record<number, CycleData['currentFlow']> = {
           0: 'none', 1: 'light', 2: 'medium', 3: 'heavy',
         };
-        currentFlow = flowMap[latest.flow] ?? null;
+        currentFlow = flowMap[latest.flow ?? 0] ?? null;
       }
     } catch {}
 
     // Read menstruation period records for last period start
     try {
-      const periods = await HCModule.readRecords('MenstruationPeriod', {
-        timeRangeFilter: { operator: 'between', startTime: thirtyDaysAgo.toISOString(), endTime: new Date().toISOString() },
+      const { records: periods } = await HCModule.readRecords('MenstruationPeriod', {
+        timeRangeFilter: {
+          operator: 'between',
+          startTime: thirtyDaysAgo.toISOString(),
+          endTime: new Date().toISOString(),
+        },
       });
-      if (periods?.length > 0) {
-        const latest = periods[periods.length - 1];
-        lastPeriodStart = new Date(latest.startTime).toISOString().slice(0, 10);
+      if (periods && periods.length > 0) {
+        const latest = periods[periods.length - 1] as { time?: string; startTime?: string };
+        // MenstruationPeriod is an instantaneous record (carries `time`); fall
+        // back to startTime for forward-compat with provider variations.
+        const periodStart = latest.time ?? latest.startTime;
+        if (periodStart) {
+          lastPeriodStart = new Date(periodStart).toISOString().slice(0, 10);
+        }
       }
     } catch {}
 

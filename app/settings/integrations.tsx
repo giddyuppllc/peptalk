@@ -3,7 +3,8 @@
  *
  * Shipped in 1.9.0:
  *   - Apple Health (iOS)  → real connection via react-native-health
- *   - Health Connect (Android) → scaffold (reads land in 1.9.x)
+ *   - Health Connect (Android) → live connection via react-native-health-connect
+ *     (Steps, Sleep, Heart Rate, Active/Total Calories, Weight, Body Fat)
  *   - Oura, Whoop → "Coming soon" cards; we're waiting on API approvals
  *
  * Sources listed in `BiomarkerSource` but not wired (Dexcom, Libre,
