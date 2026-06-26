@@ -547,10 +547,10 @@ export default function SubscriptionScreen() {
             <TouchableOpacity
               onPress={() => router.push('/terms' as any)}
               accessibilityRole="link"
-              accessibilityLabel="Open Terms of Service"
+              accessibilityLabel="Open Terms of Use (EULA)"
               hitSlop={6}
             >
-              <Text style={styles.legalLink}>Terms of Service</Text>
+              <Text style={styles.legalLink}>Terms of Use (EULA)</Text>
             </TouchableOpacity>
             <Text style={styles.legalDivider}>·</Text>
             <TouchableOpacity
