@@ -17,7 +17,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import { supabase } from '../services/supabase';
@@ -70,8 +70,12 @@ export function useAimeeVoice(): UseAimeeVoiceResult {
       const perm = await Audio.requestPermissionsAsync();
       if (!perm.granted) {
         Alert.alert(
-          'Mic permission needed',
-          'Enable microphone access in Settings so Aimee can hear you.',
+          'Microphone is off',
+          'Voice messages need microphone access. You can turn it on in Settings whenever you like.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ],
         );
         return;
       }

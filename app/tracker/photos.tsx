@@ -16,6 +16,7 @@ import {
   StyleSheet,
   Image,
   Alert,
+  Linking,
   Modal,
   TextInput,
 } from 'react-native';
@@ -48,8 +49,12 @@ export default function ProgressPhotosScreen() {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
       if (!perm.granted) {
         Alert.alert(
-          'Camera access needed',
-          'Allow camera in Settings to take a progress photo.',
+          'Camera is off',
+          'Taking a progress photo needs camera access. You can turn it on in Settings whenever you like.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ],
         );
         return;
       }
@@ -78,8 +83,12 @@ export default function ProgressPhotosScreen() {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
         Alert.alert(
-          'Photos access needed',
-          'Allow photo library access in Settings to import a progress photo.',
+          'Photo access is off',
+          'Importing a photo needs photo library access. You can turn it on in Settings whenever you like.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ],
         );
         return;
       }

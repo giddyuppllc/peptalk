@@ -132,7 +132,7 @@ function MealScanScreen() {
           <Ionicons name="camera-outline" size={56} color={t.textMuted} />
           <Text style={[s.permTitle, { color: t.text }]}>Camera permission needed</Text>
           <Text style={[s.permDesc, { color: t.textSecondary }]}>
-            Grant camera access to scan plates of food.
+            PepTalk uses the camera to scan plates of food.
           </Text>
           {/* 2026-05-17 a11y fix: if the OS won't prompt again
               (user previously denied + checked "don't ask"),
@@ -147,10 +147,10 @@ function MealScanScreen() {
               }
             }}
             accessibilityRole="button"
-            accessibilityLabel={permission.canAskAgain ? 'Grant camera access' : 'Open settings to enable camera'}
+            accessibilityLabel={permission.canAskAgain ? 'Enable camera' : 'Open settings to enable camera'}
           >
             <Text style={s.primaryBtnText}>
-              {permission.canAskAgain ? 'Grant access' : 'Open Settings'}
+              {permission.canAskAgain ? 'Enable Camera' : 'Open Settings'}
             </Text>
           </TouchableOpacity>
         </View>
