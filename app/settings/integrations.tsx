@@ -194,10 +194,9 @@ export default function IntegrationsSettingsScreen() {
               exactly what PepTalk reads + writes, and that the user controls it. */}
           <Text style={[styles.body, { color: t.textSecondary, marginTop: 10 }]}>
             When you connect Apple Health, PepTalk reads steps, weight, heart rate, HRV, VO₂ max,
-            sleep, and cycle data so you can see trends alongside your protocols — and writes your
-            check-ins and weight back so everything stays in sync across your devices. You choose
-            exactly what to share in the iOS permission dialog, and you can change it any time in
-            Settings.
+            sleep, and cycle data so you can see trends alongside your protocols. PepTalk does not
+            write anything back to Apple Health. You choose exactly what to share in the iOS
+            permission dialog, and you can change it any time in Settings.
           </Text>
         </View>
 

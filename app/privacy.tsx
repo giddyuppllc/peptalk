@@ -36,7 +36,7 @@ const POLICY_SECTIONS: PolicySection[] = [
     paragraphs: [
       'PepTalk stores all user data locally on your device using encrypted storage (expo-secure-store). We collect only the information you voluntarily provide within the app, including:',
       '\u2022  Profile information (name, age, gender, health goals)\n\u2022  Peptide stacks and protocol configurations\n\u2022  Dose logs and check-in entries\n\u2022  Chat history with the PepTalk bot\n\u2022  Journal entries and notes',
-      'This data never leaves your device unless you explicitly opt into cloud-based AI features. We do not collect data in the background, and we do not access your contacts, photos, microphone, or location.',
+      'We do not collect data in the background, and we never access your contacts or location. PepTalk accesses your camera, photo library, and microphone only when you actively use a feature that needs them — scanning a meal or lab, adding a photo, or sending a voice message to Aimee — and only with your permission. Most data stays on your device; features you choose to use (voice transcription, photo-based food and lab scanning, AI chat, and the community) send the content you share to our secure servers so they can work.',
     ],
   },
   {

@@ -23,7 +23,6 @@
         "NSMicrophoneUsageDescription": "PepTalk uses the microphone to record voice messages to Aimee — your voice never leaves the app without being transcribed first, and audio is not stored.",
         "NSSpeechRecognitionUsageDescription": "PepTalk converts your voice messages to text so Aimee can respond. Transcription runs on our secure server, not Apple's, and audio is not saved.",
         "NSHealthShareUsageDescription": "PepTalk reads steps, weight, heart rate, HRV, VO₂ max, sleep, and cycle data from Apple Health so you can see trends alongside your peptide protocols and check-ins.",
-        "NSHealthUpdateUsageDescription": "PepTalk writes check-ins, weight, and symptom logs back to Apple Health so everything stays in sync across your devices.",
         "UIBackgroundModes": [
           "remote-notification"
         ],
@@ -211,8 +210,7 @@
         "react-native-health",
         {
           "isClinicalDataEnabled": false,
-          "healthSharePermission": "PepTalk reads Apple Health data — steps, weight, heart rate, sleep, cycle tracking, and other biometrics — so you don't have to log anything twice.",
-          "healthUpdatePermission": "PepTalk writes check-ins, weight, and symptom logs back to Apple Health so everything stays in sync."
+          "healthSharePermission": "PepTalk reads Apple Health data — steps, weight, heart rate, sleep, cycle tracking, and other biometrics — so you don't have to log anything twice."
         }
       ],
       [

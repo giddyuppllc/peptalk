@@ -1196,7 +1196,7 @@ const s = StyleSheet.create({
   blackBtn: {
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#F0EEE9',
+    backgroundColor: '#2D2D2D',
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,

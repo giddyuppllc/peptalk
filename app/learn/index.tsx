@@ -687,8 +687,11 @@ export default function LearnHubScreen() {
           </View>
         )}
 
-        {/* ── Videos ────────────────────────────────────────────── */}
-        {VIDEOS.length > 0 && (
+        {/* ── Videos ──────────────────────────────────────────────
+            Gated on having at least one REAL video. While every entry is
+            `comingSoon` (placeholder), the whole section is hidden so the
+            app never ships an advertised-but-empty feature (App Review 2.1). */}
+        {VIDEOS.some((v) => !v.comingSoon) && (
           <View style={styles.sectionWrapper}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
