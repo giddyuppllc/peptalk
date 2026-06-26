@@ -1,8 +1,10 @@
 /**
  * Subscription / paywall store.
  *
- * Manages the user's tier and feature gating.
- * Ready for react-native-iap integration — currently uses local state.
+ * Manages the user's tier and feature gating. Real StoreKit purchases run through
+ * src/services/iapService.ts (react-native-iap): purchaseProduct() opens the native
+ * sheet, the purchaseUpdatedListener (registered in app/_layout.tsx) validates the
+ * receipt server-side, and this store reflects the resulting tier/entitlement.
  */
 
 import { create } from 'zustand';
