@@ -11,43 +11,147 @@
  *
  * IMPORTANT NOTES:
  * ----------------
- * - This service ONLY works on iOS in a development build (EAS Build).
- *   It will gracefully return null / false when running in Expo Go or on
- *   Android — no crashes, no red screens.
- * - The native module (@kingstinct/react-native-healthkit) must be installed
- *   and linked via a custom dev client (`npx expo run:ios` or EAS Build).
+ * - This service ONLY works on iOS in a native build (EAS Build / dev
+ *   client). It gracefully returns null / false in Expo Go, on Android,
+ *   and on iPad (no HealthKit data layer) — no crashes, no red screens.
+ * - Backing native module is `react-native-health` (the package that is
+ *   actually installed — see package.json). An earlier version of this
+ *   file was written against `@kingstinct/react-native-healthkit`, which
+ *   was never installed, so `HKModule` was hard-wired to `null` and EVERY
+ *   read silently returned null — the check-in "Sync from Apple Health"
+ *   button did nothing. This rewrite wires the same module the working
+ *   integrations/healthKitAdapter.ts already uses, keeping every exported
+ *   signature identical so healthDataService.ts is unchanged.
+ *
+ * Unit handling: react-native-health does its own unit conversions and
+ * its output has shifted across versions, so each reader is defensive
+ * (e.g. SpO2 may arrive as a 0–1 fraction or a 0–100 percent; HRV as
+ * seconds or milliseconds). We normalise on the way out.
  */
 
-import { Platform } from 'react-native';
+import { Platform, NativeEventEmitter, NativeModules } from 'react-native';
 
 // ---------------------------------------------------------------------------
 // Dynamic module loading
 // ---------------------------------------------------------------------------
 
-// @kingstinct/react-native-healthkit is NOT installed in this project.
-// The active HealthKit data path goes through src/services/integrations/
-// healthKitAdapter.ts which uses `react-native-health` (the package that
-// IS installed).
-//
-// This file is kept around because healthDataService.ts still imports
-// types and helper signatures from here; every read function returns
-// `null` when HKModule is null, which is the safe behavior on every
-// platform. Don't add a `require('@kingstinct/react-native-healthkit')`
-// — Metro statically resolves require() calls even inside try/catch,
-// and the missing module crashes the Bundle JavaScript phase of
-// `eas build` (verified 2026-05-09 build 21 failure).
-const HKModule: any = null;
+// `react-native-health` IS installed, so a static require is safe here — the
+// same pattern is used (and ships fine through `eas build`) in
+// integrations/healthKitAdapter.ts. The old warning about Metro crashing on a
+// missing module only applied to the never-installed @kingstinct package.
+let AppleHealthKit: any = null;
+try {
+  if (Platform.OS === 'ios') {
+
+    AppleHealthKit = require('react-native-health').default ?? require('react-native-health');
+  }
+} catch {
+  // Module unavailable (Expo Go / simulator without HealthKit) — degrade.
+  AppleHealthKit = null;
+}
+
+// HealthKit links into the binary on iPad too, but the DATA layer is
+// unavailable there (iPadOS has no Health app). The native isAvailable() result
+// is the only reliable signal — Platform.isPad is wrong when an iPhone-only app
+// runs on iPad in compatibility mode. Cache the async result; `null` = not yet
+// resolved (treat as available so a normal iPhone cold-start doesn't briefly
+// hide the feature), self-correcting to false on iPad. Mirrors healthKitAdapter.
+let hkDataAvailable: boolean | null = null;
+if (AppleHealthKit?.isAvailable) {
+  try {
+    AppleHealthKit.isAvailable((err: any, avail: boolean) => {
+      hkDataAvailable = err ? false : !!avail;
+    });
+  } catch {
+    hkDataAvailable = false;
+  }
+}
+
+const PERMS = AppleHealthKit?.Constants?.Permissions ?? {};
+
+// ---------------------------------------------------------------------------
+// Low-level promise wrappers (react-native-health is callback based)
+// ---------------------------------------------------------------------------
+
+/** Resolve an array-returning read method to [] on any error / missing method. */
+function getSamples(method: string, opts: any): Promise<any[]> {
+  return new Promise((resolve) => {
+    const fn = AppleHealthKit?.[method];
+    if (typeof fn !== 'function') return resolve([]);
+    try {
+      fn.call(AppleHealthKit, opts, (err: any, results: any) => {
+        if (err) {
+          if (__DEV__) console.warn(`[HealthKit] ${method} failed:`, err);
+          return resolve([]);
+        }
+        resolve(Array.isArray(results) ? results : results ? [results] : []);
+      });
+    } catch (e) {
+      if (__DEV__) console.warn(`[HealthKit] ${method} threw:`, e);
+      resolve([]);
+    }
+  });
+}
+
+/** Resolve a single-value read method to null on any error / missing method. */
+function getOne(method: string, opts: any): Promise<any | null> {
+  return new Promise((resolve) => {
+    const fn = AppleHealthKit?.[method];
+    if (typeof fn !== 'function') return resolve(null);
+    try {
+      fn.call(AppleHealthKit, opts, (err: any, result: any) => {
+        if (err) {
+          if (__DEV__) console.warn(`[HealthKit] ${method} failed:`, err);
+          return resolve(null);
+        }
+        resolve(result ?? null);
+      });
+    } catch (e) {
+      if (__DEV__) console.warn(`[HealthKit] ${method} threw:`, e);
+      resolve(null);
+    }
+  });
+}
+
+/** Pick the most recent sample by endDate (robust to result ordering). */
+function latest<T extends { startDate?: string; endDate?: string }>(
+  samples: T[],
+): T | null {
+  if (!samples || samples.length === 0) return null;
+  return samples.reduce((best, s) => {
+    const bt = new Date(best.endDate ?? best.startDate ?? 0).getTime();
+    const st = new Date(s.endDate ?? s.startDate ?? 0).getTime();
+    return st > bt ? s : best;
+  });
+}
+
+function sinceIso(days: number): string {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
+/** Yesterday 18:00 → today 12:00 — the window that captures "last night". */
+function lastNightWindow(): { startDate: string; endDate: string } {
+  const end = new Date();
+  end.setHours(12, 0, 0, 0);
+  const start = new Date(end);
+  start.setDate(start.getDate() - 1);
+  start.setHours(18, 0, 0, 0);
+  return { startDate: start.toISOString(), endDate: end.toISOString() };
+}
 
 // ---------------------------------------------------------------------------
 // Availability check
 // ---------------------------------------------------------------------------
 
 /**
- * Returns `true` only when running on iOS AND the native HealthKit module
- * was successfully loaded. Safe to call on any platform.
+ * Returns `true` only when running on iOS, the native HealthKit module
+ * loaded, AND the device exposes a HealthKit data layer (false on iPad).
+ * Safe to call on any platform.
  */
 export function isHealthKitAvailable(): boolean {
-  return HKModule !== null && Platform.OS === 'ios';
+  return (
+    Platform.OS === 'ios' && AppleHealthKit != null && hkDataAvailable !== false
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -56,45 +160,131 @@ export function isHealthKitAvailable(): boolean {
 
 /**
  * Request read-only HealthKit permissions for all metrics PepTalk uses,
- * including Apple Watch–specific data types.
+ * including Apple Watch–specific data types. Resolves true once the native
+ * permission sheet has been presented and HealthKit initialised.
  */
 export async function requestHealthKitPermissions(): Promise<boolean> {
-  if (!HKModule) return false;
+  if (!isHealthKitAvailable()) return false;
 
-  try {
-    const { HKQuantityTypeIdentifier, HKCategoryTypeIdentifier } = HKModule;
+  const read = [
+    PERMS.Steps,
+    PERMS.Weight,
+    PERMS.HeartRate,
+    PERMS.RestingHeartRate,
+    PERMS.HeartRateVariability,
+    PERMS.Vo2Max,
+    PERMS.OxygenSaturation,
+    PERMS.RespiratoryRate,
+    PERMS.SleepAnalysis,
+    PERMS.ActiveEnergyBurned,
+    // Women's health / cycle (only those react-native-health exposes)
+    PERMS.MenstrualFlow,
+    PERMS.OvulationTestResult,
+    PERMS.SexualActivity,
+  ].filter(Boolean);
 
-    await HKModule.requestAuthorization(
-      [
-        // Phase 1 — basic metrics
-        HKQuantityTypeIdentifier.stepCount,
-        HKQuantityTypeIdentifier.bodyMass,
-        HKQuantityTypeIdentifier.heartRate,
-        HKCategoryTypeIdentifier.sleepAnalysis,
-        HKQuantityTypeIdentifier.activeEnergyBurned,
+  // Write-back scope — backs the NSHealthUpdateUsageDescription claim that
+  // PepTalk "writes check-ins, weight, and symptom logs back to Apple Health".
+  //  - Weight (BodyMass) → saveWeightToHealthKit when the user enters a weight
+  //                        in a check-in.
+  //  - MindfulSession    → saveCheckInToHealthKit when the user completes a
+  //                        daily check-in (Apple's Mindfulness category is the
+  //                        writeable native container the installed
+  //                        react-native-health build exposes for a reflective
+  //                        wellbeing moment).
+  // NOTE: symptom logs ride along on the same Mindfulness write at check-in
+  // time; react-native-health exposes no dedicated HKCategory symptom writer.
+  const write = getWriteScope();
 
-        // Phase 2 — Apple Watch metrics
-        HKQuantityTypeIdentifier.heartRateVariabilitySDNN,
-        HKQuantityTypeIdentifier.vo2Max,
-        HKQuantityTypeIdentifier.oxygenSaturation,
-        HKQuantityTypeIdentifier.respiratoryRate,
-        HKQuantityTypeIdentifier.restingHeartRate,
+  return new Promise((resolve) => {
+    try {
+      AppleHealthKit.initHealthKit(
+        { permissions: { read, write } },
+        (err: any) => {
+          if (err) {
+            if (__DEV__) console.warn('[HealthKit] init failed:', err);
+            return resolve(false);
+          }
+          resolve(true);
+        },
+      );
+    } catch (e) {
+      if (__DEV__) console.warn('[HealthKit] init threw:', e);
+      resolve(false);
+    }
+  });
+}
 
-        // Phase 3 — Women's health / cycle tracking
-        HKCategoryTypeIdentifier.menstrualFlow,
-        HKCategoryTypeIdentifier.cervicalMucusQuality,
-        HKCategoryTypeIdentifier.ovulationTestResult,
-        HKCategoryTypeIdentifier.contraceptive,
-        HKCategoryTypeIdentifier.intermenstrualBleeding,
-      ],
-      [] // no write permissions
-    );
+/**
+ * HealthKit write permissions PepTalk requests. Only the data types we
+ * actually `saveSample` are listed, so Apple's permission sheet (and the
+ * NSHealthUpdateUsageDescription string) match real behaviour.
+ */
+function getWriteScope(): string[] {
+  return [PERMS.Weight, PERMS.MindfulSession].filter(Boolean);
+}
 
-    return true;
-  } catch (error) {
-    if (__DEV__) console.warn('[HealthKit] Permission request failed:', error);
-    return false;
-  }
+// ---------------------------------------------------------------------------
+// Write-back (Phase 4) — push user-entered data into Apple Health
+// ---------------------------------------------------------------------------
+
+/** Promise wrapper around a single-record `save*` method. Resolves false on
+ *  any error / missing method rather than throwing, so a write failure never
+ *  blocks the user's local save. */
+function saveOne(method: string, options: any): Promise<boolean> {
+  return new Promise((resolve) => {
+    const fn = AppleHealthKit?.[method];
+    if (typeof fn !== 'function') return resolve(false);
+    try {
+      fn.call(AppleHealthKit, options, (err: any) => {
+        if (err) {
+          if (__DEV__) console.warn(`[HealthKit] ${method} failed:`, err);
+          return resolve(false);
+        }
+        resolve(true);
+      });
+    } catch (e) {
+      if (__DEV__) console.warn(`[HealthKit] ${method} threw:`, e);
+      resolve(false);
+    }
+  });
+}
+
+/**
+ * Write a body-weight sample (in pounds) back to Apple Health.
+ * No-op (resolves false) off iOS / without HealthKit. Safe to call
+ * unconditionally — guards on availability internally.
+ */
+export async function saveWeightToHealthKit(
+  weightLbs: number,
+  date: Date = new Date(),
+): Promise<boolean> {
+  if (!isHealthKitAvailable()) return false;
+  if (!(typeof weightLbs === 'number' && weightLbs > 0)) return false;
+  // react-native-health's saveWeight takes the value in the unit passed via
+  // `unit`; 'pound' matches our app-wide weight unit.
+  return saveOne('saveWeight', {
+    value: weightLbs,
+    unit: 'pound',
+    startDate: date.toISOString(),
+  });
+}
+
+/**
+ * Write a daily check-in to Apple Health as a Mindful Session — a reflective
+ * wellbeing moment. Duration is nominal (1 minute) since a check-in is a
+ * point-in-time self-report, not a timed meditation. Returns true on success.
+ */
+export async function saveCheckInToHealthKit(
+  date: Date = new Date(),
+): Promise<boolean> {
+  if (!isHealthKitAvailable()) return false;
+  const endDate = date;
+  const startDate = new Date(endDate.getTime() - 60 * 1000); // 1-minute session
+  return saveOne('saveMindfulSession', {
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -102,109 +292,58 @@ export async function requestHealthKitPermissions(): Promise<boolean> {
 // ---------------------------------------------------------------------------
 
 export async function fetchTodaySteps(): Promise<number | null> {
-  if (!HKModule) return null;
-
-  try {
-    const { HKQuantityTypeIdentifier } = HKModule;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const samples = await HKModule.queryStatisticsForQuantity(
-      HKQuantityTypeIdentifier.stepCount,
-      { from: today, to: new Date() }
-    );
-
-    return samples?.sumQuantity?.doubleValue ?? null;
-  } catch (error) {
-    if (__DEV__) console.warn('[HealthKit] Failed to fetch steps:', error);
-    return null;
-  }
+  // getStepCount returns a single aggregated value for the day of `date`.
+  const res = await getOne('getStepCount', { date: new Date().toISOString() });
+  const v = res?.value;
+  return typeof v === 'number' && v > 0 ? Math.round(v) : null;
 }
 
 export async function fetchLatestWeight(): Promise<number | null> {
-  if (!HKModule) return null;
-
-  try {
-    const { HKQuantityTypeIdentifier } = HKModule;
-
-    const samples = await HKModule.queryQuantitySamples(
-      HKQuantityTypeIdentifier.bodyMass,
-      { limit: 1, ascending: false }
-    );
-
-    if (samples && samples.length > 0) {
-      const kilograms = samples[0].quantity;
-      const pounds = kilograms * 2.20462;
-      return Math.round(pounds * 10) / 10;
-    }
-
-    return null;
-  } catch (error) {
-    if (__DEV__) console.warn('[HealthKit] Failed to fetch weight:', error);
-    return null;
-  }
+  const res = await getOne('getLatestWeight', { unit: 'pound' });
+  const v = res?.value;
+  if (typeof v !== 'number' || v <= 0) return null;
+  // Older react-native-health builds ignore the `unit` arg on getLatestWeight
+  // and hand back kilograms. An adult body mass below ~35 is almost certainly
+  // kg (no adult weighs 35 lb), so convert defensively.
+  const lbs = v < 35 ? v * 2.20462 : v;
+  return Math.round(lbs * 10) / 10;
 }
 
 export async function fetchLatestHeartRate(): Promise<number | null> {
-  if (!HKModule) return null;
+  const samples = await getSamples('getHeartRateSamples', {
+    startDate: sinceIso(7),
+    ascending: false,
+    limit: 24,
+  });
+  const s = latest(samples);
+  return s && typeof s.value === 'number' ? Math.round(s.value) : null;
+}
 
-  try {
-    const { HKQuantityTypeIdentifier } = HKModule;
-
-    const samples = await HKModule.queryQuantitySamples(
-      HKQuantityTypeIdentifier.heartRate,
-      { limit: 1, ascending: false }
-    );
-
-    if (samples && samples.length > 0) {
-      return Math.round(samples[0].quantity);
-    }
-
-    return null;
-  } catch (error) {
-    if (__DEV__) console.warn('[HealthKit] Failed to fetch heart rate:', error);
-    return null;
+/** Apple sleep samples are 'INBED' | 'ASLEEP' | 'CORE' | 'DEEP' | 'REM' | 'AWAKE'
+ *  on newer react-native-health, or numeric 1–5 on older bindings. */
+function isAsleepValue(value: unknown): boolean {
+  if (typeof value === 'string') {
+    return ['ASLEEP', 'CORE', 'DEEP', 'REM'].includes(value.toUpperCase());
   }
+  // numeric: 1=asleep(unspecified), 3=core, 4=deep, 5=rem  (2=awake, 0=inbed)
+  return value === 1 || value === 3 || value === 4 || value === 5;
 }
 
 export async function fetchLastNightSleep(): Promise<number | null> {
-  if (!HKModule) return null;
+  const samples = await getSamples('getSleepSamples', lastNightWindow());
+  if (!samples.length) return null;
 
-  try {
-    const { HKCategoryTypeIdentifier } = HKModule;
-
-    const now = new Date();
-    const sleepWindowEnd = new Date(now);
-    sleepWindowEnd.setHours(12, 0, 0, 0);
-
-    const sleepWindowStart = new Date(sleepWindowEnd);
-    sleepWindowStart.setDate(sleepWindowStart.getDate() - 1);
-    sleepWindowStart.setHours(18, 0, 0, 0);
-
-    const samples = await HKModule.queryCategorySamples(
-      HKCategoryTypeIdentifier.sleepAnalysis,
-      { from: sleepWindowStart, to: sleepWindowEnd }
-    );
-
-    if (!samples || samples.length === 0) return null;
-
-    let totalMinutes = 0;
-    for (const sample of samples) {
-      const value = sample.value;
-      if (value === 1 || value === 3 || value === 4 || value === 5) {
-        const start = new Date(sample.startDate).getTime();
-        const end = new Date(sample.endDate).getTime();
-        totalMinutes += (end - start) / (1000 * 60);
-      }
-    }
-
-    if (totalMinutes === 0) return null;
-    return Math.round((totalMinutes / 60) * 10) / 10;
-  } catch (error) {
-    if (__DEV__) console.warn('[HealthKit] Failed to fetch sleep data:', error);
-    return null;
+  let totalMinutes = 0;
+  for (const s of samples) {
+    if (!isAsleepValue(s.value)) continue;
+    const start = new Date(s.startDate).getTime();
+    const end = new Date(s.endDate).getTime();
+    const dur = (end - start) / (1000 * 60);
+    if (dur > 0) totalMinutes += dur;
   }
+
+  if (totalMinutes === 0) return null;
+  return Math.round((totalMinutes / 60) * 10) / 10;
 }
 
 // ---------------------------------------------------------------------------
@@ -231,86 +370,109 @@ export interface SleepStages {
   qualityScore?: number;
 }
 
+/** Bucket a sleep sample value into a stage name. */
+function sleepStageOf(
+  value: unknown,
+): 'awake' | 'core' | 'deep' | 'rem' | null {
+  const v = typeof value === 'string' ? value.toUpperCase() : value;
+  switch (v) {
+    case 'AWAKE':
+    case 2:
+      return 'awake';
+    case 'CORE':
+    case 'ASLEEP':
+    case 1:
+    case 3:
+      return 'core';
+    case 'DEEP':
+    case 4:
+      return 'deep';
+    case 'REM':
+    case 5:
+      return 'rem';
+    default:
+      return null; // INBED / 0 / unknown
+  }
+}
+
 /**
  * Fetch last night's sleep broken down by stage (Apple Watch only).
  * Returns null if Watch sleep data isn't available.
  */
 export async function fetchSleepStages(): Promise<SleepStages | null> {
-  if (!HKModule) return null;
+  const samples = await getSamples('getSleepSamples', lastNightWindow());
+  if (!samples.length) return null;
 
-  try {
-    const { HKCategoryTypeIdentifier } = HKModule;
+  let awakeMinutes = 0;
+  let coreMinutes = 0;
+  let deepMinutes = 0;
+  let remMinutes = 0;
 
-    const now = new Date();
-    const sleepWindowEnd = new Date(now);
-    sleepWindowEnd.setHours(12, 0, 0, 0);
-
-    const sleepWindowStart = new Date(sleepWindowEnd);
-    sleepWindowStart.setDate(sleepWindowStart.getDate() - 1);
-    sleepWindowStart.setHours(18, 0, 0, 0);
-
-    const samples = await HKModule.queryCategorySamples(
-      HKCategoryTypeIdentifier.sleepAnalysis,
-      { from: sleepWindowStart, to: sleepWindowEnd }
-    );
-
-    if (!samples || samples.length === 0) return null;
-
-    let awakeMinutes = 0;
-    let coreMinutes = 0;
-    let deepMinutes = 0;
-    let remMinutes = 0;
-
-    for (const sample of samples) {
-      const duration = (new Date(sample.endDate).getTime() - new Date(sample.startDate).getTime()) / (1000 * 60);
-      switch (sample.value) {
-        case 2: awakeMinutes += duration; break;  // awake
-        case 1: // asleep unspecified — count as core
-        case 3: coreMinutes += duration; break;    // asleep core
-        case 4: deepMinutes += duration; break;    // asleep deep
-        case 5: remMinutes += duration; break;     // asleep REM
-      }
+  for (const sample of samples) {
+    const duration =
+      (new Date(sample.endDate).getTime() -
+        new Date(sample.startDate).getTime()) /
+      (1000 * 60);
+    if (duration <= 0) continue;
+    switch (sleepStageOf(sample.value)) {
+      case 'awake':
+        awakeMinutes += duration;
+        break;
+      case 'core':
+        coreMinutes += duration;
+        break;
+      case 'deep':
+        deepMinutes += duration;
+        break;
+      case 'rem':
+        remMinutes += duration;
+        break;
     }
+  }
 
-    const total = coreMinutes + deepMinutes + remMinutes;
-    if (total === 0) return null;
+  const total = coreMinutes + deepMinutes + remMinutes;
+  if (total === 0) return null;
 
-    // Detect bedtime and wake time from first/last sleep samples
-    const sleepSamples = samples
-      .filter((s: any) => s.value >= 1 && s.value <= 5)
-      .sort((a: any, b: any) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-
-    const bedtime = sleepSamples.length > 0 ? sleepSamples[0].startDate : undefined;
-    const wakeTime = sleepSamples.length > 0 ? sleepSamples[sleepSamples.length - 1].endDate : undefined;
-
-    // Sleep efficiency: time asleep / total time in bed
-    const timeInBed = total + awakeMinutes;
-    const efficiency = timeInBed > 0 ? Math.round((total / timeInBed) * 100) : undefined;
-
-    // Quality score (0-100): weighted by deep (40%), REM (30%), efficiency (20%), duration (10%)
-    const deepScore = Math.min((deepMinutes / 90) * 100, 100); // 90 min deep = perfect
-    const remScore = Math.min((remMinutes / 120) * 100, 100);  // 120 min REM = perfect
-    const durationScore = Math.min((total / 480) * 100, 100);  // 8 hours = perfect
-    const effScore = efficiency ?? 85;
-    const qualityScore = Math.round(
-      deepScore * 0.4 + remScore * 0.3 + effScore * 0.2 + durationScore * 0.1
+  // Detect bedtime and wake time from the asleep samples
+  const sleepSamples = samples
+    .filter((s: any) => sleepStageOf(s.value) !== null && sleepStageOf(s.value) !== 'awake')
+    .sort(
+      (a: any, b: any) =>
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
     );
 
-    return {
-      awake: Math.round((awakeMinutes / 60) * 10) / 10,
-      core: Math.round((coreMinutes / 60) * 10) / 10,
-      deep: Math.round((deepMinutes / 60) * 10) / 10,
-      rem: Math.round((remMinutes / 60) * 10) / 10,
-      total: Math.round((total / 60) * 10) / 10,
-      bedtime,
-      wakeTime,
-      efficiency,
-      qualityScore,
-    };
-  } catch (error) {
-    if (__DEV__) console.warn('[HealthKit] Failed to fetch sleep stages:', error);
-    return null;
-  }
+  const bedtime =
+    sleepSamples.length > 0 ? sleepSamples[0].startDate : undefined;
+  const wakeTime =
+    sleepSamples.length > 0
+      ? sleepSamples[sleepSamples.length - 1].endDate
+      : undefined;
+
+  // Sleep efficiency: time asleep / total time in bed
+  const timeInBed = total + awakeMinutes;
+  const efficiency =
+    timeInBed > 0 ? Math.round((total / timeInBed) * 100) : undefined;
+
+  // Quality score (0-100): weighted by deep (40%), REM (30%), efficiency (20%), duration (10%)
+  const deepScore = Math.min((deepMinutes / 90) * 100, 100); // 90 min deep = perfect
+  const remScore = Math.min((remMinutes / 120) * 100, 100); // 120 min REM = perfect
+  const durationScore = Math.min((total / 480) * 100, 100); // 8 hours = perfect
+  const effScore = efficiency ?? 85;
+  const qualityScore = Math.round(
+    deepScore * 0.4 + remScore * 0.3 + effScore * 0.2 + durationScore * 0.1,
+  );
+
+  return {
+    awake: Math.round((awakeMinutes / 60) * 10) / 10,
+    core: Math.round((coreMinutes / 60) * 10) / 10,
+    deep: Math.round((deepMinutes / 60) * 10) / 10,
+    rem: Math.round((remMinutes / 60) * 10) / 10,
+    total: Math.round((total / 60) * 10) / 10,
+    bedtime,
+    wakeTime,
+    efficiency,
+    qualityScore,
+  };
 }
 
 /**
@@ -318,26 +480,15 @@ export async function fetchSleepStages(): Promise<SleepStages | null> {
  * @returns HRV in milliseconds, or null if unavailable.
  */
 export async function fetchLatestHRV(): Promise<number | null> {
-  if (!HKModule) return null;
-
-  try {
-    const { HKQuantityTypeIdentifier } = HKModule;
-
-    const samples = await HKModule.queryQuantitySamples(
-      HKQuantityTypeIdentifier.heartRateVariabilitySDNN,
-      { limit: 1, ascending: false }
-    );
-
-    if (samples && samples.length > 0) {
-      // HRV SDNN is stored in seconds, convert to ms
-      return Math.round(samples[0].quantity * 1000);
-    }
-
-    return null;
-  } catch (error) {
-    if (__DEV__) console.warn('[HealthKit] Failed to fetch HRV:', error);
-    return null;
-  }
+  const samples = await getSamples('getHeartRateVariabilitySamples', {
+    startDate: sinceIso(30),
+    ascending: false,
+  });
+  const s = latest(samples);
+  if (!s || typeof s.value !== 'number') return null;
+  // SDNN may arrive in seconds (≈0.045) or already in ms (≈45).
+  const ms = s.value < 1 ? s.value * 1000 : s.value;
+  return Math.round(ms);
 }
 
 /**
@@ -345,25 +496,14 @@ export async function fetchLatestHRV(): Promise<number | null> {
  * @returns VO2 max in mL/(kg·min), or null if unavailable.
  */
 export async function fetchLatestVO2Max(): Promise<number | null> {
-  if (!HKModule) return null;
-
-  try {
-    const { HKQuantityTypeIdentifier } = HKModule;
-
-    const samples = await HKModule.queryQuantitySamples(
-      HKQuantityTypeIdentifier.vo2Max,
-      { limit: 1, ascending: false }
-    );
-
-    if (samples && samples.length > 0) {
-      return Math.round(samples[0].quantity * 10) / 10;
-    }
-
-    return null;
-  } catch (error) {
-    if (__DEV__) console.warn('[HealthKit] Failed to fetch VO2 max:', error);
-    return null;
-  }
+  const samples = await getSamples('getVo2MaxSamples', {
+    startDate: sinceIso(90),
+    ascending: false,
+  });
+  const s = latest(samples);
+  return s && typeof s.value === 'number'
+    ? Math.round(s.value * 10) / 10
+    : null;
 }
 
 /**
@@ -371,26 +511,15 @@ export async function fetchLatestVO2Max(): Promise<number | null> {
  * @returns SpO2 as a percentage (e.g. 98.5), or null if unavailable.
  */
 export async function fetchLatestSpO2(): Promise<number | null> {
-  if (!HKModule) return null;
-
-  try {
-    const { HKQuantityTypeIdentifier } = HKModule;
-
-    const samples = await HKModule.queryQuantitySamples(
-      HKQuantityTypeIdentifier.oxygenSaturation,
-      { limit: 1, ascending: false }
-    );
-
-    if (samples && samples.length > 0) {
-      // HealthKit stores SpO2 as a fraction (0.0–1.0), convert to %
-      return Math.round(samples[0].quantity * 1000) / 10;
-    }
-
-    return null;
-  } catch (error) {
-    if (__DEV__) console.warn('[HealthKit] Failed to fetch SpO2:', error);
-    return null;
-  }
+  const samples = await getSamples('getOxygenSaturationSamples', {
+    startDate: sinceIso(30),
+    ascending: false,
+  });
+  const s = latest(samples);
+  if (!s || typeof s.value !== 'number') return null;
+  // May arrive as a 0–1 fraction or an already-scaled percent.
+  const pct = s.value <= 1 ? s.value * 100 : s.value;
+  return Math.round(pct * 10) / 10;
 }
 
 /**
@@ -398,52 +527,27 @@ export async function fetchLatestSpO2(): Promise<number | null> {
  * @returns Breaths per minute, or null if unavailable.
  */
 export async function fetchLatestRespiratoryRate(): Promise<number | null> {
-  if (!HKModule) return null;
-
-  try {
-    const { HKQuantityTypeIdentifier } = HKModule;
-
-    const samples = await HKModule.queryQuantitySamples(
-      HKQuantityTypeIdentifier.respiratoryRate,
-      { limit: 1, ascending: false }
-    );
-
-    if (samples && samples.length > 0) {
-      return Math.round(samples[0].quantity * 10) / 10;
-    }
-
-    return null;
-  } catch (error) {
-    if (__DEV__) console.warn('[HealthKit] Failed to fetch respiratory rate:', error);
-    return null;
-  }
+  const samples = await getSamples('getRespiratoryRateSamples', {
+    startDate: sinceIso(30),
+    ascending: false,
+  });
+  const s = latest(samples);
+  return s && typeof s.value === 'number'
+    ? Math.round(s.value * 10) / 10
+    : null;
 }
 
 /**
  * Fetch the most recent resting heart rate from Apple Watch.
- * This is computed by Apple Watch over the course of the day.
  * @returns Resting HR in BPM, or null if unavailable.
  */
 export async function fetchLatestRestingHeartRate(): Promise<number | null> {
-  if (!HKModule) return null;
-
-  try {
-    const { HKQuantityTypeIdentifier } = HKModule;
-
-    const samples = await HKModule.queryQuantitySamples(
-      HKQuantityTypeIdentifier.restingHeartRate,
-      { limit: 1, ascending: false }
-    );
-
-    if (samples && samples.length > 0) {
-      return Math.round(samples[0].quantity);
-    }
-
-    return null;
-  } catch (error) {
-    if (__DEV__) console.warn('[HealthKit] Failed to fetch resting heart rate:', error);
-    return null;
-  }
+  const samples = await getSamples('getRestingHeartRateSamples', {
+    startDate: sinceIso(30),
+    ascending: false,
+  });
+  const s = latest(samples);
+  return s && typeof s.value === 'number' ? Math.round(s.value) : null;
 }
 
 /**
@@ -451,26 +555,20 @@ export async function fetchLatestRestingHeartRate(): Promise<number | null> {
  * @returns Active calories burned, or null if unavailable.
  */
 export async function fetchTodayActiveEnergy(): Promise<number | null> {
-  if (!HKModule) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-  try {
-    const { HKQuantityTypeIdentifier } = HKModule;
+  const samples = await getSamples('getActiveEnergyBurned', {
+    startDate: today.toISOString(),
+    endDate: new Date().toISOString(),
+  });
+  if (!samples.length) return null;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const samples = await HKModule.queryStatisticsForQuantity(
-      HKQuantityTypeIdentifier.activeEnergyBurned,
-      { from: today, to: new Date() }
-    );
-
-    return samples?.sumQuantity?.doubleValue
-      ? Math.round(samples.sumQuantity.doubleValue)
-      : null;
-  } catch (error) {
-    if (__DEV__) console.warn('[HealthKit] Failed to fetch active energy:', error);
-    return null;
-  }
+  const total = samples.reduce(
+    (sum: number, s: any) => sum + (typeof s.value === 'number' ? s.value : 0),
+    0,
+  );
+  return total > 0 ? Math.round(total) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -479,59 +577,67 @@ export async function fetchTodayActiveEnergy(): Promise<number | null> {
 
 type HealthDataCallback = () => void;
 
-let observerSubscriptions: (() => void)[] = [];
+let observerCleanups: (() => void)[] = [];
 
 /**
  * Register background observers for key Apple Watch metrics.
- * When new data arrives from the Watch, the callback is invoked
- * so the app can refresh its displayed data.
- *
- * Call this once at app startup (e.g. in the root layout).
- * Returns an unsubscribe function.
+ * react-native-health pushes JS events (e.g. `healthKit:StepCount:new`) once
+ * the corresponding native observer is started; we listen for the handful it
+ * supports and refresh on any of them. Best-effort: if the native event
+ * emitter or observer API is unavailable this degrades to a no-op rather than
+ * throwing. Call once at app startup; returns an unsubscribe function.
  */
-export function enableBackgroundObservers(onUpdate: HealthDataCallback): () => void {
-  if (!HKModule) return () => {};
+export function enableBackgroundObservers(
+  onUpdate: HealthDataCallback,
+): () => void {
+  if (!isHealthKitAvailable()) return () => {};
 
-  const { HKQuantityTypeIdentifier, HKCategoryTypeIdentifier } = HKModule;
-
-  const typesToObserve = [
-    HKQuantityTypeIdentifier.stepCount,
-    HKQuantityTypeIdentifier.heartRate,
-    HKQuantityTypeIdentifier.heartRateVariabilitySDNN,
-    HKQuantityTypeIdentifier.restingHeartRate,
-    HKQuantityTypeIdentifier.oxygenSaturation,
-    HKQuantityTypeIdentifier.respiratoryRate,
-    HKCategoryTypeIdentifier.sleepAnalysis,
-    HKQuantityTypeIdentifier.activeEnergyBurned,
-  ];
-
-  // Clean up any existing observers
+  // Always start from a clean slate.
   disableBackgroundObservers();
 
-  for (const type of typesToObserve) {
-    try {
-      const subscription = HKModule.subscribeToChanges(type, () => {
-        onUpdate();
-      });
-      if (subscription && typeof subscription === 'function') {
-        observerSubscriptions.push(subscription);
-      }
-    } catch (error) {
-      if (__DEV__) console.warn(`[HealthKit] Failed to observe ${type}:`, error);
-    }
-  }
+  try {
+    const native = NativeModules.AppleHealthKit;
+    if (!native) return () => {};
 
-  return disableBackgroundObservers;
+    const emitter = new NativeEventEmitter(native);
+    const events = [
+      'healthKit:StepCount:new',
+      'healthKit:HeartRate:new',
+      'healthKit:RestingHeartRate:new',
+      'healthKit:SleepAnalysis:new',
+      'healthKit:ActiveEnergyBurned:new',
+    ];
+
+    const subs = events.map((evt) => emitter.addListener(evt, () => onUpdate()));
+    observerCleanups.push(() => subs.forEach((s) => s.remove()));
+
+    // Kick off the one observer react-native-health natively supports starting
+    // from JS. Others fire if the host app has background delivery configured.
+    try {
+      AppleHealthKit.initStepCountObserver?.({}, () => {});
+    } catch {
+      /* observer optional */
+    }
+
+    return disableBackgroundObservers;
+  } catch (error) {
+    if (__DEV__) console.warn('[HealthKit] background observers unavailable:', error);
+    return () => {};
+  }
 }
 
 /**
  * Remove all active HealthKit observer subscriptions.
  */
 export function disableBackgroundObservers(): void {
-  for (const unsub of observerSubscriptions) {
-    try { unsub(); } catch {}
+  for (const cleanup of observerCleanups) {
+    try {
+      cleanup();
+    } catch {
+      /* ignore */
+    }
   }
-  observerSubscriptions = [];
+  observerCleanups = [];
 }
 
 // ---------------------------------------------------------------------------
@@ -561,7 +667,7 @@ export interface WatchHealthData extends HealthCheckInData {
  * Fetch basic health metrics for check-in pre-fill (Phase 1).
  */
 export async function syncHealthDataToCheckIn(): Promise<HealthCheckInData> {
-  if (!HKModule) return {};
+  if (!isHealthKitAvailable()) return {};
 
   const [steps, weightLbs, restingHeartRate, sleepHours] = await Promise.all([
     fetchTodaySteps(),
@@ -584,11 +690,20 @@ export async function syncHealthDataToCheckIn(): Promise<HealthCheckInData> {
  * Used for enhanced check-ins and AI bot context.
  */
 export async function syncAllWatchData(): Promise<WatchHealthData> {
-  if (!HKModule) return {};
+  if (!isHealthKitAvailable()) return {};
 
   const [
-    steps, weightLbs, heartRate, sleepHours,
-    hrv, vo2Max, spo2, respiratoryRate, restingHR, activeCalories, sleepStages,
+    steps,
+    weightLbs,
+    heartRate,
+    sleepHours,
+    hrv,
+    vo2Max,
+    spo2,
+    respiratoryRate,
+    restingHR,
+    activeCalories,
+    sleepStages,
   ] = await Promise.all([
     fetchTodaySteps(),
     fetchLatestWeight(),
@@ -634,39 +749,52 @@ export interface CycleData {
 }
 
 export async function fetchCycleData(): Promise<CycleData | null> {
-  if (!HKModule) return null;
+  if (!isHealthKitAvailable()) return null;
 
   try {
-    const { HKCategoryTypeIdentifier } = HKModule;
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
+    // react-native-health exposes menstruation + ovulation samples; cervical
+    // mucus and contraceptive types aren't bound, so those stay null.
     let currentFlow: CycleData['currentFlow'] = null;
     let lastPeriodStart: string | null = null;
-    try {
-      const flowSamples = await HKModule.queryCategorySamples(
-        HKCategoryTypeIdentifier.menstrualFlow,
-        { from: thirtyDaysAgo, to: new Date(), limit: 30, ascending: false }
+
+    const flowSamples = await getSamples('getMenstruationSamples', {
+      startDate: sinceIso(30),
+      ascending: false,
+    });
+    if (flowSamples.length > 0) {
+      // HealthKit HKCategoryValueMenstrualFlow: 1=unspecified, 2=light,
+      // 3=medium, 4=heavy, 5=none.
+      const flowMap: Record<number, CycleData['currentFlow']> = {
+        1: 'light',
+        2: 'light',
+        3: 'medium',
+        4: 'heavy',
+        5: 'none',
+      };
+      const newest = latest(flowSamples);
+      currentFlow = newest ? flowMap[newest.value] ?? null : null;
+      // Walk newest→oldest for the first real-flow day = period start.
+      const byNewest = [...flowSamples].sort(
+        (a, b) =>
+          new Date(b.startDate ?? 0).getTime() -
+          new Date(a.startDate ?? 0).getTime(),
       );
-      if (flowSamples?.length > 0) {
-        const flowMap: Record<number, CycleData['currentFlow']> = {
-          1: 'light', 2: 'medium', 3: 'heavy', 4: 'none',
-        };
-        currentFlow = flowMap[flowSamples[0].value] ?? null;
-        for (let i = 0; i < flowSamples.length; i++) {
-          if (flowSamples[i].value >= 1 && flowSamples[i].value <= 3) {
-            lastPeriodStart = new Date(flowSamples[i].startDate).toISOString().slice(0, 10);
-            break;
-          }
+      for (const sample of byNewest) {
+        if (sample.value >= 1 && sample.value <= 4) {
+          lastPeriodStart = new Date(sample.startDate)
+            .toISOString()
+            .slice(0, 10);
+          break;
         }
       }
-    } catch {}
+    }
 
     let cycleDay: number | null = null;
     let phase: CycleData['phase'] = null;
     if (lastPeriodStart) {
       const daysSince = Math.floor(
-        (Date.now() - new Date(lastPeriodStart).getTime()) / (1000 * 60 * 60 * 24)
+        (Date.now() - new Date(lastPeriodStart).getTime()) /
+          (1000 * 60 * 60 * 24),
       );
       cycleDay = daysSince;
       if (daysSince <= 5) phase = 'menstrual';
@@ -675,50 +803,31 @@ export async function fetchCycleData(): Promise<CycleData | null> {
       else phase = 'luteal';
     }
 
-    let contraceptiveType: string | null = null;
-    try {
-      const samples = await HKModule.queryCategorySamples(
-        HKCategoryTypeIdentifier.contraceptive,
-        { limit: 1, ascending: false }
-      );
-      if (samples?.length > 0) {
-        const typeMap: Record<number, string> = {
-          1: 'Unspecified', 2: 'Implant', 3: 'Injection',
-          4: 'IUD', 5: 'Ring', 6: 'Oral Pill', 7: 'Patch',
-        };
-        contraceptiveType = typeMap[samples[0].value] ?? 'Unknown';
-      }
-    } catch {}
-
-    let cervicalMucus: string | null = null;
-    try {
-      const samples = await HKModule.queryCategorySamples(
-        HKCategoryTypeIdentifier.cervicalMucusQuality,
-        { limit: 1, ascending: false }
-      );
-      if (samples?.length > 0) {
-        const mucusMap: Record<number, string> = {
-          1: 'Dry', 2: 'Sticky', 3: 'Creamy', 4: 'Watery', 5: 'Egg White',
-        };
-        cervicalMucus = mucusMap[samples[0].value] ?? null;
-      }
-    } catch {}
-
     let ovulationResult: CycleData['ovulationResult'] = null;
-    try {
-      const samples = await HKModule.queryCategorySamples(
-        HKCategoryTypeIdentifier.ovulationTestResult,
-        { limit: 1, ascending: false }
-      );
-      if (samples?.length > 0) {
-        const ovMap: Record<number, CycleData['ovulationResult']> = {
-          1: 'negative', 2: 'indeterminate', 3: 'positive',
-        };
-        ovulationResult = ovMap[samples[0].value] ?? null;
-      }
-    } catch {}
+    const ovSamples = await getSamples('getOvulationTestResultSamples', {
+      startDate: sinceIso(30),
+      ascending: false,
+    });
+    if (ovSamples.length > 0) {
+      const newest = latest(ovSamples);
+      // 1=negative, 2=indeterminate/luteinizingHormoneSurge, 3=positive
+      const ovMap: Record<number, CycleData['ovulationResult']> = {
+        1: 'negative',
+        2: 'indeterminate',
+        3: 'positive',
+      };
+      ovulationResult = newest ? ovMap[newest.value] ?? null : null;
+    }
 
-    return { currentFlow, lastPeriodStart, cycleDay, phase, contraceptiveType, cervicalMucus, ovulationResult };
+    return {
+      currentFlow,
+      lastPeriodStart,
+      cycleDay,
+      phase,
+      contraceptiveType: null,
+      cervicalMucus: null,
+      ovulationResult,
+    };
   } catch (error) {
     if (__DEV__) console.warn('[HealthKit] Failed to fetch cycle data:', error);
     return null;

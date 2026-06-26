@@ -34,10 +34,13 @@ import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { Spacing, BorderRadius, FontSizes } from '../../src/constants/theme';
 import { useMealStore } from '../../src/store/useMealStore';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
-import { getProgramById } from '../../src/data/workoutPrograms';
+import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import {
+  getProgramById,
+  getRecommendedProgramId,
+  PROGRAM_SHORT_LABEL,
+} from '../../src/data/workoutPrograms';
 import { selectionTick, tapMedium } from '../../src/utils/haptics';
-
-const JAMIE_PROGRAM_ID = 'll-body-recomp-1';
 
 function todayKey(): string {
   const d = new Date();
@@ -65,10 +68,24 @@ export default function TrainScreen() {
   const calsTarget = targets?.calories ?? 2000;
   const calsRemaining = Math.max(0, calsTarget - calsToday);
 
+  // Gendered marquee program — men get Men's BUILD, women Lusciously Lean.
+  // Unset sex → no default; the tile sends them to pick a track (opt-in).
+  const biologicalSex = useHealthProfileStore((s) => s.profile.biologicalSex);
+  const recommendedProgramId = getRecommendedProgramId(biologicalSex);
   const jamieProgram = activeProgram
     ? getProgramById(activeProgram.programId)
     : null;
-  const isJamieActive = jamieProgram?.id === JAMIE_PROGRAM_ID;
+  const isJamieActive =
+    !!recommendedProgramId && jamieProgram?.id === recommendedProgramId;
+  const jamieTileSub = isJamieActive
+    ? "Continue · today's session"
+    : recommendedProgramId
+      ? PROGRAM_SHORT_LABEL[recommendedProgramId] ?? 'Start program'
+      : 'Choose your track';
+  const goJamieProgram = () =>
+    recommendedProgramId
+      ? go(`/workouts/program/${recommendedProgramId}`)
+      : go('/workouts');
 
   const go = (path: string) => {
     selectionTick();
@@ -169,7 +186,7 @@ export default function TrainScreen() {
 
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => go(`/workouts/program/${JAMIE_PROGRAM_ID}`)}
+            onPress={goJamieProgram}
             style={styles.tile}
             accessibilityRole="button"
             accessibilityLabel="Jamie's program"
@@ -182,9 +199,7 @@ export default function TrainScreen() {
             >
               <Ionicons name="star" size={36} color="#fff" />
               <Text style={styles.tileTitle}>JAMIE'S PROGRAM</Text>
-              <Text style={styles.tileSub}>
-                {isJamieActive ? 'Continue · today\'s session' : 'Lusciously Lean'}
-              </Text>
+              <Text style={styles.tileSub}>{jamieTileSub}</Text>
             </LinearGradient>
           </TouchableOpacity>
 

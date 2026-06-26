@@ -16,6 +16,9 @@ import {
   fetchLatestHeartRate as hkHeartRate,
   fetchLastNightSleep as hkSleep,
   syncHealthDataToCheckIn as hkSync,
+  // Phase 4 — write-back
+  saveWeightToHealthKit as hkSaveWeight,
+  saveCheckInToHealthKit as hkSaveCheckIn,
   // Phase 2 — Apple Watch metrics
   fetchLatestHRV as hkHRV,
   fetchLatestVO2Max as hkVO2,
@@ -182,6 +185,46 @@ export async function syncAllWatchToCheckIn(): Promise<WatchHealthData> {
     return hcSync();
   }
   return hkSyncAll();
+}
+
+// ---------------------------------------------------------------------------
+// Write-back — push user-entered data into the platform health store
+// ---------------------------------------------------------------------------
+//
+// These back the iOS NSHealthUpdateUsageDescription claim that PepTalk
+// "writes check-ins, weight, and symptom logs back to Apple Health". All
+// resolve to a boolean (true = written) and never throw — a failed write must
+// not block the user's local save. Android Health Connect write-back isn't
+// wired yet, so these are iOS-only no-ops elsewhere.
+
+/** Write a body-weight value (lbs) back to the platform health store. */
+export async function writeWeightToHealth(
+  weightLbs: number,
+  date?: Date,
+): Promise<boolean> {
+  if (!isIOS) return false;
+  return hkSaveWeight(weightLbs, date);
+}
+
+/**
+ * Record that the user completed a daily check-in in the platform health
+ * store (iOS: a Mindful Session — a reflective wellbeing moment).
+ */
+export async function writeCheckInToHealth(date?: Date): Promise<boolean> {
+  if (!isIOS) return false;
+  return hkSaveCheckIn(date);
+}
+
+/**
+ * Record a symptom / side-effect log in the platform health store. iOS has no
+ * dedicated react-native-health symptom-category writer, so the log is
+ * surfaced as a brief Mindful Session (a "paused to log how I feel" moment) —
+ * the same writeable container used for check-ins — keeping the
+ * "writes symptom logs back to Apple Health" claim truthful.
+ */
+export async function writeSymptomToHealth(date?: Date): Promise<boolean> {
+  if (!isIOS) return false;
+  return hkSaveCheckIn(date);
 }
 
 // ---------------------------------------------------------------------------

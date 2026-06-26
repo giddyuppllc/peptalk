@@ -1,0 +1,127 @@
+# PepTalk — capture the Pro-only FEATURE screens.
+#
+# Uses expo-router deep links (scheme "peptalk://") to jump straight to each
+# Pro-gated screen — far more reliable than tapping through a UI that exposes
+# almost no accessibility labels. Each openLink raises an "Open in PepTalk?"
+# system prompt that we confirm by tapping "Open".
+#
+# Requires: dev/sim build already loaded + logged in (Pro auto-granted in
+# non-production builds). Metro must be running.
+#
+#   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+#     maestro --device <sim-udid> test .maestro/pro-features.yaml
+appId: com.peptalkapp.peptalk
+tags:
+  - screenshots
+---
+- launchApp
+# Clear any leftover "Open in PepTalk?" scheme prompt from a prior run.
+- tapOn:
+    text: "Cancel"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Hi, reviewer|Welcome|Home"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# --- Aimee chat (Pro: 300 chats/day) ---
+- openLink:
+    link: "peptalk://peptalk"
+- tapOn:
+    text: "Open"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: feat-aimee-chat
+
+# --- Workout generator (Pro: AI-generated targeted workouts) ---
+- openLink:
+    link: "peptalk://workouts/generate"
+- tapOn:
+    text: "Open"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: feat-workout-generate
+
+# --- Recipe generator (Pro: 10/day) ---
+- openLink:
+    link: "peptalk://nutrition/recipe-generator"
+- tapOn:
+    text: "Open"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: feat-recipe-generator
+
+# --- 7-day meal plan (Pro: 5/day) ---
+- openLink:
+    link: "peptalk://nutrition/meal-plan"
+- tapOn:
+    text: "Open"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: feat-meal-plan
+
+# --- Voice log / talk-to-Aimee (Pro: 60/day) ---
+- openLink:
+    link: "peptalk://nutrition/voice-log"
+- tapOn:
+    text: "Open"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: feat-voice-log
+
+# --- Food scanner (Pro: 20 scans/day) ---
+- openLink:
+    link: "peptalk://nutrition/food-scanner"
+- tapOn:
+    text: "Open"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: feat-food-scanner
+
+# --- Meal scan ---
+- openLink:
+    link: "peptalk://nutrition/meal-scan"
+- tapOn:
+    text: "Open"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: feat-meal-scan
+
+# --- Pantry scan ---
+- openLink:
+    link: "peptalk://pantry/scan"
+- tapOn:
+    text: "Open"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: feat-pantry-scan
+
+# --- Lab results / lab scan (Pro: 20/day) ---
+- openLink:
+    link: "peptalk://labs/entry"
+- tapOn:
+    text: "Open"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: feat-lab-entry
+
+# --- Custom meal from pantry (Pro: pantry -> meal suggestions) ---
+- openLink:
+    link: "peptalk://nutrition/custom-meal-from-pantry"
+- tapOn:
+    text: "Open"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: feat-custom-meal-from-pantry

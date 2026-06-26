@@ -1459,18 +1459,180 @@ const br_w4: WorkoutWeek = {
   ],
 };
 
+// ---------------------------------------------------------------------------
+// DRAFT (auto-generated continuation of weeks 1–4) — pending Jamie Esposito
+// review/refinement. Weeks 5–8 keep the exact same 5-day split (Upper / Lower
+// / Arms & Abs / Glutes & Hamstrings / Full Body) and only reference exercises
+// already used in the authored weeks 1–4 above. Progression continues the
+// established 1→4 ramp: compounds settle at 4 working sets with the lowest rep
+// (highest-intensity) range in weeks 5–7, accessories creep up in reps, and
+// plank/core holds extend. Week 8 is an intentional lighter peak/deload week
+// (volume pulled back to 3 sets, reps raised) to finish the block. NOT
+// trainer-authored — this is a draft accelerator so the calendar populates all
+// 8 weeks; Jamie's sign-off required before it is treated as final programming.
+// ---------------------------------------------------------------------------
+
+const br_w5: WorkoutWeek = {
+  weekNumber: 5,
+  days: [
+    day('Upper Body W5', 'BR-W5/D1', [
+      s('Barbell Bench Press', [8, 8, 8, 8], 'normal', { restSeconds: 60 }),
+      s('Pull Up', [8, 8, 8, 8], 'normal', { restSeconds: 60 }),
+      s('Dumbbell Shoulder Press', [10, 10, 10, 10], 'super_set'),
+      s('Reverse Fly', [15, 15, 15], 'super_set', { restSeconds: 30 }),
+    ]),
+    day('Lower Body W5', 'BR-W5/D2', [
+      s('Barbell Back Squat', [8, 8, 8, 8], 'normal', { restSeconds: 60 }),
+      s('Romanian Deadlift', [10, 10, 10, 10], 'normal', { restSeconds: 60 }),
+      s('Leg Press', [15, 15, 15], 'super_set'),
+      s('Calf Raise', [20, 20, 20], 'super_set', { restSeconds: 30 }),
+    ]),
+    day('Arms & Abs W5', 'BR-W5/D3', [
+      s('Dumbbell Bicep Curl', [15, 15, 15], 'super_set'),
+      s('Skull Crusher', [12, 12, 12], 'super_set', { restSeconds: 30 }),
+      s('Hammer Curl', [15, 15, 15], 'super_set'),
+      s('Tricep Pushdown', [15, 15, 15], 'super_set', { restSeconds: 30 }),
+      s('Bicycle Crunch', [20, 20, 20], 'normal', { restSeconds: 15 }),
+    ]),
+    day('Glutes & Hamstrings W5', 'BR-W5/D4', [
+      s('Barbell Hip Thrust', [8, 8, 8, 8], 'normal', { restSeconds: 60 }),
+      s('Leg Curl', [15, 15, 15, 15], 'normal', { restSeconds: 45 }),
+      s('Cable Kickback', [15, 15, 15], 'super_set'),
+      s('Banded Lateral Walk', [20, 20, 20], 'super_set', { restSeconds: 30 }),
+    ]),
+    day('Full Body W5', 'BR-W5/D5', [
+      s('Kettlebell Swing', [20, 20, 20, 20], 'normal', { restSeconds: 30 }),
+      s('Goblet Squat', [15, 15, 15], 'super_set'),
+      s('Push Up', [20, 20, 20], 'super_set'),
+      s('Up And Down Plank', [1, 1, 1, 1], 'super_set', { timeSeconds: 45 }),
+    ]),
+  ],
+};
+
+const br_w6: WorkoutWeek = {
+  weekNumber: 6,
+  days: [
+    day('Upper Body W6', 'BR-W6/D1', [
+      s('Incline Dumbbell Press', [10, 10, 10, 10], 'normal', { restSeconds: 60 }),
+      s('Lat Pulldown', [12, 12, 12, 12], 'normal', { restSeconds: 45 }),
+      s('Arnold Press', [10, 10, 10, 10], 'super_set'),
+      s('Cable Chest Fly', [15, 15, 15], 'super_set', { restSeconds: 30 }),
+    ]),
+    day('Lower Body W6', 'BR-W6/D2', [
+      s('Barbell Front Squat', [8, 8, 8, 8], 'normal', { restSeconds: 60 }),
+      s('Sumo Deadlift', [8, 8, 8, 8], 'normal', { restSeconds: 60 }),
+      s('Walking Lunge', [15, 15, 15], 'super_set'),
+      s('Leg Extension', [15, 15, 15], 'super_set', { restSeconds: 30 }),
+    ]),
+    day('Arms & Abs W6', 'BR-W6/D3', [
+      s('Dumbbell Bicep Curl', [15, 15, 15, 15], 'super_set'),
+      s('Overhead Tricep Extension', [15, 15, 15], 'super_set', { restSeconds: 30 }),
+      s('Hammer Curl', [15, 15, 15], 'super_set'),
+      s('Skull Crusher', [12, 12, 12], 'super_set', { restSeconds: 30 }),
+      s('medicine ball crunch', [20, 20, 20], 'normal', { restSeconds: 15 }),
+    ]),
+    day('Glutes & Hamstrings W6', 'BR-W6/D4', [
+      s('Barbell Hip Thrust', [8, 8, 8, 8], 'normal', { restSeconds: 60 }),
+      s('Leg Curl', [15, 15, 15, 15], 'normal', { restSeconds: 45 }),
+      s('Single Leg Glute Bridge', [15, 15, 15], 'super_set'),
+      s('Banded Abduction on Machine', [20, 20, 20], 'super_set', { restSeconds: 30 }),
+    ]),
+    day('Full Body W6', 'BR-W6/D5', [
+      s('Kettlebell Swing', [20, 20, 20, 20], 'normal', { restSeconds: 30 }),
+      s('Dumbbell Thruster', [12, 12, 12, 12], 'super_set'),
+      s('Renegade Row', [12, 12, 12, 12], 'super_set'),
+      s('SB plank', [1, 1, 1, 1], 'normal', { timeSeconds: 60, restSeconds: 15 }),
+    ]),
+  ],
+};
+
+const br_w7: WorkoutWeek = {
+  weekNumber: 7,
+  days: [
+    day('Upper Body W7', 'BR-W7/D1', [
+      s('Barbell Bench Press', [8, 8, 8, 8], 'normal', { restSeconds: 60 }),
+      s('Pull Up', [8, 8, 8, 8], 'normal', { restSeconds: 60 }),
+      s('Dumbbell Shoulder Press', [10, 10, 10, 10], 'super_set'),
+      s('Face Pull', [15, 15, 15], 'super_set', { restSeconds: 30 }),
+    ]),
+    day('Lower Body W7', 'BR-W7/D2', [
+      s('Barbell Back Squat', [8, 8, 8, 8], 'normal', { restSeconds: 60 }),
+      s('Romanian Deadlift', [8, 8, 8, 8], 'normal', { restSeconds: 60 }),
+      s('Bulgarian Split Squat', [12, 12, 12], 'super_set'),
+      s('Calf Raise', [20, 20, 20], 'super_set', { restSeconds: 30 }),
+    ]),
+    day('Arms & Abs W7', 'BR-W7/D3', [
+      s('Dumbbell Bicep Curl', [15, 15, 15, 15], 'super_set'),
+      s('Tricep Pushdown', [15, 15, 15, 15], 'super_set', { restSeconds: 30 }),
+      s('Hammer Curl', [15, 15, 15], 'super_set'),
+      s('Overhead Tricep Extension', [15, 15, 15], 'super_set', { restSeconds: 30 }),
+      s('Up And Down Plank', [1, 1, 1, 1], 'super_set', { timeSeconds: 45 }),
+    ]),
+    day('Glutes & Hamstrings W7', 'BR-W7/D4', [
+      s('Barbell Hip Thrust', [8, 8, 8, 8], 'normal', { restSeconds: 60 }),
+      s('Leg Curl', [15, 15, 15, 15], 'normal', { restSeconds: 45 }),
+      s('Cable Kickback', [15, 15, 15], 'super_set'),
+      s('Fire Hydrant', [20, 20, 20], 'super_set', { restSeconds: 30 }),
+    ]),
+    day('Full Body W7', 'BR-W7/D5', [
+      s('Kettlebell Swing', [20, 20, 20, 20], 'normal', { restSeconds: 30 }),
+      s('Goblet Squat', [15, 15, 15], 'super_set'),
+      s('Dumbbell Row', [15, 15, 15], 'super_set'),
+      s('SB plank', [1, 1, 1, 1], 'normal', { timeSeconds: 60, restSeconds: 15 }),
+    ]),
+  ],
+};
+
+// Week 8 = lighter peak/deload week: volume pulled back to 3 sets and reps
+// raised, echoing the program's "low intensity" finish before re-testing.
+const br_w8: WorkoutWeek = {
+  weekNumber: 8,
+  days: [
+    day('Upper Body W8', 'BR-W8/D1', [
+      s('Barbell Bench Press', [12, 12, 12], 'normal', { restSeconds: 60 }),
+      s('Lat Pulldown', [12, 12, 12], 'normal', { restSeconds: 45 }),
+      s('Dumbbell Shoulder Press', [12, 12, 12], 'super_set'),
+      s('Cable Chest Fly', [15, 15, 15], 'super_set', { restSeconds: 30 }),
+    ]),
+    day('Lower Body W8', 'BR-W8/D2', [
+      s('Barbell Back Squat', [12, 12, 12], 'normal', { restSeconds: 60 }),
+      s('Romanian Deadlift', [12, 12, 12], 'normal', { restSeconds: 60 }),
+      s('Leg Press', [15, 15, 15], 'super_set'),
+      s('Banded Glute Bridge', [20, 20, 20], 'super_set', { restSeconds: 30 }),
+    ]),
+    day('Arms & Abs W8', 'BR-W8/D3', [
+      s('Dumbbell Bicep Curl', [15, 15, 15], 'super_set'),
+      s('Tricep Pushdown', [15, 15, 15], 'super_set', { restSeconds: 30 }),
+      s('Hammer Curl', [15, 15, 15], 'super_set'),
+      s('Skull Crusher', [12, 12, 12], 'super_set', { restSeconds: 30 }),
+      s('Plank', [1, 1, 1], 'normal', { timeSeconds: 45, restSeconds: 15 }),
+    ]),
+    day('Glutes & Hamstrings W8', 'BR-W8/D4', [
+      s('Barbell Hip Thrust', [12, 12, 12], 'normal', { restSeconds: 60 }),
+      s('Leg Curl', [12, 12, 12], 'normal', { restSeconds: 45 }),
+      s('Cable Kickback', [15, 15, 15], 'super_set'),
+      s('Banded Lateral Walk', [20, 20, 20], 'super_set', { restSeconds: 30 }),
+    ]),
+    day('Full Body W8', 'BR-W8/D5', [
+      s('Kettlebell Swing', [18, 18, 18], 'normal', { restSeconds: 30 }),
+      s('Goblet Squat', [15, 15, 15], 'super_set'),
+      s('Push Up', [15, 15, 15], 'super_set'),
+      s('SB plank', [1, 1, 1], 'normal', { timeSeconds: 45, restSeconds: 15 }),
+    ]),
+  ],
+};
+
 export const BODY_RECOMP: WorkoutProgram = {
   id: 'll-body-recomp-1',
   name: 'Lusciously Lean BODYreCOMP 1.0',
   description:
     'An 8-week body recomposition program with a heavy focus on nutrition and personalized macros. ' +
     '5 workouts per week: upper, lower, arms & abs, glutes & hamstrings, and full body. ' +
-    'Includes gym and home versions. Low intensity cardio homework based on weight loss goals. ' +
-    'First 4 weeks shown.',
+    'Includes gym and home versions. Low intensity cardio homework based on weight loss goals.',
   createdBy: 'Jamie Esposito',
   category: ['recomp', 'hypertrophy', 'fat_loss'],
   difficulty: 'intermediate',
-  weeks: [br_w1, br_w2, br_w3, br_w4],
+  weeks: [br_w1, br_w2, br_w3, br_w4, br_w5, br_w6, br_w7, br_w8],
   durationWeeks: 8,
   isPremium: true,
   imageUrl: 'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=600&q=80',
@@ -1850,5 +2012,29 @@ export const WORKOUT_PROGRAMS: WorkoutProgram[] = new Proxy([] as WorkoutProgram
 export function getProgramById(programId: string): WorkoutProgram | undefined {
   return _ALL_PROGRAMS.find((p) => p.id === programId);
 }
+
+/**
+ * Jamie's recommended marquee program for a user's biological sex.
+ * Men → Men's BUILD, women → Lusciously Lean. Returns null when sex is unset
+ * so callers can offer a "choose your track" pick rather than defaulting
+ * everyone into the female program (opt-in, not automatic on upgrade).
+ */
+export function getRecommendedProgramId(sex?: string | null): string | null {
+  if (sex === 'male') return 'mens-build';
+  if (sex === 'female') return 'll-body-recomp-1';
+  return null;
+}
+
+/** Short tile/row label per program. */
+export const PROGRAM_SHORT_LABEL: Record<string, string> = {
+  'mens-build': "Men's BUILD",
+  'll-body-recomp-1': 'Lusciously Lean',
+};
+
+/** One-line tagline per program. */
+export const PROGRAM_TAGLINE: Record<string, string> = {
+  'mens-build': 'Strength & size · men',
+  'll-body-recomp-1': "Jamie's signature recomp · women",
+};
 
 export default WORKOUT_PROGRAMS;

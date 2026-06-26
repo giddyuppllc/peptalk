@@ -1,0 +1,2254 @@
+{
+  "weeks": [
+    {
+      "week": 1,
+      "days": [
+        {
+          "dayName": "Challenge workout W1/D1",
+          "code": "Challenege workout W1/D1",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Up And Down Plank",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": "30 seconds",
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Alternating knee to elbow towel slides",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB folding chairs",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "30 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W1/D2",
+          "code": "Challenge workout W1/D2",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "crunch with adduction (pelvic floor)",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Table Top alternating towel arm slides",
+              "priority": null,
+              "setsReps": "10/10/10",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Low leg bent knee windmill",
+              "priority": null,
+              "setsReps": "12/12/12",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "30 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W1/D3",
+          "code": "Challenge workout W1/D3",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB plank",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "30 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "lower leg lifts with block feet holds",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "supported hip dead bug",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "30 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W1/D4",
+          "code": "Challenge workout W1/D4",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "medicine ball dead bugs",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Pallof cable press",
+              "priority": null,
+              "setsReps": "12/12/12",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "crunch with adduction (pelvic floor)",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W1/D5",
+          "code": "Challenge workout W1/D5",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "KB pull over with glute bridge",
+              "priority": null,
+              "setsReps": "12/12/12",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Table Top Knee Taps with Block Adduction",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "week": 2,
+      "days": [
+        {
+          "dayName": "Challenge workout W2/D1",
+          "code": "Challenge workout W2/D1",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": "10 seconds",
+              "rest": "20 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "table top alternatin towel arm slides",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "stability ball knee tucks",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "30 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W2/D2",
+          "code": "Challenge workout W2/D2",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "weighted stability ball crunch",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Normal set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "MB pelvic floor heel taps",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "KB pull over with glute bridge",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "30 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W2/D3",
+          "code": "Challenge workout W2/D3",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB plank",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "30 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Bench low leg lifts with glute raise",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "medicine ball dead bugs",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "30 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W2/D4",
+          "code": "Challenge workout W2/D4",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Table Top Knee Taps with Block Adduction",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Normal set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "supported hip dead bug",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Lower leg windmill",
+              "priority": null,
+              "setsReps": "12/12/12",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W2/D5",
+          "code": "Challenge workout W2/D5",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB folding chairs",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Table top w/ adduction alt foot raise",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "decline knee to elbow",
+              "priority": null,
+              "setsReps": "12/12/12",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "week": 3,
+      "days": [
+        {
+          "dayName": "Challenge workout W3/D1",
+          "code": "Challenge workout W3/D1",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "30 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "MB pelvic floor heel taps",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "KB pull over with glute bridge",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "30 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W3/D2",
+          "code": "Challenge workout W3/D2",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Standing dumbbell windmill",
+              "priority": null,
+              "setsReps": "12/12/12",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Table Top Knee Taps with Block Adduction",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB folding chairs",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W3/D3",
+          "code": "Challenge workout W3/D3",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB plank",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "45 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Table top w/ adduction alt foot raise",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "lying crunch with adduction",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W3/D4",
+          "code": "Challenge workout W3/D4",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Up And Down Plank",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": "30 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "weighted stability ball crunch",
+              "priority": null,
+              "setsReps": "12/12/12",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "crunch with adduction (pelvic floor)",
+              "priority": null,
+              "setsReps": "12/12/12",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W3/D5",
+          "code": "Challenge workout W3/D5",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "KB pull over with glute bridge",
+              "priority": null,
+              "setsReps": "12-15/12-15/12-15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Table Top Knee Taps with Block Adduction",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "week": 4,
+      "days": [
+        {
+          "dayName": "Challenge workout W4/D1",
+          "code": "Challenge workout W4/D1",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB plank",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": "30 seconds",
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": "10 seconds",
+              "rest": "20 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "decline knee to elbow",
+              "priority": null,
+              "setsReps": "10/10/10",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": null,
+              "rest": "20 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W4/D2",
+          "code": "Challenge workout W4/D2",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "medicine ball dead bugs",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "weighted stability ball crunch",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "20 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Table Top isometric hold w/ adduction",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Super Set 2",
+              "tempo": null,
+              "time": "30 seconds",
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "MB pelvic floor heel taps",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set 2",
+              "tempo": null,
+              "time": null,
+              "rest": "20 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W4/D3",
+          "code": "Challenge workout W4/D3",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB folding chairs",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "KB pull over with glute bridge",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W4/D4",
+          "code": "Challenge workout W4/D4",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Alternating knee to elbow towel slides",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Bench low leg lifts with glute raise",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Table top w/ adduction alt foot raise",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set 2",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Lower Leg bent knee windmill with block",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set 2",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W4/D5",
+          "code": "Challenge workout W4/D5",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "20 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "KB alternating low leg raises",
+              "priority": null,
+              "setsReps": "12/12/12",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "stability ball knee tucks",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set 2",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "banded clams with hip raise",
+              "priority": null,
+              "setsReps": "12/12/12",
+              "setType": "Super Set 2",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "week": 5,
+      "days": [
+        {
+          "dayName": "Challenge workout W5/D1",
+          "code": "Challenege workout W5/D1",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Up And Down Plank",
+              "priority": null,
+              "setsReps": "1/1/1/1",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": "30 seconds",
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Alternating knee to elbow towel slides",
+              "priority": null,
+              "setsReps": "20/20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB folding chairs",
+              "priority": null,
+              "setsReps": "20/20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W5/D2",
+          "code": "Challenge workout W5/D2",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "crunch with adduction (pelvic floor)",
+              "priority": null,
+              "setsReps": "20/20/20/20",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "table top alternating towel arm slides.",
+              "priority": null,
+              "setsReps": "10/10/10/10",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Low leg bent knee windmill",
+              "priority": null,
+              "setsReps": "12/12/12/12",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W5/D3",
+          "code": "Challenge workout W5/D3",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB plank",
+              "priority": null,
+              "setsReps": "1/1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "30 seconds",
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "lower leg lifts with block feet holds",
+              "priority": null,
+              "setsReps": "15/15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "supported hip dead bug",
+              "priority": null,
+              "setsReps": "20/20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W5/D4",
+          "code": "Challenge workout W5/D4",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "medicine ball dead bugs",
+              "priority": null,
+              "setsReps": "20/20/20/20",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Pallof cable press",
+              "priority": null,
+              "setsReps": "12/12/12/12",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "crunch with adduction (pelvic floor)",
+              "priority": null,
+              "setsReps": "15/15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W5/D5",
+          "code": "Challenge workout W5/D5",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "KB pull over with glute bridge",
+              "priority": null,
+              "setsReps": "12/12/12/12",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Table Top Knee Taps with Block Adduction",
+              "priority": null,
+              "setsReps": "15/15/15/12",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "week": 6,
+      "days": [
+        {
+          "dayName": "Challenge workout W6/D1",
+          "code": "Challenge workout W6/D1",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "table top alternating towel arm slides.",
+              "priority": null,
+              "setsReps": "25/25/25",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "stability ball knee tucks",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "30 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W6/D2",
+          "code": "Challenge workout W6/D2",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "weighted stability ball crunch",
+              "priority": null,
+              "setsReps": "30/30/30",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "MB pelvic floor heel taps",
+              "priority": null,
+              "setsReps": "30/30/30",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "KB pull over with glute bridge",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "30 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W6/D3",
+          "code": "Challenge workout W6/D3",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB plank",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "60 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Bench low leg lifts with glute raise",
+              "priority": null,
+              "setsReps": "25/25/25",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "medicine ball dead bugs",
+              "priority": null,
+              "setsReps": "30/30/30",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "30 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W6/D4",
+          "code": "Challenge workout W6/D4",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "table top alternating towel arm slides.",
+              "priority": null,
+              "setsReps": "30/30/30",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "supported hip dead bug",
+              "priority": null,
+              "setsReps": "30/30/30",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Lower leg windmill",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W6/D5",
+          "code": "Challenge workout W6/D5",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB folding chairs",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Table top w/ adduction alt foot raise",
+              "priority": null,
+              "setsReps": "30/30/30",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "decline knee to elbow",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "week": 7,
+      "days": [
+        {
+          "dayName": "Challenge workout W7/D1",
+          "code": "Challenge workout W7/D1",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "30 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "MB pelvic floor heel taps",
+              "priority": null,
+              "setsReps": "20/20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "KB pull over with glute bridge",
+              "priority": null,
+              "setsReps": "15/15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "30 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W7/D2",
+          "code": "Challenge workout W7/D2",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Standing dumbbell windmill",
+              "priority": null,
+              "setsReps": "12/12/12/12",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Table Top Knee Taps with Block Adduction",
+              "priority": null,
+              "setsReps": "15/15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB folding chairs",
+              "priority": null,
+              "setsReps": "15/15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W7/D3",
+          "code": "Challenge workout W7/D3",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB plank",
+              "priority": null,
+              "setsReps": "1/1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "60 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Table top w/ adduction alt foot raise",
+              "priority": null,
+              "setsReps": "20/20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "lying crunch with adduction",
+              "priority": null,
+              "setsReps": "15/15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W7/D4",
+          "code": "Challenge workout W7/D4",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1/1",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Up And Down Plank",
+              "priority": null,
+              "setsReps": "1/1/1/1",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": "45 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "weighted stability ball crunch",
+              "priority": null,
+              "setsReps": "12/12/12",
+              "setType": "Super Set 2",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "crunch with adduction (pelvic floor)",
+              "priority": null,
+              "setsReps": "12/12/12",
+              "setType": "Super Set 2",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W7/D5",
+          "code": "Challenge workout W7/D5",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "10 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "KB pull over with glute bridge",
+              "priority": null,
+              "setsReps": "12-15/12-15/12-15/12-15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Table Top Knee Taps with Block Adduction",
+              "priority": null,
+              "setsReps": "15/15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "week": 8,
+      "days": [
+        {
+          "dayName": "Challenge workout W8/D1",
+          "code": "Challenge workout W8/D1",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB plank",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": "60 seconds",
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "20 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "decline knee to elbow",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": null,
+              "rest": "20 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W8/D2",
+          "code": "Challenge workout W8/D2",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "medicine ball dead bugs",
+              "priority": null,
+              "setsReps": "30/30/30",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "weighted stability ball crunch",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "20 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Table Top isometric hold w/ adduction",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Super Set 2",
+              "tempo": null,
+              "time": "60 seconds",
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "MB pelvic floor heel taps",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set 2",
+              "tempo": null,
+              "time": null,
+              "rest": "20 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W8/D3",
+          "code": "Challenge workout W8/D3",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Normal Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB folding chairs",
+              "priority": null,
+              "setsReps": "25/25/25",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "KB pull over with glute bridge",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W8/D4",
+          "code": "Challenge workout W8/D4",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Alternating knee to elbow towel slides",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Bench low leg lifts with glute raise",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Table top w/ adduction alt foot raise",
+              "priority": null,
+              "setsReps": "30/30/30",
+              "setType": "Super Set 2",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "Lower Leg bent knee windmill with block",
+              "priority": null,
+              "setsReps": "30/30/30",
+              "setType": "Super Set 2",
+              "tempo": null,
+              "time": null,
+              "rest": "15 seconds",
+              "description": null
+            }
+          ]
+        },
+        {
+          "dayName": "Challenge workout W48D5",
+          "code": "Challenge workout W8/D5",
+          "exercises": [
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "SB stomach Vaccum",
+              "priority": null,
+              "setsReps": "1/1/1",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": "15 seconds",
+              "rest": "20 seconds",
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "KB alternating low leg raises",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "stability ball knee tucks",
+              "priority": null,
+              "setsReps": "20/20/20",
+              "setType": "Super Set 2",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            },
+            {
+              "count": null,
+              "staticOrVariable": "static",
+              "exerciseOrMuscle": "banded clams with hip raise",
+              "priority": null,
+              "setsReps": "15/15/15",
+              "setType": "Super Set 2",
+              "tempo": null,
+              "time": null,
+              "rest": null,
+              "description": null
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "exerciseList": [
+    "standing dumbbell alternating bicep curl",
+    "bench side jumps",
+    "chest supported incline row",
+    "MB pelvic floor heel taps",
+    "band shuffle",
+    "floor dumbbell skull crusher",
+    "lower leg lifts with block feet holds",
+    "stability ball dumbbell bicep curl",
+    "medicine ball dead bugs",
+    "bench glute raises",
+    "standing dumbbell alternating hammer curl",
+    "stability ball knee tucks",
+    "banded standing glute kicks",
+    "stability ball dumbbell bicep curl",
+    "floor dumbbell chest press",
+    "medicine ball crunch",
+    "Half burpee",
+    "Bench hops",
+    "incline alternating dumbbell hammer curl",
+    "kneeling banded glute abduction",
+    "stability ball dumbbell hammer preacher curl",
+    "decline knee to elbow",
+    "push up burpees",
+    "Medicine ball burpees",
+    "banded glute kicks",
+    "weighted stability ball crunch",
+    "jump rope",
+    "landmine row",
+    "Banded fire hydrants",
+    "Bulgarian jumps",
+    "Bench Decline Push up",
+    "dumbbell RDL",
+    "medicine ball unilateral push up",
+    "decline dumbbell alternating bicep curl",
+    "Bench low leg lifts with glute raise",
+    "standing single leg dumbbell RDL",
+    "cable low to high woodchops",
+    "Alternating knee to elbow towel slides",
+    "table top alternatin towel arm slides",
+    "Bench supported reverse fly",
+    "Power squat (facing in)",
+    "seated adduction machine",
+    "decline leg hack press",
+    "Barbell chest press",
+    "Barbell narrow stance hip thrust",
+    "Cable rope hammer curls",
+    "KB alternating low leg raises",
+    "dumbbell lateral raises with internal frontal raises",
+    "dumbbell lateral raises with internal frontal raises",
+    "Single leg side leg press",
+    "box step ups",
+    "seated cable lat pull down",
+    "Cable rope upright row",
+    "Hanging decline crunch",
+    "standing plate alternating frontal and lateral raises",
+    "bent knee raises with block between feet",
+    "banded rainbow kicks",
+    "shoulder floor push up",
+    "leg press narrow high stance (glute focus)",
+    "standing plate around the worlds",
+    "Incline dumbbell narrow chest press",
+    "Bent over Cable bar row",
+    "Duck walks",
+    "Supinated cable bar pull down",
+    "seated dumbbell bicep curls",
+    "wall sit with +",
+    "Dumbbell bulgarian RDL into body weight pistol squat",
+    "Banded side step squats",
+    "bent over cable rope row",
+    "kneeling Cable overhead tricep extensions",
+    "seated cable single arm row",
+    "Tricep rope pulldown",
+    "smith machine good mornings",
+    "Hanging Alt knee raises",
+    "Tricep band single arm overhead extension",
+    "SB folding chairs",
+    "single arm renegade row",
+    "seated dumbbell lateral raises",
+    "Hanging Knee raises slow eccentric",
+    "Dumbbell squat",
+    "Lower leg windmill",
+    "bodyweight squat heels elevated",
+    "Single leg hamstring curl",
+    "Push up with arm row",
+    "Decline single leg press (quad focused)",
+    "cable oblique rotations",
+    "bent over single arm reverse cable fly",
+    "Wall sit with parallel isometric arm hold",
+    "Cable Abduction straight leg",
+    "Barbell bent over row sup grip",
+    "Barbell 1/2 curl full curl bicep curls",
+    "barbell narrow stance RDL",
+    "Renegade row",
+    "banded kneeling lateral kicks",
+    "seated bicep curl with knee adduction",
+    "Seated hammer curl",
+    "squatting cable rope hammer curls",
+    "smith machine narrow rdl",
+    "KB pull over with glute bridge",
+    "KB alternating low leg raises",
+    "kneeling cable rope pull",
+    "deficit reverse dumbbell lunges",
+    "crunch with adduction (pelvic floor)",
+    "Narrow dumbbell press",
+    "Standing dumbbell windmill",
+    "glute bridge with adduction",
+    "Supinated single arm cable tricep pull down",
+    "Power squat (facing in)",
+    "Flat lying prone row",
+    "banded glute bridge",
+    "Bent over one arm tricep kickbacks",
+    "Cable bar bicep curl",
+    "Hanging Alternating oblique raises",
+    "Cable single arm Tricep push down",
+    "Dumbbell deficit curtsy lunge",
+    "lying crunch with adduction",
+    "Pallof cable press",
+    "Barbell B stance hip thrust",
+    "standing plate reverse flies",
+    "alternating shoulder taps",
+    "Smith machine stationary lunge",
+    "single arm Dumbbell bent over row",
+    "machine single leg extension",
+    "Barbell box squat",
+    "cable single arm lateral raises",
+    "smith machine B stance rdl",
+    "Underhand lat pulldown",
+    "seated Single arm dumbbell arnold press",
+    "cable standing single arm reverse fly",
+    "seated Single arm press narrow dumbbell",
+    "Cable isometric squat with rope pull",
+    "Cable single arm Tricep pull down",
+    "Facepull reverse grip",
+    "Narrow dumbbell press",
+    "Incline Dumbbell hammer curls",
+    "Flat lying prone row",
+    "standing Dumbbell curl and press",
+    "banded donkey kicks",
+    "Cable Abduction behind straight leg kick",
+    "KB pull over with glute bridge",
+    "Decline leg single leg press high stance",
+    "Bench supported W",
+    "Preacher curls single arm",
+    "smith machine shoulder press",
+    "seated cable supinated row",
+    "smith machine Curtsy lunges",
+    "Ball single leg curl",
+    "dumbbell skull crusher",
+    "machine seated abduction",
+    "alternating dumbbell bulgarian split squat and rdl",
+    "Decline leg single leg press high stance",
+    "Decline sumo leg press",
+    "bent knee raise with yoga block adduction",
+    "Hanging Leg raises",
+    "Prone bent leg hamstring machine",
+    "Barbell walking lunges",
+    "Machine tricep push down",
+    "dumbbell narrow chest press",
+    "Bulgarian split squat (glute focused)",
+    "cable single arm frontal raises",
+    "Dumbbell single leg hip thrust",
+    "cable donkey kickback",
+    "Cable kickback",
+    "machine single arm chest press",
+    "Hanging Knee raises",
+    "Bench supported Y",
+    "SB stomach Vaccum",
+    "chest fly machine",
+    "Duel cable Lat pulls",
+    "cable single arm upright row",
+    "Cable bar bicep curl",
+    "dumbbell opposite lateral and frontal raises",
+    "Prone hamstring machine",
+    "leg curl machine glute emphasis",
+    "Preacher hammer curl single arm",
+    "SB plank",
+    "Single arm kneeling cable row",
+    "lying crunch with adduction",
+    "deficit reverse dumbbell lunges",
+    "Single arm Cable over head lat pulldown",
+    "Glute bridge w/ adduction slow eccentric",
+    "Leg press hack stance",
+    "Leg press sumo stance",
+    "single arm overhead dumbbell tricep extentions",
+    "Smith machine Sumo squat",
+    "Barbell overhead tricep extensions",
+    "plank with kettlebell unilateral slide",
+    "dumbbell squat with curl and press",
+    "Barbell sumo hip thrust",
+    "Table Top Knee Taps with Block Adduction",
+    "Ball straight leg bridge",
+    "SL glute bridge w/ leg raise",
+    "kettlebell swings",
+    "Seated dumbbell shoulder press with adduction",
+    "Barbell bulgarian split squat (quad focused)",
+    "seated single arm dumbbell curl with block adduction",
+    "Tricep pushdown bar grip change",
+    "Cable overhead tricep extensions",
+    "Towel Pike",
+    "banded glute kickbacks",
+    "Power Hack squat",
+    "Cable Abduction bent knee",
+    "table top alternating towel arm slides.",
+    "smith machine RDL",
+    "Kettlebell RDL",
+    "banded clams with hip raise",
+    "Kettlebell sumo RDL",
+    "standing Dumbbell wide bicep curl",
+    "Low leg bent knee windmill",
+    "Isometric glute bridge with adduction",
+    "supported hip dead bug",
+    "Smith machine Narrow squat",
+    "Seated Dumbbell reverse fly",
+    "resistance band bicep curls",
+    "Lower Leg bent knee windmill with block",
+    "Barbell hip thrusts",
+    "Wall sit with parallel isometric arm hold",
+    "standing Dumbbell frontal raises",
+    "Squat jumps",
+    "cable single arm lateral raises",
+    "standing plate lateral raises",
+    "machine seated abduction forward lean",
+    "Seated dumbbell arnold press",
+    "decline Leg press",
+    "single Leg dumbbell RDL",
+    "smith machine sumo RDL",
+    "Table Top isometric hold w/ adduction",
+    "machine seated hovering abduction",
+    "Alternating rocking Lat pulldown",
+    "Alternating rocking Lat pulldown",
+    "Barbell incline chest press",
+    "Table top w/ adduction alt foot raise",
+    "Dumbbell Pullover",
+    "Cable RDL",
+    "Banded Side Step Squat",
+    "Barbell Hipthrust",
+    "Incline Dumbbell bicep curls",
+    "Ball Leg Curl",
+    "Crab Walk",
+    "Barbell Bent Over Row",
+    "Barbell Bicep Curl",
+    "Barbell Deadlift",
+    "Barbell Shoulder Press",
+    "Barbell Shrugs",
+    "Barbell Skullcrushers",
+    "Barbell Squat",
+    "Bodyweight Squat",
+    "Cable Overhead Tricep Extension",
+    "Chest Press Machine",
+    "Chin Up",
+    "Dumbbell Fly",
+    "Dumbbell Incline Flys",
+    "Dumbbell Lateral Raise",
+    "Dumbbell Overhead Tricep Extensions",
+    "Dumbbell Static Lunges",
+    "Facepull",
+    "Floor Back Extensions",
+    "Goblet Squat Heels Elevated",
+    "Hyperextensions",
+    "Leg Curl Machine",
+    "Leg Press",
+    "Narrow Grip Seated Cable Row",
+    "Preacher curls machine",
+    "Push Up",
+    "Rack Pull",
+    "Reverse Deltoid Fly Machine",
+    "Seated Calf Raise Machine",
+    "Seated Dumbbell Shoulder Press",
+    "Shoulder Press Machine",
+    "Single Leg Leg Press Machine",
+    "Smith Machine Squats",
+    "Standing Calf Raise Machine",
+    "Standing Single Leg Calf Raise",
+    "Static Barbell Lunge",
+    "Step Up",
+    "Straight Arm Pulldown",
+    "Sumo Deadlift",
+    "Superman",
+    "Tricep Dips (Machine)",
+    "Tricep Dips Bench",
+    "Tricep rope pulldown",
+    "Tricep Push Up",
+    "Tricep Pushdown (Bar)",
+    "Up And Down Plank",
+    "V Bar Pulldown",
+    "Wall Sit",
+    "Wide Grip Lat Pulldown",
+    "Wide Grip Seated Cable Row"
+  ]
+}

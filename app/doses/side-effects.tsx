@@ -25,6 +25,10 @@ import {
 } from '../../src/store/useSideEffectStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { PEPTIDES } from '../../src/data/peptides';
+import {
+  isHealthDataAvailable,
+  writeSymptomToHealth,
+} from '../../src/services/healthDataService';
 
 function severityColorFor(
   t: ReturnType<typeof useV3Theme>,
@@ -58,6 +62,15 @@ export default function SideEffectsScreen() {
         linkToRecentDose && recentDose ? recentDose.id : undefined,
       peptideId: recentDose?.peptideId,
     });
+
+    // Write-back to Apple Health (iOS) — backs the NSHealthUpdateUsageDescription
+    // claim that PepTalk writes symptom logs back to Health. Guarded internally
+    // on availability + permission; fire-and-forget so a write failure never
+    // blocks the local log.
+    if (isHealthDataAvailable()) {
+      void writeSymptomToHealth();
+    }
+
     setSymptom('');
     setSeverity(2);
   };

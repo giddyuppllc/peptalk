@@ -20,6 +20,7 @@ import { ProtocolPlanCard } from '../../src/components/ProtocolPlanCard';
 import { intensityToDoseRangeMcg, intensityToDoseMcg } from '../../src/components/ProtocolIntensityPicker';
 import { ActivateProtocolButton } from '../../src/components/ActivateProtocolButton';
 import { SuppliesEstimatorCard } from '../../src/components/SuppliesEstimatorCard';
+import { DosingReferenceTableCard } from '../../src/components/DosingReferenceTableCard';
 import { PeptideTrendCard } from '../../src/components/PeptideTrendCard';
 import { PeptideCyclePhaseCard } from '../../src/components/PeptideCyclePhaseCard';
 import { PeptideLifestyleCard } from '../../src/components/PeptideLifestyleCard';
@@ -767,6 +768,15 @@ export default function PeptideDetailScreen() {
             ))}
           </GlassCard>
         )}
+
+        {/* Master dosing-reference table — at-a-glance range / cycle /
+            daily+weekly frequency / time-off / fasted from Edward's
+            ingested master table (src/data/peptideDosingTable.ts).
+            Renders for every peptide that has a table row; self-hides
+            otherwise. Research-use framing only. */}
+        <View style={styles.section}>
+          <DosingReferenceTableCard peptideId={peptide.id} />
+        </View>
 
         {/* Quick dose reference — at-a-glance Beginner / Advanced ranges
             derived from the protocol's published research range. Tap a

@@ -3,18 +3,19 @@
  * and plays the video full-width.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Video, ResizeMode } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { CATEGORY_LABELS, getVideoBySlug } from '../../../src/data/workoutVideos';
-import { useVideoTaggerStore, applyEdits } from '../../../src/store/useVideoTaggerStore';
+import { useVideoTaggerStore, combineEdits } from '../../../src/store/useVideoTaggerStore';
 import { resolveVideoUrl } from '../../../src/services/r2VideoResolver';
 import EXERCISES from '../../../src/data/exercises';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { useSectionAccent } from '../../../src/hooks/useSectionAccent';
+import { FullScreenVideo } from '../../../src/components/FullScreenVideo';
 
 export default function LibraryPlayerScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -22,20 +23,28 @@ export default function LibraryPlayerScreen() {
   const t = useTheme();
   const accent = useSectionAccent('workouts');
   const edits = useVideoTaggerStore((s) => s.edits);
+  const remoteEdits = useVideoTaggerStore((s) => s.remoteEdits);
+  const combined = combineEdits(remoteEdits, edits);
 
   const baseVideo = getVideoBySlug(slug ?? '');
-  const video = baseVideo ? { ...baseVideo, ...(edits[baseVideo.slug] ?? {}) } : null;
+  const video = baseVideo ? { ...baseVideo, ...(combined[baseVideo.slug] ?? {}) } : null;
   const exercise = video?.exerciseId ? EXERCISES.find((e) => e.id === video.exerciseId) : null;
 
   const [url, setUrl] = useState<string | null>(null);
   const [captionUrl, setCaptionUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  // Auto-present full screen once per selected clip (the user picked it
+  // to watch). Re-opening after close is via the inline poster.
+  const autoOpenedRef = useRef(false);
 
   useEffect(() => {
     if (!video) return;
     setUrl(null);
     setCaptionUrl(null);
     setError(null);
+    setFullscreen(false);
+    autoOpenedRef.current = false;
     // Capture the slug into a closure and check it on resolve.
     // Without this, rapid-tap between videos lets an earlier slug's
     // resolve land AFTER a later one and overwrite the URL with stale
@@ -48,6 +57,10 @@ export default function LibraryPlayerScreen() {
       if (res.ok) {
         setUrl(res.url);
         setCaptionUrl(res.captionUrl ?? null);
+        if (!autoOpenedRef.current) {
+          autoOpenedRef.current = true;
+          setFullscreen(true);
+        }
       } else {
         setError(
           res.reason === 'not_pro'
@@ -105,13 +118,24 @@ export default function LibraryPlayerScreen() {
           </View>
         )}
         {url && (
-          <Video
-            source={{ uri: url }}
-            style={StyleSheet.absoluteFill}
-            resizeMode={ResizeMode.CONTAIN}
-            useNativeControls
-            shouldPlay
-          />
+          <TouchableOpacity activeOpacity={0.9} style={StyleSheet.absoluteFill} onPress={() => setFullscreen(true)}>
+            <Video
+              source={{ uri: url }}
+              style={StyleSheet.absoluteFill}
+              resizeMode={ResizeMode.CONTAIN}
+              shouldPlay={false}
+              isMuted
+            />
+            <View style={s.overlay}>
+              <View style={s.playFab}>
+                <Ionicons name="play" size={30} color="#fff" />
+              </View>
+            </View>
+            <View style={s.expandBadge}>
+              <Ionicons name="expand" size={14} color="#fff" />
+              <Text style={s.expandText}>Full screen</Text>
+            </View>
+          </TouchableOpacity>
         )}
         {captionUrl && (
           <View style={s.ccBadge}>
@@ -140,6 +164,13 @@ export default function LibraryPlayerScreen() {
           <Text style={[s.body, { color: t.textSecondary }]}>{video.description}</Text>
         )}
       </ScrollView>
+
+      <FullScreenVideo
+        visible={fullscreen}
+        uri={url}
+        title={video.title}
+        onClose={() => setFullscreen(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -150,6 +181,27 @@ const s = StyleSheet.create({
   videoFrame: { width: '100%', aspectRatio: 16 / 9 },
   overlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   overlayText: { color: '#fff', fontSize: 13, marginTop: 8, textAlign: 'center' },
+  playFab: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  expandBadge: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  expandText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   title: { fontSize: 22, fontWeight: '700', lineHeight: 28 },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   metaPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },

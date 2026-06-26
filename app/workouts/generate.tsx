@@ -34,45 +34,84 @@ import { Spacing, BorderRadius, FontSizes } from '../../src/constants/theme';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
-import {
-  GOAL_LABELS,
-  getTemplatesForUser,
-  generateWorkout,
-} from '../../src/services/workoutGenerator';
+import { useProgressGoalsStore } from '../../src/store/useProgressGoalsStore';
+import { GOAL_LABELS } from '../../src/services/workoutGenerator';
+import { AiWorkoutError } from '../../src/services/aimeeWorkout';
+import { buildMonthlyPlan } from '../../src/services/monthlyPlan';
+import type { ExerciseGender, ExerciseLocation } from '../../src/types/fitness';
 import { tapMedium, selectionTick } from '../../src/utils/haptics';
 import { PaywallModal } from '../../src/components/PaywallModal';
 
 const DAY_OPTIONS = [3, 4, 5, 6] as const;
+const LENGTH_OPTIONS = [30, 45, 60] as const;
 const LOCATION_OPTIONS = [
   { id: 'gym', label: 'Full gym', icon: 'barbell' as const },
   { id: 'home', label: 'Home / minimal', icon: 'home' as const },
 ];
+
+// Gendered builder goals — men and women get tailored tracks; unset sex sees
+// all goals. Keys are real goal keys (so AI + deterministic templates resolve);
+// only the display label is gendered for the flagship goals.
+const GENDERED_GOALS: Record<'men' | 'women' | 'anyone', string[]> = {
+  women: ['transformation', 'weight_loss', 'circuit', 'body_recomp'],
+  men: ['body_recomp', 'strength', 'hypertrophy', 'aerobic'],
+  anyone: ['transformation', 'weight_loss', 'circuit', 'hypertrophy', 'strength', 'aerobic', 'body_recomp'],
+};
+const GENDERED_GOAL_LABEL: Record<string, Partial<Record<'men' | 'women', string>>> = {
+  transformation: { women: 'Lusciously Lean' },
+  body_recomp: { men: 'BUILD', women: 'Recomp' },
+  circuit: { women: 'Circuit' },
+};
 
 export default function GenerateWorkoutScreen() {
   const router = useRouter();
   const t = useTheme();
   const accent = useSectionAccent();
   const canUse = useSubscriptionStore((s) => s.hasFeature('custom_workout_generator'));
-  const saveGenerated = useWorkoutStore((s) => s.saveGeneratedWorkout);
+  const setMonthlyPlan = useWorkoutStore((s) => s.setMonthlyPlan);
   const biologicalSex = useHealthProfileStore((s) => s.profile.biologicalSex);
+  const primaryGoals = useHealthProfileStore((s) => s.profile.primaryGoals);
+  const setGoalValue = useProgressGoalsStore((s) => s.setGoalValue);
+  const toggleGoal = useProgressGoalsStore((s) => s.toggleGoal);
+  const stepGoalEnabled = useProgressGoalsStore(
+    (s) => s.goals.find((g) => g.key === 'steps')?.enabled ?? false,
+  );
 
-  const userGender: 'male' | 'female' =
-    biologicalSex === 'male' ? 'male' : 'female';
+  // Gender for the exercise library (filters move suitability). Unknown sex
+  // maps to 'anyone' so non-male users aren't silently forced into the female
+  // template set (old bug) — AI + library both handle 'anyone'.
+  const aiGender: ExerciseGender =
+    biologicalSex === 'male' ? 'men' : biologicalSex === 'female' ? 'women' : 'anyone';
 
-  // Goals available given the user's sex (templates differ slightly per gender)
-  const availableGoals = useMemo(() => {
-    const seen = new Set<string>();
-    for (const t of getTemplatesForUser({ gender: userGender })) seen.add(t.goal);
-    return [...seen];
-  }, [userGender]);
+  // Gendered goal set (men/women tailored, unset = all).
+  const availableGoals = useMemo(() => GENDERED_GOALS[aiGender], [aiGender]);
+  const goalLabel = (g: string): string => {
+    if (aiGender === 'men' || aiGender === 'women') {
+      const override = GENDERED_GOAL_LABEL[g]?.[aiGender];
+      if (override) return override;
+    }
+    return GOAL_LABELS[g]?.label ?? g;
+  };
 
   const [goal, setGoal] = useState<string | null>(availableGoals[0] ?? null);
   const [daysPerWeek, setDaysPerWeek] = useState<number>(4);
+  const [lengthMinutes, setLengthMinutes] = useState<number>(45);
   const [location, setLocation] = useState<'gym' | 'home'>('gym');
   const [generating, setGenerating] = useState(false);
   const [paywallVisible, setPaywallVisible] = useState(false);
 
-  const handleGenerate = () => {
+  // A weight-loss goal — either the picked training goal OR the user's profile
+  // primary goal — triggers the auto step goal (Jamie's rule #3).
+  const isWeightLoss =
+    goal === 'weight_loss' || (primaryGoals ?? []).includes('weight_loss');
+
+  /**
+   * Build the full 30-day Monthly Workout Programming plan: AI-designed and
+   * grounded in Jamie's library, respecting days/week + session length +
+   * home/gym, expanded into a weekly-repeat calendar. Weight-loss plans also
+   * pin a 10–12k daily step goal.
+   */
+  const handleGenerate = async () => {
     if (!canUse) {
       setPaywallVisible(true);
       return;
@@ -84,50 +123,38 @@ export default function GenerateWorkoutScreen() {
     tapMedium();
     setGenerating(true);
 
-    // Slight delay so the user sees the spinner — the generator itself
-    // is synchronous and would otherwise feel like the button did nothing.
-    setTimeout(() => {
-      try {
-        const candidates = getTemplatesForUser({
-          gender: userGender,
-          goal,
-          daysPerWeek,
-        });
-        const template =
-          candidates[0] ??
-          getTemplatesForUser({ gender: userGender, goal })[0];
-        if (!template) {
-          Alert.alert(
-            'No template found',
-            'No matching workout template — try a different goal.',
-          );
-          setGenerating(false);
-          return;
-        }
-        const generated = generateWorkout(template.id, {
-          location,
-          gender: userGender === 'male' ? 'men' : 'women',
-        });
-        if (!generated) {
-          Alert.alert('Generation failed', 'Try a different goal or location.');
-          setGenerating(false);
-          return;
-        }
-        const id = saveGenerated({
-          name: `${GOAL_LABELS[goal]?.label ?? goal} — ${daysPerWeek}-day`,
-          goal,
-          daysPerWeek,
-          location,
-          level: 'intermediate',
-          workout: generated,
-        });
-        setGenerating(false);
-        router.replace(`/workouts/my-workouts?highlight=${id}` as never);
-      } catch (e) {
-        setGenerating(false);
-        Alert.alert('Generation failed', 'Try again.');
+    try {
+      const plan = await buildMonthlyPlan({
+        goal,
+        workoutsPerWeek: daysPerWeek,
+        lengthMinutes,
+        location: location as ExerciseLocation,
+        gender: aiGender,
+        level: 'intermediate',
+        isWeightLoss,
+      });
+
+      setMonthlyPlan(plan);
+
+      // Rule #3 — weight-loss plans auto-add a daily step goal (10–12k).
+      if (plan.stepGoalAdded && plan.stepGoal) {
+        setGoalValue('steps', plan.stepGoal);
+        if (!stepGoalEnabled) toggleGoal('steps');
       }
-    }, 400);
+
+      router.replace('/workouts/plan' as never);
+    } catch (err) {
+      if (err instanceof AiWorkoutError && err.code === 'upgrade') {
+        setPaywallVisible(true);
+        return;
+      }
+      Alert.alert(
+        'Generation failed',
+        err instanceof AiWorkoutError ? err.message : 'Try again in a moment.',
+      );
+    } finally {
+      setGenerating(false);
+    }
   };
 
   return (
@@ -141,7 +168,8 @@ export default function GenerateWorkoutScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={[styles.subtitle, { color: t.textSecondary }]}>
-          Pick what you want to train, how many days, and where. Aimee builds the rest.
+          Pick your goal, days per week, session length, and where you train.
+          Aimee builds a full 30-day plan from Jamie&apos;s library.
         </Text>
 
         {/* Goal */}
@@ -177,7 +205,7 @@ export default function GenerateWorkoutScreen() {
                     { color: selected ? accent.deep : t.text },
                   ]}
                 >
-                  {meta?.label ?? g}
+                  {goalLabel(g)}
                 </Text>
               </TouchableOpacity>
             );
@@ -212,6 +240,45 @@ export default function GenerateWorkoutScreen() {
                   ]}
                 >
                   {d}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Session length */}
+        <Text style={[styles.sectionLabel, { color: t.text }]}>Workout length</Text>
+        <View style={styles.row}>
+          {LENGTH_OPTIONS.map((mins) => {
+            const selected = lengthMinutes === mins;
+            return (
+              <TouchableOpacity
+                key={mins}
+                onPress={() => {
+                  selectionTick();
+                  setLengthMinutes(mins);
+                }}
+                style={[
+                  styles.locationPill,
+                  {
+                    borderColor: selected ? accent.deep : t.cardBorder,
+                    backgroundColor: selected ? `${accent.deep}12` : t.surface,
+                  },
+                ]}
+                activeOpacity={0.85}
+              >
+                <Ionicons
+                  name="time-outline"
+                  size={16}
+                  color={selected ? accent.deep : t.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.locationText,
+                    { color: selected ? accent.deep : t.text },
+                  ]}
+                >
+                  {mins} min
                 </Text>
               </TouchableOpacity>
             );
@@ -276,14 +343,29 @@ export default function GenerateWorkoutScreen() {
               <Ionicons name="sparkles" size={18} color="#fff" />
             )}
             <Text style={styles.generateBtnText}>
-              {generating ? 'Building…' : 'Generate workout'}
+              {generating ? 'Building…' : 'Build my 30-day plan'}
             </Text>
           </LinearGradient>
         </TouchableOpacity>
 
+        {isWeightLoss && (
+          <View
+            style={[
+              styles.stepNote,
+              { backgroundColor: `${accent.deep}10`, borderColor: `${accent.deep}30` },
+            ]}
+          >
+            <Ionicons name="walk-outline" size={16} color={accent.deep} />
+            <Text style={[styles.stepNoteText, { color: t.text }]}>
+              Weight-loss goal — we&apos;ll add a daily 11k step goal to your plan.
+            </Text>
+          </View>
+        )}
+
         <Text style={[styles.footnote, { color: t.textSecondary }]}>
-          Saved to "Your Workouts" so you can run it any time. Re-generate
-          anytime for a fresh exercise mix.
+          Your week repeats across 30 days, so each Monday (etc.) is the same
+          workout — log reps + weights to track progressive overload. Swap any
+          exercise from the plan screen.
         </Text>
       </ScrollView>
 
@@ -374,5 +456,20 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xs,
     marginTop: Spacing.md,
     lineHeight: 18,
+  },
+  stepNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+  },
+  stepNoteText: {
+    flex: 1,
+    fontSize: FontSizes.sm,
+    fontWeight: '600',
   },
 });

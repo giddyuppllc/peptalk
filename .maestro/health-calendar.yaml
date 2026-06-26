@@ -1,0 +1,66 @@
+# PepTalk — health-tracking + calendar feature screens render & are reachable.
+# Deep-links each surface (scheme "peptalk://"); dev/sim build, logged in.
+#
+#   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+#     maestro --device <sim-udid> test .maestro/health-calendar.yaml
+appId: com.peptalkapp.peptalk
+tags:
+  - screenshots
+  - smoke
+---
+- launchApp
+- tapOn:
+    text: "Cancel"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Hi, reviewer|Welcome|Home"
+    timeout: 30000
+
+# --- Apple Health & integrations (the working HealthKit connect path) ---
+- openLink:
+    link: "peptalk://settings/integrations"
+- tapOn:
+    text: "Open"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Integrations|Apple Health|Connect"
+    timeout: 15000
+- takeScreenshot: feat-integrations
+
+# --- Activity (Apple-style rings reading HealthKit biometrics) ---
+- openLink:
+    link: "peptalk://activity"
+- tapOn:
+    text: "Open"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: feat-activity
+
+# --- Calendar (custom wellness journal grid) ---
+- openLink:
+    link: "peptalk://calendar"
+- tapOn:
+    text: "Open"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+# First-time disclaimer gate, if shown.
+- tapOn:
+    text: "I Understand.*Accept"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: feat-calendar
+
+# --- Daily check-in ---
+- openLink:
+    link: "peptalk://check-in"
+- tapOn:
+    text: "Open"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: feat-check-in

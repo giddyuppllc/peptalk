@@ -27,6 +27,7 @@ import { KNOWLEDGE_TOPICS } from '../data/knowledgeTopics';
 import { PEPTIDES, getPeptideById, getPeptidesByCategory } from '../data/peptides';
 import { analyzeStack, getKnownInteraction } from './analysisEngine';
 import { getProtocolsByPeptide, PROTOCOL_TEMPLATES } from '../data/protocols';
+import { getDosingTableEntry } from '../data/peptideDosingTable';
 import { BOT_MEDICAL_SUFFIX, BOT_INFO_SUFFIX } from '../constants/legal';
 
 // Intents that involve dosing, safety, or medical topics get a stronger disclaimer
@@ -844,6 +845,27 @@ function respondDosingProtocol(peptides: Peptide[], context?: BotContext): strin
   if (peptides.length > 0) {
     const p = peptides[0];
     const protocols = getProtocolsByPeptide(p.id);
+
+    // --- Master dosing-table envelope (research reference) ---
+    // From Edward's ingested master table (src/data/peptideDosingTable.ts):
+    // at-a-glance range / cycle / frequency / time-off / fasted. Surfaced
+    // for every peptide that has a table row, alongside whatever protocol
+    // template detail follows.
+    const tableEntry = getDosingTableEntry(p.id);
+    if (tableEntry) {
+      parts.push(`**${p.name} — research dosing reference:**`);
+      parts.push(`• **Dosing range:** ${tableEntry.dosingRange}`);
+      if (tableEntry.cycleLength) parts.push(`• **Cycle length:** ${tableEntry.cycleLength}`);
+      if (tableEntry.frequencyDaily) parts.push(`• **Frequency (daily):** ${tableEntry.frequencyDaily}`);
+      if (tableEntry.frequencyWeekly) parts.push(`• **Frequency (weekly):** ${tableEntry.frequencyWeekly}`);
+      if (tableEntry.timeOffBetweenCycles) parts.push(`• **Time off between cycles:** ${tableEntry.timeOffBetweenCycles}`);
+      if (tableEntry.fasted !== undefined) parts.push(`• **Fasted:** ${tableEntry.fasted ? 'Yes' : 'No'}`);
+      if (tableEntry.titrationNote) {
+        parts.push(`• **Titration:** ${tableEntry.titrationNote}`);
+      }
+      parts.push(`*Research dosing reference — not medical advice. Ranges reflect research practice, not a prescription.*`);
+      parts.push('');
+    }
 
     if (protocols.length > 0) {
       const proto = protocols[0];

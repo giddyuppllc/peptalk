@@ -18,6 +18,7 @@ import {
   Alert,
   Modal,
   TextInput,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { V3DetailShell, GlassCard } from '../../src/components/v3';
@@ -75,8 +76,11 @@ export default function ProgressPhotosScreen() {
     tapMedium();
     try {
       const ImagePicker = await import('expo-image-picker');
+      // Android uses the system Photo Picker (no permission needed), so a
+      // non-granted result must NOT block the picker there. iOS still
+      // requires the library permission.
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
+      if (!perm.granted && Platform.OS !== 'android') {
         Alert.alert(
           'Photos access needed',
           'Allow photo library access in Settings to import a progress photo.',

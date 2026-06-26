@@ -165,7 +165,18 @@ export const useAuthStore = create<AuthStore>()(
           trackLoginSucceeded();
         } catch (error: any) {
           if (__DEV__) console.error('[useAuthStore] Login failed:', error);
-          captureException(error, { source: 'auth.login', errorName: error?.name });
+          // Expected auth rejections (wrong password, unconfirmed email) are
+          // user errors, not bugs — still surface them to the user + analytics,
+          // but don't report them to Sentry where they bury real crashes.
+          // Only capture unexpected failures (network, 5xx, unexpected throws).
+          const msg = String(error?.message ?? '').toLowerCase();
+          const isExpectedAuthError =
+            msg.includes('invalid login credentials') ||
+            msg.includes('invalid email or password') ||
+            msg.includes('email not confirmed');
+          if (!isExpectedAuthError) {
+            captureException(error, { source: 'auth.login', errorName: error?.name });
+          }
           set({ isLoading: false });
           trackLoginFailed(error?.message ?? 'unknown');
           throw error;

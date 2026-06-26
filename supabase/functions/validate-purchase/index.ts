@@ -14,11 +14,14 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { compactVerify, importX509, decodeProtectedHeader } from 'https://esm.sh/jose@5.9.6';
+import { X509Certificate } from 'https://esm.sh/@peculiar/x509@1.9.7';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const APPLE_SHARED_SECRET = Deno.env.get('APPLE_SHARED_SECRET') ?? '';
+const BUNDLE_ID = Deno.env.get('APPLE_BUNDLE_ID') ?? 'com.peptalkapp.peptalk';
 
 const APPLE_PROD_URL = 'https://buy.itunes.apple.com/verifyReceipt';
 const APPLE_SANDBOX_URL = 'https://sandbox.itunes.apple.com/verifyReceipt';
@@ -90,7 +93,7 @@ Deno.serve(async (req) => {
     let originalTransactionId: string | null = null;
 
     if (body.platform === 'ios') {
-      const result = await verifyAppleReceipt(body.receipt, body.productId);
+      const result = await verifyAppleReceiptV2(body.receipt, body.productId);
       validated = result.valid;
       expiresAt = result.expiresAt;
       originalTransactionId = result.originalTransactionId;
@@ -259,6 +262,93 @@ Deno.serve(async (req) => {
 // Apple receipt verification
 // ---------------------------------------------------------------------------
 
+// StoreKit 2 (react-native-iap v15): the iOS purchaseToken is a JWS-signed
+// transaction, NOT a StoreKit 1 base64 receipt. The deprecated /verifyReceipt
+// endpoint rejects a JWS, so we verify it locally against Apple's cert chain
+// (verifier ported verbatim from the proven apple-notifications function).
+async function verifyAppleReceiptV2(
+  receipt: string,
+  expectedProductId: string,
+): Promise<{ valid: boolean; expiresAt: string | null; originalTransactionId: string | null }> {
+  try {
+    const tx: any = await verifyAppleJWS(receipt);
+    if (tx?.bundleId && tx.bundleId !== BUNDLE_ID) {
+      console.warn('[validate-purchase] JWS bundleId mismatch:', tx.bundleId, 'expected', BUNDLE_ID);
+      return { valid: false, expiresAt: null, originalTransactionId: null };
+    }
+    if (tx?.productId !== expectedProductId) {
+      console.warn('[validate-purchase] JWS productId mismatch: got', tx?.productId, 'expected', expectedProductId);
+      return { valid: false, expiresAt: null, originalTransactionId: null };
+    }
+    const expiresMs = Number(tx?.expiresDate ?? 0);
+    const revokedMs = Number(tx?.revocationDate ?? 0); // set on refund/revoke
+    const isActive = expiresMs > Date.now() && !revokedMs;
+    const originalTransactionId =
+      tx?.originalTransactionId != null ? String(tx.originalTransactionId) : null;
+    return {
+      valid: isActive,
+      expiresAt: expiresMs > 0 ? new Date(expiresMs).toISOString() : null,
+      originalTransactionId,
+    };
+  } catch (err) {
+    console.error('[validate-purchase] StoreKit 2 JWS verification failed:', (err as any)?.message ?? err);
+    return { valid: false, expiresAt: null, originalTransactionId: null };
+  }
+}
+
+// --- StoreKit 2 JWS verifier (ported from apple-notifications/index.ts) ------
+async function verifyAppleJWS(jws: string): Promise<any> {
+  const header = decodeProtectedHeader(jws) as any;
+  const x5c: string[] | undefined = header?.x5c;
+  if (!x5c || x5c.length === 0) throw new Error('JWS missing x5c header');
+  await assertChainRootedAtApple(x5c);
+  await verifyX509Chain(x5c);
+  const leafPem =
+    '-----BEGIN CERTIFICATE-----\n' +
+    x5c[0].replace(/(.{64})/g, '$1\n') +
+    '\n-----END CERTIFICATE-----';
+  const key = await importX509(leafPem, header.alg ?? 'ES256');
+  const { payload } = await compactVerify(jws, key);
+  return JSON.parse(new TextDecoder().decode(payload));
+}
+
+// SHA-256 fingerprint of Apple Root CA - G3 — pinned so a rotated/different
+// root is rejected. Source: apple.com/certificateauthority/AppleRootCA-G3.cer
+const APPLE_ROOT_G3_SHA256 =
+  '63343abfb89a6a03ebb57e9b3f5fa7be7c4f5c756f3017b3a8c488c3653e9179';
+
+async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function base64ToBytes(b64: string): Uint8Array {
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+}
+
+async function assertChainRootedAtApple(x5c: string[]): Promise<void> {
+  if (x5c.length < 2) throw new Error('JWS x5c chain must include leaf + intermediate + root');
+  const rootHash = await sha256Hex(base64ToBytes(x5c[x5c.length - 1]));
+  if (rootHash !== APPLE_ROOT_G3_SHA256) {
+    throw new Error(`Untrusted root cert in x5c chain (sha256=${rootHash})`);
+  }
+}
+
+async function verifyX509Chain(x5c: string[]): Promise<void> {
+  const certs = x5c.map((b64) => new X509Certificate(base64ToBytes(b64)));
+  const now = new Date();
+  for (let i = 0; i < certs.length; i++) {
+    const cert = certs[i];
+    if (now < cert.notBefore || now > cert.notAfter) {
+      throw new Error(`Cert ${i} (${cert.subject}) outside validity window`);
+    }
+    const issuer = certs[i + 1] ?? certs[i];
+    const ok = await cert.verify({ publicKey: issuer.publicKey });
+    if (!ok) throw new Error(`Cert ${i} (${cert.subject}) signature does not verify`);
+  }
+}
+
+// (Legacy StoreKit 1 verifier — retained, no longer the active path.)
 async function verifyAppleReceipt(
   receipt: string,
   expectedProductId: string,
@@ -279,18 +369,16 @@ async function verifyAppleReceipt(
     return { valid: false, expiresAt: null, originalTransactionId: null };
   }
 
-  // Reject sandbox receipts in a production build. The function reads
-  // EXPO_PUBLIC_ENV at boot (defaults to 'production' so a missing flag
-  // fails closed). TestFlight + development builds set this to 'staging'
-  // or 'development' so sandbox testers continue to work there.
-  const envFlag = (Deno.env.get('EXPO_PUBLIC_ENV') ?? 'production').toLowerCase();
-  const isProdRuntime = envFlag === 'production' || envFlag === 'prod';
+  // Do NOT blanket-reject sandbox receipts in prod. Apple App Review purchases
+  // with a SANDBOX Apple ID even against the production binary, so rejecting
+  // sandbox here turns the reviewer's Subscribe into a no-op and re-triggers
+  // the Guideline 2.1a rejection. Self-grant abuse (replaying a sandbox
+  // receipt) is bounded by the original_transaction_id dedup downstream — that
+  // is the real guard, not a blanket environment reject. We still record which
+  // environment validated so abuse can be monitored.
   const receiptEnv = (res.environment ?? validatedEnvironment) as string;
-  if (isProdRuntime && receiptEnv === 'Sandbox') {
-    console.warn(
-      '[validate-purchase] rejected sandbox receipt in prod runtime — possible self-grant attempt',
-    );
-    return { valid: false, expiresAt: null, originalTransactionId: null };
+  if (receiptEnv === 'Sandbox') {
+    console.warn('[validate-purchase] accepting sandbox receipt (App Review / testing path)');
   }
 
   // Apple can return multiple in-app entries (renewals, upgrades, etc.).

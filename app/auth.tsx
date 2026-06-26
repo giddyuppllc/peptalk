@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { PasswordToggle } from '../src/components/PasswordToggle';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useOnboardingStore } from '../src/store/useOnboardingStore';
 import { isValidEmail, validatePassword, PASSWORD_MIN_LENGTH } from '../src/utils/validation';
@@ -214,14 +215,7 @@ export default function AuthScreen() {
                   textContentType="password"
                   accessibilityLabel="Password"
                 />
-                <TouchableOpacity
-                  onPress={() => setShowPw(!showPw)}
-                  style={s.eyeBtn}
-                  accessibilityRole="button"
-                  accessibilityLabel={showPw ? 'Hide password' : 'Show password'}
-                >
-                  <Ionicons name={showPw ? 'eye-off' : 'eye'} size={18} color="#9CA3AF" />
-                </TouchableOpacity>
+                <PasswordToggle visible={showPw} onToggle={() => setShowPw(!showPw)} />
               </View>
 
               {!!error && <Text style={s.error} accessibilityRole="alert" accessibilityLiveRegion="polite">{error}</Text>}
@@ -330,14 +324,7 @@ export default function AuthScreen() {
                   accessibilityLabel="Password"
                   accessibilityHint="Minimum 8 characters including at least one letter and one number"
                 />
-                <TouchableOpacity
-                  onPress={() => setShowPw(!showPw)}
-                  style={s.eyeBtn}
-                  accessibilityRole="button"
-                  accessibilityLabel={showPw ? 'Hide password' : 'Show password'}
-                >
-                  <Ionicons name={showPw ? 'eye-off' : 'eye'} size={18} color="#9CA3AF" />
-                </TouchableOpacity>
+                <PasswordToggle visible={showPw} onToggle={() => setShowPw(!showPw)} />
               </View>
 
               {/* Legal disclaimer */}
@@ -522,9 +509,6 @@ const s = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'DMSans-Regular',
     color: '#2D2D2D',
-  },
-  eyeBtn: {
-    padding: 8,
   },
   error: {
     color: '#DC2626',
