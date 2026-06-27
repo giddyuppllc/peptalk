@@ -205,15 +205,10 @@ function initHealthKit(permissions: {
  * to an empty array — the connect flow gracefully degrades.
  */
 function getWriteScope(): string[] {
-  // Writes are now implemented (see saveWeight / saveMindfulSession below and
-  // the call sites in healthDataService → check-in / side-effects screens), so
-  // we request the matching write permissions on connect. This backs the
-  // NSHealthUpdateUsageDescription claim that PepTalk writes weight + check-ins
-  // (and symptom logs, surfaced as a Mindful Session) back to Apple Health.
-  //
-  // The installed react-native-health build exposes no SleepAnalysis or
-  // symptom-category writer, so those are intentionally omitted — requesting a
-  // write permission we can't act on is what an earlier audit flagged.
+  // Write-back enabled: weight (BodyMass) + check-ins/symptoms (MindfulSession)
+  // are written via saveWeight / saveMindfulSession below. Backed by
+  // NSHealthUpdateUsageDescription in app.json — the two MUST stay in sync or
+  // connect crashes.
   const out: string[] = [];
   if (PERMS.Weight) out.push(PERMS.Weight);
   if (PERMS.MindfulSession) out.push(PERMS.MindfulSession);

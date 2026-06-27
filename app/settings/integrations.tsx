@@ -22,6 +22,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -114,12 +115,27 @@ export default function IntegrationsSettingsScreen() {
     try {
       const ok = await connectSource(source, DEFAULT_SCOPES[source]);
       if (!ok) {
-        Alert.alert(
-          'Could not connect',
-          source === 'apple_health'
-            ? 'Open iOS Settings → Privacy → Health → PepTalk to grant access.'
-            : 'Something went wrong — try again in a moment.',
-        );
+        if (source === 'apple_health') {
+          // App Review 5.1.1(iv): iOS owns the Health permission dialog (fired by
+          // connectSource above) and deliberately hides read-access status for
+          // privacy, so we can never know it "failed". We must NOT show a custom
+          // prompt that pre-empts or pressures the system request. This is a
+          // neutral, factual notice with a genuine choice — no "grant access",
+          // no "tap allow", no funnel toward granting.
+          Alert.alert(
+            'Apple Health',
+            "Health permissions are managed by iOS. If your data isn't syncing, you can review them in the Settings app.",
+            [
+              { text: 'Not now', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            ],
+          );
+        } else {
+          Alert.alert(
+            'Could not connect',
+            'Something went wrong — try again in a moment.',
+          );
+        }
       }
     } finally {
       setConnecting(null);
@@ -174,6 +190,14 @@ export default function IntegrationsSettingsScreen() {
             Apple Health and Health Connect aggregate data from dozens of devices — Apple Watch,
             Oura, most scales, most CGMs, and blood pressure monitors all write to them. Start
             there; we add direct integrations as they become available.
+          </Text>
+          {/* App Review 2.5.1: clearly identify HealthKit functionality in the UI —
+              exactly what PepTalk reads + writes, and that the user controls it. */}
+          <Text style={[styles.body, { color: t.textSecondary, marginTop: 10 }]}>
+            When you connect Apple Health, PepTalk reads steps, weight, heart rate, HRV, VO₂ max,
+            sleep, and cycle data so you can see trends alongside your protocols — and writes your
+            check-ins and weight back so everything stays in sync. You choose exactly what to share
+            in the iOS permission dialog, and you can change it any time in Settings.
           </Text>
         </View>
 

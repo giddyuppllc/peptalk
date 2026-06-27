@@ -42,6 +42,7 @@ import {
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { supabase } from '../../src/services/supabase';
 import { Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
+import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 
@@ -142,6 +143,8 @@ export default function LabsScreen() {
       Alert.alert('Photo too large', 'Try a smaller / lower-quality photo (most lab reports compress fine at medium quality).');
       return;
     }
+    // App Review 5.1.2: explicit consent before sending the lab photo to the vision model.
+    if (!(await ensureAiConsent())) return;
     setScanning(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();

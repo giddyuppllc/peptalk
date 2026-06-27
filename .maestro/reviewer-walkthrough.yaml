@@ -1,0 +1,44 @@
+# PepTalk — reviewer walkthrough. Uses deep links for reliable navigation and
+# a coordinate tap to dismiss the RN consent <Modal> (which Maestro's view
+# hierarchy can't select by text). Session is already signed in.
+#   maestro test .maestro/reviewer-walkthrough.yaml
+appId: com.peptalkapp.peptalk
+---
+- launchApp
+# 5.1.2 — capture the AI consent modal, then dismiss via the Agree button position
+- takeScreenshot: 10-ai-consent
+- tapOn:
+    point: "50%, 69%"
+- takeScreenshot: 11-after-consent
+
+# 3.1.2(c) — subscription paywall via deep link: price + EULA + Privacy + Restore
+- openLink: peptalk://subscription
+- extendedWaitUntil:
+    visible:
+      text: "Subscribe|Restore|Plans|Plus|Pro|Terms"
+    timeout: 10000
+    optional: true
+- takeScreenshot: 12-subscription-top
+- scrollUntilVisible:
+    element:
+      text: "Terms of Use.*EULA|Privacy Policy|Restore"
+    direction: DOWN
+    timeout: 15000
+    optional: true
+- takeScreenshot: 13-subscription-legal
+
+# 2.5.1 — integrations via deep link: read-only Health text + Connect
+- openLink: peptalk://settings/integrations
+- extendedWaitUntil:
+    visible:
+      text: "Apple Health|Integrations|Connect"
+    timeout: 10000
+    optional: true
+- takeScreenshot: 14-integrations
+- scrollUntilVisible:
+    element:
+      text: "does not write|reads steps"
+    direction: DOWN
+    timeout: 12000
+    optional: true
+- takeScreenshot: 15-integrations-readonly

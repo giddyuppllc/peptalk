@@ -30,6 +30,7 @@ import { supabase } from '../../src/services/supabase';
 import { trackFeatureGated } from '../../src/services/analyticsEvents';
 import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
 import { AskAimeeButton } from '../../src/components/AskAimeeButton';
+import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 
@@ -211,6 +212,8 @@ export default function FoodScannerScreen() {
   };
 
   const analyzeFoodPhoto = async (base64: string) => {
+    // App Review 5.1.2: explicit consent before sending the photo to the vision model.
+    if (!(await ensureAiConsent())) return;
     setScanning(true);
     setResult(null);
 

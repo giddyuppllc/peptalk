@@ -20,6 +20,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -1305,7 +1306,7 @@ function LegalLinks() {
           <Text style={[linkStyles.privacyText, { color: t.textSecondary }]}>Subscription</Text>
         </TouchableOpacity>
       </View>
-      <Text style={[linkStyles.versionText, { color: t.textMuted }]}>PepTalk v1.0.0 (Beta)</Text>
+      <Text style={[linkStyles.versionText, { color: t.textMuted }]}>PepTalk v{Constants.expoConfig?.version ?? '1.9.8'}</Text>
     </View>
   );
 }

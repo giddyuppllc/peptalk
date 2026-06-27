@@ -545,12 +545,18 @@ export default function SubscriptionScreen() {
           </Text>
           <View style={styles.legalLinks}>
             <TouchableOpacity
-              onPress={() => router.push('/terms' as any)}
+              onPress={() =>
+                Linking.openURL(
+                  // Apple's standard EULA (Apple 3.1.2(c)). Leave the App Store
+                  // Connect EULA field blank so this default applies.
+                  'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/',
+                )
+              }
               accessibilityRole="link"
-              accessibilityLabel="Open Terms of Service"
+              accessibilityLabel="Open Terms of Use (EULA)"
               hitSlop={6}
             >
-              <Text style={styles.legalLink}>Terms of Service</Text>
+              <Text style={styles.legalLink}>Terms of Use (EULA)</Text>
             </TouchableOpacity>
             <Text style={styles.legalDivider}>·</Text>
             <TouchableOpacity

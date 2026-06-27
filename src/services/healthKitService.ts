@@ -221,6 +221,9 @@ export async function requestHealthKitPermissions(): Promise<boolean> {
  * NSHealthUpdateUsageDescription string) match real behaviour.
  */
 function getWriteScope(): string[] {
+  // Write-back enabled: PepTalk writes weight (BodyMass) + check-ins/symptoms
+  // (MindfulSession) to Apple Health. Backed by NSHealthUpdateUsageDescription
+  // in app.json — the two MUST stay in sync or connect crashes.
   return [PERMS.Weight, PERMS.MindfulSession].filter(Boolean);
 }
 

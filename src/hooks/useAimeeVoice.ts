@@ -17,12 +17,13 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import { supabase } from '../services/supabase';
 import { useSubscriptionStore } from '../store/useSubscriptionStore';
 import { tapLight, tapMedium } from '../utils/haptics';
+import { ensureAiConsent } from '../utils/ensureAiConsent';
 
 export type VoiceStatus =
   | 'idle'
@@ -65,13 +66,19 @@ export function useAimeeVoice(): UseAimeeVoiceResult {
       router.push('/subscription' as never);
       return;
     }
+    // App Review 5.1.2: explicit consent before sending voice to OpenAI (Whisper).
+    if (!(await ensureAiConsent())) return;
     try {
       tapMedium();
       const perm = await Audio.requestPermissionsAsync();
       if (!perm.granted) {
         Alert.alert(
-          'Mic permission needed',
-          'Enable microphone access in Settings so Aimee can hear you.',
+          'Microphone is off',
+          'Voice messages need microphone access. You can turn it on in Settings whenever you like.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ],
         );
         return;
       }

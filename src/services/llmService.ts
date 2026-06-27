@@ -20,6 +20,7 @@
 // inside getClient() makes the import unreachable in prod and
 // drops the SDK from the release bundle entirely.
 import { ChatMessage, EnhancedBotContext } from '../types';
+import { ensureAiConsent } from '../utils/ensureAiConsent';
 import { sanitizeForLLM } from './privacyGuard';
 import { supabase } from './supabase';
 import { captureException } from './telemetry';
@@ -655,6 +656,9 @@ export async function generateAIResponse(
   userMessage: string,
   context: EnhancedBotContext
 ): Promise<ChatMessage | null> {
+  // App Review 5.1.2: explicit consent before sending chat text to xAI (Aimee).
+  if (!(await ensureAiConsent())) return null;
+
   // Build conversation messages (last 10 for context)
   const conversationMessages = context.conversationHistory.slice(-10).map((msg) => ({
     role: msg.role === 'bot' ? 'assistant' as const : 'user' as const,
@@ -1019,6 +1023,12 @@ export async function* generateAIResponseStream(
 ): AsyncGenerator<AimeeStreamEvent, void, unknown> {
   if (!SUPABASE_URL) {
     yield { type: 'error', message: 'No backend configured' };
+    return;
+  }
+
+  // App Review 5.1.2: explicit consent before sending chat text to xAI (Aimee).
+  if (!(await ensureAiConsent())) {
+    yield { type: 'error', message: 'AI features need your consent — you can enable them any time.' };
     return;
   }
 
