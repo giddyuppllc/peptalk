@@ -38,6 +38,7 @@ FUNCTIONS=(
   aimee-recipe
   aimee-report-rewrite
   aimee-voice
+  aimee-workout
 
   # Vision (scan endpoints)
   food-scan
@@ -80,6 +81,7 @@ FUNCTIONS=(
   transcribe-workout-video
   tag-workout-video
   migrate-video-to-stream
+  save-workout-overrides
 
   # Learn / educational videos (auth-only, no tier gate)
   get-learn-video
