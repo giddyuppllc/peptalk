@@ -42,12 +42,21 @@ import {
 // the OS settings later (e.g. Apple Health toggles per category).
 const DEFAULT_SCOPES: Record<BiomarkerSource, BiomarkerScope[]> = {
   manual: [],
+  // Trimmed to ONLY the scopes PepTalk actually surfaces (App Review 5.1.1/2.5.1
+  // minimal-data). Every type below maps to a visible feature:
+  //   activity/body/heart/sleep → biometrics cache → activity, trackers,
+  //     DaySummarySheet, PeptideTrendCard, weekly summary, readiness, and the
+  //     daily check-in autofill (steps, active energy, weight, body fat, RHR,
+  //     HRV, VO₂ max, blood oxygen, respiratory rate, sleep, workouts).
+  //   cycle (menstrual_flow → periods; ovulation_test/sexual_activity →
+  //     cycle day logs) → Cycle screens + Cycle log.
+  // Removed (no visible feature; dedicated device rows below own them where
+  // relevant): blood_pressure (Withings), blood_glucose (Dexcom/Libre),
+  // bbt (Tempdrop), wrist_temperature, cervical_mucus (kegg).
   apple_health: [
     'steps', 'active_energy', 'resting_heart_rate', 'hrv', 'vo2_max',
-    'spo2', 'sleep', 'weight', 'body_fat', 'blood_pressure',
-    'blood_glucose', 'bbt', 'wrist_temperature', 'menstrual_flow',
-    'ovulation_test', 'cervical_mucus', 'sexual_activity', 'workouts',
-    'respiratory_rate',
+    'spo2', 'sleep', 'weight', 'body_fat', 'menstrual_flow',
+    'ovulation_test', 'sexual_activity', 'workouts', 'respiratory_rate',
   ],
   health_connect: [
     'steps', 'active_energy', 'resting_heart_rate', 'hrv', 'sleep',
@@ -194,10 +203,12 @@ export default function IntegrationsSettingsScreen() {
           {/* App Review 2.5.1: clearly identify HealthKit functionality in the UI —
               exactly what PepTalk reads + writes, and that the user controls it. */}
           <Text style={[styles.body, { color: t.textSecondary, marginTop: 10 }]}>
-            When you connect Apple Health, PepTalk reads steps, weight, heart rate, HRV, VO₂ max,
-            sleep, and cycle data so you can see trends alongside your protocols — and writes your
-            check-ins and weight back so everything stays in sync. You choose exactly what to share
-            in the iOS permission dialog, and you can change it any time in Settings.
+            When you connect Apple Health, PepTalk reads your activity (steps, active energy,
+            workouts), body metrics (weight, body composition), heart data (heart rate, HRV,
+            VO₂ max, blood oxygen, respiratory rate), sleep, and cycle data so you can see trends
+            alongside your protocols — and writes your check-ins and weight back so everything
+            stays in sync. You choose exactly what to share in the iOS permission dialog, and you
+            can change it any time in Settings.
           </Text>
         </View>
 
