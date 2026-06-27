@@ -6,8 +6,14 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
 import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
-import type { WorkoutLog, WorkoutLogSet } from '../types/fitness';
+import type { WorkoutLog, WorkoutLogSet, Exercise } from '../types/fitness';
 import type { GeneratedWorkout } from '../services/workoutGenerator';
+import type { MonthlyPlan, ProgramPlan } from '../services/monthlyPlan';
+import {
+  swapExerciseInWeek,
+  expandCalendar,
+  PLAN_DAYS,
+} from '../services/monthlyPlan';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,6 +48,12 @@ interface WorkoutState {
   inProgress: WorkoutLog | null;
   /** User-generated custom workouts (from the generator sheet) */
   savedGeneratedWorkouts: SavedGeneratedWorkout[];
+  /**
+   * The active 30-day Monthly Workout Programming Machine plan (or a
+   * pre-programmed series like Lusciously Lean laid onto the calendar).
+   * One at a time — building a new plan replaces it.
+   */
+  monthlyPlan: MonthlyPlan | ProgramPlan | null;
   /**
    * Log IDs whose Supabase upsert failed (offline, transient network,
    * RLS race). Flushed on boot + reconnect. 2026-05-17 P1 fix — same
@@ -83,6 +95,18 @@ interface WorkoutActions {
   deleteGeneratedWorkout: (id: string) => void;
   getGeneratedWorkoutById: (id: string) => SavedGeneratedWorkout | null;
 
+  // Monthly Workout Programming Machine
+  /** Store a freshly-built 30-day plan (replaces any existing one). */
+  setMonthlyPlan: (plan: MonthlyPlan | ProgramPlan) => void;
+  /** Clear the active plan. */
+  clearMonthlyPlan: () => void;
+  /**
+   * Swap the exercise at (dayIndex, exerciseIndex) of the active plan's
+   * template week for `replacement`, then re-expand the calendar so every
+   * future repeat of that weekday reflects the swap.
+   */
+  swapPlanExercise: (dayIndex: number, exerciseIndex: number, replacement: Exercise) => void;
+
   /**
    * Insert a pre-built WorkoutLog row. Used by Aimee's schedule_workout
    * client action — the workout is "planned" (completedAt left
@@ -117,6 +141,7 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
       logs: [],
       inProgress: null,
       savedGeneratedWorkouts: [],
+      monthlyPlan: null,
       pendingSyncs: [],
 
       flushPendingSyncs: async () => {
@@ -168,6 +193,46 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
 
       getGeneratedWorkoutById: (id) => {
         return get().savedGeneratedWorkouts.find((w) => w.id === id) ?? null;
+      },
+
+      // -----------------------------------------------------------------------
+      // Monthly Workout Programming Machine
+      // -----------------------------------------------------------------------
+
+      setMonthlyPlan: (plan) => set({ monthlyPlan: plan }),
+
+      clearMonthlyPlan: () => set({ monthlyPlan: null }),
+
+      swapPlanExercise: (dayIndex, exerciseIndex, replacement) => {
+        const plan = get().monthlyPlan;
+        if (!plan) return;
+        const week = swapExerciseInWeek(plan.week, dayIndex, exerciseIndex, replacement);
+
+        // Program-sourced plans also keep a flat programDays list; swap there too
+        // so the calendar (which reads programDays) reflects the change.
+        if (plan.source === 'program' && 'programDays' in plan) {
+          const programDays = (plan as ProgramPlan).programDays.map((d, di) =>
+            di === dayIndex
+              ? {
+                  ...d,
+                  exercises: d.exercises.map((ex, ei) =>
+                    ei === exerciseIndex ? { ...ex, exercise: replacement } : ex,
+                  ),
+                }
+              : d,
+          );
+          set({ monthlyPlan: { ...(plan as ProgramPlan), week, programDays } });
+          return;
+        }
+
+        // AI plans: re-expand the 30-day calendar so labels stay in sync.
+        const calendar = expandCalendar(
+          PLAN_DAYS,
+          plan.trainingWeekdays,
+          week,
+          plan.startDate,
+        );
+        set({ monthlyPlan: { ...plan, week, calendar } });
       },
 
       addPlannedLog: (log) => {
@@ -443,6 +508,7 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
           logs: [],
           inProgress: null,
           savedGeneratedWorkouts: [],
+          monthlyPlan: null,
           // Wipe offline retry queue on logout (same reason as
           // useDoseLogStore / useChatStore).
           pendingSyncs: [],
@@ -490,6 +556,7 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
         activeProgram: state.activeProgram,
         logs: state.logs,
         savedGeneratedWorkouts: state.savedGeneratedWorkouts,
+        monthlyPlan: state.monthlyPlan,
         // Persist the retry queue across cold launches.
         pendingSyncs: state.pendingSyncs,
       }),

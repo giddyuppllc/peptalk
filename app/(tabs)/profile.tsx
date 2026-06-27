@@ -342,8 +342,11 @@ function UserProfile() {
       {
         text: 'Choose from Library',
         onPress: async () => {
+          // Android uses the system Photo Picker (no permission needed),
+          // so a non-granted result must NOT block the picker there. iOS
+          // still requires the library permission.
           const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) { Alert.alert('Photo library permission required'); return; }
+          if (!perm.granted && Platform.OS !== 'android') { Alert.alert('Photo library permission required'); return; }
           const result = await ImagePicker.launchImageLibraryAsync({
             allowsEditing: true,
             aspect: [1, 1],

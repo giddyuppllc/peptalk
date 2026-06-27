@@ -38,7 +38,8 @@ import {
   CATEGORY_ORDER,
   type WorkoutVideoCategory,
 } from '../../src/data/workoutVideos';
-import { useVideoTaggerStore, applyEdits } from '../../src/store/useVideoTaggerStore';
+import { useVideoTaggerStore, applyEdits, combineEdits } from '../../src/store/useVideoTaggerStore';
+import { saveWorkoutOverrides } from '../../src/services/workoutOverrides';
 import { resolveVideoUrl } from '../../src/services/r2VideoResolver';
 import EXERCISES from '../../src/data/exercises';
 import { useTheme } from '../../src/hooks/useTheme';
@@ -74,11 +75,16 @@ export default function VideoTaggerScreen() {
   }, [isAdmin, router]);
 
   const edits = useVideoTaggerStore((s) => s.edits);
+  const remoteEdits = useVideoTaggerStore((s) => s.remoteEdits);
   const setEdit = useVideoTaggerStore((s) => s.setEdit);
   const resetAll = useVideoTaggerStore((s) => s.resetAll);
 
-  // Apply edits to the static manifest, then queue up videos still flagged needsReview.
-  const merged = useMemo(() => applyEdits(WORKOUT_VIDEOS, edits), [edits]);
+  // Apply edits to the static manifest (remote overrides first, then this
+  // session's local edits), then queue up videos still flagged needsReview.
+  const merged = useMemo(
+    () => applyEdits(WORKOUT_VIDEOS, combineEdits(remoteEdits, edits)),
+    [remoteEdits, edits]
+  );
   const queue = useMemo(() => merged.filter((v) => v.needsReview), [merged]);
   const taggedCount = WORKOUT_VIDEOS.length - queue.length;
 
@@ -155,17 +161,61 @@ export default function VideoTaggerScreen() {
     else setIndex(0);
   };
 
-  const handleExport = async () => {
+  // Copy the merged manifest to the clipboard — kept as a fallback for the
+  // old "paste into workoutVideos.json + commit" flow. The DB save below is
+  // the real persistence; this is only for when someone wants the raw JSON.
+  const copyManifestToClipboard = async () => {
+    const combined = combineEdits(remoteEdits, edits);
     const exported = WORKOUT_VIDEOS.map((v) => ({
       ...v,
-      ...(edits[v.slug] ?? {}),
+      ...(combined[v.slug] ?? {}),
     }));
     const json = JSON.stringify(exported, null, 2);
     await Clipboard.setStringAsync(json);
-    Alert.alert(
-      'Manifest copied',
-      `${exported.length} entries on the clipboard. Paste into src/data/workoutVideos.json and commit. Then run "Reset edits" to clear the local store.`,
-    );
+  };
+
+  // Primary save path: UPSERT this session's edits to Supabase via the
+  // admin-gated save-workout-overrides edge function. On success the tags
+  // are live for everyone on the next app load — no rebuild. Clipboard
+  // export stays available as a fallback (offered if the DB write fails).
+  const [saving, setSaving] = useState(false);
+  const handleSave = async () => {
+    const sessionEdits = edits;
+    const count = Object.keys(sessionEdits).length;
+    if (count === 0) {
+      Alert.alert('Nothing to save', 'No new edits in this session yet.');
+      return;
+    }
+    setSaving(true);
+    const result = await saveWorkoutOverrides(sessionEdits);
+    setSaving(false);
+
+    if (result.ok) {
+      successTick();
+      Alert.alert(
+        'Saved to the cloud',
+        `${result.saved} tag${result.saved === 1 ? '' : 's'} saved. They go live for everyone on the next app load — no new build needed.`,
+        [
+          { text: 'Copy JSON too', onPress: copyManifestToClipboard },
+          { text: 'Done', style: 'cancel' },
+        ],
+      );
+    } else {
+      const why =
+        result.reason === 'not_signed_in'
+          ? 'You are signed out. Sign in and try again.'
+          : result.reason === 'forbidden'
+            ? 'Your account is not on the admin allowlist (ADMIN_EMAILS).'
+            : `Network error${result.message ? `: ${result.message}` : ''}.`;
+      Alert.alert(
+        "Couldn't save to the cloud",
+        `${why}\n\nYou can copy the manifest JSON to the clipboard as a fallback and paste it into src/data/workoutVideos.json.`,
+        [
+          { text: 'Copy JSON', onPress: copyManifestToClipboard },
+          { text: 'Cancel', style: 'cancel' },
+        ],
+      );
+    }
   };
 
   // ── Non-admin bail (effect above triggers the redirect) ──
@@ -179,14 +229,19 @@ export default function VideoTaggerScreen() {
           <Ionicons name="checkmark-circle" size={64} color={accent.deep} />
           <Text style={[styles.emptyTitle, { color: t.text }]}>All done!</Text>
           <Text style={[styles.emptyBody, { color: t.textSecondary }]}>
-            Every video has been tagged. Tap export to copy the updated manifest.
+            Every video has been tagged. Save to push your tags to the cloud — they go live for everyone without a new build.
           </Text>
           <TouchableOpacity
-            style={[styles.primaryBtn, { backgroundColor: accent.deep }]}
-            onPress={handleExport}
+            style={[styles.primaryBtn, { backgroundColor: accent.deep, opacity: saving ? 0.6 : 1 }]}
+            onPress={handleSave}
+            disabled={saving}
           >
-            <Ionicons name="copy-outline" size={18} color="#fff" />
-            <Text style={styles.primaryBtnText}>Export updated manifest</Text>
+            {saving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
+            )}
+            <Text style={styles.primaryBtnText}>{saving ? 'Saving…' : 'Save tags to cloud'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => Alert.alert('Reset edits?', 'This clears your local tagging session. Use only after exporting.', [
@@ -216,8 +271,12 @@ export default function VideoTaggerScreen() {
             {taggedCount} / {WORKOUT_VIDEOS.length} tagged
           </Text>
         </View>
-        <TouchableOpacity onPress={handleExport} hitSlop={12}>
-          <Ionicons name="cloud-upload-outline" size={22} color={accent.deep} />
+        <TouchableOpacity onPress={handleSave} hitSlop={12} disabled={saving}>
+          {saving ? (
+            <ActivityIndicator size="small" color={accent.deep} />
+          ) : (
+            <Ionicons name="cloud-upload-outline" size={22} color={accent.deep} />
+          )}
         </TouchableOpacity>
       </View>
 

@@ -160,6 +160,7 @@ export default function WorkoutsScreen() {
 
   const templates = useWorkoutTemplateStore((st) => st.templates);
   const deleteTemplate = useWorkoutTemplateStore((st) => st.deleteTemplate);
+  const monthlyPlan = useWorkoutStore((st) => st.monthlyPlan);
 
   // Gendered marquee program: men → Men's BUILD, women → Lusciously Lean.
   // Unset sex → offer BOTH so the user opts into a track (no female default).
@@ -220,14 +221,40 @@ export default function WorkoutsScreen() {
           <ActiveProgramBanner />
         </View>
 
-        {/* Build a new workout — primary CTA */}
+        {/* Active 30-day plan banner (only if one is built) */}
+        {monthlyPlan && (
+          <View style={s.section}>
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={() => goPrimary('/workouts/plan')}
+              style={[s.programRow, { backgroundColor: t.surface, borderColor: `${accent.deep}30` }]}
+              accessibilityRole="button"
+              accessibilityLabel="View 30-day plan"
+            >
+              <View style={[s.programIcon, { backgroundColor: accent.deep }]}>
+                <Ionicons name="calendar" size={20} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.programTitle, { color: t.text }]} numberOfLines={1}>
+                  {monthlyPlan.label}
+                </Text>
+                <Text style={[s.programSub, { color: t.textSecondary }]}>
+                  Your 30-day plan · {monthlyPlan.workoutsPerWeek}×/week
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={t.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Build a 30-day plan — primary AI CTA */}
         <View style={s.section}>
           <TouchableOpacity
             activeOpacity={0.88}
-            onPress={() => goPrimary('/workouts/new')}
+            onPress={() => goPrimary('/workouts/generate')}
             style={s.bigCta}
             accessibilityRole="button"
-            accessibilityLabel="Build a new workout"
+            accessibilityLabel="Build a 30-day plan"
           >
             <LinearGradient
               colors={['#E89672', '#D98C86']}
@@ -235,15 +262,37 @@ export default function WorkoutsScreen() {
               end={{ x: 1, y: 1 }}
               style={s.bigCtaGrad}
             >
-              <Ionicons name="hammer" size={32} color="#fff" />
+              <Ionicons name="sparkles" size={32} color="#fff" />
               <View style={{ flex: 1 }}>
-                <Text style={s.bigCtaTitle}>Build a new workout</Text>
+                <Text style={s.bigCtaTitle}>Build a 30-day plan</Text>
                 <Text style={s.bigCtaSub}>
-                  Pick exercises, set sets and reps, save it.
+                  Pick your goal, days, and length — Aimee builds the month.
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={22} color="#fff" />
             </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
+        {/* Build a single workout — secondary CTA */}
+        <View style={s.section}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => go('/workouts/new')}
+            style={[s.savedRow, { backgroundColor: t.surface, borderColor: t.cardBorder }]}
+            accessibilityRole="button"
+            accessibilityLabel="Build a single workout"
+          >
+            <View style={[s.savedIcon, { backgroundColor: `${accent.deep}18` }]}>
+              <Ionicons name="hammer" size={20} color={accent.deep} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.savedTitle, { color: t.text }]}>Build a single workout</Text>
+              <Text style={[s.savedMeta, { color: t.textSecondary }]}>
+                Pick exercises, set sets and reps, save it.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={t.textSecondary} />
           </TouchableOpacity>
         </View>
 

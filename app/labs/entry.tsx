@@ -16,6 +16,7 @@ import {
   Pressable,
   StyleSheet,
   Alert,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -89,7 +90,10 @@ export default function LabEntryScreen() {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
       if (!perm.granted) {
         const lib = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!lib.granted) {
+        // Android uses the system Photo Picker for the library, which needs
+        // no permission — so a non-granted library result must NOT block
+        // the fallback there. iOS still requires the library permission.
+        if (!lib.granted && Platform.OS !== 'android') {
           Alert.alert(
             'Photos access needed',
             'Allow camera or library access in Settings to scan a report.',

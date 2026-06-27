@@ -205,18 +205,70 @@ function initHealthKit(permissions: {
  * to an empty array — the connect flow gracefully degrades.
  */
 function getWriteScope(): string[] {
-  // No writes are implemented today. Wave 76.6 added the scope before
-  // any write call sites existed, which Wave 76.9's build-config audit
-  // flagged as misleading-for-App-Review (we'd be requesting permission
-  // to write data we never actually write). Returning [] until the
-  // first real write feature lands (check-in weight → HealthKit).
+  // Writes are now implemented (see saveWeight / saveMindfulSession below and
+  // the call sites in healthDataService → check-in / side-effects screens), so
+  // we request the matching write permissions on connect. This backs the
+  // NSHealthUpdateUsageDescription claim that PepTalk writes weight + check-ins
+  // (and symptom logs, surfaced as a Mindful Session) back to Apple Health.
   //
-  // When wiring writes back in, restore:
-  //   if (PERMS.Weight) out.push(PERMS.Weight);
-  //   if (PERMS.MindfulSession) out.push(PERMS.MindfulSession);
-  //   if (PERMS.SleepAnalysis) out.push(PERMS.SleepAnalysis);
-  // AND add the corresponding saveSample call sites.
-  return [];
+  // The installed react-native-health build exposes no SleepAnalysis or
+  // symptom-category writer, so those are intentionally omitted — requesting a
+  // write permission we can't act on is what an earlier audit flagged.
+  const out: string[] = [];
+  if (PERMS.Weight) out.push(PERMS.Weight);
+  if (PERMS.MindfulSession) out.push(PERMS.MindfulSession);
+  return out;
+}
+
+// ── Write-back helpers ─────────────────────────────────────────────────────
+//
+// Standalone (not part of the BiomarkerAdapter read interface) so the other
+// adapters don't have to implement them. Each resolves false on any
+// error / missing native method rather than throwing.
+
+function saveOne(method: string, options: any): Promise<boolean> {
+  return new Promise((resolve) => {
+    const fn = AppleHealthKit?.[method];
+    if (typeof fn !== 'function') return resolve(false);
+    try {
+      fn.call(AppleHealthKit, options, (err: Error | null) => {
+        if (err) {
+          log(`${method} failed:`, err);
+          return resolve(false);
+        }
+        resolve(true);
+      });
+    } catch (err) {
+      log(`${method} threw:`, err);
+      resolve(false);
+    }
+  });
+}
+
+/** Write a body-weight sample (pounds) to Apple Health. */
+export async function saveWeight(
+  weightLbs: number,
+  date: Date = new Date(),
+): Promise<boolean> {
+  if (!healthKitAdapter.available()) return false;
+  if (!(typeof weightLbs === 'number' && weightLbs > 0)) return false;
+  return saveOne('saveWeight', {
+    value: weightLbs,
+    unit: 'pound',
+    startDate: date.toISOString(),
+  });
+}
+
+/** Write a brief Mindful Session (a check-in / symptom log moment) to Health. */
+export async function saveMindfulSession(
+  date: Date = new Date(),
+): Promise<boolean> {
+  if (!healthKitAdapter.available()) return false;
+  const startDate = new Date(date.getTime() - 60 * 1000);
+  return saveOne('saveMindfulSession', {
+    startDate: startDate.toISOString(),
+    endDate: date.toISOString(),
+  });
 }
 
 function getSamples<T>(method: string, opts: any): Promise<T[]> {
@@ -255,10 +307,9 @@ export const healthKitAdapter: BiomarkerAdapter = {
       await initHealthKit({
         permissions: {
           read: scopeToHKPerms(scopes),
-          // Write scope is fixed — we want the same three Health writes
-          // regardless of which biomarker the user toggled on. Listed
-          // up-front in NSHealthUpdateUsageDescription so the permission
-          // sheet matches.
+          // Write scope is fixed (weight + mindful-session/check-in) regardless
+          // of which biomarker the user toggled on, and is listed up-front in
+          // NSHealthUpdateUsageDescription so the permission sheet matches.
           write: getWriteScope(),
         },
       });

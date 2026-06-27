@@ -36,6 +36,7 @@ import {
   PEPTALK_DOSING_DISCLAIMER,
 } from '../../src/data/peptideDosingReference';
 import { getCalculatorMetadata } from '../../src/data/calculatorMetadata';
+import { getDosingTableEntry } from '../../src/data/peptideDosingTable';
 import {
   calculate,
   formatDose,
@@ -579,6 +580,32 @@ export default function CalculatorV2Screen() {
                     Cycle: {ref.cycleLength}
                     {ref.cycleOff ? ` · Off: ${ref.cycleOff}` : ''}
                   </Text>
+                  {/* Master dosing-table envelope (research reference) —
+                      adds at-a-glance weekly frequency / time-off / fasted
+                      from src/data/peptideDosingTable.ts when available. */}
+                  {(() => {
+                    const te = peptideId ? getDosingTableEntry(peptideId) : null;
+                    if (!te) return null;
+                    const bits: string[] = [];
+                    if (te.frequencyWeekly) bits.push(te.frequencyWeekly);
+                    if (te.timeOffBetweenCycles) bits.push(`${te.timeOffBetweenCycles} off`);
+                    if (te.fasted !== undefined) bits.push(te.fasted ? 'Fasted' : 'No fasting');
+                    if (bits.length === 0) return null;
+                    return (
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          lineHeight: 16,
+                          color: t.colors.textSecondary as string,
+                          fontFamily: t.typography.body,
+                          marginTop: 2,
+                          fontStyle: 'italic',
+                        }}
+                      >
+                        Reference: {bits.join(' · ')}
+                      </Text>
+                    );
+                  })()}
                 </View>
               ) : null}
             </GlassCard>

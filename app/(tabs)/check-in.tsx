@@ -33,6 +33,8 @@ import {
   requestHealthPermissions,
   syncAllWatchToCheckIn,
   getHealthSourceLabel,
+  writeWeightToHealth,
+  writeCheckInToHealth,
 } from '../../src/services/healthDataService';
 import { Colors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
@@ -502,6 +504,18 @@ export default function CheckInScreen() {
 
     trackCheckInSaved(entry.date, Boolean(entry.notes));
     notifySuccess();
+
+    // Write-back to Apple Health (iOS) — backs the NSHealthUpdateUsageDescription
+    // claim that PepTalk writes check-ins + weight back to Health. Guarded on
+    // availability + permission inside the service; fire-and-forget so a write
+    // failure never blocks the local save. Timestamp the entry's own date.
+    if (isHealthDataAvailable()) {
+      const entryDate = entry.date ? new Date(`${entry.date}T12:00:00`) : new Date();
+      void writeCheckInToHealth(entryDate);
+      if (typeof entry.weightLbs === 'number' && entry.weightLbs > 0) {
+        void writeWeightToHealth(entry.weightLbs, entryDate);
+      }
+    }
 
     // Streak celebration + smart next actions
     const newStreak = getStreak();

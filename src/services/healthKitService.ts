@@ -183,10 +183,23 @@ export async function requestHealthKitPermissions(): Promise<boolean> {
     PERMS.SexualActivity,
   ].filter(Boolean);
 
+  // Write-back scope — backs the NSHealthUpdateUsageDescription claim that
+  // PepTalk "writes check-ins, weight, and symptom logs back to Apple Health".
+  //  - Weight (BodyMass) → saveWeightToHealthKit when the user enters a weight
+  //                        in a check-in.
+  //  - MindfulSession    → saveCheckInToHealthKit when the user completes a
+  //                        daily check-in (Apple's Mindfulness category is the
+  //                        writeable native container the installed
+  //                        react-native-health build exposes for a reflective
+  //                        wellbeing moment).
+  // NOTE: symptom logs ride along on the same Mindfulness write at check-in
+  // time; react-native-health exposes no dedicated HKCategory symptom writer.
+  const write = getWriteScope();
+
   return new Promise((resolve) => {
     try {
       AppleHealthKit.initHealthKit(
-        { permissions: { read, write: [] } },
+        { permissions: { read, write } },
         (err: any) => {
           if (err) {
             if (__DEV__) console.warn('[HealthKit] init failed:', err);
@@ -199,6 +212,78 @@ export async function requestHealthKitPermissions(): Promise<boolean> {
       if (__DEV__) console.warn('[HealthKit] init threw:', e);
       resolve(false);
     }
+  });
+}
+
+/**
+ * HealthKit write permissions PepTalk requests. Only the data types we
+ * actually `saveSample` are listed, so Apple's permission sheet (and the
+ * NSHealthUpdateUsageDescription string) match real behaviour.
+ */
+function getWriteScope(): string[] {
+  return [PERMS.Weight, PERMS.MindfulSession].filter(Boolean);
+}
+
+// ---------------------------------------------------------------------------
+// Write-back (Phase 4) — push user-entered data into Apple Health
+// ---------------------------------------------------------------------------
+
+/** Promise wrapper around a single-record `save*` method. Resolves false on
+ *  any error / missing method rather than throwing, so a write failure never
+ *  blocks the user's local save. */
+function saveOne(method: string, options: any): Promise<boolean> {
+  return new Promise((resolve) => {
+    const fn = AppleHealthKit?.[method];
+    if (typeof fn !== 'function') return resolve(false);
+    try {
+      fn.call(AppleHealthKit, options, (err: any) => {
+        if (err) {
+          if (__DEV__) console.warn(`[HealthKit] ${method} failed:`, err);
+          return resolve(false);
+        }
+        resolve(true);
+      });
+    } catch (e) {
+      if (__DEV__) console.warn(`[HealthKit] ${method} threw:`, e);
+      resolve(false);
+    }
+  });
+}
+
+/**
+ * Write a body-weight sample (in pounds) back to Apple Health.
+ * No-op (resolves false) off iOS / without HealthKit. Safe to call
+ * unconditionally — guards on availability internally.
+ */
+export async function saveWeightToHealthKit(
+  weightLbs: number,
+  date: Date = new Date(),
+): Promise<boolean> {
+  if (!isHealthKitAvailable()) return false;
+  if (!(typeof weightLbs === 'number' && weightLbs > 0)) return false;
+  // react-native-health's saveWeight takes the value in the unit passed via
+  // `unit`; 'pound' matches our app-wide weight unit.
+  return saveOne('saveWeight', {
+    value: weightLbs,
+    unit: 'pound',
+    startDate: date.toISOString(),
+  });
+}
+
+/**
+ * Write a daily check-in to Apple Health as a Mindful Session — a reflective
+ * wellbeing moment. Duration is nominal (1 minute) since a check-in is a
+ * point-in-time self-report, not a timed meditation. Returns true on success.
+ */
+export async function saveCheckInToHealthKit(
+  date: Date = new Date(),
+): Promise<boolean> {
+  if (!isHealthKitAvailable()) return false;
+  const endDate = date;
+  const startDate = new Date(endDate.getTime() - 60 * 1000); // 1-minute session
+  return saveOne('saveMindfulSession', {
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
   });
 }
 
