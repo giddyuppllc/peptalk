@@ -927,7 +927,7 @@ export function getAllDosingReferencesForPeptide(peptideId: string): DosingRefer
 
 /** Standard PepTalk safety disclaimer attached to every reference reply. */
 export const PEPTALK_DOSING_DISCLAIMER =
-  'This is not medical advice. Based on research dosing and current reconstitution practices used in research.';
+  'This is supportive information based on medical research — not a source of truth. Talk to your doctor before starting any protocol. Some compounds (e.g. testosterone, HCG, GLP-1s, SARMs) are prescription or controlled substances and require a doctor’s prescription.';
 
 /**
  * Convert U-100 insulin-syringe units to mg, given the vial's mg/mL.
