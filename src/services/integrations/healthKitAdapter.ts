@@ -205,12 +205,14 @@ function initHealthKit(permissions: {
  * to an empty array — the connect flow gracefully degrades.
  */
 function getWriteScope(): string[] {
-  // Read-only by design: PepTalk does not write back to Apple Health. No write
-  // scope is requested — requesting one without NSHealthUpdateUsageDescription
-  // (intentionally absent) would crash on connect. The saveWeight /
-  // saveMindfulSession helpers below remain as harmless no-ops (they fail soft
-  // without write permission); the Integrations UI + Info.plist are read-only.
-  return [];
+  // Write-back enabled: weight (BodyMass) + check-ins/symptoms (MindfulSession)
+  // are written via saveWeight / saveMindfulSession below. Backed by
+  // NSHealthUpdateUsageDescription in app.json — the two MUST stay in sync or
+  // connect crashes.
+  const out: string[] = [];
+  if (PERMS.Weight) out.push(PERMS.Weight);
+  if (PERMS.MindfulSession) out.push(PERMS.MindfulSession);
+  return out;
 }
 
 // ── Write-back helpers ─────────────────────────────────────────────────────
