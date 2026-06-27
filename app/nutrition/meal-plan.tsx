@@ -26,6 +26,7 @@ import { useMealStore } from '../../src/store/useMealStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import type { MealType } from '../../src/types/fitness';
 import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
+import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
 
 interface PlannedMeal {
   type: string;
@@ -79,6 +80,8 @@ function MealPlanScreen() {
   const goals = profile.primaryGoals ?? [];
 
   const handleGenerate = async () => {
+    // App Review 5.1.2: explicit consent before sending profile data to xAI (Aimee).
+    if (!(await ensureAiConsent())) return;
     try {
       setGenerating(true);
       setPlan(null);

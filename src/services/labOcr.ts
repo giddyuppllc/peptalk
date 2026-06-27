@@ -31,6 +31,11 @@ export interface LabOcrResult {
 }
 
 export async function recognizeLabPhoto(uri: string): Promise<LabOcrResult> {
+  // App Review 5.1.2: explicit consent before sending the lab photo to the vision model.
+  const { ensureAiConsent } = await import('../utils/ensureAiConsent');
+  if (!(await ensureAiConsent())) {
+    return { ok: false, values: [], unmappedLines: [], reason: 'unavailable' };
+  }
   try {
     const { supabase } = await import('./supabase');
     // Match the food-scan pattern: read the image as base64 client-side

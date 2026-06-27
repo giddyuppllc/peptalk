@@ -783,6 +783,9 @@ export async function generateRecipe(params: {
 }[] | null> {
   const { diet, mealType, preferences, targets, allergens } = params;
 
+  // App Review 5.1.2: explicit consent before sending recipe data to xAI (Aimee).
+  if (!(await ensureAiConsent())) return null;
+
   // ── Try server edge function first (production path — key stays server-side) ──
   if (SUPABASE_URL) {
     try {
@@ -896,6 +899,8 @@ export async function generateHealthPlan(params: {
   currentPrograms: string[];
   duration: string;
 }): Promise<string | null> {
+  // App Review 5.1.2: explicit consent before sending health profile to xAI (Aimee).
+  if (!(await ensureAiConsent())) return null;
   if (!XAI_API_KEY) return null;
 
   try {
@@ -1205,6 +1210,10 @@ export async function resolveAimeeAction(args: {
   decision: 'confirm' | 'cancel';
   edits?: Record<string, unknown>;
 }): Promise<{ ok: boolean; status?: string; error?: string }> {
+  // App Review 5.1.2: explicit consent before sending action data to xAI (Aimee).
+  if (!(await ensureAiConsent())) {
+    return { ok: false, error: 'AI features need your consent — you can enable them any time.' };
+  }
   if (!SUPABASE_URL) return { ok: false, error: 'No backend configured' };
 
   const { data: { session } } = await supabase.auth.getSession();

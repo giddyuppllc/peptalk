@@ -36,6 +36,7 @@ import { tapLight, tapMedium } from '../../src/utils/haptics';
 import { supabase } from '../../src/services/supabase';
 import { usePantryStore, type StorageLocation } from '../../src/store/usePantryStore';
 import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
+import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
 
 const ALLOWED_PANTRY_UNITS = new Set([
   'each', 'oz', 'g', 'lb', 'kg', 'cup', 'tbsp', 'tsp', 'ml', 'l',
@@ -109,6 +110,8 @@ export default function PantryScanScreen() {
 
   const pickAndScan = async (source: 'camera' | 'library') => {
     tapMedium();
+    // App Review 5.1.2: explicit consent before sending the photo to the vision model.
+    if (!(await ensureAiConsent())) return;
     try {
       const perm =
         source === 'camera'

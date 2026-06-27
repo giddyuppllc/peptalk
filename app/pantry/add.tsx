@@ -34,6 +34,7 @@ import { usePantryStore, type StorageLocation } from '../../src/store/usePantryS
 import { useFeatureGate } from '../../src/hooks/useFeatureGate';
 import { supabase } from '../../src/services/supabase';
 import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
+import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
 
 const NL_ALLOWED_PANTRY_UNITS = new Set([
   'each', 'oz', 'g', 'lb', 'kg', 'cup', 'tbsp', 'tsp', 'ml', 'l',
@@ -113,6 +114,8 @@ export default function AddPantryScreen() {
       Alert.alert('Describe your items', 'Type or dictate what you want to add.');
       return;
     }
+    // App Review 5.1.2: explicit consent before sending pantry text to xAI (Aimee).
+    if (!(await ensureAiConsent())) return;
     setNlLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('aimee-pantry-parse', {

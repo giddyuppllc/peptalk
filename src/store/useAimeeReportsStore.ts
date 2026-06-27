@@ -82,6 +82,9 @@ export const useAimeeReportsStore = create<ReportsState & ReportsActions>()(
       rewriteReportBody: async (id) => {
         const report = get().reports.find((r) => r.id === id);
         if (!report) return;
+        // App Review 5.1.2: explicit consent before sending report text to xAI (Aimee).
+        const { ensureAiConsent } = await import('../utils/ensureAiConsent');
+        if (!(await ensureAiConsent())) return;
         try {
           // Lazy-require to keep this store boot-cheap; supabase client
           // pulls in expo-secure-store + the SDK.

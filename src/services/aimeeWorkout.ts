@@ -210,6 +210,13 @@ function fillProgram(
  * caller decides whether to fall back to the deterministic generator.
  */
 export async function generateAiWorkout(params: AiWorkoutParams): Promise<GeneratedWorkout> {
+  // App Review 5.1.2: explicit consent before sending workout params to xAI (Aimee).
+  // Decline is surfaced as an AiWorkoutError so the caller falls back to the
+  // deterministic, on-device generator — no data leaves the device.
+  const { ensureAiConsent } = await import('../utils/ensureAiConsent');
+  if (!(await ensureAiConsent())) {
+    throw new AiWorkoutError('unavailable', 'AI features need your consent — you can enable them any time.');
+  }
   const { supabase } = await import('./supabase');
   const { data: { session } } = await (supabase as any).auth.getSession();
   if (!session?.access_token) {

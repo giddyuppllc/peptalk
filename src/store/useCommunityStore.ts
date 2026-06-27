@@ -329,8 +329,23 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
       const { data, error } = await q.limit(50);
       if (error) throw error;
 
+      // Current user id — pending image posts are hidden from everyone
+      // except their author (App Store 1.2: UGC images must not be
+      // publicly visible before moderation approves them). RLS enforces
+      // this server-side too; this is the client mirror so a stale realtime
+      // patch can't leak a pending image into the feed.
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentUserId = user?.id ?? null;
+
       const blocked = new Set(get().blockedUserIds);
-      const visibleRows = (data ?? []).filter((r: any) => !blocked.has(r.user_id));
+      const visibleRows = (data ?? []).filter((r: any) => {
+        if (blocked.has(r.user_id)) return false;
+        const hasImage = Array.isArray(r.image_urls) && r.image_urls.length > 0;
+        if (hasImage && r.moderation_status === 'pending' && r.user_id !== currentUserId) {
+          return false;
+        }
+        return true;
+      });
       // Manual join against public_profiles since the base `profiles`
       // table is self-only RLS (PostgREST embed returned NULL for
       // every non-self author before Wave 76.11).
@@ -379,7 +394,20 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
         .eq('id', postId)
         .maybeSingle();
       if (postErr) throw postErr;
-      if (!postRow || postRow.is_deleted) {
+
+      // Current user id — a post with a pending image is only visible to
+      // its author until moderation approves it (App Store 1.2). Mirror of
+      // the RLS rule so a non-author who deep-links a pending post sees the
+      // standard "removed" placeholder instead of the unmoderated image.
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentUserId = user?.id ?? null;
+      const postHasImage = !!postRow
+        && Array.isArray(postRow.image_urls) && postRow.image_urls.length > 0;
+      const postPendingHidden = postHasImage
+        && postRow.moderation_status === 'pending'
+        && postRow.user_id !== currentUserId;
+
+      if (!postRow || postRow.is_deleted || postPendingHidden) {
         set({
           postDetails: {
             ...get().postDetails,
@@ -420,7 +448,16 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
       }
 
       const comments = (commentRows ?? [])
-        .filter((r: any) => !blocked.has(r.user_id))
+        .filter((r: any) => {
+          if (blocked.has(r.user_id)) return false;
+          // Same pending-image rule as posts: a comment carrying an
+          // unmoderated image is visible only to its author until approved.
+          const hasImage = Array.isArray(r.image_urls) && r.image_urls.length > 0;
+          if (hasImage && r.moderation_status === 'pending' && r.user_id !== currentUserId) {
+            return false;
+          }
+          return true;
+        })
         .map((r: any) => {
           const c = rowToComment(r, authorMap);
           if (r.is_anonymous) {

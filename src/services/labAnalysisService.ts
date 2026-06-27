@@ -10,6 +10,7 @@
 import { useLabResultsStore, type LabValue } from '../store/useLabResultsStore';
 import { useDoseLogStore } from '../store/useDoseLogStore';
 import { useHealthProfileStore } from '../store/useHealthProfileStore';
+import { ensureAiConsent } from '../utils/ensureAiConsent';
 
 const FN_NAME = 'aimee-lab-interpret';
 
@@ -52,6 +53,10 @@ function latestPerMarker(results: LabValue[]): LabValue[] {
  * profile from local stores so callers don't need to assemble them.
  */
 export async function interpretLatestLabs(): Promise<LabInterpretationResult> {
+  // App Review 5.1.2: explicit consent before sending lab data to xAI (Aimee).
+  if (!(await ensureAiConsent())) {
+    return { error: 'AI features need your consent — you can enable them any time.' };
+  }
   const { supabase } = await import('./supabase');
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) {

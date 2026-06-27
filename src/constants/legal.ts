@@ -100,10 +100,11 @@ export const TELEMEDICINE_DISCLAIMER =
 // ---------------------------------------------------------------------------
 
 export const DATA_PRIVACY_SUMMARY =
-  'Your health data is encrypted and stored locally on your device. PepTalk does not ' +
-  'transmit, sell, or share your personal health information with any third party ' +
-  'unless you explicitly opt in to specific features (such as cloud AI). You can ' +
-  'delete all your data at any time from your Profile settings.';
+  'Your data is encrypted in transit and at rest and synced to your private account ' +
+  'on our secure backend. PepTalk never sells or shares your personal health ' +
+  'information for advertising. AI features are opt-in: when you use one, the relevant ' +
+  'content is sent to our AI providers (xAI and OpenAI) to generate a result. You can ' +
+  'delete your account and all associated data at any time from your Profile settings.';
 
 export const ANONYMOUS_ANALYTICS_DISCLOSURE =
   'If you opt in, PepTalk collects anonymous usage patterns (e.g., which features ' +
@@ -175,10 +176,10 @@ export const TOS_SECTIONS = [
     title: 'Data Privacy',
     icon: 'lock-closed-outline' as const,
     content:
-      'Your data is encrypted and stored locally on your device. PepTalk does not collect, ' +
-      'transmit, or share your personal health information without your explicit consent. ' +
-      'Anonymous usage analytics (if opted in) cannot identify you personally. See our ' +
-      'Privacy Policy for full details.',
+      'Your data is encrypted in transit and at rest and synced to your private account on ' +
+      'our secure backend. PepTalk does not sell or share your personal health information ' +
+      'for advertising. Opt-in AI features send the content you submit to our AI providers ' +
+      '(xAI and OpenAI) to generate a result. See our Privacy Policy for full details.',
   },
   {
     title: 'Changes to Terms',

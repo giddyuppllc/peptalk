@@ -31,6 +31,7 @@ import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { useAllergyStore } from '../../src/store/useAllergyStore';
 import { supabase } from '../../src/services/supabase';
 import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
+import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
 
 interface SuggestedIngredient {
   name: string;
@@ -106,6 +107,8 @@ function PantrySuggestionsInner() {
   }, [targets, mealType]);
 
   const handleGenerate = async () => {
+    // App Review 5.1.2: explicit consent before sending pantry data to xAI (Aimee).
+    if (!(await ensureAiConsent())) return;
     setLoading(true);
     setSuggestions([]);
     try {

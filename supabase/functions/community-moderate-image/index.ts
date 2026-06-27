@@ -28,9 +28,11 @@
  *   - Bloodwork / lab reports
  *   - Food photos
  *
- * Fail-safe: if vision call errors, we log and AUTO-APPROVE (mark as
- * approved). Better to publish than to silently lose user content.
- * Reports + manual moderation cover false negatives.
+ * Fail-safe (App Store 1.2 / UGC): if the vision call errors or no vision
+ * key is configured, we FAIL CLOSED — the row is LEFT 'pending' (visible
+ * only to its author) and is never auto-approved. An unreviewed image is
+ * never published to other users; a human/admin approves it later from the
+ * moderation queue. The flagged path still soft-deletes + notifies.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -187,8 +189,24 @@ Deno.serve(async (req) => {
       return jsonResp({ error: 'targetType, targetId, imageUrls required' }, 400);
     }
     if (!VISION_API_KEY) {
-      // No AI configured — auto-approve so the post still renders.
-      return jsonResp({ ok: true, reason: 'no_ai_key_auto_approved' }, 200);
+      // FAIL CLOSED (App Store 1.2 / UGC): with no vision key configured we
+      // cannot review the image, so the row stays 'pending' and remains
+      // hidden from everyone but the author. A human/admin can approve it
+      // later from the moderation queue. (Previously this auto-approved,
+      // publishing unreviewed images — the bug this change fixes.)
+      try {
+        const adminLog = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+        const idColLog = targetType === 'post' ? 'post_id' : 'comment_id';
+        await adminLog.from('community_moderation_log').insert({
+          [idColLog]: targetId,
+          image_url: imageUrls[0] ?? '',
+          outcome: 'error',
+          reason: 'No vision API key configured — left pending for manual review.',
+        });
+      } catch (logErr) {
+        console.warn('[community-moderate-image] missing-key log failed:', logErr);
+      }
+      return jsonResp({ ok: true, reason: 'no_ai_key_left_pending', flagged: false }, 200);
     }
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
@@ -236,6 +254,7 @@ Deno.serve(async (req) => {
     }
 
     let flagged = false;
+    let errored = false;
     let allCategories: string[] = [];
     let flagReason = '';
     let flagUrl = '';
@@ -243,8 +262,13 @@ Deno.serve(async (req) => {
     for (const url of imageUrls) {
       const outcome = await moderateOne(url);
       if (!outcome) {
-        // Fetch / API error — log and treat this image as approved
-        // (don't punish the user for our own pipeline errors).
+        // FAIL CLOSED: a fetch / vision API error means this image was
+        // NOT actually reviewed. Record the error and mark the whole row
+        // as errored so we do NOT promote it to 'approved' below — it
+        // stays 'pending' (hidden from non-authors) for manual review.
+        // Previously this `continue`d and the row fell through to the
+        // auto-approve, publishing an unreviewed image.
+        errored = true;
         await admin.from('community_moderation_log').insert({
           [idCol]: targetId,
           image_url: url,
@@ -317,7 +341,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // All clean — promote to approved.
+    if (errored) {
+      // One or more images couldn't be reviewed. FAIL CLOSED: leave the row
+      // 'pending' (author-only) so an unreviewed image is never published.
+      // A human/admin can approve it from the moderation queue later.
+      console.warn('[community-moderate-image] left pending after image error:', targetType, targetId);
+      return jsonResp({ ok: true, flagged: false, reason: 'left_pending_after_error' }, 200);
+    }
+
+    // All images reviewed and clean — promote to approved.
     await admin
       .from(table)
       .update({ moderation_status: 'approved' })

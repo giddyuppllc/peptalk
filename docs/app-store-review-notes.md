@@ -47,8 +47,10 @@ https://peptalk.bio/privacy).
   daily summary. HealthKit data is encrypted on-device and never sold.
 
 ### Live community chat (UGC)
-- Plus and Pro members can post in admin-hosted live events. Free users
-  can read transcripts but cannot post.
+- Live events are a paying-member feature: only Plus and Pro members can
+  enter and post in admin-hosted live events. Free users are shown an upgrade
+  prompt for live chat (they cannot enter the live room). The general
+  community feed (posts/comments) is readable on Free.
 - A blocking disclaimer modal appears the first time any user enters a
   live event. It states: chats are member-to-member, not medical advice,
   and members must consult a licensed healthcare provider. Acceptance
@@ -57,9 +59,11 @@ https://peptalk.bio/privacy).
     - Owners + the host: Edit / Delete
     - All other viewers: **Report** (Spam / Harassment / Unsafe medical
       advice / Misinformation / Off-topic / Other)
-- Image moderation is automated via Grok Vision before any image is
-  visible in the feed; flagged images soft-delete the parent post and
-  notify the author.
+- Image moderation is automated via a third-party AI vision service
+  (OpenAI) before any image is visible to other members; pending images are
+  hidden from non-authors until they pass screening, and flagged images
+  soft-delete the parent post and notify the author. Moderation fails closed
+  (an image stays hidden if screening cannot complete).
 - User-blocking is wired and persisted (Profile → Settings → Blocked
   users). Blocked users' content is filtered client-side from the feed.
 
@@ -71,6 +75,17 @@ https://peptalk.bio/privacy).
   relationship, consult a licensed provider before any peptide use.
 - Aimee (the AI assistant) has system prompts forbidding medical advice
   and is rate-limited to 20 messages/day on Plus / unlimited on Pro.
+
+### Third-party AI processing & consent (Guideline 5.1.2)
+- AI features (Aimee chat, voice→text, photo food/lab/pantry scanning,
+  meal/recipe/workout generation, lab interpretation) send the content you
+  submit to third-party AI providers: xAI (Grok) for text/vision and OpenAI
+  (Whisper) for voice transcription.
+- Consent is opt-in and off by default: the first time the user triggers any
+  AI feature, a consent modal explains the third-party processing and requires
+  an affirmative tap before any data is sent. Declining leaves AI features off;
+  the rest of the app works normally. Consent is revocable in Profile settings.
+- This is disclosed in the in-app Privacy Policy (Profile → Privacy Policy).
 
 ### Sign-in
 - Email + password only (no third-party social auth), so Apple Sign-In
