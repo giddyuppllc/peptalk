@@ -35,6 +35,7 @@ import { Spacing, BorderRadius, Colors } from '../../src/constants/theme';
 import { searchAllFoods, calcUnifiedMacros, type UnifiedFood } from '../../src/services/foodSearchService';
 import { useMealStore } from '../../src/store/useMealStore';
 import type { MealType } from '../../src/types/fitness';
+import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -50,6 +51,8 @@ const inferMealType = (): MealType => {
 // which passes the image to Grok Vision and returns the identified items.
 // Falls back to a common-plate guess only if the request errors out entirely.
 async function detectFoodsFromPhoto(photoUri: string): Promise<string[]> {
+  // App Review 5.1.2: explicit consent before sending the photo to the vision model.
+  if (!(await ensureAiConsent())) return [];
   try {
     const { supabase } = await import('../../src/services/supabase');
     // Convert file URI → base64 for the edge function

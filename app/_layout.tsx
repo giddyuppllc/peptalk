@@ -29,6 +29,7 @@ import { HomeFab } from '../src/components/HomeFab';
 import { GlobalAimeeFab } from '../src/components/GlobalAimeeFab';
 import { CelebrationModal } from '../src/components/CelebrationModal';
 import { WorkoutRewardModal } from '../src/components/WorkoutRewardModal';
+import { AiConsentModal } from '../src/components/AiConsentModal';
 import { PepTalkCharacter } from '../src/components/PepTalkCharacter';
 import { SpotlightTour } from '../src/components/tutorial/SpotlightTour';
 import { UpgradeDeltaWatcher } from '../src/components/tutorial/UpgradeDeltaWatcher';
@@ -971,6 +972,8 @@ function RootLayout() {
         <OfflineBanner />
         <CelebrationModal />
         <WorkoutRewardModal />
+        {/* One-time explicit consent for third-party AI processing (App Review 5.1.2) */}
+        <AiConsentModal />
         {/* First-run walkthrough + upgrade delta tours (mounted at root so they survive navigation) */}
         <SpotlightTour />
         <UpgradeDeltaWatcher />

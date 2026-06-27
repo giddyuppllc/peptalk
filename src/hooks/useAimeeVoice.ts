@@ -23,6 +23,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../services/supabase';
 import { useSubscriptionStore } from '../store/useSubscriptionStore';
 import { tapLight, tapMedium } from '../utils/haptics';
+import { ensureAiConsent } from '../utils/ensureAiConsent';
 
 export type VoiceStatus =
   | 'idle'
@@ -65,6 +66,8 @@ export function useAimeeVoice(): UseAimeeVoiceResult {
       router.push('/subscription' as never);
       return;
     }
+    // App Review 5.1.2: explicit consent before sending voice to OpenAI (Whisper).
+    if (!(await ensureAiConsent())) return;
     try {
       tapMedium();
       const perm = await Audio.requestPermissionsAsync();
