@@ -192,7 +192,7 @@ export default function IntegrationsSettingsScreen() {
             there; we add direct integrations as they become available.
           </Text>
           {/* App Review 2.5.1: clearly identify HealthKit functionality in the UI —
-              exactly what PepTalk reads + writes, and that the user controls it. */}
+              exactly what PepTalk reads (read-only), and that the user controls it. */}
           <Text style={[styles.body, { color: t.textSecondary, marginTop: 10 }]}>
             When you connect Apple Health, PepTalk reads steps, weight, heart rate, HRV, VO₂ max,
             sleep, and cycle data so you can see trends alongside your protocols. PepTalk does not

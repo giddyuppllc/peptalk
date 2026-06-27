@@ -221,7 +221,11 @@ export async function requestHealthKitPermissions(): Promise<boolean> {
  * NSHealthUpdateUsageDescription string) match real behaviour.
  */
 function getWriteScope(): string[] {
-  return [PERMS.Weight, PERMS.MindfulSession].filter(Boolean);
+  // Read-only by design: PepTalk does not write back to Apple Health. No write
+  // scope is requested — and requesting one without NSHealthUpdateUsageDescription
+  // (which is intentionally absent) would crash on connect. The Integrations UI
+  // and Info.plist are read-only to match.
+  return [];
 }
 
 // ---------------------------------------------------------------------------
