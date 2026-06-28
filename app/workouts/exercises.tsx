@@ -411,7 +411,7 @@ export default function ExerciseLibraryScreen() {
   }, []);
 
   return (
-    <PaywallGate feature="workout_videos">
+    <PaywallGate feature="exercise_library">
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>

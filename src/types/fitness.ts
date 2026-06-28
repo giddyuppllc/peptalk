@@ -401,7 +401,6 @@ const FREE_FEATURES: string[] = [
   // Workouts — manual only
   'workout_logging',
   'cardio_logging',
-  'exercise_library',
   // General
   'learn_hub',
   'basic_journal',              // capped to 5 entries/week
@@ -465,7 +464,7 @@ const PRO_FEATURES: string[] = [
   'recipe_generator',
   // Workouts — programs + custom
   'workout_programs',
-  'workout_videos',
+  'exercise_library',
   'custom_workout_generator',
   'generated_workout_tracker',
   // Reports

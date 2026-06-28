@@ -358,7 +358,7 @@ function tierForFeature(feature: string | undefined): SubscriptionTier | null {
     // workout-program library or recipe generator.
     'recipe_generator',
     'workout_programs',
-    'workout_videos',
+    'exercise_library',
     'custom_workout_generator',
     'generated_workout_tracker',
     'health_reports',
