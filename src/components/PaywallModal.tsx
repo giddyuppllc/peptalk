@@ -121,8 +121,8 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
     description: 'Follow structured multi-week workout programs.',
   },
   workout_videos: {
-    name: 'Workout Videos',
-    description: 'Exercise demo videos for every movement.',
+    name: 'Exercise Library',
+    description: "Jamie's full exercise library — step-by-step form, coaching cues, and safety notes for every move (demo videos as they drop).",
   },
   ai_meal_plans: {
     name: 'Meal Plans',

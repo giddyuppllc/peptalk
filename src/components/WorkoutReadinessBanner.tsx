@@ -14,8 +14,9 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { GlassCard } from './GlassCard';
 import { useTheme } from '../hooks/useTheme';
 import { getReadinessScore } from '../services/readinessScore';
@@ -23,6 +24,7 @@ import { Spacing, FontSizes } from '../constants/theme';
 
 export function WorkoutReadinessBanner() {
   const t = useTheme();
+  const router = useRouter();
   const summary = useMemo(() => getReadinessScore(), []);
 
   if (!summary) return null;
@@ -54,9 +56,16 @@ export function WorkoutReadinessBanner() {
           {body}
         </Text>
       </View>
-      {/* Training video library hidden for now — CTA removed until the
-          video catalog is ready. Re-add the "Light day" button (push to
-          /workouts/library?category=yoga) to restore. */}
+      {!isReady && (
+        <TouchableOpacity
+          onPress={() => router.push('/workouts/exercises?muscle=core' as any)}
+          style={[styles.cta, { backgroundColor: accent }]}
+          accessibilityRole="button"
+          accessibilityLabel="Browse light exercises"
+        >
+          <Text style={styles.ctaText}>Light day</Text>
+        </TouchableOpacity>
+      )}
     </GlassCard>
   );
 }

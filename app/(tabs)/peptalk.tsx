@@ -123,9 +123,6 @@ function isAllowedNavigationPath(path: string): boolean {
   if (path.startsWith('//') || path.includes('..')) return false;
   // No /admin/, no /dev-, no internal-only routes.
   if (/^\/?(admin|dev-)/.test(path)) return false;
-  // Training video library hidden for now — block navigation until the video
-  // catalog is ready. Remove this line to restore.
-  if (/^\/?workouts\/library(\/|\?|$)/.test(path)) return false;
   const allowed = [
     /^\/?$/,
     /^\/?\(tabs\)\/?$/,

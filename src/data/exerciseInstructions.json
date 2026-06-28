@@ -7009,5 +7009,2229 @@
     "safetyNotes": [
       "Avoid locking your knees at the top to reduce joint stress."
     ]
+  },
+  "plank": {
+    "description": "Builds deep core and shoulder endurance by holding a rigid straight-line body position against gravity.",
+    "steps": [
+      "Set your forearms on the floor under your shoulders with elbows bent at ninety degrees.",
+      "Extend your legs back and rise onto your toes so your body forms one straight line.",
+      "Brace your abs and squeeze your glutes, holding the position without sagging or piking.",
+      "Breathe steadily and maintain the hold for the prescribed duration."
+    ],
+    "cues": [
+      "Squeeze glutes and brace abs",
+      "Keep hips level with shoulders"
+    ],
+    "safetyNotes": [
+      "Stop if your lower back starts to sag or ache, as that signals your core has fatigued."
+    ]
+  },
+  "basic-crunch": {
+    "description": "Targets the upper abdominals by curling the shoulders off the floor through spinal flexion.",
+    "steps": [
+      "Lie on your back with knees bent and feet flat on the floor.",
+      "Place your hands behind your head or across your chest without pulling your neck.",
+      "Curl your shoulder blades off the floor by contracting your abs.",
+      "Lower under control back to the start and repeat for reps."
+    ],
+    "cues": [
+      "Lead with the ribs, not the neck",
+      "Exhale as you crunch up"
+    ],
+    "safetyNotes": [
+      "Avoid yanking on your head, which strains the neck instead of working the abs."
+    ]
+  },
+  "elbows-to-knees-sit-up": {
+    "description": "Works the full abdominal wall by sitting up and driving the elbows toward the knees.",
+    "steps": [
+      "Lie on your back with knees bent and hands lightly behind your head.",
+      "Engage your abs and curl your torso all the way up.",
+      "Bring your elbows toward your knees at the top of the movement.",
+      "Lower back down with control and repeat for reps."
+    ],
+    "cues": [
+      "Drive elbows toward knees",
+      "Keep the movement smooth and controlled"
+    ],
+    "safetyNotes": [
+      "Keep your feet anchored and avoid jerking up to protect your lower back."
+    ]
+  },
+  "side-plank": {
+    "description": "Strengthens the obliques and lateral core by holding the body sideways in a straight line.",
+    "steps": [
+      "Lie on your side with your forearm on the floor directly under your shoulder.",
+      "Stack your feet and lift your hips so your body forms a straight diagonal line.",
+      "Brace your obliques and hold, keeping your top hip from dropping.",
+      "Hold for the prescribed duration, then switch sides."
+    ],
+    "cues": [
+      "Drive the bottom hip up",
+      "Keep your body in one line"
+    ],
+    "safetyNotes": [
+      "Keep your supporting shoulder stacked over the elbow to avoid straining the joint."
+    ]
+  },
+  "hip-taps": {
+    "description": "Targets the obliques from a forearm plank by rotating the hips down to tap each side.",
+    "steps": [
+      "Start in a forearm plank with elbows under shoulders and body in a straight line.",
+      "Rotate your hips to one side and lightly tap that hip to the floor.",
+      "Return to center, then rotate and tap the opposite hip.",
+      "Alternate sides smoothly for the prescribed reps."
+    ],
+    "cues": [
+      "Rotate from the waist",
+      "Keep shoulders square and stable"
+    ],
+    "safetyNotes": [
+      "Move slowly through the rotation to protect your lower back and shoulders."
+    ]
+  },
+  "bicycle-crunches": {
+    "description": "Works the obliques and rectus abdominis by alternating opposite elbow to knee in a pedaling motion.",
+    "steps": [
+      "Lie on your back with hands behind your head and legs lifted, knees bent.",
+      "Curl up and rotate one elbow toward the opposite knee while extending the other leg.",
+      "Switch sides by bringing the opposite elbow and knee together.",
+      "Continue alternating in a controlled pedaling rhythm for reps."
+    ],
+    "cues": [
+      "Rotate the torso, not just the elbow",
+      "Keep the lower back pressed down"
+    ],
+    "safetyNotes": [
+      "Avoid pulling on your neck and keep the motion controlled rather than rushed."
+    ]
+  },
+  "russian-twist-sb": {
+    "description": "Trains rotational core strength by twisting a stability ball side to side from a seated position.",
+    "steps": [
+      "Sit on the floor with knees bent and lean back slightly to engage your core.",
+      "Hold the stability ball at your chest with your feet flat or lifted.",
+      "Rotate your torso to one side and bring the ball toward the floor.",
+      "Twist to the opposite side and continue alternating for reps."
+    ],
+    "cues": [
+      "Turn through the core, not the arms",
+      "Keep your chest tall as you rotate"
+    ],
+    "safetyNotes": [
+      "Keep a slight bend and braced spine to avoid rounding and straining your back."
+    ]
+  },
+  "leg-lowers": {
+    "description": "Strengthens the lower abs by lowering straight legs toward the floor while keeping the spine flat.",
+    "steps": [
+      "Lie on your back with legs extended straight toward the ceiling.",
+      "Press your lower back into the floor and brace your abs.",
+      "Lower both legs slowly toward the floor without letting your back arch.",
+      "Raise them back to the start and repeat for reps."
+    ],
+    "cues": [
+      "Press the lower back into the floor",
+      "Lower only as far as you can stay flat"
+    ],
+    "safetyNotes": [
+      "Bend your knees slightly if your lower back lifts off the floor."
+    ]
+  },
+  "alternating-bench-lower-leg-lifts-with-glute-raise": {
+    "description": "Targets the lower abs and glutes by alternating leg lifts off a bench with a hip raise.",
+    "steps": [
+      "Lie on your back with your hips at the edge of a bench and hands gripping behind your head.",
+      "Extend both legs out and brace your core.",
+      "Lift one leg up while raising your hips off the bench, then lower it.",
+      "Alternate legs with the glute raise each rep."
+    ],
+    "cues": [
+      "Drive through the glutes on each raise",
+      "Keep your core braced throughout"
+    ],
+    "safetyNotes": [
+      "Hold the bench securely and control the descent to protect your lower back."
+    ]
+  },
+  "weighted-crunches": {
+    "description": "Overloads the upper abs by curling the torso up while holding a weight against the chest.",
+    "steps": [
+      "Lie on your back with knees bent and feet flat, holding a weight on your chest.",
+      "Brace your abs and curl your shoulder blades off the floor.",
+      "Squeeze at the top while keeping the weight close to your chest.",
+      "Lower under control and repeat for reps."
+    ],
+    "cues": [
+      "Hug the weight to your chest",
+      "Exhale and crunch with the abs"
+    ],
+    "safetyNotes": [
+      "Start light and keep a controlled tempo to avoid straining the neck or back."
+    ]
+  },
+  "toe-touches": {
+    "description": "Targets the upper abs by reaching the hands toward raised toes through a tight crunch.",
+    "steps": [
+      "Lie on your back and extend both legs straight up toward the ceiling.",
+      "Reach your arms up toward your toes.",
+      "Crunch your shoulders off the floor and reach your hands toward your feet.",
+      "Lower back down with control and repeat for reps."
+    ],
+    "cues": [
+      "Reach fingertips toward toes",
+      "Keep legs vertical and still"
+    ],
+    "safetyNotes": [
+      "Curl from the abs rather than jerking the head and shoulders upward."
+    ]
+  },
+  "alternating-toe-touch": {
+    "description": "Works the obliques by crunching up and reaching one hand across toward the opposite raised foot.",
+    "steps": [
+      "Lie on your back with legs lifted toward the ceiling.",
+      "Crunch up and reach your right hand toward your left foot.",
+      "Lower back down, then reach your left hand toward your right foot.",
+      "Continue alternating sides for reps."
+    ],
+    "cues": [
+      "Reach across the body",
+      "Twist through the obliques"
+    ],
+    "safetyNotes": [
+      "Keep the movement controlled and avoid pulling on your neck."
+    ]
+  },
+  "mountain-climbers": {
+    "description": "Builds core stability and conditioning by driving the knees toward the chest from a plank position.",
+    "steps": [
+      "Start in a high plank with hands under your shoulders and body in a straight line.",
+      "Drive one knee toward your chest while keeping your hips low.",
+      "Quickly switch legs, extending one back as the other comes in.",
+      "Continue alternating at a steady pace for reps."
+    ],
+    "cues": [
+      "Keep hips low and level",
+      "Drive knees fast and controlled"
+    ],
+    "safetyNotes": [
+      "Keep your shoulders stacked over your wrists to avoid wrist and shoulder strain."
+    ]
+  },
+  "plank-jack": {
+    "description": "Combines core bracing and cardio by jumping the feet in and out while holding a forearm plank.",
+    "steps": [
+      "Set up in a forearm plank with elbows under shoulders and body straight.",
+      "Brace your core and jump both feet out wide.",
+      "Jump your feet back together while keeping your hips stable.",
+      "Continue jumping in and out for the prescribed duration."
+    ],
+    "cues": [
+      "Keep hips from bouncing",
+      "Brace the core on every jump"
+    ],
+    "safetyNotes": [
+      "Keep your hips level and avoid letting your lower back sag during the jumps."
+    ]
+  },
+  "plank-push": {
+    "description": "Builds core and shoulder strength by pressing up and down between forearm and high plank positions.",
+    "steps": [
+      "Begin in a forearm plank with body in a straight line.",
+      "Press up onto one hand, then the other, into a high plank.",
+      "Lower back down one forearm at a time to the start.",
+      "Continue alternating the leading arm for the prescribed duration."
+    ],
+    "cues": [
+      "Keep hips square and steady",
+      "Minimize side-to-side rocking"
+    ],
+    "safetyNotes": [
+      "Move under control and keep your core tight to protect your shoulders and back."
+    ]
+  },
+  "reverse-crunch": {
+    "description": "Targets the lower abs by curling the hips and knees toward the chest off the floor.",
+    "steps": [
+      "Lie on your back with knees bent and hands at your sides or under your hips.",
+      "Lift your knees toward your chest until your hips curl off the floor.",
+      "Squeeze your abs at the top of the curl.",
+      "Lower your hips back down with control and repeat for reps."
+    ],
+    "cues": [
+      "Curl the hips off the floor",
+      "Use the abs, not momentum"
+    ],
+    "safetyNotes": [
+      "Avoid swinging your legs and keep the motion slow to protect your lower back."
+    ]
+  },
+  "table-top-knee-taps": {
+    "description": "Trains deep core control by lowering tabletop knees to lightly tap the floor and lifting back up.",
+    "steps": [
+      "Lie on your back and lift your legs into a tabletop with knees over hips.",
+      "Press your lower back into the floor and brace your abs.",
+      "Lower your toes to tap the floor while keeping your spine flat.",
+      "Lift back to tabletop and repeat for reps."
+    ],
+    "cues": [
+      "Keep the lower back glued down",
+      "Tap lightly and lift slowly"
+    ],
+    "safetyNotes": [
+      "Lower only as far as you can keep your back flat against the floor."
+    ]
+  },
+  "deep-core-sl-knee-to-elbow": {
+    "description": "Activates the deep core and obliques by drawing a single-leg knee toward the same-side elbow.",
+    "steps": [
+      "Start on hands and knees or in a forearm position with a braced core.",
+      "Extend one leg back and engage your abs.",
+      "Draw that knee in toward your elbow, rounding through the core.",
+      "Extend the leg back out and repeat for reps before switching sides."
+    ],
+    "cues": [
+      "Round the spine as the knee draws in",
+      "Move from the deep core"
+    ],
+    "safetyNotes": [
+      "Keep the movement slow and controlled to maintain core engagement and protect the spine."
+    ]
+  },
+  "alternating-ankle-touch": {
+    "description": "Targets the obliques by crunching side to side to tap each ankle from a bent-knee position.",
+    "steps": [
+      "Lie on your back with knees bent and feet flat, arms at your sides.",
+      "Crunch your shoulders slightly off the floor.",
+      "Reach one hand down the side to tap your ankle, then switch.",
+      "Continue alternating side taps for reps."
+    ],
+    "cues": [
+      "Crunch sideways toward the ankle",
+      "Keep shoulders off the floor"
+    ],
+    "safetyNotes": [
+      "Keep your neck relaxed and move from the waist rather than the shoulders."
+    ]
+  },
+  "deep-core-rainbow-side-taps": {
+    "description": "Works the obliques and deep core by sweeping the legs in a rainbow arc to tap side to side.",
+    "steps": [
+      "Lie on your back with legs lifted and your lower back pressed down.",
+      "Brace your core and keep your shoulders grounded.",
+      "Sweep your legs in an arc to one side to tap the floor.",
+      "Arc back across to tap the opposite side and repeat for reps."
+    ],
+    "cues": [
+      "Control the arc with the obliques",
+      "Keep the lower back anchored"
+    ],
+    "safetyNotes": [
+      "Reduce the range if your lower back lifts off the floor during the sweep."
+    ]
+  },
+  "pilates-lower-leg-lifts": {
+    "description": "Strengthens the lower abs with a slow, controlled Pilates-style lowering and lifting of straight legs.",
+    "steps": [
+      "Lie on your back with legs extended straight toward the ceiling.",
+      "Draw your navel down and press your lower back into the mat.",
+      "Lower your legs slowly toward the floor while keeping your spine flat.",
+      "Lift them back up with control and repeat for reps."
+    ],
+    "cues": [
+      "Move slowly with control",
+      "Keep the spine pressed to the mat"
+    ],
+    "safetyNotes": [
+      "Lower only as far as you can keep your lower back flat to avoid strain."
+    ]
+  },
+  "elevated-hip-bent-knee-raises": {
+    "description": "Targets the lower abs by raising bent knees toward the chest with the hips slightly elevated.",
+    "steps": [
+      "Lie on your back with hips elevated on your hands or a cushion and knees bent.",
+      "Brace your abs and keep your back supported.",
+      "Raise your bent knees toward your chest, curling the hips up.",
+      "Lower with control and repeat for reps."
+    ],
+    "cues": [
+      "Curl knees toward the chest",
+      "Keep the motion controlled"
+    ],
+    "safetyNotes": [
+      "Avoid swinging your legs and keep your core engaged to protect your back."
+    ]
+  },
+  "lower-leg-sb-twists": {
+    "description": "Trains the obliques by rotating bent legs side to side while squeezing a stability ball between the knees.",
+    "steps": [
+      "Lie on your back holding a stability ball between your bent knees.",
+      "Lift your legs to tabletop and extend your arms out for balance.",
+      "Rotate your knees and the ball to one side toward the floor.",
+      "Return to center and rotate to the other side for reps."
+    ],
+    "cues": [
+      "Rotate from the core",
+      "Keep both shoulders on the floor"
+    ],
+    "safetyNotes": [
+      "Control the rotation and limit the range to protect your lower back."
+    ]
+  },
+  "sb-alt-dead-bug": {
+    "description": "Builds anti-extension core stability by extending opposite arm and leg while pressing a stability ball.",
+    "steps": [
+      "Lie on your back holding a stability ball between your hands and knees in tabletop.",
+      "Press the ball lightly and brace your core with the lower back flat.",
+      "Extend one arm overhead and the opposite leg out straight.",
+      "Return to the start and alternate sides for reps."
+    ],
+    "cues": [
+      "Keep the lower back flat",
+      "Move opposite arm and leg together"
+    ],
+    "safetyNotes": [
+      "Stop extending if your lower back arches off the floor."
+    ]
+  },
+  "oblique-side-crunch": {
+    "description": "Isolates the obliques by crunching the torso laterally toward the hip from a side-lying position.",
+    "steps": [
+      "Lie on your side with knees bent and your top hand behind your head.",
+      "Stack your hips and engage your oblique.",
+      "Crunch your ribs toward your hip, lifting your shoulder off the floor.",
+      "Lower with control and repeat for reps before switching sides."
+    ],
+    "cues": [
+      "Crunch ribs toward the hip",
+      "Lead with the obliques"
+    ],
+    "safetyNotes": [
+      "Avoid pulling on your neck and let the obliques drive the movement."
+    ]
+  },
+  "table-top-alternatin-towel-arm-slides": {
+    "description": "Challenges deep core stability by sliding one arm forward on a towel while holding a tabletop position.",
+    "steps": [
+      "Set up on hands and knees with a towel under one hand and your core braced.",
+      "Keep your back flat and hips square.",
+      "Slide the towel hand forward until your arm is extended, then pull it back.",
+      "Alternate arms while keeping your torso stable for reps."
+    ],
+    "cues": [
+      "Keep hips square and still",
+      "Brace the core as the arm slides"
+    ],
+    "safetyNotes": [
+      "Move slowly and resist twisting to keep tension on the core and off the lower back."
+    ]
+  },
+  "elevated-hip-alt-bent-knee-raises-w-kb-hold": {
+    "description": "Builds lower-ab endurance by holding a kettlebell while alternating bent-knee raises with elevated hips.",
+    "steps": [
+      "Lie on your back with hips slightly elevated, holding a kettlebell at your chest.",
+      "Brace your core and lift your legs to a bent-knee position.",
+      "Raise one knee toward your chest, then alternate as you hold the weight.",
+      "Maintain the braced hold for the prescribed duration."
+    ],
+    "cues": [
+      "Keep the kettlebell stable",
+      "Brace the core throughout the hold"
+    ],
+    "safetyNotes": [
+      "Use a manageable kettlebell weight and keep your lower back supported throughout."
+    ]
+  },
+  "elevated-hip-sl-raises-w-kb-hold": {
+    "description": "Trains lower abs and stability by raising a single straight leg while holding a kettlebell, hips elevated.",
+    "steps": [
+      "Lie on your back with hips slightly elevated, holding a kettlebell at your chest.",
+      "Brace your core and extend your legs straight.",
+      "Raise one straight leg toward the ceiling while holding the weight steady.",
+      "Hold and alternate legs for the prescribed duration."
+    ],
+    "cues": [
+      "Keep the lifting leg straight",
+      "Hold the kettlebell still"
+    ],
+    "safetyNotes": [
+      "Choose a controllable weight and keep your back flat to protect your spine."
+    ]
+  },
+  "stability-bird-dog": {
+    "description": "Improves core stability and balance by extending opposite arm and leg from a hands-and-knees position.",
+    "steps": [
+      "Start on hands and knees with wrists under shoulders and knees under hips.",
+      "Brace your core and keep your back flat.",
+      "Extend one arm forward and the opposite leg back until both are level.",
+      "Return to the start and alternate sides for reps."
+    ],
+    "cues": [
+      "Reach long through arm and leg",
+      "Keep the hips and back level"
+    ],
+    "safetyNotes": [
+      "Avoid arching your lower back or twisting your hips as you extend."
+    ]
+  },
+  "sb-knee-tucks": {
+    "description": "Targets the lower abs by tucking the knees toward the chest while rolling a stability ball under the feet.",
+    "steps": [
+      "Get into a high plank with your shins or feet resting on a stability ball.",
+      "Brace your core and keep your hands under your shoulders.",
+      "Tuck your knees toward your chest, rolling the ball forward.",
+      "Extend your legs back to plank and repeat for reps."
+    ],
+    "cues": [
+      "Pull knees in with the abs",
+      "Keep shoulders over the wrists"
+    ],
+    "safetyNotes": [
+      "Keep your core tight to prevent your hips from sagging or piking too high."
+    ]
+  },
+  "sb-crunch": {
+    "description": "Works the abs through a fuller range of motion by crunching while lying back over a stability ball.",
+    "steps": [
+      "Sit on a stability ball and walk your feet out until your lower back rests on the ball.",
+      "Place your hands behind your head and let your torso extend slightly over the ball.",
+      "Crunch your shoulders up by contracting your abs.",
+      "Lower back over the ball with control and repeat for reps."
+    ],
+    "cues": [
+      "Curl up from the abs",
+      "Keep the ball stable underneath"
+    ],
+    "safetyNotes": [
+      "Plant your feet wide for balance and avoid pulling on your neck."
+    ]
+  },
+  "smith-machine-body-weight-prone-grip-row": {
+    "description": "Builds back strength by rowing your bodyweight to a fixed Smith bar using an overhand prone grip.",
+    "steps": [
+      "Set the Smith bar at waist height and lie under it with an overhand grip slightly wider than shoulders.",
+      "Hang with arms extended and your body in a straight line, heels on the floor.",
+      "Pull your chest up to the bar by driving your elbows back and squeezing your shoulder blades.",
+      "Lower under control to full extension and repeat for reps."
+    ],
+    "cues": [
+      "Squeeze the shoulder blades together",
+      "Keep the body in a straight line"
+    ],
+    "safetyNotes": [
+      "Confirm the bar is locked securely in the Smith rails before loading your weight on it."
+    ]
+  },
+  "smith-machine-body-weight-supinated-grip-row": {
+    "description": "Targets the back and biceps by rowing your bodyweight to a fixed Smith bar with an underhand grip.",
+    "steps": [
+      "Set the Smith bar at waist height and lie under it with an underhand shoulder-width grip.",
+      "Hang with arms extended and your body straight, heels planted on the floor.",
+      "Pull your chest toward the bar, driving your elbows down and back.",
+      "Lower with control to full extension and repeat for reps."
+    ],
+    "cues": [
+      "Drive elbows toward your hips",
+      "Keep the core braced and body rigid"
+    ],
+    "safetyNotes": [
+      "Make sure the bar is securely locked in the Smith rails before beginning."
+    ]
+  },
+  "single-arm-dumbbell-row": {
+    "description": "Builds unilateral back strength by rowing a dumbbell with one arm while braced on a bench.",
+    "steps": [
+      "Place one knee and hand on a bench with the opposite foot on the floor and a dumbbell in the free hand.",
+      "Keep your back flat and let the dumbbell hang at arm's length.",
+      "Pull the dumbbell up toward your hip, driving your elbow back and squeezing your back.",
+      "Lower under control to full extension and repeat for reps before switching sides."
+    ],
+    "cues": [
+      "Pull the elbow toward the hip",
+      "Keep your back flat and steady"
+    ],
+    "safetyNotes": [
+      "Avoid twisting your torso and keep your spine neutral to protect your lower back."
+    ]
+  },
+  "single-arm-weighted-row": {
+    "description": "Strengthens the back unilaterally by rowing a weight with one arm while hinged forward and braced.",
+    "steps": [
+      "Hinge forward at the hips with a flat back, holding a weight in one hand and bracing the other on a sturdy surface.",
+      "Let the weight hang straight down at arm's length.",
+      "Pull the weight up toward your hip, driving your elbow back and squeezing your shoulder blade.",
+      "Lower with control to full extension and repeat for reps before switching sides."
+    ],
+    "cues": [
+      "Drive the elbow back, not out",
+      "Keep your back flat and core tight"
+    ],
+    "safetyNotes": [
+      "Maintain a neutral spine and avoid rounding your back during the hinge and pull."
+    ]
+  },
+  "dumbbell-incline-row": {
+    "description": "Chest-supported row on an incline bench that targets the back and rear shoulders while reducing lower-back strain.",
+    "steps": [
+      "Lie chest-down on a bench set to about 30 to 45 degrees, holding a dumbbell in each hand with arms hanging straight down.",
+      "Set your shoulder blades down and away from your ears before pulling.",
+      "Drive your elbows up and back, squeezing your shoulder blades together until the dumbbells reach your ribs.",
+      "Lower under control until your arms are fully extended."
+    ],
+    "cues": [
+      "Lead with the elbows",
+      "Squeeze the shoulder blades"
+    ],
+    "safetyNotes": [
+      "Keep your chest pinned to the bench so you don't swing the weight with momentum."
+    ]
+  },
+  "narrow-grip-lat-pulldown": {
+    "description": "Cable pulldown with a close grip that builds back width and thickness while emphasizing the lower lats.",
+    "steps": [
+      "Sit at the pulldown machine with thighs secured and grip the close handle with palms facing in.",
+      "Lean back slightly and lift your chest toward the bar.",
+      "Pull the handle to your upper chest by driving your elbows down and back.",
+      "Return the handle slowly until your arms are fully extended overhead."
+    ],
+    "cues": [
+      "Pull with the elbows",
+      "Chest tall throughout"
+    ],
+    "safetyNotes": [
+      "Avoid leaning back excessively or jerking the weight to complete a rep."
+    ]
+  },
+  "seated-cable-rows-wide-grip": {
+    "description": "Seated cable row with a wide grip that targets the mid-back, rhombids, and rear delts for thickness.",
+    "steps": [
+      "Sit tall on the seat with feet braced and grip the wide bar with a slight bend in your knees.",
+      "Set your torso upright and pull your shoulder blades down.",
+      "Row the bar toward your upper abdomen, driving your elbows out and back.",
+      "Extend your arms slowly to the start without rounding your back."
+    ],
+    "cues": [
+      "Pinch the shoulder blades",
+      "Keep the torso upright"
+    ],
+    "safetyNotes": [
+      "Don't round your lower back or heave your torso to move the weight."
+    ]
+  },
+  "seated-cable-rows-narrow-grip": {
+    "description": "Seated cable row with a close grip that emphasizes the lats and inner back through a long range of motion.",
+    "steps": [
+      "Sit tall with feet braced and grip the close V-handle with palms facing each other.",
+      "Set your chest up and shoulder blades down before pulling.",
+      "Row the handle to your stomach by driving your elbows straight back along your sides.",
+      "Let the handle travel forward slowly until your arms are fully extended."
+    ],
+    "cues": [
+      "Drive elbows back",
+      "Stretch forward at the bottom"
+    ],
+    "safetyNotes": [
+      "Keep your spine neutral and avoid using momentum from your lower back."
+    ]
+  },
+  "flat-lying-supinated-row": {
+    "description": "Bodyweight row done lying under a bar with an underhand grip that targets the lats and biceps.",
+    "steps": [
+      "Lie face-up under a fixed bar and grip it slightly wider than shoulder width with palms facing you.",
+      "Hang with arms straight, heels on the floor, and body in a straight line.",
+      "Pull your chest up to the bar by driving your elbows down toward your hips.",
+      "Lower yourself slowly until your arms are fully extended."
+    ],
+    "cues": [
+      "Keep the body rigid",
+      "Pull chest to bar"
+    ],
+    "safetyNotes": [
+      "Brace your core and avoid sagging your hips out of the straight-line position."
+    ]
+  },
+  "dumbbell-lat-pull-over": {
+    "description": "Lying pullover with a dumbbell that stretches and works the lats and serratus across an overhead arc.",
+    "steps": [
+      "Lie on a bench holding one dumbbell with both hands cupped under the top plate over your chest.",
+      "Keep a slight bend in your elbows and your feet planted firmly.",
+      "Lower the dumbbell back over your head until you feel a stretch through your lats.",
+      "Pull the weight back over your chest using your back muscles."
+    ],
+    "cues": [
+      "Feel the lats stretch",
+      "Keep elbows slightly bent"
+    ],
+    "safetyNotes": [
+      "Use a manageable weight and keep your lower back from arching off the bench."
+    ]
+  },
+  "cable-bar-bent-over-row": {
+    "description": "Bent-over cable row using a low pulley and bar that builds mid-back thickness with constant tension.",
+    "steps": [
+      "Stand facing a low cable pulley and grip the bar with hands shoulder-width apart.",
+      "Hinge forward at the hips with a flat back and slight knee bend.",
+      "Row the bar to your lower ribs by driving your elbows up and back.",
+      "Extend your arms under control while holding the hinged position."
+    ],
+    "cues": [
+      "Keep the back flat",
+      "Row to the belly"
+    ],
+    "safetyNotes": [
+      "Maintain a neutral spine throughout and avoid rounding your back under load."
+    ]
+  },
+  "barbell-bicep-curls": {
+    "description": "Standing barbell curl that builds overall biceps size and strength through a full elbow flexion.",
+    "steps": [
+      "Stand tall holding a barbell with an underhand, shoulder-width grip and arms extended.",
+      "Keep your elbows tucked close to your sides.",
+      "Curl the bar up toward your shoulders by flexing only at the elbows.",
+      "Lower the bar slowly until your arms are fully straight."
+    ],
+    "cues": [
+      "Pin the elbows in",
+      "Control the lowering"
+    ],
+    "safetyNotes": [
+      "Avoid swinging your torso or using your hips to heave the weight up."
+    ]
+  },
+  "barbell-12-curl-full-curl-bicep-curls": {
+    "description": "Barbell curl combining partial and full reps to maximize biceps time under tension and burn.",
+    "steps": [
+      "Stand holding a barbell with an underhand, shoulder-width grip and arms extended.",
+      "Curl the bar halfway up to a 90-degree elbow bend, then lower to the start.",
+      "Curl the bar all the way to your shoulders for a full rep, then lower fully.",
+      "Repeat alternating the half curl and full curl as one cycle."
+    ],
+    "cues": [
+      "Keep elbows fixed",
+      "Hit each range cleanly"
+    ],
+    "safetyNotes": [
+      "Use lighter weight than a standard curl since the extended tension fatigues quickly."
+    ]
+  },
+  "alternating-incline-bicep-curls": {
+    "description": "Seated incline dumbbell curl that lengthens the biceps for a strong stretch and peak contraction.",
+    "steps": [
+      "Sit back on an incline bench holding a dumbbell in each hand with arms hanging straight down.",
+      "Let your shoulders stay back so your arms hang behind your torso.",
+      "Curl one dumbbell up toward your shoulder while keeping the other arm extended.",
+      "Lower under control and alternate arms each rep."
+    ],
+    "cues": [
+      "Let the arms hang back",
+      "Curl one side at a time"
+    ],
+    "safetyNotes": [
+      "Keep your upper arms still against the bench and avoid swinging the dumbbells."
+    ]
+  },
+  "barbell-21s-bicep-curls": {
+    "description": "Biceps curl sequence of 7 lower, 7 upper, and 7 full reps to torch the muscle with high volume.",
+    "steps": [
+      "Stand holding a barbell with an underhand, shoulder-width grip and arms extended.",
+      "Perform 7 reps from full extension to the halfway point.",
+      "Perform 7 reps from the halfway point up to your shoulders.",
+      "Finish with 7 full-range reps from extension to the top."
+    ],
+    "cues": [
+      "Keep elbows locked in place",
+      "Count each range out"
+    ],
+    "safetyNotes": [
+      "Choose a light load, as the 21 continuous reps fatigue the biceps rapidly."
+    ]
+  },
+  "stability-ball-dumbbell-preacher-curl": {
+    "description": "Preacher-style dumbbell curl with the upper arm braced on a stability ball to isolate the biceps.",
+    "steps": [
+      "Kneel behind a stability ball and rest the back of one upper arm across the top of the ball.",
+      "Hold a dumbbell with that arm fully extended down the ball's face.",
+      "Curl the dumbbell up toward your shoulder while keeping the arm pressed to the ball.",
+      "Lower slowly until your arm is straight, then switch sides."
+    ],
+    "cues": [
+      "Keep the arm on the ball",
+      "Avoid bouncing at the bottom"
+    ],
+    "safetyNotes": [
+      "Control the lowering and don't fully snap the elbow straight under load."
+    ]
+  },
+  "stability-ball-cable-bar-preacher-curl": {
+    "description": "Preacher curl with a cable bar and stability ball that keeps constant tension on the biceps.",
+    "steps": [
+      "Kneel behind a stability ball facing a low cable, resting both upper arms over the ball.",
+      "Grip the cable bar with an underhand grip and arms extended down the ball.",
+      "Curl the bar up toward your shoulders while keeping your arms on the ball.",
+      "Lower the bar slowly until your arms are fully extended."
+    ],
+    "cues": [
+      "Anchor the arms on the ball",
+      "Feel the constant tension"
+    ],
+    "safetyNotes": [
+      "Keep your core engaged so the ball stays stable throughout each rep."
+    ]
+  },
+  "stability-ball-cable-rope-hammer-preacher-curl": {
+    "description": "Hammer-grip rope preacher curl over a stability ball that targets the biceps and brachialis.",
+    "steps": [
+      "Kneel behind a stability ball facing a low cable, resting your upper arms over the ball.",
+      "Grip the rope with a neutral hammer grip and arms extended down the ball.",
+      "Curl the rope up toward your shoulders, keeping palms facing each other.",
+      "Lower the rope slowly until your arms are fully extended."
+    ],
+    "cues": [
+      "Keep palms facing in",
+      "Arms stay on the ball"
+    ],
+    "safetyNotes": [
+      "Maintain core tension to keep the ball from rolling during the curl."
+    ]
+  },
+  "cable-bar-alternating-12-curl-full-curl": {
+    "description": "Cable bar curl alternating half and full reps to keep constant tension and build biceps endurance.",
+    "steps": [
+      "Stand facing a low cable pulley and grip the bar underhand with arms extended.",
+      "Curl the bar halfway to a 90-degree elbow bend, then lower to the start.",
+      "Curl the bar fully up to your shoulders, then lower to full extension.",
+      "Alternate the half curl and full curl as one continuous cycle."
+    ],
+    "cues": [
+      "Keep elbows pinned",
+      "Hit each range fully"
+    ],
+    "safetyNotes": [
+      "Keep your torso still and let the cable, not momentum, drive the reps."
+    ]
+  },
+  "dumbbell-hammer-curls": {
+    "description": "Neutral-grip dumbbell curl that builds the biceps, brachialis, and forearms for thicker arms.",
+    "steps": [
+      "Stand tall holding a dumbbell in each hand with palms facing your thighs.",
+      "Keep your elbows tucked close to your sides.",
+      "Curl the dumbbells up toward your shoulders, keeping palms facing each other throughout.",
+      "Lower the weights slowly until your arms are fully extended."
+    ],
+    "cues": [
+      "Keep palms facing in",
+      "Elbows stay tucked"
+    ],
+    "safetyNotes": [
+      "Avoid swinging your body and keep your wrists firm and neutral."
+    ]
+  },
+  "alternating-dumbbell-bicep-curls": {
+    "description": "Standing dumbbell curl performed one arm at a time to focus contraction and even out side-to-side strength.",
+    "steps": [
+      "Stand tall holding a dumbbell in each hand with palms facing forward and arms extended.",
+      "Keep your elbows tucked close to your sides.",
+      "Curl one dumbbell up toward your shoulder while the other arm stays extended.",
+      "Lower under control and alternate arms each rep."
+    ],
+    "cues": [
+      "Curl one arm at a time",
+      "Keep the elbows still"
+    ],
+    "safetyNotes": [
+      "Avoid rocking your torso to help lift the weight."
+    ]
+  },
+  "calf-press-leg-press-machine": {
+    "description": "Calf press on the leg press sled that loads the gastrocnemius and soleus through ankle extension.",
+    "steps": [
+      "Sit in the leg press with the balls of your feet on the bottom edge of the platform and heels off.",
+      "Release the safety catches and support the weight with your legs nearly straight.",
+      "Press the platform away by extending your ankles and pushing through the balls of your feet.",
+      "Lower slowly to let your heels drop and stretch the calves."
+    ],
+    "cues": [
+      "Push through the toes",
+      "Get a full stretch at the bottom"
+    ],
+    "safetyNotes": [
+      "Keep your knees slightly bent, not locked, and control the stretch to protect the ankles."
+    ]
+  },
+  "standing-dumbbell-calf-raise": {
+    "description": "Standing calf raise with dumbbells that strengthens the calves through full ankle extension.",
+    "steps": [
+      "Stand tall holding a dumbbell in each hand, with the balls of your feet on a raised edge if available.",
+      "Let your heels drop slightly to stretch the calves.",
+      "Rise onto the balls of your feet as high as possible by extending your ankles.",
+      "Lower your heels slowly under control."
+    ],
+    "cues": [
+      "Rise up tall on the toes",
+      "Lower with control"
+    ],
+    "safetyNotes": [
+      "Hold a wall or rack for balance if you feel unsteady on the raised edge."
+    ]
+  },
+  "dumbbell-bench-press": {
+    "description": "Flat dumbbell press that builds the chest, front shoulders, and triceps with a long range of motion.",
+    "steps": [
+      "Lie on a flat bench holding a dumbbell in each hand at chest level with feet planted.",
+      "Set your shoulder blades back and down against the bench.",
+      "Press the dumbbells up until your arms are extended over your chest.",
+      "Lower the weights slowly until they reach chest level."
+    ],
+    "cues": [
+      "Keep the shoulder blades pinned",
+      "Press up and slightly in"
+    ],
+    "safetyNotes": [
+      "Keep your wrists stacked over your elbows and don't drop the dumbbells too low too fast."
+    ]
+  },
+  "single-arm-dumbbell-chest-press": {
+    "description": "One-arm dumbbell press that builds the chest while challenging the core to resist rotation.",
+    "steps": [
+      "Lie on a flat bench holding one dumbbell at chest level with the other hand resting at your side.",
+      "Plant your feet and brace your core to keep your torso square.",
+      "Press the dumbbell up until your arm is extended over your chest.",
+      "Lower the weight slowly to chest level, then complete reps and switch sides."
+    ],
+    "cues": [
+      "Resist the rotation",
+      "Keep the hips level"
+    ],
+    "safetyNotes": [
+      "Brace hard so your torso doesn't twist toward the working arm."
+    ]
+  },
+  "dumbbell-chest-fly": {
+    "description": "Flat dumbbell fly that stretches and isolates the chest through a wide arcing motion.",
+    "steps": [
+      "Lie on a flat bench holding a dumbbell in each hand pressed above your chest, palms facing each other.",
+      "Keep a soft bend in your elbows throughout.",
+      "Open your arms out wide in an arc until you feel a stretch across your chest.",
+      "Bring the dumbbells back together over your chest using your pecs."
+    ],
+    "cues": [
+      "Hug a wide arc",
+      "Keep the elbows soft"
+    ],
+    "safetyNotes": [
+      "Don't lower the weights too far or straighten your elbows, which strains the shoulders."
+    ]
+  },
+  "incline-dumbbell-chest-fly": {
+    "description": "Incline dumbbell fly that isolates the upper chest through a wide arcing stretch.",
+    "steps": [
+      "Lie back on a bench set to 30 to 45 degrees holding dumbbells above your chest, palms facing in.",
+      "Keep a soft bend in your elbows throughout.",
+      "Open your arms out wide in an arc until you feel a stretch across your upper chest.",
+      "Bring the dumbbells back together above your chest using your pecs."
+    ],
+    "cues": [
+      "Stretch wide at the bottom",
+      "Squeeze the chest at the top"
+    ],
+    "safetyNotes": [
+      "Keep elbows slightly bent and avoid overstretching at the bottom to protect the shoulders."
+    ]
+  },
+  "decline-push-up": {
+    "description": "Push-up with feet elevated that shifts emphasis to the upper chest and front shoulders.",
+    "steps": [
+      "Set your hands shoulder-width on the floor and place your feet up on a bench or step.",
+      "Form a straight line from your head to your heels with your core braced.",
+      "Lower your chest toward the floor by bending your elbows.",
+      "Press back up until your arms are fully extended."
+    ],
+    "cues": [
+      "Keep the body in one line",
+      "Lower with control"
+    ],
+    "safetyNotes": [
+      "Keep your hips from sagging and don't let your lower back arch."
+    ]
+  },
+  "incline-push-up": {
+    "description": "Push-up with hands elevated that reduces load to target the chest, shoulders, and triceps.",
+    "steps": [
+      "Place your hands shoulder-width on a bench or raised surface and step your feet back.",
+      "Form a straight line from your head to your heels with your core braced.",
+      "Lower your chest toward the edge by bending your elbows.",
+      "Press back up until your arms are fully extended."
+    ],
+    "cues": [
+      "Keep a rigid plank",
+      "Lower the chest to the edge"
+    ],
+    "safetyNotes": [
+      "Keep your core tight so your hips don't sag out of the straight-line position."
+    ]
+  },
+  "machine-chest-press": {
+    "description": "Seated machine press that works the chest and triceps along a fixed, controlled pushing path.",
+    "steps": [
+      "Sit on the machine with your back flat against the pad and handles at mid-chest height.",
+      "Grip the handles and set your shoulder blades back and down.",
+      "Press the handles forward until your arms are extended.",
+      "Return the handles slowly until your hands are back at chest level."
+    ],
+    "cues": [
+      "Keep the back on the pad",
+      "Press smoothly forward"
+    ],
+    "safetyNotes": [
+      "Adjust the seat so the handles align with your mid-chest to protect the shoulders."
+    ]
+  },
+  "broad-jump-jog-back": {
+    "description": "Explosive forward broad jump followed by a jog back that builds lower-body power and conditioning.",
+    "steps": [
+      "Stand with feet hip-width apart and knees slightly bent.",
+      "Swing your arms back and load your hips, then jump forward as far as possible.",
+      "Land softly on both feet with bent knees to absorb the impact.",
+      "Jog back to the start and repeat for reps."
+    ],
+    "cues": [
+      "Swing the arms to jump",
+      "Land soft and quiet"
+    ],
+    "safetyNotes": [
+      "Bend your knees and hips on landing to absorb force and protect your joints."
+    ]
+  },
+  "star-jump": {
+    "description": "Explosive jump spreading the arms and legs into a star shape to raise the heart rate and build power.",
+    "steps": [
+      "Stand tall with feet together and knees slightly bent.",
+      "Dip into a quarter squat to load your legs.",
+      "Jump up explosively, spreading your arms and legs out into a star shape.",
+      "Land softly with feet together and knees bent, then repeat."
+    ],
+    "cues": [
+      "Explode up and out",
+      "Land soft and balanced"
+    ],
+    "safetyNotes": [
+      "Land with soft, bent knees to cushion the impact on your joints."
+    ]
+  },
+  "burpees": {
+    "description": "Full-body conditioning move chaining a squat, plank, push-up, and jump to spike heart rate and power.",
+    "steps": [
+      "Stand with feet shoulder-width apart, then squat and place your hands on the floor.",
+      "Jump or step your feet back into a plank and lower your chest to the floor.",
+      "Press up and jump your feet back toward your hands.",
+      "Explode straight up into a jump, then repeat."
+    ],
+    "cues": [
+      "Keep a flat plank",
+      "Stay in a steady rhythm"
+    ],
+    "safetyNotes": [
+      "Keep your core braced in the plank so your lower back doesn't sag."
+    ]
+  },
+  "skaters": {
+    "description": "Lateral bounding from foot to foot that builds single-leg power, balance, and cardio capacity.",
+    "steps": [
+      "Stand on one leg with a slight knee bend and the other foot lifted behind you.",
+      "Push off explosively to bound sideways, landing on the opposite foot.",
+      "Let your trailing leg swing behind for balance as you land softly.",
+      "Bound back and forth, alternating sides for reps."
+    ],
+    "cues": [
+      "Push off the outside leg",
+      "Land soft and stick it"
+    ],
+    "safetyNotes": [
+      "Land on a bent knee and control your balance to avoid rolling an ankle."
+    ]
+  },
+  "180-degree-squat": {
+    "description": "Squat with a 180-degree jump turn that builds lower-body power, coordination, and conditioning.",
+    "steps": [
+      "Stand with feet shoulder-width apart and lower into a squat.",
+      "Drive up explosively and jump while rotating 180 degrees in the air.",
+      "Land softly facing the opposite direction with knees bent.",
+      "Immediately squat again and repeat the jump turn back."
+    ],
+    "cues": [
+      "Spot your landing",
+      "Land soft into the squat"
+    ],
+    "safetyNotes": [
+      "Land with bent knees and feet flat to absorb the rotation safely."
+    ]
+  },
+  "butt-kicks": {
+    "description": "Running-in-place drill kicking heels to the glutes to warm up the hamstrings and raise the heart rate.",
+    "steps": [
+      "Stand tall with feet hip-width apart and arms bent at your sides.",
+      "Jog in place, kicking one heel up toward your glute.",
+      "Quickly alternate, pulling the opposite heel up as the first foot lowers.",
+      "Keep a quick, light rhythm for the set."
+    ],
+    "cues": [
+      "Kick the heels to the glutes",
+      "Stay light on the feet"
+    ],
+    "safetyNotes": [
+      "Stay on the balls of your feet and land softly to ease impact on the knees."
+    ]
+  },
+  "air-squats": {
+    "description": "Bodyweight squat that builds the quads, glutes, and hamstrings while grooving sound squat mechanics.",
+    "steps": [
+      "Stand with feet shoulder-width apart and toes slightly turned out.",
+      "Brace your core and send your hips back and down.",
+      "Lower until your thighs are at least parallel, keeping your chest up.",
+      "Drive through your heels to stand back up tall."
+    ],
+    "cues": [
+      "Hips back and down",
+      "Drive through the heels"
+    ],
+    "safetyNotes": [
+      "Keep your knees tracking over your toes and your chest from collapsing forward."
+    ]
+  },
+  "side-to-side-squats": {
+    "description": "Squat shifting weight side to side that works the quads, glutes, and inner thighs while raising the heart rate.",
+    "steps": [
+      "Stand with feet wider than shoulder-width and toes slightly turned out.",
+      "Shift your weight to one side and squat down over that leg.",
+      "Push back to center and shift to squat over the opposite leg.",
+      "Continue alternating sides for reps."
+    ],
+    "cues": [
+      "Sit into each side",
+      "Keep the chest up"
+    ],
+    "safetyNotes": [
+      "Keep your working knee tracking over your toes as you shift your weight."
+    ]
+  },
+  "lateral-lunge": {
+    "description": "Side lunge that targets the quads, glutes, and inner thighs while improving hip mobility and stability.",
+    "steps": [
+      "Stand tall with feet together and hands at your chest.",
+      "Take a wide step out to one side and bend that knee, sitting your hips back.",
+      "Keep the trailing leg straight and your chest up as you lower.",
+      "Push off the bent leg to return to standing, then alternate sides."
+    ],
+    "cues": [
+      "Sit the hips back",
+      "Keep the trailing leg straight"
+    ],
+    "safetyNotes": [
+      "Keep the bent knee tracking over your foot and don't let it cave inward."
+    ]
+  },
+  "walking-lunges": {
+    "description": "A dynamic lower-body move that builds the quads, glutes, and balance by stepping forward into alternating lunges.",
+    "steps": [
+      "Stand tall with feet hip-width apart and hands on your hips or at your sides.",
+      "Step forward with one leg and lower until both knees bend to about 90 degrees.",
+      "Drive through the front heel and step the back foot forward into the next lunge.",
+      "Continue walking forward, alternating legs for the prescribed reps."
+    ],
+    "cues": [
+      "Keep torso upright",
+      "Drive through front heel"
+    ],
+    "safetyNotes": [
+      "Keep the front knee tracking over your toes and avoid letting it cave inward."
+    ]
+  },
+  "dumbbell-walking-lunges-glute-focused": {
+    "description": "A loaded walking lunge with a longer stride and forward lean to bias glute recruitment over the quads.",
+    "steps": [
+      "Stand tall holding a dumbbell in each hand at your sides with feet hip-width apart.",
+      "Take a long step forward and lower into a lunge with a slight forward torso lean.",
+      "Push through the front heel to bring the back leg forward into the next stride.",
+      "Repeat, alternating legs for the prescribed reps."
+    ],
+    "cues": [
+      "Lean slightly forward from hips",
+      "Push through front heel"
+    ],
+    "safetyNotes": [
+      "Keep the dumbbells controlled at your sides and the front knee aligned over your foot."
+    ]
+  },
+  "barbell-sumo-deadlift": {
+    "description": "A wide-stance barbell deadlift that emphasizes the glutes and inner thighs while keeping the torso more upright.",
+    "steps": [
+      "Stand with feet wider than shoulder-width and toes turned out, bar over mid-foot.",
+      "Hinge down and grip the bar inside your knees with arms straight.",
+      "Brace your core, then drive through your heels to stand tall and lock out the hips.",
+      "Lower the bar under control back to the floor and reset."
+    ],
+    "cues": [
+      "Open knees over toes",
+      "Squeeze glutes at top"
+    ],
+    "safetyNotes": [
+      "Keep your back flat and chest up throughout to protect your spine."
+    ]
+  },
+  "cable-glute-medius-kickback": {
+    "description": "An isolation cable move that targets the gluteus medius by driving the leg out and back against resistance.",
+    "steps": [
+      "Attach an ankle cuff to a low cable and face the machine, holding the frame for support.",
+      "Shift weight onto your standing leg and keep a soft knee.",
+      "Drive the working leg back and slightly out, squeezing the glute at the top.",
+      "Return slowly to the start and repeat for the prescribed reps."
+    ],
+    "cues": [
+      "Squeeze glute at top",
+      "Move from the hip only"
+    ],
+    "safetyNotes": [
+      "Avoid arching your lower back by keeping your core braced throughout the kickback."
+    ]
+  },
+  "cable-bar-rdl": {
+    "description": "A Romanian deadlift performed with a cable bar that loads the glutes and hamstrings through a hip hinge.",
+    "steps": [
+      "Attach a straight bar to a low cable and stand holding it with feet hip-width apart.",
+      "Keep a slight knee bend and brace your core with the bar against your thighs.",
+      "Hinge at the hips, pushing them back as the bar lowers along your legs.",
+      "Drive your hips forward to return to standing, squeezing your glutes at the top."
+    ],
+    "cues": [
+      "Push hips back",
+      "Keep bar close to legs"
+    ],
+    "safetyNotes": [
+      "Stop lowering when you feel a hamstring stretch and never round your lower back."
+    ]
+  },
+  "smith-machine-goodmornings": {
+    "description": "A hip-hinge move on the Smith machine that loads the glutes and hamstrings with a guided bar path.",
+    "steps": [
+      "Set the Smith bar across your upper back and unrack it with feet hip-width apart.",
+      "Keep a slight knee bend and brace your core tightly.",
+      "Hinge forward at the hips, lowering your chest until your torso is near parallel.",
+      "Drive your hips forward to return upright and squeeze your glutes."
+    ],
+    "cues": [
+      "Hinge from the hips",
+      "Keep back flat"
+    ],
+    "safetyNotes": [
+      "Use a light load and stop at a flat-back range to avoid spinal strain."
+    ]
+  },
+  "stationary-lunge-glute-focused": {
+    "description": "A split-stance lunge held in place with a forward lean to maximize glute engagement on the front leg.",
+    "steps": [
+      "Stand in a staggered stance with one foot forward and the other back on the ball of the foot.",
+      "Lean your torso slightly forward over the front thigh.",
+      "Lower straight down until the back knee nearly touches the floor.",
+      "Drive through the front heel to return to the top and repeat for reps."
+    ],
+    "cues": [
+      "Lean over front thigh",
+      "Drive through front heel"
+    ],
+    "safetyNotes": [
+      "Keep the front knee stacked over your ankle and avoid letting it drift forward past your toes."
+    ]
+  },
+  "single-leg-reverse-lunges": {
+    "description": "A bodyweight reverse lunge stepping back into a deep split to build glute and lower-body strength.",
+    "steps": [
+      "Stand tall with feet hip-width apart and hands at your hips for balance.",
+      "Step one foot back and lower until both knees bend to about 90 degrees.",
+      "Press through the front heel to return to standing.",
+      "Complete the reps on one leg before switching, or alternate as prescribed."
+    ],
+    "cues": [
+      "Step straight back",
+      "Press through front heel"
+    ],
+    "safetyNotes": [
+      "Lower the back knee under control and keep your torso upright to maintain balance."
+    ]
+  },
+  "barbell-goodmorning": {
+    "description": "A barbell hip hinge that strengthens the glutes and hamstrings by bowing the torso forward under load.",
+    "steps": [
+      "Set a barbell across your upper back and stand with feet hip-width apart.",
+      "Brace your core and unlock your knees slightly.",
+      "Hinge at the hips, pushing them back as your chest lowers toward parallel.",
+      "Drive your hips forward to stand tall and squeeze your glutes."
+    ],
+    "cues": [
+      "Push hips back",
+      "Keep chest proud"
+    ],
+    "safetyNotes": [
+      "Use a moderate load and maintain a flat back throughout to protect your spine."
+    ]
+  },
+  "dumbbell-box-step-up-glute-focused": {
+    "description": "A loaded step-up onto a box with a forward lean that emphasizes the glutes of the working leg.",
+    "steps": [
+      "Stand facing a knee-height box holding a dumbbell in each hand.",
+      "Place one full foot on the box and lean your torso slightly forward.",
+      "Drive through the box-leg heel to stand tall on top.",
+      "Lower under control back to the floor and repeat for reps before switching legs."
+    ],
+    "cues": [
+      "Push through top-foot heel",
+      "Minimize bottom-leg push"
+    ],
+    "safetyNotes": [
+      "Use a stable box and keep the working knee aligned over your foot as you rise."
+    ]
+  },
+  "landmine-squat": {
+    "description": "A squat anchored to a landmine bar that supports an upright torso while loading the glutes and quads.",
+    "steps": [
+      "Hold the end of a landmine bar at chest height with both hands and feet shoulder-width apart.",
+      "Brace your core and keep your chest up.",
+      "Bend your knees and hips to lower into a squat until your thighs reach parallel.",
+      "Drive through your heels to stand tall and repeat for reps."
+    ],
+    "cues": [
+      "Chest up",
+      "Drive through heels"
+    ],
+    "safetyNotes": [
+      "Let the bar's arc guide you and keep your knees tracking over your toes."
+    ]
+  },
+  "landmine-squat-and-press": {
+    "description": "A combined landmine squat and overhead press that works the glutes, legs, and shoulders in one movement.",
+    "steps": [
+      "Hold the landmine bar end at chest height with feet shoulder-width apart.",
+      "Lower into a squat until your thighs reach parallel.",
+      "Drive up explosively and press the bar overhead as you stand.",
+      "Return the bar to your chest and repeat for the prescribed reps."
+    ],
+    "cues": [
+      "Use leg drive to press",
+      "Brace core throughout"
+    ],
+    "safetyNotes": [
+      "Keep your core tight during the press and avoid leaning back as the bar travels up."
+    ]
+  },
+  "landmine-rdl": {
+    "description": "A Romanian deadlift using a landmine bar that loads the glutes and hamstrings through a guided hip hinge.",
+    "steps": [
+      "Hold the end of the landmine bar at your thighs with feet hip-width apart.",
+      "Keep a slight knee bend and brace your core.",
+      "Hinge at the hips and lower the bar along your legs until you feel a hamstring stretch.",
+      "Drive your hips forward to return upright and squeeze your glutes."
+    ],
+    "cues": [
+      "Push hips back",
+      "Keep bar close"
+    ],
+    "safetyNotes": [
+      "Keep your back flat and stop the descent before your lower back rounds."
+    ]
+  },
+  "landmine-curtsy-lunge": {
+    "description": "A landmine-supported curtsy lunge that targets the glutes by crossing one leg behind the other.",
+    "steps": [
+      "Hold the landmine bar end at chest height with feet hip-width apart.",
+      "Step one leg back and across behind your standing leg.",
+      "Lower until your front thigh is near parallel, keeping your hips square.",
+      "Drive through the front heel back to standing and repeat for reps."
+    ],
+    "cues": [
+      "Cross leg behind",
+      "Keep hips square"
+    ],
+    "safetyNotes": [
+      "Move slowly and keep the front knee aligned over your foot to protect the joint."
+    ]
+  },
+  "landmine-alternating-squat-and-rdl": {
+    "description": "A landmine combo alternating a squat and a Romanian deadlift to train the glutes through two hip patterns.",
+    "steps": [
+      "Hold the landmine bar end at chest height with feet shoulder-width apart.",
+      "Perform a squat by bending your knees and hips, then stand back up.",
+      "Next, hinge at the hips into an RDL, lowering the bar along your legs.",
+      "Return upright and continue alternating squat and RDL for reps."
+    ],
+    "cues": [
+      "Squat with knees, hinge with hips",
+      "Brace core each rep"
+    ],
+    "safetyNotes": [
+      "Keep your back flat on the RDL and your knees tracking over your toes on the squat."
+    ]
+  },
+  "leg-press-high-stance": {
+    "description": "A leg press with feet placed high on the platform to shift emphasis onto the glutes and hamstrings.",
+    "steps": [
+      "Sit in the leg press and place your feet high and wide on the platform.",
+      "Release the safeties and lower the platform until your knees reach about 90 degrees.",
+      "Drive through your heels to extend your legs without locking the knees.",
+      "Repeat for the prescribed reps under control."
+    ],
+    "cues": [
+      "Push through heels",
+      "Stop short of lockout"
+    ],
+    "safetyNotes": [
+      "Keep your lower back flat against the pad and never fully lock your knees."
+    ]
+  },
+  "power-squat-sumo-facing-in": {
+    "description": "A wide sumo stance on the power squat machine facing in to emphasize the glutes and inner thighs.",
+    "steps": [
+      "Position yourself in the power squat machine with shoulders under the pads.",
+      "Set your feet wide with toes turned out in a sumo stance.",
+      "Lower under control until your thighs reach parallel.",
+      "Drive through your heels to stand and squeeze your glutes at the top."
+    ],
+    "cues": [
+      "Open knees over toes",
+      "Drive through heels"
+    ],
+    "safetyNotes": [
+      "Keep your spine neutral against the pads and avoid letting your knees cave inward."
+    ]
+  },
+  "dumbbell-squat-glute-focus": {
+    "description": "A dumbbell squat with a slightly wider stance and hip-back descent to bias the glutes.",
+    "steps": [
+      "Stand holding a dumbbell in each hand at your sides with feet slightly wider than shoulders.",
+      "Brace your core and push your hips back as you bend your knees.",
+      "Lower until your thighs reach at least parallel.",
+      "Drive through your heels to stand tall and squeeze your glutes."
+    ],
+    "cues": [
+      "Push hips back",
+      "Drive through heels"
+    ],
+    "safetyNotes": [
+      "Keep your chest up and knees tracking over your toes throughout the squat."
+    ]
+  },
+  "decline-leg-press-narrow-stance": {
+    "description": "A leg press with a narrow foot stance that shifts emphasis toward the quads and outer glutes.",
+    "steps": [
+      "Sit in the leg press and place your feet close together low on the platform.",
+      "Release the safeties and lower the platform until your knees reach about 90 degrees.",
+      "Drive through the balls and heels of your feet to extend your legs.",
+      "Stop short of locking out and repeat for reps."
+    ],
+    "cues": [
+      "Keep feet close together",
+      "Stop short of lockout"
+    ],
+    "safetyNotes": [
+      "Keep your hips flat on the seat and avoid letting your lower back round at the bottom."
+    ]
+  },
+  "power-squat-goodmornings": {
+    "description": "A hip-hinge goodmorning performed on the power squat machine to load the glutes and hamstrings.",
+    "steps": [
+      "Position your shoulders under the pads in the power squat machine with feet hip-width apart.",
+      "Keep a slight knee bend and brace your core.",
+      "Hinge forward at the hips, lowering your torso toward parallel.",
+      "Drive your hips forward to return upright and squeeze your glutes."
+    ],
+    "cues": [
+      "Hinge from hips",
+      "Keep back flat"
+    ],
+    "safetyNotes": [
+      "Use a controlled range and maintain a neutral spine to protect your lower back."
+    ]
+  },
+  "barbell-rdl": {
+    "description": "A barbell Romanian deadlift that builds the glutes and hamstrings through a loaded hip hinge.",
+    "steps": [
+      "Stand holding a barbell at your thighs with feet hip-width apart.",
+      "Keep a slight knee bend and brace your core with the bar against your legs.",
+      "Hinge at the hips, lowering the bar along your legs until you feel a hamstring stretch.",
+      "Drive your hips forward to stand tall and squeeze your glutes."
+    ],
+    "cues": [
+      "Push hips back",
+      "Keep bar close to legs"
+    ],
+    "safetyNotes": [
+      "Keep your back flat and stop lowering before your spine begins to round."
+    ]
+  },
+  "romanian-deadlift": {
+    "description": "A hip-hinge deadlift variation that loads the hamstrings through a controlled stretch and contraction.",
+    "steps": [
+      "Stand holding a loaded bar at your thighs with feet hip-width apart.",
+      "Keep a slight knee bend and brace your core.",
+      "Push your hips back and lower the bar along your legs until you feel a hamstring stretch.",
+      "Drive your hips forward to return to standing tall."
+    ],
+    "cues": [
+      "Push hips back",
+      "Feel the hamstring stretch"
+    ],
+    "safetyNotes": [
+      "Maintain a flat back throughout and avoid rounding at the bottom of the hinge."
+    ]
+  },
+  "sumo-rdl": {
+    "description": "A wide-stance Romanian deadlift that emphasizes the glutes and inner thighs through a hip hinge.",
+    "steps": [
+      "Stand with feet wider than shoulders, toes turned out, holding the bar in front.",
+      "Keep a slight knee bend and brace your core.",
+      "Hinge at the hips, lowering the bar along your legs until you feel a stretch.",
+      "Drive your hips forward to stand tall and squeeze your glutes."
+    ],
+    "cues": [
+      "Open knees over toes",
+      "Push hips back"
+    ],
+    "safetyNotes": [
+      "Keep your back flat and the bar close to your body throughout the movement."
+    ]
+  },
+  "dumbbell-single-leg-deadlift": {
+    "description": "A single-leg hip hinge with a dumbbell that builds hamstring strength, balance, and stability.",
+    "steps": [
+      "Stand on one leg holding a dumbbell in the opposite hand.",
+      "Keep a slight bend in the standing knee and brace your core.",
+      "Hinge at the hip, lowering the weight as your free leg extends behind you.",
+      "Drive through the standing heel to return upright and repeat before switching sides."
+    ],
+    "cues": [
+      "Hinge from the hip",
+      "Keep hips level"
+    ],
+    "safetyNotes": [
+      "Move slowly and keep your back flat to maintain balance and protect your spine."
+    ]
+  },
+  "dumbbell-deadlift": {
+    "description": "A hip-hinge deadlift with dumbbells that strengthens the hamstrings, glutes, and lower back.",
+    "steps": [
+      "Stand with feet hip-width apart holding a dumbbell in each hand in front of your thighs.",
+      "Hinge at the hips and bend your knees to lower the dumbbells toward the floor.",
+      "Keep your back flat and the weights close to your legs.",
+      "Drive through your heels to stand tall and squeeze your glutes."
+    ],
+    "cues": [
+      "Keep weights close",
+      "Drive through heels"
+    ],
+    "safetyNotes": [
+      "Maintain a flat back throughout and avoid rounding your spine as you lift."
+    ]
+  },
+  "nordic-hamstring-curl": {
+    "description": "An advanced bodyweight curl that builds eccentric hamstring strength by lowering the torso under control.",
+    "steps": [
+      "Kneel upright with your ankles anchored under a sturdy support or held by a partner.",
+      "Keep your hips extended and your body straight from knees to head.",
+      "Lower your torso forward slowly, resisting with your hamstrings as long as possible.",
+      "Catch yourself with your hands, then push back to the start and repeat."
+    ],
+    "cues": [
+      "Resist the descent",
+      "Keep hips extended"
+    ],
+    "safetyNotes": [
+      "Lower only as far as you can control and use your hands to catch yourself to avoid falling."
+    ]
+  },
+  "ball-glute-bridge": {
+    "description": "A glute bridge with feet on a stability ball that loads the hamstrings and glutes while challenging stability.",
+    "steps": [
+      "Lie on your back with your heels on a stability ball and arms flat at your sides.",
+      "Brace your core to keep the ball steady.",
+      "Drive through your heels to lift your hips until your body forms a straight line.",
+      "Lower under control and repeat for the prescribed reps."
+    ],
+    "cues": [
+      "Squeeze glutes at top",
+      "Keep ball steady"
+    ],
+    "safetyNotes": [
+      "Move slowly to control the ball and avoid overextending your lower back at the top."
+    ]
+  },
+  "staticbarbell-lunges": {
+    "description": "A stationary barbell split lunge that builds the quads by lowering straight down in a fixed stance.",
+    "steps": [
+      "Set a barbell across your upper back and stand in a split stance, one foot forward.",
+      "Brace your core and keep your torso upright.",
+      "Lower straight down until your back knee nearly touches the floor.",
+      "Drive through the front heel to return to the top and repeat before switching legs."
+    ],
+    "cues": [
+      "Stay tall",
+      "Lower straight down"
+    ],
+    "safetyNotes": [
+      "Keep the front knee aligned over your ankle and control the descent to protect the joint."
+    ]
+  },
+  "smith-machine-squat": {
+    "description": "A squat on the Smith machine that loads the quads with a guided vertical bar path for added stability.",
+    "steps": [
+      "Set the Smith bar across your upper back and position your feet slightly forward.",
+      "Unrack the bar and brace your core.",
+      "Bend your knees and hips to lower until your thighs reach parallel.",
+      "Drive through your feet to stand tall and repeat for reps."
+    ],
+    "cues": [
+      "Brace core",
+      "Drive through whole foot"
+    ],
+    "safetyNotes": [
+      "Set the safety stops at the bottom of your range and keep your back against the bar's path."
+    ]
+  },
+  "smith-machine-lunge": {
+    "description": "A split-stance lunge on the Smith machine that targets the quads with a stable guided bar.",
+    "steps": [
+      "Set the Smith bar across your upper back and step into a split stance, one foot forward.",
+      "Unrack the bar and brace your core.",
+      "Lower straight down until your back knee nearly touches the floor.",
+      "Drive through the front heel to return up and repeat before switching legs."
+    ],
+    "cues": [
+      "Stay upright",
+      "Drive through front heel"
+    ],
+    "safetyNotes": [
+      "Keep the front knee tracking over your foot and set the safety stops before starting."
+    ]
+  },
+  "hack-squat-machine": {
+    "description": "A machine squat with back support that isolates the quads through a fixed, angled pressing path.",
+    "steps": [
+      "Position your back against the pad and shoulders under the supports with feet shoulder-width on the platform.",
+      "Release the safeties and brace your core.",
+      "Lower under control until your knees reach about 90 degrees.",
+      "Drive through your feet to extend your legs without locking out."
+    ],
+    "cues": [
+      "Push through whole foot",
+      "Keep back on pad"
+    ],
+    "safetyNotes": [
+      "Keep your knees tracking over your toes and avoid bouncing at the bottom of the movement."
+    ]
+  },
+  "machine-leg-press": {
+    "description": "A seated press that builds the quads by extending the legs against a loaded platform.",
+    "steps": [
+      "Sit in the leg press with feet shoulder-width apart on the platform.",
+      "Release the safeties and brace your core against the seat.",
+      "Lower the platform until your knees reach about 90 degrees.",
+      "Drive through your feet to extend your legs, stopping short of lockout."
+    ],
+    "cues": [
+      "Push through whole foot",
+      "Stop short of lockout"
+    ],
+    "safetyNotes": [
+      "Keep your lower back flat against the seat and never fully lock your knees."
+    ]
+  },
+  "single-leg-press": {
+    "description": "A one-legged leg press that builds quad strength and corrects side-to-side imbalances.",
+    "steps": [
+      "Sit in the leg press and place one foot centered on the platform.",
+      "Release the safeties and brace your core.",
+      "Lower the platform until your knee reaches about 90 degrees.",
+      "Drive through your foot to extend the leg, then repeat before switching sides."
+    ],
+    "cues": [
+      "Center the foot",
+      "Stop short of lockout"
+    ],
+    "safetyNotes": [
+      "Keep the working knee aligned over your foot and avoid letting it cave inward."
+    ]
+  },
+  "barbell-reverse-deficit-lunge": {
+    "description": "A reverse lunge stepping back off a raised surface to load the quads through a deeper range of motion.",
+    "steps": [
+      "Stand on a low platform with a barbell across your upper back and feet hip-width apart.",
+      "Step one foot back and down off the platform.",
+      "Lower until the front thigh passes parallel and the back knee nears the floor.",
+      "Drive through the front heel to return to the platform and repeat before switching legs."
+    ],
+    "cues": [
+      "Step straight back",
+      "Drive through front heel"
+    ],
+    "safetyNotes": [
+      "Use a stable platform and control the deeper descent to keep the front knee aligned."
+    ]
+  },
+  "machine-leg-extension": {
+    "description": "A seated isolation move that targets the quads by extending the knees against a padded lever.",
+    "steps": [
+      "Sit in the machine with your back against the pad and shins behind the ankle roller.",
+      "Adjust the pad so your knees align with the machine's pivot.",
+      "Extend your legs to lift the roller until your knees are nearly straight.",
+      "Lower under control and repeat for the prescribed reps."
+    ],
+    "cues": [
+      "Squeeze quads at top",
+      "Lower slowly"
+    ],
+    "safetyNotes": [
+      "Avoid jerking the weight or snapping your knees fully straight at the top."
+    ]
+  },
+  "walking-dumbbell-lunges": {
+    "description": "A moving lunge holding dumbbells that builds quad strength and balance by stepping forward through alternating legs.",
+    "steps": [
+      "Stand tall holding a dumbbell in each hand at your sides with feet hip-width apart.",
+      "Step forward with one leg and lower until both knees bend to about 90 degrees.",
+      "Drive through the front heel and bring the back foot forward into the next lunge.",
+      "Continue alternating legs as you walk forward for the prescribed reps."
+    ],
+    "cues": [
+      "Keep your torso upright",
+      "Track front knee over toes"
+    ],
+    "safetyNotes": [
+      "Avoid letting the front knee collapse inward or travel far past your toes."
+    ]
+  },
+  "barbell-deficit-curtsy-lunge": {
+    "description": "A barbell curtsy lunge performed from a raised platform for extra range, targeting the quads, glutes, and outer hips.",
+    "steps": [
+      "Stand on a low platform with a barbell racked across your upper back and feet hip-width.",
+      "Step one foot back and across behind the other into a curtsy position.",
+      "Lower until the front thigh is near parallel, dropping below platform level.",
+      "Drive through the front heel to return to standing, then repeat on each side."
+    ],
+    "cues": [
+      "Keep hips square forward",
+      "Sit straight down, not twisted"
+    ],
+    "safetyNotes": [
+      "Master the bodyweight curtsy lunge before adding a barbell and a deficit."
+    ]
+  },
+  "goblet-squats-heel-elevated-squats": {
+    "description": "A front-loaded squat holding a weight at your chest that emphasizes the quads while keeping the torso upright.",
+    "steps": [
+      "Hold a dumbbell or kettlebell vertically against your chest with both hands, feet shoulder-width.",
+      "Optionally place your heels on a small wedge or plates for extra depth.",
+      "Brace your core and squat down until thighs reach at least parallel.",
+      "Drive through your feet to stand back up to full extension."
+    ],
+    "cues": [
+      "Elbows down and chest tall",
+      "Push knees out over toes"
+    ],
+    "safetyNotes": [
+      "Keep your back flat and avoid rounding forward as you reach the bottom."
+    ]
+  },
+  "barbell-curtsy-lunge": {
+    "description": "A barbell curtsy lunge that works the quads, glutes, and outer hips by stepping one leg behind and across.",
+    "steps": [
+      "Stand with a barbell racked across your upper back and feet hip-width apart.",
+      "Step one foot back and diagonally behind the other into a curtsy stance.",
+      "Bend both knees to lower until the front thigh nears parallel.",
+      "Push through the front heel to stand, then repeat for the prescribed reps."
+    ],
+    "cues": [
+      "Keep hips and shoulders square",
+      "Stay tall through the spine"
+    ],
+    "safetyNotes": [
+      "Move with control to keep your balance and avoid twisting the front knee."
+    ]
+  },
+  "dumbbell-rear-lunges": {
+    "description": "A reverse lunge holding dumbbells that builds quad and glute strength while sparing the knees compared to forward lunges.",
+    "steps": [
+      "Stand tall with a dumbbell in each hand at your sides and feet hip-width apart.",
+      "Step one foot straight back and lower until both knees bend to about 90 degrees.",
+      "Drive through the front heel to return the back foot to standing.",
+      "Repeat on the same leg or alternate sides for the prescribed reps."
+    ],
+    "cues": [
+      "Keep weight in the front heel",
+      "Lower the back knee straight down"
+    ],
+    "safetyNotes": [
+      "Keep your front shin vertical and avoid pushing the knee past your toes."
+    ]
+  },
+  "dumbbell-step-ups": {
+    "description": "A loaded step-up onto a box that builds single-leg quad and glute strength while challenging balance.",
+    "steps": [
+      "Stand facing a knee-high box holding a dumbbell in each hand at your sides.",
+      "Place one full foot on the box and press through that heel to stand on top.",
+      "Bring the trailing foot up to meet it, standing tall on the box.",
+      "Step the same foot back down with control, then repeat for the prescribed reps."
+    ],
+    "cues": [
+      "Drive through the top-foot heel",
+      "Stand fully tall each rep"
+    ],
+    "safetyNotes": [
+      "Use a stable box at a height you can control without pushing off the bottom leg."
+    ]
+  },
+  "bulgarian-split-squat-quad-focused": {
+    "description": "A rear-foot-elevated split squat with an upright torso that places heavy emphasis on the front-leg quad.",
+    "steps": [
+      "Stand a stride in front of a bench and rest the top of one foot on it behind you.",
+      "Keep your torso upright and your front foot close under your hips.",
+      "Lower straight down until the front thigh reaches about parallel.",
+      "Drive through the front heel to stand, finishing all reps before switching legs."
+    ],
+    "cues": [
+      "Stay tall to load the quad",
+      "Drop the back knee straight down"
+    ],
+    "safetyNotes": [
+      "Find stable balance before adding load and keep the front knee tracking over the foot."
+    ]
+  },
+  "wall-sit-with-dumbbell-curl-and-press-plus-adduction": {
+    "description": "An isometric wall sit holding quad tension while curling and pressing dumbbells and squeezing the inner thighs.",
+    "steps": [
+      "Slide down a wall until your thighs are parallel to the floor with knees over ankles, holding a dumbbell in each hand.",
+      "Hold the seated position with your back flat against the wall.",
+      "Curl the dumbbells to your shoulders, press overhead, then lower back down.",
+      "Press your inner thighs together intermittently and hold for the prescribed duration."
+    ],
+    "cues": [
+      "Keep thighs parallel and still",
+      "Press the whole back into the wall"
+    ],
+    "safetyNotes": [
+      "Stop if your knees ache or your thighs give out before the time is up."
+    ]
+  },
+  "weighted-squat": {
+    "description": "A bodyweight squat with added load that builds overall quad and glute strength through a full sit-down motion.",
+    "steps": [
+      "Stand with feet shoulder-width apart holding a weight at your chest or sides.",
+      "Brace your core and push your hips back as you bend your knees.",
+      "Lower until your thighs are at least parallel to the floor.",
+      "Drive through your feet to stand back up to full extension."
+    ],
+    "cues": [
+      "Keep chest up and core braced",
+      "Push knees out over toes"
+    ],
+    "safetyNotes": [
+      "Keep your heels planted and your back flat throughout the movement."
+    ]
+  },
+  "staticdumbbell-lunges": {
+    "description": "A stationary split-stance lunge holding dumbbells that builds quad strength without stepping in or out.",
+    "steps": [
+      "Stand in a split stance with one foot forward, holding a dumbbell in each hand.",
+      "Lower straight down until both knees bend to about 90 degrees.",
+      "Drive through the front heel to return to the top of the stance.",
+      "Complete all reps on one side, then switch your lead leg."
+    ],
+    "cues": [
+      "Drop straight down, not forward",
+      "Keep your torso upright"
+    ],
+    "safetyNotes": [
+      "Keep the front shin vertical and the back knee from slamming the floor."
+    ]
+  },
+  "machine-shoulder-press-narrow-grip": {
+    "description": "A seated machine press with hands set close that drives the front delts and triceps overhead through a guided path.",
+    "steps": [
+      "Sit in the machine with your back flat against the pad and grip the handles narrow.",
+      "Set the seat so the handles start near shoulder height.",
+      "Press the handles straight up until your arms are nearly extended.",
+      "Lower under control back to the starting height and repeat."
+    ],
+    "cues": [
+      "Keep wrists stacked over elbows",
+      "Press evenly with both arms"
+    ],
+    "safetyNotes": [
+      "Avoid locking the elbows out hard at the top of each press."
+    ]
+  },
+  "reverse-fly-machine": {
+    "description": "A seated machine movement that opens the arms back to target the rear delts and upper-back muscles.",
+    "steps": [
+      "Sit facing the pad with your chest pressed against it and grip the handles in front.",
+      "Adjust the handles so your arms start nearly straight at shoulder height.",
+      "Pull the handles back and out in a wide arc, leading with your elbows.",
+      "Squeeze your rear delts, then return slowly to the start."
+    ],
+    "cues": [
+      "Lead with the elbows",
+      "Squeeze shoulder blades together"
+    ],
+    "safetyNotes": [
+      "Use a moderate weight and avoid jerking the handles back with momentum."
+    ]
+  },
+  "bent-over-dumbbell-reverse-fly": {
+    "description": "A hinged-over fly raising dumbbells out to the sides to target the rear delts and upper back.",
+    "steps": [
+      "Hold a dumbbell in each hand and hinge forward at the hips with a flat back.",
+      "Let the dumbbells hang under your shoulders with a slight elbow bend.",
+      "Raise both arms out to the sides until they reach shoulder height.",
+      "Lower the dumbbells slowly back to the start and repeat."
+    ],
+    "cues": [
+      "Lead with your pinkies up",
+      "Keep a soft bend in the elbows"
+    ],
+    "safetyNotes": [
+      "Keep your back flat and use light weight to protect your lower back."
+    ]
+  },
+  "squat-press": {
+    "description": "A combined squat and overhead press that works the shoulders while driving power from the legs in one fluid rep.",
+    "steps": [
+      "Stand with feet shoulder-width apart holding weights at your shoulders.",
+      "Bend your knees and lower into a squat until thighs reach parallel.",
+      "Drive up through your feet and press the weights overhead as you stand.",
+      "Lower the weights back to your shoulders and repeat into the next squat."
+    ],
+    "cues": [
+      "Use leg drive into the press",
+      "Brace your core overhead"
+    ],
+    "safetyNotes": [
+      "Keep your back flat and avoid arching as you press the weight overhead."
+    ]
+  },
+  "single-are-cable-reverse-fly": {
+    "description": "A one-arm cable fly pulling across the body to isolate the rear delt with constant tension.",
+    "steps": [
+      "Stand side-on to a cable set at shoulder height and grab the handle with the far hand.",
+      "Step back so the cable crosses in front of your chest with arm extended.",
+      "Pull the handle out and back in a wide arc, leading with the elbow.",
+      "Return slowly under tension, then finish all reps before switching sides."
+    ],
+    "cues": [
+      "Lead with the elbow",
+      "Control the return slowly"
+    ],
+    "safetyNotes": [
+      "Keep your torso still and avoid twisting to swing the weight."
+    ]
+  },
+  "barbell-upright-row": {
+    "description": "A barbell pull up the front of the body that builds the side delts and upper traps.",
+    "steps": [
+      "Stand tall holding a barbell at thigh level with hands about shoulder-width apart.",
+      "Keep the bar close to your body as you pull it upward.",
+      "Lead with your elbows until the bar reaches mid-chest height.",
+      "Lower the bar under control back to your thighs and repeat."
+    ],
+    "cues": [
+      "Lead with the elbows",
+      "Keep the bar close to your body"
+    ],
+    "safetyNotes": [
+      "Stop the pull at chest height and avoid raising elbows above the shoulders to protect the joint."
+    ]
+  },
+  "smith-machine-shrug": {
+    "description": "A shrug along the fixed Smith bar path that isolates the upper trapezius by elevating the shoulders.",
+    "steps": [
+      "Stand inside the Smith machine and grip the bar at thigh level shoulder-width apart.",
+      "Unrack the bar and let it hang with arms straight.",
+      "Shrug your shoulders straight up toward your ears as high as possible.",
+      "Pause at the top, then lower the bar under control and repeat."
+    ],
+    "cues": [
+      "Lift straight up, not forward",
+      "Pause and squeeze at the top"
+    ],
+    "safetyNotes": [
+      "Keep your arms straight and avoid rolling the shoulders to stay off the neck."
+    ]
+  },
+  "cable-bar-upright-row": {
+    "description": "A cable upright row using a straight bar that targets the side delts and traps with steady tension.",
+    "steps": [
+      "Attach a straight bar to a low pulley and grip it shoulder-width at thigh level.",
+      "Stand tall with arms extended and the bar close to your body.",
+      "Pull the bar up toward your chest, leading with your elbows.",
+      "Lower the bar slowly back to the start and repeat."
+    ],
+    "cues": [
+      "Lead with the elbows",
+      "Keep the bar close"
+    ],
+    "safetyNotes": [
+      "Stop at chest height and avoid lifting the elbows above shoulder level."
+    ]
+  },
+  "dumbbell-upright-row": {
+    "description": "An upright row with dumbbells that builds the side delts and traps while allowing a natural wrist path.",
+    "steps": [
+      "Stand tall holding a dumbbell in each hand in front of your thighs, palms toward you.",
+      "Keep the dumbbells close to your body as you begin the pull.",
+      "Raise them up toward your collarbone, leading with your elbows.",
+      "Lower the dumbbells under control back to your thighs and repeat."
+    ],
+    "cues": [
+      "Lead with the elbows",
+      "Keep dumbbells close to the body"
+    ],
+    "safetyNotes": [
+      "Stop at chest height and avoid raising the elbows past shoulder level."
+    ]
+  },
+  "overhead-tricep-dumbbell-extensions": {
+    "description": "An overhead extension lowering a dumbbell behind the head to stretch and strengthen the triceps.",
+    "steps": [
+      "Stand or sit tall holding one dumbbell overhead with both hands and arms extended.",
+      "Keep your elbows pointing forward and tucked close to your head.",
+      "Bend your elbows to lower the dumbbell behind your head.",
+      "Extend your arms to press the weight back overhead and repeat."
+    ],
+    "cues": [
+      "Keep elbows tucked in",
+      "Only the forearms move"
+    ],
+    "safetyNotes": [
+      "Use a controlled tempo and keep the weight from drifting too far behind your neck."
+    ]
+  },
+  "overhead-tricep-barbell-extensions": {
+    "description": "An overhead barbell extension lowering the bar behind the head to load the triceps through a full stretch.",
+    "steps": [
+      "Stand or sit tall holding a barbell overhead with a narrow grip and arms extended.",
+      "Keep your elbows pointing forward and close to your head.",
+      "Bend at the elbows to lower the bar behind your head under control.",
+      "Extend your arms to press the bar back overhead and repeat."
+    ],
+    "cues": [
+      "Keep elbows tucked and high",
+      "Move only the forearms"
+    ],
+    "safetyNotes": [
+      "Use a weight you can control and avoid lowering the bar onto your neck."
+    ]
+  },
+  "barbell-skullcrusher": {
+    "description": "A lying barbell extension that isolates the triceps by bending only at the elbows toward the forehead.",
+    "steps": [
+      "Lie on a bench holding a barbell with a narrow grip, arms extended over your chest.",
+      "Keep your upper arms vertical and elbows pointing up.",
+      "Bend your elbows to lower the bar toward your forehead or just behind it.",
+      "Extend your arms to press the bar back up and repeat."
+    ],
+    "cues": [
+      "Keep upper arms still",
+      "Lower the bar with control"
+    ],
+    "safetyNotes": [
+      "Use a spotter or moderate weight and keep the bar from dropping toward your face."
+    ]
+  },
+  "cable-single-arm-tricep-kickback": {
+    "description": "A one-arm cable kickback that extends the elbow behind you to isolate the triceps under constant tension.",
+    "steps": [
+      "Set a cable to low and grip the handle with one hand, hinging forward with a flat back.",
+      "Pin your upper arm against your side with the elbow bent at 90 degrees.",
+      "Extend your elbow to straighten the arm fully behind you.",
+      "Return slowly to the bent position and finish all reps before switching sides."
+    ],
+    "cues": [
+      "Keep the upper arm pinned",
+      "Squeeze at full extension"
+    ],
+    "safetyNotes": [
+      "Keep your back flat and avoid swinging the torso to move the weight."
+    ]
+  },
+  "cable-bar-tricep-pull-down-grip-change": {
+    "description": "A cable pushdown that varies grip on the bar to hit the triceps from different angles through elbow extension.",
+    "steps": [
+      "Attach a straight bar to a high pulley and grip it with elbows tucked at your sides.",
+      "Stand tall with a slight forward lean and the bar near your chest.",
+      "Push the bar down until your arms are fully extended.",
+      "Return slowly to the start, varying your grip width across sets, and repeat."
+    ],
+    "cues": [
+      "Keep elbows pinned to your sides",
+      "Squeeze the triceps at the bottom"
+    ],
+    "safetyNotes": [
+      "Keep your torso steady and avoid leaning into the bar to push the weight."
+    ]
+  },
+  "cable-bar-push-down": {
+    "description": "A cable pushdown using a straight bar that isolates the triceps by extending the elbows downward.",
+    "steps": [
+      "Attach a straight bar to a high pulley and grip it shoulder-width with elbows tucked.",
+      "Stand tall with a slight forward lean and the bar near your chest.",
+      "Push the bar down until your arms are fully straight.",
+      "Return the bar slowly to chest height and repeat."
+    ],
+    "cues": [
+      "Keep elbows pinned to your sides",
+      "Squeeze at the bottom"
+    ],
+    "safetyNotes": [
+      "Keep your shoulders down and avoid using body weight to drive the bar."
+    ]
+  },
+  "cable-rope-pull-downs": {
+    "description": "A cable pushdown with a rope attachment that lets the hands split apart to fully contract the triceps.",
+    "steps": [
+      "Attach a rope to a high pulley and grip both ends with elbows tucked at your sides.",
+      "Stand tall with a slight forward lean and the rope near your chest.",
+      "Push down and spread the rope ends apart as your arms straighten.",
+      "Return the rope slowly to the start and repeat."
+    ],
+    "cues": [
+      "Spread the rope at the bottom",
+      "Keep elbows pinned in"
+    ],
+    "safetyNotes": [
+      "Keep your torso still and avoid leaning to add momentum to the press."
+    ]
+  },
+  "tricep-push-ups": {
+    "description": "A narrow-hand push-up that shifts emphasis onto the triceps by keeping the elbows tucked to the body.",
+    "steps": [
+      "Set up in a plank with hands under your chest, narrower than shoulder-width.",
+      "Brace your core and keep your body in a straight line.",
+      "Lower your chest toward the floor, keeping your elbows close to your sides.",
+      "Press back up to full arm extension and repeat."
+    ],
+    "cues": [
+      "Keep elbows tucked tight",
+      "Hold a straight body line"
+    ],
+    "safetyNotes": [
+      "Drop to your knees if your hips sag or your form breaks down."
+    ]
+  },
+  "dumbbell-skullcrusher": {
+    "description": "A lying extension with dumbbells that isolates the triceps by bending the elbows toward the head.",
+    "steps": [
+      "Lie on a bench holding a dumbbell in each hand, arms extended over your chest.",
+      "Keep your upper arms vertical with elbows pointing up.",
+      "Bend your elbows to lower the dumbbells toward your ears or forehead.",
+      "Extend your arms to press the weights back up and repeat."
+    ],
+    "cues": [
+      "Keep upper arms still",
+      "Lower with control"
+    ],
+    "safetyNotes": [
+      "Keep a firm grip and control the dumbbells so they do not drop toward your head."
+    ]
+  },
+  "hip-bridges-optional": {
+    "description": "A floor bridge that warms up and activates the glutes and hamstrings by driving the hips upward.",
+    "steps": [
+      "Lie on your back with knees bent, feet flat, and hip-width apart.",
+      "Press through your heels and squeeze your glutes to lift your hips.",
+      "Raise until your body forms a straight line from knees to shoulders.",
+      "Lower your hips back down with control and repeat."
+    ],
+    "cues": [
+      "Squeeze the glutes at the top",
+      "Drive through your heels"
+    ],
+    "safetyNotes": [
+      "Lift with your glutes rather than arching your lower back at the top."
+    ]
+  },
+  "deadbug-extensions-optional": {
+    "description": "A core warm-up that extends opposite arm and leg while keeping the lower back pressed flat to the floor.",
+    "steps": [
+      "Lie on your back with arms reaching up and knees bent over your hips.",
+      "Press your lower back flat into the floor and brace your core.",
+      "Slowly extend one arm overhead and the opposite leg toward the floor.",
+      "Return to the start and repeat with the other arm and leg."
+    ],
+    "cues": [
+      "Keep the lower back flat",
+      "Move slowly and controlled"
+    ],
+    "safetyNotes": [
+      "Only lower the limbs as far as you can without your back arching off the floor."
+    ]
+  },
+  "bird-dog-optional": {
+    "description": "A kneeling warm-up that extends opposite arm and leg to activate the core, back, and glutes for stability.",
+    "steps": [
+      "Start on all fours with hands under shoulders and knees under hips.",
+      "Brace your core and keep your back flat and neutral.",
+      "Reach one arm forward and the opposite leg straight back until level with your torso.",
+      "Return to the start and repeat on the opposite side."
+    ],
+    "cues": [
+      "Keep your hips square",
+      "Reach long and stay level"
+    ],
+    "safetyNotes": [
+      "Move slowly and avoid rotating your hips or arching your lower back."
+    ]
+  },
+  "inchworms-optional": {
+    "description": "A dynamic warm-up that walks the hands out to a plank and back, mobilizing the hamstrings, shoulders, and core.",
+    "steps": [
+      "Stand tall with feet hip-width apart, then hinge and place your hands on the floor.",
+      "Walk your hands forward until you reach a straight-arm plank.",
+      "Walk your feet toward your hands, keeping your legs as straight as comfortable.",
+      "Stand back up and repeat for the prescribed reps."
+    ],
+    "cues": [
+      "Keep your core braced in plank",
+      "Walk hands and feet smoothly"
+    ],
+    "safetyNotes": [
+      "Bend your knees as needed and keep your hips from sagging in the plank."
+    ]
+  },
+  "shoulder-taps": {
+    "description": "A plank-based warm-up tapping each shoulder to fire up the core and shoulders while resisting rotation.",
+    "steps": [
+      "Set up in a high plank with hands under shoulders and feet wider than hips.",
+      "Brace your core and keep your hips level and still.",
+      "Lift one hand to tap the opposite shoulder, then return it to the floor.",
+      "Alternate hands for the prescribed reps while keeping your hips steady."
+    ],
+    "cues": [
+      "Keep your hips from rocking",
+      "Tap lightly and stay braced"
+    ],
+    "safetyNotes": [
+      "Widen your feet for stability and avoid letting your hips twist with each tap."
+    ]
+  },
+  "snow-angels-optional": {
+    "description": "A mobility warm-up sweeping the arms in a wide arc to open the shoulders and upper back.",
+    "steps": [
+      "Stand or lie down with your arms at your sides and palms facing forward.",
+      "Keep your arms straight and your shoulders relaxed down.",
+      "Sweep both arms out and overhead in a wide arc until they meet at the top.",
+      "Reverse the motion slowly back to your sides and repeat."
+    ],
+    "cues": [
+      "Keep arms straight throughout",
+      "Move slowly through the full range"
+    ],
+    "safetyNotes": [
+      "Only sweep as far overhead as your shoulders allow without shrugging or pinching."
+    ]
   }
 }

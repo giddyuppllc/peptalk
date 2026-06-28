@@ -145,6 +145,22 @@ export const VIDEOS: VideoContent[] = [
   },
 ];
 
+/**
+ * A video is "real" (playable) only when it's not flagged `comingSoon`
+ * AND its `videoUrl` carries no `PLACEHOLDER_*` stub token. Every list/
+ * gallery/deep-link surface filters on this so the app never advertises
+ * an empty video feature (App Review 2.1). When real videos land, the
+ * predicate flips automatically and the UI re-lights — no code changes.
+ */
+export const isRealVideo = (v: VideoContent): boolean =>
+  v.comingSoon !== true && !/PLACEHOLDER/i.test(v.videoUrl);
+
+/** Only the playable videos — use this anywhere a list is rendered. */
+export const getRealVideos = (): VideoContent[] => VIDEOS.filter(isRealVideo);
+
+/** True when at least one real (playable) video exists. */
+export const hasRealVideos = (): boolean => VIDEOS.some(isRealVideo);
+
 export const getVideoById = (id: string): VideoContent | undefined =>
   VIDEOS.find((v) => v.id === id);
 
@@ -152,10 +168,10 @@ export const getVideoBySlug = (slug: string): VideoContent | undefined =>
   VIDEOS.find((v) => v.slug === slug);
 
 export const getVideosByCategory = (category: VideoCategory): VideoContent[] =>
-  VIDEOS.filter((v) => v.category === category);
+  VIDEOS.filter((v) => isRealVideo(v) && v.category === category);
 
 export const getVideosByPeptideId = (peptideId: string): VideoContent[] =>
-  VIDEOS.filter((v) => v.relatedPeptideIds?.includes(peptideId));
+  VIDEOS.filter((v) => isRealVideo(v) && v.relatedPeptideIds?.includes(peptideId));
 
 export const getFeaturedVideos = (): VideoContent[] =>
-  VIDEOS.filter((v) => v.featured);
+  VIDEOS.filter((v) => isRealVideo(v) && v.featured);

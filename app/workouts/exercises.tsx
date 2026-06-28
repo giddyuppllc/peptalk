@@ -15,12 +15,34 @@ import {
   Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 import { EXERCISES, searchExercises, getExerciseInstructions } from '../../src/data/exercises';
 import { ExerciseVideo } from '../../src/components/ExerciseVideo';
+import { hasExerciseVideo } from '../../src/services/videoService';
+import { PaywallGate } from '../../src/hooks/useFeatureGate';
 import type { Exercise, MuscleGroup, Equipment } from '../../src/types/fitness';
+
+// Muscle-group → icon for the form-guide hero shown when an exercise has
+// no demo video yet (so every exercise detail leads with a visual, not a
+// blank). Videos auto-replace this the moment they land in the manifest.
+const MUSCLE_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
+  core: 'body-outline',
+  glutes: 'body-outline',
+  quads: 'walk-outline',
+  hamstrings: 'walk-outline',
+  calves: 'walk-outline',
+  chest: 'fitness-outline',
+  back: 'barbell-outline',
+  shoulders: 'barbell-outline',
+  biceps: 'barbell-outline',
+  triceps: 'barbell-outline',
+  forearms: 'barbell-outline',
+  cardio: 'heart-outline',
+  full_body: 'body-outline',
+};
 
 // ---------------------------------------------------------------------------
 // Muscle group filter chips
@@ -203,10 +225,30 @@ function ExerciseDetailModal({
             {/* Title */}
             <Text style={styles.modalTitle}>{exercise.name}</Text>
 
-            {/* Video */}
-            <View style={styles.videoContainer}>
-              <ExerciseVideo exerciseId={exercise.id} />
-            </View>
+            {/* Demo video when one exists; otherwise a muscle-group form-guide
+                hero so the detail still leads with a visual, not a blank. */}
+            {hasExerciseVideo(exercise.id) ? (
+              <View style={styles.videoContainer}>
+                <ExerciseVideo exerciseId={exercise.id} />
+              </View>
+            ) : (
+              <LinearGradient
+                colors={[Colors.raindropsDeep, Colors.pepTeal]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.formHero}
+              >
+                <Ionicons
+                  name={MUSCLE_ICON[exercise.primaryMuscle] ?? 'barbell-outline'}
+                  size={44}
+                  color="rgba(255,255,255,0.95)"
+                />
+                <Text style={styles.formHeroMuscle}>
+                  {exercise.primaryMuscle.replace(/_/g, ' ')}
+                </Text>
+                <Text style={styles.formHeroHint}>Follow the steps below</Text>
+              </LinearGradient>
+            )}
 
             {/* Badges */}
             <View style={styles.modalBadges}>
@@ -330,9 +372,14 @@ function ExerciseDetailModal({
 
 export default function ExerciseLibraryScreen() {
   const router = useRouter();
+  // Optional deep-link filter, e.g. /workouts/exercises?muscle=core
+  const params = useLocalSearchParams<{ muscle?: string }>();
+  const initialMuscle = (MUSCLE_FILTERS.some((m) => m.key === params.muscle)
+    ? (params.muscle as MuscleGroup)
+    : 'all') as MuscleGroup | 'all';
   const [query, setQuery] = useState('');
   const [muscleFilter, setMuscleFilter] = useState<MuscleGroup | 'all'>(
-    'all',
+    initialMuscle,
   );
   const [equipmentFilter, setEquipmentFilter] = useState<Equipment | 'all'>(
     'all',
@@ -364,6 +411,7 @@ export default function ExerciseLibraryScreen() {
   }, []);
 
   return (
+    <PaywallGate feature="workout_videos">
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
@@ -507,6 +555,7 @@ export default function ExerciseLibraryScreen() {
         onClose={closeDetail}
       />
     </SafeAreaView>
+    </PaywallGate>
   );
 }
 
@@ -737,6 +786,25 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: Spacing.md,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  formHero: {
+    aspectRatio: 16 / 9,
+    borderRadius: BorderRadius.md,
+    overflow: 'hidden',
+    marginBottom: Spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  formHeroMuscle: {
+    color: '#fff',
+    fontSize: FontSizes.md,
+    fontWeight: '700',
+    textTransform: 'capitalize',
+  },
+  formHeroHint: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: FontSizes.xs,
   },
   modalBadges: {
     flexDirection: 'row',

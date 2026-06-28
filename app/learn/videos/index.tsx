@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from '../../../src/components/GlassCard';
-import { VIDEOS, getFeaturedVideos } from '../../../src/data/videos';
+import { getRealVideos, getFeaturedVideos } from '../../../src/data/videos';
 import { VideoCategory } from '../../../src/types';
 
 // ── Constants ────────────────────────────────────────────────────
@@ -54,13 +54,18 @@ export default function VideoGalleryScreen() {
 
   const featuredVideos = useMemo(() => getFeaturedVideos(), []);
 
-  const filteredVideos = useMemo(() => {
-    if (activeFilter === 'all') return VIDEOS;
-    return VIDEOS.filter((v) => v.category === activeFilter);
-  }, [activeFilter]);
+  // Only real (playable) videos ever reach the gallery — coming-soon /
+  // PLACEHOLDER stubs are filtered out so no broken card is shown.
+  const realVideos = useMemo(() => getRealVideos(), []);
 
-  // If no videos at all, show the empty state
-  if (VIDEOS.length === 0) {
+  const filteredVideos = useMemo(() => {
+    if (activeFilter === 'all') return realVideos;
+    return realVideos.filter((v) => v.category === activeFilter);
+  }, [activeFilter, realVideos]);
+
+  // If no real videos exist yet, show the friendly "coming soon" state
+  // instead of an empty gallery (App Review 2.1).
+  if (realVideos.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <ScrollView

@@ -20,7 +20,7 @@ import { EDUCATIONAL_ARTICLES } from '../../src/data/educationalArticles';
 import { GOAL_OPTIONS } from '../../src/constants/goals';
 import type { GoalType } from '../../src/types';
 import { HOW_TO_GUIDES } from '../../src/data/howToGuides';
-import { VIDEOS } from '../../src/data/videos';
+import { getRealVideos, hasRealVideos } from '../../src/data/videos';
 import {
   ArticleCategory,
   GuideCategory,
@@ -688,10 +688,13 @@ export default function LearnHubScreen() {
         )}
 
         {/* ── Videos ──────────────────────────────────────────────
-            Gated on having at least one REAL video. While every entry is
-            `comingSoon` (placeholder), the whole section is hidden so the
-            app never ships an advertised-but-empty feature (App Review 2.1). */}
-        {VIDEOS.some((v) => !v.comingSoon) && (
+            Gated on having at least one REAL video (`hasRealVideos` ⇒
+            not coming-soon AND no PLACEHOLDER url). While every entry is
+            a placeholder, the whole section is hidden so the app never
+            ships an advertised-but-empty feature (App Review 2.1). The
+            FlatList is fed only the real videos so a coming-soon card can
+            never render here. Re-lights automatically when content lands. */}
+        {hasRealVideos() && (
           <View style={styles.sectionWrapper}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
@@ -711,7 +714,7 @@ export default function LearnHubScreen() {
             </View>
 
             <FlatList
-              data={VIDEOS}
+              data={getRealVideos()}
               keyExtractor={(item) => item.id}
               horizontal
               showsHorizontalScrollIndicator={false}

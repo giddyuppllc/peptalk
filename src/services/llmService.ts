@@ -582,9 +582,7 @@ function describeRoute(route: string): { label: string; icon: string } {
     '/(tabs)/profile': { label: 'Profile', icon: 'person-outline' },
     '/nutrition': { label: 'Nutrition', icon: 'restaurant-outline' },
     '/workouts': { label: 'Workouts', icon: 'barbell-outline' },
-    '/workouts/exercises': { label: 'Browse exercises', icon: 'list-outline' },
-    // Training video library hidden for now — removed from Aimee nav until the
-    // video catalog is ready. Restore this entry to re-enable.
+    '/workouts/exercises': { label: 'Exercise library', icon: 'barbell-outline' },
     '/calculators': { label: 'Calculators', icon: 'calculator-outline' },
     '/doses/calculator': { label: 'Dosing calculator', icon: 'calculator-outline' },
     '/calculators/reconstitution': { label: 'Reconstitution', icon: 'flask-outline' },
