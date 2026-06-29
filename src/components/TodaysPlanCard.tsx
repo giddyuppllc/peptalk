@@ -112,7 +112,11 @@ export function TodaysPlanCard() {
           iconColor: '#D98C86',
           label: `Workout · Day ${dayOfProgram}`,
           detail: 'Open your program',
-          onPress: () => router.push('/workouts/player' as any),
+          // Open the scheduled program day in player-v2 (which reads the active
+          // program's currentWeek/currentDay), not bare /workouts/player — that
+          // launches Free-Workout mode and ignores the schedule.
+          onPress: () =>
+            router.push(`/workouts/player-v2?programId=${activeProgram.programId}` as any),
           rank: 30,
         });
       }

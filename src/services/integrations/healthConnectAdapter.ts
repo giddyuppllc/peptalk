@@ -50,6 +50,7 @@ const READ_PERMISSIONS = [
   { accessType: 'read', recordType: 'Steps' },
   { accessType: 'read', recordType: 'SleepSession' },
   { accessType: 'read', recordType: 'HeartRate' },
+  { accessType: 'read', recordType: 'HeartRateVariabilityRmssd' },
   { accessType: 'read', recordType: 'ActiveCaloriesBurned' },
   { accessType: 'read', recordType: 'Weight' },
   { accessType: 'read', recordType: 'BodyFat' },
@@ -247,6 +248,28 @@ export const healthConnectAdapter: BiomarkerAdapter = {
             value: Math.round(min),
             unit: 'bpm',
             timestamp: ts,
+            source: 'health_connect',
+          });
+        }
+      }
+    }
+
+    // ── HRV (HeartRateVariabilityRmssd) ─────────────────────────────────
+    // hrv is in health_connect DEFAULT_SCOPES and is a first-class iOS
+    // feature, so we import it on Android too. NOTE: the corresponding
+    // manifest permission `android.permission.health.READ_HEART_RATE_VARIABILITY`
+    // must be declared in app.json for this read to be granted on-device —
+    // until then readSafe degrades to an empty result.
+    if (scopeSet.has('hrv')) {
+      const records = await readSafe('HeartRateVariabilityRmssd');
+      for (const r of records as any[]) {
+        const ms = r.heartRateVariabilityMillis;
+        if (typeof ms === 'number') {
+          scalars.push({
+            scope: 'hrv',
+            value: Math.round(ms * 10) / 10,
+            unit: 'ms',
+            timestamp: r.time ?? endTime,
             source: 'health_connect',
           });
         }

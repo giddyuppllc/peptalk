@@ -165,7 +165,10 @@ function fillProgram(
       const isTimed = slot.timeSeconds != null || selected.isTimeBased;
       exercises.push({
         exercise: selected,
-        reps: isTimed && slot.timeSeconds ? '1' : expandReps(slot.reps, slot.sets),
+        // Timed moves track "1 rep = one timed hold" per set, but must keep the
+        // slot's intended set count (the hold target lives in timeSeconds). Repeat
+        // '1' across slot.sets instead of collapsing the whole slot to a single set.
+        reps: isTimed && slot.timeSeconds ? expandReps('1', slot.sets) : expandReps(slot.reps, slot.sets),
         setType: slot.setType || 'normal',
         tempo: slot.tempo,
         rest: slot.rest,

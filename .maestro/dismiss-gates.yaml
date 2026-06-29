@@ -1,0 +1,14 @@
+# Dismiss the Research & Education disclaimer gate (text first, point fallback).
+appId: com.peptalkapp.peptalk
+---
+- tapOn:
+    text: "I understand and agree"
+    optional: true
+- tapOn:
+    point: "18%, 80%"
+- tapOn:
+    text: "Continue"
+    optional: true
+- tapOn:
+    point: "50%, 86%"
+- takeScreenshot: /tmp/peptalk-review/qa/after-disclaimer

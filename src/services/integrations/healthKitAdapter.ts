@@ -36,6 +36,7 @@ import type {
   SleepSample,
 } from './types';
 import type { PeriodEntry, CycleDayLog, FlowIntensity, BiomarkerScope } from '../../types/cycle';
+import { secureStorage } from '../secureStorage';
 
 // ── Dynamic module load ────────────────────────────────────────────────────
 
@@ -132,6 +133,73 @@ let lastSyncedAt: string | undefined;
 
 function log(...args: unknown[]) {
   if (__DEV__) console.log('[HealthKit]', ...args);
+}
+
+// ── Persisted "user connected Apple Health" flag ──────────────────────────
+//
+// `authorized` is module-level and resets to false on every cold start, and
+// HealthKit exposes NO API to query read-authorization. Without persistence
+// the card showed "Not connected" after each relaunch and background sync
+// stopped until the user manually re-connected. We persist the scopes the
+// user connected with and silently re-init HealthKit on launch. Re-init never
+// re-prompts for already-decided types, so re-hydration is invisible.
+const HK_CONNECTED_KEY = 'peptalk:apple_health_connected';
+
+let rehydratePromise: Promise<void> | null = null;
+
+async function persistConnected(scopes: BiomarkerScope[]): Promise<void> {
+  try {
+    await secureStorage.setItem(HK_CONNECTED_KEY, JSON.stringify(scopes));
+  } catch (err) {
+    log('persist connected flag failed', err);
+  }
+}
+
+async function clearConnected(): Promise<void> {
+  try {
+    await secureStorage.removeItem(HK_CONNECTED_KEY);
+  } catch (err) {
+    log('clear connected flag failed', err);
+  }
+}
+
+/**
+ * Re-hydrate authorization on cold start from the persisted flag. Idempotent
+ * and safe to call unconditionally — no-ops when already authorized, when the
+ * flag is absent, or off iOS. Re-init does not re-prompt for granted types.
+ */
+async function rehydrateAuth(): Promise<void> {
+  if (!AppleHealthKit || Platform.OS !== 'ios') return;
+  if (authorized) return;
+  try {
+    const raw = await secureStorage.getItem(HK_CONNECTED_KEY);
+    if (!raw) return;
+    let scopes: BiomarkerScope[] = [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) scopes = parsed as BiomarkerScope[];
+    } catch {
+      // Corrupt value — fall back to a minimal read scope below.
+    }
+    const read = scopeToHKPerms(scopes.length > 0 ? scopes : (['steps'] as BiomarkerScope[]));
+    await initHealthKit({ permissions: { read, write: getWriteScope() } });
+    authorized = true;
+    log('re-hydrated Apple Health authorization from persisted flag');
+  } catch (err) {
+    log('re-hydrate failed', err);
+  }
+}
+
+/** Kick off (once) and await re-hydration. Called at module load and before
+ *  any auth-dependent read so a relaunch resumes without a manual reconnect. */
+export function ensureHealthKitRehydrated(): Promise<void> {
+  if (!rehydratePromise) rehydratePromise = rehydrateAuth();
+  return rehydratePromise;
+}
+
+// Fire-and-forget re-hydration on module import (app cold start).
+if (Platform.OS === 'ios' && AppleHealthKit) {
+  void ensureHealthKitRehydrated();
 }
 
 /**
@@ -291,6 +359,9 @@ export const healthKitAdapter: BiomarkerAdapter = {
   },
 
   async isAuthorized() {
+    // Re-hydrate the persisted connection first so a cold start doesn't
+    // report "not connected" before connect() has been called this session.
+    await ensureHealthKitRehydrated();
     // Double-check against HealthKit — user may have revoked in iOS Settings.
     if (!authorized) return false;
     return verifyLiveAuth();
@@ -309,6 +380,9 @@ export const healthKitAdapter: BiomarkerAdapter = {
         },
       });
       authorized = true;
+      // Persist so the connection survives relaunch (HealthKit has no
+      // read-auth query API to re-derive this from).
+      await persistConnected(scopes);
       log('connected with scopes', scopes, 'write scope', getWriteScope());
       return true;
     } catch (err) {
@@ -322,9 +396,13 @@ export const healthKitAdapter: BiomarkerAdapter = {
     // HealthKit doesn't expose an API to revoke; user must do it in Settings.
     authorized = false;
     lastSyncedAt = undefined;
+    // Clear the persisted flag so we don't re-init on next launch.
+    await clearConnected();
   },
 
   async status(): Promise<AdapterStatus> {
+    // Re-hydrate so the card reflects a persisted connection after relaunch.
+    await ensureHealthKitRehydrated();
     // Re-verify against HealthKit so revoked-in-Settings shows correctly.
     const live = authorized ? await verifyLiveAuth() : false;
     return {
@@ -341,6 +419,8 @@ export const healthKitAdapter: BiomarkerAdapter = {
   },
 
   async sync(scopes: BiomarkerScope[], sinceIso?: string): Promise<SyncResult> {
+    // Resume background sync after a cold start by re-hydrating first.
+    await ensureHealthKitRehydrated();
     if (!this.available() || !authorized) {
       return {
         scalars: [],
@@ -453,16 +533,74 @@ export const healthKitAdapter: BiomarkerAdapter = {
     }
 
     // ── Sleep ───────────────────────────────────────────────────────────
+    // Apple Watch writes MANY fragments per night — an INBED bracket plus a
+    // stream of CORE/DEEP/REM/AWAKE stage segments. Emitting one SleepSample
+    // per fragment made the router's per-night last-write-wins collapse to a
+    // single fragment's duration → wildly wrong nightly totals. Instead we
+    // group fragments into sessions (a >3h gap starts a new night) and sum
+    // only the asleep-stage durations, excluding INBED (which brackets and
+    // would double-count the whole window) and AWAKE (interruptions).
     if (scopeSet.has('sleep')) {
       const sleepSamples = await getSamples<any>('getSleepSamples', { startDate });
-      for (const s of sleepSamples) {
-        const start = new Date(s.startDate);
-        const end = new Date(s.endDate);
+
+      // react-native-health `value` strings: INBED, ASLEEP, CORE, DEEP, REM, AWAKE.
+      const ASLEEP_STAGES = new Set(['ASLEEP', 'CORE', 'DEEP', 'REM']);
+
+      type Frag = {
+        value: string;
+        start: number;
+        end: number;
+      };
+      const frags: Frag[] = sleepSamples
+        .map((s: any) => ({
+          value: String(s.value ?? '').toUpperCase(),
+          start: new Date(s.startDate).getTime(),
+          end: new Date(s.endDate).getTime(),
+        }))
+        .filter((f: Frag) => Number.isFinite(f.start) && Number.isFinite(f.end) && f.end > f.start)
+        .sort((a: Frag, b: Frag) => a.start - b.start);
+
+      // Split fragments into per-night sessions on a >3h gap.
+      const SESSION_GAP_MS = 3 * 60 * 60 * 1000;
+      const sessions: Frag[][] = [];
+      let current: Frag[] = [];
+      let lastEnd = -Infinity;
+      for (const f of frags) {
+        if (current.length > 0 && f.start - lastEnd > SESSION_GAP_MS) {
+          sessions.push(current);
+          current = [];
+        }
+        current.push(f);
+        lastEnd = Math.max(lastEnd, f.end);
+      }
+      if (current.length > 0) sessions.push(current);
+
+      for (const session of sessions) {
+        let asleepMs = 0;
+        let deepMs = 0;
+        let remMs = 0;
+        let sessionStart = Infinity;
+        let sessionEnd = -Infinity;
+        for (const f of session) {
+          sessionStart = Math.min(sessionStart, f.start);
+          sessionEnd = Math.max(sessionEnd, f.end);
+          const dur = f.end - f.start;
+          if (f.value === 'DEEP') deepMs += dur;
+          if (f.value === 'REM') remMs += dur;
+          if (ASLEEP_STAGES.has(f.value)) asleepMs += dur;
+        }
+        // Fallback: a source that wrote only INBED (no stage/asleep data) —
+        // approximate with the in-bed span so the night isn't lost entirely.
+        const totalMs = asleepMs > 0 ? asleepMs : sessionEnd - sessionStart;
+        const totalMinutes = Math.round(totalMs / 60000);
+        if (totalMinutes <= 0) continue;
         sleeps.push({
           scope: 'sleep',
-          startIso: s.startDate,
-          endIso: s.endDate,
-          totalMinutes: Math.round((end.getTime() - start.getTime()) / 60000),
+          startIso: new Date(sessionStart).toISOString(),
+          endIso: new Date(sessionEnd).toISOString(),
+          totalMinutes,
+          deepMinutes: deepMs > 0 ? Math.round(deepMs / 60000) : undefined,
+          remMinutes: remMs > 0 ? Math.round(remMs / 60000) : undefined,
           source: 'apple_health',
         });
       }

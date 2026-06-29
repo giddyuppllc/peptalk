@@ -1,0 +1,9 @@
+appId: com.peptalkapp.peptalk
+---
+- tapOn:
+    text: "incline push up"
+    optional: true
+- takeScreenshot: /tmp/peptalk-review/qa/vid2-detail
+- tapOn:
+    point: "50%, 28%"
+- takeScreenshot: /tmp/peptalk-review/qa/vid2-after-play-tap

@@ -51,6 +51,8 @@ interface ExerciseState {
   restSeconds: number | null;
   setType: string;
   recommendedRpe: number;
+  /** Progressive-overload reference: top set from the most recent prior session. */
+  lastSummary: string | null;
   sets: SetState[];
 }
 
@@ -86,6 +88,7 @@ function GeneratedTrackerScreen() {
   const dayIndex = parseInt(params.dayIndex ?? '0', 10);
 
   const getGeneratedWorkoutById = useWorkoutStore((st) => st.getGeneratedWorkoutById);
+  const logs = useWorkoutStore((st) => st.logs);
   const beginWorkout = useWorkoutStore((st) => st.beginWorkout);
   const logSet = useWorkoutStore((st) => st.logSet);
   const finishWorkout = useWorkoutStore((st) => st.finishWorkout);
@@ -101,6 +104,28 @@ function GeneratedTrackerScreen() {
       const targets = parseRepString(ex.reps);
       const restSecs = parseRestToSeconds(ex.rest);
       const recRpe = getRecommendedRpe(saved.goal, ex.exercise.priority);
+
+      // Progressive overload: find the most recent prior log that contains this
+      // exercise, take its heaviest working set as a "last time" reference, and
+      // prefill the weight input so the user starts from where they left off.
+      // logs are stored newest-first (finishWorkout prepends).
+      let lastWeight = '';
+      let lastSummary: string | null = null;
+      for (const log of logs) {
+        const exSets = log.sets.filter((sx) => sx.exerciseId === ex.exercise.id);
+        if (exSets.length === 0) continue;
+        const top = exSets.reduce((a, b) =>
+          (b.weightLbs ?? 0) > (a.weightLbs ?? 0) ? b : a,
+        );
+        if (top.weightLbs != null && top.weightLbs > 0) {
+          lastWeight = String(top.weightLbs);
+          lastSummary = `Last time: ${top.weightLbs} lb × ${top.reps} reps`;
+        } else {
+          lastSummary = `Last time: ${top.reps} reps`;
+        }
+        break;
+      }
+
       return {
         exerciseId: ex.exercise.id,
         exerciseName: ex.exercise.name,
@@ -110,10 +135,11 @@ function GeneratedTrackerScreen() {
         restSeconds: restSecs,
         setType: ex.setType ?? 'normal',
         recommendedRpe: recRpe,
-        sets: targets.map(() => ({ reps: '', weight: '', rpe: null, completed: false })),
+        lastSummary,
+        sets: targets.map(() => ({ reps: '', weight: lastWeight, rpe: null, completed: false })),
       };
     });
-  }, [day, saved]);
+  }, [day, saved, logs]);
 
   const [exercises, setExercises] = useState<ExerciseState[]>(initialExercises);
   const [started, setStarted] = useState(false);
@@ -401,6 +427,14 @@ function GeneratedTrackerScreen() {
                       </View>
                     )}
                   </View>
+                  {ex.lastSummary && (
+                    <View style={s.lastTimeRow}>
+                      <Ionicons name="trending-up" size={11} color={accent.deep} />
+                      <Text style={[s.lastTimeText, { color: t.textSecondary }]} numberOfLines={1}>
+                        {ex.lastSummary}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
 
@@ -765,6 +799,17 @@ const s = StyleSheet.create({
     fontFamily: 'DMSans-Bold',
     letterSpacing: 0.3,
     textTransform: 'uppercase',
+  },
+  lastTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  lastTimeText: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Medium',
+    flex: 1,
   },
 
   // Column layout

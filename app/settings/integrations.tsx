@@ -59,8 +59,11 @@ const DEFAULT_SCOPES: Record<BiomarkerSource, BiomarkerScope[]> = {
     'ovulation_test', 'sexual_activity', 'workouts', 'respiratory_rate',
   ],
   health_connect: [
+    // No 'menstrual_flow': the HC adapter can't read it (react-native-health-connect
+    // exposes no menstruation API) and READ_MENSTRUATION isn't declared — don't
+    // advertise cycle import Android can't deliver.
     'steps', 'active_energy', 'resting_heart_rate', 'hrv', 'sleep',
-    'weight', 'body_fat', 'menstrual_flow',
+    'weight', 'body_fat',
   ],
   google_fit: ['steps', 'active_energy', 'sleep', 'weight'],
   oura: ['sleep', 'hrv', 'resting_heart_rate', 'bbt'],

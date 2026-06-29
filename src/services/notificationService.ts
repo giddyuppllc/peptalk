@@ -10,6 +10,7 @@
 
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ---------------------------------------------------------------------------
 // Dynamic module loading — safe for Expo Go
@@ -470,13 +471,68 @@ export async function cancelWeeklyReport(): Promise<void> {
   }
 }
 
+// ─── §16 — Immediate-nudge dedup (cooldown) ──────────────────────────────────
+//
+// Immediate (trigger:null) notifications fire and leave the scheduled
+// list instantly, so deduping via getAllScheduledNotificationsAsync() is
+// a no-op — the same banner re-spams on every foreground. Instead we
+// track recently-fired nudge ids → timestamp in a small persisted map
+// and skip re-firing within a cooldown window.
+
+const FIRED_NUDGES_KEY = 'peptalk.firedNudges.v1';
+const DEFAULT_NUDGE_COOLDOWN_MS = 12 * 60 * 60 * 1000; // 12h
+const NUDGE_PRUNE_MS = 48 * 60 * 60 * 1000; // drop entries older than 48h
+
+// Module-level cache so foregrounds within one session don't re-read storage.
+let firedNudges: Record<string, number> | null = null;
+
+async function loadFiredNudges(): Promise<Record<string, number>> {
+  if (firedNudges) return firedNudges;
+  let loaded: Record<string, number> = {};
+  try {
+    const raw = await AsyncStorage.getItem(FIRED_NUDGES_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    if (parsed && typeof parsed === 'object') loaded = parsed;
+  } catch {
+    loaded = {};
+  }
+  firedNudges = loaded;
+  return loaded;
+}
+
+/** True if `id` fired within the cooldown window — caller should skip. */
+async function wasNudgedRecently(
+  id: string,
+  cooldownMs: number = DEFAULT_NUDGE_COOLDOWN_MS,
+): Promise<boolean> {
+  const map = await loadFiredNudges();
+  const ts = map[id];
+  return typeof ts === 'number' && Date.now() - ts < cooldownMs;
+}
+
+/** Record that `id` just fired (and prune stale entries). */
+async function markNudgeFired(id: string): Promise<void> {
+  const map = await loadFiredNudges();
+  const now = Date.now();
+  map[id] = now;
+  for (const k of Object.keys(map)) {
+    if (now - map[k] > NUDGE_PRUNE_MS) delete map[k];
+  }
+  try {
+    await AsyncStorage.setItem(FIRED_NUDGES_KEY, JSON.stringify(map));
+  } catch {
+    /* no-op — in-memory cache still dedups for this session */
+  }
+}
+
 // ─── §16 — One-off event nudges ──────────────────────────────────────────────
 //
 // Fires a local notification immediately. Used for ingest events (new
 // lab / scan), cycle completion, and dose-miss nudges that compute
 // dynamic content at fire time (can't be pre-scheduled as a weekly).
 // Idempotency is on the caller via the `id` parameter — the same id
-// won't fan out duplicates within a single OS session.
+// won't re-fire within `cooldownMs` (default 12h) thanks to the
+// persisted fired-nudge map above.
 
 export async function fireImmediateNudge(args: {
   id: string;
@@ -484,15 +540,12 @@ export async function fireImmediateNudge(args: {
   body: string;
   route?: string;
   data?: Record<string, unknown>;
+  cooldownMs?: number;
 }): Promise<void> {
   if (!isAvailable()) return;
-  try {
-    // Skip if already scheduled / delivered today with the same id.
-    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    if (scheduled?.some?.((n: any) => n.identifier === args.id)) return;
-  } catch {
-    /* fall through */
-  }
+  // Immediate notifications don't linger in the scheduled list, so we
+  // dedup against a persisted recently-fired map instead.
+  if (await wasNudgedRecently(args.id, args.cooldownMs)) return;
   try {
     await Notifications.scheduleNotificationAsync({
       identifier: args.id,
@@ -505,9 +558,10 @@ export async function fireImmediateNudge(args: {
       },
       trigger: null, // immediate
     });
+    await markNudgeFired(args.id);
   } catch (err) {
     if (__DEV__)
-       
+
       console.warn(`[notif] fireImmediateNudge ${args.id} failed:`, err);
   }
 }
@@ -710,13 +764,9 @@ export async function checkMidDayMacroDeficit(args: {
     if (!target || target <= 0) continue;
     if (current >= target * NUDGE_THRESHOLD_PCT) continue;
     const id = `macro_nudge_${m.key}_${dateKey}`;
-    // Check if we already fired today by looking at delivered + scheduled.
-    try {
-      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-      if (scheduled?.some?.((n: any) => n.identifier === id)) continue;
-    } catch {
-      /* no-op */
-    }
+    // Immediate notifications leave the scheduled list instantly, so dedup
+    // against the persisted fired-nudge map (id is per-macro per-day).
+    if (await wasNudgedRecently(id)) continue;
     try {
       await Notifications.scheduleNotificationAsync({
         identifier: id,
@@ -729,6 +779,7 @@ export async function checkMidDayMacroDeficit(args: {
         },
         trigger: null, // immediate
       });
+      await markNudgeFired(id);
     } catch (err) {
       if (__DEV__)
          

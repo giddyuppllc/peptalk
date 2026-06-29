@@ -1,0 +1,15 @@
+appId: com.peptalkapp.peptalk
+---
+- tapOn:
+    text: "Search exercises..."
+    optional: true
+- inputText: "push up"
+- takeScreenshot: /tmp/peptalk-review/qa/vid-search
+- tapOn:
+    text: "Push.?[Uu]p|Pushup|Push up"
+    optional: true
+- takeScreenshot: /tmp/peptalk-review/qa/vid-exercise-detail
+- tapOn:
+    text: "Play|Watch|Demo|View video|Video"
+    optional: true
+- takeScreenshot: /tmp/peptalk-review/qa/vid-player

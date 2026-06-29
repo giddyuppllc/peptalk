@@ -106,7 +106,27 @@ function MealPlanScreen() {
         },
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      if (error) throw error;
+      if (error) {
+        // supabase-js v2 rejects non-2xx with a FunctionsHttpError whose
+        // .message is the generic "Edge Function returned a non-2xx status
+        // code". The real reason (e.g. "Daily meal-plan limit reached") is
+        // in the JSON {error} body, reachable via error.context (a Response
+        // whose body is a stream needing .text() to resolve).
+        const ctx: any = (error as any)?.context;
+        let parsedMessage: string | null = null;
+        try {
+          if (ctx && typeof ctx.text === 'function') {
+            const text = await ctx.text();
+            if (text) parsedMessage = JSON.parse(text)?.error ?? null;
+          } else if (ctx?.body && typeof ctx.body === 'string') {
+            parsedMessage = JSON.parse(ctx.body)?.error ?? null;
+          } else if (ctx?.body && typeof ctx.body.text === 'function') {
+            const text = await ctx.body.text();
+            if (text) parsedMessage = JSON.parse(text)?.error ?? null;
+          }
+        } catch { /* ignore — fall back to generic message */ }
+        throw new Error(parsedMessage ?? error.message ?? 'Could not generate meal plan.');
+      }
       if (!data?.plan || !Array.isArray(data.plan) || data.plan.length === 0) {
         Alert.alert('No plan generated', 'Couldn\'t build a plan with these inputs — try different goals or allergens.');
         return;

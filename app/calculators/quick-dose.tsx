@@ -207,11 +207,15 @@ export default function QuickDoseScreen() {
                   <Text style={styles.doseValue}>
                     {reconInfo.doseMin}-{reconInfo.doseMax} {reconInfo.doseUnit}
                   </Text>
-                  <Text style={styles.doseConversion}>
-                    = {fmt(toMg(reconInfo.doseMin, reconInfo.doseUnit))}-{fmt(toMg(reconInfo.doseMax, reconInfo.doseUnit))} mg
-                    {' · '}
-                    {fmt(toMcg(reconInfo.doseMin, reconInfo.doseUnit), 0)}-{fmt(toMcg(reconInfo.doseMax, reconInfo.doseUnit), 0)} mcg
-                  </Text>
+                  {/* IU is an activity unit with no fixed mass conversion, so a
+                      mg/mcg restatement would be bogus — show it only for mg/mcg. */}
+                  {reconInfo.unitConvertible && (
+                    <Text style={styles.doseConversion}>
+                      = {fmt(toMg(reconInfo.doseMin, reconInfo.doseUnit))}-{fmt(toMg(reconInfo.doseMax, reconInfo.doseUnit))} mg
+                      {' · '}
+                      {fmt(toMcg(reconInfo.doseMin, reconInfo.doseUnit), 0)}-{fmt(toMcg(reconInfo.doseMax, reconInfo.doseUnit), 0)} mcg
+                    </Text>
+                  )}
                 </View>
                 <View style={styles.doseItem}>
                   <Text style={styles.doseLabel}>Route</Text>

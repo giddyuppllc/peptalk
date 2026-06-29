@@ -196,6 +196,10 @@ export const useBiometricsStore = create<BiometricsState & BiometricsActions>()(
 export function biometricScopeFromSyncScope(scope: string): BiometricScope | null {
   switch (scope) {
     case 'steps': return 'steps';
+    // Adapters emit the BiomarkerScope name 'active_energy'; the cache scope
+    // is 'active_calories'. Accept both so the round-trip doesn't silently
+    // drop the sample. (Same idea for wrist temperature below.)
+    case 'active_energy':
     case 'active_calories': return 'active_calories';
     case 'resting_heart_rate': return 'resting_heart_rate';
     case 'hrv': return 'hrv';
@@ -204,6 +208,7 @@ export function biometricScopeFromSyncScope(scope: string): BiometricScope | nul
     case 'respiratory_rate': return 'respiratory_rate';
     case 'weight': return 'weight';
     case 'body_fat': return 'body_fat';
+    case 'wrist_temperature':
     case 'wrist_temp': return 'wrist_temp';
     case 'blood_glucose': return 'blood_glucose';
     default: return null;

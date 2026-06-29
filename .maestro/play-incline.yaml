@@ -1,0 +1,7 @@
+appId: com.peptalkapp.peptalk
+---
+- tapOn:
+    point: "50%, 59%"
+- takeScreenshot: /tmp/peptalk-review/qa/vid4-detail
+- tapOn:
+    point: "50%, 28%"

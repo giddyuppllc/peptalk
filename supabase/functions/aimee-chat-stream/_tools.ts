@@ -707,6 +707,7 @@ export async function execDraftMealTemplate(
 
 export function execLogMeal(
   input: Record<string, unknown>,
+  localDate?: string,
 ): Record<string, unknown> {
   // We hand the payload back to the client and let useMealStore.addMeal
   // own the write. Single source of truth: local Zustand → syncRecord
@@ -715,8 +716,9 @@ export function execLogMeal(
   // would create (no read-back layer for meal_entries).
   const mealType = typeof input.mealType === 'string' ? input.mealType : 'snack';
   const title = typeof input.title === 'string' ? input.title : 'Meal';
-  // Date range guard — see sanitizeRecentDate() for rationale.
-  const date = sanitizeRecentDate(input.date);
+  // Date range guard — see sanitizeRecentDate() for rationale. When the
+  // model omits the date, default to the user's LOCAL date, not server UTC.
+  const date = sanitizeRecentDate(input.date, localDate);
   const items = Array.isArray(input.items) ? input.items : [];
 
   const totals = items.reduce(
@@ -814,6 +816,7 @@ export async function execProposeLogField(
 
 export function execLogDose(
   input: Record<string, unknown>,
+  localDate?: string,
 ): Record<string, unknown> {
   // Hand the payload back to the client → useDoseLogStore.logDose owns
   // the write. See execLogMeal for the rationale (single source of
@@ -829,8 +832,9 @@ export function execLogDose(
   // coaxed model could log a dose for 2099-01-01 (or 1999) and
   // pollute the dose log + future alert calculations. P1 from Wave
   // 76.11 Aimee fuzzing audit. Allow yesterday, today, and tomorrow
-  // (timezone slop on the client side).
-  const date = sanitizeRecentDate(input.date);
+  // (timezone slop on the client side). When the model omits the date,
+  // default to the user's LOCAL date, not server UTC.
+  const date = sanitizeRecentDate(input.date, localDate);
   const time = typeof input.time === 'string' && /^\d{2}:\d{2}$/.test(input.time)
     ? input.time
     : new Date().toISOString().slice(11, 16);
@@ -967,6 +971,7 @@ const SCREEN_TO_PATH: Record<string, string> = {
 
 export function execLogWater(
   input: Record<string, unknown>,
+  localDate?: string,
 ): Record<string, unknown> {
   const ounces = Number(input.ounces);
   if (!Number.isFinite(ounces) || ounces <= 0) {
@@ -975,10 +980,12 @@ export function execLogWater(
   // Sanity cap — single log shouldn't exceed 200 oz (a gallon-and-a-half).
   // Prevents a hallucinated 9999 from poisoning daily totals.
   if (ounces > 200) return { error: 'ounces too large (max 200 per log)' };
+  // When the model omits the date, default to the user's LOCAL date, not
+  // server UTC, so an evening log doesn't land on tomorrow for US users.
   const date =
     typeof input.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.date)
       ? input.date
-      : new Date().toISOString().slice(0, 10);
+      : todayFor(localDate);
   return {
     ok: true,
     summary: `Log ${Math.round(ounces)} oz of water for ${date}.`,
@@ -1088,7 +1095,7 @@ export async function executeTool(
     case 'draft_meal_template':
       return execDraftMealTemplate(ctx.supabase, ctx.userId, toolInput, ctx.conversationId);
     case 'log_meal':
-      return execLogMeal(toolInput);
+      return execLogMeal(toolInput, ctx.localDate);
     case 'propose_log_field':
       return execProposeLogField(
         ctx.supabase,
@@ -1098,7 +1105,7 @@ export async function executeTool(
         ctx.localDate,
       );
     case 'log_dose':
-      return execLogDose(toolInput);
+      return execLogDose(toolInput, ctx.localDate);
     case 'schedule_workout':
       return execScheduleWorkout(toolInput);
     case 'open_dosing_calculator':
@@ -1106,7 +1113,7 @@ export async function executeTool(
     case 'navigate_to_screen':
       return execNavigateToScreen(toolInput);
     case 'log_water':
-      return execLogWater(toolInput);
+      return execLogWater(toolInput, ctx.localDate);
     case 'log_appetite':
       return execLogAppetite(toolInput);
     case 'add_to_pantry':
@@ -1119,23 +1126,39 @@ export async function executeTool(
 // ─── Small numeric helpers ────────────────────────────────────────────────
 
 /**
+ * Resolve the "today" default for a log entry. Prefers the user's
+ * client-supplied LOCAL date (YYYY-MM-DD) so an entry made at 9 PM PST
+ * lands on the correct calendar day instead of tomorrow's server-UTC
+ * date. Falls back to server UTC only when the client didn't send one.
+ */
+function todayFor(localDate?: string): string {
+  return (typeof localDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(localDate))
+    ? localDate
+    : new Date().toISOString().slice(0, 10);
+}
+
+/**
  * Reject dates more than 1 day in the future (timezone slop) and
  * more than 365 days in the past (don't let the model log doses for
  * 2099-01-01 or 1999 just because the user phrased a prompt cleverly).
- * Returns today's date in UTC when the input is missing or out of range.
+ * When the input is missing or out of range, falls back to the user's
+ * local date (`fallbackLocalDate`) if provided, else server UTC today —
+ * this fixes the wrong-calendar-day bug for users behind UTC who omit
+ * the date (the common "I just took/ate X" case).
  */
-function sanitizeRecentDate(input: unknown): string {
+function sanitizeRecentDate(input: unknown, fallbackLocalDate?: string): string {
+  const fallback = todayFor(fallbackLocalDate);
   if (typeof input !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(input)) {
-    return new Date().toISOString().slice(0, 10);
+    return fallback;
   }
   const parsed = new Date(`${input}T12:00:00Z`).getTime();
   if (!Number.isFinite(parsed)) {
-    return new Date().toISOString().slice(0, 10);
+    return fallback;
   }
   const now = Date.now();
   const dayMs = 86_400_000;
   if (parsed > now + 1 * dayMs || parsed < now - 365 * dayMs) {
-    return new Date().toISOString().slice(0, 10);
+    return fallback;
   }
   return input;
 }

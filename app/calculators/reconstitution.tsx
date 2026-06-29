@@ -56,10 +56,11 @@ export default function ReconstitutionCalculatorScreen() {
 
   // Core calculations (per peptidedosages.com formula)
   const concentrationPerMl = waterMl > 0 ? vialMcg / waterMl : 0; // mcg per 1mL
-  const concentrationPerTick = concentrationPerMl / 10; // mcg per 0.1mL tick
+  // U-100 insulin syringe: 100 ticks/units per 1mL, so 1 tick = 0.01mL.
+  const concentrationPerTick = concentrationPerMl / 100; // mcg per 0.01mL tick
   const volumeToInject = concentrationPerMl > 0 ? doseMcg / concentrationPerMl : 0; // mL
   const syringeUnits = volumeToInject * 100; // U-100 insulin syringe
-  const ticksToDrawTo = volumeToInject * 10; // 0.1mL ticks
+  const ticksToDrawTo = volumeToInject * 100; // 0.01mL ticks (1 tick = 1 unit)
   const dosesPerVial = doseMcg > 0 && volumeToInject > 0 ? waterMl / volumeToInject : 0;
 
   const canCalculate = vialRaw > 0 && waterMl > 0 && doseRaw > 0;
@@ -68,7 +69,7 @@ export default function ReconstitutionCalculatorScreen() {
     setShowResults(true);
   }, []);
 
-  // Syringe visual: 1mL insulin syringe = 100 units = 10 ticks of 0.1mL
+  // Syringe visual: 1mL insulin syringe = 100 units = 100 ticks of 0.01mL
   // Show where the fill line is
   const syringeFillPercent = useMemo(() => {
     if (!canCalculate || !showResults) return 0;
@@ -251,7 +252,7 @@ export default function ReconstitutionCalculatorScreen() {
             <GlassCard variant="gradient">
               <Text style={[styles.previewLabel, { color: t.textSecondary }]}>Concentration</Text>
               <Text style={styles.previewValue}>
-                {concentrationPerTick.toFixed(1)} mcg per 0.1mL (tick)
+                {concentrationPerTick.toFixed(1)} mcg per 0.01mL (tick)
               </Text>
               <Text style={[styles.previewSub, { color: t.textSecondary }]}>
                 {(vialMcg / waterMl).toFixed(0)} mcg per 1mL total
@@ -321,7 +322,7 @@ export default function ReconstitutionCalculatorScreen() {
                     </Text>
                     <Text style={{ fontSize: 13, color: t.textSecondary }}>
                       That's {(volumeToInject * 100).toFixed(0)} units on a U-100 insulin syringe
-                      ({(volumeToInject * 10).toFixed(1)} tick{(volumeToInject * 10) === 1 ? '' : 's'})
+                      ({(volumeToInject * 100).toFixed(1)} tick{(volumeToInject * 100) === 1 ? '' : 's'})
                     </Text>
                   </View>
                 </View>

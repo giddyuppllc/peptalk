@@ -138,6 +138,14 @@ Deno.serve(async (req) => {
   }
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const clientContext = (body.context ?? {}) as Record<string, unknown>;
+  // The user's local calendar date (YYYY-MM-DD), so "I just took/ate X" logs
+  // on the user's day, not server UTC. Falls back to UTC today in _tools.ts
+  // when absent.
+  const clientLocalDate =
+    typeof clientContext?.localDate === 'string' &&
+    /^\d{4}-\d{2}-\d{2}$/.test(clientContext.localDate)
+      ? clientContext.localDate
+      : undefined;
   // chat_id must be a sane id (UUID-ish or chat-prefixed slug). Without
   // length + charset bounds, the column accepts a 5 MB string that gets
   // written to chat_messages twice per turn. P1 from Wave 76.11 audit.
@@ -244,6 +252,7 @@ Deno.serve(async (req) => {
                   supabase,
                   userId: user.id,
                   conversationId,
+                  localDate: clientLocalDate,
                 });
               } catch (e) {
                 console.error(`[aimee-chat-stream] tool ${tc.name} failed:`, e);

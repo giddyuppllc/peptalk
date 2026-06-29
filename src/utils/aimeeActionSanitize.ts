@@ -20,7 +20,7 @@
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 export type DoseUnit = 'mcg' | 'mg' | 'iu';
-export type DoseRoute = 'subcutaneous' | 'intramuscular' | 'oral' | 'nasal' | 'topical';
+export type DoseRoute = 'subcutaneous' | 'intramuscular' | 'oral' | 'nasal' | 'topical' | 'sublingual';
 export type StorageLocation = 'fridge' | 'freezer' | 'pantry';
 export type AppetiteState = 'hungry' | 'full' | 'nauseous';
 export type PantryUnit = 'each' | 'oz' | 'g' | 'lb' | 'kg' | 'cup' | 'tbsp' | 'tsp' | 'ml' | 'l';
@@ -29,8 +29,14 @@ const ALLOWED_MEAL_TYPES: ReadonlySet<MealType> = new Set([
   'breakfast', 'lunch', 'dinner', 'snack',
 ]);
 const ALLOWED_DOSE_UNITS: ReadonlySet<DoseUnit> = new Set(['mcg', 'mg', 'iu']);
+// Superset of the server log_dose `route` enum
+// (subcutaneous/intramuscular/oral/nasal/sublingual). 'topical' is kept
+// because it's a valid AdministrationRoute used elsewhere in the app; the
+// server tool never emits it, so it's harmless here. The previously-missing
+// 'sublingual' caused a sublingual dose to be silently coerced to
+// 'subcutaneous'.
 const ALLOWED_DOSE_ROUTES: ReadonlySet<DoseRoute> = new Set([
-  'subcutaneous', 'intramuscular', 'oral', 'nasal', 'topical',
+  'subcutaneous', 'intramuscular', 'oral', 'nasal', 'topical', 'sublingual',
 ]);
 const ALLOWED_APPETITE: ReadonlySet<AppetiteState> = new Set([
   'hungry', 'full', 'nauseous',

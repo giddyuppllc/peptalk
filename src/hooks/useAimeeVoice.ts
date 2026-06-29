@@ -100,6 +100,20 @@ export function useAimeeVoice(): UseAimeeVoiceResult {
     }
   }, [router, tier]);
 
+  // Recording forces iOS onto the earpiece/quiet route via
+  // allowsRecordingIOS:true. If we never undo it, Aimee's spoken reply
+  // plays quietly through the earpiece. Reset to false after we stop so
+  // playback routes to the speaker (keep playsInSilentModeIOS so the
+  // reply is still audible when the phone is on silent).
+  const resetAudioMode = useCallback(async () => {
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
+    } catch {}
+  }, []);
+
   const cancel = useCallback(async () => {
     const rec = recordingRef.current;
     recordingRef.current = null;
@@ -109,7 +123,8 @@ export function useAimeeVoice(): UseAimeeVoiceResult {
         await rec.stopAndUnloadAsync();
       } catch {}
     }
-  }, []);
+    await resetAudioMode();
+  }, [resetAudioMode]);
 
   const stop = useCallback(async () => {
     const rec = recordingRef.current;
@@ -128,6 +143,7 @@ export function useAimeeVoice(): UseAimeeVoiceResult {
     setStatus('uploading');
     try {
       await rec.stopAndUnloadAsync();
+      await resetAudioMode();
       const uri = rec.getURI();
       recordingRef.current = null;
       if (!uri) throw new Error('No audio captured');
@@ -186,9 +202,10 @@ export function useAimeeVoice(): UseAimeeVoiceResult {
       );
     } catch (err) {
       console.warn('[useAimeeVoice] stop failed:', err);
+      await resetAudioMode();
       setStatus('idle');
     }
-  }, [router, cancel]);
+  }, [router, cancel, resetAudioMode]);
 
   return {
     status,

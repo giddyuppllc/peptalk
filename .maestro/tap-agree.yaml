@@ -1,0 +1,4 @@
+appId: com.peptalkapp.peptalk
+---
+- tapOn:
+    point: "50%, 69%"

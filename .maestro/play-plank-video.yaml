@@ -1,0 +1,12 @@
+appId: com.peptalkapp.peptalk
+---
+- openLink: peptalk://workouts/exercises
+- extendedWaitUntil:
+    visible: "Plank"
+    timeout: 8000
+- tapOn:
+    text: "Plank"
+    index: 0
+- takeScreenshot: /tmp/peptalk-review/qa/vid3-plank-detail
+- tapOn:
+    point: "50%, 30%"

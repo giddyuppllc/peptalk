@@ -50,6 +50,94 @@ function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/**
+ * Minimal markdown renderer for Aimee's lab interpretation.
+ *
+ * The aimee-lab-interpret edge function returns markdown (## headings,
+ * **bold**, > blockquotes, - bullets). No markdown renderer is shared
+ * app-wide (ChatBubble's is inline-bold only + not exported), so we
+ * convert the common block + inline tokens to styled <Text> here rather
+ * than adding a react-native-markdown dependency.
+ */
+function renderInlineBold(text: string, baseKey: string): React.ReactNode[] {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**') ? (
+      <Text key={`${baseKey}-b${i}`} style={mdStyles.bold}>
+        {part.slice(2, -2)}
+      </Text>
+    ) : (
+      <Text key={`${baseKey}-t${i}`}>{part}</Text>
+    ),
+  );
+}
+
+function InterpretationMarkdown({ markdown }: { markdown: string }) {
+  const t = useTheme();
+  const lines = markdown.replace(/\r\n/g, '\n').split('\n');
+  return (
+    <View>
+      {lines.map((rawLine, idx) => {
+        const line = rawLine.trimEnd();
+        const key = `md-${idx}`;
+        if (line.trim() === '') {
+          return <View key={key} style={mdStyles.spacer} />;
+        }
+        const heading = line.match(/^(#{1,3})\s+(.*)$/);
+        if (heading) {
+          const level = heading[1].length;
+          const hStyle =
+            level === 1 ? mdStyles.h1 : level === 2 ? mdStyles.h2 : mdStyles.h3;
+          return (
+            <Text key={key} style={[hStyle, { color: t.text }]}>
+              {renderInlineBold(heading[2], key)}
+            </Text>
+          );
+        }
+        const quote = line.match(/^>\s?(.*)$/);
+        if (quote) {
+          return (
+            <View key={key} style={[mdStyles.quote, { borderLeftColor: '#9b6cd9' }]}>
+              <Text style={[mdStyles.quoteText, { color: t.textSecondary }]}>
+                {renderInlineBold(quote[1], key)}
+              </Text>
+            </View>
+          );
+        }
+        const bullet = line.match(/^\s*[-*]\s+(.*)$/);
+        if (bullet) {
+          return (
+            <View key={key} style={mdStyles.bulletRow}>
+              <Text style={[mdStyles.bulletDot, { color: '#9b6cd9' }]}>•</Text>
+              <Text style={[mdStyles.bulletText, { color: t.text }]}>
+                {renderInlineBold(bullet[1], key)}
+              </Text>
+            </View>
+          );
+        }
+        return (
+          <Text key={key} style={[mdStyles.paragraph, { color: t.text }]}>
+            {renderInlineBold(line, key)}
+          </Text>
+        );
+      })}
+    </View>
+  );
+}
+
+const mdStyles = StyleSheet.create({
+  bold: { fontWeight: '700' },
+  h1: { fontSize: FontSizes.lg, fontWeight: '700', marginTop: 10, marginBottom: 4 },
+  h2: { fontSize: FontSizes.md, fontWeight: '700', marginTop: 10, marginBottom: 4 },
+  h3: { fontSize: FontSizes.sm, fontWeight: '700', marginTop: 8, marginBottom: 2 },
+  paragraph: { fontSize: FontSizes.sm, lineHeight: 22, marginBottom: 4 },
+  spacer: { height: 6 },
+  quote: { borderLeftWidth: 3, paddingLeft: 10, marginVertical: 4 },
+  quoteText: { fontSize: FontSizes.sm, lineHeight: 22, fontStyle: 'italic' },
+  bulletRow: { flexDirection: 'row', marginBottom: 3, paddingRight: 4 },
+  bulletDot: { fontSize: FontSizes.sm, lineHeight: 22, marginRight: 6 },
+  bulletText: { flex: 1, fontSize: FontSizes.sm, lineHeight: 22 },
+});
+
 export default function LabsScreen() {
   const router = useRouter();
   const t = useTheme();
@@ -409,9 +497,7 @@ export default function LabsScreen() {
                 {new Date(interpretation.generatedAt).toLocaleString()}
               </Text>
             </View>
-            <Text style={[styles.interpretBody, { color: t.text }]}>
-              {interpretation.markdown}
-            </Text>
+            <InterpretationMarkdown markdown={interpretation.markdown} />
           </GlassCard>
         )}
 

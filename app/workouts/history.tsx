@@ -34,9 +34,9 @@ function LogItem({ log }: { log: WorkoutLog }) {
       </View>
       <View style={styles.logInfo}>
         <Text style={styles.logTitle}>
-          {log.dayId
+          {log.weekNumber != null && log.dayId
             ? `Week ${log.weekNumber} · ${log.dayId}`
-            : 'Freestyle Workout'}
+            : log.workoutName ?? log.dayId ?? 'Freestyle Workout'}
         </Text>
         <View style={styles.logMeta}>
           <View style={styles.logMetaItem}>

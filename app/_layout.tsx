@@ -175,24 +175,29 @@ function RootLayout() {
     if (lastIapUserIdRef.current === currentUserId) return;
     // Only fire on actual user changes after first boot binding.
     if (lastIapUserIdRef.current !== null) {
-      try { endIAP(); } catch {}
-      try {
-        initIAP({
-          onPurchase: async ({ productId, transactionReceipt }) => {
-            const liveUserId = useAuthStore.getState().user?.id ?? null;
-            if (liveUserId && currentUserId !== liveUserId) return;
-            const platform: 'ios' | 'android' = Platform.OS === 'ios' ? 'ios' : 'android';
-            try {
-              await useSubscriptionStore
-                .getState()
-                .validatePurchase(platform, productId, transactionReceipt);
-            } catch {}
-          },
-          onPending: ({ productId }) => {
-            useSubscriptionStore.getState().setPendingPurchase({ productId });
-          },
-        });
-      } catch {}
+      // endIAP() is async (tears down the StoreKit connection + listeners).
+      // initIAP must wait for it, or the new purchase listener races the
+      // teardown and ends up unregistered until the next app restart.
+      (async () => {
+        try { await endIAP(); } catch {}
+        try {
+          await initIAP({
+            onPurchase: async ({ productId, transactionReceipt }) => {
+              const liveUserId = useAuthStore.getState().user?.id ?? null;
+              if (liveUserId && currentUserId !== liveUserId) return;
+              const platform: 'ios' | 'android' = Platform.OS === 'ios' ? 'ios' : 'android';
+              try {
+                await useSubscriptionStore
+                  .getState()
+                  .validatePurchase(platform, productId, transactionReceipt);
+              } catch {}
+            },
+            onPending: ({ productId }) => {
+              useSubscriptionStore.getState().setPendingPurchase({ productId });
+            },
+          });
+        } catch {}
+      })();
     }
     lastIapUserIdRef.current = currentUserId;
   }, [currentUserId]);
@@ -907,6 +912,12 @@ function RootLayout() {
 
         // Pull the just-granted session into local state + route.
         await useAuthStore.getState().restoreSession();
+        // A user who authenticated via a confirmation/recovery link has an
+        // account — never force them back through onboarding. (A signup
+        // started from the /auth screen mid-onboarding leaves isComplete
+        // false; without this they'd be bounced to /onboarding by the nav
+        // guard and hit "User already registered" at the account step.)
+        useOnboardingStore.getState().completeOnboarding();
         if (!cancelled) router.replace('/(tabs)');
       } catch (err: any) {
         if (__DEV__) console.warn('[auth-link] handling failed:', err);

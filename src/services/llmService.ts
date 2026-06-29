@@ -208,6 +208,14 @@ interface AimeeServerContext {
   currentRoute?: string;
 }
 
+/** The device's LOCAL calendar date as YYYY-MM-DD (new Date() is local in RN). */
+function localToday(): string {
+  const d = new Date();
+  const m = `${d.getMonth() + 1}`.padStart(2, '0');
+  const day = `${d.getDate()}`.padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
 function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
   const { hasConsent } = sanitizeForLLM(context);
 
@@ -1067,7 +1075,9 @@ export async function* generateAIResponseStream(
       },
       body: JSON.stringify({
         messages: conversationMessages,
-        context: serverContext,
+        // Include the user's LOCAL calendar date so tool-logged doses/meals/
+        // water land on their day, not server UTC (e.g. evening in the US).
+        context: { ...serverContext, localDate: localToday() },
         conversationId: options?.conversationId ?? null,
       }),
       // Honor caller-supplied abort signal so the chat screen can

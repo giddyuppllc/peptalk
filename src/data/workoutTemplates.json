@@ -386,20 +386,20 @@
           {
             "muscle": "quads",
             "priority": "P1",
-            "reps": "41255",
+            "reps": "10-12/10-12/10-12",
             "setType": "super_set",
             "rest": "30 seconds"
           },
           {
             "muscle": "quads",
             "priority": "P2",
-            "reps": "41255",
+            "reps": "10-12/10-12/10-12",
             "setType": "super_set_2"
           },
           {
             "muscle": "hamstrings",
             "priority": "P1",
-            "reps": "41255",
+            "reps": "10-12/10-12/10-12",
             "setType": "super_set_2",
             "rest": "30 seconds"
           },
@@ -630,33 +630,33 @@
           {
             "muscle": "chest",
             "priority": "P1",
-            "reps": "41255",
+            "reps": "10-12/10-12/10-12/10-12",
             "setType": "super_set"
           },
           {
             "muscle": "triceps",
             "priority": "P1",
-            "reps": "41255",
+            "reps": "10-12/10-12/10-12/10-12",
             "setType": "super_set",
             "rest": "30 seconds"
           },
           {
             "muscle": "chest",
             "priority": "P2",
-            "reps": "41255",
+            "reps": "10-12/10-12/10-12/10-12",
             "setType": "super_set"
           },
           {
             "muscle": "shoulders",
             "priority": "P2",
-            "reps": "41255",
+            "reps": "10-12/10-12/10-12/10-12",
             "setType": "super_set",
             "rest": "30 seconds"
           },
           {
             "muscle": "triceps",
             "priority": "P2",
-            "reps": "41255",
+            "reps": "10-12/10-12/10-12/10-12",
             "setType": "super_set"
           }
         ]
