@@ -54,6 +54,7 @@ const POLICY_SECTIONS: PolicySection[] = [
     paragraphs: [
       'We take the protection of your health-related information extremely seriously.',
       'All health data\u2014including dose logs, check-in responses, body composition data, and protocol details\u2014is encrypted in transit (TLS) and at rest, and stored in your private account on our secure backend so it syncs across your devices. We never sell this data or share it for advertising. Health data is sent to a third-party AI provider only when you actively use an AI feature (see \u201cAI & Cloud Services\u201d below), and only after you have granted consent.',
+      'Health platform integrations: if you choose to connect Apple Health (iOS) or Health Connect (Android), PepTalk reads only the data types you approve in the system permission dialog (such as steps, heart rate, sleep, weight, and body composition) to show trends alongside your protocols and check-ins. This data is read on-device with your explicit grant, is never sold or used for advertising, and you can revoke access at any time in Apple Health / Health Connect or your device settings. PepTalk does not write data back to Health Connect on Android.',
       'PepTalk does not qualify as a covered entity under HIPAA, but we voluntarily adhere to HIPAA-inspired principles: minimum necessary access, encryption at rest, and user control over all data.',
     ],
   },

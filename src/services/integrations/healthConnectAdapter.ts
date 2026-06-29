@@ -51,7 +51,6 @@ const READ_PERMISSIONS = [
   { accessType: 'read', recordType: 'SleepSession' },
   { accessType: 'read', recordType: 'HeartRate' },
   { accessType: 'read', recordType: 'ActiveCaloriesBurned' },
-  { accessType: 'read', recordType: 'TotalCaloriesBurned' },
   { accessType: 'read', recordType: 'Weight' },
   { accessType: 'read', recordType: 'BodyFat' },
 ] as const;

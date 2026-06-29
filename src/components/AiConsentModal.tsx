@@ -40,7 +40,13 @@ export function AiConsentModal() {
   if (!visible) return null;
 
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent>
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={() => setDismissed(true)}
+    >
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <View style={styles.iconWrap}>

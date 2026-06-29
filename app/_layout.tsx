@@ -864,14 +864,24 @@ function RootLayout() {
       if (!url.startsWith('peptalk://auth')) return;
       try {
         const { supabase } = await import('../src/services/supabase');
-        // Two URL shapes covered:
-        //   1. PKCE flow (default modern Supabase): ?code=...
+        // Three URL shapes covered:
+        //   1. PKCE flow (?code=...) — only when the client uses flowType:'pkce'
+        //      AND a code_verifier was stored on this device.
         //   2. OTP flow: ?token_hash=...&type=signup|recovery|invite
+        //   3. Implicit flow (the client's CURRENT default — flowType unset):
+        //      Supabase /auth/v1/verify 302-redirects to
+        //      peptalk://auth/callback#access_token=...&refresh_token=...
+        //      i.e. tokens in the URL FRAGMENT, no ?code/?token_hash. Because
+        //      detectSessionInUrl is false in RN, we set the session by hand.
+        //      Without this branch, confirmation links dead-ended on every
+        //      platform (the prior code only parsed ?code=/?token_hash=).
         // Parse without depending on URL polyfill (RN ships an incomplete
-        // one); a regex pull is sufficient for query strings.
+        // one); a regex pull is sufficient.
         const codeMatch = url.match(/[?&]code=([^&#]+)/);
         const tokenHashMatch = url.match(/[?&]token_hash=([^&#]+)/);
         const typeMatch = url.match(/[?&]type=([^&#]+)/);
+        const accessTokenMatch = url.match(/[#&]access_token=([^&]+)/);
+        const refreshTokenMatch = url.match(/[#&]refresh_token=([^&]+)/);
 
         if (codeMatch?.[1]) {
           const { error } = await (supabase as any).auth.exchangeCodeForSession(
@@ -884,8 +894,14 @@ function RootLayout() {
             type: decodeURIComponent(typeMatch[1]) as any,
           });
           if (error) throw error;
+        } else if (accessTokenMatch?.[1] && refreshTokenMatch?.[1]) {
+          const { error } = await (supabase as any).auth.setSession({
+            access_token: decodeURIComponent(accessTokenMatch[1]),
+            refresh_token: decodeURIComponent(refreshTokenMatch[1]),
+          });
+          if (error) throw error;
         } else {
-          if (__DEV__) console.warn('[auth-link] missing code/token_hash in', url);
+          if (__DEV__) console.warn('[auth-link] no code/token_hash/access_token in', url);
           return;
         }
 
