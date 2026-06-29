@@ -25,6 +25,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 
 // 2026-05-20 fix: don't fall back to OPENAI_API_KEY — on this project
 // that env var holds the Grok/xAI key (OPENAI_BASE_URL points to
@@ -163,10 +164,15 @@ Deno.serve(async (req) => {
       .select('subscription_tier, is_pro')
       .eq('id', user.id)
       .single();
-    const tier = isBetaTester
-      ? 'pro'
-      : (profile?.subscription_tier ?? 'free');
-    const isPro = tier === 'pro' || profile?.is_pro === true || isBetaTester;
+    // resolveEffectiveTier verifies a live subscription backs the mirror tier
+    // and returns 'pro' for beta testers. Drop the legacy `profile.is_pro`
+    // OR-term: it's the SAME stale mirror as subscription_tier (set by the IAP
+    // webhooks) and would re-open the expired-sub hole.
+    const tier = await resolveEffectiveTier(supabase, user.id, {
+      profileTier: profile?.subscription_tier,
+      isBetaTester,
+    });
+    const isPro = tier === 'pro';
 
     if (!isPro) {
       return jsonResp(

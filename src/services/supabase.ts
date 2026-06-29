@@ -12,23 +12,68 @@ import type { Database } from '../types/database';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
-/** Secure storage adapter for Supabase auth session persistence */
+/**
+ * Secure storage adapter for Supabase auth session persistence.
+ *
+ * Android's expo-secure-store has a ~2048-byte limit per value; the Supabase
+ * session blob (access + refresh tokens + user metadata) can exceed it, which
+ * silently fails to persist → the user appears logged out on the next launch.
+ * We chunk large values across multiple SecureStore keys to stay under the
+ * limit (the documented LargeSecureStore pattern, kept ENTIRELY in SecureStore
+ * so tokens are never written to unencrypted AsyncStorage). SecureStore keys
+ * allow [A-Za-z0-9._-], so the `.N` / `.__chunks__` suffixes are valid.
+ */
+const CHUNK_SIZE = 1800; // chars; stays < 2048 bytes even with some multi-byte chars
+const COUNT_SUFFIX = '.__chunks__';
+
 const secureStoreAdapter = {
   getItem: async (key: string): Promise<string | null> => {
     try {
-      return await SecureStore.getItemAsync(key);
+      const countRaw = await SecureStore.getItemAsync(key + COUNT_SUFFIX);
+      if (countRaw == null) {
+        // Legacy single-key value (pre-chunking) — read it directly so an
+        // existing session survives the upgrade without a forced logout.
+        return await SecureStore.getItemAsync(key);
+      }
+      const count = parseInt(countRaw, 10) || 0;
+      let out = '';
+      for (let i = 0; i < count; i++) {
+        const part = await SecureStore.getItemAsync(`${key}.${i}`);
+        if (part == null) return null; // partial/corrupt → treat as no session
+        out += part;
+      }
+      return out;
     } catch {
       return null;
     }
   },
   setItem: async (key: string, value: string): Promise<void> => {
     try {
-      await SecureStore.setItemAsync(key, value);
+      const prevCountRaw = await SecureStore.getItemAsync(key + COUNT_SUFFIX);
+      const prevCount = prevCountRaw ? parseInt(prevCountRaw, 10) || 0 : 0;
+
+      const chunkCount = Math.max(1, Math.ceil(value.length / CHUNK_SIZE));
+      for (let i = 0; i < chunkCount; i++) {
+        await SecureStore.setItemAsync(`${key}.${i}`, value.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE));
+      }
+      // Remove stale higher-index chunks if the value shrank since last write.
+      for (let i = chunkCount; i < prevCount; i++) {
+        await SecureStore.deleteItemAsync(`${key}.${i}`).catch(() => {});
+      }
+      await SecureStore.setItemAsync(key + COUNT_SUFFIX, String(chunkCount));
+      // Drop any legacy single-key value now that it's stored chunked.
+      await SecureStore.deleteItemAsync(key).catch(() => {});
     } catch {}
   },
   removeItem: async (key: string): Promise<void> => {
     try {
-      await SecureStore.deleteItemAsync(key);
+      const countRaw = await SecureStore.getItemAsync(key + COUNT_SUFFIX);
+      const count = countRaw ? parseInt(countRaw, 10) || 0 : 0;
+      for (let i = 0; i < count; i++) {
+        await SecureStore.deleteItemAsync(`${key}.${i}`).catch(() => {});
+      }
+      await SecureStore.deleteItemAsync(key + COUNT_SUFFIX).catch(() => {});
+      await SecureStore.deleteItemAsync(key).catch(() => {}); // legacy single-key
     } catch {}
   },
 };

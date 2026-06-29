@@ -95,26 +95,63 @@ export interface UnifiedFood {
 // ---------------------------------------------------------------------------
 // API configuration
 // ---------------------------------------------------------------------------
+//
+// SECURITY (P3): the paid / rate-limited vendor keys (USDA, Spoonacular,
+// CalorieNinjas) used to be read here from EXPO_PUBLIC_* env vars and the
+// vendors were called directly from the client. EXPO_PUBLIC_* values are
+// inlined into the shipped JS bundle, so those keys were extractable from
+// any installed app. Those calls now go through the `food-search-proxy`
+// edge function, which holds the keys as server-side secrets. See
+// `callFoodProxy` below.
 
-// USDA FoodData Central — free, unlimited with key
-const USDA_API_KEY = process.env.EXPO_PUBLIC_USDA_API_KEY || 'DEMO_KEY';
-const USDA_BASE = 'https://api.nal.usda.gov/fdc/v1';
-
-// Open Food Facts — no key needed
+// Open Food Facts — no key needed, called directly (free, unlimited).
 const OFF_BASE = 'https://world.openfoodfacts.net';
 
-// Spoonacular — free tier: 150 req/day, has food images + nutrition
-const SPOONACULAR_API_KEY = process.env.EXPO_PUBLIC_SPOONACULAR_API_KEY || '';
-const SPOONACULAR_BASE = 'https://api.spoonacular.com';
-
-// CalorieNinjas — free tier: 10K req/month, natural language parsing
-const CALORIENINJAS_API_KEY = process.env.EXPO_PUBLIC_CALORIENINJAS_API_KEY || '';
-const CALORIENINJAS_BASE = 'https://api.calorieninjas.com/v1';
-
-// Nutritionix — free tier (register at https://developer.nutritionix.com)
+// Nutritionix — free tier (register at https://developer.nutritionix.com).
+// No credentials configured; kept for the natural-language fallback path.
 const NUTRITIONIX_APP_ID = '';
 const NUTRITIONIX_API_KEY = '';
 const NUTRITIONIX_BASE = 'https://trackapi.nutritionix.com/v2';
+
+// ---------------------------------------------------------------------------
+// Vendor proxy — keyed APIs are reached only via the food-search-proxy edge
+// function so the vendor keys never ship in the client bundle.
+// ---------------------------------------------------------------------------
+
+type FoodProxyProvider = 'usda' | 'spoonacular' | 'calorieninjas';
+
+interface FoodProxyBody {
+  provider: FoodProxyProvider;
+  query: string;
+  /** USDA only */
+  pageSize?: number;
+  /** USDA only — comma-separated dataTypes */
+  dataType?: string;
+  /** Spoonacular only */
+  number?: number;
+}
+
+/**
+ * Calls the `food-search-proxy` edge function and returns the vendor's
+ * response body unchanged (the proxy passes it through verbatim), or
+ * `null` if the provider is unavailable / the call failed. Callers treat
+ * `null` as "skip this provider" — the same graceful degradation that the
+ * old direct-fetch `try/catch → return []` gave us.
+ */
+async function callFoodProxy(body: FoodProxyBody): Promise<any | null> {
+  try {
+    const { supabase } = await import('./supabase');
+    const { data, error } = await supabase.functions.invoke('food-search-proxy', {
+      body,
+    });
+    if (error) return null;
+    // The proxy signals a skippable provider with `{ unavailable: true }`.
+    if (!data || data.unavailable) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // USDA FoodData Central
@@ -122,10 +159,13 @@ const NUTRITIONIX_BASE = 'https://trackapi.nutritionix.com/v2';
 
 async function searchUSDA(query: string, limit = 25): Promise<UnifiedFood[]> {
   try {
-    const url = `${USDA_BASE}/foods/search?query=${encodeURIComponent(query)}&pageSize=${limit}&api_key=${USDA_API_KEY}&dataType=Foundation,SR Legacy,Branded`;
-    const res = await fetch(url);
-    if (!res.ok) return [];
-    const data = await res.json();
+    const data = await callFoodProxy({
+      provider: 'usda',
+      query,
+      pageSize: limit,
+      dataType: 'Foundation,SR Legacy,Branded',
+    });
+    if (!data) return [];
 
     return (data.foods || []).map((item: any): UnifiedFood => {
       const nutrients = item.foodNutrients || [];
@@ -469,18 +509,16 @@ function nutritionixItemToUnified(item: any, type: 'common' | 'branded'): Unifie
 const spoonImageCache = new Map<string, string | null>();
 
 async function getSpoonacularImage(query: string): Promise<string | undefined> {
-  if (!SPOONACULAR_API_KEY) return undefined;
-
   const cacheKey = query.toLowerCase().trim();
   if (spoonImageCache.has(cacheKey)) {
     return spoonImageCache.get(cacheKey) ?? undefined;
   }
 
   try {
-    const url = `${SPOONACULAR_BASE}/food/ingredients/search?query=${encodeURIComponent(query)}&number=1&apiKey=${SPOONACULAR_API_KEY}`;
-    const res = await fetch(url);
-    if (!res.ok) { spoonImageCache.set(cacheKey, null); return undefined; }
-    const data = await res.json();
+    const data = await callFoodProxy({ provider: 'spoonacular', query, number: 1 });
+    // Provider unavailable (no key / outage) → skip, but cache the miss so
+    // we don't re-invoke the proxy for the same query this session.
+    if (!data) { spoonImageCache.set(cacheKey, null); return undefined; }
 
     const item = data.results?.[0];
     if (item?.image) {
@@ -513,16 +551,11 @@ function isNaturalLanguageQuery(query: string): boolean {
 }
 
 async function searchCalorieNinjas(query: string): Promise<UnifiedFood[]> {
-  if (!CALORIENINJAS_API_KEY) return [];
   if (!isNaturalLanguageQuery(query)) return [];
 
   try {
-    const url = `${CALORIENINJAS_BASE}/nutrition?query=${encodeURIComponent(query)}`;
-    const res = await fetch(url, {
-      headers: { 'X-Api-Key': CALORIENINJAS_API_KEY },
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
+    const data = await callFoodProxy({ provider: 'calorieninjas', query });
+    if (!data) return [];
 
     return (data.items || []).map((item: any): UnifiedFood => {
       const servingG = item.serving_size_g || 100;
@@ -712,16 +745,17 @@ export async function lookupBarcode(barcode: string): Promise<UnifiedFood | null
     }
   } catch { /* fall through to USDA */ }
 
-  // Fallback: try USDA barcode search
+  // Fallback: try USDA barcode search (via the proxy — no key in client)
   try {
-    const url = `${USDA_BASE}/foods/search?query=${barcode}&pageSize=1&api_key=${USDA_API_KEY}&dataType=Branded`;
-    const res = await fetch(url);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.foods?.length > 0) {
-        const results = await searchUSDA(data.foods[0].description, 1);
-        if (results.length > 0) return results[0];
-      }
+    const data = await callFoodProxy({
+      provider: 'usda',
+      query: barcode,
+      pageSize: 1,
+      dataType: 'Branded',
+    });
+    if (data?.foods?.length > 0) {
+      const results = await searchUSDA(data.foods[0].description, 1);
+      if (results.length > 0) return results[0];
     }
   } catch { /* no result */ }
 

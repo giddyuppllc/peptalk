@@ -9,6 +9,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -70,7 +71,10 @@ Deno.serve(async (req) => {
       .from('profiles').select('subscription_tier, username, created_at')
       .eq('id', user.id).maybeSingle();
 
-    const tier = isBetaTester ? 'pro' : (profile?.subscription_tier ?? 'free');
+    const tier = await resolveEffectiveTier(admin, user.id, {
+      profileTier: profile?.subscription_tier,
+      isBetaTester,
+    });
     if (tier === 'free') {
       return json({ error: 'Posting requires PepTalk+ or Pro.', upgrade: true }, 403);
     }

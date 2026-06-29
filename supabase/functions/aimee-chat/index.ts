@@ -12,6 +12,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildAimeeSystemPrompt, SAFETY_TRAILER, type AimeeServerContext } from './_prompt.ts';
+import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 // Default to Grok — matches the other edge functions. If secrets aren't set
@@ -92,7 +93,12 @@ Deno.serve(async (req) => {
       .eq('id', user.id)
       .single();
 
-    const tier = isBetaTester ? 'pro' : (profile?.subscription_tier ?? 'free');
+    // Verify a live subscription backs a paid mirror tier (defends against a
+    // webhook-misfire lapse). See _shared/effectiveTier.
+    const tier = await resolveEffectiveTier(supabase, user.id, {
+      profileTier: profile?.subscription_tier,
+      isBetaTester,
+    });
     const limit = RATE_LIMITS[tier] ?? 0;
 
     if (limit === 0) {

@@ -22,6 +22,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import {
   S3Client,
   GetObjectCommand,
@@ -107,8 +108,14 @@ Deno.serve(async (req: Request) => {
     .select('subscription_tier, is_pro')
     .eq('id', userId)
     .single();
-  const tier = profile?.subscription_tier ?? 'free';
-  const isPro = tier === 'pro' || profile?.is_pro === true;
+  // Verify a live subscription backs the mirror tier (defends against a
+  // webhook-misfire lapse). The beta-tester + tagger overrides are applied
+  // separately in the final gate below, so they're not passed here. Drop the
+  // legacy `profile.is_pro` OR-term — same stale mirror, same hole.
+  const tier = await resolveEffectiveTier(supabase, userId, {
+    profileTier: profile?.subscription_tier,
+  });
+  const isPro = tier === 'pro';
 
   // Tagger override — admin emails can preview videos for tagging without Pro.
   const taggerOverride =

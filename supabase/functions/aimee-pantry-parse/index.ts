@@ -12,6 +12,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -94,7 +95,10 @@ Deno.serve(async (req) => {
       .select('subscription_tier')
       .eq('id', user.id)
       .maybeSingle();
-    const tier = isBetaTester ? 'pro' : (profile?.subscription_tier ?? 'free');
+    const tier = await resolveEffectiveTier(supabase, user.id, {
+      profileTier: profile?.subscription_tier,
+      isBetaTester,
+    });
     if (tier === 'free') {
       return json({ error: 'Plus or Pro tier required', upgrade: true }, 403);
     }

@@ -53,6 +53,7 @@ import {
 } from './_grok.ts';
 import { AIMEE_TOOLS, executeTool } from './_tools.ts';
 import { checkCostCap, denialMessage, recordSpend } from './_cost.ts';
+import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -100,7 +101,12 @@ Deno.serve(async (req) => {
     .select('subscription_tier')
     .eq('id', user.id)
     .single();
-  const tier = isBetaTester ? 'pro' : (profile?.subscription_tier ?? 'free');
+  // Resolve against the subscriptions table so a stale paid mirror (webhook
+  // misfire after a lapse) doesn't keep serving Pro. See _shared/effectiveTier.
+  const tier = await resolveEffectiveTier(supabase, user.id, {
+    profileTier: profile?.subscription_tier,
+    isBetaTester,
+  });
   const messageLimit = RATE_LIMITS[tier] ?? 0;
   if (messageLimit === 0) {
     return jsonError(403, 'AI chat requires PepTalk+ or Pro subscription', { upgrade: true });

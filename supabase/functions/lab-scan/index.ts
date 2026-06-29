@@ -13,6 +13,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 
 // 2026-05-17 vision routing fix: see food-scan for full rationale.
 // Grok-4.3 doesn't accept image inputs; OpenAI gpt-4o-mini does and
@@ -110,7 +111,10 @@ Deno.serve(async (req) => {
       .select('subscription_tier')
       .eq('id', user.id)
       .single();
-    const effectiveTier = isBetaTester ? 'pro' : (profile?.subscription_tier ?? 'free');
+    const effectiveTier = await resolveEffectiveTier(supabase, user.id, {
+      profileTier: profile?.subscription_tier,
+      isBetaTester,
+    });
     if (effectiveTier !== 'pro' && effectiveTier !== 'plus') {
       return jsonResp({
         error: 'Lab scanning requires PepTalk+ or Pro',

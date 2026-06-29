@@ -26,6 +26,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -113,7 +114,10 @@ Deno.serve(async (req) => {
     const isBetaTester = !!user.email && BETA_TESTER_EMAILS.has(user.email.toLowerCase());
     const { data: profile } = await supabase
       .from('profiles').select('subscription_tier').eq('id', user.id).single();
-    const effectiveTier = isBetaTester ? 'pro' : (profile?.subscription_tier ?? 'free');
+    const effectiveTier = await resolveEffectiveTier(supabase, user.id, {
+      profileTier: profile?.subscription_tier,
+      isBetaTester,
+    });
     if (effectiveTier !== 'pro' && effectiveTier !== 'plus') {
       return jsonResp({
         error: 'Lab interpretation requires PepTalk+ or Pro.',

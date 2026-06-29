@@ -17,6 +17,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 
 // 2026-05-20 vision routing fix: Grok-4.x does not accept image inputs
 // (food-scan caught this 2026-05-17, this fn was missed). Route to
@@ -193,9 +194,10 @@ Deno.serve(async (req) => {
       .select('subscription_tier')
       .eq('id', user.id)
       .single();
-    const effectiveTier = isBetaTester
-      ? 'pro'
-      : (profile?.subscription_tier ?? 'free');
+    const effectiveTier = await resolveEffectiveTier(supabase, user.id, {
+      profileTier: profile?.subscription_tier,
+      isBetaTester,
+    });
 
     if (effectiveTier !== 'pro' && effectiveTier !== 'plus') {
       return new Response(

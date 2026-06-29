@@ -58,6 +58,13 @@ supabase secrets set INTERNAL_FUNCTION_SECRET=$(openssl rand -hex 32)
 # Runtime env (sandbox-vs-prod IAP). 'production' for the store build.
 supabase secrets set EXPO_PUBLIC_ENV=production
 
+# Food-search proxy (keys moved OUT of the client bundle into the edge fn).
+# Until these are set, food-search-proxy returns {unavailable} and those
+# providers are skipped (Open Food Facts / UPC DB still work — they're keyless).
+supabase secrets set USDA_API_KEY=<usda key>           # falls back to DEMO_KEY if unset
+supabase secrets set SPOONACULAR_API_KEY=<spoonacular key>
+supabase secrets set CALORIENINJAS_API_KEY=<calorieninjas key>
+
 # Verify
 supabase secrets list
 ```
@@ -76,14 +83,20 @@ grep `pg_net.http_post` / `net.http_post`). If unset, those fns now return a lou
 ---
 
 ## 4. 🟥 Deploy edge functions  (`supabase functions deploy`)
-18 functions changed this session. Two are external webhooks → `--no-verify-jwt`.
+~30 functions changed/added this session (the gate-expiry hardening alone touched 18 tier-gate
+fns + the shared `_shared/effectiveTier.ts` helper, which ships bundled with each). Two are
+external webhooks → `--no-verify-jwt`. Simplest is `supabase functions deploy` (push ALL), then
+re-deploy the two webhooks with the flag. The explicit changed-only list:
 
 ```bash
 # Standard (verify JWT)
-supabase functions deploy aimee-chat aimee-chat-stream aimee-pantry-scan aimee-voice \
-  community-create-comment community-live-edit-message community-moderate-image \
-  community-push-fanout community-search community-upload-image crm-event-fanout \
-  delete-user food-scan lab-scan transcribe-workout-video validate-purchase
+supabase functions deploy \
+  aimee-chat aimee-chat-stream aimee-lab-interpret aimee-pantry-meal aimee-pantry-parse \
+  aimee-pantry-scan aimee-plan aimee-recipe aimee-report-rewrite aimee-voice aimee-workout \
+  community-create-comment community-create-post community-live-edit-message \
+  community-live-send-message community-moderate-image community-push-fanout community-search \
+  community-suggest-topic community-upload-image crm-event-fanout delete-user \
+  food-scan food-search-proxy get-workout-video lab-scan transcribe-workout-video validate-purchase
 
 # External webhooks — MUST use --no-verify-jwt
 supabase functions deploy apple-notifications --no-verify-jwt

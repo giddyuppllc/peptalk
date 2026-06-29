@@ -21,6 +21,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -125,8 +126,14 @@ Deno.serve(async (req) => {
       .select('subscription_tier, is_pro')
       .eq('id', user.id)
       .single();
-    const tier = isBetaTester ? 'pro' : (profile?.subscription_tier ?? 'free');
-    const isPro = tier === 'pro' || profile?.is_pro === true || isBetaTester;
+    // resolveEffectiveTier verifies a live subscription backs the mirror tier
+    // and returns 'pro' for beta testers. Drop the legacy `profile.is_pro`
+    // OR-term — it's the same stale mirror and would re-open the expired hole.
+    const tier = await resolveEffectiveTier(supabase, user.id, {
+      profileTier: profile?.subscription_tier,
+      isBetaTester,
+    });
+    const isPro = tier === 'pro';
     if (!isPro) {
       return jsonResp(
         { error: 'Aimee report rewrites are a PepTalk Pro feature.', upgrade: true },

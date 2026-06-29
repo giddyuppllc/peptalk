@@ -10,6 +10,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 
 // 2026-05-17 vision routing fix: Grok-4.3 (the current default OPENAI_MODEL
 // on this project) does not accept image inputs. Routing vision endpoints
@@ -117,7 +118,10 @@ Deno.serve(async (req) => {
       .eq('id', user.id)
       .single();
 
-    const effectiveTier = isBetaTester ? 'pro' : (profile?.subscription_tier ?? 'free');
+    const effectiveTier = await resolveEffectiveTier(supabase, user.id, {
+      profileTier: profile?.subscription_tier,
+      isBetaTester,
+    });
 
     // Food Scanner moved into Plus in Wave 16 — both Plus and Pro are
     // permitted. Free users still get the upgrade prompt.
