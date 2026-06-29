@@ -106,23 +106,6 @@ Deno.serve(async (req) => {
     return jsonError(403, 'AI chat requires PepTalk+ or Pro subscription', { upgrade: true });
   }
 
-  // 3. Per-message rate limit ---------------------------------------------
-  const rateLimit = await checkRateLimit(supabase, user.id, 'aimee-chat-stream', messageLimit);
-  if (!rateLimit.allowed) {
-    if (rateLimit.failedClosed) {
-      return jsonError(
-        503,
-        'Aimee is temporarily unavailable — please try again in a minute.',
-        { retryAfter: rateLimit.retryAfter },
-      );
-    }
-    return jsonError(
-      429,
-      `Daily message limit reached (${rateLimit.limit}/day)${tier === 'plus' ? '. Upgrade to Pro for more.' : '. Resets tomorrow.'}`,
-      { upgrade: tier === 'plus', retryAfter: rateLimit.retryAfter },
-    );
-  }
-
   // 4. Dollar-aware cost cap ----------------------------------------------
   const costCheck = await checkCostCap(supabase, user.id);
   if (!costCheck.allowed) {
@@ -169,6 +152,27 @@ Deno.serve(async (req) => {
   const safeContext: AimeeServerContext = sanitizeContext(clientContext, tier);
   const systemPrompt = buildAimeeSystemPrompt(safeContext);
 
+  // 6b. Per-message rate limit — consume the credit only AFTER auth, tier,
+  //     cost-cap, and body validation pass, so a rejected request never
+  //     burns a daily message. The atomic bump enforces the per-day cap
+  //     under concurrency; a hard failure or an empty generation is
+  //     refunded inside the stream below (P3.5).
+  const rateLimit = await checkRateLimit(supabase, user.id, 'aimee-chat-stream', messageLimit);
+  if (!rateLimit.allowed) {
+    if (rateLimit.failedClosed) {
+      return jsonError(
+        503,
+        'Aimee is temporarily unavailable — please try again in a minute.',
+        { retryAfter: rateLimit.retryAfter },
+      );
+    }
+    return jsonError(
+      429,
+      `Daily message limit reached (${rateLimit.limit}/day)${tier === 'plus' ? '. Upgrade to Pro for more.' : '. Resets tomorrow.'}`,
+      { upgrade: tier === 'plus', retryAfter: rateLimit.retryAfter },
+    );
+  }
+
   // 7. Set up streaming response -----------------------------------------
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -180,6 +184,19 @@ Deno.serve(async (req) => {
       };
       const close = () => {
         try { controller.close(); } catch { /* already closed */ }
+      };
+
+      // P3.5: the daily message credit was bumped up front (atomic cap
+      // enforcement). Refund it if the turn produces NO output — a hard
+      // failure before any generation, or a model turn with no text and
+      // no tool calls. The guard makes the refund idempotent and never
+      // fires once real output reached the user.
+      let producedOutput = false;
+      let creditRefunded = false;
+      const refundCredit = async () => {
+        if (creditRefunded || producedOutput) return;
+        creditRefunded = true;
+        await refundRateLimit(supabase, user.id, 'aimee-chat-stream');
       };
 
       try {
@@ -220,6 +237,9 @@ Deno.serve(async (req) => {
             output_tokens: totalUsage.output_tokens + collected.usage.output_tokens,
           };
           if (collected.text) finalAssistantText = collected.text;
+          // First real text or tool call = a successful generation; the
+          // message credit is now earned and won't be refunded.
+          if (collected.text || collected.toolCalls.length > 0) producedOutput = true;
 
           if (collected.toolCalls.length === 0) break;
 
@@ -313,6 +333,11 @@ Deno.serve(async (req) => {
           }
         }
 
+        // P3.5: a turn that yielded no text and no tool calls is a dead
+        // generation — refund the message credit before we finish (no-op
+        // once any output was produced).
+        await refundCredit();
+
         // 8. Persist conversation + record spend ----------------------------
         const costMC = tokensToMicrocents(totalUsage);
         await recordSpend(supabase, user.id, costMC);
@@ -367,6 +392,9 @@ Deno.serve(async (req) => {
         close();
       } catch (err) {
         console.error('[aimee-chat-stream] fatal:', err);
+        // P3.5: a fatal error before any generation refunds the credit;
+        // refundCredit() is a no-op if real output already reached the user.
+        await refundCredit();
         send({ type: 'error', message: 'AI service temporarily unavailable' });
         close();
       }
@@ -665,5 +693,40 @@ async function checkRateLimit(
   } catch (err) {
     console.error(`[${functionName}] rate-limit check failed; failing closed:`, err);
     return { allowed: false, limit, count: 0, retryAfter: 60, failedClosed: true };
+  }
+}
+
+/**
+ * Best-effort refund of one unit consumed by checkRateLimit when the turn
+ * produced no output (hard failure before generation, or an empty model
+ * turn). The atomic bump stays up front so the per-day cap is still
+ * enforced under concurrency; this hands the credit back on the failure
+ * path. A lost refund only ever returns a credit the user was owed —
+ * never a money leak — so a light read-then-write is acceptable here.
+ */
+async function refundRateLimit(
+  supabase: any,
+  userId: string,
+  functionName: string,
+): Promise<void> {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data, error } = await supabase
+      .from('ai_usage_log')
+      .select('count')
+      .eq('user_id', userId)
+      .eq('function_name', functionName)
+      .eq('date', today)
+      .single();
+    if (error || !data) return;
+    const next = Math.max(0, ((data as any).count ?? 0) - 1);
+    await supabase
+      .from('ai_usage_log')
+      .update({ count: next })
+      .eq('user_id', userId)
+      .eq('function_name', functionName)
+      .eq('date', today);
+  } catch (err) {
+    console.error(`[${functionName}] rate-limit refund failed (non-fatal):`, err);
   }
 }

@@ -63,7 +63,7 @@ async function checkRateLimit(
   userId: string,
   functionName: string,
   limit: number,
-): Promise<{ allowed: boolean; limit: number; retryAfter?: number }> {
+): Promise<{ allowed: boolean; limit: number; retryAfter?: number; failedClosed?: boolean }> {
   try {
     const today = new Date().toISOString().slice(0, 10);
     const { data, error } = await supabase.rpc('bump_ai_usage', {
@@ -88,7 +88,43 @@ async function checkRateLimit(
     return { allowed: true, limit };
   } catch (err) {
     console.error(`[${functionName}] rate-limit check failed; failing closed:`, err);
-    return { allowed: false, limit, retryAfter: 60 };
+    return { allowed: false, limit, retryAfter: 60, failedClosed: true };
+  }
+}
+
+/**
+ * Best-effort refund of one unit consumed by checkRateLimit when the
+ * billable Whisper call never produced a usable, billed result (network
+ * failure, timeout, or upstream non-2xx). The atomic bump stays up front
+ * so the per-day cap is still enforced under concurrency; this hands the
+ * unit back on the rare failure path. A lost refund only ever returns a
+ * credit the user was owed — never a money leak — so a light
+ * read-then-write is acceptable here.
+ */
+async function refundRateLimit(
+  supabase: any,
+  userId: string,
+  functionName: string,
+): Promise<void> {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data, error } = await supabase
+      .from('ai_usage_log')
+      .select('count')
+      .eq('user_id', userId)
+      .eq('function_name', functionName)
+      .eq('date', today)
+      .single();
+    if (error || !data) return;
+    const next = Math.max(0, ((data as any).count ?? 0) - 1);
+    await supabase
+      .from('ai_usage_log')
+      .update({ count: next })
+      .eq('user_id', userId)
+      .eq('function_name', functionName)
+      .eq('date', today);
+  } catch (err) {
+    console.error(`[${functionName}] rate-limit refund failed (non-fatal):`, err);
   }
 }
 
@@ -139,19 +175,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Daily cap — 60 voice messages per Pro user. Atomic via RPC so
-    // concurrent requests can't sneak past.
-    const rate = await checkRateLimit(supabase, user.id, 'aimee-voice', VOICE_DAILY_LIMIT);
-    if (!rate.allowed) {
-      return jsonResp(
-        {
-          error: `Daily voice limit reached (${rate.limit}/day). Resets tomorrow.`,
-          retryAfter: rate.retryAfter,
-        },
-        429,
-      );
-    }
-
     const form = await req.formData().catch(() => null);
     const audio = form?.get('audio');
     if (!(audio instanceof File) && !(audio instanceof Blob)) {
@@ -162,6 +185,31 @@ Deno.serve(async (req) => {
       return jsonResp({ error: 'Audio exceeds 25 MB Whisper cap' }, 413);
     }
 
+    // Daily cap — 60 voice messages per Pro user. Consumed only now that
+    // the request is valid and we're about to call the billable Whisper
+    // endpoint (P2.26: the bump used to run before this validation).
+    // Atomic via RPC so concurrent requests can't sneak past.
+    const rate = await checkRateLimit(supabase, user.id, 'aimee-voice', VOICE_DAILY_LIMIT);
+    if (!rate.allowed) {
+      // P3.16: transient DB failure → 503 (retryable), not 429. Mirrors aimee-chat.
+      if (rate.failedClosed) {
+        return jsonResp(
+          {
+            error: 'Voice is temporarily unavailable — please try again in a minute.',
+            retryAfter: rate.retryAfter,
+          },
+          503,
+        );
+      }
+      return jsonResp(
+        {
+          error: `Daily voice limit reached (${rate.limit}/day). Resets tomorrow.`,
+          retryAfter: rate.retryAfter,
+        },
+        429,
+      );
+    }
+
     const whisperForm = new FormData();
     const filename = (audio as any).name || 'voice.m4a';
     whisperForm.append('file', audioBlob, filename);
@@ -170,15 +218,26 @@ Deno.serve(async (req) => {
     whisperForm.append('language', 'en');
     whisperForm.append('temperature', '0.0');
 
-    const wRes = await fetch(WHISPER_URL, {
+    const whisperCall = () => fetch(WHISPER_URL, {
       method: 'POST',
       headers: { Authorization: `Bearer ${WHISPER_API_KEY}` },
       body: whisperForm,
       signal: AbortSignal.timeout(60000),
     });
+    let wRes: Response;
+    try {
+      wRes = await whisperCall();
+    } catch (err) {
+      // Network/timeout — no transcript delivered and we weren't billed; refund.
+      await refundRateLimit(supabase, user.id, 'aimee-voice');
+      console.error('[aimee-voice] whisper request failed', err);
+      return jsonResp({ error: 'Voice transcription temporarily unavailable' }, 502);
+    }
     if (!wRes.ok) {
       const detail = await wRes.text().catch(() => '');
       console.error('[aimee-voice] whisper err', wRes.status, detail);
+      // Upstream returned non-2xx — refund the consumed voice credit.
+      await refundRateLimit(supabase, user.id, 'aimee-voice');
       return jsonResp({ error: `Whisper ${wRes.status}` }, 502);
     }
     const transcript = (await wRes.text()).trim();

@@ -83,7 +83,7 @@ async function checkRateLimit(
   userId: string,
   endpoint: string,
   dailyLimit: number,
-) {
+): Promise<{ allowed: boolean; limit: number; retryAfter?: number; failedClosed?: boolean }> {
   // Atomic via SECURITY DEFINER RPC. The previous read-modify-write
   // shape (count → check → insert) on `edge_function_calls` could leak
   // one extra call past the cap under concurrent same-user requests.
@@ -112,7 +112,43 @@ async function checkRateLimit(
     return { allowed: true, limit: dailyLimit };
   } catch (err) {
     console.error(`[${endpoint}] rate-limit check failed; failing closed:`, err);
-    return { allowed: false, limit: dailyLimit, retryAfter: 60 };
+    return { allowed: false, limit: dailyLimit, retryAfter: 60, failedClosed: true };
+  }
+}
+
+/**
+ * Best-effort refund of one unit consumed by checkRateLimit when the
+ * billable upstream call never produced a usable, billed result (network
+ * failure, timeout, or upstream non-2xx). The atomic bump stays up front
+ * so the per-day cap is still enforced under concurrency; this hands the
+ * unit back on the rare failure path. A lost refund only ever returns a
+ * credit the user was owed — never a money leak — so a light
+ * read-then-write is acceptable here.
+ */
+async function refundRateLimit(
+  supabase: any,
+  userId: string,
+  functionName: string,
+): Promise<void> {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const { data, error } = await supabase
+      .from('ai_usage_log')
+      .select('count')
+      .eq('user_id', userId)
+      .eq('function_name', functionName)
+      .eq('date', today)
+      .single();
+    if (error || !data) return;
+    const next = Math.max(0, ((data as any).count ?? 0) - 1);
+    await supabase
+      .from('ai_usage_log')
+      .update({ count: next })
+      .eq('user_id', userId)
+      .eq('function_name', functionName)
+      .eq('date', today);
+  } catch (err) {
+    console.error(`[${functionName}] rate-limit refund failed (non-fatal):`, err);
   }
 }
 
@@ -173,21 +209,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Tiered cap: Plus 5/day, Pro 20/day. Same per-tier shape as food-scan.
-    const dailyLimit = effectiveTier === 'pro' ? 20 : 5;
-    const rate = await checkRateLimit(supabase, user.id, 'aimee-pantry-scan', dailyLimit);
-    if (!rate.allowed) {
-      return new Response(
-        JSON.stringify({
-          error: `Daily pantry-scan limit reached (${rate.limit}/day).`,
-          retryAfter: rate.retryAfter,
-        }),
-        {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      );
-    }
+    // P2.26: validate the request BEFORE consuming any quota. The bump
+    // used to run here, ahead of the size/parse checks, so a rejected
+    // request still burned the user's daily scan. Bump moved to just
+    // before the billable vision call below.
 
     // 2026-05-17 security fix: pre-parse size guard. The 6MB cap below
     // runs AFTER req.json() parses the body, so an attacker can stream
@@ -230,7 +255,39 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const visionRes = await fetch(`${VISION_BASE_URL}/chat/completions`, {
+
+    // Consume quota — request is valid and we're about to make the
+    // billable vision call. Atomic bump enforces the per-day cap under
+    // concurrency; a failed upstream call is refunded below.
+    const dailyLimit = effectiveTier === 'pro' ? 20 : 5;
+    const rate = await checkRateLimit(supabase, user.id, 'aimee-pantry-scan', dailyLimit);
+    if (!rate.allowed) {
+      // P3.16: transient DB failure → 503 (retryable), not 429. Mirrors aimee-chat.
+      if (rate.failedClosed) {
+        return new Response(
+          JSON.stringify({
+            error: 'Pantry scanning is temporarily unavailable — please try again in a minute.',
+            retryAfter: rate.retryAfter,
+          }),
+          {
+            status: 503,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          error: `Daily pantry-scan limit reached (${rate.limit}/day).`,
+          retryAfter: rate.retryAfter,
+        }),
+        {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
+    const visionCall = () => fetch(`${VISION_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${VISION_API_KEY}`,
@@ -258,9 +315,27 @@ Deno.serve(async (req) => {
       signal: AbortSignal.timeout(60000),
     });
 
+    let visionRes: Response;
+    try {
+      visionRes = await visionCall();
+    } catch (err) {
+      // Network/timeout — no result delivered and we weren't billed; refund.
+      await refundRateLimit(supabase, user.id, 'aimee-pantry-scan');
+      console.error('[aimee-pantry-scan] vision request failed', err);
+      return new Response(
+        JSON.stringify({ error: 'Pantry scan temporarily unavailable' }),
+        {
+          status: 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
     if (!visionRes.ok) {
       const detail = await visionRes.text().catch(() => '');
       console.error('[aimee-pantry-scan] vision err', visionRes.status, detail);
+      // Upstream returned non-2xx — refund the consumed scan.
+      await refundRateLimit(supabase, user.id, 'aimee-pantry-scan');
       return new Response(
         JSON.stringify({ error: 'Pantry scan temporarily unavailable' }),
         {
