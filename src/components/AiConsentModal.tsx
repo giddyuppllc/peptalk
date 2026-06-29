@@ -3,8 +3,8 @@
  *
  * App Store Guideline 5.1.2 requires explicit consent before sharing personal
  * data with third parties, INCLUDING third-party AI services. PepTalk sends
- * chat text to xAI (Aimee), voice to OpenAI Whisper, and photos to a vision
- * model. This modal captures that consent up front — once — and is mounted at
+ * chat text to xAI (Aimee), and voice + scanned photos to OpenAI (Whisper +
+ * vision). This modal captures that consent up front — once — and is mounted at
  * the root so it appears the first time a user reaches the app after onboarding.
  *
  * Self-gating: renders only when onboarding is complete, both stores have
@@ -71,7 +71,7 @@ export function AiConsentModal() {
             </View>
             <View style={styles.row}>
               <Ionicons name="camera-outline" size={18} color="#888" />
-              <Text style={styles.rowText}>Scanned photos → vision model</Text>
+              <Text style={styles.rowText}>Scanned photos → OpenAI (vision)</Text>
             </View>
             <Text style={styles.fineprint}>
               Your data is used only to deliver these features — never for advertising. You

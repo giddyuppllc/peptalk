@@ -63,7 +63,7 @@ const POLICY_SECTIONS: PolicySection[] = [
     icon: 'cloud-outline',
     paragraphs: [
       'PepTalk\u2019s AI features (the Aimee assistant, voice logging, photo-based food and lab scanning, meal/recipe/workout generation, and lab interpretation) are powered by third-party AI providers. These features are opt-in: the first time you use one, we ask for your consent before any data is sent.',
-      'The third-party AI providers we use are:\n\u2022  xAI (Grok) \u2014 processes your chat messages, the health/profile context you choose to share, and images you scan (meals, labs, pantry) to generate responses\n\u2022  OpenAI (Whisper) \u2014 transcribes the voice audio you record for voice logging',
+      'The third-party AI providers we use are:\n\u2022  xAI (Grok) \u2014 processes your chat messages with Aimee and the health/profile context you choose to share, to generate responses\n\u2022  OpenAI \u2014 transcribes the voice audio you record (Whisper) and analyzes the photos you scan (meals, labs, pantry) and community images to generate results',
       'What you should know about AI features:\n\u2022  The content you submit (chat text, voice audio, and photos) is sent to the provider to produce a result; photos and audio are sent as-is, not anonymized\n\u2022  We send personal health/profile context only when it is needed to personalize a response, and only with your consent\n\u2022  Providers process this data to return a result and under their terms do not use PepTalk submissions to train their models\n\u2022  Consent is requested once and can be revoked at any time in Profile settings; if you decline or revoke, AI features are disabled but the rest of the app keeps working',
     ],
   },
