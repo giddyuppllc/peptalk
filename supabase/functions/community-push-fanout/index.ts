@@ -86,7 +86,15 @@ Deno.serve(async (req) => {
   // live-broadcast — the trigger passes x-internal-key via pg_net.http_post.
   const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET') ?? '';
   const providedSecret = req.headers.get('x-internal-key') ?? '';
-  if (!internalSecret || providedSecret !== internalSecret) {
+  if (!internalSecret) {
+    // The SECRET ISN'T SET ON THIS FUNCTION — a deploy/config miss, not an
+    // attacker. Without this loud log, every push silently 401-drops and the
+    // symptom ("no community notifications") is undiagnosable. Set it with:
+    //   supabase secrets set INTERNAL_FUNCTION_SECRET=<value matching the DB GUC>
+    console.error('[community-push-fanout] MISCONFIG: INTERNAL_FUNCTION_SECRET unset — all pushes will 401-drop');
+    return jsonResp({ error: 'Server misconfigured: internal secret unset' }, 503);
+  }
+  if (providedSecret !== internalSecret) {
     return jsonResp({ error: 'Unauthorized' }, 401);
   }
 

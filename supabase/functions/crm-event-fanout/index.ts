@@ -65,7 +65,14 @@ Deno.serve(async (req) => {
   // secret header — pg_net trigger passes x-internal-key.
   const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET') ?? '';
   const providedSecret = req.headers.get('x-internal-key') ?? '';
-  if (!internalSecret || providedSecret !== internalSecret) {
+  if (!internalSecret) {
+    // Unset secret = deploy/config miss, not an attacker. Log loudly so the
+    // silent "CRM attribution stopped" symptom is diagnosable. Set with:
+    //   supabase secrets set INTERNAL_FUNCTION_SECRET=<value matching the DB GUC>
+    console.error('[crm-event-fanout] MISCONFIG: INTERNAL_FUNCTION_SECRET unset — all CRM fanout will 401-drop');
+    return jsonResp({ error: 'Server misconfigured: internal secret unset' }, 503);
+  }
+  if (providedSecret !== internalSecret) {
     return jsonResp({ error: 'Unauthorized' }, 401);
   }
 
