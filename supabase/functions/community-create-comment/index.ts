@@ -154,6 +154,20 @@ Deno.serve(async (req) => {
       ).slice(0, MAX_MENTIONS);
 
       if (handles.length > 0) {
+        // Load every block row touching the commenter in EITHER direction so a
+        // @mention can't push-notify someone the commenter blocked or who blocked
+        // the commenter (mirrors the symmetric post-author block check above).
+        const { data: blockRows } = await admin
+          .from('community_blocks')
+          .select('blocker_id, blocked_id')
+          .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
+        const blockedParties = new Set<string>();
+        for (const b of blockRows ?? []) {
+          // The "other" party in each block relative to the commenter.
+          if (b.blocker_id === user.id && b.blocked_id) blockedParties.add(b.blocked_id);
+          if (b.blocked_id === user.id && b.blocker_id) blockedParties.add(b.blocker_id);
+        }
+
         // Case-insensitive exact match (ilike, no wildcards). Handles are
         // \w-only so they're safe to interpolate into a PostgREST .or filter.
         const orFilter = handles.map((h) => `username.ilike.${h}`).join(',');
@@ -168,6 +182,7 @@ Deno.serve(async (req) => {
             if (!p?.id) return false;
             if (p.id === user.id) return false;        // no self-mention
             if (p.id === post.user_id) return false;   // post author already gets reply_to_post
+            if (blockedParties.has(p.id)) return false; // symmetric block: no mention ping
             if (seen.has(p.id)) return false;          // de-dupe
             seen.add(p.id);
             return true;

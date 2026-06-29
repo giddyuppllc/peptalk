@@ -270,9 +270,19 @@ Deno.serve(async (req) => {
           // upgrading (already have access) but the feature still serves
           // them, so the only "downgrade" is when they buy something new
           // (which they won't, since it's free). P0 from Wave 76.7 audit.
-          const profileTier = stillActive ? tier : 'free';
-          const isPro = stillActive && tier === 'pro';
-          const isPlus = stillActive && tier === 'plus';
+          // P1 cross-platform fix: a terminal event (expiration/refund/
+          // revoked) on ONE product must NOT clobber profiles to 'free'
+          // when the user STILL holds another active, unexpired
+          // subscription on a different product_id (e.g. Pro on Android
+          // while their iOS Plus expires). The fired product's own row was
+          // just set is_active=false by the upsert above, so recompute the
+          // highest tier the user still holds live across their OTHER rows.
+          // For a still-active event the firing product's tier applies.
+          const profileTier = stillActive
+            ? tier
+            : await highestLiveTier(admin, userId, productId);
+          const isPro = profileTier === 'pro';
+          const isPlus = profileTier === 'plus';
           const { error: profileErr } = await admin
             .from('profiles')
             .update({
@@ -310,6 +320,36 @@ Deno.serve(async (req) => {
     return new Response('Internal error', { status: 500 });
   }
 });
+
+/**
+ * Highest subscription tier the user STILL holds live across all of their
+ * subscription rows EXCEPT `excludeProductId` (the product whose terminal
+ * event just fired). "Live" = is_active=true AND expires_at strictly in the
+ * future. IAP rows always carry an expires_at, so a null expiry is treated
+ * as NOT live (the `.gt('expires_at', ...)` filter excludes NULLs in
+ * PostgREST). Returns 'pro' > 'plus' > 'free'. Used so a terminal event on
+ * one platform/product doesn't downgrade a user who still pays on another.
+ */
+async function highestLiveTier(
+  admin: any,
+  userId: string,
+  excludeProductId: string,
+): Promise<'free' | 'plus' | 'pro'> {
+  const nowIso = new Date().toISOString();
+  const { data: rows } = await admin
+    .from('subscriptions')
+    .select('tier, expires_at, is_active')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .neq('product_id', excludeProductId)
+    .gt('expires_at', nowIso);
+  let best: 'free' | 'plus' | 'pro' = 'free';
+  for (const r of rows ?? []) {
+    if (r.tier === 'pro') return 'pro';
+    if (r.tier === 'plus') best = 'plus';
+  }
+  return best;
+}
 
 /**
  * Verify a JWS produced by Apple and return the decoded payload.

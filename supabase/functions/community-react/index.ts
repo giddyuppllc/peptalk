@@ -21,6 +21,13 @@ const corsHeaders = {
 
 const ALLOWED_KINDS = new Set(['helpful', 'like', 'dose_warning']);
 
+// Cap reaction-driven push spam from add/remove/re-add toggling. Each 'add'
+// re-fires the AFTER INSERT notify trigger, so we count the notification rows
+// this user has caused (kind='reaction', actor_id=user) in the last hour —
+// mirrors the count-within-window rate-limit pattern in the sibling community
+// write fns (community-create-post 10/day, community-create-comment 30/hour).
+const REACTIONS_PER_HOUR = 200;
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -62,6 +69,19 @@ Deno.serve(async (req) => {
         : await q.eq('comment_id', commentId!);
       if (delErr) throw delErr;
       return json({ ok: true, action: 'removed' });
+    }
+
+    // Rate limit the add path (the only one that fires the notify push trigger)
+    // to stop react/un-react toggling from spamming the target with pushes.
+    const sinceHour = new Date(Date.now() - 3600 * 1000).toISOString();
+    const { count: reactNotifs } = await admin
+      .from('community_notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('actor_id', user.id)
+      .eq('kind', 'reaction')
+      .gte('created_at', sinceHour);
+    if ((reactNotifs ?? 0) >= REACTIONS_PER_HOUR) {
+      return json({ error: `Slow down — ${REACTIONS_PER_HOUR} reactions/hour limit hit.` }, 429);
     }
 
     // Add — upsert-ish via insert + ignore unique-violation.

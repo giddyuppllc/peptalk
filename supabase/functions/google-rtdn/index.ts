@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
       const vUserId = vRow?.user_id ?? null;
       const vProductId = vRow?.product_id ?? null;
 
-      await admin.from('subscription_events').upsert(
+      const { error: vEventErr } = await admin.from('subscription_events').upsert(
         {
           user_id: vUserId,
           product_id: vProductId,
@@ -192,20 +192,39 @@ Deno.serve(async (req) => {
         },
         { onConflict: 'platform,external_event_id', ignoreDuplicates: true },
       );
+      // Transient DB-write failure: return 500 so Pub/Sub redelivers. The
+      // (platform, external_event_id) idempotency key makes redelivery safe.
+      if (vEventErr) {
+        console.error('[google-rtdn] voided subscription_events upsert failed:', vEventErr.message);
+        return new Response('DB write failed', { status: 500 });
+      }
 
       if (vUserId && vProductId) {
-        await admin
+        const { error: vSubErr } = await admin
           .from('subscriptions')
           .update({ is_active: false, last_validated_at: new Date().toISOString() })
           .eq('user_id', vUserId)
           .eq('product_id', vProductId);
-        // Revoke server-side access too (gates read profiles, not subscriptions).
+        if (vSubErr) {
+          console.error('[google-rtdn] voided subscriptions update failed:', vSubErr.message);
+          return new Response('DB write failed', { status: 500 });
+        }
+        // Revoke server-side access too (gates read profiles, not
+        // subscriptions). P1: don't blindly write 'free' — if the user
+        // still holds another active, unexpired subscription on a different
+        // product (e.g. the other platform), keep their highest live tier.
+        const vProfileTier = await highestLiveTier(admin, vUserId, vProductId);
         const { error: vProfileErr } = await admin
           .from('profiles')
-          .update({ subscription_tier: 'free', is_pro: false, is_plus: false })
+          .update({
+            subscription_tier: vProfileTier,
+            is_pro: vProfileTier === 'pro',
+            is_plus: vProfileTier === 'plus',
+          })
           .eq('id', vUserId);
         if (vProfileErr) {
-          console.warn('[google-rtdn] voided profiles downgrade failed:', vProfileErr.message);
+          console.error('[google-rtdn] voided profiles downgrade failed:', vProfileErr.message);
+          return new Response('DB write failed', { status: 500 });
         }
       } else {
         console.warn('[google-rtdn] voided purchase with no matching row:', vToken.substring(0, 12));
@@ -229,6 +248,14 @@ Deno.serve(async (req) => {
     // and whether it's currently active. The notification alone doesn't
     // carry that. Reuses the service-account JWT flow from validate-purchase.
     const state = await fetchGoogleSubscriptionState(productId, purchaseToken);
+    // A token-exchange / androidpublisher fetch failure is transient — we
+    // can't safely compute is_active / expires_at without it. Return 500 so
+    // Pub/Sub redelivers against our idempotent keys rather than committing
+    // a guessed state.
+    if (state.fetchFailed) {
+      console.error('[google-rtdn] subscription-state fetch failed; returning 500 for Pub/Sub retry');
+      return new Response('Upstream fetch failed', { status: 500 });
+    }
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
@@ -260,7 +287,7 @@ Deno.serve(async (req) => {
 
     const eventType = GOOGLE_EVENT_MAP[notificationType] ?? 'unknown';
 
-    await admin.from('subscription_events').upsert(
+    const { error: eventErr } = await admin.from('subscription_events').upsert(
       {
         user_id: userId,
         product_id: productId,
@@ -272,6 +299,10 @@ Deno.serve(async (req) => {
       },
       { onConflict: 'platform,external_event_id', ignoreDuplicates: true },
     );
+    if (eventErr) {
+      console.error('[google-rtdn] subscription_events upsert failed:', eventErr.message);
+      return new Response('DB write failed', { status: 500 });
+    }
 
     // Mutate subscriptions only when productId resolves to a known tier.
     // Defaulting unknown product ids to 'plus' (previous behavior) would
@@ -283,7 +314,7 @@ Deno.serve(async (req) => {
       } else {
         const stillActive = !['expiration', 'revoked', 'refund'].includes(eventType)
           && (state.expiresAt === null || new Date(state.expiresAt).getTime() > Date.now());
-        await admin.from('subscriptions').upsert(
+        const { error: subErr } = await admin.from('subscriptions').upsert(
           {
             user_id: userId,
             product_id: productId,
@@ -295,23 +326,37 @@ Deno.serve(async (req) => {
           },
           { onConflict: 'user_id,product_id' },
         );
+        if (subErr) {
+          console.error('[google-rtdn] subscriptions upsert failed:', subErr.message);
+          return new Response('DB write failed', { status: 500 });
+        }
 
         // Mirror tier into profiles — server-side feature gates
         // (aimee-chat-stream, aimee-voice, get-workout-video, …) authorize
         // off profiles.subscription_tier / is_pro, NOT the subscriptions
         // table. Without this, a cancelled/expired/refunded Android sub
         // keeps paid server access. Mirrors apple-notifications' P0 fix.
-        const profileTier = stillActive ? tier : 'free';
+        //
+        // P1 cross-platform fix: when this event leaves the firing product
+        // inactive, don't clobber profiles to 'free' if the user still
+        // holds another active, unexpired subscription on a different
+        // product (e.g. Pro on iOS while their Android Plus expires). The
+        // upsert above already wrote is_active=stillActive for this product,
+        // so recompute the highest tier the user still holds live.
+        const profileTier = stillActive
+          ? tier
+          : await highestLiveTier(admin, userId, productId);
         const { error: profileErr } = await admin
           .from('profiles')
           .update({
             subscription_tier: profileTier,
-            is_pro: stillActive && tier === 'pro',
-            is_plus: stillActive && tier === 'plus',
+            is_pro: profileTier === 'pro',
+            is_plus: profileTier === 'plus',
           })
           .eq('id', userId);
         if (profileErr) {
-          console.warn('[google-rtdn] profiles tier mirror failed:', profileErr.message);
+          console.error('[google-rtdn] profiles tier mirror failed:', profileErr.message);
+          return new Response('DB write failed', { status: 500 });
         }
       }
     }
@@ -319,9 +364,13 @@ Deno.serve(async (req) => {
     return new Response('ok', { status: 200 });
   } catch (err) {
     console.error('[google-rtdn] handler threw:', err);
-    // Return 2xx so Pub/Sub doesn't redeliver forever when the error is
-    // a permanent parse bug. Non-retriable errors should be logged, not
-    // retried. For retriable errors, switch to 500 conditionally.
+    // Reserve 200 for genuinely non-retriable failures. The only throws that
+    // reach here are envelope/payload parse errors (req.json / JSON.parse on
+    // a malformed Pub/Sub message) — redelivering those just loops, so ack
+    // them. All TRANSIENT failures (DB writes, Google token/API fetch) are
+    // handled inline above with an explicit 500 so Pub/Sub redelivers
+    // against our idempotent (platform,external_event_id) /
+    // (user_id,product_id) keys.
     return new Response('ok', { status: 200 });
   }
 });
@@ -329,24 +378,59 @@ Deno.serve(async (req) => {
 async function fetchGoogleSubscriptionState(
   productId: string,
   purchaseToken: string,
-): Promise<{ expiresAt: string | null }> {
+): Promise<{ expiresAt: string | null; fetchFailed: boolean }> {
   if (!GOOGLE_SERVICE_ACCOUNT_JSON) {
-    return { expiresAt: null };
+    // Permanent misconfiguration, not a transient failure — retrying won't
+    // help, so don't signal fetchFailed (the caller would loop forever).
+    return { expiresAt: null, fetchFailed: false };
   }
   try {
     const accessToken = await getGoogleAccessToken();
-    if (!accessToken) return { expiresAt: null };
+    if (!accessToken) return { expiresAt: null, fetchFailed: true };
 
     const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${ANDROID_PACKAGE_NAME}/purchases/subscriptions/${productId}/tokens/${encodeURIComponent(purchaseToken)}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-    if (!res.ok) return { expiresAt: null };
+    if (!res.ok) return { expiresAt: null, fetchFailed: true };
     const data = await res.json();
     const expiresMs = parseInt(data.expiryTimeMillis ?? '0', 10);
-    return { expiresAt: expiresMs > 0 ? new Date(expiresMs).toISOString() : null };
+    return {
+      expiresAt: expiresMs > 0 ? new Date(expiresMs).toISOString() : null,
+      fetchFailed: false,
+    };
   } catch (err) {
     console.warn('[google-rtdn] fetchGoogleSubscriptionState failed:', err);
-    return { expiresAt: null };
+    return { expiresAt: null, fetchFailed: true };
   }
+}
+
+/**
+ * Highest subscription tier the user STILL holds live across all of their
+ * subscription rows EXCEPT `excludeProductId` (the product whose terminal /
+ * voided event just fired). "Live" = is_active=true AND expires_at strictly
+ * in the future. IAP rows always carry an expires_at, so a null expiry is
+ * treated as NOT live (the `.gt('expires_at', ...)` filter excludes NULLs in
+ * PostgREST). Returns 'pro' > 'plus' > 'free'. Prevents a terminal event on
+ * one platform/product from downgrading a user who still pays on another.
+ */
+async function highestLiveTier(
+  admin: any,
+  userId: string,
+  excludeProductId: string,
+): Promise<'free' | 'plus' | 'pro'> {
+  const nowIso = new Date().toISOString();
+  const { data: rows } = await admin
+    .from('subscriptions')
+    .select('tier, expires_at, is_active')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .neq('product_id', excludeProductId)
+    .gt('expires_at', nowIso);
+  let best: 'free' | 'plus' | 'pro' = 'free';
+  for (const r of rows ?? []) {
+    if (r.tier === 'pro') return 'pro';
+    if (r.tier === 'plus') best = 'plus';
+  }
+  return best;
 }
 
 // ---------------------------------------------------------------------------

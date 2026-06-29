@@ -19,27 +19,56 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
  * session blob (access + refresh tokens + user metadata) can exceed it, which
  * silently fails to persist → the user appears logged out on the next launch.
  * We chunk large values across multiple SecureStore keys to stay under the
- * limit (the documented LargeSecureStore pattern, kept ENTIRELY in SecureStore
- * so tokens are never written to unencrypted AsyncStorage). SecureStore keys
- * allow [A-Za-z0-9._-], so the `.N` / `.__chunks__` suffixes are valid.
+ * limit, kept ENTIRELY in SecureStore so tokens never touch unencrypted
+ * AsyncStorage. SecureStore keys allow [A-Za-z0-9._-], so the `.gN.i` / `.__ptr__`
+ * suffixes are valid.
+ *
+ * ATOMICITY. The chunk set is written under a monotonic GENERATION namespace
+ * (`key.g<gen>.<i>`); the live value is whichever generation the single pointer
+ * key (`key.__ptr__` = "<gen>:<count>") names. setItem writes the NEW generation
+ * fully, then commits with one atomic pointer write, then GCs the old generation.
+ * So a crash, a thrown chunk write, or a concurrent read can never observe a
+ * torn mix of new+old chunks — getItem always resolves a complete generation
+ * (the old one until the pointer flips). A per-key write mutex serializes
+ * setItem/removeItem so two writes can't interleave on the same generation.
  */
 const CHUNK_SIZE = 1800; // chars; stays < 2048 bytes even with some multi-byte chars
-const COUNT_SUFFIX = '.__chunks__';
+const PTR_SUFFIX = '.__ptr__';
+
+// Per-key promise chain — serializes writes (setItem/removeItem) for a key so
+// concurrent token-refresh writes can't race the generation counter.
+const writeChains = new Map<string, Promise<unknown>>();
+function withWriteLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const prev = writeChains.get(key) ?? Promise.resolve();
+  const next = prev.then(fn, fn);
+  // Keep the chain alive but don't let a rejection poison the next write.
+  writeChains.set(key, next.catch(() => {}));
+  return next;
+}
+
+function parsePtr(raw: string | null): { gen: number; count: number } | null {
+  if (!raw) return null;
+  const sep = raw.indexOf(':');
+  if (sep < 0) return null;
+  const gen = parseInt(raw.slice(0, sep), 10);
+  const count = parseInt(raw.slice(sep + 1), 10);
+  if (!Number.isFinite(gen) || !Number.isFinite(count) || count <= 0) return null;
+  return { gen, count };
+}
 
 const secureStoreAdapter = {
   getItem: async (key: string): Promise<string | null> => {
     try {
-      const countRaw = await SecureStore.getItemAsync(key + COUNT_SUFFIX);
-      if (countRaw == null) {
-        // Legacy single-key value (pre-chunking) — read it directly so an
-        // existing session survives the upgrade without a forced logout.
+      const ptr = parsePtr(await SecureStore.getItemAsync(key + PTR_SUFFIX));
+      if (!ptr) {
+        // No pointer → legacy single-key value (pre-chunking). Read it directly
+        // so an existing session survives the upgrade without a forced logout.
         return await SecureStore.getItemAsync(key);
       }
-      const count = parseInt(countRaw, 10) || 0;
       let out = '';
-      for (let i = 0; i < count; i++) {
-        const part = await SecureStore.getItemAsync(`${key}.${i}`);
-        if (part == null) return null; // partial/corrupt → treat as no session
+      for (let i = 0; i < ptr.count; i++) {
+        const part = await SecureStore.getItemAsync(`${key}.g${ptr.gen}.${i}`);
+        if (part == null) return null; // incomplete generation → no session
         out += part;
       }
       return out;
@@ -47,35 +76,41 @@ const secureStoreAdapter = {
       return null;
     }
   },
-  setItem: async (key: string, value: string): Promise<void> => {
-    try {
-      const prevCountRaw = await SecureStore.getItemAsync(key + COUNT_SUFFIX);
-      const prevCount = prevCountRaw ? parseInt(prevCountRaw, 10) || 0 : 0;
+  setItem: (key: string, value: string): Promise<void> =>
+    withWriteLock(key, async () => {
+      try {
+        const old = parsePtr(await SecureStore.getItemAsync(key + PTR_SUFFIX));
+        const newGen = (old?.gen ?? -1) + 1;
+        const count = Math.max(1, Math.ceil(value.length / CHUNK_SIZE));
 
-      const chunkCount = Math.max(1, Math.ceil(value.length / CHUNK_SIZE));
-      for (let i = 0; i < chunkCount; i++) {
-        await SecureStore.setItemAsync(`${key}.${i}`, value.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE));
-      }
-      // Remove stale higher-index chunks if the value shrank since last write.
-      for (let i = chunkCount; i < prevCount; i++) {
-        await SecureStore.deleteItemAsync(`${key}.${i}`).catch(() => {});
-      }
-      await SecureStore.setItemAsync(key + COUNT_SUFFIX, String(chunkCount));
-      // Drop any legacy single-key value now that it's stored chunked.
-      await SecureStore.deleteItemAsync(key).catch(() => {});
-    } catch {}
-  },
-  removeItem: async (key: string): Promise<void> => {
-    try {
-      const countRaw = await SecureStore.getItemAsync(key + COUNT_SUFFIX);
-      const count = countRaw ? parseInt(countRaw, 10) || 0 : 0;
-      for (let i = 0; i < count; i++) {
-        await SecureStore.deleteItemAsync(`${key}.${i}`).catch(() => {});
-      }
-      await SecureStore.deleteItemAsync(key + COUNT_SUFFIX).catch(() => {});
-      await SecureStore.deleteItemAsync(key).catch(() => {}); // legacy single-key
-    } catch {}
-  },
+        // 1. Write the new generation fully (does not touch the live one).
+        for (let i = 0; i < count; i++) {
+          await SecureStore.setItemAsync(`${key}.g${newGen}.${i}`, value.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE));
+        }
+        // 2. COMMIT — single atomic pointer write flips the live generation.
+        await SecureStore.setItemAsync(key + PTR_SUFFIX, `${newGen}:${count}`);
+        // 3. GC the previous generation + any legacy single-key value.
+        if (old) {
+          for (let i = 0; i < old.count; i++) {
+            await SecureStore.deleteItemAsync(`${key}.g${old.gen}.${i}`).catch(() => {});
+          }
+        }
+        await SecureStore.deleteItemAsync(key).catch(() => {});
+      } catch {}
+    }),
+  removeItem: (key: string): Promise<void> =>
+    withWriteLock(key, async () => {
+      try {
+        const ptr = parsePtr(await SecureStore.getItemAsync(key + PTR_SUFFIX));
+        if (ptr) {
+          for (let i = 0; i < ptr.count; i++) {
+            await SecureStore.deleteItemAsync(`${key}.g${ptr.gen}.${i}`).catch(() => {});
+          }
+        }
+        await SecureStore.deleteItemAsync(key + PTR_SUFFIX).catch(() => {});
+        await SecureStore.deleteItemAsync(key).catch(() => {}); // legacy single-key
+      } catch {}
+    }),
 };
 
 /**

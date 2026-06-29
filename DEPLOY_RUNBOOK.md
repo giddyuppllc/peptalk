@@ -28,6 +28,7 @@ These MUST be applied or the data-sync layer 22P02-fails and the feed 404s on th
 20260629000001_pantry_nutrition           # pantry nutrition JSONB
 20260629000002_fix_profiles_protect_trigger   # P1: stop every authed profile UPDATE throwing
 20260629000004_reaction_mention_notifications # reaction/@mention notification triggers
+20260629000005_reaction_notify_block_guard    # block-evasion fix: reaction notify respects community_blocks
 ```
 ```bash
 supabase db push
@@ -71,14 +72,39 @@ supabase secrets list
 
 ---
 
-## 3. 🟧 Wire the internal-secret DB GUC + pg_net triggers (one-time)
+## 3. 🟧 Wire the internal-secret into Supabase **Vault** + pg_net triggers (one-time)
 The community-push-fanout / crm-event-fanout / live-broadcast / moderate-image triggers
-pass `x-internal-key` via `pg_net.http_post`. Set the DB-side value to MATCH the secret above:
-```sql
-ALTER DATABASE postgres SET app.internal_function_secret = '<same value as INTERNAL_FUNCTION_SECRET>';
+pass `x-internal-key` via `net.http_post`. The trigger reads that value from **Supabase Vault**
+(`vault.decrypted_secrets WHERE name = 'app_internal_function_secret'`) — **NOT** a `current_setting`
+GUC. (`ALTER DATABASE … SET app.internal_function_secret` does nothing — the triggers never read it.)
+The Vault value MUST equal the `INTERNAL_FUNCTION_SECRET` edge-fn secret from step 2, or every fanout
+fn 401/503-drops while in-app notification rows still write (push just never fires).
+
+Because the existing edge-fn secret value can't be read back, regenerate BOTH to one fresh value:
+```bash
+NEW=$(openssl rand -hex 32); echo "$NEW"          # paste this into the SQL below
+supabase secrets set INTERNAL_FUNCTION_SECRET="$NEW"
 ```
-Confirm the four pg_net trigger callers send the header (they're in the community migrations —
-grep `pg_net.http_post` / `net.http_post`). If unset, those fns now return a loud 503 (not a silent 401).
+Then in the Supabase **SQL Editor** (create-or-update — handles the case where it already exists):
+```sql
+DO $$
+DECLARE sid uuid;
+BEGIN
+  SELECT id INTO sid FROM vault.secrets WHERE name = 'app_internal_function_secret';
+  IF sid IS NULL THEN
+    PERFORM vault.create_secret('PASTE_NEW_HEX_HERE', 'app_internal_function_secret');
+  ELSE
+    PERFORM vault.update_secret(sid, 'PASTE_NEW_HEX_HERE');
+  END IF;
+END $$;
+```
+Verify it took:
+```sql
+SELECT name, left(decrypted_secret,6) || '…' AS val FROM vault.decrypted_secrets
+  WHERE name IN ('app_internal_function_secret','app_supabase_url','app_service_role_key');
+```
+(`app_supabase_url` + `app_service_role_key` must also be present — same Vault pattern. If `base_url`
+or `service_key` is NULL the trigger returns early and no fanout fires at all.)
 
 ---
 
@@ -94,8 +120,8 @@ supabase functions deploy \
   aimee-chat aimee-chat-stream aimee-lab-interpret aimee-pantry-meal aimee-pantry-parse \
   aimee-pantry-scan aimee-plan aimee-recipe aimee-report-rewrite aimee-voice aimee-workout \
   community-create-comment community-create-post community-live-edit-message \
-  community-live-send-message community-moderate-image community-push-fanout community-search \
-  community-suggest-topic community-upload-image crm-event-fanout delete-user \
+  community-live-send-message community-moderate-image community-push-fanout community-react \
+  community-search community-suggest-topic community-upload-image crm-event-fanout delete-user \
   food-scan food-search-proxy get-workout-video lab-scan transcribe-workout-video validate-purchase
 
 # External webhooks — MUST use --no-verify-jwt

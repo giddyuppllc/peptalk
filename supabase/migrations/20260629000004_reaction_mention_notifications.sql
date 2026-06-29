@@ -44,7 +44,15 @@ BEGIN
   END IF;
 
   -- Guard self-reaction: don't notify someone for reacting to their own content.
-  IF target_author IS NOT NULL AND target_author <> NEW.user_id THEN
+  -- Also guard the symmetric block model: don't deliver a reaction push when a
+  -- community_blocks row exists in EITHER direction between the author and the
+  -- reactor (mirrors the edge-function block checks).
+  IF target_author IS NOT NULL AND target_author <> NEW.user_id
+     AND NOT EXISTS (
+       SELECT 1 FROM public.community_blocks
+       WHERE (blocker_id = target_author AND blocked_id = NEW.user_id)
+          OR (blocker_id = NEW.user_id AND blocked_id = target_author)
+     ) THEN
     INSERT INTO public.community_notifications (user_id, kind, post_id, comment_id, actor_id)
     VALUES (target_author, 'reaction', target_post, NEW.comment_id, NEW.user_id);
   END IF;
