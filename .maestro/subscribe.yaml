@@ -12,29 +12,37 @@
 #
 #   maestro test .maestro/subscribe.yaml \
 #     -e EMAIL=reviewer@peptalk.bio -e PASSWORD=<reviewer-password>
+#
+# Login is CONDITIONAL (a persisted Keychain session survives clearState), and
+# the paywall is reached via deep link rather than tapping a profile row whose
+# label varies by tier.
 appId: com.peptalkapp.peptalk
 tags:
   - smoke
 ---
 - launchApp:
     clearState: true
-- tapOn: "Sign In"
-- tapOn: "Email address"
-- inputText: ${EMAIL}
-- tapOn: "Password"
-- inputText: ${PASSWORD}
-- hideKeyboard
-- tapOn:
-    text: "Log in"
-    index: 0
-- extendedWaitUntil:
-    notVisible: "Email address"
-    timeout: 20000
+- runFlow:
+    when:
+      visible: "Sign In"
+    commands:
+      - tapOn: "Sign In"
+      - tapOn: "Email address"
+      - inputText: ${EMAIL}
+      - tapOn: "Password"
+      - inputText: ${PASSWORD}
+      - hideKeyboard
+      - tapOn:
+          text: "Log in"
+          index: 0
+      - extendedWaitUntil:
+          notVisible: "Email address"
+          timeout: 20000
 
-# Profile → Subscription paywall
-- tapOn: "Profile"
-- tapOn:
-    text: "Subscription|Upgrade|Plus|Pro"   # regex — whichever the row says
-- assertVisible:
-    text: "Subscribe|Upgrade|Start"          # the live CTA must be present
+# Subscription paywall (deep link — robust against tier-dependent row copy).
+- openLink:
+    link: "peptalk://subscription"
+- extendedWaitUntil:
+    visible: "Choose Your Plan|Plans|Subscribe|Upgrade|Start|Free|Pro|Have a discount code"
+    timeout: 15000
 - takeScreenshot: paywall

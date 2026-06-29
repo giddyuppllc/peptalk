@@ -1,7 +1,7 @@
 # PepTalk — verify the workout generator actually produces a workout.
-# Deep-links to the generator, taps Generate, confirms it lands on
-# "Your Workouts" with a saved workout (proves AI path or deterministic
-# fallback both end-to-end). Dev/sim build, logged in.
+# Deep-links to the generator, taps "Build my 30-day plan", confirms it lands
+# on the 30-Day Plan screen with real day rows (proves the AI path OR the
+# deterministic fallback works end-to-end). Dev/sim build, logged in.
 appId: com.peptalkapp.peptalk
 tags:
   - smoke
@@ -11,8 +11,7 @@ tags:
     text: "Cancel"
     optional: true
 - extendedWaitUntil:
-    visible:
-      text: "Hi, reviewer|Welcome|Home"
+    visible: "Hi, reviewer|Welcome|Home"
     timeout: 30000
 - openLink:
     link: "peptalk://workouts/generate"
@@ -20,17 +19,18 @@ tags:
     text: "Open"
     optional: true
 - extendedWaitUntil:
-    visible: "Generate workout"
+    visible: "Build my 30-day plan|Generate Workout|TRAINING GOAL"
     timeout: 15000
 - takeScreenshot: wkt-generate-before
-# NB: tap the button by coordinate — text "Generate workout" also matches the
-# screen HEADER "Generate Workout", which is higher up and would win.
+# The CTA is "Build my 30-day plan" near the bottom. In a DEV build the LogBox
+# warning toast overlaps the very bottom edge, so tap by a coordinate that
+# lands on the button ABOVE the toast (≈87% height) rather than by text.
 - tapOn:
-    point: "50%,80%"
-# AI call (if deployed) or instant fallback — wait for the My Workouts screen.
+    point: "50%, 87%"
+# AI call (if aimee-workout is deployed) or instant deterministic fallback —
+# wait for the 30-Day Plan screen with its day rows.
 - extendedWaitUntil:
-    visible:
-      text: "My Workouts|saved workout|DAY 1"
+    visible: "30-Day Plan|Day 1|Day 2|Rest day|Upper Push|Lower"
     timeout: 50000
 - waitForAnimationToEnd:
     timeout: 3000

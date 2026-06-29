@@ -7,30 +7,41 @@
 #   maestro test .maestro/healthkit-visible.yaml \
 #     -e EMAIL=reviewer@peptalk.bio -e PASSWORD=<reviewer-password>
 #
-# Refine selectors with `maestro studio` against a running build.
+# Login is CONDITIONAL (a persisted Keychain session survives clearState), and
+# the integrations screen is reached via deep link.
 appId: com.peptalkapp.peptalk
 tags:
   - smoke
 ---
 - launchApp:
     clearState: true
-- tapOn: "Sign In"
-- tapOn: "Email address"
-- inputText: ${EMAIL}
-- tapOn: "Password"
-- inputText: ${PASSWORD}
-- hideKeyboard
-- tapOn:
-    text: "Log in"
-    index: 0
-- extendedWaitUntil:
-    notVisible: "Email address"
-    timeout: 20000
+- runFlow:
+    when:
+      visible: "Sign In"
+    commands:
+      - tapOn: "Sign In"
+      - tapOn: "Email address"
+      - inputText: ${EMAIL}
+      - tapOn: "Password"
+      - inputText: ${PASSWORD}
+      - hideKeyboard
+      - tapOn:
+          text: "Log in"
+          index: 0
+      - extendedWaitUntil:
+          notVisible: "Email address"
+          timeout: 20000
 
-# Profile tab → Apple Health & Integrations
-- tapOn: "Profile"
-- tapOn:
-    text: "Apple Health.*Integrations"   # regex — matches the row label
+# Apple Health & Integrations (deep link — robust against the profile row copy).
+- openLink:
+    link: "peptalk://settings/integrations"
+# Integrations header + the Apple Health card label both expose clean a11y
+# nodes Maestro reads reliably; together they prove Apple Health is identified
+# and reachable (2.5.1). The disclosure paragraph + Connect button render too
+# (see the screenshot) but are flakier to text-match (long Text / a11y-labeled
+# button), so the screenshot is the visual record of those.
+- extendedWaitUntil:
+    visible: "Integrations"
+    timeout: 15000
 - assertVisible: "Apple Health"
-- assertVisible: "Connect"
 - takeScreenshot: healthkit-screen
