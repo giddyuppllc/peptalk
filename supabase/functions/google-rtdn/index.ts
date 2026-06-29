@@ -77,6 +77,15 @@ interface RTDNPayload {
     purchaseToken: string;
     subscriptionId: string;
   };
+  // Refunds / chargebacks arrive here, NOT in subscriptionNotification.
+  // Only emitted if "Voided Purchases" notifications are enabled in
+  // Play Console → Monetization setup.
+  voidedPurchasesNotification?: {
+    purchaseToken: string;
+    orderId: string;
+    productType: number; // 1 = subscription, 2 = one-time
+    refundType: number;  // 1 = full refund, 2 = partial/quantity
+  };
   testNotification?: { version: string };
 }
 
@@ -143,10 +152,63 @@ Deno.serve(async (req) => {
       return new Response('Package mismatch', { status: 400 });
     }
 
+    // Voided purchases (refund / chargeback) → revoke entitlement now.
+    // Without this, a refunded user keeps their tier until the sub would
+    // have naturally expired (only an immediate SUBSCRIPTION_REVOKED type-12
+    // was handled before). Resolves the same way as the subscription path:
+    // user/row by purchase_token, with the legacy receipt_data backstop.
+    const voided = payload.voidedPurchasesNotification;
+    if (voided) {
+      const vToken = voided.purchaseToken;
+      const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+      let { data: vRow } = await admin
+        .from('subscriptions')
+        .select('user_id, product_id')
+        .eq('purchase_token', vToken)
+        .limit(1)
+        .maybeSingle();
+      if (!vRow) {
+        const fb = await admin
+          .from('subscriptions')
+          .select('user_id, product_id')
+          .eq('receipt_data', vToken.substring(0, 500))
+          .limit(1)
+          .maybeSingle();
+        vRow = fb.data ?? null;
+      }
+      const vUserId = vRow?.user_id ?? null;
+      const vProductId = vRow?.product_id ?? null;
+
+      await admin.from('subscription_events').upsert(
+        {
+          user_id: vUserId,
+          product_id: vProductId,
+          platform: 'android',
+          event_type: 'refund',
+          external_event_id: envelope.message.messageId,
+          raw_payload: { payload },
+          expires_at: null,
+        },
+        { onConflict: 'platform,external_event_id', ignoreDuplicates: true },
+      );
+
+      if (vUserId && vProductId) {
+        await admin
+          .from('subscriptions')
+          .update({ is_active: false, last_validated_at: new Date().toISOString() })
+          .eq('user_id', vUserId)
+          .eq('product_id', vProductId);
+      } else {
+        console.warn('[google-rtdn] voided purchase with no matching row:', vToken.substring(0, 12));
+      }
+
+      return new Response('ok', { status: 200 });
+    }
+
     const sub = payload.subscriptionNotification;
     if (!sub) {
-      // Nothing actionable in other notification types today (voided
-      // purchases, one-time products) — ack and move on.
+      // Other notification types (one-time products) — ack and move on.
       return new Response('ok', { status: 200 });
     }
 
