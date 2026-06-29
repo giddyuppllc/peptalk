@@ -262,6 +262,11 @@ export async function scheduleDoseReminder(
   peptideName: string,
   time: string,
   frequency: string,
+  // The protocol's start date (YYYY-MM-DD) — used as the cadence anchor so
+  // weekly/custom reminders fire on the user's ACTUAL dosing weekday and
+  // biweekly steps every 2 weeks from this date instead of a hardcoded
+  // Monday. Optional for legacy callers (falls back to Monday/anchor=today).
+  anchorDate?: string,
 ): Promise<string> {
   if (!isAvailable()) return '';
 
@@ -272,7 +277,7 @@ export async function scheduleDoseReminder(
   await cancelDoseRemindersFor(peptideId);
 
   const [hours, minutes] = time.split(':').map(Number);
-  const triggers = buildTriggersForFrequency(frequency, hours, minutes);
+  const triggers = buildTriggersForFrequency(frequency, hours, minutes, anchorDate);
 
   const ids: string[] = [];
   for (let i = 0; i < triggers.length; i++) {
@@ -791,19 +796,29 @@ export async function checkMidDayMacroDeficit(args: {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
- * Returns an array of OS triggers for the given protocol frequency.
- * Multi-day cadences (biw, tiw, biweekly) produce multiple weekly
- * triggers — the caller schedules one notification per element.
+ * Returns an array of OS triggers for the given protocol frequency,
+ * anchored to the protocol's real start date so reminders match the
+ * user's ACTUAL dosing schedule. Multi-day cadences (biw, tiw, eod)
+ * produce multiple weekly triggers and biweekly produces a bounded
+ * series of one-shot DATE triggers — the caller schedules one
+ * notification per element.
  *
  * Earlier this function returned a single trigger and silently fell
  * through to 'daily' for every cadence except 'weekly', meaning
  * every-other-day, twice-weekly, and biweekly protocols fired EVERY
  * DAY. P1 from Wave 76.9 push audit.
+ *
+ * Then weekly/biweekly were HARDCODED to Monday regardless of when the
+ * user actually started, and 'biweekly' fired EVERY week instead of
+ * every 2 weeks (P3.14). Now weekly/custom fire on the start weekday,
+ * multi-day cadences are spaced relative to it, and biweekly steps
+ * every 14 days from the anchor.
  */
 function buildTriggersForFrequency(
   frequency: string,
   hours: number,
   minutes: number,
+  anchorDate?: string,
 ): any[] {
   const dailyType = Notifications?.SchedulableTriggerInputTypes?.DAILY ?? 'daily';
   const weeklyType = Notifications?.SchedulableTriggerInputTypes?.WEEKLY ?? 'weekly';
@@ -817,29 +832,98 @@ function buildTriggersForFrequency(
   });
 
   // Expo weekday convention: 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat.
+  // Derive the protocol's start weekday so weekly/multi-day cadences fire
+  // on the user's real dosing day instead of a hardcoded Monday. JS
+  // getDay() is 0=Sun..6=Sat → +1 for Expo's 1=Sun..7=Sat. Falls back to
+  // Monday (2) when no anchor is supplied (legacy callers).
+  const anchor = parseAnchorDate(anchorDate);
+  const anchorWeekday = anchor ? anchor.getDay() + 1 : 2;
+  // Shift an Expo weekday forward by `days`, wrapping within 1..7.
+  const shift = (weekday: number, days: number) => ((weekday - 1 + days) % 7) + 1;
+
   switch (frequency) {
     case 'daily':
       return [{ type: dailyType, hour: hours, minute: minutes, channelId }];
     case 'weekly':
-    case 'biweekly': // every 2 wks — OS can't model exactly; fire same weekday weekly
-      return [wk(2)]; // Mon
-    case 'biw': // bi-weekly = TWICE per week (Mon + Thu)
+    case 'custom':
+      // Fire weekly on the protocol's actual start weekday.
+      return [wk(anchorWeekday)];
+    case 'biweekly':
+      // Every 2 weeks — the OS has no native biweekly repeat, so emit a
+      // bounded series of one-shot DATE triggers 14 days apart starting
+      // from the anchor. Re-activating the protocol reschedules the set.
+      return buildBiweeklyDateTriggers(anchor, hours, minutes, channelId);
+    case 'biw': // 2x per week — start weekday + 3 days later.
     case 'twice_weekly':
-      return [wk(2), wk(5)];
-    case 'tiw': // tri-weekly = THREE times per week (Mon + Wed + Fri)
+      return [wk(anchorWeekday), wk(shift(anchorWeekday, 3))];
+    case 'tiw': // 3x per week — start weekday + 2 + 4 days.
     case 'thrice_weekly':
     case 'triweekly':
-      return [wk(2), wk(4), wk(6)];
+      return [wk(anchorWeekday), wk(shift(anchorWeekday, 2)), wk(shift(anchorWeekday, 4))];
     case 'eod':
     case 'every_other_day':
-      // OS doesn't model every-other-day natively. Approximate as
-      // Mon/Wed/Fri/Sun (4×/week) which is close to 3.5×/week target.
-      return [wk(1), wk(2), wk(4), wk(6)];
+      // OS doesn't model every-other-day natively. Approximate as 4×/week
+      // (close to the 3.5×/week target), spaced from the start weekday.
+      return [
+        wk(anchorWeekday),
+        wk(shift(anchorWeekday, 2)),
+        wk(shift(anchorWeekday, 4)),
+        wk(shift(anchorWeekday, 6)),
+      ];
     default:
       // Unknown frequency — fall back to daily and log so we notice.
       if (__DEV__) console.warn('[notif] unknown frequency, defaulting to daily:', frequency);
       return [{ type: dailyType, hour: hours, minute: minutes, channelId }];
   }
+}
+
+/** Number of biweekly occurrences to pre-schedule (~4 months). The
+ *  protocol is rescheduled on every (re)activation, so this only needs
+ *  to comfortably outlast a typical cycle window without burning through
+ *  iOS's 64-pending-notification ceiling. */
+const BIWEEKLY_OCCURRENCE_COUNT = 8;
+
+/**
+ * Build one-shot DATE triggers stepping every 14 days from the anchor.
+ * Skips occurrences already in the past so only future reminders are
+ * registered. Steps by calendar date (not fixed ms) so the dose time
+ * stays stable across DST.
+ */
+function buildBiweeklyDateTriggers(
+  anchor: Date | null,
+  hours: number,
+  minutes: number,
+  channelId: string | undefined,
+): any[] {
+  const dateType = Notifications?.SchedulableTriggerInputTypes?.DATE ?? 'date';
+  const now = Date.now();
+  const cursor = anchor ? new Date(anchor) : new Date();
+  cursor.setHours(hours, minutes, 0, 0);
+  // Advance to the first occurrence that's still in the future.
+  while (cursor.getTime() <= now) {
+    cursor.setDate(cursor.getDate() + 14);
+  }
+  const triggers: any[] = [];
+  for (let i = 0; i < BIWEEKLY_OCCURRENCE_COUNT; i++) {
+    triggers.push({ type: dateType, date: new Date(cursor), channelId });
+    cursor.setDate(cursor.getDate() + 14);
+  }
+  return triggers;
+}
+
+/**
+ * Parse a YYYY-MM-DD anchor date into a local Date at midnight. Returns
+ * null for missing/malformed input so callers fall back to defaults.
+ * Built from explicit Y/M/D parts to avoid the UTC-midnight shift that
+ * `new Date('YYYY-MM-DD')` applies (which can land on the prior day in
+ * negative-offset timezones and break the derived weekday).
+ */
+function parseAnchorDate(dateStr?: string): Date | null {
+  if (!dateStr) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr.trim());
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 // Back-compat shim — old callers got a single trigger. Returns the

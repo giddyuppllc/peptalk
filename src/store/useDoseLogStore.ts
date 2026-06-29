@@ -481,7 +481,7 @@ export const useDoseLogStore = create<DoseLogStore>()(
           if (notificationsAvailable?.()) {
             const peptideName = getPeptideById?.(input.peptideId)?.name ?? input.peptideId;
             const reminderTime = '08:00';
-            scheduleDoseReminder?.(input.peptideId, peptideName, reminderTime, input.frequency)
+            scheduleDoseReminder?.(input.peptideId, peptideName, reminderTime, input.frequency, protocol.startDate)
               ?.catch?.((err: unknown) => {
                 if (typeof __DEV__ !== 'undefined' && (__DEV__ as boolean)) {
                   if (__DEV__) console.warn('[useDoseLogStore] scheduleDoseReminder failed:', err);

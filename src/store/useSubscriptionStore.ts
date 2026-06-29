@@ -377,6 +377,22 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
         // ref outside the store state so it survives re-runs.
         if (syncInFlight) return;
         syncInFlight = true;
+        // 2026-06-28 stale-read race guard (P3.12): a syncFromServer started
+        // BEFORE a purchase completes can resolve AFTER validatePurchase has
+        // written the freshly-validated paid tier, clobbering it back down to
+        // whatever the DB held when this sync's SELECT ran. validatePurchase is
+        // the only OTHER writer that advances `lastSyncedAt` (syncInFlight above
+        // serializes concurrent syncs, so no other sync can move it while we're
+        // in flight). So: snapshot lastSyncedAt now; if it changes before we
+        // apply our server snapshot, a purchase landed mid-flight and our read
+        // is stale — bail rather than overwrite the just-validated tier.
+        //
+        // This does NOT break the legit downgrade-on-expiry path: an expired /
+        // empty server state that is genuinely newer than the last purchase has
+        // NO concurrent validatePurchase (the purchase predates this sync), so
+        // lastSyncedAt is unchanged and the downgrade write proceeds normally.
+        const lastSyncedAtAtSyncStart = get().lastSyncedAt;
+        const purchaseSupersededSync = () => get().lastSyncedAt !== lastSyncedAtAtSyncStart;
         try {
         // Retry transient failures so a flaky network during boot doesn't
         // leave users locked to the last-persisted tier for the session.
@@ -510,6 +526,16 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
                     );
                   }
                 }
+                if (purchaseSupersededSync()) {
+                  // A purchase was validated while this sync was in flight —
+                  // its tier is fresher than this (possibly lower) mirror read.
+                  if (__DEV__) {
+                    console.warn(
+                      '[useSubscriptionStore] syncFromServer: purchase landed mid-sync — skipping stale mirror promotion',
+                    );
+                  }
+                  return;
+                }
                 if (mirrorTier === 'plus' || mirrorTier === 'pro') {
                   // Profile mirror says paid — the subscriptions row is
                   // momentarily missing/transient. Promote to the mirror
@@ -546,6 +572,19 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
             const stillValid =
               (data.is_active ?? true) &&
               (!data.expires_at || new Date(data.expires_at) > new Date());
+            if (purchaseSupersededSync()) {
+              // A purchase was validated while this sync was in flight. Our
+              // `data` is a snapshot of the subscriptions table taken BEFORE
+              // that purchase, so applying it now would clobber the freshly-
+              // validated tier (the classic stale-read race). The purchase
+              // write is authoritative and more recent — leave it intact.
+              if (__DEV__) {
+                console.warn(
+                  '[useSubscriptionStore] syncFromServer: purchase landed mid-sync — discarding stale server snapshot',
+                );
+              }
+              return;
+            }
             set({
               tier: stillValid ? data.tier : 'free',
               productId: data.product_id,

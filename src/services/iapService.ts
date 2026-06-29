@@ -13,7 +13,7 @@
  *   5. restorePurchases() on demand
  */
 
-import { Platform } from 'react-native';
+import { Platform, Linking } from 'react-native';
 import type { SubscriptionTier } from '../types/fitness';
 import { captureException } from './telemetry';
 
@@ -463,5 +463,41 @@ export async function restorePurchases(): Promise<number> {
     if (__DEV__) console.warn('[iapService] restorePurchases failed:', err);
     captureException(err, { source: 'iap.restore' });
     return 0;
+  }
+}
+
+/**
+ * Open the OS code-redemption flow so a customer can redeem a discount code.
+ *
+ * This is the ONLY supported way to apply a discount to a store subscription:
+ *  - iOS: presents StoreKit's offer-code redemption sheet. The code is an
+ *    Apple "Offer Code" generated in App Store Connect; Apple applies the
+ *    discount to the purchase/renewal itself.
+ *  - Android: deep-links to the Play Store redeem screen (pre-filled when a
+ *    code is supplied) for a Google Play promo code.
+ *
+ * We do NOT (and Apple/Google do not let us) apply an offer code
+ * programmatically from a Bearer call — redemption happens in the OS UI.
+ * Returns true if the redemption UI was presented.
+ */
+export async function presentCodeRedemption(prefillCode?: string | null): Promise<boolean> {
+  try {
+    if (Platform.OS === 'ios') {
+      if (!isAvailable() || typeof IAP.presentCodeRedemptionSheetIOS !== 'function') {
+        return false;
+      }
+      await IAP.presentCodeRedemptionSheetIOS();
+      return true;
+    }
+    // Android: Play promo-code redemption (pre-filled when we have the code).
+    const url = prefillCode
+      ? `https://play.google.com/redeem?code=${encodeURIComponent(prefillCode)}`
+      : 'https://play.google.com/store/account/subscriptions';
+    await Linking.openURL(url);
+    return true;
+  } catch (err) {
+    if (__DEV__) console.warn('[iapService] presentCodeRedemption failed:', err);
+    captureException(err, { source: 'iap.redeemCode' });
+    return false;
   }
 }

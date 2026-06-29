@@ -259,6 +259,11 @@ export interface FoodItem {
   carbsGrams: number;
   fatGrams: number;
   fiberGrams: number;
+  /** Optional micronutrients (per serving) */
+  sugarGrams?: number;
+  sodiumMg?: number;
+  cholesterolMg?: number;
+  saturatedFatGrams?: number;
   /** Whether this is a user-created custom food */
   isCustom: boolean;
 }

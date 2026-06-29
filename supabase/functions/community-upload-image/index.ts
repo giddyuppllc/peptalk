@@ -119,23 +119,7 @@ Deno.serve(async (req: Request) => {
   if (authErr || !userData?.user) return json({ error: 'Invalid auth token' }, 401);
   const userId = userData.user.id;
 
-  // 2. Block users currently in moderation timeout. The community
-  //    moderate path can flag a user_status row that prevents new posts
-  //    — that should also prevent fresh image uploads (which would
-  //    otherwise sit in storage as orphans).
-  const { data: status } = await supabase
-    .from('community_user_status')
-    .select('is_blocked, banned_until')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (status?.is_blocked) {
-    return json({ error: 'Account blocked from uploads' }, 403);
-  }
-  if (status?.banned_until && new Date(status.banned_until) > new Date()) {
-    return json({ error: 'Upload privileges temporarily suspended' }, 403);
-  }
-
-  // 3. Body
+  // 2. Body
   let body: { contentType?: string; size?: number; kind?: string };
   try {
     body = await req.json();
@@ -155,14 +139,14 @@ Deno.serve(async (req: Request) => {
   }
   const kind = body.kind && ALLOWED_KINDS.has(body.kind) ? body.kind : 'post';
 
-  // 4. Mint a deterministic key under the user's namespace. UUID + date
+  // 3. Mint a deterministic key under the user's namespace. UUID + date
   //    keeps keys collision-free even if two devices upload at the
   //    same second; the date prefix makes lifecycle/cleanup queries easy.
   const ext = TYPE_TO_EXT[contentType];
   const datePrefix = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   const objectKey = `${kind}/${userId}/${datePrefix}/${crypto.randomUUID()}.${ext}`;
 
-  // 5. Sign a PUT URL. ContentLength + ContentType are *unsigned* here
+  // 4. Sign a PUT URL. ContentLength + ContentType are *unsigned* here
   //    so the client can attach the real values; R2 enforces the
   //    Content-Type header matches the signed presign metadata only when
   //    we use SignableHeaders. For simplicity we trust the size cap in

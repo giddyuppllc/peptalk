@@ -58,6 +58,7 @@ export default function CycleLogScreen() {
 
   const [notes, setNotes] = useState(dayLog?.notes ?? '');
   const [bbtText, setBbtText] = useState(dayLog?.bbt != null ? String(dayLog.bbt) : '');
+  const [bbtWarning, setBbtWarning] = useState(false);
 
   const activeSymptoms = useMemo(() => new Set(dayLog?.symptoms ?? []), [dayLog?.symptoms]);
   const activeMoods = useMemo(() => new Set(dayLog?.moods ?? []), [dayLog?.moods]);
@@ -68,12 +69,38 @@ export default function CycleLogScreen() {
   };
 
   const commitBBT = () => {
-    const v = parseFloat(bbtText);
-    if (isNaN(v)) {
+    const raw = bbtText.trim();
+    if (raw === '') {
+      // Cleared input — drop any stored value, no warning.
+      setBbtWarning(false);
       setBBT(date, undefined, 'manual');
-    } else if (v > 90 && v < 110) {
-      setBBT(date, v, 'manual');
+      return;
     }
+    const v = parseFloat(raw);
+    if (isNaN(v)) {
+      setBbtWarning(false);
+      setBBT(date, undefined, 'manual');
+      return;
+    }
+    if (v > 90 && v < 110) {
+      // Valid Fahrenheit reading — persist as-is.
+      setBbtWarning(false);
+      setBBT(date, v, 'manual');
+    } else if (v >= 35 && v <= 38) {
+      // Plausible Celsius basal temp — convert C→F so it isn't silently dropped.
+      const f = Math.round(((v * 9) / 5 + 32) * 10) / 10;
+      setBbtWarning(false);
+      setBbtText(String(f));
+      setBBT(date, f, 'manual');
+    } else {
+      // Outside both plausible ranges — flag it and don't persist a garbage value.
+      setBbtWarning(true);
+    }
+  };
+
+  const onChangeBBT = (text: string) => {
+    if (bbtWarning) setBbtWarning(false);
+    setBbtText(text);
   };
 
   return (
@@ -200,7 +227,7 @@ export default function CycleLogScreen() {
             <TextInput
               style={[styles.bbtInput, { backgroundColor: t.inputBg, color: t.text }]}
               value={bbtText}
-              onChangeText={setBbtText}
+              onChangeText={onChangeBBT}
               onBlur={commitBBT}
               keyboardType="decimal-pad"
               placeholder="97.8"
@@ -209,6 +236,12 @@ export default function CycleLogScreen() {
             />
             <Text style={[styles.bbtUnit, { color: t.textSecondary }]}>°F</Text>
           </View>
+          {bbtWarning && (
+            <Text style={[styles.bbtWarning, { color: t.primary }]}>
+              Enter a Fahrenheit temperature between 90 and 110°F (e.g. 97.8). Tip: Celsius
+              readings around 36.5° are converted automatically.
+            </Text>
+          )}
           <Text style={[styles.hint, { color: t.textSecondary }]}>
             Measure first thing in the morning, before moving.
           </Text>
@@ -428,6 +461,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 6,
     fontStyle: 'italic',
+  },
+  bbtWarning: {
+    fontSize: 11,
+    marginTop: 6,
+    fontWeight: '600',
   },
   switchRow: {
     flexDirection: 'row',

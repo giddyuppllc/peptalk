@@ -21,6 +21,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -29,6 +30,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 import { redeemReferralCode } from '../../src/services/referralService';
+import { presentCodeRedemption } from '../../src/services/iapService';
 
 export default function ReferralCodeScreen() {
   const router = useRouter();
@@ -74,15 +76,24 @@ export default function ReferralCodeScreen() {
         {redeemed ? (
           <GlassCard style={styles.successCard}>
             <Ionicons name="checkmark-circle" size={28} color={t.primary} />
-            <Text style={[styles.successTitle, { color: t.text }]}>Code applied</Text>
-            <Text style={[styles.successBody, { color: t.textSecondary }]}>
-              {redeemed.discount > 0
-                ? `${redeemed.discount}% off your first month is locked in.`
-                : 'Your sales partner has been credited.'}
-              {redeemed.appleOfferCode
-                ? ' The discount applies automatically when you upgrade.'
-                : ''}
+            <Text style={[styles.successTitle, { color: t.text }]}>
+              {redeemed.appleOfferCode ? 'Discount ready' : 'Partner credited'}
             </Text>
+            <Text style={[styles.successBody, { color: t.textSecondary }]}>
+              {redeemed.appleOfferCode
+                ? `${redeemed.discount > 0 ? `${redeemed.discount}% off your first month. ` : ''}Tap below to apply it in the ${Platform.OS === 'ios' ? 'App Store' : 'Play Store'} — the discount is applied when you confirm the subscription.`
+                : 'Your sales partner has been credited. Choose a plan to subscribe.'}
+            </Text>
+            {redeemed.appleOfferCode ? (
+              <TouchableOpacity
+                onPress={() => presentCodeRedemption(redeemed.appleOfferCode)}
+                style={[styles.btn, { backgroundColor: t.primary, marginTop: 14 }]}
+                accessibilityRole="button"
+                accessibilityLabel="Apply discount in the store"
+              >
+                <Text style={styles.btnText}>Apply discount</Text>
+              </TouchableOpacity>
+            ) : null}
           </GlassCard>
         ) : (
           <GlassCard style={styles.formCard}>

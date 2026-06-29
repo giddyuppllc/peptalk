@@ -247,12 +247,15 @@ export const useAuthStore = create<AuthStore>()(
               { onConflict: 'id' },
             );
           if (upsertErr) {
-            if (__DEV__) console.warn('[useAuthStore] profile upsert failed — rolling back signup:', upsertErr);
-            try { await db.auth.signOut(); } catch {}
-            set({ isLoading: false });
-            throw new Error(
-              `Account created but profile setup failed: ${upsertErr.message ?? upsertErr}. Please try again.`,
-            );
+            // Best-effort safety net only. The DB trigger handle_new_user
+            // already created the public.profiles row (SECURITY DEFINER), and
+            // we have a live session here — auth.users + profiles both exist.
+            // Signing out + telling the user to "try again" would just re-run
+            // signUp → "User already registered" and strand them. So log the
+            // failure for telemetry and proceed into the app like the happy
+            // path; restoreSession() reads the trigger-created profile.
+            if (__DEV__) console.warn('[useAuthStore] safety-net profile upsert failed (proceeding — trigger row already exists):', upsertErr);
+            captureException(upsertErr, { source: 'auth.signup.upsert', userId: data.user.id });
           }
 
           const appUser: User = {

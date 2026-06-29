@@ -104,18 +104,22 @@ export default function AuthScreen() {
     if (resetting) return;
     setResetting(true);
     try {
-      // Uses Supabase's default "Site URL" for the reset link (configured
-      // in dashboard → Auth → URL Configuration). Users land on a
-      // web-hosted reset screen; deep linking back into the app is a
-      // follow-up once the associated-domains setup is in place.
+      // Deep-link the reset back into the app. Without redirectTo the link
+      // uses the dashboard "Site URL" (a web page) and can't complete in-app.
+      // The app/_layout.tsx Linking handler picks up peptalk://auth/callback
+      // and sets a session (verifyOtp for ?token_hash=...&type=recovery, or
+      // setSession for the implicit #access_token fragment), dropping the
+      // user in so they can set a new password. The redirect URL must also be
+      // whitelisted in Supabase: Auth → URL Configuration → Redirect URLs.
       const { supabase } = await import('../src/services/supabase');
       const { error: resetErr } = await (supabase as any).auth.resetPasswordForEmail(
         normalizedEmail,
+        { redirectTo: 'peptalk://auth/callback' },
       );
       if (resetErr) throw resetErr;
       Alert.alert(
         'Reset email sent',
-        `If an account exists for ${normalizedEmail}, we sent a password-reset link. Check your inbox (and spam) and follow the link to pick a new password.`,
+        `If an account exists for ${normalizedEmail}, we sent a password-reset link. Open it on this device and follow the link to pick a new password.`,
       );
     } catch (err: any) {
       // Don't leak whether the email exists — return the same friendly

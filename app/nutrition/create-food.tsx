@@ -140,6 +140,10 @@ export default function CreateFoodScreen() {
       carbsGrams: clampMacro(carbs, 1000),
       fatGrams: clampMacro(fat, 1000),
       fiberGrams: clampMacro(fiber, 200),
+      sugarGrams: clampMacro(sugar, 1000),
+      sodiumMg: clampMacro(sodium, 100000),
+      cholesterolMg: clampMacro(cholesterol, 100000),
+      saturatedFatGrams: clampMacro(saturatedFat, 1000),
       isCustom: true,
     });
 

@@ -47,6 +47,8 @@ interface ExerciseState {
   exerciseName: string;
   targetReps: string[];
   isTimeBased: boolean;
+  /** For time-based exercises: target seconds per set */
+  timeSeconds: number | null;
   restLabel: string | null;
   restSeconds: number | null;
   setType: string;
@@ -131,6 +133,7 @@ function GeneratedTrackerScreen() {
         exerciseName: ex.exercise.name,
         targetReps: targets,
         isTimeBased: ex.exercise.isTimeBased,
+        timeSeconds: ex.timeSeconds ?? null,
         restLabel: ex.rest ?? null,
         restSeconds: restSecs,
         setType: ex.setType ?? 'normal',
@@ -252,10 +255,16 @@ function GeneratedTrackerScreen() {
             exercises.forEach((ex) => {
               ex.sets.forEach((set, i) => {
                 if (!set.completed) return;
+                // For timed exercises the user enters seconds in the same
+                // input the rep-based path uses; record it as durationSeconds
+                // rather than reps so timed work isn't logged as reps.
                 const logEntry: WorkoutLogSet = {
                   exerciseId: ex.exerciseId,
                   setNumber: i + 1,
-                  reps: parseInt(set.reps, 10) || 0,
+                  reps: ex.isTimeBased ? 0 : parseInt(set.reps, 10) || 0,
+                  durationSeconds: ex.isTimeBased
+                    ? parseInt(set.reps, 10) || undefined
+                    : undefined,
                   weightLbs: set.weight ? parseFloat(set.weight) : undefined,
                   rpe: set.rpe ?? undefined,
                   completed: true,
@@ -466,7 +475,11 @@ function GeneratedTrackerScreen() {
                 >
                   <Text style={[s.setNumber, s.colSet, { color: t.text }]}>{setIdx + 1}</Text>
                   <Text style={[s.targetText, s.colTarget, { color: t.textSecondary }]}>
-                    {ex.targetReps[setIdx] ?? '-'}
+                    {ex.isTimeBased
+                      ? ex.timeSeconds != null
+                        ? `${ex.timeSeconds}s`
+                        : (ex.targetReps[setIdx] ?? '-')
+                      : (ex.targetReps[setIdx] ?? '-')}
                   </Text>
                   {!ex.isTimeBased && (
                     <TextInput

@@ -148,6 +148,7 @@ export function ActivateProtocolButton({
                 peptideName,
                 '09:00',
                 frequencyToReminderKey(frequency),
+                startDateIso,
               );
 
               // Vial-expiry one-shot.

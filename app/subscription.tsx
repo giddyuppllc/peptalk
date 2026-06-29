@@ -28,6 +28,7 @@ import {
   purchaseProduct,
   restorePurchases,
   waitForPendingValidations,
+  presentCodeRedemption,
   type ProductId,
 } from '../src/services/iapService';
 import {
@@ -498,14 +499,18 @@ export default function SubscriptionScreen() {
               }
               await useSubscriptionStore.getState().syncFromServer();
               const tierAfter = useSubscriptionStore.getState().tier;
-              const upgraded = tierAfter !== 'free' && tierAfter !== tierBefore;
+              // Success = the user ends up on a paid tier, whether or not it
+              // CHANGED — an already-active subscriber re-running Restore was
+              // previously shown a misleading "if your plan doesn't show as
+              // active, try again" message.
+              const nowPaid = tierAfter !== 'free';
               trackRestoreSucceeded(count);
               Alert.alert(
                 'Restore Complete',
                 count === 0
                   ? 'No previous purchases found on this account.'
-                  : upgraded
-                    ? `Your ${tierAfter === 'pro' ? 'Pro' : 'Plus'} subscription has been restored.`
+                  : nowPaid
+                    ? `Your ${tierAfter === 'pro' ? 'Pro' : 'Plus'} subscription is active.`
                     : `Found ${count} previous purchase${count === 1 ? '' : 's'}. If your plan doesn't show as active, try again in a moment.`,
               );
             } catch (err: any) {
@@ -519,6 +524,18 @@ export default function SubscriptionScreen() {
           accessibilityLabel="Restore previous purchases"
         >
           <Text style={styles.restoreBtnText}>{restoring ? 'Restoring…' : 'Restore Purchases'}</Text>
+        </TouchableOpacity>
+
+        {/* Redeem a discount code (Apple Offer Code / Play promo code). Lets
+            partner / cross-site customers apply a discount the OS-blessed way:
+            the redemption sheet applies it to the subscription itself. */}
+        <TouchableOpacity
+          style={styles.restoreBtn}
+          onPress={() => presentCodeRedemption()}
+          accessibilityRole="button"
+          accessibilityLabel="Redeem a discount code"
+        >
+          <Text style={styles.restoreBtnText}>Have a discount code?</Text>
         </TouchableOpacity>
 
         {/* Manage Subscription (paid users only). Required by Apple for
