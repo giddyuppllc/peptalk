@@ -168,14 +168,11 @@ export async function pickAndUploadCommunityImage(
     throw new Error('Image picker is not available in this build.');
   }
 
-  // Android uses the system Photo Picker (no permission needed), so a
-  // non-granted result must NOT block the picker there. iOS still
-  // requires the library permission.
-  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!perm.granted && Platform.OS !== 'android') {
-    throw new Error('Photo library permission denied');
-  }
-
+  // Both platforms present the OS photo picker (Android Photo Picker /
+  // iOS PHPicker) via launchImageLibraryAsync. These run out-of-process and
+  // require NO media-library permission, so we deliberately do NOT call
+  // requestMediaLibraryPermissionsAsync() — that keeps READ_MEDIA_IMAGES /
+  // READ_MEDIA_VIDEO out of use per Google Play's Photo & Video policy.
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ImagePicker.MediaTypeOptions?.Images ?? 'Images',
     allowsEditing: kind === 'avatar',
