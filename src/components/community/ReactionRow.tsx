@@ -2,14 +2,14 @@
  * ReactionRow — three reaction buttons (Helpful / Like / ⚠ Dose warning)
  * with optimistic toggle.
  *
- * Used on both PostDetail and individual comments. Reaction state is
- * tracked locally per row since the store doesn't currently hydrate
- * per-target reaction membership (would require a separate query each
- * time; not worth the chatter for v1). Server enforces uniqueness via
- * the (user_id, post_id|comment_id, kind) unique index.
+ * Used on both PostDetail and individual comments. The store hydrates
+ * per-target reaction membership when a post detail opens
+ * (reactionsByTarget), so the row knows which kinds the current user has
+ * already reacted with and toggles instead of always incrementing. Server
+ * enforces uniqueness via the (user_id, post_id|comment_id, kind) index.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../hooks/useTheme';
@@ -33,15 +33,33 @@ export function ReactionRow({ postId, commentId, initialCount = 0 }: ReactionRow
   const t = useTheme();
   const toggleReaction = useCommunityStore((s) => s.toggleReaction);
 
-  // Optimistic local state. We don't hydrate from server to keep the
-  // row cheap; users see a momentary mismatch on app reopen if they
-  // already reacted, but the count is server-authoritative.
-  const [active, setActive] = useState<Record<CommunityReactionKind, boolean>>({
-    helpful: false,
-    like: false,
-    dose_warning: false,
+  // Per-target reaction membership hydrated by hydratePostDetail. Keyed by
+  // commentId for comment rows, postId for the post row. May be undefined
+  // until the detail finishes loading, then arrives as a (possibly empty)
+  // array. P3.11.
+  const targetKey = commentId ?? postId ?? '';
+  const memberKinds = useCommunityStore((s) => s.reactionsByTarget[targetKey]);
+
+  const buildActive = (kinds: CommunityReactionKind[] | undefined): Record<CommunityReactionKind, boolean> => ({
+    helpful: !!kinds?.includes('helpful'),
+    like: !!kinds?.includes('like'),
+    dose_warning: !!kinds?.includes('dose_warning'),
   });
+
+  // Seed from membership so re-reacting toggles off instead of double-counting.
+  const [active, setActive] = useState<Record<CommunityReactionKind, boolean>>(() => buildActive(memberKinds));
   const [count, setCount] = useState(initialCount);
+
+  // Membership may land after first render (detail loads async), and the
+  // store row is updated on every toggle — resync so this row reflects the
+  // authoritative membership. Keyed on the kinds string so it only fires on
+  // an actual change, never clobbering an in-flight optimistic toggle of
+  // the same value.
+  const memberSig = (memberKinds ?? []).slice().sort().join(',');
+  useEffect(() => {
+    setActive(buildActive(memberKinds));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memberSig]);
 
   const onTap = async (kind: CommunityReactionKind) => {
     const wasActive = active[kind];

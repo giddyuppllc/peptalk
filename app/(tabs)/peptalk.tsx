@@ -762,6 +762,7 @@ export default function PepTalkScreen() {
           })
           .catch((err) => {
             if (__DEV__) console.warn('[aimee] prefill stream failed/timed out:', err);
+            streamAbortRef.current?.abort();
             localFallback();
           });
       } else {
@@ -823,6 +824,10 @@ export default function PepTalkScreen() {
         if (streamed) return;
       } catch (err) {
         if (__DEV__) console.warn('[aimee] stream failed/timed out:', err);
+        // withTimeout rejecting does NOT stop the underlying SSE — abort it
+        // so it can't keep appending to a zombie bubble while the fallback
+        // path produces a second reply.
+        streamAbortRef.current?.abort();
       }
 
       // 2. Fall back to the legacy non-streaming endpoint (Grok-backed).
@@ -897,6 +902,7 @@ export default function PepTalkScreen() {
           if (streamed) return;
         } catch (err) {
           if (__DEV__) console.warn('[aimee] quick-reply stream failed/timed out:', err);
+          streamAbortRef.current?.abort();
         }
 
         setTyping(true);

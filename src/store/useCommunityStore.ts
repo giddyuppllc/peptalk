@@ -28,6 +28,15 @@ interface CommunityState {
   /** User-blocked ids — hides their content client-side without a
    *  server round-trip. */
   blockedUserIds: string[];
+  /** True once hydrateBlockedUsers has completed at least once this
+   *  session. The feed gates its first load on this so a blocked
+   *  author's post can't flash in before the block list lands. P3.10. */
+  blockedHydrated: boolean;
+  /** Current user's reaction membership keyed by target id (postId for a
+   *  post, commentId for a comment) → the kinds they've already reacted
+   *  with. Hydrated alongside a post detail so ReactionRow knows what's
+   *  already on and toggles instead of always incrementing. P3.11. */
+  reactionsByTarget: Record<string, CommunityReactionKind[]>;
   /** Users this account follows. Hydrated once on community-screen
    *  mount, kept in sync by toggleFollow. */
   followedUserIds: string[];
@@ -346,6 +355,8 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
   posts: [],
   postDetails: {},
   blockedUserIds: [],
+  blockedHydrated: false,
+  reactionsByTarget: {},
   followedUserIds: [],
   unreadNotificationCount: 0,
   loadingFeed: false,
@@ -592,6 +603,41 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
           return c;
         });
 
+      // Hydrate the current user's reaction membership for this post + its
+      // visible comments in one query so ReactionRow knows what's already
+      // reacted and toggles instead of always incrementing. P3.11. RLS
+      // (community_reactions SELECT using(true)) lets us read our own rows;
+      // we scope by user_id anyway. Best-effort — a failure just leaves the
+      // rows in their pre-fix optimistic state.
+      if (currentUserId) {
+        try {
+          const commentIds = comments.map((c: CommunityComment) => c.id);
+          const orFilter = commentIds.length > 0
+            ? `post_id.eq.${postId},comment_id.in.(${commentIds.join(',')})`
+            : `post_id.eq.${postId}`;
+          const { data: reactionRows } = await supabase
+            .from('community_reactions')
+            .select('post_id, comment_id, kind')
+            .eq('user_id', currentUserId)
+            .or(orFilter);
+          const membership: Record<string, CommunityReactionKind[]> = {};
+          for (const r of (reactionRows ?? []) as any[]) {
+            const key = r.comment_id ?? r.post_id;
+            if (!key) continue;
+            (membership[key] ??= []).push(r.kind as CommunityReactionKind);
+          }
+          // Ensure every rendered target has an entry (even if empty) so
+          // ReactionRow's selector sees a defined, stable value and resets
+          // any stale "active" state from a previously viewed post.
+          for (const id of [postId, ...commentIds]) {
+            membership[id] ??= [];
+          }
+          set({ reactionsByTarget: { ...get().reactionsByTarget, ...membership } });
+        } catch (rerr) {
+          if (__DEV__) console.warn('[community] reaction membership hydrate:', rerr);
+        }
+      }
+
       set({
         postDetails: {
           ...get().postDetails,
@@ -617,6 +663,11 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
       set({ blockedUserIds: (data ?? []).map((r: any) => r.blocked_id) });
     } catch (err) {
       if (__DEV__) console.warn('[community] hydrateBlockedUsers:', err);
+    } finally {
+      // Mark hydrated even on error so the feed isn't blocked forever on a
+      // transient failure — worst case it loads with an empty block list,
+      // exactly the pre-fix behaviour. P3.10.
+      set({ blockedHydrated: true });
     }
   },
 
@@ -762,6 +813,16 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
         ...target,
         action: presentlyReacted ? 'remove' : 'add',
       });
+      // Keep cached membership in sync so re-entering a post (or a sibling
+      // ReactionRow) reflects the new state without a re-hydrate. P3.11.
+      const key = target.commentId ?? target.postId;
+      if (key) {
+        const cur = get().reactionsByTarget[key] ?? [];
+        const next = presentlyReacted
+          ? cur.filter((k) => k !== target.kind)
+          : Array.from(new Set([...cur, target.kind]));
+        set({ reactionsByTarget: { ...get().reactionsByTarget, [key]: next } });
+      }
       return { ok: true };
     } catch (err: any) {
       return { ok: false, error: err?.message ?? 'Failed' };
@@ -987,6 +1048,8 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
       posts: [],
       postDetails: {},
       blockedUserIds: [],
+      blockedHydrated: false,
+      reactionsByTarget: {},
       followedUserIds: [],
       unreadNotificationCount: 0,
     });

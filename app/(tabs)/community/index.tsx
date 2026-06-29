@@ -76,7 +76,6 @@ export default function CommunityFeedScreen() {
 
   useEffect(() => {
     hydrateTopics();
-    hydrateBlockedUsers();
     hydrateFollowedUsers();
     // Open the live feed channel so new posts + counter updates appear
     // without manual pull-to-refresh.
@@ -84,11 +83,25 @@ export default function CommunityFeedScreen() {
     return () => {
       unsubscribeFeedRealtime();
     };
-  }, [hydrateTopics, hydrateBlockedUsers, hydrateFollowedUsers, subscribeFeedRealtime, unsubscribeFeedRealtime]);
+  }, [hydrateTopics, hydrateFollowedUsers, subscribeFeedRealtime, unsubscribeFeedRealtime]);
 
   useEffect(() => {
-    hydrateFeed({ topicSlug: activeSlug, sort, followingOnly: feedMode === 'following' });
-  }, [hydrateFeed, activeSlug, sort, feedMode]);
+    // P3.10: block list must be loaded BEFORE the first feed render, else a
+    // blocked author's post flashes in until hydrateBlockedUsers wins the
+    // race. Await it (once per session) ahead of every feed load so the
+    // initial render is always block-filtered.
+    let cancelled = false;
+    (async () => {
+      if (!useCommunityStore.getState().blockedHydrated) {
+        await hydrateBlockedUsers();
+      }
+      if (cancelled) return;
+      hydrateFeed({ topicSlug: activeSlug, sort, followingOnly: feedMode === 'following' });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrateFeed, hydrateBlockedUsers, activeSlug, sort, feedMode]);
 
   const filterChips = useMemo(
     () => [

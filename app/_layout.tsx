@@ -948,6 +948,35 @@ function RootLayout() {
     };
   }, [router]);
 
+  // Keep the auth store in sync with the underlying GoTrue session, and
+  // drive token auto-refresh off AppState (per Supabase's RN guidance).
+  // Without this, a session revoked mid-use (account deleted elsewhere,
+  // password changed, server-side revocation) leaves a stale "logged-in"
+  // shell where every authed call 401s until a cold restart.
+  useEffect(() => {
+    let authSub: { unsubscribe: () => void } | null = null;
+    let appSub: { remove: () => void } | null = null;
+    (async () => {
+      const { supabase } = await import('../src/services/supabase');
+      const { data } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+          useAuthStore.getState().restoreSession()?.catch?.(() => {});
+        }
+      });
+      authSub = data?.subscription ?? null;
+      // Auto-refresh only while foregrounded (RN apps are suspended in bg).
+      try { supabase.auth.startAutoRefresh(); } catch {}
+      appSub = AppState.addEventListener('change', (next) => {
+        if (next === 'active') { try { supabase.auth.startAutoRefresh(); } catch {} }
+        else { try { supabase.auth.stopAutoRefresh(); } catch {} }
+      });
+    })();
+    return () => {
+      try { authSub?.unsubscribe(); } catch {}
+      try { appSub?.remove(); } catch {}
+    };
+  }, []);
+
   // When auth flips from logged-out → logged-in (signup flow, or a
   // sign-in after the boot hydrations already no-op'd with no session),
   // re-run the hydrations so the user sees their server data without
