@@ -271,20 +271,22 @@ export default function RecipeGeneratorScreen() {
 
   const handleGenerate = async () => {
     setLoading(true);
+    // Collect allergens from every source we track so AI recipes avoid
+    // anything the user can't (or won't) eat. De-duped. Hoisted ABOVE the
+    // try so the catch-block fallback filters against the SAME complete
+    // set — an offline/error path must never surface a declared allergen.
+    const profile = useHealthProfileStore.getState().profile;
+    const structuredAllergens = useAllergyStore.getState().allergens;
+    const allergens = Array.from(
+      new Set(
+        [
+          ...(profile?.medical?.allergies ?? []),
+          ...(profile?.nutrition?.foodAllergies ?? []),
+          ...structuredAllergens.map((a) => a.label),
+        ].filter(Boolean),
+      ),
+    );
     try {
-      // Collect allergens from every source we track so AI recipes avoid
-      // anything the user can't (or won't) eat. De-duped, severe flagged.
-      const profile = useHealthProfileStore.getState().profile;
-      const structuredAllergens = useAllergyStore.getState().allergens;
-      const allergens = Array.from(
-        new Set(
-          [
-            ...(profile?.medical?.allergies ?? []),
-            ...(profile?.nutrition?.foodAllergies ?? []),
-            ...structuredAllergens.map((a) => a.label),
-          ].filter(Boolean),
-        ),
-      );
       if (isAIAvailable()) {
         const aiRecipes = await generateRecipe({
           diet,
@@ -330,10 +332,11 @@ export default function RecipeGeneratorScreen() {
       void allergenSet; // touch to satisfy lint if we add filtering later
     } catch {
       // Even on error, never serve a recipe with the user's allergens.
+      // Reuse the SAME combined allergen set computed above (medical +
+      // nutrition + structured) — not just medical.allergies.
       const safe = FALLBACK_RECIPES.filter((r) => {
         const haystack = (r.name + ' ' + r.ingredients.join(' ')).toLowerCase();
-        const allergList = useHealthProfileStore.getState().profile?.medical?.allergies ?? [];
-        return !allergList.some((a) => haystack.includes(a.toLowerCase()));
+        return !allergens.some((a) => haystack.includes(a.toLowerCase()));
       });
       setRecipes(safe);
     }

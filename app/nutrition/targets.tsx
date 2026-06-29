@@ -90,13 +90,17 @@ export default function MacroTargetsScreen() {
   };
 
   const handleSave = () => {
+    // Clamp each field to a sane non-negative range so negative/garbage
+    // input can't break the macro-ring math downstream. Mirrors create-food.
+    const clamp = (raw: string, fallback: number, max: number) =>
+      Math.min(Math.max(parseInt(raw, 10) || fallback, 0), max);
     const newTargets = {
-      calories: parseInt(cal, 10) || 2000,
-      proteinGrams: parseInt(protein, 10) || 150,
-      carbsGrams: parseInt(carbs, 10) || 200,
-      fatGrams: parseInt(fat, 10) || 67,
-      fiberGrams: parseInt(fiber, 10) || 30,
-      waterOz: parseInt(water, 10) || 100,
+      calories: clamp(cal, 2000, 10000),
+      proteinGrams: clamp(protein, 150, 1000),
+      carbsGrams: clamp(carbs, 200, 1000),
+      fatGrams: clamp(fat, 67, 1000),
+      fiberGrams: clamp(fiber, 30, 1000),
+      waterOz: clamp(water, 100, 500),
     };
     setTargets(newTargets);
     // Sync to donut chart goals

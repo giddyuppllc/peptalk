@@ -604,6 +604,7 @@ export const useDoseLogStore = create<DoseLogStore>()(
           site: string | null;
           batch_number: string | null;
           notes: string | null;
+          source: string | null;
           created_at: string | null;
         };
         const merged = await hydrateFromServer<Row, DoseLogEntry>(
@@ -621,6 +622,12 @@ export const useDoseLogStore = create<DoseLogStore>()(
             batchNumber: r.batch_number ?? undefined,
             notes: r.notes ?? undefined,
             createdAt: r.created_at ?? new Date().toISOString(),
+            // Carry the planned/logged distinction back from the server.
+            // scheduleCycle writes source:'planned' for pre-generated future
+            // doses; without mapping it back, planned doses hydrated on a new
+            // device/reinstall loaded as completed (planned undefined → falsy)
+            // and silently polluted adherence + the Weekly Tracker.
+            planned: r.source === 'planned',
           }),
           { orderBy: 'date', ascending: false, limit: 2000 },
         );

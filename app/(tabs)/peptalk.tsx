@@ -1233,6 +1233,8 @@ export default function PepTalkScreen() {
                 style={[styles.quickReplyChip, { borderColor: `${accent.deep}30` }]}
                 onPress={() => handleQuickReply(reply)}
                 scaleTo={0.95}
+                accessibilityRole="button"
+                accessibilityLabel={reply}
               >
                 <LinearGradient
                   colors={[`${accent.deep}18`, `${accent.pastel}0A`]}
@@ -1264,6 +1266,8 @@ export default function PepTalkScreen() {
                   router.push(action.route as any);
                 }}
                 scaleTo={0.95}
+                accessibilityRole="button"
+                accessibilityLabel={action.label}
               >
                 <LinearGradient
                   colors={[`${accent.deep}22`, `${accent.pastel}10`]}

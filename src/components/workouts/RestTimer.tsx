@@ -42,29 +42,52 @@ export function RestTimer({
 }: RestTimerProps) {
   const [remaining, setRemaining] = useState(durationSeconds);
   const [total, setTotal] = useState(durationSeconds);
+  const [running, setRunning] = useState(durationSeconds > 0);
   const completedRef = useRef(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Reset when the parent hands us a new duration
   useEffect(() => {
     setRemaining(durationSeconds);
     setTotal(durationSeconds);
+    setRunning(durationSeconds > 0);
     completedRef.current = false;
   }, [durationSeconds]);
 
-  // Tick once a second
+  // Single stable interval while running. Mirrors player.tsx's useRestTimer
+  // fix (2026-05-17): the tick effect must NOT depend on the per-second
+  // `remaining` value — that tore down + recreated the interval every tick,
+  // causing timing drift and occasional double-fires. We depend only on
+  // `running`; the interval decrements via the functional setState updater
+  // and self-terminates by flipping `running` to false when it hits zero.
   useEffect(() => {
-    if (remaining <= 0) {
-      if (!completedRef.current && total > 0) {
-        completedRef.current = true;
-        notifySuccess();
-        onComplete?.();
-      }
+    if (!running) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
       return;
     }
-    const id = setInterval(() => {
-      setRemaining((r) => Math.max(0, r - 1));
+    intervalRef.current = setInterval(() => {
+      setRemaining((r) => {
+        if (r <= 1) {
+          setRunning(false);
+          return 0;
+        }
+        return r - 1;
+      });
     }, 1000);
-    return () => clearInterval(id);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [running]);
+
+  // Fire onComplete exactly once when the countdown reaches zero. Kept as a
+  // separate cheap effect (no interval work) so the perf-critical tick effect
+  // above stays decoupled from `remaining`.
+  useEffect(() => {
+    if (remaining <= 0 && total > 0 && !completedRef.current) {
+      completedRef.current = true;
+      notifySuccess();
+      onComplete?.();
+    }
   }, [remaining, total, onComplete]);
 
   const mins = Math.floor(remaining / 60);
@@ -103,6 +126,7 @@ export function RestTimer({
             setTotal((t) => t + 30);
             setRemaining((r) => r + 30);
             completedRef.current = false;
+            setRunning(true);
           }}
           accessibilityRole="button"
           accessibilityLabel="Add 30 seconds to rest"
@@ -115,6 +139,7 @@ export function RestTimer({
         <AnimatedPress
           onPress={() => {
             tapLight();
+            setRunning(false);
             setRemaining(0);
             onSkip?.();
           }}

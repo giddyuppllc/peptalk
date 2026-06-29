@@ -372,12 +372,16 @@ function ExerciseDetailModal({
 
 export default function ExerciseLibraryScreen() {
   const router = useRouter();
-  // Optional deep-link filter, e.g. /workouts/exercises?muscle=core
-  const params = useLocalSearchParams<{ muscle?: string }>();
+  // Optional deep-link filter, e.g. /workouts/exercises?muscle=core&q=squat.
+  // Aimee's "view exercise" rows pass both so the library opens scoped to
+  // the tapped exercise instead of the full unfiltered list.
+  const params = useLocalSearchParams<{ muscle?: string; q?: string }>();
   const initialMuscle = (MUSCLE_FILTERS.some((m) => m.key === params.muscle)
     ? (params.muscle as MuscleGroup)
     : 'all') as MuscleGroup | 'all';
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(
+    typeof params.q === 'string' ? params.q : '',
+  );
   const [muscleFilter, setMuscleFilter] = useState<MuscleGroup | 'all'>(
     initialMuscle,
   );

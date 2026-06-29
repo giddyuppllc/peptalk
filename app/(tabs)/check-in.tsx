@@ -691,6 +691,9 @@ export default function CheckInScreen() {
                     key={opt.value}
                     onPress={() => toggleEmotion(opt.value)}
                     activeOpacity={0.7}
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={opt.label}
+                    accessibilityState={{ selected, checked: selected }}
                     style={[
                       styles.chip,
                       { borderColor: t.glassBorder, backgroundColor: t.glass },
@@ -761,6 +764,9 @@ export default function CheckInScreen() {
               onPress={handleHealthSync}
               disabled={healthSyncing || healthSynced}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={healthSynced ? 'Health data synced' : 'Sync vitals from health app'}
+              accessibilityState={{ disabled: healthSyncing || healthSynced, busy: healthSyncing }}
             >
               {healthSyncing ? (
                 <ActivityIndicator size="small" color={ACCENT} />
@@ -877,6 +883,9 @@ export default function CheckInScreen() {
                           key={so.value}
                           onPress={() => updatePeptideEffect(protocol.peptideId, 'sentiment', so.value)}
                           activeOpacity={0.7}
+                          accessibilityRole="radio"
+                          accessibilityLabel={so.label}
+                          accessibilityState={{ selected: active, checked: active }}
                           style={[
                             styles.sentimentChip,
                             { borderColor: t.glassBorder, backgroundColor: t.glass },
@@ -912,6 +921,9 @@ export default function CheckInScreen() {
                     key={tag}
                     onPress={() => toggleSideEffect(tag)}
                     activeOpacity={0.7}
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={tag}
+                    accessibilityState={{ selected, checked: selected }}
                     style={[
                       styles.chip,
                       { borderColor: t.glassBorder, backgroundColor: t.glass },

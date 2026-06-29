@@ -31,8 +31,36 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Spacing, FontSizes } from '../../src/constants/theme';
 import { useNotificationStore } from '../../src/store/useNotificationStore';
+import { useDoseLogStore } from '../../src/store/useDoseLogStore';
+import { getPeptideById } from '../../src/data/peptides';
+import {
+  scheduleDoseReminder,
+  cancelRemindersByTag,
+} from '../../src/services/notificationService';
 
 const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+/**
+ * Re-schedule dose reminders for every active protocol. Mirrors the auto-
+ * scheduling useDoseLogStore does on protocol activation (08:00 default,
+ * anchored to the protocol start date). scheduleDoseReminder sweeps the
+ * peptide's existing identifiers first, so this is idempotent.
+ */
+async function rescheduleAllDoses(): Promise<void> {
+  const protocols = useDoseLogStore
+    .getState()
+    .protocols.filter((p) => p.isActive);
+  for (const protocol of protocols) {
+    const peptideName = getPeptideById(protocol.peptideId)?.name ?? protocol.peptideId;
+    await scheduleDoseReminder(
+      protocol.peptideId,
+      peptideName,
+      '08:00',
+      protocol.frequency,
+      protocol.startDate,
+    );
+  }
+}
 
 interface TimeRowProps {
   label: string;
@@ -88,6 +116,20 @@ export default function NotificationSettingsScreen() {
   const toggleWeeklyReport = useNotificationStore((s) => s.toggleWeeklyReport);
   const setMealSafetyReminders = useNotificationStore((s) => s.setMealSafetyReminders);
   const setMealSafetyReminderTime = useNotificationStore((s) => s.setMealSafetyReminderTime);
+
+  // Persist the dose-reminder flag AND make it take effect immediately:
+  // (re)schedule reminders for active protocols when turned on, cancel the
+  // scheduled-dose identifiers when turned off. Consistent with the
+  // profile-tab dose toggle. The `dose-` (hyphen) prefix matches the
+  // scheduled-dose identifiers without sweeping the `dose_missed_*` nudges.
+  const handleToggleDose = async (value: boolean) => {
+    setDoseReminders(value);
+    if (value && prefs.enabled) {
+      await rescheduleAllDoses();
+    } else {
+      await cancelRemindersByTag('dose-');
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
@@ -162,7 +204,7 @@ export default function NotificationSettingsScreen() {
                 </View>
                 <Switch
                   value={prefs.doseReminders}
-                  onValueChange={setDoseReminders}
+                  onValueChange={handleToggleDose}
                   trackColor={{ true: t.primary + '88', false: t.cardBorder }}
                   thumbColor={prefs.doseReminders ? t.primary : '#fff'}
                 />

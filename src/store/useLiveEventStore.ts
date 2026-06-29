@@ -49,6 +49,12 @@ interface LiveEventState {
   channel: any | null;
 
   hydrateActive: () => Promise<void>;
+  /**
+   * Hydrate a specific event by id regardless of status (live OR ended).
+   * Used by the chat screen so deep-links / list-taps to an ended event
+   * resolve instead of spinning forever waiting on the currently-live one.
+   */
+  hydrateEvent: (eventId: string) => Promise<void>;
   subscribeToEvent: (eventId: string) => Promise<void>;
   unsubscribe: () => void;
   pushLocalMessage: (msg: LiveMessage) => void;
@@ -182,6 +188,51 @@ export const useLiveEventStore = create<LiveEventState>((set, get) => ({
       set({ messages: (msgs ?? []).map(rowToMessage) });
     } catch (err) {
       if (__DEV__) console.warn('[live-event] hydrate failed:', err);
+    } finally {
+      set({ hydrating: false });
+    }
+  },
+
+  hydrateEvent: async (eventId: string) => {
+    if (!eventId) return;
+    if (get().hydrating) return;
+    set({ hydrating: true });
+    try {
+      const { supabase } = await import('../services/supabase');
+      const { data: row } = await (supabase as any)
+        .from('community_live_events')
+        .select(`
+          id, host_user_id, title, description, status,
+          started_at, ended_at, required_tier
+        `)
+        .eq('id', eventId)
+        .maybeSingle();
+      if (!row) {
+        // Don't clobber a different active event we may already be showing.
+        if (get().active?.id === eventId) set({ active: null, messages: [] });
+        return;
+      }
+      // Resolve the host's name from public_profiles before mapping the
+      // row (the self-only `profiles` table can't be embedded).
+      await loadAuthors(supabase, [row.host_user_id]);
+      const event = rowToEvent(row);
+      set({ active: event });
+
+      // Pull last 200 messages for the event so users see context (works
+      // for ended events too — the transcript stays viewable).
+      const { data: msgs } = await (supabase as any)
+        .from('community_live_messages')
+        .select(`
+          id, event_id, user_id, body, is_host, is_deleted, last_edited_at, created_at
+        `)
+        .eq('event_id', event.id)
+        .order('created_at', { ascending: true })
+        .limit(200);
+      // Batch-resolve every author from public_profiles, then map.
+      await loadAuthors(supabase, (msgs ?? []).map((m: any) => m.user_id));
+      set({ messages: (msgs ?? []).map(rowToMessage) });
+    } catch (err) {
+      if (__DEV__) console.warn('[live-event] hydrateEvent failed:', err);
     } finally {
       set({ hydrating: false });
     }

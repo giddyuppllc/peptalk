@@ -300,6 +300,25 @@ export default function CycleDashboard() {
           </>
         )}
 
+        {/* Pregnancy mode banner */}
+        {mode === 'pregnancy' && (
+          <View style={styles.section}>
+            <GlassCard>
+              <View style={styles.cardHeader}>
+                <Ionicons name="heart-circle-outline" size={18} color={t.primary} />
+                <Text style={[styles.cardKicker, { color: t.textSecondary }]}>
+                  PREGNANCY MODE
+                </Text>
+              </View>
+              <Text style={[styles.modeBody, { color: t.text }]}>
+                Cycle and fertility predictions are paused during pregnancy.
+                You can still log symptoms, mood, and anything you notice —
+                update your method in setup once your cycle returns.
+              </Text>
+            </GlassCard>
+          </View>
+        )}
+
         {/* Non-cyclical mode banner */}
         {(mode === 'continuous' || mode === 'irregular' || mode === 'returning') && (
           <View style={styles.section}>

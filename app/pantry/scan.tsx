@@ -26,6 +26,7 @@ import {
   Alert,
   TextInput,
   Platform,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -125,6 +126,10 @@ export default function PantryScanScreen() {
         Alert.alert(
           source === 'camera' ? 'Camera permission needed' : 'Photos permission needed',
           'Enable access in Settings to scan your kitchen.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => {}) },
+          ],
         );
         return;
       }

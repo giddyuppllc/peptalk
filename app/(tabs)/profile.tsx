@@ -39,9 +39,12 @@ import { notificationsAvailable ,
   cancelAllReminders,
   scheduleWorkoutReminder,
   scheduleMealReminder,
+  scheduleDoseReminder,
   scheduleWeeklyReport,
   cancelRemindersByTag,
 } from '../../src/services/notificationService';
+import { useDoseLogStore } from '../../src/store/useDoseLogStore';
+import { getPeptideById } from '../../src/data/peptides';
 import {
   Colors,
   FontSizes,
@@ -860,9 +863,13 @@ function QuickLinksSection() {
   const router = useRouter();
   const t = useTheme();
 
+  // NOTE: "Export My Data" was removed — it routed to the same
+  // /health-report screen as "Share Health Report", so it was a duplicate
+  // action dressed up as a second feature. The Health Report screen already
+  // covers generating + sharing (which is the export path). One honest
+  // action instead of two doing the same thing.
   const links = [
     { icon: 'document-text-outline' as const, label: 'Share Health Report', route: '/health-report' as const, color: '#E89672', desc: 'Generate and share with your provider' },
-    { icon: 'download-outline' as const, label: 'Export My Data', route: '/health-report' as const, color: Colors.pepTeal, desc: 'Download your wellness journal' },
     { icon: 'book-outline' as const, label: 'My Journal', route: '/journal' as const, color: '#F4ECC2', desc: 'View and manage journal entries' },
   ];
 
@@ -870,7 +877,7 @@ function QuickLinksSection() {
     <View style={styles.researchSection}>
       <Text style={[styles.settingsSectionTitle, { color: t.text }]}>Quick Actions</Text>
 
-      {/* Gradient action buttons for share/export */}
+      {/* Gradient action button for sharing the health report */}
       <View style={actionStyles.row}>
         <TouchableOpacity
           style={actionStyles.btn}
@@ -884,28 +891,13 @@ function QuickLinksSection() {
             style={actionStyles.gradient}
           >
             <Ionicons name="share-outline" size={22} color="#fff" />
-            <Text style={actionStyles.label}>Share Health{'\n'}Report</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={actionStyles.btn}
-          activeOpacity={0.8}
-          onPress={() => router.push(links[1].route)}
-        >
-          <LinearGradient
-            colors={[Colors.pepTeal, '#0891b2']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={actionStyles.gradient}
-          >
-            <Ionicons name="download-outline" size={22} color="#fff" />
-            <Text style={actionStyles.label}>Export{'\n'}My Data</Text>
+            <Text style={actionStyles.label}>Share Health Report</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>
 
       {/* Link rows */}
-      {links.slice(2).map((link) => (
+      {links.slice(1).map((link) => (
         <TouchableOpacity
           key={link.route + link.label}
           activeOpacity={0.7}
@@ -1000,6 +992,18 @@ function NotificationSettings() {
       await scheduleDailyCheckInReminder(preferences.checkInReminderTime);
     } else {
       await cancelRemindersByTag('checkin');
+    }
+  };
+
+  const handleToggleDose = async (value: boolean) => {
+    setDoseReminders(value);
+    if (value && notifEnabled) {
+      await rescheduleAllDoses();
+    } else {
+      // `dose-` (hyphen) prefix matches the scheduled-dose identifiers
+      // (`dose-${peptideId}` / `dose-${peptideId}-slot-N`) without sweeping
+      // the `dose_missed_*` foreground nudges, which use an underscore.
+      await cancelRemindersByTag('dose-');
     }
   };
 
@@ -1113,7 +1117,7 @@ function NotificationSettings() {
           </View>
           <Switch
             value={preferences.doseReminders && notifEnabled}
-            onValueChange={setDoseReminders}
+            onValueChange={handleToggleDose}
             disabled={!notifEnabled}
             trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(227, 167, 161, 0.4)' }}
             thumbColor={
@@ -1266,6 +1270,28 @@ async function rescheduleWorkouts(time: string, days: number[]): Promise<void> {
 async function rescheduleAllMeals(mealTimes: Record<string, string>): Promise<void> {
   for (const [meal, time] of Object.entries(mealTimes)) {
     await scheduleMealReminder(meal, time);
+  }
+}
+
+/**
+ * Re-schedule dose reminders for every active protocol. Mirrors the auto-
+ * scheduling useDoseLogStore does on protocol activation (08:00 default,
+ * anchored to the protocol start date). scheduleDoseReminder sweeps the
+ * peptide's existing identifiers first, so this is idempotent.
+ */
+async function rescheduleAllDoses(): Promise<void> {
+  const protocols = useDoseLogStore
+    .getState()
+    .protocols.filter((p) => p.isActive);
+  for (const protocol of protocols) {
+    const peptideName = getPeptideById(protocol.peptideId)?.name ?? protocol.peptideId;
+    await scheduleDoseReminder(
+      protocol.peptideId,
+      peptideName,
+      '08:00',
+      protocol.frequency,
+      protocol.startDate,
+    );
   }
 }
 

@@ -166,6 +166,7 @@ export default function HomeScreen() {
           <Animated.View entering={FadeInDown.delay(60).duration(320)}>
             <DrillCard
               label="Weekly Tracker"
+              accessibilityLabel={`Weekly Tracker. ${moodLabel}. ${sleepLabel}. ${energyLabel}.`}
               onPress={() => router.push('/tracker' as never)}
               preview={
                 <View>
@@ -184,6 +185,7 @@ export default function HomeScreen() {
           <Animated.View entering={FadeInDown.delay(120).duration(320)}>
             <DrillCard
               label="Nutrition"
+              accessibilityLabel={`Nutrition. Protein ${Math.round(mealTotals.proteinGrams ?? 0)} of ${macroTargets.proteinGrams ?? 100} grams. Carbs ${Math.round(mealTotals.carbsGrams ?? 0)} of ${macroTargets.carbsGrams ?? 220} grams. Fat ${Math.round(mealTotals.fatGrams ?? 0)} of ${macroTargets.fatGrams ?? 70} grams. Fiber ${Math.round(mealTotals.fiberGrams ?? 0)} of ${macroTargets.fiberGrams ?? 28} grams.`}
               onPress={() => router.push('/nutrition' as never)}
               preview={
                 <View style={styles.nutritionRow}>
@@ -218,6 +220,7 @@ export default function HomeScreen() {
           <Animated.View entering={FadeInDown.delay(180).duration(320)}>
             <DrillCard
               label="Activity"
+              accessibilityLabel={`Activity. Steps ${latestCheckin?.steps != null ? latestCheckin.steps.toLocaleString() : 'not logged'}. Active calories ${latestCheckin?.activeCalories != null ? Math.round(latestCheckin.activeCalories) : 'not logged'}. Workouts ${recentWorkoutCount}.`}
               onPress={() => router.push('/activity' as never)}
               preview={
                 <View style={styles.activityRow}>

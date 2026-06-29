@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { CheckInEntry, CheckInRating, EmotionTag, PeptideEffect, SleepStageData } from '../types';
+import { BodyMeasurements, CheckInEntry, CheckInRating, EmotionTag, PeptideEffect, SleepStageData } from '../types';
 import { secureStorage } from '../services/secureStorage';
 import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
 
@@ -120,6 +120,8 @@ export const useCheckinStore = create<CheckinStore>()(
           hrv_ms: nextEntry.hrvMs ?? null,
           vo2_max: nextEntry.vo2Max ?? null,
           spo2: nextEntry.spo2 ?? null,
+          respiratory_rate: nextEntry.respiratoryRate ?? null,
+          body_measurements: nextEntry.bodyMeasurements ?? null,
           notes: nextEntry.notes ?? null,
           emotion_tags: nextEntry.emotionTags ?? [],
           side_effect_tags: nextEntry.sideEffectTags ?? [],
@@ -195,6 +197,8 @@ export const useCheckinStore = create<CheckinStore>()(
           hrv_ms: number | null;
           vo2_max: number | null;
           spo2: number | null;
+          respiratory_rate: number | null;
+          body_measurements: BodyMeasurements | null;
           notes: string | null;
           emotion_tags: string[] | null;
           side_effect_tags: string[] | null;
@@ -222,6 +226,8 @@ export const useCheckinStore = create<CheckinStore>()(
             hrvMs: r.hrv_ms ?? undefined,
             vo2Max: r.vo2_max ?? undefined,
             spo2: r.spo2 ?? undefined,
+            respiratoryRate: r.respiratory_rate ?? undefined,
+            bodyMeasurements: r.body_measurements ?? undefined,
             activeCalories: r.active_calories ?? undefined,
             sleepStages: r.sleep_stages ?? undefined,
             notes: r.notes ?? undefined,

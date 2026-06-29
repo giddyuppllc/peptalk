@@ -86,10 +86,15 @@ export default function BodyCompositionEntryScreen() {
       Alert.alert('Nothing to save', 'Enter at least one measurement.');
       return;
     }
+    const parsed = new Date(`${scanDate}T12:00:00`);
+    if (Number.isNaN(parsed.getTime())) {
+      Alert.alert('Invalid date', 'Enter the scan date as YYYY-MM-DD.');
+      return;
+    }
     tapMedium();
     addScan({
       ...payload,
-      scannedAt: new Date(`${scanDate}T12:00:00`).toISOString(),
+      scannedAt: parsed.toISOString(),
       source: 'manual',
     });
     // §10.4 — Aimee narrative on new upload.

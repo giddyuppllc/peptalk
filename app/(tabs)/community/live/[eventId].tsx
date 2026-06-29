@@ -46,9 +46,10 @@ export default function LiveEventChatScreen() {
 
   const active = useLiveEventStore((s) => s.active);
   const messages = useLiveEventStore((s) => s.messages);
+  const hydrating = useLiveEventStore((s) => s.hydrating);
   const subscribe = useLiveEventStore((s) => s.subscribeToEvent);
   const unsubscribe = useLiveEventStore((s) => s.unsubscribe);
-  const hydrate = useLiveEventStore((s) => s.hydrateActive);
+  const hydrateEvent = useLiveEventStore((s) => s.hydrateEvent);
   const pushLocalMessage = useLiveEventStore((s) => s.pushLocalMessage);
   const reportLiveMessage = useCommunityStore((s) => s.reportLiveMessage);
 
@@ -65,15 +66,18 @@ export default function LiveEventChatScreen() {
   const listRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    // Hydrate (in case user opened this URL directly without seeing the banner)
-    if (!active || active.id !== eventId) {
-      hydrate();
+    // Hydrate the SPECIFIC route event (in case user opened this URL
+    // directly without seeing the banner). Fetching by id — not "whatever
+    // is currently live" — is what lets ended / non-live events resolve
+    // instead of spinning forever.
+    if (eventId && (!active || active.id !== eventId)) {
+      hydrateEvent(eventId);
     }
     if (eventId) {
       subscribe(eventId);
     }
     return () => unsubscribe();
-  }, [eventId, active?.id, hydrate, subscribe, unsubscribe]);
+  }, [eventId, active?.id, hydrateEvent, subscribe, unsubscribe]);
 
   // Auto-scroll to newest message on every new arrival.
   useEffect(() => {
@@ -92,6 +96,10 @@ export default function LiveEventChatScreen() {
     (required === 'plus' && (tier === 'plus' || tier === 'pro')) ||
     (required === 'pro' && tier === 'pro');
 
+  // The store's `active` may transiently hold a different event (e.g. the
+  // currently-live one). Only treat it as resolved when it matches the
+  // route id — otherwise we show the spinner / unavailable state.
+  const eventResolved = !!active && active.id === eventId;
   const isLive = active?.status === 'live' && active.id === eventId;
 
   const sendMessage = async () => {
@@ -357,13 +365,51 @@ export default function LiveEventChatScreen() {
         )}
       </View>
 
-      {!active && (
+      {/* Three explicit pre-content states so an ended / unavailable event
+          resolves to a real empty state instead of an infinite spinner:
+            1. hydrating              → spinner
+            2. resolved-but-no-match  → "isn't available or has ended"
+            3. resolved + matches     → the chat (below) */}
+      {hydrating && !eventResolved && (
         <View style={styles.center}>
           <ActivityIndicator color={t.textSecondary} />
         </View>
       )}
 
-      {active && (
+      {!hydrating && !eventResolved && (
+        <View style={[styles.center, { padding: Spacing.lg, gap: 14 }]}>
+          <View style={{ width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: `${t.primary}18` }}>
+            <Ionicons name="radio-outline" size={32} color={t.textSecondary} />
+          </View>
+          <Text style={{ fontSize: 18, fontWeight: '800', textAlign: 'center', color: t.text }}>
+            This event isn't available
+          </Text>
+          <Text style={{ fontSize: FontSizes.sm, lineHeight: 20, textAlign: 'center', maxWidth: 300, color: t.textSecondary }}>
+            It may have ended or been removed. Check the community lobby for
+            what's live right now.
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={{ paddingVertical: 12, paddingHorizontal: 24, borderRadius: 999, backgroundColor: t.primary }}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Text style={{ color: '#fff', fontSize: FontSizes.sm, fontWeight: '800', letterSpacing: 0.4 }}>Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => { if (eventId) hydrateEvent(eventId); }}
+              style={{ paddingVertical: 12, paddingHorizontal: 24, borderRadius: 999, borderWidth: 1.5, borderColor: t.cardBorder }}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading this event"
+            >
+              <Text style={{ color: t.text, fontSize: FontSizes.sm, fontWeight: '800', letterSpacing: 0.4 }}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {eventResolved && (
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}

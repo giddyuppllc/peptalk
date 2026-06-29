@@ -205,6 +205,10 @@ export default function LabEntryScreen() {
       return;
     }
     tapMedium();
+    // A garbage manual draw-date corrupts the latest-result sort key, so
+    // normalize before the loop: keep a valid YYYY-MM-DD, else fall back
+    // to today.
+    const safeDate = isValidIsoDate(drawDate) ? drawDate : todayKey();
     let savedCount = 0;
     for (const [markerId, raw] of entries) {
       const value = parseFloat(raw);
@@ -215,7 +219,7 @@ export default function LabEntryScreen() {
         markerId,
         value,
         unit: marker.unit,
-        date: drawDate,
+        date: safeDate,
       });
       savedCount++;
     }

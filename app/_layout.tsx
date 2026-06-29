@@ -23,7 +23,7 @@ import { Newsreader_600SemiBold } from '@expo-google-fonts/newsreader/600SemiBol
 import { Newsreader_700Bold } from '@expo-google-fonts/newsreader/700Bold';
 import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
-import { V3ThemeProvider } from '../src/theme/V3ThemeProvider';
+import { V3ThemeProvider, useV3Theme } from '../src/theme/V3ThemeProvider';
 import { OfflineBanner } from '../src/components/OfflineBanner';
 import { HomeFab } from '../src/components/HomeFab';
 import { GlobalAimeeFab } from '../src/components/GlobalAimeeFab';
@@ -63,6 +63,16 @@ import { useTheme } from '../src/hooks/useTheme';
 // fires before any component renders or stores hydrate.
 initTelemetry();
 installGlobalErrorHandler();
+
+// Renders the OS status bar with glyphs keyed to the ACTIVE v3 variant.
+// Lives in its own component so it reads the variant via useV3Theme() from
+// *inside* V3ThemeProvider — RootLayout itself sits above the provider and
+// would only ever see the default (light) context. Black glyphs were
+// unreadable on the male charcoal background before this.
+function ThemedStatusBar() {
+  const v3 = useV3Theme();
+  return <StatusBar style={v3.isDark ? 'light' : 'dark'} />;
+}
 
 function RootLayout() {
   const router = useRouter();
@@ -1039,7 +1049,7 @@ function RootLayout() {
     <V3ThemeProvider>
     <SafeAreaProvider>
       <View style={[styles.container, { backgroundColor: t.bg }]}>
-        <StatusBar style={t.statusBar} />
+        <ThemedStatusBar />
         <OfflineBanner />
         <CelebrationModal />
         <WorkoutRewardModal />

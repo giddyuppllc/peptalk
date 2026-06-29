@@ -52,8 +52,13 @@ interface IntegrationsActions {
   syncFromServer: () => Promise<void>;
 }
 
-function uid(): string {
-  return `int-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+// Deterministic id from the natural key (the table is UNIQUE(user_id, source)
+// — one connection row per source). A random per-row id meant the same source
+// reconnected on another device upserted onConflict:'id' against a mismatched
+// key, duplicating the row or fighting the unique constraint. `int-${source}`
+// aligns the primary key with the natural key so cross-device sync dedups.
+function integrationId(source: BiomarkerSource): string {
+  return `int-${source}`;
 }
 
 export const useIntegrationsStore = create<IntegrationsState & IntegrationsActions>()(
@@ -70,7 +75,7 @@ export const useIntegrationsStore = create<IntegrationsState & IntegrationsActio
 
         const existing = get().integrations.find((i) => i.source === source);
         const record: ConnectedIntegration = {
-          id: existing?.id ?? uid(),
+          id: integrationId(source),
           source,
           connected: ok,
           scopes,

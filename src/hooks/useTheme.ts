@@ -12,9 +12,12 @@
 import { useOnboardingStore } from '../store/useOnboardingStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { getTestProfile } from '../constants/testProfiles';
+import { useV3Theme } from '../theme/V3ThemeProvider';
 
 export interface ThemeColors {
-  isDark: false;
+  /** Follows the active v3 variant — true when the male charcoal palette
+   *  is in effect, false on the light (female-default) palette. */
+  isDark: boolean;
   gender: 'male' | 'female';
 
   // Backgrounds
@@ -38,7 +41,7 @@ export interface ThemeColors {
   glassAccentBorder: string;
 
   // Status bar
-  statusBar: 'dark';
+  statusBar: 'dark' | 'light';
   headerTint: string;
 
   // Input
@@ -212,7 +215,51 @@ export function useTheme(): ThemeColors {
   const rawGender = testProfile?.gender ?? onboardingGender;
   const gender: 'male' | 'female' = rawGender === 'Female' ? 'female' : 'male';
 
-  return gender === 'female' ? femaleTheme : maleTheme;
+  // Converge with the v3 design system: read the variant V3ThemeProvider
+  // has selected and let the legacy surface/text/status tokens follow it,
+  // so screens still on useTheme() go dark with the rest of the app for
+  // male users (no more half-dark/half-light). The gender-derived accent
+  // tokens (primary, ctaGradient, orchid, …) are deliberately preserved so
+  // every existing consumer keeps the same token NAMES and shape.
+  const v3 = useV3Theme();
+  const base = gender === 'female' ? femaleTheme : maleTheme;
+
+  if (!v3.isDark) return base;
+
+  const c = v3.colors;
+  return {
+    ...base,
+    isDark: true,
+
+    bg: c.bgBase1,
+    card: c.cardBg,
+    cardBorder: c.cardBorder,
+    tabBar: c.bgBase1,
+    surface: c.bgBase2,
+
+    text: c.textPrimary,
+    textSecondary: c.textSecondary,
+    textMuted: 'rgba(241,236,228,0.45)',
+
+    glass: 'rgba(38,40,44,0.78)',
+    glassBorder: 'rgba(241,236,228,0.08)',
+    glassElevated: 'rgba(46,48,52,0.92)',
+    glassElevatedBorder: 'rgba(241,236,228,0.12)',
+    glassAccent: 'rgba(201,136,90,0.12)',
+    glassAccentBorder: 'rgba(201,136,90,0.25)',
+
+    statusBar: 'light',
+    headerTint: c.textPrimary,
+
+    inputBg: c.cardBg,
+    inputBorder: c.cardBorder,
+    placeholder: 'rgba(241,236,228,0.45)',
+
+    icon: c.textSecondary,
+
+    shadow: '#000',
+    shadowOpacity: 0.45,
+  };
 }
 
 /** Non-hook version */

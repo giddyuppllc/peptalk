@@ -24,11 +24,13 @@ import {
   ScrollView,
   Alert,
   Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { PaywallGate } from '../../src/hooks/useFeatureGate';
@@ -72,14 +74,25 @@ const inferMealType = (): MealType => {
   return 'dinner';
 };
 
+// Discriminated outcome of a scan so the caller can tell apart a true
+// "vision saw nothing" (empty) from failures that retaking the photo can't
+// fix — a network/auth/base64 error, or the user declining AI consent.
+// Previously every one of these collapsed into [] and the UI told the user
+// to "try better lighting", which is wrong for offline/401/5xx/consent.
+type DetectResult =
+  | { status: 'ok'; items: ScanItem[] }
+  | { status: 'empty' }
+  | { status: 'error' }
+  | { status: 'no_consent' };
+
 // Detects foods in a photo by calling the `food-scan` Supabase edge function,
 // which passes the image to vision and returns the identified items WITH
 // per-item portion + macro estimates. We return the full item objects so the
 // caller can log those accurate macros directly instead of re-searching the
 // database (which threw away the model's estimates and produced generic rows).
-async function detectFoodsFromPhoto(photoUri: string): Promise<ScanItem[]> {
+async function detectFoodsFromPhoto(photoUri: string): Promise<DetectResult> {
   // App Review 5.1.2: explicit consent before sending the photo to the vision model.
-  if (!(await ensureAiConsent())) return [];
+  if (!(await ensureAiConsent())) return { status: 'no_consent' };
   try {
     const { supabase } = await import('../../src/services/supabase');
     // Convert file URI → base64 for the edge function
@@ -96,16 +109,17 @@ async function detectFoodsFromPhoto(photoUri: string): Promise<ScanItem[]> {
     // protein, carbs, fat, fiber }], totals, description }. Keep the whole
     // item — the macros are the whole point of the scan.
     if (data?.items && Array.isArray(data.items) && data.items.length > 0) {
-      return (data.items as ScanItem[]).filter((f) => f?.name);
+      const items = (data.items as ScanItem[]).filter((f) => f?.name);
+      return items.length > 0 ? { status: 'ok', items } : { status: 'empty' };
     }
-    // Empty array: vision ran but saw nothing recognizable
-    return [];
+    // Vision ran but saw nothing recognizable — retaking can actually help.
+    return { status: 'empty' };
   } catch (err) {
     if (__DEV__) {
       console.warn('[meal-scan] vision detection failed:', err);
     }
-    // Return empty instead of fake foods so user knows detection failed
-    return [];
+    // Network / auth / base64 failure — retaking the photo won't help.
+    return { status: 'error' };
   }
 }
 
@@ -190,26 +204,44 @@ function MealScanScreen() {
     );
   }
 
-  // ── Capture + analyze ──
-  const handleCapture = async () => {
-    if (!cameraRef.current) return;
+  // ── Shared analysis path ──
+  // Both the live camera capture and the "Choose from library" picker feed
+  // their resulting photo URI in here, so the detection + macro-mapping
+  // logic lives in exactly one place.
+  const analyzePhoto = async (uri: string) => {
     try {
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.5, base64: false });
-      if (!mountedRef.current) return;
-      if (!photo?.uri) return;
-      setPhotoUri(photo.uri);
+      setPhotoUri(uri);
       setAnalyzing(true);
 
       // 1. Detect foods (with macros) via vision
-      const detected = await detectFoodsFromPhoto(photo.uri);
+      const detected = await detectFoodsFromPhoto(uri);
       if (!mountedRef.current) return;
 
-      if (detected.length === 0) {
+      // Failures that retaking can't fix — bounce back to the camera with a
+      // message that matches the real cause instead of "better lighting".
+      if (detected.status === 'no_consent') {
+        Alert.alert(
+          'AI features off',
+          'Turn on AI features to scan your meal. You can agree the next time you scan.',
+        );
+        setPhotoUri(null);
+        return;
+      }
+      if (detected.status === 'error') {
+        Alert.alert(
+          'Couldn\'t scan',
+          'Couldn\'t reach the scanner — check your connection and try again.',
+        );
+        setPhotoUri(null);
+        return;
+      }
+      if (detected.status === 'empty') {
+        // True zero-detections — this is the only case where retaking with a
+        // clearer angle / better lighting can actually help.
         Alert.alert(
           'Nothing recognized',
           'We couldn\'t identify any foods in that photo. Try a clearer angle or better lighting.',
         );
-        setAnalyzing(false);
         return;
       }
 
@@ -219,9 +251,10 @@ function MealScanScreen() {
       //    food-scanner.tsx / sanitizeLogMeal). Only when an item comes
       //    back with no usable calories do we fall back to a database
       //    search so the row still has *some* macros.
+      const items = detected.items;
       const all: ScannedFood[] = [];
-      for (let i = 0; i < detected.length; i++) {
-        const item = detected[i];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
         const name = clampString(item.name, 200);
         if (!name) continue;
 
@@ -270,6 +303,54 @@ function MealScanScreen() {
       }
     } finally {
       if (mountedRef.current) setAnalyzing(false);
+    }
+  };
+
+  // ── Live camera capture ──
+  const handleCapture = async () => {
+    if (!cameraRef.current) return;
+    try {
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.5, base64: false });
+      if (!mountedRef.current) return;
+      if (!photo?.uri) return;
+      await analyzePhoto(photo.uri);
+    } catch (err) {
+      if (mountedRef.current) {
+        Alert.alert('Capture failed', 'Could not capture the photo.');
+      }
+    }
+  };
+
+  // ── Choose an existing photo (parity with lab / pantry scanners) ──
+  const handlePickFromLibrary = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      // Android's library uses the system Photo Picker, which needs no
+      // permission — a non-granted result there must NOT block. iOS still
+      // requires the library permission.
+      if (!perm.granted && Platform.OS !== 'android') {
+        Alert.alert(
+          'Photos access needed',
+          'Allow photo library access in Settings to choose a meal photo.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => {}) },
+          ],
+        );
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.5,
+        base64: false,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      if (!mountedRef.current) return;
+      await analyzePhoto(result.assets[0].uri);
+    } catch (err) {
+      if (mountedRef.current) {
+        Alert.alert('Couldn\'t open library', 'Could not open your photo library. Please try again.');
+      }
     }
   };
 
@@ -340,14 +421,25 @@ function MealScanScreen() {
             <Text style={s.frameHint}>Center your plate in the frame</Text>
           </View>
 
-          {/* Shutter */}
+          {/* Shutter + library picker */}
           <View style={s.shutterRow}>
+            <View style={s.shutterSideSlot} />
             <TouchableOpacity
               style={s.shutterBtn}
               onPress={handleCapture}
               activeOpacity={0.8}
             >
               <View style={s.shutterInner} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.shutterSideSlot, s.libraryBtn]}
+              onPress={handlePickFromLibrary}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Choose from library"
+            >
+              <Ionicons name="images-outline" size={26} color="#fff" />
+              <Text style={s.libraryBtnText}>Library</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -502,7 +594,22 @@ const s = StyleSheet.create({
     textShadowRadius: 4,
   },
 
-  shutterRow: { alignItems: 'center', paddingBottom: 30 },
+  shutterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 24,
+    paddingBottom: 30,
+  },
+  shutterSideSlot: { width: 64, alignItems: 'center', justifyContent: 'center' },
+  libraryBtn: { gap: 2 },
+  libraryBtnText: {
+    fontSize: 11,
+    fontFamily: 'DMSans-Medium',
+    color: '#fff',
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowRadius: 4,
+  },
   shutterBtn: {
     width: 76,
     height: 76,

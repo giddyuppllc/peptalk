@@ -76,7 +76,13 @@ const WorkoutResult: React.FC<{ result: AimeeToolResult }> = ({ result }) => {
           style={styles.exerciseRow}
           onPress={() => {
             tapMedium();
-            router.push('/workouts/exercises');
+            // Carry context so the library opens pre-filtered to this
+            // exercise instead of the full unfiltered list: the muscle
+            // chip selects the group, and `q` pre-fills the search box.
+            router.push({
+              pathname: '/workouts/exercises',
+              params: { muscle: ex.muscles?.[0], q: ex.name },
+            });
           }}
           accessibilityLabel={`Open ${ex.name}`}
         >

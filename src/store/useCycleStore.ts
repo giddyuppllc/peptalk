@@ -223,16 +223,25 @@ export const useCycleStore = create<CycleState & CycleActions>()(
       upsertDayLog: (date, patch) => {
         const now = new Date().toISOString();
         const existing = get().dayLogs.find((d) => d.date === date);
+        // Deterministic id from the date (one day-log per user per date —
+        // the table is UNIQUE(user_id, date)). syncRecord upserts
+        // onConflict:'id', so a random per-row id meant the same date synced
+        // from another device either duplicated or violated the unique
+        // constraint. Regenerating `cyclelog-${date}` on every write — exactly
+        // like check_ins uses `checkin-${date}` — dedups across devices and
+        // migrates any pre-existing random-id local rows on their next save.
+        const deterministicId = `cyclelog-${date}`;
         const merged: CycleDayLog = existing
           ? {
               ...existing,
+              id: deterministicId,
               ...patch,
               symptoms: patch.symptoms ?? existing.symptoms ?? [],
               moods: patch.moods ?? existing.moods ?? [],
               updatedAt: now,
             }
           : {
-              id: uid('cyclelog'),
+              id: deterministicId,
               date,
               symptoms: patch.symptoms ?? [],
               moods: patch.moods ?? [],

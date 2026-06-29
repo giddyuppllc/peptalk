@@ -33,6 +33,8 @@ export default function CommunityUserProfile() {
   const [profile, setProfile] = useState<{ id: string; username?: string; displayName?: string; avatarUrl?: string } | null>(null);
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [following, setFollowing] = useState(false);
 
   const isFollowing = profile ? followedUserIds.includes(profile.id) : false;
@@ -40,14 +42,20 @@ export default function CommunityUserProfile() {
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
     (async () => {
       try {
         const { supabase } = await import('../../../../src/services/supabase');
-        const { data: profileRow } = await (supabase as any)
+        const { data: profileRow, error: profileErr } = await (supabase as any)
           .from('profiles')
           .select('id, username, display_name, avatar_url')
           .ilike('username', handle)
           .maybeSingle();
+
+        // A query error means the network/RLS failed — distinct from a
+        // successful query that returns no row (genuinely missing user).
+        if (profileErr) throw profileErr;
 
         if (cancelled || !profileRow) {
           setLoading(false);
@@ -88,12 +96,20 @@ export default function CommunityUserProfile() {
             displayName: profileRow.display_name ?? undefined,
           },
         })));
+      } catch (err) {
+        // Network / RLS failure — record a distinct error state so the UI
+        // can offer a retry instead of falsely claiming the user doesn't
+        // exist.
+        if (!cancelled) {
+          if (__DEV__) console.warn('[community-profile] load failed:', err);
+          setLoadError(true);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [handle]);
+  }, [handle, reloadKey]);
 
   const topicLabel = (slug: string) =>
     topics.find((tp) => tp.slug === slug)?.name ?? slug;
@@ -114,6 +130,22 @@ export default function CommunityUserProfile() {
         <View style={styles.center}>
           <ActivityIndicator color={t.textSecondary} />
         </View>
+      ) : loadError ? (
+        <TouchableOpacity
+          style={[styles.center, { gap: 10, paddingHorizontal: Spacing.lg }]}
+          activeOpacity={0.8}
+          onPress={() => setReloadKey((k) => k + 1)}
+          accessibilityRole="button"
+          accessibilityLabel="Retry loading this profile"
+        >
+          <Ionicons name="cloud-offline-outline" size={32} color={t.textSecondary} />
+          <Text style={{ color: t.text, fontWeight: '700', fontSize: FontSizes.md }}>
+            Couldn't load this profile
+          </Text>
+          <Text style={{ color: t.textSecondary, fontSize: FontSizes.sm, textAlign: 'center' }}>
+            Tap to retry.
+          </Text>
+        </TouchableOpacity>
       ) : !profile ? (
         <View style={styles.center}>
           <Text style={{ color: t.textSecondary }}>User not found.</Text>

@@ -26,6 +26,19 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// Mirror the community_posts_feed view's anonymity masking: anonymous posts
+// must never expose their author's real user_id to anyone but the author.
+// The view returns NULL user_id for is_anonymous rows the viewer doesn't own,
+// but this function reads the BASE table, so we mask in code here.
+function maskAnonymous<T extends { user_id: string | null; is_anonymous?: boolean }>(
+  posts: T[],
+  viewerId: string,
+): T[] {
+  return posts.map((p) =>
+    p.is_anonymous && p.user_id !== viewerId ? { ...p, user_id: null } : p,
+  );
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -104,10 +117,10 @@ Deno.serve(async (req) => {
           (b.created_at ?? '').localeCompare(a.created_at ?? ''),
         )
         .slice(0, 30);
-      return json({ posts: merged });
+      return json({ posts: maskAnonymous(merged, user.id) });
     }
 
-    return json({ posts: data ?? [] });
+    return json({ posts: maskAnonymous(data ?? [], user.id) });
   } catch (err) {
     console.error('[community-search]', err);
     return json({ error: 'Internal error' }, 500);

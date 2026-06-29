@@ -79,6 +79,8 @@ Deno.serve(async (req) => {
       'contraception_history',
       'connected_integrations',
       'allergen_entries',
+      'side_effect_entries',
+      'lab_results',
       'ai_usage_log',
       'subscription_events',
       'subscriptions',

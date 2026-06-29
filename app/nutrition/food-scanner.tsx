@@ -14,6 +14,7 @@ import {
   Alert,
   Image,
   Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -211,6 +212,52 @@ export default function FoodScannerScreen() {
     }
   };
 
+  // Choose an existing photo instead of the live camera (parity with the
+  // lab / pantry scanners). Feeds the picked image into the SAME
+  // analyzeFoodPhoto() path the camera capture uses.
+  const pickFromLibrary = async () => {
+    try {
+      const ImagePicker = await import('expo-image-picker');
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      // Android's library uses the system Photo Picker, which needs no
+      // permission — a non-granted result there must NOT block. iOS still
+      // requires the library permission.
+      if (!perm.granted && Platform.OS !== 'android') {
+        Alert.alert(
+          'Photos access needed',
+          'Allow photo library access in Settings to scan an existing photo.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => {}) },
+          ],
+        );
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.4,
+        base64: true,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      if (!asset.base64) {
+        Alert.alert('Error', 'Could not read that photo. Please try another.');
+        return;
+      }
+      if (asset.base64.length > 5_000_000) {
+        Alert.alert(
+          'Photo too large',
+          'Please choose a smaller photo — that one is too large to analyze.',
+        );
+        return;
+      }
+      setPhoto(`data:image/jpeg;base64,${asset.base64}`);
+      analyzeFoodPhoto(asset.base64);
+    } catch (e) {
+      Alert.alert('Error', 'Could not open your photo library. Please try again.');
+    }
+  };
+
   const analyzeFoodPhoto = async (base64: string) => {
     // App Review 5.1.2: explicit consent before sending the photo to the vision model.
     if (!(await ensureAiConsent())) return;
@@ -319,6 +366,15 @@ export default function FoodScannerScreen() {
             </Text>
             <AnimatedPress onPress={takePhoto} style={styles.shutterBtn}>
               <View style={styles.shutterInner} />
+            </AnimatedPress>
+            <AnimatedPress
+              onPress={pickFromLibrary}
+              style={styles.libraryBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Choose from library"
+            >
+              <Ionicons name="images-outline" size={20} color="#fff" />
+              <Text style={styles.libraryBtnText}>Choose from library</Text>
             </AnimatedPress>
           </View>
         </CameraView>
@@ -518,6 +574,17 @@ const styles = StyleSheet.create({
     width: 58, height: 58, borderRadius: 29,
     backgroundColor: '#fff',
   },
+  libraryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  libraryBtnText: { color: '#fff', fontSize: FontSizes.sm, fontWeight: '600' },
 
   // Photo preview
   photoPreview: {
