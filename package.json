@@ -17,6 +17,7 @@
     "verify:dosecalc": "tsx scripts/verify-dose-calculator.ts",
     "verify:inbody": "tsx scripts/verify-inbody-parser.ts",
     "verify:all": "npm run verify:calc && npm run verify:sanitize && npm run verify:cycle && npm run verify:adherence && npm run verify:labparsers && npm run verify:mealmath && npm run verify:dosecalc && npm run verify:inbody",
+    "verify:deploy": "bash scripts/verify-deploy.sh",
     "lint": "expo lint"
   },
   "expo": {
