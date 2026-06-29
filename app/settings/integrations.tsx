@@ -42,21 +42,24 @@ import {
 // the OS settings later (e.g. Apple Health toggles per category).
 const DEFAULT_SCOPES: Record<BiomarkerSource, BiomarkerScope[]> = {
   manual: [],
-  // Trimmed to ONLY the scopes PepTalk actually surfaces (App Review 5.1.1/2.5.1
-  // minimal-data). Every type below maps to a visible feature:
+  // ONLY the scopes PepTalk actually surfaces AND that react-native-health can
+  // request (App Review 5.1.1/2.5.1 minimal-data — request/disclose nothing
+  // you can't use). Every type below maps to a visible feature:
   //   activity/body/heart/sleep → biometrics cache → activity, trackers,
   //     DaySummarySheet, PeptideTrendCard, weekly summary, readiness, and the
   //     daily check-in autofill (steps, active energy, weight, body fat, RHR,
   //     HRV, VO₂ max, blood oxygen, respiratory rate, sleep, workouts).
-  //   cycle (menstrual_flow → periods; ovulation_test/sexual_activity →
-  //     cycle day logs) → Cycle screens + Cycle log.
-  // Removed (no visible feature; dedicated device rows below own them where
-  // relevant): blood_pressure (Withings), blood_glucose (Dexcom/Libre),
-  // bbt (Tempdrop), wrist_temperature, cervical_mucus (kegg).
+  // NOTE: menstrual_flow / ovulation_test / sexual_activity were REMOVED —
+  // react-native-health 1.19.0 has NO HealthKit permission constants for them,
+  // so they were silently dropped (never requested) and the iOS usage string
+  // must NOT claim "cycle tracking" it can't deliver (2.5.1 reviewer flag).
+  // Cycle tracking remains available via manual entry in the Cycle log.
+  // Also removed (no visible feature; dedicated device rows own them):
+  // blood_pressure (Withings), blood_glucose (Dexcom/Libre), bbt (Tempdrop),
+  // wrist_temperature, cervical_mucus (kegg).
   apple_health: [
     'steps', 'active_energy', 'resting_heart_rate', 'hrv', 'vo2_max',
-    'spo2', 'sleep', 'weight', 'body_fat', 'menstrual_flow',
-    'ovulation_test', 'sexual_activity', 'workouts', 'respiratory_rate',
+    'spo2', 'sleep', 'weight', 'body_fat', 'workouts', 'respiratory_rate',
   ],
   health_connect: [
     // No 'menstrual_flow': the HC adapter can't read it (react-native-health-connect
@@ -208,7 +211,7 @@ export default function IntegrationsSettingsScreen() {
           <Text style={[styles.body, { color: t.textSecondary, marginTop: 10 }]}>
             When you connect Apple Health, PepTalk reads your activity (steps, active energy,
             workouts), body metrics (weight, body composition), heart data (heart rate, HRV,
-            VO₂ max, blood oxygen, respiratory rate), sleep, and cycle data so you can see trends
+            VO₂ max, blood oxygen, respiratory rate), and sleep so you can see trends
             alongside your protocols — and writes your check-ins and weight back so everything
             stays in sync. You choose exactly what to share in the iOS permission dialog, and you
             can change it any time in Settings.
