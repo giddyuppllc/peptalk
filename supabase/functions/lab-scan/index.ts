@@ -19,6 +19,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // reuses the OpenAI key already set for Whisper.
 const VISION_API_KEY =
   Deno.env.get('OPENAI_VISION_API_KEY') ??
+  Deno.env.get('OPENAI_TRANSCRIBE_API_KEY') ??
   Deno.env.get('OPENAI_WHISPER_API_KEY') ??
   '';
 const VISION_BASE_URL =

@@ -129,6 +129,61 @@ Deno.serve(async (req) => {
 
     if (insertErr) throw insertErr;
 
+    // ─── @mention notifications ──────────────────────────────────────────
+    // Parse @username tokens from the body, resolve them to user ids via
+    // public_profiles, and insert one 'mention' community_notifications row
+    // per mentioned user. The existing community_notifications_push_fanout
+    // AFTER INSERT trigger then delivers each row to the recipient's devices,
+    // and the tap router + local-banner poller already render 'mention'.
+    // Reactions are handled by a DB trigger (migration); mentions need the
+    // parsed body so they live here. Bounded + guards self/post-author
+    // double-pings. Best-effort — never fail the comment on a mention error.
+    try {
+      const MAX_MENTIONS = 10;
+      // Handles are [a-z0-9_], 1-30 chars; lowercased + de-duped.
+      const handles = Array.from(
+        new Set(
+          (text.match(/@([a-zA-Z0-9_]{1,30})/g) ?? []).map((m) =>
+            m.slice(1).toLowerCase(),
+          ),
+        ),
+      ).slice(0, MAX_MENTIONS);
+
+      if (handles.length > 0) {
+        // Case-insensitive exact match (ilike, no wildcards). Handles are
+        // \w-only so they're safe to interpolate into a PostgREST .or filter.
+        const orFilter = handles.map((h) => `username.ilike.${h}`).join(',');
+        const { data: mentioned } = await admin
+          .from('public_profiles')
+          .select('id, username')
+          .or(orFilter);
+
+        const seen = new Set<string>();
+        const rows = (mentioned ?? [])
+          .filter((p: any) => {
+            if (!p?.id) return false;
+            if (p.id === user.id) return false;        // no self-mention
+            if (p.id === post.user_id) return false;   // post author already gets reply_to_post
+            if (seen.has(p.id)) return false;          // de-dupe
+            seen.add(p.id);
+            return true;
+          })
+          .map((p: any) => ({
+            user_id: p.id,
+            kind: 'mention',
+            post_id: postId,
+            comment_id: created!.id,
+            actor_id: user.id,
+          }));
+
+        if (rows.length > 0) {
+          await admin.from('community_notifications').insert(rows);
+        }
+      }
+    } catch (mentionErr) {
+      console.warn('[community-create-comment] mention dispatch failed:', mentionErr);
+    }
+
     return json({ ok: true, commentId: created!.id, createdAt: created!.created_at });
   } catch (err) {
     console.error('[community-create-comment]', err);

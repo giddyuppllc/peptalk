@@ -44,7 +44,7 @@ import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner@3.658.1';
 
 const OPENAI_API_KEY =
   Deno.env.get('OPENAI_TRANSCRIBE_API_KEY') ??
-  Deno.env.get('OPENAI_API_KEY') ??
+  Deno.env.get('OPENAI_WHISPER_API_KEY') ??
   '';
 const WHISPER_URL = 'https://api.openai.com/v1/audio/transcriptions';
 const WHISPER_MODEL = 'whisper-1';

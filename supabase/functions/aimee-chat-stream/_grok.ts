@@ -6,14 +6,17 @@
  * directly (no SDK) so we control the SSE parser and so Deno cold-
  * starts stay snappy.
  *
- * Model: grok-4.3 — current xAI default for chat. Override with the
- * GROK_MODEL secret for A/B.
+ * Model: grok-4-1-fast-reasoning — matches the client-side direct
+ * fallback in src/services/llmService.ts so client + server agree on a
+ * verified live id (the old 'grok-4.3' default was an invalid
+ * placeholder that threw on every call). Set the GROK_MODEL secret to
+ * the live id at deploy to override.
  *
  * Costs are computed from the `usage` block in the final stream event
  * (or final response) so we don't have to estimate. Stored in
  * microcents (1 USD = 100,000,000 mc).
  *
- * Pricing (May 2026, grok-4.3 placeholder — confirm at deploy time):
+ * Pricing (May 2026, grok-4-1-fast-reasoning — confirm at deploy time):
  *   input:  $0.20 / 1M tokens  → 20  microcents/token
  *   output: $0.50 / 1M tokens  → 50  microcents/token
  * Override with GROK_INPUT_MC_PER_TOKEN / GROK_OUTPUT_MC_PER_TOKEN.
@@ -21,7 +24,11 @@
 
 const GROK_API_KEY = Deno.env.get('GROK_API_KEY') ?? Deno.env.get('XAI_API_KEY') ?? Deno.env.get('OPENAI_API_KEY') ?? '';
 const GROK_BASE_URL = Deno.env.get('GROK_BASE_URL') ?? Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
-const GROK_MODEL = Deno.env.get('GROK_MODEL') ?? Deno.env.get('OPENAI_MODEL') ?? 'grok-4.3';
+// Default to the SAME verified id the client uses (src/services/llmService.ts
+// MODEL = 'grok-4-1-fast-reasoning'); 'grok-4.3' was an invalid placeholder
+// that made every chat throw and silently drop users to the local bot.
+// Set the GROK_MODEL secret to the live id at deploy.
+const GROK_MODEL = Deno.env.get('GROK_MODEL') ?? Deno.env.get('OPENAI_MODEL') ?? 'grok-4-1-fast-reasoning';
 
 const INPUT_MICROCENTS_PER_TOKEN = Number(
   Deno.env.get('GROK_INPUT_MC_PER_TOKEN') ?? 20,

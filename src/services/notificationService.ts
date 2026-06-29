@@ -111,9 +111,20 @@ export function registerNotificationResponseHandler(
           case 'workout': return '/(tabs)/workouts';
           case 'meal':
           case 'meal-safety': return '/(tabs)/nutrition';
+          // Legacy/UI vocabulary AND the canonical community_notifications
+          // `kind` values carried by both the push payload (community-push-
+          // fanout) and the local-banner poller (communityNotificationDelivery).
+          // Without these last five, taps on reply/reaction/mention/moderation
+          // banners fell through to `default` and only opened the app to the
+          // last screen instead of deep-linking to the post (P1).
           case 'community-reply':
           case 'community-mention':
-          case 'community-like': {
+          case 'community-like':
+          case 'reply_to_post':
+          case 'reply_to_comment':
+          case 'reaction':
+          case 'mention':
+          case 'moderation_action': {
             const postId = typeof data.postId === 'string' ? data.postId : null;
             return postId ? `/(tabs)/community/${postId}` : '/(tabs)/community';
           }

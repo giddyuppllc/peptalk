@@ -171,6 +171,13 @@ Deno.serve(async (req) => {
         postId: n.post_id,
         commentId: n.comment_id,
         notificationId: n.id,
+        // Deep-link target honored by the tap router in notificationService
+        // (registerNotificationResponseHandler reads data.route first). Without
+        // this, background taps fell through to the kind-inference fallback —
+        // which only matched the legacy 'community-*' vocab, not these `kind`
+        // values — and the app just opened to the last screen (P1). Matches the
+        // community post route: app/(tabs)/community/[id].tsx.
+        route: n.post_id ? `/(tabs)/community/${n.post_id}` : '/(tabs)/community',
       },
     }));
 

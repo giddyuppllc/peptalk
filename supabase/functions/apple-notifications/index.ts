@@ -217,6 +217,27 @@ Deno.serve(async (req) => {
             productId,
           );
         } else {
+          // ── Crossgrade fix (P1 revenue) ──
+          // iOS reuses ONE original_transaction_id across every product in a
+          // subscription group, so a Plus→Pro change (DID_CHANGE_RENEWAL_PREF
+          // / UPGRADED) carries the same otxid as the user's existing Plus
+          // row. The upsert below keys on (user_id, product_id) and would
+          // INSERT a fresh (user, pro) row — colliding with the GLOBAL unique
+          // index `subscriptions_original_transaction_id_unique` (23505).
+          // Here that error isn't checked, so the upsert silently fails: the
+          // new Pro row is never written, then the sibling-deactivation step
+          // below flips the user's only active row to is_active=false,
+          // dropping a paid Pro user to free. Free the otxid from the
+          // superseded sibling row (same user + same otxid, different product)
+          // first so the upsert can claim it.
+          if (originalTxId) {
+            await admin
+              .from('subscriptions')
+              .update({ is_active: false, original_transaction_id: null })
+              .eq('user_id', userId)
+              .eq('original_transaction_id', originalTxId)
+              .neq('product_id', productId);
+          }
           await admin.from('subscriptions').upsert(
             {
               user_id: userId,

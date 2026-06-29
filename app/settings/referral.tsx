@@ -26,6 +26,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
@@ -41,6 +42,7 @@ export default function ReferralCodeScreen() {
     discount: number;
     appleOfferCode: string | null;
   } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const handleRedeem = async () => {
     if (!code.trim() || submitting) return;
@@ -55,6 +57,18 @@ export default function ReferralCodeScreen() {
       discount: res.discount_percent,
       appleOfferCode: res.apple_offer_code,
     });
+  };
+
+  // Apple's redemption sheet cannot be pre-filled — it always opens empty, so
+  // we copy the offer code to the clipboard first and tell the user to paste it.
+  const handleApply = async (offerCode: string) => {
+    try {
+      await Clipboard.setStringAsync(offerCode);
+      setCopied(true);
+    } catch {
+      // Clipboard failed — the code is still shown on-screen to type manually.
+    }
+    await presentCodeRedemption(offerCode);
   };
 
   return (
@@ -80,19 +94,42 @@ export default function ReferralCodeScreen() {
               {redeemed.appleOfferCode ? 'Discount ready' : 'Partner credited'}
             </Text>
             <Text style={[styles.successBody, { color: t.textSecondary }]}>
-              {redeemed.appleOfferCode
-                ? `${redeemed.discount > 0 ? `${redeemed.discount}% off your first month. ` : ''}Tap below to apply it in the ${Platform.OS === 'ios' ? 'App Store' : 'Play Store'} — the discount is applied when you confirm the subscription.`
-                : 'Your sales partner has been credited. Choose a plan to subscribe.'}
+              {!redeemed.appleOfferCode
+                ? 'Your sales partner has been credited. Choose a plan to subscribe.'
+                : Platform.OS === 'ios'
+                  ? `${redeemed.discount > 0 ? `${redeemed.discount}% off your first month. ` : ''}Tap “Apply discount” below: we’ll copy your code, then paste it into the App Store redemption sheet to confirm your subscription.`
+                  : `${redeemed.discount > 0 ? `${redeemed.discount}% off your first month. ` : ''}Promo codes are redeemable on iOS for now. Open PepTalk on an iPhone or iPad with this code to apply your discount.`}
             </Text>
+
             {redeemed.appleOfferCode ? (
-              <TouchableOpacity
-                onPress={() => presentCodeRedemption(redeemed.appleOfferCode)}
-                style={[styles.btn, { backgroundColor: t.primary, marginTop: 14 }]}
-                accessibilityRole="button"
-                accessibilityLabel="Apply discount in the store"
-              >
-                <Text style={styles.btnText}>Apply discount</Text>
-              </TouchableOpacity>
+              <>
+                {/* Show the code prominently so the user can read or paste it —
+                    Apple's redemption sheet opens empty and can't be pre-filled. */}
+                <View style={[styles.codeBox, { backgroundColor: t.glass, borderColor: t.cardBorder }]}>
+                  <Text style={[styles.codeLabel, { color: t.textSecondary }]}>YOUR CODE</Text>
+                  <Text selectable style={[styles.codeValue, { color: t.text }]}>
+                    {redeemed.appleOfferCode}
+                  </Text>
+                </View>
+
+                {Platform.OS === 'ios' ? (
+                  <>
+                    <TouchableOpacity
+                      onPress={() => handleApply(redeemed.appleOfferCode as string)}
+                      style={[styles.btn, { backgroundColor: t.primary, marginTop: 14 }]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Copy code and open the App Store redemption sheet"
+                    >
+                      <Text style={styles.btnText}>Apply discount</Text>
+                    </TouchableOpacity>
+                    {copied ? (
+                      <Text style={[styles.copiedHint, { color: t.primary }]}>
+                        Copied — paste it into the redemption sheet, then tap Redeem.
+                      </Text>
+                    ) : null}
+                  </>
+                ) : null}
+              </>
             ) : null}
           </GlassCard>
         ) : (
@@ -186,5 +223,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnText: { color: '#fff', fontSize: FontSizes.md, fontWeight: '700' },
+  codeBox: {
+    marginTop: 14,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  codeLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
+  codeValue: { fontSize: FontSizes.lg, fontWeight: '800', letterSpacing: 2 },
+  copiedHint: {
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
+    marginTop: 8,
+  },
   fineprint: { fontSize: 11, lineHeight: 16, marginTop: 16, textAlign: 'center' },
 });

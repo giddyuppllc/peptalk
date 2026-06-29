@@ -175,6 +175,38 @@ Deno.serve(async (req) => {
     if (body.platform === 'android') {
       subRow.purchase_token = body.receipt;
     }
+
+    // ── Crossgrade fix (P1 revenue) ──
+    // iOS reuses the SAME original_transaction_id across every product in a
+    // subscription group. A Plus→Pro upgrade therefore arrives with
+    // productId=peptalk_pro_* but the SAME original_transaction_id as the
+    // user's existing Plus row. The upsert below keys on (user_id,
+    // product_id), so for a never-seen (user, pro) pair it does an INSERT —
+    // which collides with the GLOBAL partial unique index
+    // `subscriptions_original_transaction_id_unique` (one otxid → one row).
+    // That 23505 used to bubble up as a 500, so the client kept tier='plus'
+    // even though Apple charged the user for Pro. Free the otxid from the
+    // superseded sibling row (same user + same otxid, different product)
+    // first: deactivate it and clear its original_transaction_id so the
+    // index no longer holds the value. The new Pro row then claims the otxid
+    // cleanly, and client tier resolution (most-recent ACTIVE row wins, Pro
+    // outranks Plus) lands the user on Pro.
+    if (originalTransactionId) {
+      const { error: freeErr } = await adminClient
+        .from('subscriptions')
+        .update({ is_active: false, original_transaction_id: null })
+        .eq('user_id', user.id)
+        .eq('original_transaction_id', originalTransactionId)
+        .neq('product_id', body.productId);
+      if (freeErr) {
+        console.error(
+          `[validate-purchase] CRITICAL: could not free original_transaction_id from superseded row for user ${user.id}:`,
+          freeErr,
+        );
+        return json({ error: 'Could not record subscription' }, 500);
+      }
+    }
+
     const { error: subErr } = await adminClient
       .from('subscriptions')
       .upsert(subRow, { onConflict: 'user_id,product_id' });

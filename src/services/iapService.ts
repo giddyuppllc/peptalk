@@ -13,7 +13,7 @@
  *   5. restorePurchases() on demand
  */
 
-import { Platform, Linking } from 'react-native';
+import { Platform } from 'react-native';
 import type { SubscriptionTier } from '../types/fitness';
 import { captureException } from './telemetry';
 
@@ -473,8 +473,15 @@ export async function restorePurchases(): Promise<number> {
  *  - iOS: presents StoreKit's offer-code redemption sheet. The code is an
  *    Apple "Offer Code" generated in App Store Connect; Apple applies the
  *    discount to the purchase/renewal itself.
- *  - Android: deep-links to the Play Store redeem screen (pre-filled when a
- *    code is supplied) for a Google Play promo code.
+ *
+ * Note: StoreKit's redemption sheet CANNOT be pre-filled — Apple silently
+ * drops any code we pass, so the caller is responsible for surfacing the
+ * code to the user (display + clipboard) before invoking this.
+ *
+ * Android is intentionally NOT supported: our `referral_codes` table only
+ * holds Apple offer codes, and feeding an Apple code to Play's redeem URL
+ * gets rejected by Google. Promo codes are iOS-only for now, so this is a
+ * no-op (returns false) on Android.
  *
  * We do NOT (and Apple/Google do not let us) apply an offer code
  * programmatically from a Bearer call — redemption happens in the OS UI.
@@ -486,15 +493,18 @@ export async function presentCodeRedemption(prefillCode?: string | null): Promis
       if (!isAvailable() || typeof IAP.presentCodeRedemptionSheetIOS !== 'function') {
         return false;
       }
+      // Apple drops any passed-in code; the sheet always opens empty. The
+      // caller must have already shown/copied the code for the user to paste.
       await IAP.presentCodeRedemptionSheetIOS();
       return true;
     }
-    // Android: Play promo-code redemption (pre-filled when we have the code).
-    const url = prefillCode
-      ? `https://play.google.com/redeem?code=${encodeURIComponent(prefillCode)}`
-      : 'https://play.google.com/store/account/subscriptions';
-    await Linking.openURL(url);
-    return true;
+    // Android: no Play promo code exists for our codes (referral_codes only
+    // stores Apple offer codes). Don't open the Play redeem URL with an Apple
+    // code — Google rejects it. Promo redemption is iOS-only for now.
+    if (__DEV__) {
+      console.warn('[iapService] presentCodeRedemption: not supported on Android');
+    }
+    return false;
   } catch (err) {
     if (__DEV__) console.warn('[iapService] presentCodeRedemption failed:', err);
     captureException(err, { source: 'iap.redeemCode' });
