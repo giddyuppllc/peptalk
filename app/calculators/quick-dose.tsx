@@ -92,8 +92,16 @@ export default function QuickDoseScreen() {
     const doseMin = protocol.typicalDose?.min ?? 0;
     const doseMax = protocol.typicalDose?.max ?? 0;
     const doseUnit = protocol.typicalDose?.unit ?? 'mcg';
-    const volumeMinMl = doseMin / concentrationMcgPerMl;
-    const volumeMaxMl = doseMax / concentrationMcgPerMl;
+    // IU is an activity unit with no peptide-agnostic mass conversion, so a
+    // volume/ticks draw can't be computed from a mcg/mL concentration.
+    const unitConvertible = doseUnit !== 'IU';
+    // CRITICAL: convert the dose to mcg before dividing by the mcg/mL
+    // concentration. Dividing a raw mg/IU value gave a ~0 draw for every
+    // mg-dosed peptide (e.g. 1 mg → 0.0004 mL instead of 0.4 mL).
+    const doseMinMcg = toMcg(doseMin, doseUnit);
+    const doseMaxMcg = toMcg(doseMax, doseUnit);
+    const volumeMinMl = doseMinMcg / concentrationMcgPerMl;
+    const volumeMaxMl = doseMaxMcg / concentrationMcgPerMl;
     const volumeMinUnits = Math.round(volumeMinMl * 100); // insulin syringe units
     const volumeMaxUnits = Math.round(volumeMaxMl * 100);
 
@@ -104,6 +112,7 @@ export default function QuickDoseScreen() {
       doseMin,
       doseMax,
       doseUnit,
+      unitConvertible,
       volumeMinMl: Math.round(volumeMinMl * 100) / 100,
       volumeMaxMl: Math.round(volumeMaxMl * 100) / 100,
       volumeMinUnits,
@@ -262,18 +271,28 @@ export default function QuickDoseScreen() {
 
               <GlassCard style={styles.injectionCard}>
                 <Text style={styles.injectionTitle}>Draw this much</Text>
-                <Text style={styles.injectionValue}>
-                  {reconInfo.volumeMinUnits}-{reconInfo.volumeMaxUnits} ticks
-                </Text>
-                <Text style={styles.injectionUnits}>
-                  on a U-100 insulin syringe
-                </Text>
-                <Text style={styles.injectionDetail}>
-                  = {reconInfo.volumeMinMl}-{reconInfo.volumeMaxMl} mL of liquid
-                </Text>
-                <Text style={styles.injectionDetail}>
-                  Each tick delivers {fmt(reconInfo.concentrationMcgPerMl / 100, 1)} mcg of peptide
-                </Text>
+                {reconInfo.unitConvertible ? (
+                  <>
+                    <Text style={styles.injectionValue}>
+                      {reconInfo.volumeMinUnits}-{reconInfo.volumeMaxUnits} ticks
+                    </Text>
+                    <Text style={styles.injectionUnits}>
+                      on a U-100 insulin syringe
+                    </Text>
+                    <Text style={styles.injectionDetail}>
+                      = {reconInfo.volumeMinMl}-{reconInfo.volumeMaxMl} mL of liquid
+                    </Text>
+                    <Text style={styles.injectionDetail}>
+                      Each tick delivers {fmt(reconInfo.concentrationMcgPerMl / 100, 1)} mcg of peptide
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={styles.injectionDetail}>
+                    This compound is dosed in {reconInfo.doseUnit}, which has no fixed
+                    mass conversion — a syringe draw can't be auto-calculated. Follow
+                    your product's reconstitution chart.
+                  </Text>
+                )}
               </GlassCard>
 
               {/* Plain-English conversion footer — same two sentences every time */}

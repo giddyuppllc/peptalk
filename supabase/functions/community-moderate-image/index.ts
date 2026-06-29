@@ -235,16 +235,17 @@ Deno.serve(async (req) => {
           ? (bumpData[0] as any).count ?? 0
           : 0;
         if (used > 50) {
+          // FAIL CLOSED: hitting the daily cap must NOT publish an
+          // unreviewed image. Leave moderation_status='pending' (author-only
+          // per RLS) for manual queue review — never auto-approve. (This
+          // branch previously set 'approved', a fail-open hole that
+          // contradicted the function's fail-closed guarantee.)
           await admin.from('community_moderation_log').insert({
             [idCol]: targetId,
             categories: ['rate_limit'],
-            reason: 'Daily moderation cap reached — auto-approved without vision check.',
+            reason: 'Daily moderation cap reached — left pending for manual review.',
           }).select();
-          await admin
-            .from(table)
-            .update({ moderation_status: 'approved' })
-            .eq('id', targetId);
-          return jsonResp({ ok: true, reason: 'rate_limited_auto_approved' }, 200);
+          return jsonResp({ ok: true, reason: 'rate_limited_left_pending', flagged: false }, 200);
         }
       }
     } catch (rlErr) {

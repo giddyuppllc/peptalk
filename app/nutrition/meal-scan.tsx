@@ -6,9 +6,10 @@
  * MVP behavior:
  *   1. Camera viewfinder via expo-camera
  *   2. User taps shutter → capture photo
- *   3. Detection runs: derives food name keywords from EXIF/heuristics for now
- *      (placeholder — wire to OpenAI vision later via openai package)
- *   4. Each detected item runs through searchAllFoods() → real macros
+ *   3. Detection runs the `food-scan` edge function (Grok/OpenAI vision)
+ *   4. Each detected item keeps the model's portion + macro estimates
+ *      directly; only items the model couldn't macro-fill fall back to a
+ *      searchAllFoods() database match.
  *   5. User reviews + confirms which to log
  */
 
@@ -36,8 +37,32 @@ import { searchAllFoods, calcUnifiedMacros, type UnifiedFood } from '../../src/s
 import { useMealStore } from '../../src/store/useMealStore';
 import type { MealType } from '../../src/types/fitness';
 import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
+import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+// Raw per-item shape returned by the `food-scan` edge function (vision model).
+interface ScanItem {
+  name?: string;
+  estimatedGrams?: number;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  fiber?: number;
+}
+
+// Sanitized, UI-ready item carrying the macros we'll actually log.
+interface ScannedFood {
+  id: string;
+  name: string;
+  grams: number;
+  calories: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatGrams: number;
+  fiberGrams: number;
+}
 
 const inferMealType = (): MealType => {
   const h = new Date().getHours();
@@ -48,9 +73,11 @@ const inferMealType = (): MealType => {
 };
 
 // Detects foods in a photo by calling the `food-scan` Supabase edge function,
-// which passes the image to Grok Vision and returns the identified items.
-// Falls back to a common-plate guess only if the request errors out entirely.
-async function detectFoodsFromPhoto(photoUri: string): Promise<string[]> {
+// which passes the image to vision and returns the identified items WITH
+// per-item portion + macro estimates. We return the full item objects so the
+// caller can log those accurate macros directly instead of re-searching the
+// database (which threw away the model's estimates and produced generic rows).
+async function detectFoodsFromPhoto(photoUri: string): Promise<ScanItem[]> {
   // App Review 5.1.2: explicit consent before sending the photo to the vision model.
   if (!(await ensureAiConsent())) return [];
   try {
@@ -65,9 +92,11 @@ async function detectFoodsFromPhoto(photoUri: string): Promise<string[]> {
     });
     if (error) throw error;
 
-    // Edge function returns { items: [{ name, estimatedGrams, ... }], totals, description }
+    // Edge function returns { items: [{ name, estimatedGrams, calories,
+    // protein, carbs, fat, fiber }], totals, description }. Keep the whole
+    // item — the macros are the whole point of the scan.
     if (data?.items && Array.isArray(data.items) && data.items.length > 0) {
-      return data.items.map((f: any) => f.name).filter(Boolean);
+      return (data.items as ScanItem[]).filter((f) => f?.name);
     }
     // Empty array: vision ran but saw nothing recognizable
     return [];
@@ -99,7 +128,7 @@ function MealScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
-  const [matches, setMatches] = useState<UnifiedFood[]>([]);
+  const [matches, setMatches] = useState<ScannedFood[]>([]);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [mealType] = useState<MealType>(paramMealType ?? inferMealType());
 
@@ -171,7 +200,7 @@ function MealScanScreen() {
       setPhotoUri(photo.uri);
       setAnalyzing(true);
 
-      // 1. Detect food names via Grok Vision
+      // 1. Detect foods (with macros) via vision
       const detected = await detectFoodsFromPhoto(photo.uri);
       if (!mountedRef.current) return;
 
@@ -184,12 +213,51 @@ function MealScanScreen() {
         return;
       }
 
-      // 2. For each detected name, search for the best match
-      const all: UnifiedFood[] = [];
-      for (const name of detected) {
+      // 2. Build the review list. The vision model already returns an
+      //    accurate portion + macros per item, so we keep those directly
+      //    (clamped — the model can hallucinate any value, same caps as
+      //    food-scanner.tsx / sanitizeLogMeal). Only when an item comes
+      //    back with no usable calories do we fall back to a database
+      //    search so the row still has *some* macros.
+      const all: ScannedFood[] = [];
+      for (let i = 0; i < detected.length; i++) {
+        const item = detected[i];
+        const name = clampString(item.name, 200);
+        if (!name) continue;
+
+        const hasMacros = Number.isFinite(Number(item.calories)) && Number(item.calories) > 0;
+        if (hasMacros) {
+          all.push({
+            id: `scan-${Date.now()}-${i}`,
+            name,
+            grams: clamp(item.estimatedGrams, 5000),
+            calories: clamp(item.calories, 3000),
+            proteinGrams: clamp(item.protein, 300),
+            carbsGrams: clamp(item.carbs, 500),
+            fatGrams: clamp(item.fat, 300),
+            fiberGrams: clamp(item.fiber, 100),
+          });
+          continue;
+        }
+
+        // Fallback: model gave us a name but no macros — search the DB.
         const results = await searchAllFoods(name, { limit: 3 });
         if (!mountedRef.current) return;
-        if (results.length > 0) all.push(results[0]);
+        if (results.length > 0) {
+          const food: UnifiedFood = results[0];
+          const grams = food.defaultServingGrams || 100;
+          const macros = calcUnifiedMacros(food, grams);
+          all.push({
+            id: food.id,
+            name: `${food.name}${food.brand ? ` (${food.brand})` : ''}`,
+            grams,
+            calories: macros.calories,
+            proteinGrams: macros.proteinGrams,
+            carbsGrams: macros.carbsGrams,
+            fatGrams: macros.fatGrams,
+            fiberGrams: macros.fiberGrams ?? 0,
+          });
+        }
       }
       if (!mountedRef.current) return;
       setMatches(all);
@@ -217,28 +285,20 @@ function MealScanScreen() {
       Alert.alert('Nothing selected', 'Tap items to include them.');
       return;
     }
+    // Log the AI's per-item portion + macros directly (already clamped at
+    // capture time). No re-search — that's exactly what was throwing away
+    // the vision model's accurate estimates.
     const foods = toLog.map((food) => {
-      const grams = food.defaultServingGrams || 100;
-      const macros = calcUnifiedMacros(food, grams);
+      const grams = Math.round(food.grams);
       return {
         foodId: food.id,
-        foodName: `${food.name}${food.brand ? ` (${food.brand})` : ''} — ${grams}g`,
+        foodName: `${food.name} — ${grams}g`,
         servings: 1,
-        calories: macros.calories,
-        proteinGrams: macros.proteinGrams,
-        carbsGrams: macros.carbsGrams,
-        fatGrams: macros.fatGrams,
-        fiberGrams: macros.fiberGrams,
-        sodiumMg: macros.sodiumMg,
-        sugarGrams: macros.sugarGrams,
-        cholesterolMg: macros.cholesterolMg,
-        saturatedFatGrams: macros.saturatedFatGrams,
-        transFatGrams: macros.transFatGrams,
-        potassiumMg: macros.potassiumMg,
-        calciumMg: macros.calciumMg,
-        ironMg: macros.ironMg,
-        vitaminAMcg: macros.vitaminAMcg,
-        vitaminCMg: macros.vitaminCMg,
+        calories: food.calories,
+        proteinGrams: food.proteinGrams,
+        carbsGrams: food.carbsGrams,
+        fatGrams: food.fatGrams,
+        fiberGrams: food.fiberGrams,
       };
     });
 
@@ -330,8 +390,8 @@ function MealScanScreen() {
             ) : (
               matches.map((food) => {
                 const checked = !!selected[food.id];
-                const grams = food.defaultServingGrams || 100;
-                const cal = calcUnifiedMacros(food, grams).calories;
+                const grams = Math.round(food.grams);
+                const cal = Math.round(food.calories);
                 return (
                   <TouchableOpacity
                     key={food.id}

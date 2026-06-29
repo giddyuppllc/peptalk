@@ -199,6 +199,14 @@ Deno.serve(async (req) => {
           .update({ is_active: false, last_validated_at: new Date().toISOString() })
           .eq('user_id', vUserId)
           .eq('product_id', vProductId);
+        // Revoke server-side access too (gates read profiles, not subscriptions).
+        const { error: vProfileErr } = await admin
+          .from('profiles')
+          .update({ subscription_tier: 'free', is_pro: false, is_plus: false })
+          .eq('id', vUserId);
+        if (vProfileErr) {
+          console.warn('[google-rtdn] voided profiles downgrade failed:', vProfileErr.message);
+        }
       } else {
         console.warn('[google-rtdn] voided purchase with no matching row:', vToken.substring(0, 12));
       }
@@ -287,6 +295,24 @@ Deno.serve(async (req) => {
           },
           { onConflict: 'user_id,product_id' },
         );
+
+        // Mirror tier into profiles — server-side feature gates
+        // (aimee-chat-stream, aimee-voice, get-workout-video, …) authorize
+        // off profiles.subscription_tier / is_pro, NOT the subscriptions
+        // table. Without this, a cancelled/expired/refunded Android sub
+        // keeps paid server access. Mirrors apple-notifications' P0 fix.
+        const profileTier = stillActive ? tier : 'free';
+        const { error: profileErr } = await admin
+          .from('profiles')
+          .update({
+            subscription_tier: profileTier,
+            is_pro: stillActive && tier === 'pro',
+            is_plus: stillActive && tier === 'plus',
+          })
+          .eq('id', userId);
+        if (profileErr) {
+          console.warn('[google-rtdn] profiles tier mirror failed:', profileErr.message);
+        }
       }
     }
 

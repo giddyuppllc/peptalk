@@ -58,15 +58,19 @@ export async function routeSyncResult(result: SyncResult): Promise<RouteStats> {
         }
       }
 
-      store.updatePeriod?.(existing?.id ?? p.id, {
-        startDate: p.startDate,
-        endDate: p.endDate,
-        dailyFlow: p.dailyFlow,
-        source: p.source,
-      });
-      if (!existing) {
-        // updatePeriod only merges existing rows; for new imports, push directly
-        store.periods.unshift(p);
+      if (existing) {
+        // Matching manual/older row exists — merge the imported fields in.
+        store.updatePeriod?.(existing.id, {
+          startDate: p.startDate,
+          endDate: p.endDate,
+          dailyFlow: p.dailyFlow,
+          source: p.source,
+        });
+      } else {
+        // Brand-new import: insert through the store so it renders,
+        // persists locally, and syncs to Supabase (updatePeriod's map()
+        // would no-op on an id that isn't in the store yet).
+        store.importPeriod?.(p);
       }
       stats.periodsImported++;
     }

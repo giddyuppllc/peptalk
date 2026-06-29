@@ -56,6 +56,58 @@ interface LiveEventState {
   reset: () => void;
 }
 
+/**
+ * Author-identity cache, keyed by user id. Mirrors the community feed's
+ * `public_profiles` lookup (useCommunityStore.fetchAuthorMap): the base
+ * `profiles` table is self-only RLS, so a PostgREST `profiles:user_id`
+ * embed returns NULL for every author except the caller — which made
+ * every host + participant render as "Member". We resolve names from the
+ * authenticated-readable `public_profiles` table instead.
+ *
+ * Persisted at module scope so realtime INSERTs can show the right name
+ * for already-seen authors without an extra round-trip.
+ */
+const authorCache = new Map<string, { username?: string; displayName?: string }>();
+
+function displayNameFor(userId: string | null | undefined): string | undefined {
+  if (!userId) return undefined;
+  const a = authorCache.get(userId);
+  if (!a) return undefined;
+  return a.displayName?.trim() || a.username?.trim() || undefined;
+}
+
+/**
+ * Batch-fetch public-safe profile rows for a set of user ids into
+ * authorCache. Mirrors useCommunityStore.fetchAuthorMap precisely —
+ * reads `id, username, display_name, avatar_url` from `public_profiles`,
+ * de-dupes, and uses a single `.in('id', ids)` query. Ids already in the
+ * cache are skipped so realtime inserts stay cheap.
+ */
+async function loadAuthors(
+  supabase: any,
+  userIds: (string | null | undefined)[],
+): Promise<void> {
+  const unique = Array.from(new Set(userIds.filter(Boolean) as string[]))
+    .filter((id) => !authorCache.has(id));
+  if (unique.length === 0) return;
+  try {
+    const { data } = await supabase
+      .from('public_profiles')
+      .select('id, username, display_name, avatar_url')
+      .in('id', unique);
+    if (Array.isArray(data)) {
+      for (const r of data as any[]) {
+        authorCache.set(r.id, {
+          username: r.username ?? undefined,
+          displayName: r.display_name ?? undefined,
+        });
+      }
+    }
+  } catch (err) {
+    if (__DEV__) console.warn('[live-event] loadAuthors failed:', err);
+  }
+}
+
 function rowToEvent(r: any): LiveEvent {
   return {
     id: r.id,
@@ -66,7 +118,7 @@ function rowToEvent(r: any): LiveEvent {
     startedAt: r.started_at ?? null,
     endedAt: r.ended_at ?? null,
     requiredTier: r.required_tier ?? 'plus',
-    hostName: r.profiles?.display_name?.trim() || r.profiles?.username?.trim() || undefined,
+    hostName: displayNameFor(r.host_user_id),
   };
 }
 
@@ -80,7 +132,7 @@ function rowToMessage(r: any): LiveMessage {
     isDeleted: !!r.is_deleted,
     lastEditedAt: r.last_edited_at ?? null,
     createdAt: r.created_at,
-    authorName: r.profiles?.display_name?.trim() || r.profiles?.username?.trim() || undefined,
+    authorName: displayNameFor(r.user_id),
   };
 }
 
@@ -99,8 +151,7 @@ export const useLiveEventStore = create<LiveEventState>((set, get) => ({
         .from('community_live_events')
         .select(`
           id, host_user_id, title, description, status,
-          started_at, ended_at, required_tier,
-          profiles:host_user_id ( username, display_name )
+          started_at, ended_at, required_tier
         `)
         .eq('status', 'live')
         .order('started_at', { ascending: false })
@@ -110,6 +161,9 @@ export const useLiveEventStore = create<LiveEventState>((set, get) => ({
         set({ active: null, messages: [] });
         return;
       }
+      // Resolve the host's name from public_profiles before mapping the
+      // row (the self-only `profiles` table can't be embedded).
+      await loadAuthors(supabase, [row.host_user_id]);
       const event = rowToEvent(row);
       set({ active: event });
 
@@ -118,12 +172,13 @@ export const useLiveEventStore = create<LiveEventState>((set, get) => ({
       const { data: msgs } = await (supabase as any)
         .from('community_live_messages')
         .select(`
-          id, event_id, user_id, body, is_host, is_deleted, last_edited_at, created_at,
-          profiles:user_id ( username, display_name )
+          id, event_id, user_id, body, is_host, is_deleted, last_edited_at, created_at
         `)
         .eq('event_id', event.id)
         .order('created_at', { ascending: true })
         .limit(200);
+      // Batch-resolve every author from public_profiles, then map.
+      await loadAuthors(supabase, (msgs ?? []).map((m: any) => m.user_id));
       set({ messages: (msgs ?? []).map(rowToMessage) });
     } catch (err) {
       if (__DEV__) console.warn('[live-event] hydrate failed:', err);
@@ -147,8 +202,13 @@ export const useLiveEventStore = create<LiveEventState>((set, get) => ({
             table: 'community_live_messages',
             filter: `event_id=eq.${eventId}`,
           },
-          (payload: any) => {
-            const msg = rowToMessage(payload.new);
+          async (payload: any) => {
+            const r = payload.new;
+            if (get().messages.some((m) => m.id === r.id)) return;
+            // Resolve the author from public_profiles (cached) so the new
+            // message shows the right name instead of "Member".
+            await loadAuthors(supabase, [r.user_id]);
+            const msg = rowToMessage(r);
             if (get().messages.some((m) => m.id === msg.id)) return;
             set({ messages: [...get().messages, msg] });
           },

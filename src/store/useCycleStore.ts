@@ -49,6 +49,14 @@ interface CycleActions {
   endPeriod: (id: string, endDate?: string) => void;
   setDailyFlow: (periodId: string, date: string, flow: FlowIntensity) => void;
   updatePeriod: (id: string, patch: Partial<PeriodEntry>) => void;
+  /**
+   * Insert a fully-formed period that originated outside the app (e.g. a
+   * HealthKit / Health Connect import). Unlike updatePeriod, this adds a
+   * brand-new row through Zustand's setState (so it renders + persists)
+   * and pushes it to Supabase. The caller supplies the id (which may be a
+   * device-scoped id like `hk-period-2026-06-01`).
+   */
+  importPeriod: (p: PeriodEntry) => void;
   deletePeriod: (id: string) => void;
   getActivePeriod: () => PeriodEntry | undefined;
   getMostRecentPeriod: () => PeriodEntry | undefined;
@@ -182,6 +190,24 @@ export const useCycleStore = create<CycleState & CycleActions>()(
             source: updated.source,
           }).catch(() => {});
         }
+      },
+
+      importPeriod: (p) => {
+        const now = new Date().toISOString();
+        const entry: PeriodEntry = {
+          ...p,
+          createdAt: p.createdAt ?? now,
+          updatedAt: now,
+        };
+        set({ periods: [entry, ...get().periods] });
+        syncRecord('cycle_period_entries', {
+          id: entry.id,
+          start_date: entry.startDate,
+          end_date: entry.endDate ?? null,
+          daily_flow: entry.dailyFlow ?? null,
+          notes: entry.notes ?? null,
+          source: entry.source,
+        }).catch(() => {});
       },
 
       deletePeriod: (id) => {

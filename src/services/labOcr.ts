@@ -67,21 +67,24 @@ export async function recognizeLabPhoto(uri: string): Promise<LabOcrResult> {
       };
     }
 
-    if (!data || !Array.isArray(data.values) || data.values.length === 0) {
+    // The lab-scan edge function returns markers under `results` and notes
+    // under `unmappedNotes` (not values/unmappedLines). Reading the wrong keys
+    // made this always return ok:false — the Pro lab-photo scan never worked.
+    if (!data || !Array.isArray(data.results) || data.results.length === 0) {
       return {
         ok: false,
         values: [],
-        unmappedLines: data?.unmappedLines ?? [],
+        unmappedLines: data?.unmappedNotes ?? [],
         reason: 'no_match',
       };
     }
 
     return {
       ok: true,
-      values: data.values as LabParsedValue[],
+      values: data.results as LabParsedValue[],
       drawDate: data.drawDate,
       vendor: data.vendor,
-      unmappedLines: data.unmappedLines ?? [],
+      unmappedLines: data.unmappedNotes ?? [],
     };
   } catch (err) {
     return {
