@@ -16,12 +16,15 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
+import { tapMedium, notifySuccess } from '../../src/utils/haptics';
 import { useMealStore } from '../../src/store/useMealStore';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { generateRecipe, isAIAvailable } from '../../src/services/llmService';
@@ -75,6 +78,7 @@ interface GeneratedRecipe {
 }
 
 function RecipeCard({ recipe, onLog, mealType }: { recipe: GeneratedRecipe; onLog: (recipe: GeneratedRecipe) => void; mealType: string }) {
+  const t = useTheme();
   const [expanded, setExpanded] = useState(false);
   const [logged, setLogged] = useState(false);
 
@@ -89,13 +93,13 @@ function RecipeCard({ recipe, onLog, mealType }: { recipe: GeneratedRecipe; onLo
             <Ionicons name="restaurant" size={20} color={Colors.almostAquaDeep} />
           </View>
           <View style={styles.recipeInfo}>
-            <Text style={styles.recipeName}>{recipe.name}</Text>
-            <Text style={styles.recipeDesc}>{recipe.description}</Text>
+            <Text style={[styles.recipeName, { color: t.text }]}>{recipe.name}</Text>
+            <Text style={[styles.recipeDesc, { color: t.textSecondary }]}>{recipe.description}</Text>
           </View>
           <Ionicons
             name={expanded ? 'chevron-up' : 'chevron-down'}
             size={20}
-            color={Colors.darkTextSecondary}
+            color={t.textSecondary}
           />
         </View>
 
@@ -124,8 +128,8 @@ function RecipeCard({ recipe, onLog, mealType }: { recipe: GeneratedRecipe; onLo
         </View>
 
         <View style={styles.timePills}>
-          <Ionicons name="time-outline" size={12} color={Colors.darkTextSecondary} />
-          <Text style={styles.timeText}>
+          <Ionicons name="time-outline" size={12} color={t.textSecondary} />
+          <Text style={[styles.timeText, { color: t.textSecondary }]}>
             Prep: {recipe.prepMinutes}min · Cook: {recipe.cookMinutes}min ·{' '}
             {recipe.servings} serving{recipe.servings > 1 ? 's' : ''}
           </Text>
@@ -133,18 +137,18 @@ function RecipeCard({ recipe, onLog, mealType }: { recipe: GeneratedRecipe; onLo
       </TouchableOpacity>
 
       {expanded && (
-        <View style={styles.recipeExpanded}>
+        <View style={[styles.recipeExpanded, { borderTopColor: t.cardBorder }]}>
           {/* Ingredients */}
-          <Text style={styles.recipeSubhead}>Ingredients</Text>
+          <Text style={[styles.recipeSubhead, { color: t.text }]}>Ingredients</Text>
           {recipe.ingredients.map((ing, i) => (
             <View key={i} style={styles.ingredientRow}>
               <View style={styles.bulletDot} />
-              <Text style={styles.ingredientText}>{ing}</Text>
+              <Text style={[styles.ingredientText, { color: t.textSecondary }]}>{ing}</Text>
             </View>
           ))}
 
           {/* Instructions */}
-          <Text style={[styles.recipeSubhead, { marginTop: 14 }]}>
+          <Text style={[styles.recipeSubhead, { color: t.text, marginTop: 14 }]}>
             Instructions
           </Text>
           {recipe.instructions.map((step, i) => (
@@ -152,7 +156,7 @@ function RecipeCard({ recipe, onLog, mealType }: { recipe: GeneratedRecipe; onLo
               <View style={styles.stepNum}>
                 <Text style={styles.stepNumText}>{i + 1}</Text>
               </View>
-              <Text style={styles.stepText}>{step}</Text>
+              <Text style={[styles.stepText, { color: t.textSecondary }]}>{step}</Text>
             </View>
           ))}
 
@@ -188,6 +192,7 @@ function RecipeCard({ recipe, onLog, mealType }: { recipe: GeneratedRecipe; onLo
 
 export default function RecipeGeneratorScreen() {
   const router = useRouter();
+  const t = useTheme();
   const { targets } = useMealStore();
   const { hasFeature } = useSubscriptionStore();
   const [diet, setDiet] = useState('any');
@@ -236,6 +241,7 @@ export default function RecipeGeneratorScreen() {
       timestamp: new Date().toISOString(),
     });
 
+    notifySuccess();
     Alert.alert(
       'Meal Logged!',
       `${safeName} (${safeCalories} cal) added to today's nutrition.`,
@@ -270,6 +276,7 @@ export default function RecipeGeneratorScreen() {
   ];
 
   const handleGenerate = async () => {
+    tapMedium();
     setLoading(true);
     // Collect allergens from every source we track so AI recipes avoid
     // anything the user can't (or won't) eat. De-duped. Hoisted ABOVE the
@@ -345,12 +352,13 @@ export default function RecipeGeneratorScreen() {
 
   return (
     <PaywallGate feature="recipe_generator">
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
+      <StatusBar style={t.statusBar} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
-          <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
+          <Ionicons name="chevron-back" size={24} color={t.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Meals by Aimee</Text>
+        <Text style={[styles.headerTitle, { color: t.text }]}>Meals by Aimee</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -375,8 +383,8 @@ export default function RecipeGeneratorScreen() {
           >
             <Ionicons name="sparkles" size={28} color="#fff" />
           </LinearGradient>
-          <Text style={styles.introTitle}>Meals by Aimee</Text>
-          <Text style={styles.introDesc}>
+          <Text style={[styles.introTitle, { color: t.text }]}>Meals by Aimee</Text>
+          <Text style={[styles.introDesc, { color: t.textSecondary }]}>
             Get personalized meal ideas from Aimee based on your macro targets,
             dietary preferences, and available ingredients.
           </Text>
@@ -385,20 +393,20 @@ export default function RecipeGeneratorScreen() {
         {/* Current targets summary */}
         <View style={styles.section}>
           <GlassCard>
-            <Text style={styles.targetLabel}>Your Daily Targets</Text>
+            <Text style={[styles.targetLabel, { color: t.textSecondary }]}>Your Daily Targets</Text>
             <View style={styles.targetRow}>
               <Text style={styles.targetVal}>
                 {targets.calories} cal
               </Text>
-              <Text style={styles.targetSep}>·</Text>
+              <Text style={[styles.targetSep, { color: t.textSecondary }]}>·</Text>
               <Text style={styles.targetVal}>
                 {targets.proteinGrams}g protein
               </Text>
-              <Text style={styles.targetSep}>·</Text>
+              <Text style={[styles.targetSep, { color: t.textSecondary }]}>·</Text>
               <Text style={styles.targetVal}>
                 {targets.carbsGrams}g carbs
               </Text>
-              <Text style={styles.targetSep}>·</Text>
+              <Text style={[styles.targetSep, { color: t.textSecondary }]}>·</Text>
               <Text style={styles.targetVal}>{targets.fatGrams}g fat</Text>
             </View>
           </GlassCard>
@@ -406,7 +414,7 @@ export default function RecipeGeneratorScreen() {
 
         {/* Diet filter */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Diet Preference</Text>
+          <Text style={[styles.sectionTitle, { color: t.text }]}>Diet Preference</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.chipRow}>
               {DIET_OPTIONS.map((opt) => (
@@ -414,6 +422,7 @@ export default function RecipeGeneratorScreen() {
                   key={opt.key}
                   style={[
                     styles.chip,
+                    { backgroundColor: t.glass, borderColor: t.cardBorder },
                     diet === opt.key && styles.chipActive,
                   ]}
                   onPress={() => setDiet(opt.key)}
@@ -421,6 +430,7 @@ export default function RecipeGeneratorScreen() {
                   <Text
                     style={[
                       styles.chipText,
+                      { color: t.textSecondary },
                       diet === opt.key && styles.chipTextActive,
                     ]}
                   >
@@ -434,7 +444,7 @@ export default function RecipeGeneratorScreen() {
 
         {/* Meal type */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Meal Type</Text>
+          <Text style={[styles.sectionTitle, { color: t.text }]}>Meal Type</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.chipRow}>
               {MEAL_TYPE_OPTIONS.map((opt) => (
@@ -442,6 +452,7 @@ export default function RecipeGeneratorScreen() {
                   key={opt.key}
                   style={[
                     styles.chip,
+                    { backgroundColor: t.glass, borderColor: t.cardBorder },
                     mealType === opt.key && styles.chipActive,
                   ]}
                   onPress={() => setMealType(opt.key)}
@@ -449,6 +460,7 @@ export default function RecipeGeneratorScreen() {
                   <Text
                     style={[
                       styles.chipText,
+                      { color: t.textSecondary },
                       mealType === opt.key && styles.chipTextActive,
                     ]}
                   >
@@ -462,15 +474,15 @@ export default function RecipeGeneratorScreen() {
 
         {/* Extra preferences */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
+          <Text style={[styles.sectionTitle, { color: t.text }]}>
             Additional Preferences (optional)
           </Text>
           <TextInput
-            style={styles.prefInput}
+            style={[styles.prefInput, { backgroundColor: t.inputBg, borderColor: t.inputBorder, color: t.text }]}
             value={preferences}
             onChangeText={setPreferences}
             placeholder="e.g. No dairy, under 30 min, meal prep friendly"
-            placeholderTextColor={Colors.darkTextSecondary}
+            placeholderTextColor={t.placeholder}
             multiline
           />
         </View>
@@ -480,8 +492,8 @@ export default function RecipeGeneratorScreen() {
           {loading ? (
             <View style={styles.loadingRow}>
               <ActivityIndicator color={Colors.almostAquaDeep} />
-              <Text style={styles.loadingText}>
-                Generating personalized recipes...
+              <Text style={[styles.loadingText, { color: t.textSecondary }]}>
+                Aimee is whipping up recipes…
               </Text>
             </View>
           ) : (
@@ -496,7 +508,7 @@ export default function RecipeGeneratorScreen() {
         {/* Results */}
         {recipes.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Your Recipes</Text>
+            <Text style={[styles.sectionTitle, { color: t.text }]}>Your Recipes</Text>
             {recipes.map((recipe, i) => (
               <View key={i} style={{ marginBottom: 10 }}>
                 <RecipeCard recipe={recipe} onLog={handleLogRecipe} mealType={mealType} />

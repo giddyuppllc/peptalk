@@ -798,6 +798,7 @@ export default function CheckInScreen() {
                     keyboardType="numeric"
                     placeholder="--"
                     placeholderTextColor={t.placeholder}
+                    accessibilityLabel={m.label}
                   />
                 </View>
               ))}
@@ -855,6 +856,7 @@ export default function CheckInScreen() {
                       keyboardType="numeric"
                       placeholder="--"
                       placeholderTextColor={t.placeholder}
+                      accessibilityLabel={m.label}
                     />
                   </View>
                 ))}

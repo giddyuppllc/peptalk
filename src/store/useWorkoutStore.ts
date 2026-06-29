@@ -14,6 +14,7 @@ import {
   expandCalendar,
   PLAN_DAYS,
 } from '../services/monthlyPlan';
+import { toLocalDateKey } from '../utils/dateNormalization';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -306,11 +307,14 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
       // -----------------------------------------------------------------------
 
       beginWorkout: (programId, weekNum, dayId) => {
-        const now = new Date().toISOString();
+        const startDate = new Date();
+        const now = startDate.toISOString();
         set({
           inProgress: {
             id: `wlog-${Date.now()}`,
-            date: now.slice(0, 10),
+            // Local-date key, not the UTC ISO slice: an evening workout in the
+            // Americas must group to today, not roll over to tomorrow in UTC.
+            date: toLocalDateKey(startDate),
             programId,
             weekNumber: weekNum,
             dayId,

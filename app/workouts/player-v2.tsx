@@ -309,6 +309,10 @@ export default function WorkoutPlayerV2Screen() {
     return null;
   }, [program, template, activeProgram]);
 
+  // Guards against a rapid double-tap on "Log set" logging twice and
+  // skipping the next set. Cleared on a microtask once state updates settle.
+  const isLoggingRef = useRef(false);
+
   // Begin a workout once on mount
   const beganRef = useRef(false);
   useEffect(() => {
@@ -413,6 +417,14 @@ export default function WorkoutPlayerV2Screen() {
 
   const handleLogSet = useCallback(() => {
     if (!currentEx || !day) return;
+    // Double-tap guard: a second tap within the same frame is ignored, so a
+    // rapid double-tap logs the set once instead of twice (and skipping ahead).
+    if (isLoggingRef.current) return;
+    isLoggingRef.current = true;
+    // Release once this handler's synchronous state updates have been queued.
+    queueMicrotask(() => {
+      isLoggingRef.current = false;
+    });
     tapMedium();
     const reps = isTimeBased ? 1 : targetReps;
     const log: WorkoutLogSet = {

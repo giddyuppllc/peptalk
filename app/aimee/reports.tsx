@@ -38,7 +38,7 @@ export default function ReportsListScreen() {
   const rewriteReportBody = useAimeeReportsStore((s) => s.rewriteReportBody);
   const tier = useSubscriptionStore((s) => s.tier);
   const isPro = tier !== 'free';
-  const weeklyReportPref = useNotificationStore((s) => s.preferences.weeklyReport);
+  const weeklyReportPref = useNotificationStore((s) => s.preferences.weeklyReportEnabled);
   const setWeeklyReportPref = useNotificationStore((s) => s.toggleWeeklyReport);
   const notifsOn = useNotificationStore((s) => s.preferences.enabled);
 

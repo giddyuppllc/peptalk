@@ -10,7 +10,7 @@
 
 import React, { useMemo, useState } from 'react';
 import {
-  ScrollView,
+  FlatList,
   View,
   Text,
   Pressable,
@@ -46,41 +46,49 @@ export default function PeptideLibraryScreen() {
       observation={`${PEPTIDES.length} peptides. Search by name, abbreviation, or goal.`}
       intent="doses_library"
     >
-      <View
-        style={[
-          styles.searchBox,
-          {
-            borderColor: t.colors.cardBorder as string,
-            backgroundColor: t.isDark
-              ? 'rgba(255,255,255,0.04)'
-              : 'rgba(255,255,255,0.5)',
-          },
-        ]}
-      >
-        <Ionicons
-          name="search"
-          size={16}
-          color={t.colors.textSecondary as string}
-        />
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search peptides…"
-          placeholderTextColor={t.colors.textSecondary as string}
-          style={{
-            flex: 1,
-            color: t.colors.textPrimary as string,
-            fontFamily: t.typography.body,
-            fontSize: 14,
-            marginLeft: 8,
-          }}
-        />
-      </View>
-
-      <ScrollView contentContainerStyle={{ paddingBottom: 80 }}>
-        {filtered.map((p) => (
+      <FlatList
+        data={filtered}
+        keyExtractor={(item) => item.id}
+        removeClippedSubviews
+        windowSize={9}
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: 80 }}
+        ListHeaderComponent={
+          <View
+            style={[
+              styles.searchBox,
+              {
+                borderColor: t.colors.cardBorder as string,
+                backgroundColor: t.isDark
+                  ? 'rgba(255,255,255,0.04)'
+                  : 'rgba(255,255,255,0.5)',
+              },
+            ]}
+          >
+            <Ionicons
+              name="search"
+              size={16}
+              color={t.colors.textSecondary as string}
+            />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search peptides…"
+              placeholderTextColor={t.colors.textSecondary as string}
+              style={{
+                flex: 1,
+                color: t.colors.textPrimary as string,
+                fontFamily: t.typography.body,
+                fontSize: 14,
+                marginLeft: 8,
+              }}
+            />
+          </View>
+        }
+        renderItem={({ item: p }) => (
           <Pressable
-            key={p.id}
             onPress={() => {
               tapLight();
               router.push(`/peptide/${p.id}` as never);
@@ -140,8 +148,8 @@ export default function PeptideLibraryScreen() {
               </View>
             </GlassCard>
           </Pressable>
-        ))}
-      </ScrollView>
+        )}
+      />
     </V3DetailShell>
   );
 }

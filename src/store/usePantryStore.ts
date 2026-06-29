@@ -95,6 +95,9 @@ function toSupabaseRow(item: PantryItem) {
     opened_date: item.openedDate ?? null,
     barcode: item.barcode ?? null,
     notes: item.notes ?? null,
+    // Per-item nutrition snapshot (per-serving macros + serving label) —
+    // synced as a JSONB blob, mirroring check_ins.body_measurements.
+    nutrition: item.nutrition ?? null,
     created_at: item.createdAt,
     updated_at: item.updatedAt,
   };
@@ -215,6 +218,7 @@ export const usePantryStore = create<PantryState & PantryActions>()(
           opened_date: string | null;
           barcode: string | null;
           notes: string | null;
+          nutrition: PantryItem['nutrition'] | null;
           created_at: string | null;
           updated_at: string | null;
         };
@@ -234,6 +238,7 @@ export const usePantryStore = create<PantryState & PantryActions>()(
             openedDate: r.opened_date ?? undefined,
             barcode: r.barcode ?? undefined,
             notes: r.notes ?? undefined,
+            nutrition: r.nutrition ?? undefined,
             createdAt: r.created_at ?? new Date().toISOString(),
             updatedAt: r.updated_at ?? new Date().toISOString(),
           }),

@@ -11,13 +11,16 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import type { WorkoutLog } from '../../src/types/fitness';
 
 function LogItem({ log }: { log: WorkoutLog }) {
+  const t = useTheme();
   const date = new Date(log.date);
   const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
   const dateStr = date.toLocaleDateString('en-US', {
@@ -30,10 +33,10 @@ function LogItem({ log }: { log: WorkoutLog }) {
     <View style={styles.logRow}>
       <View style={styles.logDate}>
         <Text style={styles.logDay}>{dayName}</Text>
-        <Text style={styles.logDateStr}>{dateStr}</Text>
+        <Text style={[styles.logDateStr, { color: t.text }]}>{dateStr}</Text>
       </View>
       <View style={styles.logInfo}>
-        <Text style={styles.logTitle}>
+        <Text style={[styles.logTitle, { color: t.text }]}>
           {log.weekNumber != null && log.dayId
             ? `Week ${log.weekNumber} · ${log.dayId}`
             : log.workoutName ?? log.dayId ?? 'Freestyle Workout'}
@@ -41,7 +44,7 @@ function LogItem({ log }: { log: WorkoutLog }) {
         <View style={styles.logMeta}>
           <View style={styles.logMetaItem}>
             <Ionicons name="time-outline" size={12} color={Colors.raindropsDeep} />
-            <Text style={styles.logMetaText}>{log.durationMinutes} min</Text>
+            <Text style={[styles.logMetaText, { color: t.textSecondary }]}>{log.durationMinutes} min</Text>
           </View>
           <View style={styles.logMetaItem}>
             <Ionicons
@@ -49,12 +52,12 @@ function LogItem({ log }: { log: WorkoutLog }) {
               size={12}
               color={Colors.raindropsDeep}
             />
-            <Text style={styles.logMetaText}>{log.sets.length} sets</Text>
+            <Text style={[styles.logMetaText, { color: t.textSecondary }]}>{log.sets.length} sets</Text>
           </View>
           {log.rating && (
             <View style={styles.logMetaItem}>
               <Ionicons name="star" size={12} color="#F4ECC2" />
-              <Text style={styles.logMetaText}>{log.rating}/5</Text>
+              <Text style={[styles.logMetaText, { color: t.textSecondary }]}>{log.rating}/5</Text>
             </View>
           )}
         </View>
@@ -65,15 +68,17 @@ function LogItem({ log }: { log: WorkoutLog }) {
 
 export default function WorkoutHistoryScreen() {
   const router = useRouter();
+  const t = useTheme();
   const { logs } = useWorkoutStore();
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
+      <StatusBar style={t.statusBar} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
-          <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
+          <Ionicons name="chevron-back" size={24} color={t.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Workout History</Text>
+        <Text style={[styles.headerTitle, { color: t.text }]}>Workout History</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -82,16 +87,16 @@ export default function WorkoutHistoryScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <LogItem log={item} />}
         contentContainerStyle={styles.list}
-        ItemSeparatorComponent={() => <View style={styles.sep} />}
+        ItemSeparatorComponent={() => <View style={[styles.sep, { backgroundColor: t.cardBorder }]} />}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons
               name="barbell-outline"
               size={40}
-              color={Colors.darkTextSecondary}
+              color={t.textSecondary}
             />
-            <Text style={styles.emptyTitle}>No workouts yet</Text>
-            <Text style={styles.emptyDesc}>
+            <Text style={[styles.emptyTitle, { color: t.text }]}>No workouts yet</Text>
+            <Text style={[styles.emptyDesc, { color: t.textSecondary }]}>
               Start a program to begin tracking your workouts.
             </Text>
           </View>

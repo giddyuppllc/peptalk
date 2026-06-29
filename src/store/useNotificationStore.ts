@@ -19,7 +19,6 @@ interface NotificationStore {
   setDailyCheckInReminder: (enabled: boolean) => void;
   setCheckInReminderTime: (time: string) => void;
   setDoseReminders: (enabled: boolean) => void;
-  setWeeklyReport: (enabled: boolean) => void;
   setPushToken: (token: string) => void;
   setWorkoutReminderEnabled: (enabled: boolean) => void;
   setWorkoutReminder: (time: string, days: number[]) => void;
@@ -38,7 +37,6 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   dailyCheckInReminder: true,
   checkInReminderTime: '09:00',
   doseReminders: true,
-  weeklyReport: false,
   workoutReminderEnabled: false,
   workoutReminderTime: '08:00',
   workoutReminderDays: [2, 4, 6], // Mon, Wed, Fri
@@ -85,11 +83,6 @@ export const useNotificationStore = create<NotificationStore>()(
       setDoseReminders: (enabled: boolean) =>
         set((state) => ({
           preferences: { ...state.preferences, doseReminders: enabled },
-        })),
-
-      setWeeklyReport: (enabled: boolean) =>
-        set((state) => ({
-          preferences: { ...state.preferences, weeklyReport: enabled },
         })),
 
       setPushToken: (token: string) =>

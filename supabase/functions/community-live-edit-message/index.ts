@@ -4,8 +4,9 @@
  * Body: { messageId, body }
  *
  * Constraints:
- *   - Only the message author OR the event host can edit (host edit
- *     handles moderation/typo cleanup during a live session)
+ *   - Only the message author can edit. Rewriting someone else's words
+ *     and attributing them to the author is not a moderation power — the
+ *     host moderates via delete-message (delete-only), not edit.
  *   - Event must still be 'live' — once ended, transcript is frozen
  *   - Same length + profanity rules as send-message
  */
@@ -84,8 +85,7 @@ Deno.serve(async (req) => {
     if (event.status !== 'live') return jsonResp({ error: 'Event has ended — transcript is frozen.' }, 410);
 
     const isOwner = msg.user_id === user.id;
-    const isHost = event.host_user_id === user.id;
-    if (!isOwner && !isHost) return jsonResp({ error: 'Not your message.' }, 403);
+    if (!isOwner) return jsonResp({ error: 'Not your message.' }, 403);
 
     const { error: updateErr } = await admin
       .from('community_live_messages')

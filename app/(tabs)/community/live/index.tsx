@@ -45,11 +45,15 @@ export default function LiveEventListScreen() {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Distinguish a genuine empty list ("No events yet") from a fetch
+  // failure — without this a network/RLS error rendered the empty copy
+  // with no way to retry.
+  const [error, setError] = useState(false);
 
   const load = async () => {
     try {
       const { supabase } = await import('../../../../src/services/supabase');
-      const { data } = await (supabase as any)
+      const { data, error: fetchError } = await (supabase as any)
         .from('community_live_events')
         .select(`
           id, title, description, status, started_at, ended_at,
@@ -58,8 +62,15 @@ export default function LiveEventListScreen() {
         `)
         .order('started_at', { ascending: false, nullsFirst: false })
         .limit(50);
-      setEvents(data ?? []);
+      if (fetchError) {
+        setError(true);
+        setEvents([]);
+      } else {
+        setError(false);
+        setEvents(data ?? []);
+      }
     } catch {
+      setError(true);
       setEvents([]);
     } finally {
       setLoading(false);
@@ -134,12 +145,29 @@ export default function LiveEventListScreen() {
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
-            <View style={styles.emptyWrap}>
-              <Ionicons name="radio-outline" size={32} color={t.textSecondary} />
-              <Text style={[styles.emptyText, { color: t.textSecondary }]}>
-                No events yet — when an admin goes live it'll show up here.
-              </Text>
-            </View>
+            error ? (
+              <TouchableOpacity
+                onPress={load}
+                style={styles.emptyWrap}
+                accessibilityRole="button"
+                accessibilityLabel="Retry loading live events"
+              >
+                <Ionicons name="cloud-offline-outline" size={32} color="#D43A3A" />
+                <Text style={[styles.emptyText, { color: t.text }]}>
+                  Couldn't load live events.
+                </Text>
+                <Text style={[styles.emptyText, { color: t.textSecondary }]}>
+                  Tap to retry.
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.emptyWrap}>
+                <Ionicons name="radio-outline" size={32} color={t.textSecondary} />
+                <Text style={[styles.emptyText, { color: t.textSecondary }]}>
+                  No events yet — when an admin goes live it'll show up here.
+                </Text>
+              </View>
+            )
           }
           renderItem={({ item }) => (
             <EventRowItem

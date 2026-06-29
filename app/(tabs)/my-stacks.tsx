@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -966,14 +966,46 @@ const calcStyles = StyleSheet.create({
 // the `resolveActiveCycle`, `doseLoggedAt`, and `dosesPerWeekFor`
 // implementations.
 
-/** Did the user already log this protocol today? */
-function loggedToday(loggedDoses: DoseLogEntry[]): DoseLogEntry | null {
+/** Local date key (YYYY-MM-DD) for "today". */
+function todayKey(): string {
   const today = new Date();
   const y = today.getFullYear();
   const m = String(today.getMonth() + 1).padStart(2, '0');
   const d = String(today.getDate()).padStart(2, '0');
-  const key = `${y}-${m}-${d}`;
-  return loggedDoses.find((dose) => dose.date === key) ?? null;
+  return `${y}-${m}-${d}`;
+}
+
+// Twice-daily protocols split the day at 14:00 local: anything logged before
+// counts as the Morning dose, anything at/after counts as the Evening dose.
+const PM_CUTOFF_HOUR = 14;
+
+/**
+ * The dose (if any) logged today for a given plan slot.
+ *  - 'Morning' → today's earliest dose logged before 14:00
+ *  - 'Evening' → today's dose logged at/after 14:00
+ *  - anything else (single 'Today' slot) → today's first dose, any time
+ * Slot-matching prevents a single dose from satisfying both rows and stops
+ * the Evening row from being permanently un-loggable.
+ */
+function loggedTodayForSlot(
+  loggedDoses: DoseLogEntry[],
+  slot: string,
+): DoseLogEntry | null {
+  const key = todayKey();
+  const todays = loggedDoses.filter((dose) => dose.date === key);
+  if (slot === 'Morning') {
+    return (
+      todays.find((dose) => doseLoggedAt(dose).getHours() < PM_CUTOFF_HOUR) ??
+      null
+    );
+  }
+  if (slot === 'Evening') {
+    return (
+      todays.find((dose) => doseLoggedAt(dose).getHours() >= PM_CUTOFF_HOUR) ??
+      null
+    );
+  }
+  return todays[0] ?? null;
 }
 
 interface TodayCycleViewProps {
@@ -986,6 +1018,10 @@ function TodayCycleView({ onJumpToStacks }: TodayCycleViewProps) {
   const protocols = useDoseLogStore((s) => s.protocols);
   const doses = useDoseLogStore((s) => s.doses);
   const logDose = useDoseLogStore((s) => s.logDose);
+
+  // Guards against rapid double-taps creating duplicate dose rows before the
+  // store update + re-render flips the LOG button to its logged state.
+  const loggingRef = useRef(false);
 
   const active = useMemo(
     () => resolveActiveCycle(protocols, doses),
@@ -1054,6 +1090,12 @@ function TodayCycleView({ onJumpToStacks }: TodayCycleViewProps) {
     unit: string;
   }) => {
     if (!active) return;
+    // In-flight guard: ignore re-entrant taps until the prior log settles.
+    if (loggingRef.current) return;
+    // Per-slot dedup: if this slot already has a dose today, do nothing.
+    if (loggedTodayForSlot(active.loggedDoses, slot.slot)) return;
+
+    loggingRef.current = true;
     logDose({
       peptideId: active.protocol.peptideId,
       amount: slot.amount,
@@ -1062,6 +1104,11 @@ function TodayCycleView({ onJumpToStacks }: TodayCycleViewProps) {
       time: slot.time,
     });
     notifySuccess();
+    // Release after the store update + re-render settle so the button has
+    // flipped to its logged state before another tap can be processed.
+    setTimeout(() => {
+      loggingRef.current = false;
+    }, 0);
   };
 
   // ── Empty state — no active protocol ──
@@ -1160,10 +1207,10 @@ function TodayCycleView({ onJumpToStacks }: TodayCycleViewProps) {
         TODAY'S DOSES
       </Text>
       {todaysPlan.map((slot, idx) => {
-        const todayDose = loggedToday(active.loggedDoses);
-        // Twice-daily: naïvely treat any dose-today as "AM logged" until a
-        // future iteration splits by AM/PM time-window.
-        const alreadyLogged = idx === 0 ? !!todayDose : false;
+        // Match this row to the dose logged in its own AM/PM window so each
+        // slot flips to its checkmark independently (Morning vs Evening).
+        const todayDose = loggedTodayForSlot(active.loggedDoses, slot.slot);
+        const alreadyLogged = !!todayDose;
 
         return (
           <View

@@ -336,10 +336,10 @@ function RootLayout() {
           await scheduleDailyCheckInReminder(prefs.checkInReminderTime);
         }
         // §9.3 — Aimee weekly report. Schedule a Sunday 9 AM local push
-        // when notifications + weeklyReport are on; cancel cleanly when
-        // either is off so a previously-scheduled Sunday push doesn't
+        // when notifications + weeklyReportEnabled are on; cancel cleanly
+        // when either is off so a previously-scheduled Sunday push doesn't
         // keep firing for a user who turned the feature off.
-        if (prefs.enabled && prefs.weeklyReport) {
+        if (prefs.enabled && prefs.weeklyReportEnabled) {
           await scheduleWeeklyReport();
         } else {
           await cancelWeeklyReport();

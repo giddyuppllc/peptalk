@@ -239,7 +239,12 @@ export default function CommunityFeedScreen() {
 
       {/* Feed mode (All / Following) + sort */}
       <View style={styles.sortRow}>
-        <TouchableOpacity onPress={() => setFeedMode('all')} style={styles.sortBtn}>
+        <TouchableOpacity
+          onPress={() => setFeedMode('all')}
+          style={styles.sortBtn}
+          accessibilityRole="button"
+          accessibilityState={{ selected: feedMode === 'all' }}
+        >
           <Text
             style={[
               styles.sortText,
@@ -249,7 +254,12 @@ export default function CommunityFeedScreen() {
             All
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setFeedMode('following')} style={styles.sortBtn}>
+        <TouchableOpacity
+          onPress={() => setFeedMode('following')}
+          style={styles.sortBtn}
+          accessibilityRole="button"
+          accessibilityState={{ selected: feedMode === 'following' }}
+        >
           <Text
             style={[
               styles.sortText,
@@ -267,6 +277,8 @@ export default function CommunityFeedScreen() {
               key={opt.mode}
               onPress={() => setSort(opt.mode)}
               style={styles.sortBtn}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
             >
               <Text
                 style={[

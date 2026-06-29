@@ -35,10 +35,31 @@ import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { getPeptideById } from '../../src/data/peptides';
 import {
   scheduleDoseReminder,
+  scheduleWorkoutReminder,
+  scheduleMealReminder,
   cancelRemindersByTag,
 } from '../../src/services/notificationService';
 
 const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+// Expo weekday numbers are 1=Sun … 7=Sat; map to the day label
+// scheduleWorkoutReminder expects (mirrors app/(tabs)/profile.tsx).
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** Schedule workout reminders for the given days. */
+async function rescheduleWorkouts(time: string, days: number[]): Promise<void> {
+  for (const day of days) {
+    const dayLabel = DAY_LABELS[day - 1] ?? 'Workout';
+    await scheduleWorkoutReminder(dayLabel, time);
+  }
+}
+
+/** Schedule meal reminders for all configured meal types. */
+async function rescheduleAllMeals(mealTimes: Record<string, string>): Promise<void> {
+  for (const [meal, time] of Object.entries(mealTimes)) {
+    await scheduleMealReminder(meal, time);
+  }
+}
 
 /**
  * Re-schedule dose reminders for every active protocol. Mirrors the auto-
@@ -128,6 +149,37 @@ export default function NotificationSettingsScreen() {
       await rescheduleAllDoses();
     } else {
       await cancelRemindersByTag('dose-');
+    }
+  };
+
+  // Persist the workout-reminder flag AND make it take effect immediately:
+  // (re)schedule the per-day workout pings when turned on, sweep the
+  // `workout-*` identifiers when turned off. Consistent with the dose
+  // toggle above and the profile-tab workout toggle.
+  const handleToggleWorkout = async (value: boolean) => {
+    setWorkoutReminderEnabled(value);
+    if (value && prefs.enabled) {
+      await rescheduleWorkouts(prefs.workoutReminderTime, prefs.workoutReminderDays);
+    } else {
+      await cancelRemindersByTag('workout');
+    }
+  };
+
+  // Persist the meal-reminder flag AND make it take effect immediately:
+  // (re)schedule breakfast/lunch/dinner pings when turned on, cancel them
+  // when turned off. We sweep the per-meal `meal-<type>-` prefixes
+  // individually so we never touch the separate `meal-safety-` reminders.
+  const handleToggleMeals = async (value: boolean) => {
+    setMealRemindersEnabled(value);
+    if (value && prefs.enabled) {
+      await rescheduleAllMeals(prefs.mealReminderTimes);
+    } else {
+      // Meal ids are `meal-breakfast`/`meal-lunch`/`meal-dinner` (no trailing
+      // dash); cancelRemindersByTag matches by startsWith, so the tag must NOT
+      // carry a trailing dash or nothing gets cancelled.
+      await cancelRemindersByTag('meal-breakfast');
+      await cancelRemindersByTag('meal-lunch');
+      await cancelRemindersByTag('meal-dinner');
     }
   };
 
@@ -222,7 +274,7 @@ export default function NotificationSettingsScreen() {
                 </View>
                 <Switch
                   value={prefs.workoutReminderEnabled}
-                  onValueChange={setWorkoutReminderEnabled}
+                  onValueChange={handleToggleWorkout}
                   trackColor={{ true: t.primary + '88', false: t.cardBorder }}
                   thumbColor={prefs.workoutReminderEnabled ? t.primary : '#fff'}
                 />
@@ -247,7 +299,7 @@ export default function NotificationSettingsScreen() {
                 </View>
                 <Switch
                   value={prefs.mealRemindersEnabled}
-                  onValueChange={setMealRemindersEnabled}
+                  onValueChange={handleToggleMeals}
                   trackColor={{ true: t.primary + '88', false: t.cardBorder }}
                   thumbColor={prefs.mealRemindersEnabled ? t.primary : '#fff'}
                 />

@@ -17,6 +17,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,7 +25,9 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { GlassCard } from '../../src/components/GlassCard';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
+import { tapMedium, notifySuccess } from '../../src/utils/haptics';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { useMealStore } from '../../src/store/useMealStore';
 import { supabase } from '../../src/services/supabase';
@@ -90,6 +93,7 @@ interface ScanResult {
 
 export default function FoodScannerScreen() {
   const router = useRouter();
+  const t = useTheme();
   const accent = useSectionAccent();
   const tier = useSubscriptionStore((s) => s.tier);
   // Wave 76.35: use hasFeature instead of a hardcoded `tier !== 'pro'`.
@@ -122,17 +126,18 @@ export default function FoodScannerScreen() {
 
   if (!canUseFoodScanner) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
+        <StatusBar style={t.statusBar} />
         <View style={styles.header}>
-          <AnimatedPress onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
-            <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
+          <AnimatedPress onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: t.surface }]} accessibilityRole="button" accessibilityLabel="Go back">
+            <Ionicons name="chevron-back" size={24} color={t.text} />
           </AnimatedPress>
-          <Text style={styles.headerTitle}>Food Scanner</Text>
+          <Text style={[styles.headerTitle, { color: t.text }]}>Food Scanner</Text>
         </View>
         <View style={styles.locked}>
-          <Ionicons name="camera" size={48} color={Colors.darkTextSecondary} />
-          <Text style={styles.lockedTitle}>Plus Feature</Text>
-          <Text style={styles.lockedText}>
+          <Ionicons name="camera" size={48} color={t.textMuted} />
+          <Text style={[styles.lockedTitle, { color: t.text }]}>Plus Feature</Text>
+          <Text style={[styles.lockedText, { color: t.textSecondary }]}>
             Snap a plate — PepTalk identifies every food and logs the macros instantly. Available with PepTalk+.
           </Text>
           <AnimatedPress onPress={() => router.push('/subscription')}>
@@ -148,17 +153,18 @@ export default function FoodScannerScreen() {
   // Camera permissions
   if (!permission?.granted) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
+        <StatusBar style={t.statusBar} />
         <View style={styles.header}>
-          <AnimatedPress onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
-            <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
+          <AnimatedPress onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: t.surface }]} accessibilityRole="button" accessibilityLabel="Go back">
+            <Ionicons name="chevron-back" size={24} color={t.text} />
           </AnimatedPress>
-          <Text style={styles.headerTitle}>Food Scanner</Text>
+          <Text style={[styles.headerTitle, { color: t.text }]}>Food Scanner</Text>
         </View>
         <View style={styles.locked}>
           <Ionicons name="camera-outline" size={48} color={accent.deep} />
-          <Text style={styles.lockedTitle}>Camera Access Needed</Text>
-          <Text style={styles.lockedText}>
+          <Text style={[styles.lockedTitle, { color: t.text }]}>Camera Access Needed</Text>
+          <Text style={[styles.lockedText, { color: t.textSecondary }]}>
             Allow camera access to scan your meals and automatically calculate nutrition.
           </Text>
           {/* 2026-05-17 a11y fix: route to Settings when OS won't prompt again. */}
@@ -186,6 +192,7 @@ export default function FoodScannerScreen() {
 
   const takePhoto = async () => {
     if (!cameraRef.current) return;
+    tapMedium();
     try {
       // quality 0.4 keeps base64 payload under ~1-2MB on 12MP cameras —
       // plenty for vision recognition and well under the 6MB edge-function limit.
@@ -286,7 +293,7 @@ export default function FoodScannerScreen() {
 
       if (!res.ok) {
         const data = await res.json();
-        Alert.alert('Scan Failed', data.error || 'Could not analyze the photo.');
+        Alert.alert('Scan Failed', data.error || 'Aimee couldn\'t analyze the photo.');
         setScanning(false);
         return;
       }
@@ -328,6 +335,7 @@ export default function FoodScannerScreen() {
       timestamp: new Date().toISOString(),
     });
 
+    notifySuccess();
     Alert.alert('Logged!', `${result.description} added to your ${selectedMealType}.`, [
       { text: 'OK', onPress: () => router.back() },
     ]);
@@ -384,12 +392,13 @@ export default function FoodScannerScreen() {
 
   // ── Results View ──
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
+      <StatusBar style={t.statusBar} />
       <View style={styles.header}>
-        <AnimatedPress onPress={retake} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
+        <AnimatedPress onPress={retake} style={[styles.backBtn, { backgroundColor: t.surface }]}>
+          <Ionicons name="chevron-back" size={24} color={t.text} />
         </AnimatedPress>
-        <Text style={styles.headerTitle}>Scan Results</Text>
+        <Text style={[styles.headerTitle, { color: t.text }]}>Scan Results</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -401,7 +410,7 @@ export default function FoodScannerScreen() {
         {scanning && (
           <GlassCard style={styles.scanningCard}>
             <ActivityIndicator size="large" color={accent.deep} />
-            <Text style={styles.scanningText}>Aimee is analyzing your meal...</Text>
+            <Text style={[styles.scanningText, { color: t.textSecondary }]}>Aimee is analyzing your plate…</Text>
           </GlassCard>
         )}
 
@@ -409,26 +418,26 @@ export default function FoodScannerScreen() {
           <>
             {/* Description */}
             <GlassCard variant="elevated" style={styles.descCard}>
-              <Text style={styles.descText}>{result.description}</Text>
+              <Text style={[styles.descText, { color: t.text }]}>{result.description}</Text>
             </GlassCard>
 
             {/* Totals */}
             <View style={styles.totalsRow}>
               <GlassCard style={styles.totalCard}>
-                <Text style={styles.totalValue}>{result.totals.calories}</Text>
-                <Text style={styles.totalLabel}>Cal</Text>
+                <Text style={[styles.totalValue, { color: t.text }]}>{result.totals.calories}</Text>
+                <Text style={[styles.totalLabel, { color: t.textSecondary }]}>Cal</Text>
               </GlassCard>
               <GlassCard style={styles.totalCard}>
                 <Text style={[styles.totalValue, { color: accent.deep }]}>{result.totals.protein}g</Text>
-                <Text style={styles.totalLabel}>Protein</Text>
+                <Text style={[styles.totalLabel, { color: t.textSecondary }]}>Protein</Text>
               </GlassCard>
               <GlassCard style={styles.totalCard}>
                 <Text style={[styles.totalValue, { color: accent.pastel }]}>{result.totals.carbs}g</Text>
-                <Text style={styles.totalLabel}>Carbs</Text>
+                <Text style={[styles.totalLabel, { color: t.textSecondary }]}>Carbs</Text>
               </GlassCard>
               <GlassCard style={styles.totalCard}>
                 <Text style={[styles.totalValue, { color: '#ef4444' }]}>{result.totals.fat}g</Text>
-                <Text style={styles.totalLabel}>Fat</Text>
+                <Text style={[styles.totalLabel, { color: t.textSecondary }]}>Fat</Text>
               </GlassCard>
             </View>
 
@@ -436,7 +445,7 @@ export default function FoodScannerScreen() {
                 on the macro signal (see scoreFoodItem) so users get a
                 plain-English read on each item before the gram counts.
                 Macros drop to a smaller second line. */}
-            <Text style={styles.sectionTitle}>Identified Foods</Text>
+            <Text style={[styles.sectionTitle, { color: t.textSecondary }]}>Identified Foods</Text>
             {result.items.map((item, i) => {
               const signal = scoreFoodItem(item);
               const meta = SIGNAL_META[signal];
@@ -452,12 +461,12 @@ export default function FoodScannerScreen() {
                         <Ionicons name={meta.icon} size={14} color={meta.color} />
                         <Text style={[styles.signalText, { color: meta.color }]}>{meta.label}</Text>
                       </View>
-                      <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
+                      <Text style={[styles.itemName, { color: t.text }]} numberOfLines={2}>{item.name}</Text>
                     </View>
-                    <Text style={styles.itemGrams}>~{item.estimatedGrams}g</Text>
+                    <Text style={[styles.itemGrams, { color: t.textSecondary }]}>~{item.estimatedGrams}g</Text>
                   </View>
                   <View style={styles.itemMacros}>
-                    <Text style={styles.itemMacro}>{item.calories} cal</Text>
+                    <Text style={[styles.itemMacro, { color: t.textSecondary }]}>{item.calories} cal</Text>
                     <Text style={[styles.itemMacro, { color: accent.deep }]}>P {item.protein}g</Text>
                     <Text style={[styles.itemMacro, { color: accent.pastel }]}>C {item.carbs}g</Text>
                     <Text style={[styles.itemMacro, { color: '#ef4444' }]}>F {item.fat}g</Text>
@@ -477,7 +486,7 @@ export default function FoodScannerScreen() {
             </View>
 
             {/* Meal type picker */}
-            <Text style={styles.sectionTitle}>Log as</Text>
+            <Text style={[styles.sectionTitle, { color: t.textSecondary }]}>Log as</Text>
             <View style={styles.mealTypeRow}>
               {MEAL_TYPES.map((mt) => (
                 <AnimatedPress
@@ -485,16 +494,18 @@ export default function FoodScannerScreen() {
                   onPress={() => setSelectedMealType(mt.key)}
                   style={[
                     styles.mealTypeBtn,
+                    { backgroundColor: t.surface, borderColor: t.cardBorder },
                     selectedMealType === mt.key && styles.mealTypeBtnActive,
                   ]}
                 >
                   <Ionicons
                     name={mt.icon as any}
                     size={16}
-                    color={selectedMealType === mt.key ? accent.deep : Colors.darkTextSecondary}
+                    color={selectedMealType === mt.key ? accent.deep : t.textSecondary}
                   />
                   <Text style={[
                     styles.mealTypeText,
+                    { color: t.textSecondary },
                     selectedMealType === mt.key && styles.mealTypeTextActive,
                   ]}>
                     {mt.label}
@@ -515,9 +526,9 @@ export default function FoodScannerScreen() {
                 </LinearGradient>
               </AnimatedPress>
 
-              <AnimatedPress onPress={retake} style={styles.retakeBtn}>
-                <Ionicons name="camera-outline" size={18} color={Colors.darkTextSecondary} />
-                <Text style={styles.retakeBtnText}>Retake Photo</Text>
+              <AnimatedPress onPress={retake} style={[styles.retakeBtn, { backgroundColor: t.surface }]}>
+                <Ionicons name="camera-outline" size={18} color={t.textSecondary} />
+                <Text style={[styles.retakeBtnText, { color: t.textSecondary }]}>Retake Photo</Text>
               </AnimatedPress>
             </View>
           </>

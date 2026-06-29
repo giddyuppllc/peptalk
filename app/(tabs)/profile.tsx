@@ -44,6 +44,18 @@ import { notificationsAvailable ,
   cancelRemindersByTag,
 } from '../../src/services/notificationService';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
+import { useCheckinStore } from '../../src/store/useCheckinStore';
+import { useJournalStore } from '../../src/store/useJournalStore';
+import { useMealStore } from '../../src/store/useMealStore';
+import { useWorkoutStore } from '../../src/store/useWorkoutStore';
+import { useChatStore } from '../../src/store/useChatStore';
+import { useCycleStore } from '../../src/store/useCycleStore';
+import { usePantryStore } from '../../src/store/usePantryStore';
+import { useStackStore } from '../../src/store/useStackStore';
+import { useBodyMapStore } from '../../src/store/useBodyMapStore';
+import { useAllergyStore } from '../../src/store/useAllergyStore';
+import { useLabResultsStore } from '../../src/store/useLabResultsStore';
+import { useIntegrationsStore } from '../../src/store/useIntegrationsStore';
 import { getPeptideById } from '../../src/data/peptides';
 import {
   Colors,
@@ -371,7 +383,14 @@ function UserProfile() {
       {/* User Info Card */}
       <GlassCard variant="elevated" style={styles.profileCard}>
         {/* Avatar with gradient border — tappable to change photo */}
-        <TouchableOpacity style={styles.avatarContainer} onPress={pickAvatar} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.avatarContainer}
+          onPress={pickAvatar}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Change profile photo"
+          accessibilityHint="Opens your photo library"
+        >
           <LinearGradient
             colors={[t.primary, t.secondary, t.accent]}
             start={{ x: 0, y: 0 }}
@@ -882,6 +901,7 @@ function QuickLinksSection() {
         <TouchableOpacity
           style={actionStyles.btn}
           activeOpacity={0.8}
+          accessibilityRole="button"
           onPress={() => router.push(links[0].route)}
         >
           <LinearGradient
@@ -901,6 +921,7 @@ function QuickLinksSection() {
         <TouchableOpacity
           key={link.route + link.label}
           activeOpacity={0.7}
+          accessibilityRole="button"
           onPress={() => router.push(link.route)}
         >
           <GlassCard style={linkStyles.row}>
@@ -1037,9 +1058,11 @@ function NotificationSettings() {
       // `meal-safety-...` identifiers from scheduleMealSafetyChecks
       // (the leftovers / fridge-check reminders), which is a separate
       // toggle. P1 from Wave 76.9 push audit.
-      await cancelRemindersByTag('meal-breakfast-');
-      await cancelRemindersByTag('meal-lunch-');
-      await cancelRemindersByTag('meal-dinner-');
+      // Meal ids have no trailing dash (`meal-breakfast`), and cancel matches
+      // by startsWith — so the tag must omit the dash or nothing cancels.
+      await cancelRemindersByTag('meal-breakfast');
+      await cancelRemindersByTag('meal-lunch');
+      await cancelRemindersByTag('meal-dinner');
     }
   };
 
@@ -1309,6 +1332,7 @@ function LegalLinks() {
           style={linkStyles.legalLink}
           onPress={() => router.push('/privacy')}
           activeOpacity={0.7}
+          accessibilityRole="link"
         >
           <Ionicons name="shield-checkmark-outline" size={14} color={t.textSecondary} />
           <Text style={[linkStyles.privacyText, { color: t.textSecondary }]}>Privacy Policy</Text>
@@ -1318,6 +1342,7 @@ function LegalLinks() {
           style={linkStyles.legalLink}
           onPress={() => router.push('/terms')}
           activeOpacity={0.7}
+          accessibilityRole="link"
         >
           <Ionicons name="document-text-outline" size={14} color={t.textSecondary} />
           <Text style={[linkStyles.privacyText, { color: t.textSecondary }]}>Terms of Service</Text>
@@ -1327,6 +1352,7 @@ function LegalLinks() {
           style={linkStyles.legalLink}
           onPress={() => router.push('/subscription')}
           activeOpacity={0.7}
+          accessibilityRole="link"
         >
           <Ionicons name="card-outline" size={14} color={t.textSecondary} />
           <Text style={[linkStyles.privacyText, { color: t.textSecondary }]}>Subscription</Text>
@@ -1491,7 +1517,7 @@ const profileStyles = StyleSheet.create({
 // Simple row component for profile menu items
 function ProfileRow({ icon, label, onPress, color }: { icon: string; label: string; onPress: () => void; color: string }) {
   return (
-    <TouchableOpacity style={profileStyles.row} onPress={onPress} activeOpacity={0.6}>
+    <TouchableOpacity style={profileStyles.row} onPress={onPress} activeOpacity={0.6} accessibilityRole="button">
       <Ionicons name={icon as any} size={20} color={color} />
       <Text style={[profileStyles.rowLabel, { color }]}>{label}</Text>
       <Ionicons name="chevron-forward" size={16} color="#6b7280" />
@@ -1517,9 +1543,25 @@ export default function ProfileScreen() {
           text: 'Delete Everything',
           style: 'destructive',
           onPress: () => {
-            // Clear all stores
+            // Local data wipe — clear EVERY user-data store on this device.
+            // (Server-side account deletion is handled separately via the
+            // delete-user edge function in handleDeleteAccount; this path is
+            // device-local only and must not leave orphaned data behind.)
             useOnboardingStore.getState().reset();
             useHealthProfileStore.getState().resetProfile();
+            useDoseLogStore.getState().clearAll();
+            useCheckinStore.getState().clearAll();
+            useJournalStore.getState().clearAll();
+            useMealStore.getState().clearAll();
+            useWorkoutStore.getState().clearAll();
+            useChatStore.getState().resetForLogout(); // no clearAll; wipes all threads + queued syncs
+            useCycleStore.getState().clearAll();
+            usePantryStore.getState().clearAll();
+            useStackStore.getState().clearAll();
+            useBodyMapStore.getState().clearAll();
+            useAllergyStore.getState().clearAll();
+            useLabResultsStore.getState().clearAll();
+            useIntegrationsStore.getState().clearAll();
             Alert.alert('Done', 'All data has been deleted.');
           },
         },

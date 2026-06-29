@@ -58,13 +58,18 @@ export default function CommunityAdminQueue() {
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [topics, setTopics] = useState<TopicRow[]>([]);
   const [loading, setLoading] = useState(true);
+  // Distinguish a genuinely-clear queue ("No pending reports") from a
+  // fetch failure — safety-relevant, since a silent failure hid pending
+  // unsafe_medical_advice / harassment reports behind reassuring copy.
+  const [error, setError] = useState(false);
 
   const refresh = async () => {
     setLoading(true);
+    setError(false);
     try {
       const { supabase } = await import('../../src/services/supabase');
 
-      const { data: reportRows } = await (supabase as any)
+      const { data: reportRows, error: reportsError } = await (supabase as any)
         .from('community_reports')
         .select(`
           id, reporter_id, reason, notes, status, created_at,
@@ -76,16 +81,25 @@ export default function CommunityAdminQueue() {
         .order('created_at', { ascending: false })
         .limit(100);
 
-      const { data: topicRows } = await (supabase as any)
+      const { data: topicRows, error: topicsError } = await (supabase as any)
         .from('community_topics')
         .select('id, slug, name, description, status, suggested_by, created_at')
         .eq('status', 'pending_review')
         .order('created_at', { ascending: false });
 
-      setReports(reportRows ?? []);
-      setTopics(topicRows ?? []);
+      if (reportsError || topicsError) {
+        setError(true);
+        setReports([]);
+        setTopics([]);
+      } else {
+        setReports(reportRows ?? []);
+        setTopics(topicRows ?? []);
+      }
     } catch (err) {
       if (__DEV__) console.warn('[admin/community-queue]', err);
+      setError(true);
+      setReports([]);
+      setTopics([]);
     } finally {
       setLoading(false);
     }
@@ -152,6 +166,18 @@ export default function CommunityAdminQueue() {
       <ScrollView contentContainerStyle={styles.list}>
         {loading ? (
           <ActivityIndicator color={t.textSecondary} style={{ marginTop: 40 }} />
+        ) : error ? (
+          <TouchableOpacity
+            onPress={refresh}
+            style={styles.errorWrap}
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading the moderation queue"
+          >
+            <Ionicons name="cloud-offline-outline" size={32} color="#D43A3A" />
+            <Text style={[styles.errorText, { color: t.text }]}>
+              Couldn't load the queue — tap to retry.
+            </Text>
+          </TouchableOpacity>
         ) : tab === 'reports' ? (
           reports.length === 0 ? (
             <Text style={[styles.empty, { color: t.textSecondary }]}>No pending reports.</Text>
@@ -283,6 +309,8 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   empty: { padding: 30, textAlign: 'center', fontSize: FontSizes.sm },
+  errorWrap: { alignItems: 'center', gap: 10, paddingTop: 60, paddingHorizontal: 30 },
+  errorText: { fontSize: FontSizes.sm, textAlign: 'center', fontWeight: '600' },
   card: { padding: Spacing.md, gap: 8 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   reasonBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },

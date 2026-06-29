@@ -27,11 +27,13 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../src/hooks/useTheme';
+import { tapMedium, notifySuccess } from '../../src/utils/haptics';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { PaywallGate } from '../../src/hooks/useFeatureGate';
 import { Spacing, BorderRadius, Colors } from '../../src/constants/theme';
@@ -160,6 +162,7 @@ function MealScanScreen() {
   if (!permission) {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: t.bg }]}>
+        <StatusBar style={t.statusBar} />
         <ActivityIndicator color={accent.deep} style={{ marginTop: 100 }} />
       </SafeAreaView>
     );
@@ -167,6 +170,7 @@ function MealScanScreen() {
   if (!permission.granted) {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: t.bg }]} edges={['top']}>
+        <StatusBar style={t.statusBar} />
         <View style={s.header}>
           <TouchableOpacity onPress={() => router.back()} style={s.iconBtn} accessibilityRole="button" accessibilityLabel="Go back">
             <Ionicons name="chevron-back" size={24} color={t.text} />
@@ -309,6 +313,7 @@ function MealScanScreen() {
   // ── Live camera capture ──
   const handleCapture = async () => {
     if (!cameraRef.current) return;
+    tapMedium();
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.5, base64: false });
       if (!mountedRef.current) return;
@@ -391,7 +396,18 @@ function MealScanScreen() {
       notes: 'Logged via meal scan',
       timestamp: new Date().toISOString(),
     });
-    router.back();
+
+    // Confirm the log the same way food-scanner / recipe-generator do —
+    // a success haptic + an explicit "Logged!" alert — instead of silently
+    // navigating away, so the user gets the same feedback across all three
+    // nutrition log flows.
+    notifySuccess();
+    const count = toLog.length;
+    Alert.alert(
+      'Logged!',
+      `${count} item${count > 1 ? 's' : ''} added to your ${mealType}.`,
+      [{ text: 'OK', onPress: () => router.back() }],
+    );
   };
 
   // ── Live camera mode ──
@@ -450,6 +466,7 @@ function MealScanScreen() {
   // ── Review mode ──
   return (
     <SafeAreaView style={[s.container, { backgroundColor: t.bg }]} edges={['top']}>
+      <StatusBar style={t.statusBar} />
       <View style={s.header}>
         <TouchableOpacity onPress={handleRetake} style={s.iconBtn} accessibilityRole="button" accessibilityLabel="Go back">
           <Ionicons name="chevron-back" size={24} color={t.text} />
@@ -467,7 +484,7 @@ function MealScanScreen() {
           <View style={s.analyzingBox}>
             <ActivityIndicator color={accent.deep} />
             <Text style={[s.analyzingText, { color: t.textSecondary }]}>
-              Analyzing your plate...
+              Aimee is analyzing your plate…
             </Text>
           </View>
         ) : (

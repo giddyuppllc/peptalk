@@ -163,6 +163,10 @@ export const useJournalStore = create<JournalStore>()(
           tags: entry.tags,
           related_peptide_ids: entry.relatedPeptideIds ?? [],
           mood: entry.mood ?? null,
+          // Persist the true local timestamp so time-of-day survives a
+          // reinstall / device switch — previously syncFromServer hardcoded
+          // 00:00 because nothing wrote the real time to the row.
+          created_at: entry.createdAt,
         }).then((ok) => {
           if (!ok) {
             set((state) => ({
@@ -305,7 +309,11 @@ export const useJournalStore = create<JournalStore>()(
           (r) => ({
             id: r.id,
             date: r.date,
-            time: '00:00',
+            // Recover the real time-of-day from the synced created_at
+            // timestamp (local-time HH:MM) instead of hardcoding midnight.
+            time: r.created_at
+              ? `${String(new Date(r.created_at).getHours()).padStart(2, '0')}:${String(new Date(r.created_at).getMinutes()).padStart(2, '0')}`
+              : '00:00',
             category: (r.category as JournalCategory) ?? 'other',
             title: r.title ?? '',
             content: r.content ?? '',

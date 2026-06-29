@@ -1,7 +1,6 @@
 import { Peptide, PeptideCategory } from '../types';
 
-// Raw data — evaluated at import but only accessed via the Proxy below
-const _RAW_PEPTIDES: Peptide[] = [
+export const PEPTIDES: Peptide[] = [
   // ─── METABOLIC ────────────────────────────────────────────────────────────────
   {
     id: 'semaglutide',
@@ -1184,26 +1183,8 @@ const _RAW_PEPTIDES: Peptide[] = [
   },
 ];
 
-// Lazy Proxy — the raw array exists but isn't iterated until first access.
-// This prevents Hermes GC pressure during the critical first 100ms of app startup.
-export const PEPTIDES: Peptide[] = new Proxy([] as Peptide[], {
-  get(_, prop) {
-    if (prop === 'length') return _RAW_PEPTIDES.length;
-    if (prop === 'map') return _RAW_PEPTIDES.map.bind(_RAW_PEPTIDES);
-    if (prop === 'filter') return _RAW_PEPTIDES.filter.bind(_RAW_PEPTIDES);
-    if (prop === 'forEach') return _RAW_PEPTIDES.forEach.bind(_RAW_PEPTIDES);
-    if (prop === 'find') return _RAW_PEPTIDES.find.bind(_RAW_PEPTIDES);
-    if (prop === 'slice') return _RAW_PEPTIDES.slice.bind(_RAW_PEPTIDES);
-    if (prop === 'some') return _RAW_PEPTIDES.some.bind(_RAW_PEPTIDES);
-    if (prop === 'flatMap') return _RAW_PEPTIDES.flatMap.bind(_RAW_PEPTIDES);
-    if (prop === Symbol.iterator) return _RAW_PEPTIDES[Symbol.iterator].bind(_RAW_PEPTIDES);
-    if (typeof prop === 'string' && !isNaN(Number(prop))) return _RAW_PEPTIDES[Number(prop)];
-    return (_RAW_PEPTIDES as any)[prop];
-  },
-});
-
 export const getPeptideById = (id: string): Peptide | undefined =>
-  _RAW_PEPTIDES.find((p) => p.id === id);
+  PEPTIDES.find((p) => p.id === id);
 
 export const getPeptidesByCategory = (category: PeptideCategory): Peptide[] =>
-  _RAW_PEPTIDES.filter((p) => p.categories.includes(category));
+  PEPTIDES.filter((p) => p.categories.includes(category));

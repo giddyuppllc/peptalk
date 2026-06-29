@@ -7,7 +7,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
+import { FlatList, View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { V3DetailShell, GlassCard, Chip } from '../../src/components/v3';
 import { useV3Theme } from '../../src/theme/V3ThemeProvider';
@@ -53,32 +53,40 @@ export default function DoseTrackerScreen() {
       }
       intent="doses_tracker"
     >
-      <ScrollView contentContainerStyle={{ paddingBottom: 80 }}>
-        {peptideOptions.length > 1 ? (
-          <View style={styles.filterRow}>
-            <Chip
-              label="All"
-              primary={filter === null}
-              onPress={() => {
-                tapLight();
-                setFilter(null);
-              }}
-            />
-            {peptideOptions.map((p) => (
+      <FlatList
+        data={filtered}
+        keyExtractor={(d) => d.id}
+        removeClippedSubviews
+        windowSize={9}
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        contentContainerStyle={{ paddingBottom: 80 }}
+        ListHeaderComponent={
+          peptideOptions.length > 1 ? (
+            <View style={styles.filterRow}>
               <Chip
-                key={p.id}
-                label={p.name}
-                primary={filter === p.id}
+                label="All"
+                primary={filter === null}
                 onPress={() => {
                   tapLight();
-                  setFilter(p.id);
+                  setFilter(null);
                 }}
               />
-            ))}
-          </View>
-        ) : null}
-
-        {filtered.length === 0 ? (
+              {peptideOptions.map((p) => (
+                <Chip
+                  key={p.id}
+                  label={p.name}
+                  primary={filter === p.id}
+                  onPress={() => {
+                    tapLight();
+                    setFilter(p.id);
+                  }}
+                />
+              ))}
+            </View>
+          ) : null
+        }
+        ListEmptyComponent={
           <GlassCard style={styles.empty}>
             <Text
               style={{
@@ -93,134 +101,131 @@ export default function DoseTrackerScreen() {
                 : 'Nothing logged for this peptide yet.'}
             </Text>
           </GlassCard>
-        ) : (
-          filtered.map((d) => {
-            const name =
-              PEPTIDES.find((p) => p.id === d.peptideId)?.name ??
-              d.peptideId;
-            return (
-              <GlassCard
-                key={d.id}
-                style={[
-                  styles.entryCard,
-                  d.planned ? { opacity: 0.62 } : undefined,
-                ]}
-              >
-                <View style={styles.entryRow}>
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.headRow}>
-                      <Text
-                        style={[
-                          styles.peptideName,
-                          {
-                            color: t.colors.textPrimary as string,
-                            fontFamily: t.typography.bodyBold,
-                          },
-                        ]}
-                      >
-                        {name}
-                      </Text>
-                      {d.planned ? (
-                        <View
-                          style={[
-                            styles.plannedPill,
-                            {
-                              borderColor: t.colors.cardBorder as string,
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={{
-                              color: t.colors.textSecondary as string,
-                              fontFamily: t.typography.label,
-                              fontSize: 9,
-                              letterSpacing: 1.2,
-                            }}
-                          >
-                            PLANNED
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
+        }
+        renderItem={({ item: d }) => {
+          const name =
+            PEPTIDES.find((p) => p.id === d.peptideId)?.name ?? d.peptideId;
+          return (
+            <GlassCard
+              style={[
+                styles.entryCard,
+                d.planned ? { opacity: 0.62 } : undefined,
+              ]}
+            >
+              <View style={styles.entryRow}>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.headRow}>
                     <Text
                       style={[
-                        styles.amount,
+                        styles.peptideName,
                         {
                           color: t.colors.textPrimary as string,
-                          fontFamily: t.isDark
-                            ? t.typography.headlineMale
-                            : t.typography.headlineFemale,
+                          fontFamily: t.typography.bodyBold,
                         },
                       ]}
                     >
-                      {d.amount} {d.unit}
+                      {name}
                     </Text>
+                    {d.planned ? (
+                      <View
+                        style={[
+                          styles.plannedPill,
+                          {
+                            borderColor: t.colors.cardBorder as string,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={{
+                            color: t.colors.textSecondary as string,
+                            fontFamily: t.typography.label,
+                            fontSize: 9,
+                            letterSpacing: 1.2,
+                          }}
+                        >
+                          PLANNED
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text
+                    style={[
+                      styles.amount,
+                      {
+                        color: t.colors.textPrimary as string,
+                        fontFamily: t.isDark
+                          ? t.typography.headlineMale
+                          : t.typography.headlineFemale,
+                      },
+                    ]}
+                  >
+                    {d.amount} {d.unit}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.meta,
+                      {
+                        color: t.colors.textSecondary as string,
+                        fontFamily: t.typography.body,
+                      },
+                    ]}
+                  >
+                    {d.date} · {d.time} · {d.route}
+                    {d.injectionSite ? ` · ${d.injectionSite}` : ''}
+                  </Text>
+                  {d.notes ? (
                     <Text
                       style={[
-                        styles.meta,
+                        styles.notes,
                         {
                           color: t.colors.textSecondary as string,
                           fontFamily: t.typography.body,
                         },
                       ]}
                     >
-                      {d.date} · {d.time} · {d.route}
-                      {d.injectionSite ? ` · ${d.injectionSite}` : ''}
+                      {d.notes}
                     </Text>
-                    {d.notes ? (
-                      <Text
-                        style={[
-                          styles.notes,
-                          {
-                            color: t.colors.textSecondary as string,
-                            fontFamily: t.typography.body,
-                          },
-                        ]}
-                      >
-                        {d.notes}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <View style={styles.actions}>
-                    {d.planned ? (
-                      <Pressable
-                        onPress={() => {
-                          tapMedium();
-                          confirmPlannedDose(d.id);
-                        }}
-                        hitSlop={10}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Mark ${name} dose taken`}
-                      >
-                        <Ionicons
-                          name="checkmark-circle-outline"
-                          size={20}
-                          color={t.colors.textPrimary as string}
-                        />
-                      </Pressable>
-                    ) : null}
+                  ) : null}
+                </View>
+                <View style={styles.actions}>
+                  {d.planned ? (
                     <Pressable
                       onPress={() => {
                         tapMedium();
-                        deleteDose(d.id);
+                        confirmPlannedDose(d.id);
                       }}
                       hitSlop={10}
                       accessibilityRole="button"
-                      accessibilityLabel={`Delete ${name} dose`}
+                      accessibilityLabel={`Mark ${name} dose taken`}
                     >
                       <Ionicons
-                        name="trash-outline"
-                        size={16}
-                        color={t.colors.textSecondary as string}
+                        name="checkmark-circle-outline"
+                        size={20}
+                        color={t.colors.textPrimary as string}
                       />
                     </Pressable>
-                  </View>
+                  ) : null}
+                  <Pressable
+                    onPress={() => {
+                      tapMedium();
+                      deleteDose(d.id);
+                    }}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${name} dose`}
+                  >
+                    <Ionicons
+                      name="trash-outline"
+                      size={16}
+                      color={t.colors.textSecondary as string}
+                    />
+                  </Pressable>
                 </View>
-              </GlassCard>
-            );
-          })
-        )}
-      </ScrollView>
+              </View>
+            </GlassCard>
+          );
+        }}
+      />
     </V3DetailShell>
   );
 }

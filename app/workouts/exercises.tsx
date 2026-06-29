@@ -15,10 +15,12 @@ import {
   Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { EXERCISES, searchExercises, getExerciseInstructions } from '../../src/data/exercises';
 import { ExerciseVideo } from '../../src/components/ExerciseVideo';
 import { hasExerciseVideo } from '../../src/services/videoService';
@@ -125,6 +127,7 @@ function ExerciseItem({
   exercise: Exercise;
   onPress: () => void;
 }) {
+  const t = useTheme();
   const equipStr = exercise.equipment
     .filter((e) => e !== 'none')
     .join(', ')
@@ -144,7 +147,7 @@ function ExerciseItem({
       </View>
       <View style={styles.exInfo}>
         <View style={styles.exNameRow}>
-          <Text style={styles.exName} numberOfLines={1}>
+          <Text style={[styles.exName, { color: t.text }]} numberOfLines={1}>
             {exercise.name}
           </Text>
           {hasVideo(exercise) && (
@@ -172,7 +175,7 @@ function ExerciseItem({
           )}
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={16} color={Colors.darkTextSecondary} />
+      <Ionicons name="chevron-forward" size={16} color={t.textSecondary} />
     </TouchableOpacity>
   );
 }
@@ -190,6 +193,7 @@ function ExerciseDetailModal({
   visible: boolean;
   onClose: () => void;
 }) {
+  const t = useTheme();
   if (!exercise) return null;
 
   // Lazy-resolve Grok-generated coaching content (description / steps /
@@ -212,10 +216,10 @@ function ExerciseDetailModal({
     >
       {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
       <View style={styles.modalOverlay} accessibilityViewIsModal={true}>
-        <View style={styles.modalContent}>
+        <View style={[styles.modalContent, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
           {/* Close button */}
-          <TouchableOpacity style={styles.modalClose} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close">
-            <Ionicons name="close" size={24} color={Colors.darkText} />
+          <TouchableOpacity style={[styles.modalClose, { backgroundColor: t.glass }]} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close">
+            <Ionicons name="close" size={24} color={t.text} />
           </TouchableOpacity>
 
           <ScrollView
@@ -223,7 +227,7 @@ function ExerciseDetailModal({
             contentContainerStyle={styles.modalScroll}
           >
             {/* Title */}
-            <Text style={styles.modalTitle}>{exercise.name}</Text>
+            <Text style={[styles.modalTitle, { color: t.text }]}>{exercise.name}</Text>
 
             {/* Demo video when one exists; otherwise a muscle-group form-guide
                 hero so the detail still leads with a visual, not a blank. */}
@@ -292,34 +296,34 @@ function ExerciseDetailModal({
             {/* Description (one-line summary from Grok-generated content) */}
             {instructions?.description ? (
               <View style={styles.modalSection}>
-                <Text style={styles.modalDescription}>{instructions.description}</Text>
+                <Text style={[styles.modalDescription, { color: t.textSecondary }]}>{instructions.description}</Text>
               </View>
             ) : null}
 
             {/* Step-by-step instructions */}
             {instructions?.steps && instructions.steps.length > 0 ? (
               <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>How to perform</Text>
+                <Text style={[styles.modalSectionTitle, { color: t.text }]}>How to perform</Text>
                 {instructions.steps.map((step, idx) => (
                   <View key={idx} style={{ flexDirection: 'row', marginTop: idx === 0 ? 0 : 8 }}>
-                    <Text style={[styles.modalDescription, { width: 22, fontWeight: '700' }]}>
+                    <Text style={[styles.modalDescription, { width: 22, fontWeight: '700', color: t.textSecondary }]}>
                       {idx + 1}.
                     </Text>
-                    <Text style={[styles.modalDescription, { flex: 1 }]}>{step}</Text>
+                    <Text style={[styles.modalDescription, { flex: 1, color: t.textSecondary }]}>{step}</Text>
                   </View>
                 ))}
               </View>
             ) : exercise.instructions ? (
               <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>Instructions</Text>
-                <Text style={styles.modalDescription}>{exercise.instructions}</Text>
+                <Text style={[styles.modalSectionTitle, { color: t.text }]}>Instructions</Text>
+                <Text style={[styles.modalDescription, { color: t.textSecondary }]}>{exercise.instructions}</Text>
               </View>
             ) : null}
 
             {/* Coaching cues */}
             {instructions?.cues && instructions.cues.length > 0 ? (
               <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>Cues</Text>
+                <Text style={[styles.modalSectionTitle, { color: t.text }]}>Cues</Text>
                 {instructions.cues.map((cue, idx) => (
                   <View key={idx} style={{ flexDirection: 'row', marginTop: idx === 0 ? 0 : 4 }}>
                     <Ionicons
@@ -328,7 +332,7 @@ function ExerciseDetailModal({
                       color={Colors.raindropsDeep}
                       style={{ marginTop: 3, marginRight: 6 }}
                     />
-                    <Text style={[styles.modalDescription, { flex: 1 }]}>{cue}</Text>
+                    <Text style={[styles.modalDescription, { flex: 1, color: t.textSecondary }]}>{cue}</Text>
                   </View>
                 ))}
               </View>
@@ -337,7 +341,7 @@ function ExerciseDetailModal({
             {/* Safety notes */}
             {instructions?.safetyNotes && instructions.safetyNotes.length > 0 ? (
               <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>Safety</Text>
+                <Text style={[styles.modalSectionTitle, { color: t.text }]}>Safety</Text>
                 {instructions.safetyNotes.map((note, idx) => (
                   <View key={idx} style={{ flexDirection: 'row', marginTop: idx === 0 ? 0 : 4 }}>
                     <Ionicons
@@ -346,7 +350,7 @@ function ExerciseDetailModal({
                       color="#C76B45"
                       style={{ marginTop: 3, marginRight: 6 }}
                     />
-                    <Text style={[styles.modalDescription, { flex: 1 }]}>{note}</Text>
+                    <Text style={[styles.modalDescription, { flex: 1, color: t.textSecondary }]}>{note}</Text>
                   </View>
                 ))}
               </View>
@@ -354,8 +358,8 @@ function ExerciseDetailModal({
 
             {/* Priority & Location */}
             <View style={styles.modalSection}>
-              <Text style={styles.modalSectionTitle}>Details</Text>
-              <Text style={styles.modalDescription}>
+              <Text style={[styles.modalSectionTitle, { color: t.text }]}>Details</Text>
+              <Text style={[styles.modalDescription, { color: t.textSecondary }]}>
                 Priority: {exercise.priority} · Location: {exercise.location} · For: {exercise.gender}
               </Text>
             </View>
@@ -372,6 +376,7 @@ function ExerciseDetailModal({
 
 export default function ExerciseLibraryScreen() {
   const router = useRouter();
+  const t = useTheme();
   // Optional deep-link filter, e.g. /workouts/exercises?muscle=core&q=squat.
   // Aimee's "view exercise" rows pass both so the library opens scoped to
   // the tapped exercise instead of the full unfiltered list.
@@ -416,24 +421,25 @@ export default function ExerciseLibraryScreen() {
 
   return (
     <PaywallGate feature="exercise_library">
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
+      <StatusBar style={t.statusBar} />
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
-          <Ionicons name="chevron-back" size={24} color={Colors.darkText} />
+          <Ionicons name="chevron-back" size={24} color={t.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Exercise Library</Text>
+        <Text style={[styles.headerTitle, { color: t.text }]}>Exercise Library</Text>
         <View style={{ width: 40 }} />
       </View>
 
       {/* Search */}
       <View style={styles.searchWrap}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={18} color={Colors.darkTextSecondary} />
+        <View style={[styles.searchBar, { backgroundColor: t.glass, borderColor: t.glassBorder }]}>
+          <Ionicons name="search" size={18} color={t.textSecondary} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: t.text }]}
             placeholder="Search exercises..."
-            placeholderTextColor={Colors.darkTextSecondary}
+            placeholderTextColor={t.placeholder}
             value={query}
             onChangeText={setQuery}
             autoCapitalize="none"
@@ -444,7 +450,7 @@ export default function ExerciseLibraryScreen() {
               <Ionicons
                 name="close-circle"
                 size={18}
-                color={Colors.darkTextSecondary}
+                color={t.textSecondary}
               />
             </TouchableOpacity>
           )}
@@ -462,6 +468,7 @@ export default function ExerciseLibraryScreen() {
           <TouchableOpacity
             style={[
               styles.filterChip,
+              { backgroundColor: t.glass, borderColor: t.glassBorder },
               muscleFilter === item.key && styles.filterChipActive,
             ]}
             onPress={() => setMuscleFilter(item.key)}
@@ -469,6 +476,7 @@ export default function ExerciseLibraryScreen() {
             <Text
               style={[
                 styles.filterChipText,
+                { color: t.textSecondary },
                 muscleFilter === item.key && styles.filterChipTextActive,
               ]}
             >
@@ -490,6 +498,7 @@ export default function ExerciseLibraryScreen() {
             style={[
               styles.filterChip,
               styles.filterChipEquipment,
+              { backgroundColor: t.glass, borderColor: t.glassBorder },
               equipmentFilter === item.key && styles.filterChipEquipmentActive,
             ]}
             onPress={() => setEquipmentFilter(item.key)}
@@ -501,7 +510,7 @@ export default function ExerciseLibraryScreen() {
                 color={
                   equipmentFilter === item.key
                     ? '#fff'
-                    : Colors.darkTextSecondary
+                    : t.textSecondary
                 }
                 style={{ marginRight: 4 }}
               />
@@ -509,6 +518,7 @@ export default function ExerciseLibraryScreen() {
             <Text
               style={[
                 styles.filterChipText,
+                { color: t.textSecondary },
                 equipmentFilter === item.key && styles.filterChipTextActive,
               ]}
             >
@@ -519,7 +529,7 @@ export default function ExerciseLibraryScreen() {
       />
 
       {/* Count */}
-      <Text style={styles.countText}>
+      <Text style={[styles.countText, { color: t.textSecondary }]}>
         {filtered.length} exercise{filtered.length !== 1 ? 's' : ''}
       </Text>
 
@@ -535,15 +545,15 @@ export default function ExerciseLibraryScreen() {
           <ExerciseItem exercise={item} onPress={() => openDetail(item)} />
         )}
         contentContainerStyle={styles.listContent}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: t.cardBorder }]} />}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons
               name="search-outline"
               size={36}
-              color={Colors.darkTextSecondary}
+              color={t.textSecondary}
             />
-            <Text style={styles.emptyText}>No exercises found</Text>
+            <Text style={[styles.emptyText, { color: t.textSecondary }]}>No exercises found</Text>
           </View>
         }
         initialNumToRender={12}

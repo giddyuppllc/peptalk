@@ -855,7 +855,6 @@ export interface NotificationPreferences {
   dailyCheckInReminder: boolean;
   checkInReminderTime: string; // HH:mm
   doseReminders: boolean;
-  weeklyReport: boolean;
   workoutReminderEnabled: boolean;
   workoutReminderTime: string; // HH:mm
   workoutReminderDays: number[]; // Expo weekday numbers: 1=Sun … 7=Sat
