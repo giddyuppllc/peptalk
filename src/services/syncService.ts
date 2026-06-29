@@ -52,7 +52,8 @@ type TableName =
   | 'contraception_history'
   | 'connected_integrations'
   | 'allergen_entries'
-  | 'side_effect_entries';
+  | 'side_effect_entries'
+  | 'lab_results';
 
 // ---------------------------------------------------------------------------
 // Generic helpers

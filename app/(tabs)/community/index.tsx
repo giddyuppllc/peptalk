@@ -54,11 +54,14 @@ export default function CommunityFeedScreen() {
   const topics = useCommunityStore((s) => s.topics);
   const posts = useCommunityStore((s) => s.posts);
   const loadingFeed = useCommunityStore((s) => s.loadingFeed);
+  const loadingMore = useCommunityStore((s) => s.loadingMore);
+  const feedHasMore = useCommunityStore((s) => s.feedHasMore);
   const feedError = useCommunityStore((s) => s.feedError);
   const loadingTopics = useCommunityStore((s) => s.loadingTopics);
 
   const hydrateTopics = useCommunityStore((s) => s.hydrateTopics);
   const hydrateFeed = useCommunityStore((s) => s.hydrateFeed);
+  const loadMoreFeed = useCommunityStore((s) => s.loadMoreFeed);
   const hydrateBlockedUsers = useCommunityStore((s) => s.hydrateBlockedUsers);
   const hydrateFollowedUsers = useCommunityStore((s) => s.hydrateFollowedUsers);
   const reportContent = useCommunityStore((s) => s.reportContent);
@@ -271,7 +274,23 @@ export default function CommunityFeedScreen() {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         refreshing={loadingFeed && posts.length > 0}
-        onRefresh={() => hydrateFeed({ topicSlug: activeSlug, sort })}
+        onRefresh={() => hydrateFeed({ topicSlug: activeSlug, sort, followingOnly: feedMode === 'following' })}
+        onEndReached={() => {
+          // Guard against the spurious onEndReached RN fires on mount /
+          // content-size change. Only paginate once we actually have a
+          // full first page and the store says there's more.
+          if (feedHasMore && !loadingMore && !loadingFeed && posts.length > 0) {
+            loadMoreFeed();
+          }
+        }}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={styles.footerLoading}>
+              <ActivityIndicator size="small" color={t.textSecondary} />
+            </View>
+          ) : null
+        }
         renderItem={({ item }) => (
           <PostCard
             post={item}
@@ -396,6 +415,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
     gap: Spacing.sm,
   },
+  footerLoading: { paddingVertical: Spacing.md, alignItems: 'center' },
   heroCard: {
     padding: Spacing.lg,
     alignItems: 'center',

@@ -11,6 +11,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
+import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
 
 /** Common lab panel categories. UI groups entry by these. */
 export type LabCategory =
@@ -119,6 +120,8 @@ interface LabResultsActions {
   /** Plain-text summary for Aimee chat context. */
   summarizeForAimee: () => string | undefined;
   clearAll: () => void;
+  /** Hydrate from Supabase on boot / device switch. Server wins on id conflict. */
+  syncFromServer: () => Promise<void>;
 }
 
 function uid(): string {
@@ -137,11 +140,32 @@ export const useLabResultsStore = create<LabResultsState & LabResultsActions>()(
           createdAt: new Date().toISOString(),
         };
         set({ results: [entry, ...get().results] });
+
+        // Sync to Supabase. Columns match migration 20260628000002 —
+        // without this the full lab history was local-only and vanished on
+        // reinstall / device switch. ref_low/ref_high are carried from the
+        // marker catalog so server-side consumers don't need it.
+        const marker = LAB_MARKERS.find((m) => m.id === entry.markerId);
+        syncRecord('lab_results', {
+          id: entry.id,
+          marker_id: entry.markerId,
+          value: entry.value,
+          unit: entry.unit,
+          drawn_at: entry.date,
+          ref_low: marker?.refLow ?? null,
+          ref_high: marker?.refHigh ?? null,
+          notes: entry.notes ?? null,
+          created_at: entry.createdAt,
+          updated_at: new Date().toISOString(),
+        });
+
         return entry;
       },
 
-      deleteResult: (id) =>
-        set({ results: get().results.filter((r) => r.id !== id) }),
+      deleteResult: (id) => {
+        set({ results: get().results.filter((r) => r.id !== id) });
+        deleteRecord('lab_results', id);
+      },
 
       latest: (markerId) =>
         get()
@@ -173,6 +197,34 @@ export const useLabResultsStore = create<LabResultsState & LabResultsActions>()(
       },
 
       clearAll: () => set({ results: [] }),
+
+      syncFromServer: async () => {
+        type Row = {
+          id: string;
+          marker_id: string;
+          value: number;
+          unit: string | null;
+          drawn_at: string;
+          notes: string | null;
+          created_at: string | null;
+        };
+        const merged = await hydrateFromServer<Row, LabValue>(
+          'lab_results',
+          get().results,
+          (r) => ({
+            id: r.id,
+            markerId: r.marker_id,
+            value: r.value,
+            unit: r.unit ?? '',
+            date: r.drawn_at,
+            notes: r.notes ?? undefined,
+            createdAt: r.created_at ?? new Date().toISOString(),
+          }),
+          { orderBy: 'drawn_at', ascending: false, limit: 1000 },
+        );
+        const sorted = merged.sort((a, b) => b.date.localeCompare(a.date));
+        set({ results: sorted });
+      },
     }),
     {
       name: 'peptalk-lab-results',

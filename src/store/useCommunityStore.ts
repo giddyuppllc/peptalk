@@ -34,6 +34,13 @@ interface CommunityState {
   unreadNotificationCount: number;
 
   loadingFeed: boolean;
+  /** True while loadMoreFeed is fetching the next page. Separate from
+   *  loadingFeed so the initial spinner and the bottom "loading more"
+   *  spinner don't fight each other. */
+  loadingMore: boolean;
+  /** Whether the last feed page came back full — i.e. there may be more
+   *  to fetch. Flipped false once a short page lands. P2.19. */
+  feedHasMore: boolean;
   loadingTopics: boolean;
   loadingDetail: Record<string, boolean>;
   /** Last hydrateFeed error message, surfaced in the UI so a network
@@ -46,6 +53,11 @@ interface CommunityState {
   // ── Reads ──
   hydrateTopics: () => Promise<void>;
   hydrateFeed: (opts?: { topicSlug?: string | null; sort?: 'new' | 'top_today' | 'top_week' | 'top_all'; followingOnly?: boolean }) => Promise<void>;
+  /** Fetch the next page of the feed using the same query + sort as the
+   *  last hydrateFeed, APPENDING to posts. No-op while a fetch is in
+   *  flight or when feedHasMore is false. P2.19 — fixes the 50-post
+   *  ceiling where the feed had no onEndReached/cursor. */
+  loadMoreFeed: () => Promise<void>;
   /** Open a Realtime subscription on community_posts so new posts +
    *  count updates appear without manual refresh. Idempotent — safe
    *  to call from multiple mount points. */
@@ -94,6 +106,94 @@ interface CommunityState {
 }
 
 const POST_AUTHOR_FIELDS = 'id, username, display_name, avatar_url';
+
+/** Feed page size. Doubles as the initial hydrateFeed limit AND the
+ *  loadMoreFeed page size so "is this page full?" maps cleanly to
+ *  feedHasMore. P2.19. */
+const FEED_PAGE_SIZE = 30;
+
+/** Columns the feed/detail reads pull. Selected from the privacy views
+ *  (community_posts_feed / community_comments_feed) rather than the base
+ *  tables so anonymous rows arrive with user_id already masked to NULL
+ *  for everyone but the author. See migration 20260628000003. */
+const FEED_POST_COLUMNS = `
+  id, user_id, topic_slug, title, body, reaction_count, comment_count,
+  is_deleted, is_anonymous, image_urls, last_edited_at, moderation_status, created_at, updated_at
+`;
+
+type FeedOpts = { topicSlug?: string | null; sort?: 'new' | 'top_today' | 'top_week' | 'top_all'; followingOnly?: boolean };
+
+/** Build the feed SELECT query (filters + ordering) shared by the
+ *  initial hydrate and pagination. Does NOT apply the row limit/range —
+ *  the caller adds that so the same builder serves both the first page
+ *  (.limit) and subsequent keyset/range pages. */
+function buildFeedQuery(supabase: any, opts: FeedOpts, followedUserIds: string[]) {
+  const sort = opts.sort ?? 'new';
+  const topicSlug = opts.topicSlug ?? null;
+
+  let q = supabase
+    .from('community_posts_feed')
+    .select(FEED_POST_COLUMNS)
+    .eq('is_deleted', false);
+
+  if (topicSlug) q = q.eq('topic_slug', topicSlug);
+  if (opts.followingOnly) q = q.in('user_id', followedUserIds);
+
+  if (sort === 'new') {
+    q = q.order('created_at', { ascending: false });
+  } else {
+    const cutoff = sort === 'top_today'
+      ? Date.now() - 24 * 3600 * 1000
+      : sort === 'top_week'
+      ? Date.now() - 7 * 24 * 3600 * 1000
+      : null;
+    if (cutoff != null) q = q.gte('created_at', new Date(cutoff).toISOString());
+    q = q.order('reaction_count', { ascending: false }).order('created_at', { ascending: false });
+  }
+  return q;
+}
+
+/** Apply the feed visibility filters (blocked authors + pending-image
+ *  author-only rule) and resolve author cards. Shared by hydrateFeed +
+ *  loadMoreFeed so both pages get identical treatment. */
+async function buildVisiblePosts(
+  supabase: any,
+  rows: any[],
+  blocked: Set<string>,
+  currentUserId: string | null,
+): Promise<CommunityPost[]> {
+  const visibleRows = (rows ?? []).filter((r: any) => {
+    if (blocked.has(r.user_id)) return false;
+    const hasImage = Array.isArray(r.image_urls) && r.image_urls.length > 0;
+    if (hasImage && r.moderation_status === 'pending' && r.user_id !== currentUserId) {
+      return false;
+    }
+    return true;
+  });
+  const authorMap = await fetchAuthorMap(
+    supabase,
+    visibleRows.filter((r: any) => !r.is_anonymous).map((r: any) => r.user_id),
+  );
+  return visibleRows.map((r: any) => {
+    const post = rowToPost(r, authorMap);
+    if (r.is_anonymous) {
+      post.author = { id: post.userId, displayName: 'Anonymous member' };
+    }
+    return post;
+  });
+}
+
+/** Realtime INSERT/UPDATE payloads come from the BASE tables (Postgres
+ *  can't publish changes through a view), so they still carry the true
+ *  author id on is_anonymous rows even though the REST reads now mask it.
+ *  Scrub the payload row in place before anything downstream consumes it.
+ *  Defense-in-depth: the current handlers re-hydrate through the masked
+ *  views, but this guards any future code that reads payload.new.user_id. */
+function scrubAnonAuthor(r: any, currentUserId: string | null) {
+  if (r && r.is_anonymous && r.user_id && r.user_id !== currentUserId) {
+    r.user_id = null;
+  }
+}
 
 async function getSupa() {
   const { supabase } = await import('../services/supabase');
@@ -249,6 +349,8 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
   followedUserIds: [],
   unreadNotificationCount: 0,
   loadingFeed: false,
+  loadingMore: false,
+  feedHasMore: false,
   loadingTopics: false,
   loadingDetail: {},
   feedError: null,
@@ -287,86 +389,49 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
   },
 
   hydrateFeed: async (opts) => {
-    set({ loadingFeed: true, feedError: null });
+    const feedOpts: FeedOpts = {
+      topicSlug: opts?.topicSlug ?? null,
+      sort: opts?.sort ?? 'new',
+      followingOnly: !!opts?.followingOnly,
+    };
+    // Stash the active query so loadMoreFeed can replay it for the next
+    // page, and reset pagination state for the fresh load.
+    (get() as any)._feedOpts = feedOpts;
+    set({ loadingFeed: true, feedError: null, feedHasMore: false });
     try {
       const supabase = await getSupa();
-      const sort = opts?.sort ?? 'new';
-      const topicSlug = opts?.topicSlug ?? null;
 
-      let q = supabase
-        .from('community_posts')
-        .select(`
-          id, user_id, topic_slug, title, body, reaction_count, comment_count,
-          is_deleted, is_anonymous, image_urls, last_edited_at, moderation_status, created_at, updated_at
-        `)
-        .eq('is_deleted', false);
-
-      if (topicSlug) q = q.eq('topic_slug', topicSlug);
-
-      if (opts?.followingOnly) {
+      if (feedOpts.followingOnly) {
         const followed = get().followedUserIds;
         if (followed.length === 0) {
           // No follows yet — return empty rather than the global feed.
-          set({ posts: [] });
+          set({ posts: [], feedHasMore: false });
           return;
         }
-        q = q.in('user_id', followed);
       }
 
-      if (sort === 'new') {
-        q = q.order('created_at', { ascending: false });
-      } else {
-        // top_today / top_week / top_all — sort by reactions, scoped by recency.
-        const cutoff = sort === 'top_today'
-          ? Date.now() - 24 * 3600 * 1000
-          : sort === 'top_week'
-          ? Date.now() - 7 * 24 * 3600 * 1000
-          : null;
-        if (cutoff != null) q = q.gte('created_at', new Date(cutoff).toISOString());
-        q = q.order('reaction_count', { ascending: false }).order('created_at', { ascending: false });
-      }
-
-      const { data, error } = await q.limit(50);
+      const q = buildFeedQuery(supabase, feedOpts, get().followedUserIds);
+      const { data, error } = await q.limit(FEED_PAGE_SIZE);
       if (error) throw error;
 
       // Current user id — pending image posts are hidden from everyone
       // except their author (App Store 1.2: UGC images must not be
       // publicly visible before moderation approves them). RLS enforces
       // this server-side too; this is the client mirror so a stale realtime
-      // patch can't leak a pending image into the feed.
+      // patch can't leak a pending image into the feed. Also cached for
+      // the realtime INSERT handler's anon-author scrub.
       const { data: { user } } = await supabase.auth.getUser();
       const currentUserId = user?.id ?? null;
+      (get() as any)._currentUserId = currentUserId;
 
       const blocked = new Set(get().blockedUserIds);
-      const visibleRows = (data ?? []).filter((r: any) => {
-        if (blocked.has(r.user_id)) return false;
-        const hasImage = Array.isArray(r.image_urls) && r.image_urls.length > 0;
-        if (hasImage && r.moderation_status === 'pending' && r.user_id !== currentUserId) {
-          return false;
-        }
-        return true;
-      });
-      // Manual join against public_profiles since the base `profiles`
-      // table is self-only RLS (PostgREST embed returned NULL for
-      // every non-self author before Wave 76.11).
-      const authorMap = await fetchAuthorMap(
-        supabase,
-        visibleRows
-          .filter((r: any) => !r.is_anonymous)
-          .map((r: any) => r.user_id),
-      );
-      const posts = visibleRows.map((r: any) => {
-        const post = rowToPost(r, authorMap);
-        if (r.is_anonymous) {
-          post.author = {
-            id: post.userId,
-            displayName: 'Anonymous member',
-          };
-        }
-        return post;
-      });
+      const rawRows = (data ?? []) as any[];
+      const posts = await buildVisiblePosts(supabase, rawRows, blocked, currentUserId);
 
-      set({ posts });
+      // A full page back ⟹ there may be more. Note feedHasMore tracks the
+      // RAW row count, not the post-filter count, so blocked/pending rows
+      // dropping below the page size doesn't falsely end pagination.
+      set({ posts, feedHasMore: rawRows.length === FEED_PAGE_SIZE });
     } catch (err) {
       if (__DEV__) console.warn('[community] hydrateFeed:', err);
       const msg = (err as any)?.message
@@ -374,6 +439,67 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
       set({ feedError: msg });
     } finally {
       set({ loadingFeed: false });
+    }
+  },
+
+  loadMoreFeed: async () => {
+    const state = get();
+    // Guard against duplicate / pointless fetches.
+    if (state.loadingFeed || state.loadingMore || !state.feedHasMore) return;
+    const posts = state.posts;
+    if (posts.length === 0) return;
+    const feedOpts: FeedOpts = (get() as any)._feedOpts ?? { topicSlug: null, sort: 'new', followingOnly: false };
+
+    if (feedOpts.followingOnly && get().followedUserIds.length === 0) {
+      set({ feedHasMore: false });
+      return;
+    }
+
+    set({ loadingMore: true });
+    try {
+      const supabase = await getSupa();
+      const sort = feedOpts.sort ?? 'new';
+      let q = buildFeedQuery(supabase, feedOpts, get().followedUserIds);
+
+      if (sort === 'new') {
+        // Keyset cursor: created_at of the last loaded post. Stable +
+        // index-backed (idx_community_posts_feed). Identical-timestamp
+        // collisions are a negligible risk at microsecond precision;
+        // worst case one row is skipped between pages.
+        const cursor = posts[posts.length - 1]?.createdAt;
+        if (!cursor) { set({ feedHasMore: false }); return; }
+        q = q.lt('created_at', cursor).limit(FEED_PAGE_SIZE);
+      } else {
+        // top_* sorts order by reaction_count then created_at — a single
+        // created_at cursor can't express that, so page these by offset.
+        // Uses the count already loaded as the window start.
+        const from = posts.length;
+        q = q.range(from, from + FEED_PAGE_SIZE - 1);
+      }
+
+      const { data, error } = await q;
+      if (error) throw error;
+
+      const currentUserId = (get() as any)._currentUserId ?? null;
+      const blocked = new Set(get().blockedUserIds);
+      const rawRows = (data ?? []) as any[];
+      const morePosts = await buildVisiblePosts(supabase, rawRows, blocked, currentUserId);
+
+      // De-dupe against what's already loaded (defensive — realtime or a
+      // timestamp collision could otherwise double-insert a row).
+      const existingIds = new Set(get().posts.map((p) => p.id));
+      const appended = morePosts.filter((p) => !existingIds.has(p.id));
+
+      set({
+        posts: [...get().posts, ...appended],
+        feedHasMore: rawRows.length === FEED_PAGE_SIZE,
+      });
+    } catch (err) {
+      if (__DEV__) console.warn('[community] loadMoreFeed:', err);
+      // Don't surface a blocking error for pagination — leave the feed as
+      // is so the user keeps what they have. Allow a retry on next scroll.
+    } finally {
+      set({ loadingMore: false });
     }
   },
 
@@ -386,7 +512,7 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
       const supabase = await getSupa();
 
       const { data: postRow, error: postErr } = await supabase
-        .from('community_posts')
+        .from('community_posts_feed')
         .select(`
           id, user_id, topic_slug, title, body, reaction_count, comment_count,
           is_deleted, is_anonymous, image_urls, last_edited_at, moderation_status, created_at, updated_at
@@ -421,7 +547,7 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
       }
 
       const { data: commentRows, error: commentsErr } = await supabase
-        .from('community_comments')
+        .from('community_comments_feed')
         .select(`
           id, post_id, user_id, parent_comment_id, body, reaction_count,
           is_deleted, is_anonymous, image_urls, last_edited_at, moderation_status, created_at
@@ -756,7 +882,11 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'community_posts' },
-          () => {
+          (payload: any) => {
+            // Payload is from the base table — scrub the anon author id
+            // before re-hydrating (defense-in-depth; the hydrate itself
+            // reads the masked view).
+            scrubAnonAuthor(payload?.new, (get() as any)._currentUserId ?? null);
             // New post landed somewhere — refresh the visible feed.
             // Cheap because hydrateFeed already de-dupes server-side.
             get().hydrateFeed().catch(() => {});
@@ -790,6 +920,8 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'community_comments' },
           (payload: any) => {
+            // Base-table payload — scrub anon author id before any read.
+            scrubAnonAuthor(payload?.new, (get() as any)._currentUserId ?? null);
             // If we're viewing the parent post detail, append the new
             // comment to that thread without a hydrate.
             const r = payload?.new;

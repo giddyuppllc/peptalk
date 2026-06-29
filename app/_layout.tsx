@@ -54,6 +54,7 @@ import { useBodyMapStore } from '../src/store/useBodyMapStore';
 import { usePantryStore } from '../src/store/usePantryStore';
 import { useCycleStore } from '../src/store/useCycleStore';
 import { useIntegrationsStore } from '../src/store/useIntegrationsStore';
+import { useLabResultsStore } from '../src/store/useLabResultsStore';
 import { subscribeToReconnect } from '../src/hooks/useNetworkStatus';
 import { initTelemetry, installGlobalErrorHandler, captureException } from '../src/services/telemetry';
 import { useTheme } from '../src/hooks/useTheme';
@@ -611,6 +612,7 @@ function RootLayout() {
       ['pantry',     () => usePantryStore.getState().syncFromServer()],
       ['cycle',      () => useCycleStore.getState().syncFromServer()],
       ['integrations', () => useIntegrationsStore.getState().syncFromServer()],
+      ['lab results', () => useLabResultsStore.getState().syncFromServer()],
     ];
     // 2026-05-18 cold-boot audit: gate boot syncs on a fresh session.
     // Previously they fired unconditionally — if the user had a stale
@@ -662,6 +664,7 @@ function RootLayout() {
       usePantryStore.getState().syncFromServer()?.catch?.(() => {});
       useCycleStore.getState().syncFromServer()?.catch?.(() => {});
       useIntegrationsStore.getState().syncFromServer()?.catch?.(() => {});
+      useLabResultsStore.getState().syncFromServer()?.catch?.(() => {});
     });
 
     // Foreground sync — when the user returns to the app after backgrounding,
@@ -966,6 +969,7 @@ function RootLayout() {
       usePantryStore.getState().syncFromServer()?.catch?.(() => {});
       useCycleStore.getState().syncFromServer()?.catch?.(() => {});
       useIntegrationsStore.getState().syncFromServer()?.catch?.(() => {});
+      useLabResultsStore.getState().syncFromServer()?.catch?.(() => {});
       // Health profile + chat — also need to rehydrate on auth flip so a
       // fresh signup or device-switch picks up server state. Previously
       // only ran at boot, leaving signup users with empty health profiles
