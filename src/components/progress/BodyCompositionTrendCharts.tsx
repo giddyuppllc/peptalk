@@ -18,7 +18,16 @@ const WINDOW_DAYS = 90;
 
 export const BodyCompositionTrendCharts: React.FC = () => {
   const router = useRouter();
-  const scans = useBodyCompositionStore((s) => s.recentScans(WINDOW_DAYS));
+  // `recentScans(WINDOW_DAYS)` returns a freshly filtered+reversed array on
+  // every call. Calling it inside the selector loops infinitely (Zustand
+  // snapshot is never reference-stable → "Maximum update depth exceeded").
+  // Select the raw scans + the method ref and derive in useMemo instead.
+  const allScans = useBodyCompositionStore((s) => s.scans);
+  const recentScans = useBodyCompositionStore((s) => s.recentScans);
+  const scans = useMemo(
+    () => recentScans(WINDOW_DAYS),
+    [recentScans, allScans],
+  );
 
   // Extract one series per metric. Scans are already oldest-first.
   const weightSeries = useMemo(
