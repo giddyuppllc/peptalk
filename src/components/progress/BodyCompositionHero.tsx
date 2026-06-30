@@ -11,7 +11,7 @@
  * Empty state remains a single-row gradient nudge.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,7 +27,13 @@ export const BodyCompositionHero: React.FC = () => {
   const router = useRouter();
 
   const latest = useBodyCompositionStore((s) => s.latestScan());
-  const delta = useBodyCompositionStore((s) => s.deltaWindow(30));
+  // `deltaWindow(30)` builds a NEW object every call — calling it inside
+  // the selector makes Zustand's snapshot compare "changed" on every
+  // render → infinite re-render ("Maximum update depth exceeded"). Select
+  // the stable scans array + the (stable) method ref and derive in useMemo.
+  const scans = useBodyCompositionStore((s) => s.scans);
+  const deltaWindow = useBodyCompositionStore((s) => s.deltaWindow);
+  const delta = useMemo(() => deltaWindow(30), [deltaWindow, scans]);
 
   const open = () => {
     selectionTick();

@@ -61,8 +61,26 @@ const secureStoreAdapter = {
     try {
       const ptr = parsePtr(await SecureStore.getItemAsync(key + PTR_SUFFIX));
       if (!ptr) {
-        // No pointer → legacy single-key value (pre-chunking). Read it directly
-        // so an existing session survives the upgrade without a forced logout.
+        // No generation pointer. Two pre-`__ptr__` shapes can still be on disk:
+        //
+        //   1. The FIRST chunking scheme (the deploy-window build) wrote a
+        //      `.__chunks__` count + `key.0`, `key.1`, … parts and DELETED the
+        //      single-key value. The current `__ptr__`/generation reader would
+        //      miss those entirely → null session → forced logout on the very
+        //      next launch. Read that old shape here so those sessions survive.
+        const legacyCountRaw = await SecureStore.getItemAsync(key + '.__chunks__');
+        if (legacyCountRaw != null) {
+          const legacyCount = parseInt(legacyCountRaw, 10) || 0;
+          let out = '';
+          for (let i = 0; i < legacyCount; i++) {
+            const part = await SecureStore.getItemAsync(`${key}.${i}`);
+            if (part == null) return null; // partial/corrupt → no session
+            out += part;
+          }
+          return out;
+        }
+        //   2. The original pre-chunking single-key value. Read it directly so
+        //      an existing session survives the upgrade without a forced logout.
         return await SecureStore.getItemAsync(key);
       }
       let out = '';

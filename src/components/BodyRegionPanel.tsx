@@ -70,9 +70,16 @@ export function BodyRegionPanel({ region }: BodyRegionPanelProps) {
     return s.entries[s.entries.length - 1];
   });
 
-  // Injection tracking for this region
-  const regionInjections = useBodyMapStore((s) =>
-    region ? s.injections.filter((i) => i.region === region.id) : [],
+  // Injection tracking for this region.
+  // Select the raw (stable) injections array and derive the filtered
+  // slice in useMemo — filtering INSIDE the selector returns a brand-new
+  // array on every render, which Zustand v5's Object.is snapshot check
+  // flags as "changed" and loops infinitely ("Maximum update depth
+  // exceeded"). Same bug shape as the HomeScreen meal-totals fix.
+  const injections = useBodyMapStore((s) => s.injections);
+  const regionInjections = useMemo(
+    () => (region ? injections.filter((i) => i.region === region.id) : []),
+    [injections, region],
   );
   const lastInjection = regionInjections[0];
   const logInjection = useBodyMapStore((s) => s.logInjection);
