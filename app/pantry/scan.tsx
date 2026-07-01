@@ -314,12 +314,15 @@ export default function PantryScanScreen() {
     // turn the pantry into recipes.
     Alert.alert(
       'Added to pantry',
-      `${chosenWithIdx.length} item${chosenWithIdx.length === 1 ? '' : 's'} saved. Want Aimee to suggest meals from what you have?`,
+      `${chosenWithIdx.length} item${chosenWithIdx.length === 1 ? '' : 's'} saved. Head to your pantry to add more, edit, or remove — or let Aimee suggest meals.`,
       [
-        { text: 'Maybe later', style: 'cancel', onPress: () => router.back() },
         {
           text: 'Get meal ideas',
           onPress: () => router.replace('/nutrition/pantry-suggestions' as never),
+        },
+        {
+          text: 'View my pantry',
+          onPress: () => router.replace('/pantry' as never),
         },
       ],
     );

@@ -72,6 +72,7 @@ export default function PantryScreen() {
   const v3 = useV3Theme();
   const items = usePantryStore((s) => s.items);
   const removeItem = usePantryStore((s) => s.removeItem);
+  const clearAll = usePantryStore((s) => s.clearAll);
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {
@@ -112,6 +113,17 @@ export default function PantryScreen() {
     ]);
   };
 
+  const confirmClearAll = () => {
+    Alert.alert(
+      'Clear pantry',
+      `Remove all ${items.length} item${items.length === 1 ? '' : 's'} from your pantry? This can't be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear all', style: 'destructive', onPress: () => clearAll() },
+      ],
+    );
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
       <View style={styles.header}>
@@ -120,11 +132,21 @@ export default function PantryScreen() {
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: t.text }]}>My Pantry</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {items.length > 0 ? (
+            <TouchableOpacity
+              onPress={confirmClearAll}
+              style={styles.iconBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Clear all pantry items"
+            >
+              <Ionicons name="trash-outline" size={22} color={t.text} />
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             onPress={() => router.push('/pantry/scan' as any)}
             style={styles.iconBtn}
             accessibilityRole="button"
-            accessibilityLabel="Scan kitchen with camera"
+            accessibilityLabel="Scan kitchen with camera to add more"
           >
             <Ionicons name="scan" size={24} color={t.primary} />
           </TouchableOpacity>
