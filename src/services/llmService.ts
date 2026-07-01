@@ -1044,15 +1044,25 @@ export async function* generateAIResponseStream(
     return;
   }
 
+  // Resolve the session, and if the access token is missing/expired try ONE
+  // refresh before giving up — testers on valid accounts hit "Not authenticated"
+  // when their token had simply lapsed (build 55). Both calls are time-boxed so
+  // a hung network can't freeze the chat.
   let session;
+  const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T | null> =>
+    Promise.race([p, new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
   try {
-    const result = await supabase.auth.getSession();
-    session = result.data?.session;
+    const result = await withTimeout(supabase.auth.getSession(), 8000);
+    session = result?.data?.session ?? undefined;
+    if (!session?.access_token) {
+      const refreshed = await withTimeout(supabase.auth.refreshSession(), 8000);
+      session = refreshed?.data?.session ?? session;
+    }
   } catch (e) {
-    if (__DEV__) console.warn('[llmService] getSession failed:', e);
+    if (__DEV__) console.warn('[llmService] session resolve failed:', e);
   }
   if (!session?.access_token) {
-    yield { type: 'error', message: 'Not authenticated' };
+    yield { type: 'error', message: 'Please sign in again to chat with Aimee.' };
     return;
   }
 

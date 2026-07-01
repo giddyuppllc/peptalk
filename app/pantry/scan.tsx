@@ -318,11 +318,20 @@ export default function PantryScanScreen() {
       [
         {
           text: 'Get meal ideas',
-          onPress: () => router.replace('/nutrition/pantry-suggestions' as never),
+          onPress: () => router.push('/nutrition/pantry-suggestions' as never),
         },
         {
           text: 'View my pantry',
-          onPress: () => router.replace('/pantry' as never),
+          onPress: () => router.push('/pantry' as never),
+        },
+        {
+          text: 'Retake',
+          style: 'cancel',
+          onPress: () => {
+            setPhotoUri(null);
+            setItems([]);
+            setSelected([]);
+          },
         },
       ],
     );

@@ -57,6 +57,30 @@ const INTENT_LABELS: Record<ProtocolIntent, string> = {
   maintenance: 'Maintenance',
 };
 
+// Local (not UTC) YYYY-MM-DD key so the start-date chips line up with the
+// user's calendar day rather than drifting near midnight.
+const localDateKey = (d: Date) => {
+  const y = d.getFullYear();
+  const m = `${d.getMonth() + 1}`.padStart(2, '0');
+  const day = `${d.getDate()}`.padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const addDaysKey = (deltaDays: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + deltaDays);
+  return localDateKey(d);
+};
+
+// Lightweight inline start-date picker — relative chips instead of a native
+// date-picker dependency (BUG 2). Covers back-dating + starting later.
+const START_DATE_OPTIONS: { label: string; delta: number }[] = [
+  { label: 'Yesterday', delta: -1 },
+  { label: 'Today', delta: 0 },
+  { label: 'Tomorrow', delta: 1 },
+  { label: 'In 1 week', delta: 7 },
+];
+
 export default function CalculatorV2Screen() {
   const t = useV3Theme();
   const router = useRouter();
@@ -100,6 +124,10 @@ export default function CalculatorV2Screen() {
   const [perShotOverride, setPerShotOverride] = useState<string>('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [displayUnit, setDisplayUnit] = useState<'mg' | 'mcg'>('mg');
+  // BUG 2 — user-selectable cycle start date (default today).
+  const [cycleStartDate, setCycleStartDate] = useState<string>(() =>
+    localDateKey(new Date()),
+  );
 
   // Re-prime inputs from metadata + reference whenever the peptide changes.
   useEffect(() => {
@@ -220,7 +248,7 @@ export default function CalculatorV2Screen() {
   const handleScheduleCycle = () => {
     if (!peptideId || !ref || !phase || !result || result.hardFailures.length > 0) return;
     tapMedium();
-    const startISO = new Date().toISOString().slice(0, 10);
+    const startISO = cycleStartDate;
     const dates = generateCycleDates(startISO, ref.cycleLength, phase.frequency);
     if (dates.length === 0) {
       Alert.alert(
@@ -626,6 +654,55 @@ export default function CalculatorV2Screen() {
             {PEPTALK_DOSING_DISCLAIMER}
           </Text>
         </GlassCard>
+
+        {/* Cycle start date — lets the user back-date or start later before
+            scheduling the full cycle (BUG 2). */}
+        {peptideId && result && ref ? (
+          <GlassCard style={styles.cardSpacing}>
+            <Text
+              style={[
+                styles.fieldLabel,
+                {
+                  color: t.colors.textSecondary as string,
+                  fontFamily: t.typography.body,
+                },
+              ]}
+            >
+              Cycle start date
+            </Text>
+            <Text
+              style={{
+                color: t.colors.textPrimary as string,
+                fontFamily: t.typography.bodyBold,
+                fontSize: 14,
+                marginTop: 4,
+                marginBottom: 8,
+              }}
+            >
+              {new Date(cycleStartDate + 'T12:00:00').toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </Text>
+            <View style={styles.chipRow}>
+              {START_DATE_OPTIONS.map((opt) => {
+                const value = addDaysKey(opt.delta);
+                return (
+                  <Chip
+                    key={opt.label}
+                    label={opt.label}
+                    primary={cycleStartDate === value}
+                    onPress={() => {
+                      tapLight();
+                      setCycleStartDate(value);
+                    }}
+                  />
+                );
+              })}
+            </View>
+          </GlassCard>
+        ) : null}
 
         {/* CTAs — log today, or schedule the whole cycle. */}
         {peptideId && result ? (

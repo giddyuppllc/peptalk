@@ -273,7 +273,20 @@ function RootLayout() {
     return () => {
       cancelled = true;
     };
-  }, [fontsReady, hasHydrated, authHydrated, subscriptionHasHydrated, isComplete, isAuthenticated]);
+    // hydrationReady is included so the 8s hydration-timeout fallback actually
+    // re-runs this effect and dismisses the splash. Without it, a stuck store
+    // flips hydrationReady=true but nothing re-triggers here → splash forever
+    // (tester report, build 55: "app stuck on splash").
+  }, [fontsReady, hydrationReady, hasHydrated, authHydrated, subscriptionHasHydrated, isComplete, isAuthenticated]);
+
+  // Final failsafe: the splash overlay must NEVER trap the app. Even if an
+  // Animated completion callback never fires (observed on some iOS/Hermes
+  // builds) or a gate we didn't foresee stays closed, force the overlay away a
+  // hair after the 8s hydration ceiling so every launch reaches the app.
+  useEffect(() => {
+    const watchdog = setTimeout(() => setSplashVisible(false), 9500);
+    return () => clearTimeout(watchdog);
+  }, []);
 
   // Initialize notifications and restore session — no-ops gracefully in Expo Go
   useEffect(() => {
