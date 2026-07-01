@@ -37,6 +37,19 @@ const HIDDEN_PREFIXES = [
   '/workouts/player',  // workout player is a focus surface
   '/workouts/program', // program day session
   '/subscription',     // paywall — don't let users escape mid-purchase flow
+  // V3DetailShell screens render their own top-left back button; the
+  // Home FAB (also top-left) would overlap it. Hide the FAB on those
+  // detail routes so the two controls never collide.
+  '/nutrition',
+  '/activity',
+  '/doses',
+  '/tracker',
+  '/labs',
+  '/body-composition',
+  '/aimee',
+  '/community/milestones',
+  '/community/leaderboard',
+  '/profile',          // profile tab has its own back button; subpages use V3DetailShell
 ];
 
 // Exact-path matches where the FAB hides (home, modals).

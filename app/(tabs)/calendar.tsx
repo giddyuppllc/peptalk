@@ -98,6 +98,21 @@ const toDateKey = (d: Date) => {
   return `${y}-${m}-${day}`;
 };
 
+// BUG 4 — lightweight inline back-dating picker. Relative-date chips instead
+// of a native date-picker dependency; lets the user log a dose for a past day.
+const addDaysKey = (deltaDays: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + deltaDays);
+  return toDateKey(d);
+};
+
+const LOG_DATE_OPTIONS: { label: string; delta: number }[] = [
+  { label: 'Today', delta: 0 },
+  { label: 'Yesterday', delta: -1 },
+  { label: '2 days ago', delta: -2 },
+  { label: '3 days ago', delta: -3 },
+];
+
 const getMonthDays = (year: number, month: number): Date[] => {
   const days: Date[] = [];
   const firstDay = new Date(year, month, 1);
@@ -281,6 +296,20 @@ export default function CalendarScreen() {
   const [logRoute, setLogRoute] = useState<AdministrationRoute>('subcutaneous');
   const [logSite, setLogSite] = useState('');
   const [logNotes, setLogNotes] = useState('');
+  // BUG 4 — editable date (default = the day the user tapped) + optional time
+  // so doses can be back-dated instead of always landing on today.
+  const [logDate, setLogDate] = useState(selectedDate);
+  const [logTime, setLogTime] = useState('');
+
+  // Re-seed the date field from the selected day each time the modal opens
+  // (and clear any stale time), so it defaults to the day the user is on.
+  useEffect(() => {
+    if (showLogModal) {
+      setLogDate(selectedDate);
+      setLogTime('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showLogModal]);
 
   const {
     doses,
@@ -468,7 +497,9 @@ export default function CalendarScreen() {
         amount,
         unit: logUnit,
         route: logRoute,
-        date: selectedDate,
+        // BUG 4: log to the chosen (possibly back-dated) day + optional time.
+        date: logDate,
+        time: logTime.trim() || undefined,
         injectionSite: logSite ? logSite.slice(0, 60) : undefined,
         notes: logNotes ? logNotes.slice(0, 500) : undefined,
       });
@@ -484,6 +515,7 @@ export default function CalendarScreen() {
       setLogAmount('');
       setLogSite('');
       setLogNotes('');
+      setLogTime('');
       setShowLogModal(false);
 
       // Build alert buttons based on today's activity
@@ -1273,13 +1305,57 @@ export default function CalendarScreen() {
               </TouchableOpacity>
             </View>
 
-            <Text style={[styles.modalDate, { color: t.textSecondary }]}>
-              {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', {
+            {/* Date — editable (BUG 4). Defaults to the tapped day; the
+                chips back-date without needing a native date-picker dep. */}
+            <Text style={[styles.fieldLabel, { color: t.textSecondary }]}>Date</Text>
+            <Text style={[styles.modalDate, { color: t.text, marginTop: 4, marginBottom: 8 }]}>
+              {new Date(logDate + 'T12:00:00').toLocaleDateString('en-US', {
                 weekday: 'long',
                 month: 'long',
                 day: 'numeric',
               })}
             </Text>
+            <View style={styles.routeRow}>
+              {LOG_DATE_OPTIONS.map((opt) => {
+                const value = addDaysKey(opt.delta);
+                const active = logDate === value;
+                return (
+                  <TouchableOpacity
+                    key={opt.label}
+                    style={[
+                      styles.routeChip,
+                      { backgroundColor: t.card },
+                      active && styles.routeChipActive,
+                    ]}
+                    onPress={() => setLogDate(value)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Set date to ${opt.label}`}
+                  >
+                    <Text
+                      style={[
+                        styles.routeChipText,
+                        { color: t.textSecondary },
+                        active && styles.routeChipTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Time — optional free text (BUG 4). Store defaults to now if blank. */}
+            <Text style={[styles.fieldLabel, { color: t.textSecondary }]}>Time (optional)</Text>
+            <TextInput
+              style={[styles.textInput, { backgroundColor: t.card, color: t.text }]}
+              value={logTime}
+              onChangeText={setLogTime}
+              placeholder="e.g. 08:30"
+              placeholderTextColor={t.textSecondary}
+              accessibilityLabel="Time, optional"
+              accessibilityHint="Enter the time you took the dose, for example 08:30. Leave blank to use the current time."
+            />
 
             {/* Substance / supplement -- free text */}
             <Text style={[styles.fieldLabel, { color: t.textSecondary }]}>Substance / Supplement</Text>
@@ -1453,6 +1529,15 @@ export default function CalendarScreen() {
                   style={[styles.addSheetRow, { borderBottomColor: t.cardBorder }]}
                   onPress={() => {
                     setShowAddSheet(false);
+                    // BUG 3: the "Peptide dose" option used to router.push
+                    // back to this same screen (?openLog=1), which raced the
+                    // remount and often no-op'd. Open the log modal in-place
+                    // instead — selectedDate is already set, so the modal
+                    // logs to the day the user tapped.
+                    if (opt.label === 'Peptide dose') {
+                      setShowLogModal(true);
+                      return;
+                    }
                     // Defer routing so the sheet animation isn't thrashed
                     setTimeout(() => router.push(opt.route as any), 80);
                   }}

@@ -968,31 +968,53 @@ export default function PeptideDetailScreen() {
           </GlassCard>
         )}
 
-        {/* Add to Stack Button */}
-        <TouchableOpacity
-          style={[
-            styles.addToStackButton,
-            isInStack && styles.addToStackButtonActive,
-            stackFull && !isInStack && styles.addToStackButtonDisabled,
-          ]}
-          onPress={handleAddToStack}
-          disabled={isInStack}
-          activeOpacity={0.8}
-        >
-          <Ionicons
-            name={isInStack ? 'checkmark-circle' : 'add-circle-outline'}
-            size={20}
-            color={isInStack ? '#7ABED0' : '#fff'}
-          />
-          <Text
-            style={[
-              styles.addToStackText,
-              isInStack && styles.addToStackTextActive,
-            ]}
+        {/* Primary actions — Log a dose + Add to Stack, side by side.
+            "Log a dose" gives users a direct exit from the detail view
+            into the quick-log calculator (pre-pointed at this peptide) so
+            they aren't trapped in the reconstitution/detail scroll. */}
+        <View style={styles.primaryActionRow}>
+          <TouchableOpacity
+            style={styles.logDoseButton}
+            onPress={() =>
+              router.push({
+                pathname: '/doses/calculator',
+                params: { peptideId: peptide.id },
+              } as any)
+            }
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`Log a dose of ${peptide.name}`}
           >
-            {isInStack ? 'In Your Stack' : 'Add to Stack'}
-          </Text>
-        </TouchableOpacity>
+            <Ionicons name="add-circle-outline" size={20} color={PEACH} />
+            <Text style={styles.logDoseText}>Log a dose</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.addToStackButton,
+              styles.primaryActionBtn,
+              isInStack && styles.addToStackButtonActive,
+              stackFull && !isInStack && styles.addToStackButtonDisabled,
+            ]}
+            onPress={handleAddToStack}
+            disabled={isInStack}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name={isInStack ? 'checkmark-circle' : 'add-circle-outline'}
+              size={20}
+              color={isInStack ? '#7ABED0' : '#fff'}
+            />
+            <Text
+              style={[
+                styles.addToStackText,
+                isInStack && styles.addToStackTextActive,
+              ]}
+            >
+              {isInStack ? 'In Your Stack' : 'Add to Stack'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Quick Actions */}
         <View style={styles.quickActionRow}>
@@ -1951,6 +1973,33 @@ const styles = StyleSheet.create({
   },
 
   // ── Add to Stack ────────────────────────────────────────────
+  primaryActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginVertical: 16,
+  },
+  primaryActionBtn: {
+    flex: 1,
+    marginVertical: 0,
+  },
+  logDoseButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: SURFACE,
+    borderRadius: 999,
+    paddingVertical: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: `${PEACH}55`,
+  },
+  logDoseText: {
+    fontSize: 15,
+    fontFamily: 'DMSans-Bold',
+    color: PEACH,
+    letterSpacing: 0.3,
+  },
   addToStackButton: {
     flexDirection: 'row',
     alignItems: 'center',

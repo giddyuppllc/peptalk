@@ -51,6 +51,31 @@ import type {
 
 const MAX_STACK_SIZE = 5;
 
+// Local (not UTC) YYYY-MM-DD key so the start-date chips match the user's
+// calendar day.
+const localDateKey = (d: Date) => {
+  const y = d.getFullYear();
+  const m = `${d.getMonth() + 1}`.padStart(2, '0');
+  const day = `${d.getDate()}`.padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const addDaysKey = (deltaDays: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + deltaDays);
+  return localDateKey(d);
+};
+
+// Lightweight inline start-date picker (BUG 1) — relative chips, no native
+// date-picker dependency. Lets the user back-date the stack instead of it
+// silently logging for today.
+const START_DATE_OPTIONS: { label: string; delta: number }[] = [
+  { label: 'Today', delta: 0 },
+  { label: 'Yesterday', delta: -1 },
+  { label: '2 days ago', delta: -2 },
+  { label: '3 days ago', delta: -3 },
+];
+
 const CATEGORY_FILTERS: PeptideCategory[] = [
   'Metabolic',
   'Recovery',
@@ -95,6 +120,10 @@ export default function StackBuilderScreen() {
   const [showSaveInput, setShowSaveInput] = useState(false);
   const [stackName, setStackName] = useState('');
   const [paywallVisible, setPaywallVisible] = useState(false);
+  // BUG 1 — user-selectable start date for the stack (default today).
+  const [stackStartDate, setStackStartDate] = useState<string>(() =>
+    localDateKey(new Date()),
+  );
 
   // Auto-analyze when stack hits 2+ — same UX as the original.
   useEffect(() => {
@@ -248,15 +277,27 @@ export default function StackBuilderScreen() {
         amount: mg,
         unit: 'mg',
         route: (ref?.route as never) ?? 'subcutaneous',
+        date: stackStartDate,
         notes: `Stack Builder · ${currentStack.length} peptides`,
       });
       added++;
     }
+    // Truthful copy: doses land on the chosen date. There's no per-dose
+    // time-edit screen yet, so we don't promise one — we point at delete
+    // instead (each dose is removable from the Tracker day view).
+    const isToday = stackStartDate === localDateKey(new Date());
+    const whenLabel = isToday
+      ? 'today'
+      : new Date(stackStartDate + 'T12:00:00').toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+        });
     Alert.alert(
       'Stack added to Tracker',
-      `${added} ${added === 1 ? 'dose' : 'doses'} logged for today. Open Tracker to review and edit times.`,
+      `${added} ${added === 1 ? 'dose' : 'doses'} logged for ${whenLabel}. Open Tracker to see them — you can remove any dose from that day if you need to adjust.`,
     );
-  }, [currentStack, conflicts.length, logDose]);
+  }, [currentStack, conflicts.length, logDose, stackStartDate]);
 
   const textPrimary = t.colors.textPrimary as string;
   const textSecondary = t.colors.textSecondary as string;
@@ -519,6 +560,51 @@ export default function StackBuilderScreen() {
                   Save
                 </Text>
               </TouchableOpacity>
+            </View>
+
+            {/* Start-date picker (BUG 1) — pick which day the stack logs to. */}
+            <View style={styles.startDateBlock}>
+              <Text style={[styles.startDateLabel, { color: textSecondary }]}>
+                START DATE
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.startDateChips}
+              >
+                {START_DATE_OPTIONS.map((opt) => {
+                  const value = addDaysKey(opt.delta);
+                  const active = stackStartDate === value;
+                  return (
+                    <TouchableOpacity
+                      key={opt.label}
+                      style={[
+                        styles.filterChip,
+                        active && {
+                          backgroundColor: accentSoft,
+                          borderColor: accentDeep + '55',
+                        },
+                      ]}
+                      onPress={() => {
+                        tapLight();
+                        setStackStartDate(value);
+                      }}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Set stack start date to ${opt.label}`}
+                    >
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          { color: active ? accentDeep : textSecondary },
+                        ]}
+                      >
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             </View>
 
             <Pressable
@@ -823,6 +909,15 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   saveBtnText: { fontSize: 14, fontWeight: '600' },
+  startDateBlock: { marginTop: 14 },
+  startDateLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  startDateChips: { gap: 6, paddingRight: 8 },
   trackerBtn: {
     marginTop: 10,
     paddingVertical: 14,

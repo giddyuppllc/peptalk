@@ -1501,6 +1501,8 @@ const profileStyles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: Spacing.lg, paddingBottom: 40 },
   pageTitle: { fontSize: 32, fontWeight: '900', letterSpacing: -0.5, color: '#2D2D2D', marginTop: 12, marginBottom: 20 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  backBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 12, marginBottom: 20 },
   section: { marginBottom: 20 },
   sectionTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 8, marginLeft: 4 },
   card: { borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
@@ -1655,7 +1657,21 @@ export default function ProfileScreen() {
         contentContainerStyle={profileStyles.scroll}
       >
         {/* ── Header ── */}
-        <Text style={[profileStyles.pageTitle, { color: t.text }]}>Profile</Text>
+        {/* Tab bar is hidden on this screen, so give users an explicit way
+            back to Home. Same target as HomeFab: router.push('/(tabs)'). */}
+        <View style={profileStyles.headerRow}>
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)' as never)}
+            accessibilityRole="button"
+            accessibilityLabel="Back to home"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={[profileStyles.backBtn, { backgroundColor: t.card, borderColor: t.cardBorder }]}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-back" size={22} color={t.text} />
+          </TouchableOpacity>
+          <Text style={[profileStyles.pageTitle, { color: t.text }]}>Profile</Text>
+        </View>
 
         {/* ── Auth: Login or User Card ── */}
         {isAuthenticated ? <UserProfile /> : <LoginForm />}
