@@ -205,13 +205,13 @@ export default function NutritionScreen() {
               router.push('/subscription' as never);
               return;
             }
-            router.push('/pantry/scan' as never);
+            router.push('/pantry' as never);
           }}
           accessibilityRole="button"
           accessibilityLabel={
             isPro
-              ? 'Scan your fridge or pantry to keep your inventory current'
-              : 'Upgrade to Pro to scan your fridge'
+              ? 'Open your pantry to view, add, scan, or remove items'
+              : 'Upgrade to Pro for your pantry'
           }
         >
           <GlassCard style={styles.cardSpacing}>
@@ -250,7 +250,7 @@ export default function NutritionScreen() {
                     },
                   ]}
                 >
-                  {isPro ? 'Scan your kitchen' : 'Scan kitchen — Pro feature'}
+                  {isPro ? 'My pantry' : 'My pantry — Pro feature'}
                 </Text>
                 <Text
                   style={[
@@ -262,8 +262,8 @@ export default function NutritionScreen() {
                   ]}
                 >
                   {isPro
-                    ? 'Snap your fridge or pantry — Aimee identifies items, you confirm before they save.'
-                    : 'Upgrade to Pro to keep your kitchen inventory current with one photo.'}
+                    ? 'View, add, scan, or remove what’s in your fridge, freezer & pantry — then build meals from it.'
+                    : 'Upgrade to Pro to track your kitchen and build meals from what you have.'}
                 </Text>
               </View>
               {!isPro ? (
