@@ -443,7 +443,11 @@ export async function fetchExerciseVideoUrl(
   if (!session?.access_token) return null;
 
   const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-workout-video`;
-  try {
+
+  // One signed-URL fetch attempt. Returns the result on success/valid
+  // rejection, or throws on a network-level failure so the caller can
+  // retry once.
+  const attempt = async () => {
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -469,9 +473,20 @@ export async function fetchExerciseVideoUrl(
     };
     _signedUrlCache.set(slug, entry);
     return { videoUrl: entry.videoUrl, captionUrl: entry.captionUrl ?? null };
+  };
+
+  try {
+    return await attempt();
   } catch (err) {
-    if (__DEV__) console.warn('[videoService] fetch threw:', err);
-    return null;
+    // Transient failure (network blip / edge cold-start). Retry once
+    // before giving up so a single hiccup doesn't leave a broken player.
+    if (__DEV__) console.warn('[videoService] fetch threw, retrying once:', err);
+    try {
+      return await attempt();
+    } catch (err2) {
+      if (__DEV__) console.warn('[videoService] retry failed:', err2);
+      return null;
+    }
   }
 }
 

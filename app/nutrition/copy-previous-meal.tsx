@@ -26,6 +26,7 @@ import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { Spacing, BorderRadius } from '../../src/constants/theme';
 import { useMealStore } from '../../src/store/useMealStore';
 import type { MealType } from '../../src/types/fitness';
+import { todayLocalISO } from '../../src/utils/dateUtil';
 
 const MEAL_LABELS: Record<MealType, string> = {
   breakfast: 'Breakfast',
@@ -36,7 +37,7 @@ const MEAL_LABELS: Record<MealType, string> = {
   post_workout: 'Post-Workout',
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => todayLocalISO();
 
 function formatDateLabel(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00');

@@ -34,8 +34,9 @@ import { Spacing, BorderRadius } from '../../src/constants/theme';
 import { searchAllFoods, calcUnifiedMacros, type UnifiedFood } from '../../src/services/foodSearchService';
 import { useMealStore } from '../../src/store/useMealStore';
 import type { MealType } from '../../src/types/fitness';
+import { todayLocalISO } from '../../src/utils/dateUtil';
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => todayLocalISO();
 
 const inferMealType = (): MealType => {
   const h = new Date().getHours();

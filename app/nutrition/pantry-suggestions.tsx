@@ -32,6 +32,7 @@ import { useAllergyStore } from '../../src/store/useAllergyStore';
 import { supabase } from '../../src/services/supabase';
 import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
 import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
+import { todayLocalISO } from '../../src/utils/dateUtil';
 
 interface SuggestedIngredient {
   name: string;
@@ -191,7 +192,7 @@ function PantrySuggestionsInner() {
     const now = new Date();
     addMeal({
       id: `meal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      date: now.toISOString().slice(0, 10),
+      date: todayLocalISO(),
       mealType,
       foods: [safeFood],
       notes: ingredientsText,

@@ -42,8 +42,9 @@ import { useMealStore } from '../../src/store/useMealStore';
 import type { MealType } from '../../src/types/fitness';
 import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
 import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
+import { todayLocalISO } from '../../src/utils/dateUtil';
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => todayLocalISO();
 
 // Raw per-item shape returned by the `food-scan` edge function (vision model).
 interface ScanItem {
