@@ -188,6 +188,26 @@ interface DoseLogStore {
     notes?: string;
   }) => DoseLogEntry;
   deleteDose: (id: string) => void;
+  /**
+   * Edit an already-logged/planned dose in place. Merges the given
+   * fields into the matching entry (only keys present in `patch` are
+   * touched), re-persists, and re-syncs the row to Supabase using the
+   * same last-writer-wins pattern as logDose/confirmPlannedDose. Testers
+   * could previously only delete a dose; this lets them fix the amount,
+   * unit, route, date, time, site, or notes after adding.
+   */
+  updateDose: (
+    id: string,
+    patch: {
+      amount?: number;
+      unit?: DoseUnit;
+      route?: AdministrationRoute;
+      date?: string;
+      time?: string;
+      injectionSite?: string;
+      notes?: string;
+    },
+  ) => void;
 
   // Protocols
   addProtocol: (input: {
@@ -356,6 +376,65 @@ export const useDoseLogStore = create<DoseLogStore>()(
         // Also delete from Supabase — otherwise the row stays on the
         // server and reappears on the next syncFromServer() pull.
         deleteRecord('dose_logs', id);
+      },
+
+      updateDose: (id, patch) => {
+        set((state) => ({
+          doses: state.doses.map((d) => {
+            if (d.id !== id) return d;
+            // Merge only the keys the caller actually provided so an
+            // omitted field never blanks an existing value.
+            const next: DoseLogEntry = { ...d };
+            if (patch.amount !== undefined) next.amount = patch.amount;
+            if (patch.unit !== undefined) next.unit = patch.unit;
+            if (patch.route !== undefined) next.route = patch.route;
+            if (patch.date !== undefined) next.date = patch.date;
+            if (patch.time !== undefined) next.time = patch.time;
+            if (patch.injectionSite !== undefined)
+              next.injectionSite = patch.injectionSite;
+            if (patch.notes !== undefined) next.notes = patch.notes;
+            return next;
+          }),
+        }));
+
+        const updated = get().doses.find((d) => d.id === id);
+        if (!updated) return;
+
+        // Re-sync the edited row. Preserve the planned/logged distinction
+        // via `source` and queue on failure so an offline edit isn't lost
+        // — mirrors logDose's pendingSyncs retry path.
+        const peptide = getPeptideById(updated.peptideId);
+        syncRecord('dose_logs', {
+          id: updated.id,
+          peptide_id: updated.peptideId,
+          peptide_name: peptide?.name ?? updated.peptideId,
+          amount: updated.amount,
+          unit: updated.unit,
+          route: updated.route,
+          date: updated.date,
+          time: updated.time,
+          site: updated.injectionSite ?? null,
+          batch_number: updated.batchNumber ?? null,
+          notes: updated.notes ?? null,
+          source: updated.planned ? 'planned' : 'user',
+        }).then((ok) => {
+          if (!ok) {
+            set((state) => ({
+              pendingSyncs: state.pendingSyncs.includes(updated.id)
+                ? state.pendingSyncs
+                : [...state.pendingSyncs, updated.id],
+            }));
+          }
+        }).catch(() => {
+          set((state) => ({
+            pendingSyncs: state.pendingSyncs.includes(updated.id)
+              ? state.pendingSyncs
+              : [...state.pendingSyncs, updated.id],
+          }));
+        });
+
+        // A changed amount/date can flip a health alert (frequency, etc.).
+        setTimeout(() => get().refreshAlerts(), 100);
       },
 
       // §8.8 — full-cycle scheduler. Writes one planned entry per

@@ -24,6 +24,11 @@ const VISION_API_KEY =
   '';
 const VISION_BASE_URL =
   Deno.env.get('OPENAI_VISION_BASE_URL') ?? 'https://api.openai.com/v1';
+// gpt-4o-mini keeps per-scan cost low (see routing note above). The improved
+// FOOD_SCAN_PROMPT below (packaged-food / label reading + conservatism +
+// confidence) is the main free accuracy lever. For MAXIMUM accuracy on
+// packaged foods, set OPENAI_VISION_MODEL=gpt-4o — materially better at
+// reading brands/labels, but ~15-20x the per-scan cost.
 const VISION_MODEL =
   Deno.env.get('OPENAI_VISION_MODEL') ?? 'gpt-4o-mini';
 
@@ -35,23 +40,21 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const FOOD_SCAN_PROMPT = `You are a nutrition analysis AI. Analyze this photo of food and identify every item you can see.
+const FOOD_SCAN_PROMPT = `You are a careful nutrition analysis AI. Identify every food item in the photo and estimate its nutrition. Accuracy matters more than confidence — a wrong guess logged silently is worse than an honest "unsure".
 
-For each food item, estimate:
-- name (be specific: "grilled chicken breast" not just "chicken")
-- estimated weight in grams
-- calories
-- protein (grams)
-- carbs (grams)
-- fat (grams)
-- fiber (grams)
+READ THE PACKAGING FIRST. If an item is a packaged or branded product (wrapper, label, box, jar, bar, stick, pouch), read the brand + product name off the packaging and use that product's STANDARD published nutrition facts for the serving shown — do NOT estimate macros from appearance for packaged foods. Examples: a "Chomps" or similar meat stick is a beef/turkey snack stick (~90–110 cal, high protein, ~0 carbs) — never a creamer; "Skippy" is peanut butter; a protein bar's macros come from its label. Use shape, size, packaging, and context to avoid confusing visually similar items (a meat stick vs a creamer pod, yogurt vs sauce, etc.).
 
-Also provide:
-- total calories for the entire plate/bowl
-- total macros (protein, carbs, fat)
-- a one-line description of the meal
+For whole/home-cooked foods, estimate from a standard single serving and be CONSERVATIVE with portion size when uncertain (err smaller, not larger).
 
-Return ONLY valid JSON, no markdown. Format:
+For EACH item provide:
+- name (specific but honest: if you can read a brand, include it, e.g. "Chomps Original Beef Stick"; if genuinely unsure, use a generic name like "meat snack stick" rather than inventing a specific product)
+- estimatedGrams (whole number)
+- calories, protein, carbs, fat, fiber (grams)
+- confidence: a number 0–1 for how sure you are of the IDENTITY (1 = certain, 0.4 = a rough guess). Set it honestly low when unsure.
+
+Also provide a one-line meal description and plate totals (sum of items).
+
+Return ONLY valid JSON, no markdown, no commentary. Format:
 {
   "description": "Grilled chicken bowl with rice and vegetables",
   "items": [
@@ -62,16 +65,11 @@ Return ONLY valid JSON, no markdown. Format:
       "protein": 53,
       "carbs": 0,
       "fat": 6,
-      "fiber": 0
+      "fiber": 0,
+      "confidence": 0.9
     }
   ],
-  "totals": {
-    "calories": 650,
-    "protein": 58,
-    "carbs": 72,
-    "fat": 14,
-    "fiber": 8
-  }
+  "totals": { "calories": 650, "protein": 58, "carbs": 72, "fat": 14, "fiber": 8 }
 }`;
 
 Deno.serve(async (req) => {
