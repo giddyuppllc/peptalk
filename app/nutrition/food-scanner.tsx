@@ -7,6 +7,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
@@ -14,6 +15,8 @@ import {
   Alert,
   Image,
   Linking,
+  Modal,
+  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -35,6 +38,7 @@ import { trackFeatureGated } from '../../src/services/analyticsEvents';
 import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
 import { AskAimeeButton } from '../../src/components/AskAimeeButton';
 import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
+import { todayLocalISO } from '../../src/utils/dateUtil';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 
@@ -109,6 +113,11 @@ export default function FoodScannerScreen() {
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [selectedMealType, setSelectedMealType] = useState<string>('lunch');
+  // Inline correction: the vision model can misidentify an item (e.g. a
+  // beef stick read as "creamer"). Let the user fix name + macros before
+  // it lands in the daily ring, instead of logging a wrong guess silently.
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [draft, setDraft] = useState<FoodItem | null>(null);
 
   // 30s vision round-trip can outlive the screen if the user navigates
   // back mid-scan. Guard every post-await setState.
@@ -313,7 +322,7 @@ export default function FoodScannerScreen() {
   const logMeal = () => {
     if (!result) return;
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocalISO();
     // Clamp every LLM-emitted item — vision model can hallucinate any
     // value, and these foods land directly in the daily ring. Same
     // per-row caps as sanitizeLogMeal so the scan surface can't bypass
@@ -344,6 +353,44 @@ export default function FoodScannerScreen() {
   const retake = () => {
     setPhoto(null);
     setResult(null);
+  };
+
+  // ── Inline item editing ──
+  const openEditor = (i: number) => {
+    if (!result) return;
+    tapMedium();
+    setEditIndex(i);
+    setDraft({ ...result.items[i] });
+  };
+
+  const closeEditor = () => {
+    setEditIndex(null);
+    setDraft(null);
+  };
+
+  // Numeric fields: strip non-numeric input, clamp to >= 0, keep as number.
+  const setDraftNum = (key: 'calories' | 'protein' | 'carbs' | 'fat', v: string) => {
+    const n = Math.max(0, Number(v.replace(/[^0-9.]/g, '')) || 0);
+    setDraft((d) => (d ? { ...d, [key]: n } : d));
+  };
+
+  const recomputeTotals = (items: FoodItem[]): ScanResult['totals'] =>
+    items.reduce(
+      (acc, it) => ({
+        calories: acc.calories + (Number(it.calories) || 0),
+        protein: acc.protein + (Number(it.protein) || 0),
+        carbs: acc.carbs + (Number(it.carbs) || 0),
+        fat: acc.fat + (Number(it.fat) || 0),
+        fiber: acc.fiber + (Number(it.fiber) || 0),
+      }),
+      { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
+    );
+
+  const saveEdit = () => {
+    if (editIndex === null || !draft || !result) return;
+    const items = result.items.map((it, i) => (i === editIndex ? draft : it));
+    setResult({ ...result, items, totals: recomputeTotals(items) });
+    closeEditor();
   };
 
   const MEAL_TYPES = [
@@ -446,32 +493,47 @@ export default function FoodScannerScreen() {
                 plain-English read on each item before the gram counts.
                 Macros drop to a smaller second line. */}
             <Text style={[styles.sectionTitle, { color: t.textSecondary }]}>Identified Foods</Text>
+            <Text style={[styles.editHint, { color: t.textSecondary }]}>
+              Wrong guess? Tap an item to fix its name or macros before logging.
+            </Text>
             {result.items.map((item, i) => {
               const signal = scoreFoodItem(item);
               const meta = SIGNAL_META[signal];
               return (
-                <GlassCard key={i} style={styles.itemCard}>
-                  <View style={styles.itemHeader}>
-                    <View style={styles.itemHeaderLeft}>
-                      <View
-                        style={[styles.signalBadge, { backgroundColor: `${meta.color}1F`, borderColor: `${meta.color}55` }]}
-                        accessibilityLabel={`${meta.label} food`}
-                        accessibilityRole="text"
-                      >
-                        <Ionicons name={meta.icon} size={14} color={meta.color} />
-                        <Text style={[styles.signalText, { color: meta.color }]}>{meta.label}</Text>
+                <TouchableOpacity
+                  key={i}
+                  activeOpacity={0.7}
+                  onPress={() => openEditor(i)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Edit ${item.name}`}
+                  accessibilityHint="Opens an editor to correct the name and macros"
+                >
+                  <GlassCard style={styles.itemCard}>
+                    <View style={styles.itemHeader}>
+                      <View style={styles.itemHeaderLeft}>
+                        <View
+                          style={[styles.signalBadge, { backgroundColor: `${meta.color}1F`, borderColor: `${meta.color}55` }]}
+                          accessibilityLabel={`${meta.label} food`}
+                          accessibilityRole="text"
+                        >
+                          <Ionicons name={meta.icon} size={14} color={meta.color} />
+                          <Text style={[styles.signalText, { color: meta.color }]}>{meta.label}</Text>
+                        </View>
+                        <Text style={[styles.itemName, { color: t.text }]} numberOfLines={2}>{item.name}</Text>
                       </View>
-                      <Text style={[styles.itemName, { color: t.text }]} numberOfLines={2}>{item.name}</Text>
+                      <View style={styles.itemHeaderRight}>
+                        <Text style={[styles.itemGrams, { color: t.textSecondary }]}>~{item.estimatedGrams}g</Text>
+                        <Ionicons name="pencil" size={14} color={t.textSecondary} style={styles.itemEditIcon} />
+                      </View>
                     </View>
-                    <Text style={[styles.itemGrams, { color: t.textSecondary }]}>~{item.estimatedGrams}g</Text>
-                  </View>
-                  <View style={styles.itemMacros}>
-                    <Text style={[styles.itemMacro, { color: t.textSecondary }]}>{item.calories} cal</Text>
-                    <Text style={[styles.itemMacro, { color: accent.deep }]}>P {item.protein}g</Text>
-                    <Text style={[styles.itemMacro, { color: accent.pastel }]}>C {item.carbs}g</Text>
-                    <Text style={[styles.itemMacro, { color: '#ef4444' }]}>F {item.fat}g</Text>
-                  </View>
-                </GlassCard>
+                    <View style={styles.itemMacros}>
+                      <Text style={[styles.itemMacro, { color: t.textSecondary }]}>{item.calories} cal</Text>
+                      <Text style={[styles.itemMacro, { color: accent.deep }]}>P {item.protein}g</Text>
+                      <Text style={[styles.itemMacro, { color: accent.pastel }]}>C {item.carbs}g</Text>
+                      <Text style={[styles.itemMacro, { color: '#ef4444' }]}>F {item.fat}g</Text>
+                    </View>
+                  </GlassCard>
+                </TouchableOpacity>
               );
             })}
 
@@ -536,6 +598,94 @@ export default function FoodScannerScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Inline item editor — correct a misidentified item before logging. */}
+      <Modal
+        visible={editIndex !== null && !!draft}
+        transparent
+        animationType="fade"
+        onRequestClose={closeEditor}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
+          <View style={[styles.modalCard, { backgroundColor: t.surface, borderColor: t.cardBorder }]}>
+            <Text style={[styles.modalTitle, { color: t.text }]}>Edit item</Text>
+
+            <Text style={[styles.editLabel, { color: t.textSecondary }]}>Name</Text>
+            <TextInput
+              value={draft?.name ?? ''}
+              onChangeText={(v) => setDraft((d) => (d ? { ...d, name: v } : d))}
+              placeholder="Food name"
+              placeholderTextColor={t.textMuted}
+              style={[styles.editInput, { color: t.text, backgroundColor: t.bg, borderColor: t.cardBorder }]}
+              maxLength={200}
+            />
+
+            <View style={styles.editRow}>
+              <View style={styles.editCol}>
+                <Text style={[styles.editLabel, { color: t.textSecondary }]}>Calories</Text>
+                <TextInput
+                  value={String(draft?.calories ?? 0)}
+                  onChangeText={(v) => setDraftNum('calories', v)}
+                  keyboardType="numeric"
+                  style={[styles.editInput, { color: t.text, backgroundColor: t.bg, borderColor: t.cardBorder }]}
+                />
+              </View>
+              <View style={styles.editCol}>
+                <Text style={[styles.editLabel, { color: t.textSecondary }]}>Protein (g)</Text>
+                <TextInput
+                  value={String(draft?.protein ?? 0)}
+                  onChangeText={(v) => setDraftNum('protein', v)}
+                  keyboardType="numeric"
+                  style={[styles.editInput, { color: t.text, backgroundColor: t.bg, borderColor: t.cardBorder }]}
+                />
+              </View>
+            </View>
+
+            <View style={styles.editRow}>
+              <View style={styles.editCol}>
+                <Text style={[styles.editLabel, { color: t.textSecondary }]}>Carbs (g)</Text>
+                <TextInput
+                  value={String(draft?.carbs ?? 0)}
+                  onChangeText={(v) => setDraftNum('carbs', v)}
+                  keyboardType="numeric"
+                  style={[styles.editInput, { color: t.text, backgroundColor: t.bg, borderColor: t.cardBorder }]}
+                />
+              </View>
+              <View style={styles.editCol}>
+                <Text style={[styles.editLabel, { color: t.textSecondary }]}>Fat (g)</Text>
+                <TextInput
+                  value={String(draft?.fat ?? 0)}
+                  onChangeText={(v) => setDraftNum('fat', v)}
+                  keyboardType="numeric"
+                  style={[styles.editInput, { color: t.text, backgroundColor: t.bg, borderColor: t.cardBorder }]}
+                />
+              </View>
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                onPress={closeEditor}
+                style={[styles.modalBtn, { backgroundColor: t.bg, borderColor: t.cardBorder, borderWidth: 1 }]}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel edit"
+              >
+                <Text style={[styles.modalBtnText, { color: t.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={saveEdit}
+                style={[styles.modalBtn, { backgroundColor: accent.deep }]}
+                accessibilityRole="button"
+                accessibilityLabel="Save item changes"
+              >
+                <Text style={[styles.modalBtnText, { color: '#fff' }]}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -627,8 +777,11 @@ const styles = StyleSheet.create({
   itemCard: { marginBottom: Spacing.xs, paddingVertical: Spacing.sm },
   itemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
   itemHeaderLeft: { flex: 1, gap: 4 },
+  itemHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 8 },
+  itemEditIcon: { marginTop: 4 },
   itemName: { fontSize: FontSizes.md, fontWeight: '600', color: Colors.darkText },
-  itemGrams: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary, marginLeft: 8, marginTop: 4 },
+  itemGrams: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary, marginTop: 4 },
+  editHint: { fontSize: FontSizes.xs, marginBottom: Spacing.sm, marginTop: -Spacing.xs },
   itemMacros: { flexDirection: 'row', gap: Spacing.md },
   itemMacro: { fontSize: 11, fontWeight: '500', color: Colors.darkTextSecondary },
   signalBadge: {
@@ -677,6 +830,31 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.05)',
   },
   retakeBtnText: { color: Colors.darkTextSecondary, fontSize: FontSizes.sm, fontWeight: '500' },
+
+  // Edit modal
+  modalOverlay: {
+    flex: 1, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)', padding: Spacing.lg,
+  },
+  modalCard: {
+    width: '100%', maxWidth: 420, borderRadius: BorderRadius.lg,
+    borderWidth: 1, padding: Spacing.lg, gap: Spacing.xs,
+  },
+  modalTitle: { fontSize: FontSizes.lg, fontWeight: '700', marginBottom: Spacing.sm },
+  editLabel: { fontSize: FontSizes.xs, fontWeight: '600', marginBottom: 4, marginTop: Spacing.xs },
+  editInput: {
+    borderWidth: 1, borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+    fontSize: FontSizes.md,
+  },
+  editRow: { flexDirection: 'row', gap: Spacing.sm },
+  editCol: { flex: 1 },
+  modalActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.lg },
+  modalBtn: {
+    flex: 1, height: 46, borderRadius: BorderRadius.md,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  modalBtnText: { fontSize: FontSizes.md, fontWeight: '700' },
 
   // Locked
   locked: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, padding: Spacing.xl },

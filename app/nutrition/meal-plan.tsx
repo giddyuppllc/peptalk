@@ -27,6 +27,7 @@ import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import type { MealType } from '../../src/types/fitness';
 import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
 import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
+import { todayLocalISO } from '../../src/utils/dateUtil';
 
 interface PlannedMeal {
   type: string;
@@ -140,7 +141,7 @@ function MealPlanScreen() {
   };
 
   const handleLogDay = (pd: PlannedDay) => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocalISO();
     const now = new Date().toISOString();
     // Cap meals/day at 8 so a runaway plan can't insert 1000 rows.
     for (const meal of pd.meals.slice(0, 8)) {

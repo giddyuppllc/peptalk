@@ -21,12 +21,14 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { Colors, Spacing, FontSizes, BorderRadius, Gradients } from '../../src/constants/theme';
 import { LearnVideoCard } from '../../src/components/LearnVideoCard';
 import { SyringeSVG } from '../../src/components/v3';
+import { ACETIC_ACID_PEPTIDE_NAMES } from '../../src/data/calculatorMetadata';
 
 const VIAL_PRESETS = [2, 5, 10, 15, 30];
 const WATER_PRESETS = [1, 2, 3, 5];
 
 type VialUnit = 'mg' | 'mcg';
 type DoseUnit = 'mg' | 'mcg';
+type DiluentType = 'bacWater' | 'aceticAcid';
 
 export default function ReconstitutionCalculatorScreen() {
   const router = useRouter();
@@ -41,6 +43,15 @@ export default function ReconstitutionCalculatorScreen() {
   // is the readable unit at human-scale doses; the toggle stays so
   // mcg-thinking peptides still work.
   const [doseUnit, setDoseUnit] = useState<DoseUnit>('mg');
+  // BUG A — screen-level RESULT display unit. Independent of the dose INPUT
+  // toggle above: it reformats every computed result (concentration, dose)
+  // between mcg and mg. Defaults to mg per the calculator spec so users
+  // aren't forced to mentally divide by 1000 on every visit.
+  const [resultUnit, setResultUnit] = useState<DoseUnit>('mg');
+  // BUG C — user-selectable diluent. Metadata-only before; now the user can
+  // say they're reconstituting with acetic acid and get the matching label +
+  // stability reminder for hydrophobic compounds.
+  const [diluentType, setDiluentType] = useState<DiluentType>('bacWater');
   const [showResults, setShowResults] = useState(false);
 
   // Clamp at parse so a transient negative input (user typing "-5") can't
@@ -64,6 +75,29 @@ export default function ReconstitutionCalculatorScreen() {
   const dosesPerVial = doseMcg > 0 && volumeToInject > 0 ? waterMl / volumeToInject : 0;
 
   const canCalculate = vialRaw > 0 && waterMl > 0 && doseRaw > 0;
+
+  // BUG A — reformat an internally-mcg value into the chosen result unit.
+  // 1 mg = 1000 mcg. mg keeps 3 decimals below 1 (so a 33 mcg/tick reads as
+  // 0.033 mg, not a lossy 0.03) and 2 decimals otherwise.
+  const formatByUnit = useCallback(
+    (mcg: number) => {
+      if (resultUnit === 'mg') {
+        const mg = mcg / 1000;
+        return `${mg.toFixed(mg > 0 && mg < 1 ? 3 : 2)} mg`;
+      }
+      return `${mcg.toFixed(mcg < 10 ? 1 : 0)} mcg`;
+    },
+    [resultUnit],
+  );
+  // Show both units for the dose so the number is unambiguous regardless of
+  // which unit the user is thinking in.
+  const doseBothText = useMemo(() => {
+    const mg = `${(doseMcg / 1000).toFixed(doseMcg / 1000 < 1 ? 3 : 2)} mg`;
+    const mcg = `${doseMcg.toFixed(doseMcg < 10 ? 1 : 0)} mcg`;
+    return resultUnit === 'mg' ? `${mg} (${mcg})` : `${mcg} (${mg})`;
+  }, [doseMcg, resultUnit]);
+  const isAcetic = diluentType === 'aceticAcid';
+  const diluentLabel = isAcetic ? 'Acetic Acid' : 'BAC Water';
 
   const handleCalculate = useCallback(() => {
     setShowResults(true);
@@ -165,9 +199,9 @@ export default function ReconstitutionCalculatorScreen() {
           </GlassCard>
         </View>
 
-        {/* BAC Water Volume */}
+        {/* Diluent Volume (BAC water or acetic acid — BUG C) */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: t.text }]}>BAC Water Volume</Text>
+          <Text style={[styles.sectionTitle, { color: t.text }]}>{diluentLabel} Volume</Text>
           <GlassCard>
             <View style={styles.row}>
               <TextInput
@@ -246,16 +280,78 @@ export default function ReconstitutionCalculatorScreen() {
           </GlassCard>
         </View>
 
+        {/* Result display unit (BUG A) + diluent type (BUG C).
+            Toggle styling mirrors app/doses/calculator.tsx's pill toggle. */}
+        <View style={styles.section}>
+          <GlassCard>
+            <View style={styles.optionRow}>
+              <Text style={[styles.optionLabel, { color: t.textSecondary }]}>Show results in</Text>
+              <View style={styles.segToggle}>
+                {(['mg', 'mcg'] as DoseUnit[]).map((u) => {
+                  const active = resultUnit === u;
+                  return (
+                    <TouchableOpacity
+                      key={u}
+                      style={[styles.segBtn, active && { backgroundColor: t.primary }]}
+                      onPress={() => setResultUnit(u)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Show results in ${u}`}
+                    >
+                      <Text style={[styles.segText, { color: active ? '#fff' : t.textSecondary }]}>{u}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={[styles.optionRow, { marginTop: 14 }]}>
+              <Text style={[styles.optionLabel, { color: t.textSecondary }]}>Diluent</Text>
+              <View style={styles.segToggle}>
+                {([
+                  ['bacWater', 'BAC water'],
+                  ['aceticAcid', 'Acetic acid'],
+                ] as [DiluentType, string][]).map(([val, lbl]) => {
+                  const active = diluentType === val;
+                  return (
+                    <TouchableOpacity
+                      key={val}
+                      style={[styles.segBtn, styles.segBtnWide, active && { backgroundColor: t.primary }]}
+                      onPress={() => {
+                        setDiluentType(val);
+                        setShowResults(false);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Diluent: ${lbl}`}
+                    >
+                      <Text style={[styles.segText, { color: active ? '#fff' : t.textSecondary }]}>{lbl}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {isAcetic && (
+              <View style={styles.aceticNote}>
+                <Ionicons name="information-circle-outline" size={15} color={Colors.rose} />
+                <Text style={[styles.aceticNoteText, { color: t.textSecondary }]}>
+                  Acetic acid (0.6%) improves stability for hydrophobic peptides like{' '}
+                  {ACETIC_ACID_PEPTIDE_NAMES.join(', ')}. Use it in place of BAC water for those compounds.
+                </Text>
+              </View>
+            )}
+          </GlassCard>
+        </View>
+
         {/* Quick Concentration Preview */}
         {vialRaw > 0 && waterMl > 0 && (
           <View style={styles.section}>
             <GlassCard variant="gradient">
               <Text style={[styles.previewLabel, { color: t.textSecondary }]}>Concentration</Text>
               <Text style={styles.previewValue}>
-                {concentrationPerTick.toFixed(1)} mcg per 0.01mL (tick)
+                {formatByUnit(concentrationPerTick)} per 0.01mL (tick)
               </Text>
               <Text style={[styles.previewSub, { color: t.textSecondary }]}>
-                {(vialMcg / waterMl).toFixed(0)} mcg per 1mL total
+                {formatByUnit(concentrationPerMl)} per 1mL total
               </Text>
             </GlassCard>
           </View>
@@ -277,8 +373,12 @@ export default function ReconstitutionCalculatorScreen() {
               <Text style={[styles.sectionTitle, { color: t.text }]}>Results</Text>
               <GlassCard variant="glow">
                 <ResultRow
+                  label="Dose per injection"
+                  value={doseBothText}
+                />
+                <ResultRow
                   label="Concentration"
-                  value={`${concentrationPerTick.toFixed(1)} mcg / tick`}
+                  value={`${formatByUnit(concentrationPerTick)} / tick`}
                 />
                 <ResultRow
                   label="Volume to inject"
@@ -452,6 +552,49 @@ const styles = StyleSheet.create({
   unitToggleText: {
     fontSize: FontSizes.sm,
     fontWeight: '700',
+  },
+
+  // Result-unit + diluent toggles (mirror calculator.tsx pill toggle)
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  optionLabel: {
+    fontSize: FontSizes.md,
+    fontWeight: '600',
+  },
+  segToggle: {
+    flexDirection: 'row',
+    gap: 4,
+    padding: 3,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  segBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: BorderRadius.sm,
+    minWidth: 44,
+    alignItems: 'center',
+  },
+  segBtnWide: {
+    paddingHorizontal: 14,
+  },
+  segText: {
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
+  },
+  aceticNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginTop: 12,
+  },
+  aceticNoteText: {
+    flex: 1,
+    fontSize: FontSizes.sm,
+    lineHeight: 18,
   },
 
   // Presets

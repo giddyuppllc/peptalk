@@ -124,6 +124,13 @@ export default function CalculatorV2Screen() {
   const [perShotOverride, setPerShotOverride] = useState<string>('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [displayUnit, setDisplayUnit] = useState<'mg' | 'mcg'>('mg');
+  // BUG C — optional per-session diluent override. Null = follow the peptide
+  // metadata (the §8.3 acetic-acid list). Setting it lets a user who is
+  // reconstituting differently than the default flip the label + reminder
+  // without changing the underlying catalog.
+  const [diluentOverride, setDiluentOverride] = useState<
+    'bacWater' | 'aceticAcid' | null
+  >(null);
   // BUG 2 — user-selectable cycle start date (default today).
   const [cycleStartDate, setCycleStartDate] = useState<string>(() =>
     localDateKey(new Date()),
@@ -139,6 +146,7 @@ export default function CalculatorV2Screen() {
     );
     setDisplayUnit(meta.displayUnit);
     setPerShotOverride('');
+    setDiluentOverride(null);
     if (meta.diluentType === 'aceticAcid') setShowAceticFlag(true);
   }, [meta, ref]);
 
@@ -211,6 +219,15 @@ export default function CalculatorV2Screen() {
       recommendedReconstitutionMl: meta?.recommendedReconstitutionMl,
     });
   }, [peptideMg, diluentMl, vialSizeMl, perShotMg, meta]);
+
+  // Effective diluent = user override if set, else the peptide's metadata
+  // default. Drives the diluent label + Reconstitute card copy. The §8.3
+  // red-flag banner/modal stay metadata-driven (clinical requirement) so an
+  // override can't suppress the hydrophobic-peptide warning.
+  const isAcetic =
+    diluentOverride != null
+      ? diluentOverride === 'aceticAcid'
+      : meta?.diluentType === 'aceticAcid';
 
   const handleSelectPeptide = (id: string) => {
     tapLight();
@@ -448,8 +465,82 @@ export default function CalculatorV2Screen() {
               }
               setDiluentMl(v);
             }}
-            suffix={meta?.diluentType === 'aceticAcid' ? 'mL acetic' : 'mL BAC'}
+            suffix={isAcetic ? 'mL acetic' : 'mL BAC'}
           />
+          {/* BUG C — optional diluent override. */}
+          <View style={[styles.rowBetween, { marginTop: 14 }]}>
+            <Text
+              style={[
+                styles.fieldLabel,
+                {
+                  color: t.colors.textSecondary as string,
+                  fontFamily: t.typography.body,
+                },
+              ]}
+            >
+              Diluent
+            </Text>
+            <View
+              style={[
+                styles.toggle,
+                { backgroundColor: (t.colors as any).divider as string },
+              ]}
+            >
+              {(
+                [
+                  ['bacWater', 'BAC'],
+                  ['aceticAcid', 'Acetic'],
+                ] as ['bacWater' | 'aceticAcid', string][]
+              ).map(([val, lbl]) => {
+                const active = isAcetic === (val === 'aceticAcid');
+                return (
+                  <Pressable
+                    key={val}
+                    onPress={() => {
+                      tapLight();
+                      setDiluentOverride(val);
+                    }}
+                    style={[
+                      styles.toggleSeg,
+                      {
+                        backgroundColor: active
+                          ? (t.colors.textPrimary as string)
+                          : 'transparent',
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color: active
+                          ? (t.colors.bgBase1 as string)
+                          : (t.colors.textSecondary as string),
+                        fontFamily: t.typography.bodyBold,
+                        fontSize: 11,
+                        letterSpacing: 0.4,
+                      }}
+                    >
+                      {lbl}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+          {isAcetic && meta?.diluentType === 'aceticAcid' ? (
+            <Text
+              style={{
+                marginTop: 8,
+                color: t.colors.textSecondary as string,
+                fontFamily: t.typography.body,
+                fontSize: 11,
+                lineHeight: 16,
+                fontStyle: 'italic',
+              }}
+            >
+              Acetic acid (0.6%) improves stability for {peptideName ?? 'this peptide'} —
+              use it in place of BAC water.
+            </Text>
+          ) : null}
         </GlassCard>
 
         {/* Protocol intent */}
@@ -465,19 +556,37 @@ export default function CalculatorV2Screen() {
           >
             Protocol intent
           </Text>
-          <View style={[styles.chipRow, { marginTop: 8 }]}>
-            {(Object.keys(INTENT_LABELS) as ProtocolIntent[]).map((k) => (
-              <Chip
-                key={k}
-                label={INTENT_LABELS[k]}
-                primary={intent === k}
-                onPress={() => {
-                  tapLight();
-                  setIntent(k);
-                }}
-              />
-            ))}
-          </View>
+          {/* BUG B — single-phase peptides map every intent to the same
+              (only) schedule entry, so the Gradual/Aggressive/Maintenance
+              chips would silently do nothing. Hide them and explain rather
+              than fabricate phases. */}
+          {ref && ref.schedule.length <= 1 ? (
+            <Text
+              style={{
+                marginTop: 8,
+                color: t.colors.textSecondary as string,
+                fontFamily: t.typography.body,
+                fontSize: 12,
+                lineHeight: 17,
+              }}
+            >
+              This peptide uses a fixed starting dose; adjust based on response.
+            </Text>
+          ) : (
+            <View style={[styles.chipRow, { marginTop: 8 }]}>
+              {(Object.keys(INTENT_LABELS) as ProtocolIntent[]).map((k) => (
+                <Chip
+                  key={k}
+                  label={INTENT_LABELS[k]}
+                  primary={intent === k}
+                  onPress={() => {
+                    tapLight();
+                    setIntent(k);
+                  }}
+                />
+              ))}
+            </View>
+          )}
 
           <Pressable
             onPress={() => {
@@ -509,7 +618,7 @@ export default function CalculatorV2Screen() {
         {/* Reconstitute output card */}
         {result && peptideId ? (
           <ReconstituteCard
-            isAcetic={meta?.diluentType === 'aceticAcid'}
+            isAcetic={isAcetic}
             mgInVial={parseFloat(peptideMg) || 0}
             diluentMl={parseFloat(diluentMl) || 0}
             concentrationMgPerMl={result.concentrationMgPerMl}

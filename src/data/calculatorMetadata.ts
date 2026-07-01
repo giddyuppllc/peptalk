@@ -76,6 +76,20 @@ const OVERRIDES: Record<string, Override> = {
   'll-37': { displayUnit: 'mcg' },
 };
 
+/**
+ * §8.3 acetic-acid peptides, by display name — the same set encoded in
+ * OVERRIDES above (aod-9604, igf-1, igf-1-lr3, dihexa). Exported so screens
+ * without a peptide picker (e.g. the standalone reconstitution calculator)
+ * can remind users which compounds prefer acetic acid without re-hardcoding
+ * the list.
+ */
+export const ACETIC_ACID_PEPTIDE_NAMES = [
+  'IGF-1',
+  'IGF-1 LR3',
+  'Dihexa',
+  'AOD-9604',
+] as const;
+
 const DEFAULTS = {
   displayUnit: 'mg' as const,
   standardVialSizeMl: 3 as const,

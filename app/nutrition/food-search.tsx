@@ -53,6 +53,7 @@ import {
   lookupBarcode,
   type UnifiedFood,
 } from '../../src/services/foodSearchService';
+import { todayLocalISO } from '../../src/utils/dateUtil';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -136,7 +137,7 @@ type WeightUnit = 'g' | 'oz';
 
 const OZ_TO_GRAMS = 28.3495;
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => todayLocalISO();
 
 // ---------------------------------------------------------------------------
 // Debounce hook

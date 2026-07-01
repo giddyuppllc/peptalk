@@ -40,13 +40,21 @@ export function ExerciseVideo({ exerciseId, compact = false }: ExerciseVideoProp
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle');
 
-  // No video registered for this exercise — render nothing so the
-  // exercise detail page leads with the form instructions instead of
-  // a useless placeholder. Per Jamie's feedback ("Videos don't load
-  // still"). When videos land in the manifest the player surfaces
-  // automatically.
+  // No video registered for this exercise — render a small "coming
+  // soon" placeholder rather than nothing. Returning null left the
+  // detail page with a blank gap that testers read as "videos don't
+  // load / not in view." The placeholder makes the absence explicit;
+  // when videos land in the manifest the player surfaces automatically.
   if (!hasVideo) {
-    return null;
+    return (
+      <GlassCard style={compact ? styles.compactCard : styles.card}>
+        <View style={styles.placeholder}>
+          <Ionicons name="videocam-outline" size={28} color={Colors.darkTextSecondary} />
+          <Text style={styles.placeholderText}>Video coming soon</Text>
+          <Text style={styles.subText}>Follow the form cues below for now.</Text>
+        </View>
+      </GlassCard>
+    );
   }
 
   const handlePlaybackUpdate = (playbackStatus: AVPlaybackStatus) => {
