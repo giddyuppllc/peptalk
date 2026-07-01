@@ -249,9 +249,19 @@ export async function initIAP(
         code === 'E_USER_CANCELED' ||
         /cancel/i.test(error?.message ?? '');
       if (!isUserCancel) {
-        captureException(error, {
+        // react-native-iap hands us a plain object ({ code, message, productId }),
+        // NOT an Error — passing it straight to Sentry logs the useless
+        // "Object captured as exception with keys: code, message, productId".
+        // Wrap it in a real Error so Sentry gets a readable title + stack, and
+        // stash the raw fields as context. 2026-06-30 fix.
+        const wrapped = new Error(
+          `IAP purchase error [${code ?? 'unknown'}]: ${error?.message ?? 'unknown error'}`,
+        );
+        captureException(wrapped, {
           source: 'iap.purchase_error',
           code: code ?? 'unknown',
+          productId: error?.productId ?? 'unknown',
+          rawMessage: error?.message ?? '',
         });
       }
     });

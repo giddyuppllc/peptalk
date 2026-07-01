@@ -131,12 +131,30 @@ export function captureException(
   err: unknown,
   context?: Record<string, unknown>,
 ): void {
+  // Normalize non-Error inputs. Passing a plain object (e.g. a react-native-iap
+  // error) to Sentry logs the useless "Object captured as exception with keys:
+  // ...". Wrap anything that isn't an Error so Sentry always gets a real title
+  // + stack; the original shape is preserved in context by callers.
+  const normalized =
+    err instanceof Error
+      ? err
+      : new Error(
+          typeof err === 'string'
+            ? err
+            : (() => {
+                try {
+                  return JSON.stringify(err);
+                } catch {
+                  return String(err);
+                }
+              })(),
+        );
   if (__DEV__) {
-    console.warn('[telemetry:exception]', err, context ?? {});
+    console.warn('[telemetry:exception]', normalized, context ?? {});
   }
-  if (_sentry && shouldSend(errSignature(err, context))) {
+  if (_sentry && shouldSend(errSignature(normalized, context))) {
     try {
-      _sentry.captureException(err, { extra: scrubContext(context) });
+      _sentry.captureException(normalized, { extra: scrubContext(context) });
     } catch { /* never let telemetry crash callers */ }
   }
 }
