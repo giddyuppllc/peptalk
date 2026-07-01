@@ -74,7 +74,7 @@ export interface DosingTableEntry {
  * slug id and inCatalog:false so they're complete here without
  * fabricating a catalog peptide.
  */
-export const PEPTIDE_DOSING_TABLE: DosingTableEntry[] = [
+const RAW_DOSING_TABLE: DosingTableEntry[] = [
   // ───────────── GH SECRETAGOGUES / GROWTH ─────────────
   {
     peptideId: 'tesamorelin',
@@ -879,6 +879,87 @@ export const PEPTIDE_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
 ];
+
+/**
+ * Titration notes [1]–[63] — the "Click For Notes [n]" pages that were missing
+ * from the original table ingest (2026-06-30). Transcribed verbatim. Each entry
+ * in the table above references its note via `titrationNoteRef`; the transform
+ * below fills `titrationNote` + clears `titrationNotePending`.
+ */
+export const TITRATION_NOTES: Record<number, string> = {
+  1: 'Start at .5mg and titrate up every 1–2 weeks if tolerated, to a max dose of 2mg.',
+  2: 'No real titration strategy — 1–2mg is the dosing range.',
+  3: 'Start at 100mcg and increase the dose every 1–2 weeks (as needed) up to a max dose of 300mcg.',
+  4: 'Start at 100mcg and increase the dose every 1–2 weeks (as needed) up to a max dose of 500mcg.',
+  5: 'Start at 200mcg and increase the dose every 1–2 weeks (as needed) up to a max dose of 600mcg.',
+  6: 'No real titration strategy on this one.',
+  7: 'You can start low to assess effects on fasting blood glucose and increase to a max dose of 25mg.',
+  8: 'Start at 100mcg and increase the dose every 1–2 weeks (as needed) up to a max dose of 500mcg.',
+  9: 'Start low at 25mcg and work up to a max dose of 100mcg per administration. Increase by 25mcg weekly if needed.',
+  10: 'Start low at 200mcg and work up to a max dose of 400mcg per administration. Increase by increments of 50mcg each week.',
+  11: 'Start at 100mcg for the first 3–4 days, then increase if tolerated.',
+  12: 'Start at the low end for 1–2 weeks, increasing gradually.',
+  13: 'No titration strategy. However, you can work your dose higher beyond 1–2mg if desired.',
+  14: 'No real titration strategy.',
+  15: 'No real titration strategy.',
+  16: 'Start low to assess tolerance and work up to a max dose of 25mg.',
+  17: 'Start at 50mg and work up as needed. This compound can be overwhelming at first.',
+  18: 'Start low to assess tolerance and work up to a max dose of 25mg.',
+  19: 'Start low to assess tolerance and work up to a max dose of 25mg.',
+  20: 'No real titration strategy. Assess a low dose, see how it combats fatigue, then work up as needed.',
+  21: 'Start low and work up as needed. If fatigue symptoms present, drop the dose or the compound altogether.',
+  22: 'No real titration strategy — you can increase as you see fit.',
+  23: 'Start at 50mg, assess, and increase as needed — maybe after 1–2 week increments.',
+  24: 'No titration strategy — just increase if desired. 600–1200mg a week is great.',
+  25: 'Start low at 100mcg and assess, then increase as needed based off fat-loss and thermogenesis effects.',
+  26: 'Start low at 50mg and work up as needed.',
+  27: 'Start low at 500mg and work up as needed.',
+  28: 'No titration needed.',
+  29: 'Start very low at 100mcg to assess.',
+  30: 'Start low to assess and work up to a max of 2mg. Don’t use 2x within 24 hours. Used pre-activity.',
+  31: 'Start low and work up as needed, increasing each week if needed.',
+  32: 'Start low and work up as needed, increasing each week if needed.',
+  33: 'No titration strategy.',
+  34: 'No titration strategy.',
+  35: 'No titration strategy.',
+  36: 'No titration strategy. If you need more, you can work up to the 5mg total weekly dose.',
+  37: 'No titration strategy.',
+  38: 'No titration strategy.',
+  39: 'No titration strategy.',
+  40: 'Start low at 250mcg for 7–10 days, then increase to 500–1000mcg daily until color is achieved. Then drop frequency to 2–3x a week to maintain color.',
+  41: 'Start low at 250mcg for 7–10 days, then increase to 500–1000mcg daily until color is achieved. Then drop frequency to 2–3x a week to maintain color.',
+  42: 'Start 0.5mg 2x/week; increase to 1–2mg 3x/week as needed.',
+  43: 'No titration strategy needed.',
+  44: 'No titration strategy needed.',
+  45: 'Start low in the clinical starting range (.5–2mg) and work up every 4 weeks or as results plateau. Maybe increase by .5–2mg at a time.',
+  46: 'Start low in the clinical starting range (.5–2.5mg) and work up every 4 weeks or as results plateau. Maybe increase by .5–2mg at a time.',
+  47: 'Start low in the clinical starting range (.25–.5mg) and work up every 4 weeks or as results plateau. Maybe increase by .25–.5mg at a time.',
+  48: 'Start low in the clinical starting range (3mg) and work up every 4 weeks or as results plateau. Maybe increase by .5mg–1mg at a time.',
+  49: 'Start low in the clinical starting range (.25–.5mg) and work up every 4 weeks or as results plateau. Maybe increase by .25–.5mg at a time.',
+  50: 'Start low in the clinical starting range (.25–.5mg) and work up every 4 weeks or as results plateau. Maybe increase by .25–.5mg at a time.',
+  51: 'Start 0.25mg qAM → 0.5mg if tolerated; 1.0mg only for advanced users due to side-effects.',
+  52: 'No titration — use for 3 days, then come off for months to allow new cells to repopulate.',
+  53: 'Higher doses don’t really yield better benefits, but stay tuned in with your bloodwork.',
+  54: 'Titrate up based off the need for it in bloodwork — testing Testosterone, LH, FSH, and Estrogen.',
+  55: 'Titrate up based off the need for it in bloodwork — testing Testosterone, LH, FSH, and Estrogen.',
+  56: 'No titration needed.',
+  57: 'No titration needed.',
+  58: 'No titration needed.',
+  59: 'Start low at 100mcg, assess how it impacts sleep, and work up as needed.',
+  60: 'Start low at 5mg, assess tolerance, and work up over the course of your cycle.',
+  61: 'No titration strategy.',
+  62: 'No titration strategy.',
+  63: 'Only titrate up if effects are mild.',
+};
+
+/**
+ * Master table with titration prose filled in from TITRATION_NOTES. Any entry
+ * whose ref isn't in the map keeps titrationNotePending:true (none pending now).
+ */
+export const PEPTIDE_DOSING_TABLE: DosingTableEntry[] = RAW_DOSING_TABLE.map((e) => {
+  const note = TITRATION_NOTES[e.titrationNoteRef];
+  return note ? { ...e, titrationNote: note, titrationNotePending: false } : e;
+});
 
 /**
  * Aliases — the master table sometimes uses a route-specific or
