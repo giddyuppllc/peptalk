@@ -237,10 +237,23 @@ function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
     : undefined;
 
   const profile = context.healthProfile;
+  // Include weight/height/BMI/goal so Aimee can actually compute calories &
+  // macros (Mifflin-St Jeor) for "what are my macros?" instead of having to
+  // ask the user for stats we already have. (Jamie, build 59 — Aimee gave
+  // peptide stacks partly because it never received body stats.)
+  const bm = (profile as any)?.bodyMetrics;
+  const bmi =
+    bm?.weightLbs && bm?.heightInches
+      ? ((bm.weightLbs / (bm.heightInches * bm.heightInches)) * 703).toFixed(1)
+      : null;
   const healthProfileSummary = profile
     ? [
         (profile as any).biologicalSex,
         (profile as any).age ? `age ${(profile as any).age}` : null,
+        bm?.weightLbs ? `weight ${bm.weightLbs} lb` : null,
+        bm?.heightInches ? `height ${bm.heightInches} in` : null,
+        bmi ? `BMI ${bmi}` : null,
+        bm?.goalWeightLbs ? `goal weight ${bm.goalWeightLbs} lb` : null,
         (profile as any).pregnant ? 'pregnant' : null,
         (profile as any).nursing ? 'nursing' : null,
       ].filter(Boolean).join(', ')
