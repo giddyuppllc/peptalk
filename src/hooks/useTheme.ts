@@ -172,9 +172,14 @@ function buildTheme(gender: 'male' | 'female'): ThemeColors {
     tabBar: CLOUD_DANCER,
     surface: a.surfaceTint,
 
+    // Darkened for legibility on the cream (#F0EEE9) background — testers
+    // reported secondary/muted copy as "very light, difficult to read"
+    // (Shamily, build 59). Old values (#6B7280 ~4.1:1, #9CA3AF ~2.2:1) sat
+    // at/below the WCAG AA 4.5:1 floor; these clear it while keeping the
+    // text > secondary > muted hierarchy intact.
     text: '#2D2D2D',
-    textSecondary: '#6B7280',
-    textMuted: '#9CA3AF',
+    textSecondary: '#4B5563',
+    textMuted: '#6B7280',
 
     glass: 'rgba(255,255,255,0.85)',
     glassBorder: primaryRgbaGlass,
@@ -188,7 +193,7 @@ function buildTheme(gender: 'male' | 'female'): ThemeColors {
 
     inputBg: a.surfaceTint,
     inputBorder: cardBorder,
-    placeholder: '#9CA3AF',
+    placeholder: '#6B7280',
 
     splashGradient: [CLOUD_DANCER, a.blush, CLOUD_DANCER],
 
@@ -247,7 +252,9 @@ export function useTheme(): ThemeColors {
 
       text: c.textPrimary,
       textSecondary: c.textSecondary,
-      textMuted: 'rgba(241,236,228,0.45)',
+      // 0.45 alpha (~2.5:1 on #1B1C1F) was below the AA floor — bumped to
+      // 0.62 to match the light-theme legibility pass.
+      textMuted: 'rgba(241,236,228,0.62)',
 
       glass: 'rgba(38,40,44,0.78)',
       glassBorder: 'rgba(241,236,228,0.08)',
@@ -261,7 +268,7 @@ export function useTheme(): ThemeColors {
 
       inputBg: c.cardBg,
       inputBorder: c.cardBorder,
-      placeholder: 'rgba(241,236,228,0.45)',
+      placeholder: 'rgba(241,236,228,0.62)',
 
       icon: c.textSecondary,
 

@@ -190,7 +190,7 @@ const StackCard: React.FC<StackCardProps> = ({ stack, onLoad, onDelete }) => {
           </Text>
 
           {/* Peptide names (condensed) */}
-          <Text style={[styles.stackPeptides, { color: t.textMuted }]} numberOfLines={1}>
+          <Text style={[styles.stackPeptides, { color: t.textMuted }]} numberOfLines={2}>
             {peptideNames}
           </Text>
         </View>
@@ -1528,7 +1528,7 @@ export default function MyStacksScreen() {
 
   const handleLoadStack = (stack: PeptideStack) => {
     loadStack(stack);
-    router.push('/(tabs)/stack-builder');
+    router.push('/doses/stack-builder');
   };
 
   const handleCategoryTap = (categoryId: PeptideCategory) => {
@@ -1648,7 +1648,12 @@ export default function MyStacksScreen() {
                   <View style={[styles.carouselIcon, { backgroundColor: `${accent.deep}15` }]}>
                     <Ionicons name={cat.icon as any} size={20} color={accent.deep} />
                   </View>
-                  <Text style={[styles.carouselLabel, { color: t.text }]} numberOfLines={1}>
+                  <Text
+                    style={[styles.carouselLabel, { color: t.text }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                  >
                     {cat.label}
                   </Text>
                   <Text style={[styles.carouselCount, { color: t.textSecondary }]}>
@@ -1790,7 +1795,7 @@ export default function MyStacksScreen() {
           ) : (
             <TouchableOpacity
               style={[styles.emptyAction, { borderColor: `${accent.deep}40` }]}
-              onPress={() => router.push('/(tabs)/stack-builder')}
+              onPress={() => router.push('/doses/stack-builder')}
               activeOpacity={0.7}
             >
               <Ionicons name="add" size={18} color={accent.deep} />

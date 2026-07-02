@@ -27,7 +27,7 @@ import { AimeePendingActionCard } from '../../src/components/AimeePendingActionC
 import { AimeeToolResultCard } from '../../src/components/AimeeToolResultCard';
 import { getAimeeNudges } from '../../src/services/aimeeNudges';
 import { PepTalkCharacter } from '../../src/components/PepTalkCharacter';
-import { AimeeDnaIcon } from '../../src/components/AimeeDnaIcon';
+import { AimeeSparkIcon } from '../../src/components/AimeeSparkIcon';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { ChatHistoryDrawer } from '../../src/components/ChatHistoryDrawer';
 import { AimeeVoiceButton } from '../../src/components/AimeeVoiceButton';
@@ -1028,7 +1028,7 @@ export default function PepTalkScreen() {
             end={{ x: 1, y: 1 }}
             style={styles.emptyAvatarInner}
           >
-            <AimeeDnaIcon size={88} active />
+            <AimeeSparkIcon size={72} color="#3E7CB1" />
           </LinearGradient>
         </View>
         <Text style={[styles.emptyTitle, { color: t.text }]}>Hi, I'm Aimee</Text>
@@ -1089,16 +1089,33 @@ export default function PepTalkScreen() {
       >
         {/* ── Header ─────────────────────────────────────────── */}
         <View style={[styles.header, { backgroundColor: t.bg, borderBottomColor: t.cardBorder }]}>
-          <TouchableOpacity
-            onPress={() => setDrawerOpen(true)}
-            style={[styles.iconBtn, { backgroundColor: t.surface }]}
-            activeOpacity={0.7}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            accessibilityRole="button"
-            accessibilityLabel="Open chat history"
-          >
-            <Ionicons name="menu" size={20} color={t.text} />
-          </TouchableOpacity>
+          {/* Left cluster: Home + chat-history drawer. The global HomeFab
+              is hidden on the Aimee chat (bottom-left would sit under the
+              text-input bar), so this header carries the only Home
+              affordance — testers repeatedly reported no way back out of
+              the Aimee tab (builds 56/59). */}
+          <View style={styles.headerLeftBtns}>
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)' as never)}
+              style={[styles.iconBtn, { backgroundColor: t.surface }]}
+              activeOpacity={0.7}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel="Go to Home"
+            >
+              <Ionicons name="home-outline" size={19} color={t.text} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setDrawerOpen(true)}
+              style={[styles.iconBtn, { backgroundColor: t.surface }]}
+              activeOpacity={0.7}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel="Open chat history"
+            >
+              <Ionicons name="menu" size={20} color={t.text} />
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.headerLeft}>
             <View style={[styles.headerAvatar, { borderColor: '#3E7CB140' }]}>
@@ -1106,7 +1123,7 @@ export default function PepTalkScreen() {
                 colors={['#3E7CB120', '#7FB3D812']}
                 style={styles.headerAvatarInner}
               >
-                <AimeeDnaIcon size={28} active />
+                <AimeeSparkIcon size={22} color="#3E7CB1" />
               </LinearGradient>
             </View>
             <View>
@@ -1449,6 +1466,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  headerLeftBtns: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerAvatar: {
     width: 44,

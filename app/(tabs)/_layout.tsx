@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { selectionTick } from '../../src/utils/haptics';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
-import { AimeeDnaIcon } from '../../src/components/AimeeDnaIcon';
+import { AimeeSparkIcon } from '../../src/components/AimeeSparkIcon';
 import { ProfileShortcutFab } from '../../src/components/ProfileShortcutFab';
 
 type TabIconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -95,9 +95,9 @@ export default function TabsLayout() {
             title: tab.title,
             tabBarIcon: ({ focused, color, size }) =>
               tab.name === 'peptalk' ? (
-                // Custom DNA helix glyph for Aimee — glassy translucent
-                // blue, swaps the chat-bubble Ionicon.
-                <AimeeDnaIcon size={size + 2} color={color} active={focused} />
+                // Aimee's health-AI spark (matches the FAB) — replaced the
+                // DNA glyph testers read as anatomical.
+                <AimeeSparkIcon size={size + 2} color={color} />
               ) : (
                 <Ionicons
                   name={focused ? tab.activeIcon : tab.icon}
@@ -118,7 +118,6 @@ export default function TabsLayout() {
           Program / Your Workouts" buttons; existing /(tabs)/
           nutrition and /(tabs)/workouts still resolve so deep
           links from notifications / Aimee actions don't break. */}
-      <Tabs.Screen name="stack-builder" options={{ href: null }} />
       <Tabs.Screen name="check-in" options={{ href: null }} />
       <Tabs.Screen name="calendar" options={{ href: null }} />
       <Tabs.Screen name="nutrition" options={{ href: null }} />

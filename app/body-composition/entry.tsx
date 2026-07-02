@@ -111,7 +111,7 @@ export default function BodyCompositionEntryScreen() {
   return (
     <V3DetailShell
       title="Add scan"
-      observation="Fill what you have. Anything left blank stays out of the trend."
+      observation="Manual entry — type in the numbers from your scan. Anything left blank stays out of the trend."
     >
       {/* 2026-05-17 P1 fix: lower input fields (ECW/TBW, BMR, visceral
           fat) were hidden behind the numeric keyboard so the user
@@ -128,6 +128,29 @@ export default function BodyCompositionEntryScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
+        {/* Testers asked whether this pulls data in automatically or is
+            manual (build 59). Say it plainly: it's manual entry — device
+            sync isn't connected yet. */}
+        <View style={styles.infoNote}>
+          <Ionicons
+            name="information-circle-outline"
+            size={16}
+            color={t.colors.textSecondary as string}
+          />
+          <Text
+            style={[
+              styles.infoNoteText,
+              {
+                color: t.colors.textSecondary as string,
+                fontFamily: t.typography.body,
+              },
+            ]}
+          >
+            You enter these by hand from your InBody scan or smart-scale
+            readout — PepTalk does not sync from a device yet.
+          </Text>
+        </View>
+
         <GlassCard style={styles.cardSpacing}>
           <Text
             style={[
@@ -271,6 +294,18 @@ export default function BodyCompositionEntryScreen() {
 
 const styles = StyleSheet.create({
   cardSpacing: { marginTop: 12 },
+  infoNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    paddingTop: 4,
+    paddingHorizontal: 2,
+  },
+  infoNoteText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+  },
   label: {
     fontSize: 11,
     letterSpacing: 0.5,

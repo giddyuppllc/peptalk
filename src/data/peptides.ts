@@ -273,11 +273,11 @@ export const PEPTIDES: Peptide[] = [
   // ─── GROWTH HORMONE ───────────────────────────────────────────────────────────
   {
     id: 'cjc-1295',
-    name: 'CJC-1295',
-    abbreviation: 'CJC-1295',
+    name: 'CJC-1295 (with DAC)',
+    abbreviation: 'CJC-1295 DAC',
     categories: ['Growth Hormone'],
     researchSummary:
-      'CJC-1295 is a synthetic growth hormone-releasing hormone (GHRH) analog with a Drug Affinity Complex (DAC) that extends its half-life significantly. Research demonstrates sustained elevation of growth hormone and IGF-1 levels in study models. It is widely used in research exploring the GH/IGF-1 axis and its downstream effects on body composition and metabolism.',
+      'CJC-1295 is a synthetic growth hormone-releasing hormone (GHRH) analog with a Drug Affinity Complex (DAC) that extends its half-life significantly. Research demonstrates sustained elevation of growth hormone and IGF-1 levels in study models. It is widely used in research exploring the GH/IGF-1 axis and its downstream effects on body composition and metabolism. The long half-life (~6-8 days) means it is dosed weekly or twice-weekly for a steady GH elevation — see CJC-1295 (No DAC) for the short-acting, daily-dosed variant.',
     mechanismOfAction:
       'Binds to the GHRH receptor (GHRHR) on anterior pituitary somatotrophs, stimulating cAMP production and subsequent growth hormone synthesis and release. The DAC (maleimidopropionic acid) moiety enables covalent binding to serum albumin, extending plasma half-life.',
     receptorTargets: ['GHRHR'],
@@ -294,6 +294,32 @@ export const PEPTIDES: Peptide[] = [
       whatPeopleReport: 'Users commonly report noticeably deeper and more restorative sleep within the first week, often describing vivid dreams. Improvements in body composition are frequently cited, with gradual fat loss and lean muscle preservation over 3-6 month cycles. Many users describe improved skin quality, including better elasticity and reduced wrinkles. Recovery from workouts is often reported as faster and more complete. The CJC-1295/Ipamorelin combination is one of the most widely used GH peptide stacks, with users reporting synergistic benefits that mimic a more natural GH pulsatile release pattern.',
       popularWith: ['Anti-aging enthusiasts', 'Athletes', 'Body recomposition', 'Sleep optimization', 'Longevity seekers'],
       pairsWith: ['ipamorelin', 'bpc-157', 'tb-500', 'sermorelin', 'tesamorelin'],
+    },
+  },
+  {
+    id: 'cjc-1295-no-dac',
+    name: 'CJC-1295 (No DAC)',
+    abbreviation: 'Mod GRF 1-29',
+    categories: ['Growth Hormone'],
+    researchSummary:
+      'CJC-1295 without DAC — also called Modified GRF 1-29 — is a short-acting growth hormone-releasing hormone (GHRH) analog. Lacking the Drug Affinity Complex of the DAC variant, it has a very short half-life (~30 minutes) and is studied for its ability to amplify the body\'s natural, pulsatile GH release rather than producing the continuous elevation of the DAC form. It is most commonly researched alongside a ghrelin mimetic such as Ipamorelin, where the GHRH-analog + GHRP combination is reported to produce a markedly larger GH pulse than either alone.',
+    mechanismOfAction:
+      'Binds the GHRH receptor (GHRHR) on anterior pituitary somatotrophs, stimulating cAMP production and amplifying endogenous, pulsatile growth hormone release. Amino-acid substitutions improve peptidase stability over native GHRH(1-29), but without the DAC albumin-binding moiety the half-life stays short — preserving the natural nighttime GH pulse pattern instead of flattening it.',
+    receptorTargets: ['GHRHR'],
+    signalingPathways: ['cAMP/PKA', 'GH/IGF-1 axis', 'MAPK/ERK'],
+    stabilityNotes:
+      'Store lyophilized at -20°C. Reconstitute with bacteriostatic water and refrigerate at 2-8°C; use within ~30 days. Gently swirl — do not shake. Much shorter-acting than the DAC variant, so it is dosed 1-3x daily (often pre-bed) rather than weekly.',
+    molecularWeight: '3367.97 Da',
+    sequenceLength: 29,
+    halfLife: '~30 minutes',
+    storageTemp: '-20°C',
+    uses: {
+      primaryUses: ['Growth hormone optimization', 'Body composition improvement', 'Sleep enhancement', 'Recovery'],
+      commonGoals: ['Fat loss', 'Lean muscle preservation', 'Deeper sleep', 'Injury recovery', 'Anti-aging'],
+      whatPeopleReport:
+        'Because it clears quickly, users typically dose it 1-3 times daily — most importantly before bed on an empty stomach — to ride the natural nighttime GH pulse, and commonly report deeper sleep within the first week. Fat loss and improved recovery are frequently cited over 8-12 week cycles. It is most often run with Ipamorelin (the classic "CJC/Ipa" stack), which users describe as more effective than either peptide alone. Compared with the DAC version, people tend to prefer no-DAC when they want to mimic physiological pulsatile GH release rather than the sustained elevation of the long-acting form.',
+      popularWith: ['Anti-aging enthusiasts', 'Athletes', 'Body recomposition', 'Sleep optimization', 'GH peptide users'],
+      pairsWith: ['ipamorelin', 'sermorelin', 'bpc-157', 'tb-500', 'tesamorelin'],
     },
   },
   {

@@ -930,7 +930,7 @@ const SCREEN_TO_PATH: Record<string, string> = {
   'check-in': '/(tabs)/check-in',
   calendar: '/(tabs)/calendar',
   profile: '/(tabs)/profile',
-  'stack-builder': '/(tabs)/stack-builder',
+  'stack-builder': '/doses/stack-builder',
   'dosing-calc': '/doses/calculator',
   subscription: '/subscription',
   // v3 tracker hub
