@@ -141,8 +141,9 @@ export default function InBodyEntryScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={[styles.hint, { color: t.textSecondary }]}>
-          Punch in what's on your InBody printout. Weight and body fat % are
-          enough — the rest is optional.
+          Manual entry — punch in what's on your InBody printout (device sync
+          isn't connected yet). Weight and body fat % are enough; the rest is
+          optional.
         </Text>
 
         {/* Primary fields */}
