@@ -55,7 +55,9 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 11,
-    color: '#cbd5e1',
+    // Was #cbd5e1 (very light blue-gray, ~1.5:1 on the light card) — a
+    // medical disclaimer must be legible. #4B5563 clears WCAG AA.
+    color: '#4B5563',
     marginTop: 4,
     lineHeight: 16,
   },

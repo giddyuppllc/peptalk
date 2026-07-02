@@ -120,14 +120,14 @@ const styles = StyleSheet.create({
   titrationPending: {
     fontSize: 12,
     lineHeight: 18,
-    color: '#9CA3AF',
+    color: '#6B7280',
     fontStyle: 'italic',
     marginTop: 6,
   },
   disclaimer: {
     fontSize: 11,
     lineHeight: 16,
-    color: '#9CA3AF',
+    color: '#6B7280',
     fontStyle: 'italic',
     marginTop: 14,
   },

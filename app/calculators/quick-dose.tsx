@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
 
   // Disclaimer
   disclaimer: {
-    fontSize: FontSizes.xs, color: 'rgba(0,0,0,0.15)',
+    fontSize: FontSizes.xs, color: '#4B5563',
     textAlign: 'center', lineHeight: 16,
     marginVertical: Spacing.md,
   },

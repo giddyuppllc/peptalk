@@ -1229,7 +1229,12 @@ function TodayCycleView({ onJumpToStacks }: TodayCycleViewProps) {
             </View>
 
             <View style={todayStyles.doseInfo}>
-              <Text style={[todayStyles.doseName, { color: t.text }]} numberOfLines={1}>
+              <Text
+                style={[todayStyles.doseName, { color: t.text }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+              >
                 {slot.peptideName}
               </Text>
               <Text style={[todayStyles.doseAmount, { color: t.textSecondary }]} numberOfLines={1}>

@@ -469,7 +469,7 @@ const s = StyleSheet.create({
   tabText: {
     fontSize: 15,
     fontFamily: 'DMSans-SemiBold',
-    color: '#9CA3AF',
+    color: '#6B7280',
   },
   tabTextActive: {
     color: '#2D2D2D',
@@ -547,7 +547,7 @@ const s = StyleSheet.create({
   forgotText: {
     fontSize: 14,
     fontFamily: 'DMSans-Medium',
-    color: '#9CA3AF',
+    color: '#6B7280',
   },
 
   // Disclaimer
@@ -595,7 +595,7 @@ const s = StyleSheet.create({
   legalLinks: {
     fontSize: 12,
     fontFamily: 'DMSans-Regular',
-    color: '#9CA3AF',
+    color: '#6B7280',
     textAlign: 'center',
     marginTop: 16,
     lineHeight: 18,

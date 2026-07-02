@@ -1242,7 +1242,7 @@ const s = StyleSheet.create({
   labelSub: {
     fontSize: 13,
     fontFamily: 'DMSans-Regular',
-    color: '#9CA3AF',
+    color: '#6B7280',
     marginBottom: 12,
     marginTop: -6,
   },
@@ -1553,7 +1553,7 @@ const s = StyleSheet.create({
   },
   legalText: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: '#6B7280',
     textAlign: 'center',
     marginTop: 12,
     lineHeight: 18,
