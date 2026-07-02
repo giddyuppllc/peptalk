@@ -204,6 +204,28 @@ Deno.serve(async (req) => {
       labResultsSummary: typeof clientContext?.labResultsSummary === 'string'
         ? clientContext.labResultsSummary.slice(0, 800)
         : undefined,
+      // Nutrition / fitness / body-comp / goal context. Previously these
+      // were declared on AimeeServerContext and rendered by the prompt
+      // builder, but were NEVER copied here — so a "what are my macros?"
+      // question reached the model with zero body data and it fell back to
+      // the one rich source it had (the peptide library), answering with
+      // peptide stacks. (Jamie, build 59.) Whitelisting them lets the
+      // USER CONTEXT block actually populate for nutrition/fitness answers.
+      workoutSummary: typeof clientContext?.workoutSummary === 'string'
+        ? clientContext.workoutSummary.slice(0, 300)
+        : undefined,
+      nutritionSummary: typeof clientContext?.nutritionSummary === 'string'
+        ? clientContext.nutritionSummary.slice(0, 300)
+        : undefined,
+      bodyTrendSummary: typeof clientContext?.bodyTrendSummary === 'string'
+        ? clientContext.bodyTrendSummary.slice(0, 200)
+        : undefined,
+      selfStatedGoal: typeof clientContext?.selfStatedGoal === 'string'
+        ? clientContext.selfStatedGoal.slice(0, 200)
+        : undefined,
+      workoutDaysPerWeek: typeof clientContext?.workoutDaysPerWeek === 'number'
+        ? clientContext.workoutDaysPerWeek
+        : undefined,
       currentRoute: typeof clientContext?.currentRoute === 'string'
         ? clientContext.currentRoute.slice(0, 100)
         : undefined,
