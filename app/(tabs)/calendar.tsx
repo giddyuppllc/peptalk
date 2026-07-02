@@ -280,14 +280,18 @@ export default function CalendarScreen() {
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
 
-  // Auto-open the dose log modal when arriving with ?openLog=1 (from Home FAB)
-  const openLogHandled = useRef(false);
+  // Auto-open the dose log modal when arriving with ?openLog=1 (the Home
+  // dashboard's "Log …" shortcuts and the Doses hub "Log a Dose" CTA).
+  // Clear the param immediately after opening so tapping the same shortcut
+  // again ALWAYS re-opens the modal. The old once-per-mount ref guard left
+  // it stuck at open-once-per-session — a second tap did nothing because
+  // the param never changed value.
   useEffect(() => {
-    if (params.openLog === '1' && !openLogHandled.current) {
-      openLogHandled.current = true;
+    if (params.openLog === '1') {
       setShowLogModal(true);
+      router.setParams({ openLog: undefined });
     }
-  }, [params.openLog]);
+  }, [params.openLog, router]);
 
   // Log form state -- free-text substance name for plausible deniability
   const [logSubstanceName, setLogSubstanceName] = useState('');

@@ -84,7 +84,7 @@ export default function DosesHubScreen() {
 
   const observation = useMemo(() => {
     if (doses.length === 0) {
-      return 'No doses yet. Start in Calculator and I will pre-fill the math.';
+      return 'No doses yet. Tap "Log a Dose" to record one, or open the Calculator for reconstitution math.';
     }
     const weekAgo = Date.now() - 7 * 86400_000;
     const recentCount = entries.filter(
@@ -110,6 +110,50 @@ export default function DosesHubScreen() {
         contentContainerStyle={{ paddingBottom: 80 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Primary quick action. Testers asked to "just log a dose" without
+            being funneled through the reconstitution calculator first
+            (build 56). This jumps straight to the calendar's dose-log modal. */}
+        <Pressable
+          onPress={() => {
+            tapLight();
+            router.push('/(tabs)/calendar?openLog=1' as never);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Log a dose. Quick entry, no reconstitution math."
+          style={({ pressed }) => [styles.logCta, pressed && { opacity: 0.85 }]}
+        >
+          <View
+            style={[
+              styles.logCtaInner,
+              {
+                backgroundColor: t.isDark
+                  ? ((t.colors as any).accentCognac as string)
+                  : ((t.colors as any).accentRose as string),
+              },
+            ]}
+          >
+            <Ionicons name="add-circle" size={24} color="#fff" />
+            <View style={{ flex: 1 }}>
+              <Text
+                style={[
+                  styles.logCtaTitle,
+                  {
+                    fontFamily: t.isDark
+                      ? t.typography.headlineMale
+                      : t.typography.headlineFemale,
+                  },
+                ]}
+              >
+                Log a Dose
+              </Text>
+              <Text style={[styles.logCtaSub, { fontFamily: t.typography.body }]}>
+                Quick entry — no reconstitution math
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.85)" />
+          </View>
+        </Pressable>
+
         <View style={styles.tiles}>
           {TILES.map((tile) => (
             <Pressable
@@ -186,6 +230,29 @@ export default function DosesHubScreen() {
 }
 
 const styles = StyleSheet.create({
+  logCta: {
+    marginTop: 4,
+    marginBottom: 12,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  logCtaInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    borderRadius: 18,
+  },
+  logCtaTitle: {
+    fontSize: 18,
+    color: '#fff',
+  },
+  logCtaSub: {
+    fontSize: 12,
+    marginTop: 2,
+    color: 'rgba(255,255,255,0.9)',
+  },
   tiles: {
     gap: 12,
     paddingTop: 4,
