@@ -14,7 +14,7 @@
  */
 
 import React from 'react';
-import { Pressable, Text, View, StyleSheet, type ViewStyle, type StyleProp } from 'react-native';
+import { Pressable, View, StyleSheet, type ViewStyle, type StyleProp } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +31,7 @@ import { useV3Theme } from '../../theme/V3ThemeProvider';
 import { useAimeeRouter, type AimeeIntent } from '../../hooks/useAimeeRouter';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { useAimeeVoice } from '../../hooks/useAimeeVoice';
+import { AimeeSparkIcon } from '../AimeeSparkIcon';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -131,17 +132,10 @@ export function AimeeFAB({ intent = 'open_chat', style }: Props) {
         ) : isBusy ? (
           <Ionicons name="ellipsis-horizontal" size={22} color="#fff" />
         ) : (
-          <Text
-            style={{
-              fontFamily: t.isDark
-                ? t.typography.numeralsMale
-                : t.typography.numeralsFemale,
-              fontSize: 22,
-              color: t.isDark ? (t.colors.textPrimary as string) : '#fff',
-            }}
-          >
-            A
-          </Text>
+          // Health-AI spark — replaced the serif "A" / DNA branding, which
+          // testers read as anatomical. A sparkle reads unambiguously as
+          // "AI assistant".
+          <AimeeSparkIcon size={26} color={t.isDark ? (t.colors.textPrimary as string) : '#fff'} />
         )}
       </LinearGradient>
       {!isRecording && !isBusy ? (
