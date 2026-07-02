@@ -113,6 +113,17 @@ const LOG_DATE_OPTIONS: { label: string; delta: number }[] = [
   { label: '3 days ago', delta: -3 },
 ];
 
+// Accept a hand-typed YYYY-MM-DD only if it's a real calendar date that is
+// today or in the past (retroactive logging — never a future dose).
+const isValidPastDateKey = (s: string): boolean => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const d = new Date(s + 'T12:00:00');
+  if (Number.isNaN(d.getTime())) return false;
+  // Guard against rollover like 2026-02-31 → March.
+  if (toDateKey(d) !== s) return false;
+  return s <= toDateKey(new Date());
+};
+
 const getMonthDays = (year: number, month: number): Date[] => {
   const days: Date[] = [];
   const firstDay = new Date(year, month, 1);
@@ -304,6 +315,10 @@ export default function CalendarScreen() {
   // so doses can be back-dated instead of always landing on today.
   const [logDate, setLogDate] = useState(selectedDate);
   const [logTime, setLogTime] = useState('');
+  // "Earlier…" reveals a free YYYY-MM-DD field so doses can be back-dated
+  // to ANY past day, not just the last 3 (tester ask: retroactive logging).
+  const [showCustomDate, setShowCustomDate] = useState(false);
+  const [customDateText, setCustomDateText] = useState('');
 
   // Re-seed the date field from the selected day each time the modal opens
   // (and clear any stale time), so it defaults to the day the user is on.
@@ -311,6 +326,8 @@ export default function CalendarScreen() {
     if (showLogModal) {
       setLogDate(selectedDate);
       setLogTime('');
+      setShowCustomDate(false);
+      setCustomDateText(selectedDate);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showLogModal]);
@@ -1322,7 +1339,7 @@ export default function CalendarScreen() {
             <View style={styles.routeRow}>
               {LOG_DATE_OPTIONS.map((opt) => {
                 const value = addDaysKey(opt.delta);
-                const active = logDate === value;
+                const active = !showCustomDate && logDate === value;
                 return (
                   <TouchableOpacity
                     key={opt.label}
@@ -1331,7 +1348,10 @@ export default function CalendarScreen() {
                       { backgroundColor: t.card },
                       active && styles.routeChipActive,
                     ]}
-                    onPress={() => setLogDate(value)}
+                    onPress={() => {
+                      setShowCustomDate(false);
+                      setLogDate(value);
+                    }}
                     accessibilityRole="button"
                     accessibilityLabel={`Set date to ${opt.label}`}
                   >
@@ -1347,7 +1367,59 @@ export default function CalendarScreen() {
                   </TouchableOpacity>
                 );
               })}
+              {/* Arbitrary back-date — reveals a YYYY-MM-DD field so older
+                  doses can be logged, not just the last 3 days. */}
+              <TouchableOpacity
+                style={[
+                  styles.routeChip,
+                  { backgroundColor: t.card },
+                  showCustomDate && styles.routeChipActive,
+                ]}
+                onPress={() => {
+                  setShowCustomDate(true);
+                  setCustomDateText(logDate);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Pick an earlier date"
+              >
+                <Text
+                  style={[
+                    styles.routeChipText,
+                    { color: t.textSecondary },
+                    showCustomDate && styles.routeChipTextActive,
+                  ]}
+                >
+                  Earlier…
+                </Text>
+              </TouchableOpacity>
             </View>
+            {showCustomDate && (
+              <TextInput
+                style={[
+                  styles.textInput,
+                  {
+                    backgroundColor: t.card,
+                    color: t.text,
+                    marginTop: 8,
+                    borderWidth: 1,
+                    borderColor: isValidPastDateKey(customDateText)
+                      ? 'transparent'
+                      : '#EF4444',
+                  },
+                ]}
+                value={customDateText}
+                onChangeText={(v) => {
+                  setCustomDateText(v);
+                  if (isValidPastDateKey(v)) setLogDate(v);
+                }}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={t.textSecondary}
+                keyboardType="numbers-and-punctuation"
+                autoCapitalize="none"
+                accessibilityLabel="Custom date, year dash month dash day"
+                accessibilityHint="Enter any past date to back-date this dose, for example 2026-05-14."
+              />
+            )}
 
             {/* Time — optional free text (BUG 4). Store defaults to now if blank. */}
             <Text style={[styles.fieldLabel, { color: t.textSecondary }]}>Time (optional)</Text>
