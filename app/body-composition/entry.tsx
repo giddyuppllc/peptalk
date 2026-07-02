@@ -147,7 +147,7 @@ export default function BodyCompositionEntryScreen() {
             ]}
           >
             You enter these by hand from your InBody scan or smart-scale
-            readout — PepTalk doesn't sync from a device yet.
+            readout — PepTalk does not sync from a device yet.
           </Text>
         </View>
 
