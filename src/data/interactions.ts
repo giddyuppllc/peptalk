@@ -42,6 +42,26 @@ export const KNOWN_INTERACTIONS: Map<string, PeptideInteraction> = new Map([
     },
   ],
 
+  // CJC-1295 (No DAC) + Ipamorelin — the classic "CJC/Ipa" pulsatile stack
+  [
+    makeInteractionKey('cjc-1295-no-dac', 'ipamorelin'),
+    {
+      peptideA: 'cjc-1295-no-dac',
+      peptideB: 'ipamorelin',
+      interactionType: 'synergistic',
+      synergyScore: 9,
+      mechanismAnalysis:
+        'The canonical GH secretagogue pairing. CJC-1295 without DAC (Mod GRF 1-29) is a short-acting GHRH analog that amplifies the natural GH pulse, while Ipamorelin is a selective ghrelin mimetic acting on the GHS-R1a receptor. Because the no-DAC form clears quickly (~30 min), the two are typically injected together to stack a GHRH pulse on top of a ghrelin-receptor pulse — research on GHRH + GHRP co-administration reports markedly larger GH pulse amplitude than either pathway alone, while preserving physiologic pulsatility rather than the continuous elevation of the DAC variant.',
+      stabilityConsiderations:
+        'Both are stable in bacteriostatic water at refrigerated temperatures when reconstituted separately. Some users co-reconstitute a CJC/Ipamorelin blend for a single injection; single-vial long-term co-storage is not well-characterized in published literature.',
+      chemicalCompatibility:
+        'No known chemical incompatibility. Both are soluble in bacteriostatic water at standard research concentrations.',
+      researchPrecedent:
+        'GHRH-analog + GHRP synergy is well established in the literature, and the CJC-1295 (no DAC) + Ipamorelin combination is one of the most widely used GH peptide stacks. It is generally dosed 1-3x daily, most importantly pre-bed on an empty stomach, to ride the nocturnal GH pulse.',
+      pubmedLinks: ['https://pubmed.ncbi.nlm.nih.gov/16352683/'],
+    },
+  ],
+
   // BPC-157 + TB-500
   [
     makeInteractionKey('bpc-157', 'tb-500'),
