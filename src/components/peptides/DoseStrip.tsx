@@ -235,7 +235,12 @@ export function DoseStrip({
               day.doses.map((dose) => (
                 <View key={dose.id} style={styles.doseRow}>
                   <View style={[styles.doseDot, { backgroundColor: accentColor }]} />
-                  <Text style={[styles.doseName, { color: textColor }]} numberOfLines={1}>
+                  <Text
+                    style={[styles.doseName, { color: textColor }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.85}
+                  >
                     {dose.peptideName}
                   </Text>
                   <Text style={[styles.doseAmount, { color: labelColor }]} numberOfLines={1}>

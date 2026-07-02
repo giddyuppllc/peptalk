@@ -343,6 +343,8 @@ export default function StackBuilderScreen() {
                     <Text
                       style={[styles.slotText, { color: accentDeep }]}
                       numberOfLines={2}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.7}
                     >
                       {peptide.abbreviation || peptide.name.split(' ')[0]}
                     </Text>
@@ -735,7 +737,7 @@ function InteractionRow({ pair }: { pair: PairSummary }) {
               fontFamily: t.typography.bodyBold,
             },
           ]}
-          numberOfLines={1}
+          numberOfLines={2}
         >
           {pair.peptideA.abbreviation || pair.peptideA.name} ↔{' '}
           {pair.peptideB.abbreviation || pair.peptideB.name}
