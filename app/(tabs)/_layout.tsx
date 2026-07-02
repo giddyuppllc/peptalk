@@ -118,7 +118,6 @@ export default function TabsLayout() {
           Program / Your Workouts" buttons; existing /(tabs)/
           nutrition and /(tabs)/workouts still resolve so deep
           links from notifications / Aimee actions don't break. */}
-      <Tabs.Screen name="stack-builder" options={{ href: null }} />
       <Tabs.Screen name="check-in" options={{ href: null }} />
       <Tabs.Screen name="calendar" options={{ href: null }} />
       <Tabs.Screen name="nutrition" options={{ href: null }} />

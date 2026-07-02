@@ -1528,7 +1528,7 @@ export default function MyStacksScreen() {
 
   const handleLoadStack = (stack: PeptideStack) => {
     loadStack(stack);
-    router.push('/(tabs)/stack-builder');
+    router.push('/doses/stack-builder');
   };
 
   const handleCategoryTap = (categoryId: PeptideCategory) => {
@@ -1790,7 +1790,7 @@ export default function MyStacksScreen() {
           ) : (
             <TouchableOpacity
               style={[styles.emptyAction, { borderColor: `${accent.deep}40` }]}
-              onPress={() => router.push('/(tabs)/stack-builder')}
+              onPress={() => router.push('/doses/stack-builder')}
               activeOpacity={0.7}
             >
               <Ionicons name="add" size={18} color={accent.deep} />

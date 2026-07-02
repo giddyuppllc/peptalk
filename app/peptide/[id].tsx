@@ -913,7 +913,7 @@ export default function PeptideDetailScreen() {
               <TouchableOpacity key={stack.id} style={styles.relatedStackCard} onPress={() => {
                 const { loadStack } = useStackStore.getState();
                 loadStack(stack);
-                router.push('/(tabs)/stack-builder');
+                router.push('/doses/stack-builder');
               }} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`Open stack ${stack.name}, ${stack.peptideIds.length} peptides`}>
                 <View style={styles.relatedStackHeader}>
                   <Text style={styles.relatedStackName}>{stack.name}</Text>

@@ -1901,7 +1901,7 @@ function getActions(intent: BotIntent, peptides: Peptide[], context: BotContext)
       return p
         ? [
             { label: `View ${p.name}`, route: `/peptide/${p.id}`, icon: 'flask-outline' },
-            { label: 'Check Interactions', route: '/(tabs)/stack-builder', icon: 'git-merge-outline' },
+            { label: 'Check Interactions', route: '/doses/stack-builder', icon: 'git-merge-outline' },
           ]
         : [{ label: 'Browse Library', route: '/(tabs)/index', icon: 'library-outline' }];
     case 'mechanism':
@@ -1919,7 +1919,7 @@ function getActions(intent: BotIntent, peptides: Peptide[], context: BotContext)
       ].slice(0, 3);
     case 'interaction_check':
       return [
-        { label: 'Build Stack', route: '/(tabs)/stack-builder', icon: 'layers-outline' },
+        { label: 'Build Stack', route: '/doses/stack-builder', icon: 'layers-outline' },
         { label: 'Browse Stacks', route: '/(tabs)/my-stacks', icon: 'albums-outline' },
       ];
     case 'category_explore':
@@ -1938,7 +1938,7 @@ function getActions(intent: BotIntent, peptides: Peptide[], context: BotContext)
         : [{ label: 'Learn More', route: '/learn', icon: 'book-outline' }];
     case 'stack_help':
       return [
-        { label: 'Stack Builder', route: '/(tabs)/stack-builder', icon: 'layers-outline' },
+        { label: 'Stack Builder', route: '/doses/stack-builder', icon: 'layers-outline' },
         { label: 'My Stacks', route: '/(tabs)/my-stacks', icon: 'albums-outline' },
       ];
     case 'health_suggest':
