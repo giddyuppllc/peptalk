@@ -27,7 +27,7 @@ import { AimeePendingActionCard } from '../../src/components/AimeePendingActionC
 import { AimeeToolResultCard } from '../../src/components/AimeeToolResultCard';
 import { getAimeeNudges } from '../../src/services/aimeeNudges';
 import { PepTalkCharacter } from '../../src/components/PepTalkCharacter';
-import { AimeeDnaIcon } from '../../src/components/AimeeDnaIcon';
+import { AimeeSparkIcon } from '../../src/components/AimeeSparkIcon';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { ChatHistoryDrawer } from '../../src/components/ChatHistoryDrawer';
 import { AimeeVoiceButton } from '../../src/components/AimeeVoiceButton';
@@ -1028,7 +1028,7 @@ export default function PepTalkScreen() {
             end={{ x: 1, y: 1 }}
             style={styles.emptyAvatarInner}
           >
-            <AimeeDnaIcon size={88} active />
+            <AimeeSparkIcon size={72} color="#3E7CB1" />
           </LinearGradient>
         </View>
         <Text style={[styles.emptyTitle, { color: t.text }]}>Hi, I'm Aimee</Text>
@@ -1123,7 +1123,7 @@ export default function PepTalkScreen() {
                 colors={['#3E7CB120', '#7FB3D812']}
                 style={styles.headerAvatarInner}
               >
-                <AimeeDnaIcon size={28} active />
+                <AimeeSparkIcon size={22} color="#3E7CB1" />
               </LinearGradient>
             </View>
             <View>

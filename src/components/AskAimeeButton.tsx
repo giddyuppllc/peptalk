@@ -15,7 +15,7 @@
 import React from 'react';
 import { Text, StyleSheet, TouchableOpacity, ViewStyle, StyleProp } from 'react-native';
 import { useRouter } from 'expo-router';
-import { AimeeDnaIcon } from './AimeeDnaIcon';
+import { AimeeSparkIcon } from './AimeeSparkIcon';
 import { FontSizes, Spacing } from '../constants/theme';
 
 interface AskAimeeButtonProps {
@@ -59,7 +59,7 @@ export function AskAimeeButton({
         accessibilityLabel={a11y}
         accessibilityHint="Opens Aimee chat with a related question pre-loaded"
       >
-        <AimeeDnaIcon size={20} active />
+        <AimeeSparkIcon size={18} color="#3E7CB1" />
       </TouchableOpacity>
     );
   }
@@ -73,7 +73,7 @@ export function AskAimeeButton({
       accessibilityLabel={a11y}
       accessibilityHint="Opens Aimee chat with a related question pre-loaded"
     >
-      <AimeeDnaIcon size={16} active />
+      <AimeeSparkIcon size={15} color="#3E7CB1" />
       <Text style={styles.label} numberOfLines={1}>{label}</Text>
     </TouchableOpacity>
   );
