@@ -1421,8 +1421,10 @@ const dosePillStyles = StyleSheet.create({
 const PEACH = '#7ABED0';
 const PEACH_SOFT = '#F2D8D5';
 const TEXT = '#2D2D2D';
-const TEXT_SECONDARY = '#6B7280';
-const TEXT_MUTED = '#9CA3AF';
+// Darkened to match the useTheme tokens and keep the WCAG-AA hierarchy
+// (text > secondary > muted). Muted was #9CA3AF (~2.8:1 on cream) — failed.
+const TEXT_SECONDARY = '#4B5563';
+const TEXT_MUTED = '#6B7280';
 const BG = '#F0EEE9'; // Cloud Dancer
 const SURFACE = '#FAF5EF';
 const CARD_BORDER = 'rgba(0,0,0,0.06)';

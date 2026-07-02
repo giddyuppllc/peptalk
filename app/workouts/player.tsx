@@ -326,7 +326,7 @@ function ExerciseRow({
                   <TextInput
                     style={[styles.setInput, done && styles.setInputDone]}
                     placeholder="lbs"
-                    placeholderTextColor="rgba(0,0,0,0.15)"
+                    placeholderTextColor="#6B7280"
                     keyboardType="numeric"
                     value={inputData.weight}
                     onChangeText={(v) => onSetInput(key, 'weight', v)}
@@ -337,7 +337,7 @@ function ExerciseRow({
                     <TextInput
                       style={[styles.setInput, done && styles.setInputDone]}
                       placeholder={`${rep}`}
-                      placeholderTextColor="rgba(0,0,0,0.15)"
+                      placeholderTextColor="#6B7280"
                       keyboardType="numeric"
                       value={inputData.reps}
                       onChangeText={(v) => onSetInput(key, 'reps', v)}

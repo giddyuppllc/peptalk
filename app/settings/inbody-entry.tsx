@@ -293,7 +293,7 @@ function BigField({
           value={value}
           onChangeText={onChangeText}
           placeholder="—"
-          placeholderTextColor="rgba(0,0,0,0.25)"
+          placeholderTextColor="#6B7280"
           keyboardType={Platform.OS === 'ios' ? 'decimal-pad' : 'numeric'}
           style={[styles.bigFieldInput, { color }]}
           maxLength={6}
