@@ -77,7 +77,7 @@ export function useAimeeVoice(): UseAimeeVoiceResult {
           'Voice messages need microphone access. You can turn it on in Settings whenever you like.',
           [
             { text: 'Not now', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => {}) },
           ],
         );
         return;
