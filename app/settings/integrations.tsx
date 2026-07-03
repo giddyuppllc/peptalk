@@ -142,7 +142,7 @@ export default function IntegrationsSettingsScreen() {
             "Health permissions are managed by iOS. If your data isn't syncing, you can review them in the Settings app.",
             [
               { text: 'Not now', style: 'cancel' },
-              { text: 'Open Settings', onPress: () => Linking.openSettings() },
+              { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => {}) },
             ],
           );
         } else {

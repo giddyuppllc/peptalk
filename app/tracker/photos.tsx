@@ -54,7 +54,7 @@ export default function ProgressPhotosScreen() {
           'Taking a progress photo needs camera access. You can turn it on in Settings whenever you like.',
           [
             { text: 'Not now', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => {}) },
           ],
         );
         return;
@@ -91,7 +91,7 @@ export default function ProgressPhotosScreen() {
           'Importing a photo needs photo library access. You can turn it on in Settings whenever you like.',
           [
             { text: 'Not now', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => {}) },
           ],
         );
         return;
