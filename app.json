@@ -214,7 +214,7 @@
         "react-native-health",
         {
           "isClinicalDataEnabled": false,
-          "healthSharePermission": "PepTalk reads Apple Health data — activity (steps, active energy, workouts), body metrics (weight, body composition), heart data (heart rate, HRV, VO₂ max, blood oxygen, respiratory rate), and sleep — so you don't have to log anything twice.",
+          "healthSharePermission": "PepTalk reads activity (steps, active energy, workouts), body metrics (weight, body composition), heart data (heart rate, HRV, VO₂ max, blood oxygen, respiratory rate), and sleep from Apple Health to display them alongside your protocols and check-ins.",
           "healthUpdatePermission": "PepTalk writes your check-ins and weight back to Apple Health so everything stays in sync."
         }
       ],

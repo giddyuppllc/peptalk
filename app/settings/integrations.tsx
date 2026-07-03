@@ -199,7 +199,7 @@ export default function IntegrationsSettingsScreen() {
       >
         <View style={styles.section}>
           <Text style={[styles.lead, { color: t.text }]}>
-            One connection unlocks many devices
+            One connection covers many devices
           </Text>
           <Text style={[styles.body, { color: t.textSecondary }]}>
             Apple Health and Health Connect aggregate data from dozens of devices — Apple Watch,
