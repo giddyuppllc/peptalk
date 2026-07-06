@@ -782,8 +782,8 @@ function BarcodeScannerModal({ visible, onClose, onScanned }: BarcodeScannerProp
             </View>
             <View style={styles.scannerPermission}>
               <Ionicons name="camera-outline" size={60} color={Colors.darkTextSecondary} />
-              <Text style={styles.scannerPermText}>Camera access is needed to scan barcodes</Text>
-              <GradientButton label="Allow Camera Access" onPress={requestPermission} />
+              <Text style={styles.scannerPermText}>PepTalk uses the camera to scan barcodes.</Text>
+              <GradientButton label="Continue" onPress={requestPermission} />
             </View>
           </>
         ) : (

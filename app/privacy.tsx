@@ -36,7 +36,7 @@ const POLICY_SECTIONS: PolicySection[] = [
     paragraphs: [
       'PepTalk stores your data in your private account on our secure cloud backend (Supabase), encrypted in transit and at rest, with a locally cached copy on your device. We collect only the information you voluntarily provide within the app, including:',
       '\u2022  Profile information (name, age, gender, health goals)\n\u2022  Peptide stacks and protocol configurations\n\u2022  Dose logs and check-in entries\n\u2022  Chat history with the PepTalk bot\n\u2022  Journal entries and notes',
-      'We do not collect data in the background, and we never access your contacts or location. PepTalk accesses your camera, photo library, and microphone only when you actively use a feature that needs them — scanning a meal or lab, adding a photo, or sending a voice message to Aimee — and only with your permission. Most data stays on your device; features you choose to use (voice transcription, photo-based food and lab scanning, AI chat, and the community) send the content you share to our secure servers so they can work.',
+      'Aside from anonymous crash and performance diagnostics (see “Diagnostics & Crash Reporting” below), we do not collect data in the background, and we never access your contacts or location. PepTalk accesses your camera, photo library, and microphone only when you actively use a feature that needs them — scanning a meal or lab, adding a photo, or sending a voice message to Aimee — and only with your permission. Most data stays on your device; features you choose to use (voice transcription, photo-based food and lab scanning, AI chat, and the community) send the content you share to our secure servers so they can work.',
     ],
   },
   {
@@ -76,11 +76,19 @@ const POLICY_SECTIONS: PolicySection[] = [
     ],
   },
   {
+    title: 'Diagnostics & Crash Reporting',
+    icon: 'bug-outline',
+    paragraphs: [
+      'To keep the app stable, PepTalk uses a third-party crash- and performance-monitoring service (Sentry). When the app crashes or hits an error, it sends anonymous diagnostic data — the error, device model, OS version, and a random account identifier — so we can find and fix the problem.',
+      'This diagnostic data does not include your health data, chat content, photos, or voice. Email and username are stripped before any report is sent. It is used only to fix bugs and improve reliability, and is never sold or used for advertising.',
+    ],
+  },
+  {
     title: 'Data Sharing',
     icon: 'lock-closed-outline',
     paragraphs: [
       'We will never sell, share, rent, or monetize your personal data. Period.',
-      'Your data is not shared with:\n\u2022  Advertisers or ad networks (beyond anonymous, non-health signals)\n\u2022  Data brokers or analytics companies\n\u2022  Insurance companies, employers, or government agencies\n\u2022  Any third party for marketing purposes',
+      'Your data is not shared with:\n\u2022  Advertisers or ad networks\n\u2022  Data brokers or analytics companies\n\u2022  Insurance companies, employers, or government agencies\n\u2022  Any third party for marketing purposes',
       'Your data leaves your device in two ways, both in service of features you use: (1) it syncs to your private account on our secure backend (Supabase) so the app works across your devices, and (2) when you use an opt-in AI feature, the relevant content is sent to our AI providers (xAI and OpenAI) to generate a result. In neither case is your data sold, rented, or shared for marketing.',
     ],
   },

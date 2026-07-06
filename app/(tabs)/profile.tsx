@@ -18,6 +18,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
@@ -343,7 +344,14 @@ function UserProfile() {
         text: 'Take Photo',
         onPress: async () => {
           const perm = await ImagePicker.requestCameraPermissionsAsync();
-          if (!perm.granted) { Alert.alert('Camera permission required'); return; }
+          if (!perm.granted) {
+            // 5.1.1(iv): neutral notice + genuine choice, never a coercive "required".
+            Alert.alert('Camera is off', 'Taking a profile photo uses the camera. You can turn it on in Settings whenever you like.', [
+              { text: 'Not now', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => { Linking.openSettings().catch(() => {}); } },
+            ]);
+            return;
+          }
           const result = await ImagePicker.launchCameraAsync({
             allowsEditing: true,
             aspect: [1, 1],
@@ -361,7 +369,13 @@ function UserProfile() {
           // so a non-granted result must NOT block the picker there. iOS
           // still requires the library permission.
           const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted && Platform.OS !== 'android') { Alert.alert('Photo library permission required'); return; }
+          if (!perm.granted && Platform.OS !== 'android') {
+            Alert.alert('Photos are off', 'Choosing a profile photo uses your photo library. You can turn it on in Settings whenever you like.', [
+              { text: 'Not now', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => { Linking.openSettings().catch(() => {}); } },
+            ]);
+            return;
+          }
           const result = await ImagePicker.launchImageLibraryAsync({
             allowsEditing: true,
             aspect: [1, 1],

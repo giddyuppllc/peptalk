@@ -216,7 +216,8 @@ export default function LabsScreen() {
     // requires the library permission.
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted && Platform.OS !== 'android') {
-      Alert.alert('Photo library access denied', 'Allow photos so we can pick your lab report image.');
+      // 5.1.1(iv): neutral, factual, no "denied"/"allow so we can" funnel framing.
+      Alert.alert('Photos are off', 'Picking a lab-report image uses your photo library. You can turn it on in Settings.');
       return;
     }
     const pick = await ImagePicker.launchImageLibraryAsync({

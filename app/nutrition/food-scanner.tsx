@@ -172,9 +172,9 @@ export default function FoodScannerScreen() {
         </View>
         <View style={styles.locked}>
           <Ionicons name="camera-outline" size={48} color={accent.deep} />
-          <Text style={[styles.lockedTitle, { color: t.text }]}>Camera Access Needed</Text>
+          <Text style={[styles.lockedTitle, { color: t.text }]}>Camera</Text>
           <Text style={[styles.lockedText, { color: t.textSecondary }]}>
-            Allow camera access to scan your meals and automatically calculate nutrition.
+            PepTalk uses the camera to scan meals for nutrition tracking.
           </Text>
           {/* 2026-05-17 a11y fix: route to Settings when OS won't prompt again. */}
           <AnimatedPress

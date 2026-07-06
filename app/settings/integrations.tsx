@@ -341,7 +341,10 @@ export default function IntegrationsSettingsScreen() {
           </View>
         )}
 
-        {Platform.OS === 'ios' && (
+        {/* Dev-only: a raw HealthKit debug/probe screen must never ship to users or App
+            Review — a visible debug tool reads as an incomplete build (2.1/4.0) and its
+            connect-failure alert is a permission-prompt risk (5.1.1(iv)). */}
+        {__DEV__ && Platform.OS === 'ios' && (
           <View style={styles.section}>
             <TouchableOpacity
               onPress={() => router.push('/settings/healthkit-debug' as any)}
