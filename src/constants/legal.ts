@@ -182,6 +182,20 @@ export const TOS_SECTIONS = [
       '(xAI and OpenAI) to generate a result. See our Privacy Policy for full details.',
   },
   {
+    title: 'Community Conduct',
+    icon: 'people-outline' as const,
+    content:
+      'PepTalk includes community features where members post their own content. There is ' +
+      'ZERO TOLERANCE for objectionable content or abusive behavior — including harassment, ' +
+      'hate speech, threats, spam, sexual content, dangerous or misleading medical claims, and ' +
+      'the promotion of sourcing or selling controlled or unapproved substances. By posting, you ' +
+      'agree not to submit such content. You can report any post or message and block any member ' +
+      'from within the app; we review reports and remove violating content, and we may suspend or ' +
+      'remove users who violate these rules. Community posts are member opinions, not medical ' +
+      'advice from PepTalk. To report content or abuse, use the in-app report action or contact ' +
+      'privacy@peptalk.bio.',
+  },
+  {
     title: 'Changes to Terms',
     icon: 'document-text-outline' as const,
     content:
