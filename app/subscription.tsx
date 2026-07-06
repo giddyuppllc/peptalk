@@ -151,13 +151,19 @@ function TierCard({
   info,
   isActive,
   highlighted,
+  livePrice,
 }: {
   info: TierInfo;
   isActive: boolean;
   highlighted?: boolean;
+  livePrice?: string;
 }) {
   const [purchasing, setPurchasing] = React.useState(false);
   const plan = info.pricing;
+  // Apple 2.3.1/3.1.2: the price shown must match the App Store purchase sheet.
+  // Prefer StoreKit's localized price (correct currency for the reviewer's/user's
+  // storefront); fall back to the hardcoded USD string only if the fetch fails.
+  const displayPrice = livePrice ?? plan?.price ?? '';
 
   const handleUpgrade = async () => {
     if (info.tier === 'free' || !plan?.productId) return;
@@ -300,7 +306,7 @@ function TierCard({
             )}
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.tierPrice}>{plan?.price ?? ''}</Text>
+            <Text style={styles.tierPrice}>{displayPrice}</Text>
             {plan?.period ? (
               <Text style={styles.tierPeriod}>{plan.period}</Text>
             ) : null}
@@ -330,14 +336,14 @@ function TierCard({
       {!isActive && info.tier !== 'free' && (
         <View style={styles.tierCta}>
           <Text style={styles.renewDisclosure}>
-            {plan?.price}{plan?.period} · auto-renews monthly until cancelled.
+            {displayPrice}{plan?.period} · auto-renews monthly until cancelled.
             Cancel anytime in your Apple ID Subscriptions.
           </Text>
           <GradientButton
             label={purchasing ? 'Processing…' : `Subscribe to ${info.name}`}
             onPress={handleUpgrade}
             colors={info.colors}
-            accessibilityLabel={`Subscribe to ${info.name} for ${plan?.price}${plan?.period ?? ''}, auto-renews monthly`}
+            accessibilityLabel={`Subscribe to ${info.name} for ${displayPrice}${plan?.period ?? ''}, auto-renews monthly`}
             accessibilityState={{ disabled: purchasing, busy: purchasing }}
           />
         </View>
@@ -401,6 +407,23 @@ export default function SubscriptionScreen() {
   const productId = useSubscriptionStore((s) => s.productId);
   const pendingPurchase = useSubscriptionStore((s) => s.pendingPurchase);
   const [restoring, setRestoring] = React.useState(false);
+  // Live StoreKit prices (localized to the storefront) → keeps the displayed
+  // price in sync with the purchase sheet. Falls back to hardcoded USD.
+  const [livePrices, setLivePrices] = React.useState<Record<string, string>>({});
+  React.useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const { getProducts } = await import('../src/services/iapService');
+        const products = await getProducts();
+        if (!active) return;
+        const map: Record<string, string> = {};
+        for (const p of products) if (p.productId && p.localizedPrice) map[p.productId] = p.localizedPrice;
+        setLivePrices(map);
+      } catch { /* keep USD fallback */ }
+    })();
+    return () => { active = false; };
+  }, []);
   const { highlight } = useLocalSearchParams<{ highlight?: string }>();
   const highlightedTier = tierForFeature(highlight);
   const hasPaidTier = tier === 'plus' || tier === 'pro';
@@ -474,6 +497,7 @@ export default function SubscriptionScreen() {
               info={info}
               isActive={tier === info.tier}
               highlighted={highlightedTier === info.tier && tier !== info.tier}
+              livePrice={info.pricing.productId ? livePrices[info.pricing.productId] : undefined}
             />
           </View>
         ))}
