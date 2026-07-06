@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Image,
   KeyboardAvoidingView,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -360,9 +361,18 @@ export default function CheckInScreen() {
     try {
       const granted = await requestHealthPermissions();
       if (!granted) {
+        // App Review 5.1.1(iv): do NOT modify/pressure the system permission request.
+        // The native dialog is the only place we ask for access. If we can't read
+        // (e.g. iOS hides read status, or HealthKit is limited on iPad), we give a
+        // neutral notice with a genuine choice — you can still enter vitals by hand —
+        // and only *offer* a Settings link. No "needs access", no "please enable".
         Alert.alert(
-          'Permission Required',
-          `PepTalk needs access to ${getHealthSourceLabel()} to sync your data. Please enable it in your device settings.`,
+          getHealthSourceLabel(),
+          `PepTalk couldn't read from ${getHealthSourceLabel()}. You can enter your vitals below, or review permissions in Settings.`,
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => { Linking.openSettings().catch(() => {}); } },
+          ],
         );
         return;
       }
@@ -759,6 +769,11 @@ export default function CheckInScreen() {
         {/* Step 4: Vitals */}
         {step.key === 'vitals' && (
           <>
+            {/* Only surface the health-sync shortcut where the platform actually has
+                a health store (e.g. iPhone, Android w/ Health Connect). On devices
+                without it — e.g. many iPads — we hide it so the user just types the
+                vitals in, and never sees a permission-related prompt. */}
+            {isHealthDataAvailable() && (
             <TouchableOpacity
               style={[styles.stepSyncBtn, { borderColor: `${ACCENT}55`, backgroundColor: healthSynced ? `${ACCENT}12` : 'transparent' }]}
               onPress={handleHealthSync}
@@ -783,6 +798,7 @@ export default function CheckInScreen() {
                 </>
               )}
             </TouchableOpacity>
+            )}
             <View style={styles.metricGrid}>
               {[
                 { label: 'Weight (lbs)', value: weight, setter: setWeight },
