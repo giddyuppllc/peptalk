@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/hooks/useTheme';
+import { PeptideDisclaimerModal } from '../../src/components/PeptideDisclaimerModal';
 import { Colors, Spacing, FontSizes, BorderRadius, Gradients } from '../../src/constants/theme';
 
 export default function CalculatorsHubScreen() {
@@ -114,6 +115,9 @@ export default function CalculatorsHubScreen() {
           </Text>
         </View>
       </ScrollView>
+      {/* Research/medical-use gate for the calculators hub (reconstitution, quick-dose,
+          plan reached from here). Globally shows at most once. */}
+      <PeptideDisclaimerModal />
     </SafeAreaView>
   );
 }

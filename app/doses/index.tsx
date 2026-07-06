@@ -17,6 +17,7 @@ import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { V3DetailShell, GlassCard } from '../../src/components/v3';
+import { PeptideDisclaimerModal } from '../../src/components/PeptideDisclaimerModal';
 import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 import { tapLight } from '../../src/utils/haptics';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
@@ -225,6 +226,9 @@ export default function DosesHubScreen() {
           ))}
         </View>
       </ScrollView>
+      {/* Research/medical-use gate — blocks the dosing hub (and everything reached
+          from it) on first entry. Globally gated: shows at most once. */}
+      <PeptideDisclaimerModal />
     </V3DetailShell>
   );
 }

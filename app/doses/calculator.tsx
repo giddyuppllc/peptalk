@@ -30,6 +30,7 @@ import {
 } from '../../src/components/v3';
 import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 import { tapLight, tapMedium } from '../../src/utils/haptics';
+import { PeptideDisclaimerModal } from '../../src/components/PeptideDisclaimerModal';
 import { PEPTIDES } from '../../src/data/peptides';
 import {
   getDosingReference,
@@ -946,6 +947,9 @@ export default function CalculatorV2Screen() {
         body={`${peptideName ?? 'This peptide'} is hydrophobic. Do NOT reconstitute with bacteriostatic water — use 0.6% bacteriostatic acetic acid only. The calculator pre-fills the diluent label and flags this in the Reconstitute card.`}
         onDismiss={() => setShowAceticFlag(false)}
       />
+      {/* Research/medical-use gate — the calculator is a direct deep-link target
+          (Aimee + peptide detail), so gate it here too. Globally shows at most once. */}
+      <PeptideDisclaimerModal />
     </V3DetailShell>
   );
 }
