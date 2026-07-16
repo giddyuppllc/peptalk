@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   Image,
   KeyboardAvoidingView,
-  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -361,19 +360,10 @@ export default function CheckInScreen() {
     try {
       const granted = await requestHealthPermissions();
       if (!granted) {
-        // App Review 5.1.1(iv): do NOT modify/pressure the system permission request.
-        // The native dialog is the only place we ask for access. If we can't read
-        // (e.g. iOS hides read status, or HealthKit is limited on iPad), we give a
-        // neutral notice with a genuine choice — you can still enter vitals by hand —
-        // and only *offer* a Settings link. No "needs access", no "please enable".
-        Alert.alert(
-          getHealthSourceLabel(),
-          `PepTalk couldn't read from ${getHealthSourceLabel()}. You can enter your vitals below, or review permissions in Settings.`,
-          [
-            { text: 'Not now', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => { Linking.openSettings().catch(() => {}); } },
-          ],
-        );
+        // App Review 5.1.1(iv): the system permission sheet is the ONLY place we
+        // ask for Health access. If it isn't granted (denied, or HealthKit limited
+        // on iPad), we show NO custom dialog around it — the user simply enters
+        // their vitals by hand below. No modified or duplicated permission prompt.
         return;
       }
 

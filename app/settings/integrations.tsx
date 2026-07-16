@@ -22,7 +22,6 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -129,29 +128,18 @@ export default function IntegrationsSettingsScreen() {
     setConnecting(source);
     try {
       const ok = await connectSource(source, DEFAULT_SCOPES[source]);
-      if (!ok) {
-        if (source === 'apple_health') {
-          // App Review 5.1.1(iv): iOS owns the Health permission dialog (fired by
-          // connectSource above) and deliberately hides read-access status for
-          // privacy, so we can never know it "failed". We must NOT show a custom
-          // prompt that pre-empts or pressures the system request. This is a
-          // neutral, factual notice with a genuine choice — no "grant access",
-          // no "tap allow", no funnel toward granting.
-          Alert.alert(
-            'Apple Health',
-            "Health permissions are managed by iOS. If your data isn't syncing, you can review them in the Settings app.",
-            [
-              { text: 'Not now', style: 'cancel' },
-              { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => {}) },
-            ],
-          );
-        } else {
-          Alert.alert(
-            'Could not connect',
-            'Something went wrong — try again in a moment.',
-          );
-        }
+      if (!ok && source !== 'apple_health') {
+        Alert.alert(
+          'Could not connect',
+          'Something went wrong — try again in a moment.',
+        );
       }
+      // App Review 5.1.1(iv): for Apple Health we show NO custom dialog around the
+      // permission. iOS owns the Health permission sheet (fired by connectSource)
+      // and hides read-access status, so we can never know it "failed" — and we
+      // must not present anything that modifies or duplicates the system request.
+      // Guidance for managing access lives as static text on this screen (the
+      // "iOS permission dialog … change it any time in Settings" copy above).
     } finally {
       setConnecting(null);
     }
