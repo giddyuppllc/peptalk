@@ -26,7 +26,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { GlassCard } from '../../src/components/GlassCard';
@@ -101,6 +101,12 @@ export default function HealthKitDebugScreen() {
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<ScopeResult[]>([]);
   const [reportTimestamp, setReportTimestamp] = useState<string | null>(null);
+
+  // Dev/tester-only diagnostics. In a release build the route must be
+  // unreachable (not just link-hidden) so a reviewer deep-linking here can't
+  // land on the Health-permission Alert this screen surfaces. Hooks above run
+  // unconditionally; the guard sits after them to respect rules-of-hooks.
+  if (!__DEV__) return <Redirect href="/settings/integrations" />;
 
   const runProbe = async () => {
     if (!healthKitAdapter.available()) {

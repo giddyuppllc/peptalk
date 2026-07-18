@@ -177,10 +177,11 @@ export async function requestHealthKitPermissions(): Promise<boolean> {
     PERMS.RespiratoryRate,
     PERMS.SleepAnalysis,
     PERMS.ActiveEnergyBurned,
-    // Women's health / cycle (only those react-native-health exposes)
-    PERMS.MenstrualFlow,
-    PERMS.OvulationTestResult,
-    PERMS.SexualActivity,
+    // NOTE: cycle/reproductive-health read scopes (MenstrualFlow,
+    // OvulationTestResult, SexualActivity) are intentionally NOT requested.
+    // PepTalk does not surface that data and NSHealthShareUsageDescription
+    // does not cover it — requesting them is an App Review 2.5.1 risk. This
+    // list mirrors the vetted Integrations DEFAULT_SCOPES.apple_health.
   ].filter(Boolean);
 
   // Write-back scope — backs the NSHealthUpdateUsageDescription claim that

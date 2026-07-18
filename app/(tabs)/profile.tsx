@@ -1853,7 +1853,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
-        <Text style={[profileStyles.version, { color: t.textSecondary }]}>PepTalk v1.0.0</Text>
+        <Text style={[profileStyles.version, { color: t.textSecondary }]}>PepTalk v{Constants.expoConfig?.version ?? '1.9.8'}</Text>
       </ScrollView>
     </SafeAreaView>
   );
