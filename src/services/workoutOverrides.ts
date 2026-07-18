@@ -66,6 +66,18 @@ function rowToEdit(row: OverrideRow): VideoEdit {
  */
 export async function fetchWorkoutOverrides(): Promise<number | null> {
   try {
+    // Don't query until there's a live session. On cold boot / resume the app
+    // can reach here in the small window before the access token is restored or
+    // refreshed — firing the request then just returns a 401 (a source of the
+    // production 401 noise). getSession() reads from storage (no network) and
+    // refreshes an expiring token when autoRefreshToken is on; if there's still
+    // no token, skip and let onAuthStateChange re-fetch once auth is ready.
+    const { data: sess } = await supabase.auth.getSession();
+    if (!sess?.session?.access_token) {
+      if (__DEV__) console.warn('[workoutOverrides] skip fetch — no live session yet');
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('workout_video_overrides')
       .select('slug, title, description, exercise_id, category, duration_sec, needs_review');
