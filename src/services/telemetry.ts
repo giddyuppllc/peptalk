@@ -199,6 +199,42 @@ export function addBreadcrumb(
   }
 }
 
+// --- watchdog diagnostics ----------------------------------------------------
+// A WatchdogTermination has NO stack trace — iOS just kills the process. These
+// lifecycle breadcrumbs are the only signal on the NEXT one: they show whether
+// launch was slow (the classic watchdog cause), the app hit an iOS memory-
+// pressure warning (jetsam precursor), or it hung in the background before the
+// OS killed it. Purely diagnostic; nothing user-facing.
+
+const _appStartMs = Date.now();
+
+/** Breadcrumb a boot/lifecycle milestone, stamped with ms since app start. */
+export function markLifecycle(phase: string, data?: Record<string, unknown>): void {
+  addBreadcrumb('app.lifecycle', phase, { sinceStartMs: Date.now() - _appStartMs, ...(data ?? {}) });
+}
+
+/**
+ * One-time: attach lifecycle watchers so a future watchdog event carries launch
+ * timing, AppState transitions, and iOS memory-pressure warnings, plus device
+ * total RAM as context (watchdog victims cluster on low-RAM devices). Safe/no-op
+ * without Sentry. Call once, right after initTelemetry().
+ */
+export function installLifecycleBreadcrumbs(): void {
+  markLifecycle('boot:telemetry-ready');
+  try {
+    const Device = require('expo-device');
+    const totalMb = Device?.totalMemory ? Math.round(Device.totalMemory / (1024 * 1024)) : null;
+    if (totalMb && _sentry?.setContext) _sentry.setContext('device_memory', { total_mb: totalMb });
+  } catch { /* expo-device optional */ }
+  try {
+    const { AppState } = require('react-native');
+    AppState.addEventListener('change', (state: string) => markLifecycle(`appstate:${state}`));
+    // iOS emits this under memory pressure — frequently the last event before a
+    // jetsam / watchdog kill. It's the memory signal we can actually capture in JS.
+    AppState.addEventListener('memoryWarning', () => markLifecycle('memoryWarning'));
+  } catch { /* swallow */ }
+}
+
 /** Set the active user so captured events can be grouped per-user. */
 export function setUser(user: { id: string; email?: string } | null): void {
   if (_sentry) {

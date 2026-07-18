@@ -56,13 +56,18 @@ import { useCycleStore } from '../src/store/useCycleStore';
 import { useIntegrationsStore } from '../src/store/useIntegrationsStore';
 import { useLabResultsStore } from '../src/store/useLabResultsStore';
 import { subscribeToReconnect } from '../src/hooks/useNetworkStatus';
-import { initTelemetry, installGlobalErrorHandler, captureException } from '../src/services/telemetry';
+import { initTelemetry, installGlobalErrorHandler, installLifecycleBreadcrumbs, markLifecycle, captureException } from '../src/services/telemetry';
 import { useTheme } from '../src/hooks/useTheme';
 
 // Boot-time telemetry init (no-op if no DSN). Done at module scope so it
 // fires before any component renders or stores hydrate.
 initTelemetry();
 installGlobalErrorHandler();
+// Watchdog diagnostics: launch timing + AppState + iOS memory-pressure
+// breadcrumbs, so a future (stack-less) WatchdogTermination is actually
+// diagnosable — slow launch vs memory vs background hang.
+installLifecycleBreadcrumbs();
+markLifecycle('boot:start');
 
 // Renders the OS status bar with glyphs keyed to the ACTIVE v3 variant.
 // Lives in its own component so it reads the variant via useV3Theme() from
@@ -107,6 +112,9 @@ function RootLayout() {
   // as the trigger to proceed — the app simply renders with the system
   // font stack in that case.
   const [fontsTimedOut, setFontsTimedOut] = useState(false);
+  // Watchdog diagnostics: mark when the root mounts (JS boot essentially done),
+  // so a slow-launch watchdog shows the gap from boot:start.
+  useEffect(() => { markLifecycle('boot:first-render'); }, []);
   useEffect(() => {
     if (fontsLoaded) return;
     const timer = setTimeout(() => setFontsTimedOut(true), 5000);
