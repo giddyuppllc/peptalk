@@ -230,7 +230,8 @@
           }
         }
       ],
-      "react-native-health-connect"
+      "react-native-health-connect",
+      "./plugins/withHealthConnectPermissionDelegate"
     ],
     "extra": {
       "router": {},
