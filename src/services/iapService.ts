@@ -15,7 +15,7 @@
 
 import { Platform } from 'react-native';
 import type { SubscriptionTier } from '../types/fitness';
-import { captureException } from './telemetry';
+import { captureException, captureMessage } from './telemetry';
 
 // Product IDs — must match App Store Connect / Play Console exactly.
 //
@@ -244,24 +244,50 @@ export async function initIAP(
       // "I bought Pro but the app didn't unlock" reports with the
       // underlying storekit failure mode.
       const code = error?.code ?? error?.errorCode;
+      const message = error?.message ?? '';
       const isUserCancel =
         code === 'E_USER_CANCELLED' ||
         code === 'E_USER_CANCELED' ||
-        /cancel/i.test(error?.message ?? '');
-      if (!isUserCancel) {
+        /cancel/i.test(message);
+      // Environmental "this device/OS can't do IAP" conditions — StoreKit
+      // restrictions, no App Store account, MDM, or a simulator/emulator.
+      // These are NOT app bugs; capturing them as exceptions makes Sentry
+      // flag a healthy app as crashing (REACT-NATIVE-5 / -6). Log a warning
+      // breadcrumb-level message so support can still correlate, but keep
+      // them out of the crash/issue stream.
+      const isEnvironmental =
+        code === 'iap-not-available' ||
+        code === 'E_IAP_NOT_AVAILABLE' ||
+        code === 'E_SERVICE_ERROR' ||
+        /not available on this device|feature.?not.?supported|not supported/i.test(
+          message,
+        );
+      if (isUserCancel) {
+        // normal flow — ignore entirely
+      } else if (isEnvironmental) {
+        captureMessage(
+          `IAP unavailable [${code ?? 'unknown'}]: ${message || 'unknown'}`,
+          'warning',
+          {
+            source: 'iap.purchase_error.environmental',
+            code: code ?? 'unknown',
+            productId: error?.productId ?? 'unknown',
+          },
+        );
+      } else {
         // react-native-iap hands us a plain object ({ code, message, productId }),
         // NOT an Error — passing it straight to Sentry logs the useless
         // "Object captured as exception with keys: code, message, productId".
         // Wrap it in a real Error so Sentry gets a readable title + stack, and
         // stash the raw fields as context. 2026-06-30 fix.
         const wrapped = new Error(
-          `IAP purchase error [${code ?? 'unknown'}]: ${error?.message ?? 'unknown error'}`,
+          `IAP purchase error [${code ?? 'unknown'}]: ${message || 'unknown error'}`,
         );
         captureException(wrapped, {
           source: 'iap.purchase_error',
           code: code ?? 'unknown',
           productId: error?.productId ?? 'unknown',
-          rawMessage: error?.message ?? '',
+          rawMessage: message,
         });
       }
     });
