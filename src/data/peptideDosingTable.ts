@@ -255,29 +255,37 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     timeOffBetweenCycles: '4 Weeks',
     fasted: false,
   },
+  // 5-Amino-1MQ (both forms): cycleLength and fasted below supersede the
+  // original master-table values ('8-16 Weeks', fasted No) per Edward's
+  // "5-Amino-1MQ Cheat Sheet", supplied 2026-07-21. Notes [15] and [16]
+  // transcribed from that same sheet.
   {
     peptideId: '5-amino-1mq',
     compound: '5-Amino-1MQ (oral)',
     inCatalog: true,
     dosingRange: '50mg-150mg',
-    cycleLength: '8-16 Weeks',
+    cycleLength: '4-16 Weeks',
     frequencyDaily: '2-3x Daily AM/Mid PM',
     titrationNoteRef: 15,
-    titrationNotePending: true,
+    titrationNote:
+      'Oral: 50-150 mg per day, split into 1-3 doses of 50 mg each. When dosing more than once daily, space doses roughly 4 hours apart. Take in a fasted state for maximum effect — best in the morning fasted, ideally before fasted cardio or training. Swallow capsules or tablets with water. Cycle 4-16 weeks, then take a break of 4+ weeks to reset metabolic pathways.',
+    titrationNotePending: false,
     timeOffBetweenCycles: '4 Weeks',
-    fasted: false,
+    fasted: true,
   },
   {
     peptideId: '5-amino-1mq-inj',
     compound: '5-Amino-1MQ (inj)',
     inCatalog: false,
     dosingRange: '0.5mg-2mg',
-    cycleLength: '8-16 Weeks',
+    cycleLength: '4-16 Weeks',
     frequencyDaily: '1-2x Daily AM/PM',
     titrationNoteRef: 16,
-    titrationNotePending: true,
+    titrationNote:
+      'Injectable: 0.5-2 mg subcutaneously, 1-2 times daily. When dosing twice daily, space injections roughly 7-9 hours apart. Take in a fasted state for maximum effect — best in the morning fasted, ideally before fasted cardio or training. Administer subcutaneously with a 29-31g insulin syringe. Cycle 4-16 weeks, then take a break of 4+ weeks to reset metabolic pathways.',
+    titrationNotePending: false,
     timeOffBetweenCycles: '4 Weeks',
-    fasted: false,
+    fasted: true,
   },
   {
     peptideId: 'nad-plus',
