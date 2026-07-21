@@ -203,13 +203,26 @@ function RootLayout() {
           await initIAP({
             onPurchase: async ({ productId, transactionReceipt }) => {
               const liveUserId = useAuthStore.getState().user?.id ?? null;
-              if (liveUserId && currentUserId !== liveUserId) return;
+              // Cross-user event: THROW rather than return. Returning normally
+              // told iapService the purchase was handled, so it finished the
+              // transaction and the receipt was consumed without anyone being
+              // entitled. Throwing leaves it un-acknowledged so the store
+              // replays it once the owning user is signed back in.
+              if (liveUserId && currentUserId !== liveUserId) {
+                throw new Error('IAP purchase event mismatched user — not finishing');
+              }
               const platform: 'ios' | 'android' = Platform.OS === 'ios' ? 'ios' : 'android';
-              try {
-                await useSubscriptionStore
-                  .getState()
-                  .validatePurchase(platform, productId, transactionReceipt);
-              } catch {}
+              // Do NOT swallow. validatePurchase resolves false when the
+              // backend refused entitlement; iapService only skips
+              // finishTransaction when this callback rejects.
+              const granted = await useSubscriptionStore
+                .getState()
+                .validatePurchase(platform, productId, transactionReceipt);
+              if (!granted) {
+                throw new Error(
+                  `validate-purchase did not grant entitlement for ${productId}`,
+                );
+              }
             },
             onPending: ({ productId }) => {
               useSubscriptionStore.getState().setPendingPurchase({ productId });
@@ -521,16 +534,27 @@ function RootLayout() {
                 { bootUid: iapBootUserId, liveUid: liveUserId, productId },
               );
             } catch {}
-            return;
+            // THROW, don't return. A bare return looked like success to
+            // iapService, which then finished the transaction — consuming
+            // user A's receipt while user B was signed in and entitling
+            // nobody. Throwing keeps it un-acknowledged for replay.
+            throw new Error('IAP purchase event mismatched user — not finishing');
           }
           const platform: 'ios' | 'android' = Platform.OS === 'ios' ? 'ios' : 'android';
-          try {
-            await useSubscriptionStore
-              .getState()
-              .validatePurchase(platform, productId, transactionReceipt);
-          } catch (err) {
-            if (__DEV__) console.warn('[boot] validatePurchase failed:', err);
-            captureException(err, { source: 'boot.validatePurchase' });
+          // Deliberately NOT wrapped in try/catch, and the boolean is no
+          // longer discarded. iapService treats a resolved onPurchase as
+          // "entitlement granted" and finishes the transaction; swallowing
+          // the failure here is what caused paid users to get nothing while
+          // the receipt was consumed. Let it reject — iapService already
+          // reports it (source: iap.validate) and leaves the purchase
+          // un-finished so the store replays it.
+          const granted = await useSubscriptionStore
+            .getState()
+            .validatePurchase(platform, productId, transactionReceipt);
+          if (!granted) {
+            throw new Error(
+              `validate-purchase did not grant entitlement for ${productId}`,
+            );
           }
         },
         onPending: ({ productId }) => {
