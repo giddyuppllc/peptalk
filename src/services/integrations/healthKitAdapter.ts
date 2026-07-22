@@ -37,6 +37,7 @@ import type {
 } from './types';
 import type { PeriodEntry, CycleDayLog, FlowIntensity, BiomarkerScope } from '../../types/cycle';
 import { secureStorage } from '../secureStorage';
+import { captureException, captureMessage } from '../telemetry';
 
 // ── Dynamic module load ────────────────────────────────────────────────────
 
@@ -355,7 +356,21 @@ export const healthKitAdapter: BiomarkerAdapter = {
     // iPad has no HealthKit data layer — gate on the native availability check
     // so the Apple Health card shows as unavailable (not a dead "Connect") on
     // iPad, the device Apple reviews on. `null` (pending) counts as available.
-    return Platform.OS === 'ios' && AppleHealthKit != null && hkDataAvailable !== false;
+    //
+    // ALSO require the native `initHealthKit` method to actually exist. When the
+    // react-native-health native module isn't linked into the build,
+    // `require('react-native-health')` still returns a JS wrapper object
+    // (Object.assign({}, undefined, {...})) that is non-null but has NO native
+    // methods — so `AppleHealthKit != null` alone was true and the Connect
+    // button rendered, then silently threw "initHealthKit is not a function" on
+    // press (swallowed by the apple_health branch). Checking for the method makes
+    // a missing module surface as "unavailable" instead of a dead button.
+    return (
+      Platform.OS === 'ios' &&
+      AppleHealthKit != null &&
+      typeof AppleHealthKit.initHealthKit === 'function' &&
+      hkDataAvailable !== false
+    );
   },
 
   async isAuthorized() {
@@ -368,7 +383,19 @@ export const healthKitAdapter: BiomarkerAdapter = {
   },
 
   async connect(scopes: BiomarkerScope[]) {
-    if (!this.available()) return false;
+    if (!this.available()) {
+      // The connect button did nothing. Record WHY to Sentry so a TestFlight
+      // report is diagnosable without the dev-only debug screen. Silent — no UI
+      // (App Review 5.1.1(iv): nothing may wrap the Health permission request).
+      captureMessage('HealthKit connect: adapter unavailable', 'warning', {
+        source: 'healthkit.connect',
+        platform: Platform.OS,
+        moduleLoaded: AppleHealthKit != null,
+        hasNativeInit: typeof AppleHealthKit?.initHealthKit === 'function',
+        hkDataAvailable,
+      });
+      return false;
+    }
     try {
       await initHealthKit({
         permissions: {
@@ -387,6 +414,16 @@ export const healthKitAdapter: BiomarkerAdapter = {
       return true;
     } catch (err) {
       log('connect failed', err);
+      // initHealthKit rejected — the likely real-world cause of "the button does
+      // nothing" once the native module IS linked: the HealthKit capability isn't
+      // provisioned on the App ID / distribution profile, so the entitlement is
+      // stripped and the request fails. Report it (silently) so we can tell this
+      // apart from a missing module in Sentry.
+      captureException(err instanceof Error ? err : new Error(String(err)), {
+        source: 'healthkit.connect',
+        hasNativeInit: typeof AppleHealthKit?.initHealthKit === 'function',
+        readScopes: scopeToHKPerms(scopes).length,
+      });
       authorized = false;
       return false;
     }
