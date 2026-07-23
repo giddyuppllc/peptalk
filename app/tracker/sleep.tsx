@@ -8,7 +8,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
+import { ScrollView, View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Polyline, Line } from 'react-native-svg';
@@ -70,7 +70,7 @@ export default function SleepTrackerScreen() {
       title="Sleep"
       observation={
         nights.length === 0
-          ? 'No sleep data. Connect HealthKit or Health Connect to pull it.'
+          ? `No sleep data. Connect ${Platform.OS === 'ios' ? 'Apple Health' : 'Health Connect'} to pull it.`
           : avg7 != null
             ? `${avg7.toFixed(1)} hr / night average over 7 days.`
             : `Latest ${latest!.hours.toFixed(1)} hr on ${latest!.date}.`
@@ -84,7 +84,7 @@ export default function SleepTrackerScreen() {
               router.push('/settings/integrations' as never);
             }}
             accessibilityRole="button"
-            accessibilityLabel="Connect HealthKit or Health Connect to pull sleep"
+            accessibilityLabel={`Connect ${Platform.OS === 'ios' ? 'Apple Health' : 'Health Connect'} to pull sleep`}
           >
             <GlassCard style={styles.cardSpacing}>
               <View style={styles.connectRow}>

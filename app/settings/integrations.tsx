@@ -164,7 +164,7 @@ export default function IntegrationsSettingsScreen() {
 
   // Partition adapters into: available + unavailable (scaffolded dark)
   const available = ADAPTERS.filter((a) => a.available());
-  const darkScaffold = ADAPTERS.filter((a) => !a.available());
+  const darkScaffold = ADAPTERS.filter((a) => !a.available() && !(a.source === 'health_connect' && Platform.OS === 'ios'));
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>

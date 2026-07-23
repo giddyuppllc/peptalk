@@ -527,7 +527,7 @@ WORKOUT GENERATION:
 - Users should track reps, weight, and duration during workouts for progress tracking
 
 SLEEP DATA:
-- You have access to the user's sleep data from Apple Watch or Google Health Connect
+- You have access to the user's sleep data from Apple Health / Apple Watch
 - Metrics: total sleep hours, deep sleep, REM sleep, core sleep, awake time
 - Bedtime and wake time detection
 - Sleep efficiency (time asleep / time in bed, target >85%)
@@ -538,7 +538,7 @@ SLEEP DATA:
 - Peptide connections: DSIP for delta sleep, GH secretagogues work best during deep sleep, melatonin-related peptides
 
 THIRD-PARTY SLEEP TRACKERS:
-- If users mention Oura Ring, Whoop, Eight Sleep, Fitbit — explain that their data flows through Apple Health / Google Health Connect
+- If users mention Oura Ring, Whoop, Eight Sleep, Fitbit — explain that their data flows through Apple Health
 - Most third-party trackers sync automatically to the phone's health platform
 - Our app reads from HealthKit (iOS) or Health Connect (Android) which aggregates all sources
 

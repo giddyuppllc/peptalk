@@ -9,7 +9,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
+import { ScrollView, View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -179,13 +179,13 @@ export default function ActivityScreen() {
               router.push('/settings/integrations' as never);
             }}
             accessibilityRole="button"
-            accessibilityLabel="Connect a device for HealthKit or Health Connect"
+            accessibilityLabel={`Connect a device for ${Platform.OS === 'ios' ? 'Apple Health' : 'Health Connect'}`}
           >
             <GlassCard style={styles.cardSpacing}>
               <Tile
                 icon="pulse-outline"
                 title="Connect a device"
-                body="Pull steps + active calories from HealthKit / Health Connect."
+                body={`Pull steps + active calories from ${Platform.OS === 'ios' ? 'Apple Health' : 'Health Connect'}.`}
               />
             </GlassCard>
           </Pressable>
