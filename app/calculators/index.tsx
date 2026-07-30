@@ -71,14 +71,34 @@ export default function CalculatorsHubScreen() {
         </TouchableOpacity>
 
         {/*
-         * Quick Dose Guide HIDDEN 2026-05-16 — audit caught that
-         * quick-dose.tsx hardcodes vialMg=5/waterMl=2 for every peptide
-         * (src/data/protocols.ts is consulted but not Edward's reference
-         * in peptideDosingReference.ts). Result: 2× concentration error
-         * on semaglutide, 2× under-draw on retatrutide. Until that
-         * screen is rewired through getDosingReference(), don't surface
-         * it. dosing.tsx above is the source of truth.
+         * Quick Dose Guide RESTORED 2026-07-30 — the hardcoded 5mg/2mL that got
+         * this pulled is gone; reconInfo now reads per-peptide vial/diluent/mgPerMl
+         * from getDosingReference(), and shows no auto-draw when a peptide has no
+         * verified reference. Jamie's peptide-first walk-through + mcg⇄mg footer.
          */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => router.push('/calculators/quick-dose')}
+        >
+          <LinearGradient
+            colors={t.isDark ? [Gradients.card[0], Gradients.card[1]] : [t.card, t.card]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.card, { borderColor: t.glassBorder }]}
+          >
+            <View style={[styles.cardIcon, { backgroundColor: t.glass }]}>
+              <Ionicons name="pulse-outline" size={32} color="#E89672" />
+            </View>
+            <View style={styles.cardContent}>
+              <Text style={[styles.cardTitle, { color: t.text }]}>Quick Dose Guide</Text>
+              <Text style={[styles.cardDesc, { color: t.textSecondary }]}>
+                Pick a peptide for its protocols, the draw in units/mL, and mcg ⇄ mg
+                conversions.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={t.textSecondary} />
+          </LinearGradient>
+        </TouchableOpacity>
 
         {/* Reconstitution Calculator — separate purpose: vial math only, not dosing */}
         <Text style={[styles.advancedLabel, { color: t.textSecondary }]}>ADVANCED TOOLS</Text>
