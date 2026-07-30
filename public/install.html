@@ -60,7 +60,6 @@
       <h1 id="title">Installing PepTalk…</h1>
       <p id="subtitle">If the install doesn’t start in a few seconds, tap the button below.</p>
       <button class="btn" id="installBtn" disabled>Install PepTalk</button>
-      <br /><a class="ghost" href="/?source=pwa">Open PepTalk in your browser instead →</a>
     </div>
 
     <!-- iOS Safari -->
@@ -76,14 +75,12 @@
           <li>Tap <b>Add</b> — PepTalk lands on your Home Screen.</li>
         </ol>
       </div>
-      <a class="btn" href="/?source=pwa">Open PepTalk now</a>
     </div>
 
     <!-- Chrome on iOS (can't install) -->
     <div id="view-ios-chrome" class="hidden">
       <h1>Open in Safari to install</h1>
       <p>On iPhone &amp; iPad, PepTalk installs from <b>Safari</b>. Copy this page’s link and open it in Safari, then tap Share → Add to Home Screen.</p>
-      <a class="btn" href="/?source=pwa">Continue in browser</a>
     </div>
 
     <!-- Desktop / laptop -->
@@ -167,7 +164,7 @@
       if (!deferred && !$('view-install').classList.contains('hidden')) {
         $('spinner').classList.add('hidden');
         $('title').textContent = 'Get PepTalk';
-        $('subtitle').textContent = 'Use your browser menu → “Install app” / “Add to Home Screen”, or open PepTalk in your browser below.';
+        $('subtitle').textContent = 'Open your browser menu and tap “Install app” / “Add to Home Screen” to add PepTalk.';
       }
     }, 4000);
   })();
