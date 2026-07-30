@@ -67,7 +67,12 @@ try {
 }
 
 function isAvailable(): boolean {
-  return IAP != null;
+  // Never available on web. react-native-iap is a native (Nitro) module; on web
+  // the JS shim may be non-null but its native methods are undefined, so calling
+  // initConnection/requestPurchase would throw. Gating here makes every IAP path
+  // a safe no-op on web — the PWA sells memberships through the Square web
+  // checkout instead (native iOS/Android keep using StoreKit/Play Billing).
+  return Platform.OS !== 'web' && IAP != null;
 }
 
 // ---------------------------------------------------------------------------
