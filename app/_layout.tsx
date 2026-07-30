@@ -10,6 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Animated, Text, AppState , Platform, Linking, Alert } from 'react-native';
 import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts } from 'expo-font';
@@ -93,6 +94,10 @@ function RootLayout() {
 
   // Load custom fonts
   const [fontsLoaded, fontsError] = useFonts({
+    // Ionicons is the app's only icon set (187 usages). On web the glyph font
+    // isn't auto-registered, so every icon rendered as a tofu box — loading it
+    // here fixes it. Harmless on native (already bundled).
+    ...Ionicons.font,
     'Playfair-Bold': PlayfairDisplay_700Bold,
     'Playfair-ExtraBold': PlayfairDisplay_800ExtraBold,
     'Playfair-Black': PlayfairDisplay_900Black,

@@ -238,30 +238,10 @@ export default function OnboardingScreen() {
     return true;
   }, [step, profile.gender, selectedAge, profile.healthGoals.length, weightValid, heightValid, accountFirstName, accountLastName, emailOk, passwordCheck.valid, acceptedTerms]);
 
-  // Skip-and-Explore — lands the user on Home (tabs) with whatever
-  // defaults they've filled in so far. We mark onboarding complete so
-  // the route gate doesn't bounce them back, but DON'T set isComplete
-  // until we've at least preserved what they entered. This is the
-  // consumer escape hatch from the questionnaire.
-  const handleSkipAndExplore = () => {
-    // Persist any partial answers the user has entered before bouncing
-    // them to home. None of these are required to display tabs, but
-    // saving means a returning user picks up where they left off.
-    if (profile.gender && selectedAge >= 18) {
-      setAgeRange(ageToRange(selectedAge));
-    }
-    if (weightValid) setBodyMetrics({ weightLbs: parseFloat(weightLbs) });
-    if (heightValid) {
-      const f = parseInt(heightFeet, 10);
-      const i = parseInt(heightInches, 10) || 0;
-      setBodyMetrics({ heightInches: f * 12 + i });
-    }
-    // Default plan: free. User can upgrade from Profile → Subscription.
-    setTier('free');
-    completeOnboarding();
-    trackOnboardingComplete(step);
-    router.replace('/(tabs)');
-  };
+  // "Skip & explore" was removed: every user must complete the onboarding
+  // questions and create a (free) account — no guest/escape-hatch entry into
+  // the app. Account creation still defaults to the free tier; Pro (AI access)
+  // is sold from the paywall.
 
   const handleNext = async () => {
     if (!canContinue) return;
@@ -487,19 +467,6 @@ export default function OnboardingScreen() {
               <Text style={s.signInLinkText}>Already have an account? <Text style={{ color: HIGHLIGHT, fontWeight: '700' }}>Sign In</Text></Text>
             </TouchableOpacity>
 
-            {/* Skip-and-Explore — lands the user on Home with defaults
-                applied. The consumer escape hatch from the questionnaire. */}
-            <TouchableOpacity
-              style={s.exploreLink}
-              onPress={handleSkipAndExplore}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Skip onboarding and explore PepTalk"
-            >
-              <Text style={s.exploreLinkText}>
-                Or <Text style={{ color: '#2D2D2D', fontWeight: '700', textDecorationLine: 'underline' }}>Skip and explore</Text>
-              </Text>
-            </TouchableOpacity>
           </Animated.View>
 
           {/* Trust badges — fade in last */}
@@ -610,15 +577,6 @@ export default function OnboardingScreen() {
               <Text style={s.footerBackText}>Back</Text>
             </TouchableOpacity>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <TouchableOpacity
-                style={s.footerSkipBtn}
-                onPress={handleSkipAndExplore}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Skip and explore PepTalk with defaults"
-              >
-                <Text style={s.footerSkipText}>Skip & explore</Text>
-              </TouchableOpacity>
               <TouchableOpacity
                 style={[s.footerNextBtn, !canContinue && { opacity: 0.4 }]}
                 onPress={handleNext}
@@ -804,15 +762,6 @@ export default function OnboardingScreen() {
               <Text style={s.footerBackText}>Back</Text>
             </TouchableOpacity>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <TouchableOpacity
-                style={s.footerSkipBtn}
-                onPress={handleSkipAndExplore}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Skip and explore PepTalk with defaults"
-              >
-                <Text style={s.footerSkipText}>Skip & explore</Text>
-              </TouchableOpacity>
               <TouchableOpacity
                 style={[s.footerNextBtn, !canContinue && { opacity: 0.4 }]}
                 onPress={handleNext}
@@ -1058,15 +1007,6 @@ export default function OnboardingScreen() {
               <Text style={s.footerBackText}>Back</Text>
             </TouchableOpacity>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <TouchableOpacity
-                style={s.footerSkipBtn}
-                onPress={handleSkipAndExplore}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Skip account creation and explore PepTalk with defaults"
-              >
-                <Text style={s.footerSkipText}>Skip & explore</Text>
-              </TouchableOpacity>
               <TouchableOpacity
                 style={[s.footerNextBtn, (!canContinue || isLoggingIn) && { opacity: 0.4 }]}
                 onPress={handleNext}
