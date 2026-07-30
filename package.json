@@ -19,7 +19,8 @@
     "verify:all": "npm run verify:calc && npm run verify:sanitize && npm run verify:cycle && npm run verify:adherence && npm run verify:labparsers && npm run verify:mealmath && npm run verify:dosecalc && npm run verify:inbody",
     "verify:deploy": "bash scripts/verify-deploy.sh",
     "lint": "expo lint",
-    "export:web": "expo export --platform web && node scripts/inject-pwa.mjs"
+    "export:web": "expo export --platform web && node scripts/inject-pwa.mjs",
+    "deploy:web": "npm run export:web && mkdir -p dist/.vercel && cp .vercel-link/project.json dist/.vercel/project.json && cd dist && vercel deploy --prod --yes --scope giddyupp"
   },
   "expo": {
     "doctor": {
