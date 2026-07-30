@@ -169,6 +169,11 @@ function RootLayout() {
   const [isDesktopWeb, setIsDesktopWeb] = useState(false);
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    // TEMP QA unlock: ?preview=app runs the real app on desktop for co-driving.
+    // Remove once QA is done — the app is phone/tablet only.
+    try {
+      if (new URLSearchParams(window.location.search).get('preview') === 'app') return;
+    } catch {}
     const mq = window.matchMedia('(min-width: 1024px) and (hover: hover) and (pointer: fine)');
     const update = () => setIsDesktopWeb(mq.matches);
     update();

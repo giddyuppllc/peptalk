@@ -54,12 +54,19 @@
   <div class="wrap">
     <img class="logo" src="/icon-192.png" alt="PepTalk" />
 
-    <!-- Default / Android + desktop -->
+    <!-- Default / Android -->
     <div id="view-install">
-      <div class="spinner" id="spinner"></div>
-      <h1 id="title">Installing PepTalk…</h1>
-      <p id="subtitle">If the install doesn’t start in a few seconds, tap the button below.</p>
-      <button class="btn" id="installBtn" disabled>Install PepTalk</button>
+      <h1 id="title">Install PepTalk</h1>
+      <p id="subtitle">Add PepTalk to your phone — it opens as its own app, no browser.</p>
+      <button class="btn hidden" id="installBtn">Install PepTalk</button>
+      <div class="steps" id="manualSteps">
+        <div style="font-weight:800;color:var(--ink);margin-bottom:8px;">Don’t see a prompt? Add it in 2 taps:</div>
+        <ol>
+          <li>Tap the <b>⋮</b> menu (top-right of Chrome).</li>
+          <li>Tap <b>Install app</b> (or <b>Add to Home screen</b>).</li>
+        </ol>
+        <div style="font-size:13px;color:var(--muted);margin-top:8px;">Then open PepTalk from your Home screen — it runs fullscreen as its own app.</div>
+      </div>
     </div>
 
     <!-- iOS Safari -->
@@ -133,18 +140,14 @@
       return;
     }
 
-    // Android / desktop: wait for the browser's install prompt.
+    // Android: enable the one-tap Install button when Chrome offers the prompt.
     var btn = $('installBtn');
     window.addEventListener('beforeinstallprompt', function (e) {
       e.preventDefault();
       deferred = e;
-      btn.disabled = false;
-      $('spinner').classList.add('hidden');
+      btn.classList.remove('hidden');
       $('title').textContent = 'Ready to install';
-      $('subtitle').textContent = 'Tap Install to add PepTalk to your device.';
-      // Try to fire automatically; browsers that require a gesture will simply
-      // ignore this and the user taps the button (exactly our fallback).
-      try { promptInstall(); } catch (err) {}
+      $('subtitle').textContent = 'Tap Install to add PepTalk to your phone.';
     });
 
     function promptInstall() {
@@ -157,16 +160,6 @@
     btn.addEventListener('click', promptInstall);
 
     window.addEventListener('appinstalled', function () { show('view-done'); });
-
-    // If no prompt arrives (already installed on this browser, or unsupported),
-    // relax the copy after a few seconds so the page never looks stuck.
-    setTimeout(function () {
-      if (!deferred && !$('view-install').classList.contains('hidden')) {
-        $('spinner').classList.add('hidden');
-        $('title').textContent = 'Get PepTalk';
-        $('subtitle').textContent = 'Open your browser menu and tap “Install app” / “Add to Home Screen” to add PepTalk.';
-      }
-    }, 4000);
   })();
   </script>
 </body>
