@@ -26,6 +26,7 @@ import { Newsreader_700Bold } from '@expo-google-fonts/newsreader/700Bold';
 import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import DesktopGate from '../src/components/DesktopGate';
+import MobileBrowserGate from '../src/components/MobileBrowserGate';
 import { V3ThemeProvider, useV3Theme } from '../src/theme/V3ThemeProvider';
 import { OfflineBanner } from '../src/components/OfflineBanner';
 import { HomeFab } from '../src/components/HomeFab';
@@ -166,19 +167,23 @@ function RootLayout() {
   // PepTalk is a phone app; on a desktop/laptop browser the mobile UI stretches
   // and looks broken. Detect large + mouse-driven screens (phones/tablets are
   // touch/coarse-pointer → allowed) and show a "open on your phone" screen.
-  const [isDesktopWeb, setIsDesktopWeb] = useState(false);
+  // PepTalk only runs as the INSTALLED app (standalone). A browser tab (mobile or
+  // desktop) that isn't the installed app is gated, never runs the app in-browser.
+  const [webGate, setWebGate] = useState<'none' | 'desktop' | 'mobile'>('none');
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-    // TEMP QA unlock: ?preview=app runs the real app on desktop for co-driving.
-    // Remove once QA is done — the app is phone/tablet only.
+    // TEMP QA unlock: ?preview=app runs the real app in any browser for co-driving.
+    // Remove once QA is done — the app is installed-only.
     try {
       if (new URLSearchParams(window.location.search).get('preview') === 'app') return;
     } catch {}
-    const mq = window.matchMedia('(min-width: 1024px) and (hover: hover) and (pointer: fine)');
-    const update = () => setIsDesktopWeb(mq.matches);
-    update();
-    mq.addEventListener?.('change', update);
-    return () => mq.removeEventListener?.('change', update);
+    // Launched from the installed Home-screen icon → standalone → run the app.
+    const standalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true;
+    if (standalone) return;
+    const isDesktop = window.matchMedia('(min-width: 1024px) and (hover: hover) and (pointer: fine)').matches;
+    setWebGate(isDesktop ? 'desktop' : 'mobile');
   }, []);
 
   // ── Splash animation ──────────────────────────────────────────────────────
@@ -1114,11 +1119,18 @@ function RootLayout() {
     }
   }, [edit, hasHydrated, isComplete, navReady, router, segments]);
 
-  // Desktop/laptop browser → don't run the phone app; show "open on your phone".
-  if (isDesktopWeb) {
+  // Not the installed app → gate instead of running the app in a browser tab.
+  if (webGate === 'desktop') {
     return (
       <SafeAreaProvider>
         <DesktopGate />
+      </SafeAreaProvider>
+    );
+  }
+  if (webGate === 'mobile') {
+    return (
+      <SafeAreaProvider>
+        <MobileBrowserGate />
       </SafeAreaProvider>
     );
   }
