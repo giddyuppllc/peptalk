@@ -22,6 +22,7 @@ import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
 import { PEPTIDES } from '../../src/data/peptides';
 import { getProtocolsByPeptide } from '../../src/data/protocols';
+import { getDosingReference } from '../../src/data/peptideDosingReference';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { getPeptideTiming } from '../../src/data/peptideTiming';
 
@@ -82,13 +83,22 @@ export default function QuickDoseScreen() {
     [selectedPeptide],
   );
 
-  // Auto-calculate reconstitution
+  // Per-peptide reconstitution from Edward's verified dosing reference — NOT a
+  // hardcoded 5mg/2mL. The old hardcode gave every peptide a 2.5 mg/mL concentration
+  // (2× errors on semaglutide/retatrutide), which is why this screen was pulled.
+  const dosingRef = useMemo(
+    () => (selectedPeptideId ? getDosingReference(selectedPeptideId) : null),
+    [selectedPeptideId],
+  );
+
+  // Auto-calculate reconstitution — only when we have a verified reference for
+  // this peptide. No reference → no auto-draw (protocol notes still render below).
   const reconInfo = useMemo(() => {
-    if (!protocol) return null;
-    // Standard: 5mg vial + 2ml BAC water
-    const vialMg = 5;
-    const waterMl = 2;
-    const concentrationMcgPerMl = (vialMg * 1000) / waterMl;
+    if (!protocol || !dosingRef) return null;
+    const vialMg = dosingRef.vialMg;
+    const waterMl = dosingRef.diluentMl;
+    // Doc-stated mg/mL is authoritative (honors Edward's unit math).
+    const concentrationMcgPerMl = dosingRef.mgPerMl * 1000;
     const doseMin = protocol.typicalDose?.min ?? 0;
     const doseMax = protocol.typicalDose?.max ?? 0;
     const doseUnit = protocol.typicalDose?.unit ?? 'mcg';
@@ -118,7 +128,7 @@ export default function QuickDoseScreen() {
       volumeMinUnits,
       volumeMaxUnits,
     };
-  }, [protocol]);
+  }, [protocol, dosingRef]);
 
   // ── Peptide Picker ──
   if (!selectedPeptide) {
