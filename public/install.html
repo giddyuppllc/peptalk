@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Install PepTalk</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="PepTalk" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="icon" href="/icon-192.png" />
+  <style>
+    :root { --teal:#14b8a6; --ink:#0f172a; --muted:#64748b; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; margin: 0; background: #ffffff; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--ink);
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px; text-align: center;
+    }
+    .wrap { width: 100%; max-width: 400px; }
+    .logo {
+      width: 76px; height: 76px; border-radius: 20px; margin: 0 auto 22px;
+      display: block; box-shadow: 0 10px 30px rgba(20,184,166,.25);
+    }
+    h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 8px; }
+    p { color: var(--muted); font-size: 15px; line-height: 1.5; margin: 0 auto 22px; max-width: 320px; }
+    .spinner {
+      width: 26px; height: 26px; margin: 0 auto 20px; border-radius: 50%;
+      border: 3px solid #e2e8f0; border-top-color: var(--teal);
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn {
+      display: inline-block; width: 100%; padding: 16px 20px; border: 0; border-radius: 14px;
+      background: var(--teal); color: #fff; font-size: 16px; font-weight: 700; cursor: pointer;
+      text-decoration: none; box-shadow: 0 8px 20px rgba(20,184,166,.28); transition: transform .12s ease, opacity .2s;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn[disabled] { opacity: .5; pointer-events: none; }
+    .ghost { display: inline-block; margin-top: 16px; color: var(--muted); font-size: 14px; text-decoration: none; }
+    .ghost:hover { color: var(--ink); }
+    .hidden { display: none !important; }
+    .steps { text-align: left; background: #f8fafc; border: 1px solid #eef2f6; border-radius: 14px; padding: 16px 18px; margin: 0 0 20px; }
+    .steps ol { margin: 0; padding-left: 20px; color: var(--ink); font-size: 15px; line-height: 1.7; }
+    .steps b { color: var(--teal); }
+    .share { display: inline-block; vertical-align: -3px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <img class="logo" src="/icon-192.png" alt="PepTalk" />
+
+    <!-- Default / Android + desktop -->
+    <div id="view-install">
+      <div class="spinner" id="spinner"></div>
+      <h1 id="title">Installing PepTalk…</h1>
+      <p id="subtitle">If the install doesn’t start in a few seconds, tap the button below.</p>
+      <button class="btn" id="installBtn" disabled>Install PepTalk</button>
+      <br /><a class="ghost" href="/?source=pwa">Open PepTalk in your browser instead →</a>
+    </div>
+
+    <!-- iOS Safari -->
+    <div id="view-ios" class="hidden">
+      <h1>Add PepTalk to your Home Screen</h1>
+      <p>iPhone &amp; iPad install PepTalk straight from Safari:</p>
+      <div class="steps">
+        <ol>
+          <li>Tap the <b>Share</b> icon
+            <svg class="share" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3"/><path d="m7 8 5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+            at the bottom of Safari.</li>
+          <li>Scroll down and tap <b>Add to Home Screen</b>.</li>
+          <li>Tap <b>Add</b> — PepTalk lands on your Home Screen.</li>
+        </ol>
+      </div>
+      <a class="btn" href="/?source=pwa">Open PepTalk now</a>
+    </div>
+
+    <!-- Chrome on iOS (can't install) -->
+    <div id="view-ios-chrome" class="hidden">
+      <h1>Open in Safari to install</h1>
+      <p>On iPhone &amp; iPad, PepTalk installs from <b>Safari</b>. Copy this page’s link and open it in Safari, then tap Share → Add to Home Screen.</p>
+      <a class="btn" href="/?source=pwa">Continue in browser</a>
+    </div>
+
+    <!-- Installed / success -->
+    <div id="view-done" class="hidden">
+      <h1>You’re all set 🎉</h1>
+      <p>PepTalk is installed. Open it to get started.</p>
+      <a class="btn" href="/?source=pwa">Open PepTalk</a>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    var deferred = null;
+    var $ = function (id) { return document.getElementById(id); };
+    function show(id) {
+      ['view-install','view-ios','view-ios-chrome','view-done'].forEach(function (v) {
+        $(v).classList.toggle('hidden', v !== id);
+      });
+    }
+
+    // Register the service worker so the install prompt is eligible.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(function () {});
+    }
+
+    var ua = navigator.userAgent || '';
+    var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    var isSafari = /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(ua);
+
+    // Already installed / opened as an app → go straight in.
+    if (isStandalone) { location.replace('/?source=pwa'); return; }
+
+    if (isIOS) {
+      show(isSafari ? 'view-ios' : 'view-ios-chrome');
+      return;
+    }
+
+    // Android / desktop: wait for the browser's install prompt.
+    var btn = $('installBtn');
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      deferred = e;
+      btn.disabled = false;
+      $('spinner').classList.add('hidden');
+      $('title').textContent = 'Ready to install';
+      $('subtitle').textContent = 'Tap Install to add PepTalk to your device.';
+      // Try to fire automatically; browsers that require a gesture will simply
+      // ignore this and the user taps the button (exactly our fallback).
+      try { promptInstall(); } catch (err) {}
+    });
+
+    function promptInstall() {
+      if (!deferred) return;
+      deferred.prompt();
+      deferred.userChoice.then(function (choice) {
+        if (choice && choice.outcome === 'accepted') { deferred = null; }
+      });
+    }
+    btn.addEventListener('click', promptInstall);
+
+    window.addEventListener('appinstalled', function () { show('view-done'); });
+
+    // If no prompt arrives (already installed on this browser, or unsupported),
+    // relax the copy after a few seconds so the page never looks stuck.
+    setTimeout(function () {
+      if (!deferred && !$('view-install').classList.contains('hidden')) {
+        $('spinner').classList.add('hidden');
+        $('title').textContent = 'Get PepTalk';
+        $('subtitle').textContent = 'Use your browser menu → “Install app” / “Add to Home Screen”, or open PepTalk in your browser below.';
+      }
+    }, 4000);
+  })();
+  </script>
+</body>
+</html>
