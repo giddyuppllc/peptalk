@@ -98,6 +98,7 @@
     "@aws-sdk/client-s3": "~3.1045.0",
     "@aws-sdk/s3-request-presigner": "~3.1045.0",
     "@types/react": "~19.1.0",
+    "babel-plugin-transform-import-meta": "^3.0.0",
     "dotenv": "~17.4.1",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~10.0.0",

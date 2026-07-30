@@ -9,6 +9,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Animated, Text, AppState , Platform, Linking, Alert } from 'react-native';
+import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts } from 'expo-font';
@@ -1094,6 +1095,12 @@ function RootLayout() {
     <V3ThemeProvider>
     <SafeAreaProvider>
       <View style={[styles.container, { backgroundColor: t.bg }]}>
+        {/* WEB: force reduced motion so Reanimated entering animations
+            (FadeInDown/FadeInUp/etc., used across every screen) render at their
+            FINAL state instead of sticking at their opacity-0 initial frame.
+            Reanimated layout/entering animations don't play on web here, which
+            left the whole PWA rendered-but-invisible. Native is untouched. */}
+        {Platform.OS === 'web' && <ReducedMotionConfig mode={ReduceMotion.Always} />}
         <ThemedStatusBar />
         <OfflineBanner />
         <CelebrationModal />
