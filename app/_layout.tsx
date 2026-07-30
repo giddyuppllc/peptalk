@@ -25,6 +25,7 @@ import { Newsreader_600SemiBold } from '@expo-google-fonts/newsreader/600SemiBol
 import { Newsreader_700Bold } from '@expo-google-fonts/newsreader/700Bold';
 import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
+import DesktopGate from '../src/components/DesktopGate';
 import { V3ThemeProvider, useV3Theme } from '../src/theme/V3ThemeProvider';
 import { OfflineBanner } from '../src/components/OfflineBanner';
 import { HomeFab } from '../src/components/HomeFab';
@@ -160,6 +161,20 @@ function RootLayout() {
 
   // Wait for the navigator (<Stack>) to mount before attempting navigation
   const [navReady, setNavReady] = useState(false);
+
+  // ── Desktop gate ──────────────────────────────────────────────────────────
+  // PepTalk is a phone app; on a desktop/laptop browser the mobile UI stretches
+  // and looks broken. Detect large + mouse-driven screens (phones/tablets are
+  // touch/coarse-pointer → allowed) and show a "open on your phone" screen.
+  const [isDesktopWeb, setIsDesktopWeb] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const mq = window.matchMedia('(min-width: 1024px) and (hover: hover) and (pointer: fine)');
+    const update = () => setIsDesktopWeb(mq.matches);
+    update();
+    mq.addEventListener?.('change', update);
+    return () => mq.removeEventListener?.('change', update);
+  }, []);
 
   // ── Splash animation ──────────────────────────────────────────────────────
   const [splashVisible, setSplashVisible] = useState(true);
@@ -1093,6 +1108,15 @@ function RootLayout() {
       return;
     }
   }, [edit, hasHydrated, isComplete, navReady, router, segments]);
+
+  // Desktop/laptop browser → don't run the phone app; show "open on your phone".
+  if (isDesktopWeb) {
+    return (
+      <SafeAreaProvider>
+        <DesktopGate />
+      </SafeAreaProvider>
+    );
+  }
 
   return (
     <ErrorBoundary>

@@ -86,6 +86,16 @@
       <a class="btn" href="/?source=pwa">Continue in browser</a>
     </div>
 
+    <!-- Desktop / laptop -->
+    <div id="view-desktop" class="hidden">
+      <h1>PepTalk is a mobile app</h1>
+      <p>Open it on your phone to install PepTalk and get started.</p>
+      <div class="steps" style="text-align:center;">
+        <div style="font-size:20px;font-weight:800;color:var(--ink);letter-spacing:.3px;">peptalk.bio</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:6px;">Visit on your iPhone or Android and tap “Install”.</div>
+      </div>
+    </div>
+
     <!-- Installed / success -->
     <div id="view-done" class="hidden">
       <h1>You’re all set 🎉</h1>
@@ -99,7 +109,7 @@
     var deferred = null;
     var $ = function (id) { return document.getElementById(id); };
     function show(id) {
-      ['view-install','view-ios','view-ios-chrome','view-done'].forEach(function (v) {
+      ['view-install','view-ios','view-ios-chrome','view-desktop','view-done'].forEach(function (v) {
         $(v).classList.toggle('hidden', v !== id);
       });
     }
@@ -116,6 +126,10 @@
 
     // Already installed / opened as an app → go straight in.
     if (isStandalone) { location.replace('/?source=pwa'); return; }
+
+    // Desktop/laptop → PepTalk is a phone app; send them to their phone.
+    var isDesktop = window.matchMedia('(min-width: 1024px) and (hover: hover) and (pointer: fine)').matches;
+    if (isDesktop && !isIOS) { show('view-desktop'); return; }
 
     if (isIOS) {
       show(isSafari ? 'view-ios' : 'view-ios-chrome');
