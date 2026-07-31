@@ -98,3 +98,7 @@ nativewind-env.d.ts
 global.css
 assets/icon.original-with-alpha.png
 .commit-msg-tmp
+
+# Local git worktrees — never part of the repo (an embedded repo gets committed
+# as a bare gitlink that no clone can resolve).
+.claude/worktrees/
