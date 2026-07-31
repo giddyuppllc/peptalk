@@ -69,7 +69,10 @@ export default function PlanScreen() {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: t.bg }]} edges={['top']}>
         <View style={s.header}>
-          <TouchableOpacity onPress={() => router.back()} style={s.iconBtn}>
+          <TouchableOpacity onPress={() => router.back()} style={s.iconBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
             <Ionicons name="chevron-back" size={24} color={t.text} />
           </TouchableOpacity>
           <Text style={[s.headerTitle, { color: t.text }]}>30-Day Plan</Text>
@@ -128,7 +131,10 @@ export default function PlanScreen() {
     <SafeAreaView style={[s.container, { backgroundColor: t.bg }]} edges={['top']}>
       {/* Header */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.iconBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={s.iconBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="chevron-back" size={24} color={t.text} />
         </TouchableOpacity>
         <Text style={[s.headerTitle, { color: t.text }]}>30-Day Plan</Text>
@@ -307,7 +313,10 @@ export default function PlanScreen() {
               <Text style={[s.modalTitle, { color: t.text }]} numberOfLines={1}>
                 Swap {swapTarget?.current.name}
               </Text>
-              <TouchableOpacity onPress={() => setSwapTarget(null)} style={s.iconBtn}>
+              <TouchableOpacity onPress={() => setSwapTarget(null)} style={s.iconBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Close exercise swap"
+              >
                 <Ionicons name="close" size={24} color={t.text} />
               </TouchableOpacity>
             </View>

@@ -262,7 +262,10 @@ export default function VideoTaggerScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: t.cardBorder }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="chevron-back" size={26} color={t.text} />
         </TouchableOpacity>
         <View style={{ flex: 1, alignItems: 'center' }}>
@@ -271,7 +274,10 @@ export default function VideoTaggerScreen() {
             {taggedCount} / {WORKOUT_VIDEOS.length} tagged
           </Text>
         </View>
-        <TouchableOpacity onPress={handleSave} hitSlop={12} disabled={saving}>
+        <TouchableOpacity onPress={handleSave} hitSlop={12} disabled={saving}
+          accessibilityRole="button"
+          accessibilityLabel="Save tags"
+        >
           {saving ? (
             <ActivityIndicator size="small" color={accent.deep} />
           ) : (
@@ -378,7 +384,10 @@ export default function VideoTaggerScreen() {
               <Text style={[styles.selectedExerciseText, { color: accent.deep }]}>
                 {selectedExercise.name}
               </Text>
-              <TouchableOpacity onPress={() => setExerciseId(null)} hitSlop={10}>
+              <TouchableOpacity onPress={() => setExerciseId(null)} hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Clear selected exercise"
+              >
                 <Ionicons name="close-circle" size={18} color={accent.deep} />
               </TouchableOpacity>
             </View>

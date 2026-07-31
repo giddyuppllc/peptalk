@@ -158,7 +158,10 @@ export default function CreateFoodScreen() {
           <Ionicons name="chevron-back" size={24} color={t.text} />
         </TouchableOpacity>
         <Text style={[s.headerTitle, { color: t.text }]}>Create Food</Text>
-        <TouchableOpacity onPress={handleSave} style={s.iconBtn}>
+        <TouchableOpacity onPress={handleSave} style={s.iconBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Save food"
+        >
           <Ionicons name="checkmark" size={24} color={accent.deep} />
         </TouchableOpacity>
       </View>

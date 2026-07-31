@@ -319,7 +319,10 @@ export default function NewJournalEntryScreen() {
               onSubmitEditing={handleAddTag}
               returnKeyType="done"
             />
-            <Pressable onPress={handleAddTag} style={styles.addTagBtn}>
+            <Pressable onPress={handleAddTag} style={styles.addTagBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Add tag"
+            >
               <Ionicons name="add-circle" size={26} color={Colors.pepTeal} />
             </Pressable>
           </View>

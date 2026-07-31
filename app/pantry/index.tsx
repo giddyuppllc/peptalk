@@ -127,7 +127,10 @@ export default function PantryScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Ionicons name="chevron-back" size={24} color={t.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: t.text }]}>My Pantry</Text>
@@ -153,6 +156,8 @@ export default function PantryScreen() {
           <TouchableOpacity
             onPress={() => router.push('/pantry/add' as any)}
             style={styles.iconBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Add pantry item"
           >
             <Ionicons name="add-circle" size={28} color={t.primary} />
           </TouchableOpacity>
@@ -170,7 +175,10 @@ export default function PantryScreen() {
             onChangeText={setQuery}
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')}>
+            <TouchableOpacity onPress={() => setQuery('')}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+            >
               <Ionicons name="close-circle" size={18} color={t.textSecondary} />
             </TouchableOpacity>
           )}
@@ -265,6 +273,8 @@ export default function PantryScreen() {
                       <TouchableOpacity
                         onPress={() => confirmRemove(item)}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remove ${item.name}`}
                       >
                         <Ionicons
                           name="trash-outline"
