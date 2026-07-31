@@ -503,6 +503,7 @@ export default function LiveEventChatScreen() {
               maxLength={1000}
               autoFocus
               style={[styles.editInput, { backgroundColor: t.glass, color: t.text }]}
+              accessibilityLabel="Edit message"
             />
             <View style={styles.editButtons}>
               <TouchableOpacity

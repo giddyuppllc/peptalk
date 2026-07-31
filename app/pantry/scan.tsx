@@ -609,6 +609,7 @@ export default function PantryScanScreen() {
                                   });
                                 }}
                                 keyboardType="decimal-pad"
+                                accessibilityLabel="Quantity"
                               />
                             </View>
                             <View style={{ flex: 1 }}>

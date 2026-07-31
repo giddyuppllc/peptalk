@@ -569,6 +569,7 @@ function FreeWorkoutScreen() {
                     value={ex.sets}
                     onChangeText={(v) => updateExercise(ex.id, 'sets', v.replace(/[^0-9]/g, ''))}
                     keyboardType="numeric"
+                    accessibilityLabel="Sets"
                   />
                 </View>
                 <View style={styles.freeExField}>
@@ -578,6 +579,7 @@ function FreeWorkoutScreen() {
                     value={ex.reps}
                     onChangeText={(v) => updateExercise(ex.id, 'reps', v.replace(/[^0-9]/g, ''))}
                     keyboardType="numeric"
+                    accessibilityLabel="Reps"
                   />
                 </View>
                 <View style={styles.freeExField}>
