@@ -69,9 +69,22 @@ interface DrillCardProps {
   preview: React.ReactNode;
   onPress: () => void;
   accessibilityLabel?: string;
+  /**
+   * Overrides the spoken destination cue. Defaults to `hint`, which is the
+   * right answer almost everywhere — pass this only when the visual hint reads
+   * badly aloud.
+   */
+  accessibilityHint?: string;
 }
 
-export function DrillCard({ label, hint, preview, onPress, accessibilityLabel }: DrillCardProps) {
+export function DrillCard({
+  label,
+  hint,
+  preview,
+  onPress,
+  accessibilityLabel,
+  accessibilityHint,
+}: DrillCardProps) {
   const t = useV3Theme();
   const scale = useSharedValue(1);
 
@@ -94,6 +107,13 @@ export function DrillCard({ label, hint, preview, onPress, accessibilityLabel }:
       style={[aStyle, styles.wrap]}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
+      // Pressable is accessible by default, so setting accessibilityLabel
+      // collapses the card into a single node and the child Text — including
+      // the visual `hint` that says where the card goes — is never announced.
+      // A screen-reader user heard "Weekly Tracker" and no indication it was a
+      // destination. Speaking the hint restores the cue the chevron gives
+      // sighted users.
+      accessibilityHint={accessibilityHint ?? hint}
     >
       <GlassCard>
         <View style={styles.headRow}>

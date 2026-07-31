@@ -42,7 +42,7 @@ import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 import { useActivePeptideCycle } from '../../src/hooks/useActivePeptideCycle';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useCheckinStore } from '../../src/store/useCheckinStore';
-import { useMealStore } from '../../src/store/useMealStore';
+import { useMealStore, DEFAULT_TARGETS } from '../../src/store/useMealStore';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { getPeptideById } from '../../src/data/peptides';
 
@@ -126,6 +126,7 @@ export default function HomeScreen() {
         title: 'No active protocol',
         detail: 'Tap to start one in the calculator',
         fillMl: 0,
+        spoken: 'Doses. No active protocol.',
       };
     }
     const protocol = protocols
@@ -145,7 +146,21 @@ export default function HomeScreen() {
     // Show a small fill so the syringe still reads as a syringe. The
     // exact mL math lives in the Doses hub where vial concentration is
     // known.
-    return { title, detail, fillMl: 0.2 };
+    //
+    // `spoken` is the screen-reader form. The visual title uses "·" and "Wk",
+    // which a screen reader reads as punctuation and "wuck"; the other three
+    // home cards announce their live values, so this one announced only the
+    // word "Doses" and a user relying on VoiceOver/TalkBack lost the protocol,
+    // the week and the dose that everyone else can see.
+    const weekSpoken = activeCycle.totalWeeks
+      ? `week ${activeCycle.weekNumber} of ${activeCycle.totalWeeks}`
+      : `week ${activeCycle.weekNumber}`;
+    const doseSpoken = protocol
+      ? `${protocol.dose} ${protocol.unit}, ${protocol.frequency.replace(/_/g, ' ')}`
+      : 'no dose recorded';
+    const spoken = `Doses. ${peptide?.name ?? activeCycle.peptideName}, ${weekSpoken}. ${doseSpoken}.`;
+
+    return { title, detail, fillMl: 0.2, spoken };
   }, [activeCycle, protocols]);
 
   return (
@@ -187,13 +202,21 @@ export default function HomeScreen() {
             <DrillCard
               label="Nutrition"
               hint="Macros, meals & food scanner"
-              accessibilityLabel={`Nutrition. Protein ${Math.round(mealTotals.proteinGrams ?? 0)} of ${macroTargets.proteinGrams ?? 100} grams. Carbs ${Math.round(mealTotals.carbsGrams ?? 0)} of ${macroTargets.carbsGrams ?? 220} grams. Fat ${Math.round(mealTotals.fatGrams ?? 0)} of ${macroTargets.fatGrams ?? 70} grams. Fiber ${Math.round(mealTotals.fiberGrams ?? 0)} of ${macroTargets.fiberGrams ?? 28} grams.`}
+              // These reads used to carry `?? 100 / 220 / 70 / 28` — a fourth
+              // set of numbers agreeing with nothing. calories/protein/carbs/fat
+              // are non-optional on MacroTargets so those three were dead code,
+              // but `fiberGrams?` IS optional, so the home ring really could
+              // show a 28 g fiber goal while useMealStore.DEFAULT_TARGETS and
+              // useProgressGoalsStore both say 30 — one screen disagreeing with
+              // the rest of the app about the user's own target. Fall back to
+              // the store's own default so there is a single source of truth.
+              accessibilityLabel={`Nutrition. Protein ${Math.round(mealTotals.proteinGrams ?? 0)} of ${macroTargets.proteinGrams} grams. Carbs ${Math.round(mealTotals.carbsGrams ?? 0)} of ${macroTargets.carbsGrams} grams. Fat ${Math.round(mealTotals.fatGrams ?? 0)} of ${macroTargets.fatGrams} grams. Fiber ${Math.round(mealTotals.fiberGrams ?? 0)} of ${macroTargets.fiberGrams ?? DEFAULT_TARGETS.fiberGrams} grams.`}
               onPress={() => router.push('/nutrition' as never)}
               preview={
                 <View style={styles.nutritionRow}>
                   <MacroRing
                     current={Math.round(mealTotals.proteinGrams ?? 0)}
-                    target={macroTargets.proteinGrams ?? 100}
+                    target={macroTargets.proteinGrams}
                     unit="g"
                     label="PROTEIN"
                   />
@@ -201,17 +224,17 @@ export default function HomeScreen() {
                     <MacroBar
                       kind="carbs"
                       current={Math.round(mealTotals.carbsGrams ?? 0)}
-                      target={macroTargets.carbsGrams ?? 220}
+                      target={macroTargets.carbsGrams}
                     />
                     <MacroBar
                       kind="fat"
                       current={Math.round(mealTotals.fatGrams ?? 0)}
-                      target={macroTargets.fatGrams ?? 70}
+                      target={macroTargets.fatGrams}
                     />
                     <MacroBar
                       kind="fiber"
                       current={Math.round(mealTotals.fiberGrams ?? 0)}
-                      target={macroTargets.fiberGrams ?? 28}
+                      target={macroTargets.fiberGrams ?? DEFAULT_TARGETS.fiberGrams!}
                     />
                   </View>
                 </View>
@@ -264,6 +287,7 @@ export default function HomeScreen() {
             <DrillCard
               label="Doses"
               hint="Protocols, calculator & dose log"
+              accessibilityLabel={dosePreview.spoken}
               onPress={() => router.push('/doses' as never)}
               preview={
                 <View>

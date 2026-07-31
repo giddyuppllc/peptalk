@@ -95,7 +95,13 @@ export default function BuildWorkoutScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: t.cardBorder }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+          accessibilityHint="Discards this workout and goes back"
+        >
           <Ionicons name="close" size={24} color={t.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: t.text }]}>Build Workout</Text>
@@ -133,7 +139,12 @@ export default function BuildWorkoutScreen() {
                     <Text style={[styles.exerciseName, { color: t.text }]}>{exercise.name}</Text>
                     <Text style={[styles.exerciseMuscle, { color: t.textMuted }]}>{exercise.primaryMuscle}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => removeExercise(ex.exerciseId)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <TouchableOpacity
+                    onPress={() => removeExercise(ex.exerciseId)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${exercise.name}`}
+                  >
                     <Ionicons name="trash-outline" size={18} color={t.textMuted} />
                   </TouchableOpacity>
                 </View>
@@ -143,11 +154,21 @@ export default function BuildWorkoutScreen() {
                   <View style={styles.targetItem}>
                     <Text style={[styles.targetLabel, { color: t.textSecondary }]}>Sets</Text>
                     <View style={styles.targetControl}>
-                      <TouchableOpacity onPress={() => updateExercise(ex.exerciseId, 'targetSets', Math.max(1, ex.targetSets - 1))}>
+                      <TouchableOpacity
+                        onPress={() => updateExercise(ex.exerciseId, 'targetSets', Math.max(1, ex.targetSets - 1))}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Decrease sets for ${exercise.name}`}
+                        accessibilityValue={{ now: ex.targetSets }}
+                      >
                         <Ionicons name="remove-circle-outline" size={22} color={t.textSecondary} />
                       </TouchableOpacity>
                       <Text style={[styles.targetValue, { color: t.text }]}>{ex.targetSets}</Text>
-                      <TouchableOpacity onPress={() => updateExercise(ex.exerciseId, 'targetSets', ex.targetSets + 1)}>
+                      <TouchableOpacity
+                        onPress={() => updateExercise(ex.exerciseId, 'targetSets', ex.targetSets + 1)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Increase sets for ${exercise.name}`}
+                        accessibilityValue={{ now: ex.targetSets }}
+                      >
                         <Ionicons name="add-circle-outline" size={22} color={ACCENT} />
                       </TouchableOpacity>
                     </View>
@@ -158,11 +179,21 @@ export default function BuildWorkoutScreen() {
                       {exercise.isTimeBased ? 'Sec' : 'Reps'}
                     </Text>
                     <View style={styles.targetControl}>
-                      <TouchableOpacity onPress={() => updateExercise(ex.exerciseId, 'targetReps', Math.max(1, ex.targetReps - 1))}>
+                      <TouchableOpacity
+                        onPress={() => updateExercise(ex.exerciseId, 'targetReps', Math.max(1, ex.targetReps - 1))}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Decrease reps for ${exercise.name}`}
+                        accessibilityValue={{ now: ex.targetReps }}
+                      >
                         <Ionicons name="remove-circle-outline" size={22} color={t.textSecondary} />
                       </TouchableOpacity>
                       <Text style={[styles.targetValue, { color: t.text }]}>{ex.targetReps}</Text>
-                      <TouchableOpacity onPress={() => updateExercise(ex.exerciseId, 'targetReps', ex.targetReps + 1)}>
+                      <TouchableOpacity
+                        onPress={() => updateExercise(ex.exerciseId, 'targetReps', ex.targetReps + 1)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Increase reps for ${exercise.name}`}
+                        accessibilityValue={{ now: ex.targetReps }}
+                      >
                         <Ionicons name="add-circle-outline" size={22} color={ACCENT} />
                       </TouchableOpacity>
                     </View>
@@ -206,7 +237,11 @@ export default function BuildWorkoutScreen() {
                   placeholderTextColor={t.textMuted}
                   autoFocus
                 />
-                <TouchableOpacity onPress={() => { setShowSearch(false); setSearchQuery(''); }}>
+                <TouchableOpacity
+                  onPress={() => { setShowSearch(false); setSearchQuery(''); }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close exercise search"
+                >
                   <Ionicons name="close" size={18} color={t.textSecondary} />
                 </TouchableOpacity>
               </View>

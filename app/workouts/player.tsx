@@ -73,7 +73,13 @@ function YouTubeCard({ url, onRemove }: { url: string; onRemove?: () => void }) 
         <Text style={styles.ytPlayText}>Tap to watch</Text>
       </View>
       {onRemove && (
-        <TouchableOpacity style={styles.ytRemove} onPress={onRemove} hitSlop={10}>
+        <TouchableOpacity
+          style={styles.ytRemove}
+          onPress={onRemove}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Remove video"
+        >
           <Ionicons name="close-circle" size={22} color="#fff" />
         </TouchableOpacity>
       )}
@@ -121,7 +127,12 @@ function YouTubeInputCard({
             keyboardType="url"
           />
           {value.length > 0 && (
-            <TouchableOpacity onPress={() => { onChange(''); setExpanded(false); }} style={{ marginTop: 12 }}>
+            <TouchableOpacity
+              onPress={() => { onChange(''); setExpanded(false); }}
+              style={{ marginTop: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="Clear video link"
+            >
               <Ionicons name="close-circle" size={20} color={Colors.darkTextSecondary} />
             </TouchableOpacity>
           )}
@@ -469,16 +480,30 @@ function FreeWorkoutScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleQuit} style={styles.backBtn}>
+        {/* The only way out of an active workout. Unlabelled, it announced
+            nothing at all, so a screen-reader user could not leave the
+            player — the header has no other exit and the tab bar is hidden. */}
+        <TouchableOpacity
+          onPress={handleQuit}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Quit workout"
+          accessibilityHint="Ends this session and returns to the previous screen"
+        >
           <Ionicons name="close" size={24} color={Colors.darkText} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Log Workout</Text>
           <Text style={styles.headerTimer}>{timer.formatted}</Text>
         </View>
+        {/* Label tracks state — a static "Play/pause" would leave a
+            screen-reader user unable to tell whether the timer is running. */}
         <TouchableOpacity
           onPress={() => (timer.running ? timer.pause() : timer.start())}
           style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel={timer.running ? 'Pause workout timer' : 'Start workout timer'}
+          accessibilityState={{ selected: timer.running }}
         >
           <Ionicons name={timer.running ? 'pause' : 'play'} size={22} color={Colors.raindropsDeep} />
         </TouchableOpacity>
@@ -524,7 +549,14 @@ function FreeWorkoutScreen() {
                   onChangeText={(v) => updateExercise(ex.id, 'name', v)}
                 />
                 {exercises.length > 1 && (
-                  <TouchableOpacity onPress={() => removeExercise(ex.id)} hitSlop={8}>
+                  <TouchableOpacity
+                    onPress={() => removeExercise(ex.id)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      ex.name ? `Remove ${ex.name}` : `Remove exercise ${i + 1}`
+                    }
+                  >
                     <Ionicons name="trash-outline" size={18} color="#ef4444" />
                   </TouchableOpacity>
                 )}
@@ -761,7 +793,16 @@ export default function WorkoutPlayerScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleQuit} style={styles.backBtn}>
+        {/* The only way out of an active workout. Unlabelled, it announced
+            nothing at all, so a screen-reader user could not leave the
+            player — the header has no other exit and the tab bar is hidden. */}
+        <TouchableOpacity
+          onPress={handleQuit}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Quit workout"
+          accessibilityHint="Ends this session and returns to the previous screen"
+        >
           <Ionicons name="close" size={24} color={Colors.darkText} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
@@ -773,6 +814,9 @@ export default function WorkoutPlayerScreen() {
         <TouchableOpacity
           onPress={() => (timer.running ? timer.pause() : timer.start())}
           style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel={timer.running ? 'Pause workout timer' : 'Start workout timer'}
+          accessibilityState={{ selected: timer.running }}
         >
           <Ionicons
             name={timer.running ? 'pause' : 'play'}
