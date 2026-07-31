@@ -673,9 +673,15 @@ export default function CalculatorV2Screen() {
                 <View style={{ marginTop: 12, gap: 10 }}>
                   {ref.schedule.map((p, i) => {
                     const mg = p.doseMcg / 1000;
+                    // `|| 1` here silently computed every schedule row against a
+                    // 1 mL dilution whenever the diluent field was empty or 0 —
+                    // a full table of plausible draw volumes for a
+                    // reconstitution the user never entered.
+                    const dilForSchedule = parseFloat(diluentMl);
                     const conc =
-                      parseFloat(peptideMg) /
-                      (parseFloat(diluentMl) || 1);
+                      Number.isFinite(dilForSchedule) && dilForSchedule > 0
+                        ? parseFloat(peptideMg) / dilForSchedule
+                        : 0;
                     const drawMl = conc > 0 ? mg / conc : 0;
                     return (
                       <View key={i} style={styles.scheduleRow}>
