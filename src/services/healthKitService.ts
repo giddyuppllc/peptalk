@@ -458,13 +458,31 @@ export async function fetchSleepStages(): Promise<SleepStages | null> {
     timeInBed > 0 ? Math.round((total / timeInBed) * 100) : undefined;
 
   // Quality score (0-100): weighted by deep (40%), REM (30%), efficiency (20%), duration (10%)
+  //
+  // 70% of that weight is stage data. Devices that do not stage sleep report
+  // undifferentiated 'ASLEEP', which sleepStageOf() buckets as 'core' — so
+  // deepMinutes and remMinutes are both 0 and the deep/REM terms contribute
+  // nothing. A perfect 8-hour night at 95% efficiency then scores
+  // 0 + 0 + 19 + 10 = 29, and calendar.tsx renders "29%" as if it were measured.
+  //
+  // There is no honest composite to show without staging: efficiency and
+  // duration alone are a different metric, and re-normalising them to 100 would
+  // put a familiar label on an unfamiliar number. So omit the score and let the
+  // stage breakdown (which IS real) speak for itself. calendar.tsx already
+  // guards on `qualityScore != null` and renders nothing when it is absent.
+  const hasStageData = deepMinutes > 0 || remMinutes > 0;
+
   const deepScore = Math.min((deepMinutes / 90) * 100, 100); // 90 min deep = perfect
   const remScore = Math.min((remMinutes / 120) * 100, 100); // 120 min REM = perfect
   const durationScore = Math.min((total / 480) * 100, 100); // 8 hours = perfect
-  const effScore = efficiency ?? 85;
-  const qualityScore = Math.round(
-    deepScore * 0.4 + remScore * 0.3 + effScore * 0.2 + durationScore * 0.1,
-  );
+  // `total > 0` is guaranteed by the early return above, so timeInBed > 0 and
+  // efficiency is always defined here.
+  const effScore = efficiency ?? 0;
+  const qualityScore = hasStageData
+    ? Math.round(
+        deepScore * 0.4 + remScore * 0.3 + effScore * 0.2 + durationScore * 0.1,
+      )
+    : undefined;
 
   return {
     awake: Math.round((awakeMinutes / 60) * 10) / 10,

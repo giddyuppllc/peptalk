@@ -41,6 +41,7 @@ import {
   EVIDENCE_GRADE_DISPLAY,
 } from '../constants/compliance';
 import { calculatePeptideDose, generateDoseTable } from '../lib/mathEngine';
+import { getDosingReference } from '../data/peptideDosingReference';
 import type { Peptide } from '../types';
 
 interface Props {
@@ -68,20 +69,40 @@ export function PeptideGuide({ peptide, vial_mg, bac_water_ml }: Props) {
 
   const timing = useMemo(() => getPeptideTiming(peptide.id), [peptide.id]);
 
-  // Reconstitution math: prefer the user's actual vial/BAC inputs from
-  // the calculator above; fall back to a sensible default (10 mg + 2 mL
-  // = 5 mg/mL — Edward's spec default) so the section still renders
-  // educationally before the user has typed anything in.
-  const recon_vial = vial_mg && vial_mg > 0 ? vial_mg : 10;
-  const recon_bac  = bac_water_ml && bac_water_ml > 0 ? bac_water_ml : 2;
-  // calculatePeptideDose returns a discriminated result. Unwrap with a
-  // safe fallback so the UI never renders zeros / NaN even if the inputs
-  // somehow slip past the guards above.
-  const reconMathResult = calculatePeptideDose(recon_vial, recon_bac, 0);
-  const reconMath = reconMathResult.ok
-    ? reconMathResult.math
-    : { concentration_mg_per_ml: 0, volume_ml: 0, units_u100: 0, mcg_per_unit: 0 };
-  const examples  = generateDoseTable(recon_vial, recon_bac);
+  // Reconstitution math: prefer the user's actual vial/BAC inputs from the
+  // calculator above, then the curated per-peptide reference.
+  //
+  // This previously fell back to a hardcoded 10 mg + 2 mL "so the section still
+  // renders educationally" — the same mistake app/calculators/quick-dose.tsx
+  // made with 5 mg + 2 mL, which pinned every peptide to one assumed
+  // concentration and produced real overdoses (semaglutide 4x). A worked
+  // example built on the wrong vial is not educational; it is a wrong number
+  // wearing the clothes of an authoritative one. getDosingReference() is the
+  // same source quick-dose.tsx and app/doses/calculator.tsx now read, so all
+  // three agree for a given peptide.
+  const ref = useMemo(() => getDosingReference(peptide.id), [peptide.id]);
+
+  const recon_vial =
+    vial_mg && vial_mg > 0 ? vial_mg : ref?.vialMg && ref.vialMg > 0 ? ref.vialMg : null;
+  const recon_bac =
+    bac_water_ml && bac_water_ml > 0
+      ? bac_water_ml
+      : ref?.diluentMl && ref.diluentMl > 0
+        ? ref.diluentMl
+        : null;
+
+  // No user input and no curated reference → render nothing for these sections
+  // rather than inventing a vial. calculatePeptideDose already refuses bad
+  // input; this makes the refusal visible instead of substituting zeros.
+  const reconMathResult =
+    recon_vial != null && recon_bac != null
+      ? calculatePeptideDose(recon_vial, recon_bac, 0)
+      : null;
+  const reconMath = reconMathResult?.ok ? reconMathResult.math : null;
+  const examples =
+    recon_vial != null && recon_bac != null
+      ? generateDoseTable(recon_vial, recon_bac)
+      : [];
 
   // Compliance tier badge — fall back to mapping approvalStatus when the
   // newer complianceTier field isn't filled in yet
@@ -185,6 +206,7 @@ export function PeptideGuide({ peptide, vial_mg, bac_water_ml }: Props) {
       )}
 
       {/* ─── Reconstitution math ──────────────────────────────────── */}
+      {reconMath != null && recon_vial != null && recon_bac != null && (
       <Section title="Reconstitution Math" icon="calculator-outline">
         <ProtocolKV label="Vial size"     value={`${recon_vial} mg`} />
         <ProtocolKV label="BAC water"     value={`${recon_bac} mL`} />
@@ -201,6 +223,7 @@ export function PeptideGuide({ peptide, vial_mg, bac_water_ml }: Props) {
           </Text>
         )}
       </Section>
+      )}
 
       {/* ─── Example calculations table ──────────────────────────── */}
       {examples.length > 0 && (
