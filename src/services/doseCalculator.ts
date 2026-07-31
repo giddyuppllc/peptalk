@@ -24,7 +24,14 @@ export interface ReconstitutionInput {
 export interface ReconstitutionOutput {
   /** Concentration in mg per ml */
   concentrationMgPerMl: number;
-  /** Concentration in mcg per 0.1 ml (1 syringe "tick" on a U-100) */
+  /**
+   * Concentration in mcg per TICK, where one tick is one U-100 unit = 0.01 mL.
+   * Previously computed per 0.1 mL — which is ten units, not a tick — so the
+   * value was 10x too large and `ticksU100` correspondingly 10x too small.
+   * Unrendered at the time, but the names promised U-100 ticks, so anyone who
+   * surfaced them would have shipped a tenfold dosing error.
+   * app/calculators/reconstitution.tsx has always had this right.
+   */
   concentrationMcgPerTick: number;
   /** Volume to inject per dose (ml) */
   volumePerDoseMl: number;
@@ -32,7 +39,7 @@ export interface ReconstitutionOutput {
   syringeUnits: number;
   /** Doses the vial provides at the desired dose */
   dosesPerVial: number;
-  /** Ticks to draw on a U-100 (100 ticks = 1 ml) — for the visual fill graphic */
+  /** Ticks to draw on a U-100 (100 ticks = 1 ml, 1 tick = 1 unit). */
   ticksU100: number;
 }
 
@@ -57,7 +64,8 @@ export function calculateReconstitution(input: ReconstitutionInput): Reconstitut
 
   const vialMcg = vialMg * 1000;
   const concentrationMgPerMl = vialMg / bacWaterMl;
-  const concentrationMcgPerTick = vialMcg / (bacWaterMl * 10); // 1 tick = 0.1 ml on U-100
+  // 1 tick = 1 U-100 unit = 0.01 mL, so there are 100 ticks per mL.
+  const concentrationMcgPerTick = vialMcg / (bacWaterMl * 100);
 
   const volumePerDoseMl = desiredDoseMcg / (concentrationMgPerMl * 1000);
   const ticksU100 = desiredDoseMcg / concentrationMcgPerTick;

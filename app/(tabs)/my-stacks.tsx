@@ -262,8 +262,13 @@ function CalculatorTab() {
     syringe,
   });
 
-  // Syringe fill percentage for the visual (U-100 max = 100 units = 1ml)
-  const fillPct = Math.min(100, (result.syringeUnits / 100) * 100);
+  // Syringe fill percentage for the visual.
+  // MUST scale by the SELECTED syringe: syringeUnits comes back in that
+  // syringe's units, and a full barrel is 40 units on a U-40, not 100. Dividing
+  // by a hardcoded 100 drew a completely full U-40 as 40% full — a 2.5x
+  // under-representation on the graphic people check before drawing.
+  const unitsPerMlForFill = syringe === 'U-40' ? 40 : 100;
+  const fillPct = Math.min(100, (result.syringeUnits / unitsPerMlForFill) * 100);
 
   return (
     <View style={calcStyles.wrap}>
