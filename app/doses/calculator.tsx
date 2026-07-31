@@ -25,6 +25,7 @@ import {
   V3DetailShell,
   GlassCard,
   SyringeSVG,
+  VialSVG,
   FlagModal,
   Chip,
 } from '../../src/components/v3';
@@ -1081,10 +1082,15 @@ function ReconstituteCard({
           the {mgInVial} mg vial.
         </Text>
         <View style={{ marginTop: 8, alignItems: 'center' }}>
-          <SyringeSVG
-            fillMl={Math.min(1, diluentMl)}
-            capacityMl={1}
-            width={240}
+          {/* A vial, not a syringe: the diluent goes INTO the vial, and the
+              previous SyringeSVG clamped to Math.min(1, diluentMl) — so a 3 mL
+              reconstitution drew as a full 1 mL barrel, understating it 3x. */}
+          <VialSVG
+            vialMg={mgInVial}
+            diluentMl={diluentMl}
+            concentrationMgPerMl={concentrationMgPerMl}
+            isAcetic={isAcetic}
+            width={132}
           />
         </View>
         <Text
