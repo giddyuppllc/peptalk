@@ -282,7 +282,26 @@ export const useAuthStore = create<AuthStore>()(
 
       restoreSession: async () => {
         try {
-          const { data: { session } } = await db.auth.getSession();
+          // `error` is read deliberately. getSession() returns
+          // `{ session: null, error: <network/refresh failure> }` when it could
+          // not REACH the server — which is not the same thing as "this user is
+          // signed out", and on an Android cold start (radio still coming up,
+          // or a refresh-token round trip that times out) it is the common case.
+          //
+          // Treating the two identically is what signed Edward out after simply
+          // closing and reopening the app: the shell rendered while
+          // isAuthenticated was false. Three previous fixes (dae69e8, aef292a,
+          // 344b040) all chased SecureStore chunk SHAPES; none could have fixed
+          // this, because the tokens were on disk and readable the whole time.
+          const { data: { session }, error: sessionError } = await db.auth.getSession();
+
+          if (sessionError) {
+            // Couldn't verify — keep whatever was persisted and let the next
+            // launch (or autoRefreshToken) settle it. Marking hasHydrated lets
+            // the UI proceed instead of hanging on a splash.
+            set({ hasHydrated: true });
+            return;
+          }
 
           if (!session?.user) {
             // No active server-side session. Clear any STALE persisted
@@ -293,11 +312,21 @@ export const useAuthStore = create<AuthStore>()(
             return;
           }
 
-          const { data: profile } = await db
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .maybeSingle();
+          // The profile row is ENRICHMENT (name, avatar, tier). The session
+          // above is what proves identity, so a failed profile read must never
+          // sign anyone out — it previously threw into the catch below and did
+          // exactly that. coerceProfileRow already tolerates null.
+          let profile: unknown = null;
+          try {
+            const res = await db
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .maybeSingle();
+            profile = res.data;
+          } catch {
+            profile = null;
+          }
 
           const safe = coerceProfileRow(profile, session.user.email ?? '');
           // Admin override: same rule as login — admins always get 'pro'
@@ -321,10 +350,14 @@ export const useAuthStore = create<AuthStore>()(
 
           set({ user: appUser, isAuthenticated: true, hasHydrated: true });
         } catch {
-          // Same ghost-session fix on the error path — if getSession()
-          // or the profile fetch threw, treat the user as signed out
-          // rather than leaving stale persisted credentials in place.
-          set({ user: null, isAuthenticated: false, hasHydrated: true });
+          // Reaching here now means something OTHER than a reachability problem
+          // (getSession's own failure is handled above, and the profile read has
+          // its own guard). Deliberately does NOT clear the user: the original
+          // ghost-session fix cleared on any throw, which turned every transient
+          // cold-start hiccup into a silent sign-out. A genuinely dead session
+          // is caught by the `!session?.user` branch, and any authed call that
+          // really does 401 will drive a logout through the normal path.
+          set({ hasHydrated: true });
         }
       },
 
