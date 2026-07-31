@@ -1163,7 +1163,7 @@ function DrawCard({
           Draw to {formatUnits(drawUnits)} — that's {formatVolumeMl(drawMl)} on a U-100 syringe.
         </Text>
         <View style={{ marginTop: 8, alignItems: 'center' }}>
-          <SyringeSVG fillMl={drawMl} capacityMl={1} width={240} />
+          <SyringeSVG fillMl={drawMl} units={drawUnits} capacityMl={1} width={240} />
         </View>
         <Text
           style={[
