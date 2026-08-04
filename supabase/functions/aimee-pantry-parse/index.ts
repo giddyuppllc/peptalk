@@ -186,34 +186,26 @@ async function checkRateLimit(
 ): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number }> {
   const today = new Date().toISOString().slice(0, 10);
   try {
-    const { data: existing } = await supabase
-      .from('ai_usage_log')
-      .select('count')
-      .eq('user_id', userId)
-      .eq('function_name', functionName)
-      .eq('date', today)
-      .maybeSingle();
-    const count = existing?.count ?? 0;
-    if (count >= limit) {
+    // Atomic increment via the bump_ai_usage RPC (INSERT ... ON CONFLICT DO UPDATE
+    // count = count + 1 RETURNING count) — the same path every sibling AI function
+    // uses. The prior read-modify-write (SELECT count → check → upsert count+1) lost
+    // updates under concurrent same-user requests, letting the daily cap be bypassed
+    // for unbounded paid-tier LLM/vision spend.
+    const { data, error } = await supabase.rpc('bump_ai_usage', {
+      p_user_id: userId,
+      p_function_name: functionName,
+      p_date: today,
+    });
+    if (error) throw error;
+    const count = Array.isArray(data) && data[0] ? ((data[0] as { count?: number }).count ?? 0) : 0;
+    if (count > limit) {
       const now = new Date();
       const tomorrow = new Date(now);
       tomorrow.setUTCHours(24, 0, 0, 0);
       const retryAfter = Math.max(1, Math.round((tomorrow.getTime() - now.getTime()) / 1000));
       return { allowed: false, limit, count, retryAfter };
     }
-    await supabase
-      .from('ai_usage_log')
-      .upsert(
-        {
-          user_id: userId,
-          function_name: functionName,
-          date: today,
-          count: count + 1,
-          last_called_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,function_name,date' },
-      );
-    return { allowed: true, limit, count: count + 1 };
+    return { allowed: true, limit, count };
   } catch (err) {
     // Fail CLOSED. If we can't reach ai_usage_log we cannot enforce the
     // per-user cap, and the function fans out to the LLM/vision provider —

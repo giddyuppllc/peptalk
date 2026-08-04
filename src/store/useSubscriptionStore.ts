@@ -7,6 +7,7 @@
  * receipt server-side, and this store reflects the resulting tier/entitlement.
  */
 
+import { Platform } from 'react-native';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
@@ -156,7 +157,10 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
         // bypass and gate by tier as normal.
         try {
           const appEnv = (process.env.EXPO_PUBLIC_ENV ?? 'production').toLowerCase();
-          if (appEnv !== 'production') {
+          // Native TestFlight/dev only — NEVER on web. The web PWA is the real,
+          // Square-monetized surface, so the tester bypass must not ship in that
+          // bundle (a dev-env web build would otherwise unlock Pro for everyone).
+          if (appEnv !== 'production' && Platform.OS !== 'web') {
             const { useAuthStore } = require('./useAuthStore');
             if (useAuthStore.getState().isAuthenticated) return true;
           }
@@ -368,7 +372,9 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
             // auto-granted Pro on TestFlight + dev builds. Production
             // builds skip this and run the normal subscription flow.
             const appEnv = (process.env.EXPO_PUBLIC_ENV ?? 'production').toLowerCase();
-            const isNonProductionBuild = appEnv !== 'production';
+            // Native TestFlight/dev only — exclude web so the PWA always runs the
+            // real subscription flow (a dev-env web build otherwise grants Pro to all).
+            const isNonProductionBuild = appEnv !== 'production' && Platform.OS !== 'web';
             if (isNonProductionBuild) {
               set({
                 tier: 'pro',
