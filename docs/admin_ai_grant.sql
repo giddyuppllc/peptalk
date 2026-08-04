@@ -1,0 +1,28 @@
+-- Admin AI grant — unlock AI for edward@giddyupp.com (see docs/ADMIN_AI_GRANT.md).
+-- Idempotent. Grants a real admin Pro row so the web client + server both honor it.
+-- Change the email in BOTH places to grant someone else.
+with u as (
+  select id, email from auth.users
+  where lower(email) = lower('edward@giddyupp.com')
+),
+ins as (
+  insert into public.subscriptions
+    (user_id, product_id, tier, platform, expires_at, is_active, last_validated_at)
+  select id, 'admin_grant', 'pro', null, now() + interval '10 years', true, now()
+  from u
+  on conflict (user_id, product_id) do update
+    set tier = 'pro', expires_at = now() + interval '10 years',
+        is_active = true, last_validated_at = now()
+  returning user_id, tier, is_active, expires_at
+),
+mir as (
+  update public.profiles p set subscription_tier = 'pro'
+  from u where p.id = u.id
+  returning p.id
+)
+select (select email from u)                             as email,
+       (select user_id::text from ins)                   as granted_user,
+       (select tier from ins)                            as tier,
+       (select is_active from ins)                       as is_active,
+       (select to_char(expires_at,'YYYY-MM-DD') from ins) as expires,
+       (select count(*) from mir)                        as profile_rows_updated;
