@@ -82,7 +82,8 @@ Deno.serve(async (req) => {
       const cleaned: string[] = [];
       for (const u of body.imageUrls) {
         if (typeof u !== 'string') continue;
-        if (R2_PUBLIC_BASE && !u.startsWith(R2_PUBLIC_BASE + '/')) continue;
+        // Unconditional R2 allowlist — fail closed if R2_PUBLIC_BASE unset (SSRF guard).
+        if (!R2_PUBLIC_BASE || !u.startsWith(R2_PUBLIC_BASE + '/')) continue;
         cleaned.push(u);
         if (cleaned.length >= 4) break;
       }

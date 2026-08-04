@@ -50,10 +50,11 @@ Deno.serve(async (req) => {
     // also soft-delete arbitrary community posts. P0 from Wave 76.10
     // schema audit.
     //
-    // Falls back to BETA_TESTER_EMAILS only if ADMIN_EMAILS is unset
-    // (transitional grace period during rollout). Once Edward sets
-    // ADMIN_EMAILS in prod, the fallback path is dead code.
-    const adminCsv = Deno.env.get('ADMIN_EMAILS') ?? Deno.env.get('BETA_TESTER_EMAILS') ?? '';
+    // NO BETA_TESTER_EMAILS fallback: if ADMIN_EMAILS is unset the gate fails
+    // CLOSED (zero admins) rather than promoting every beta tester (the broad
+    // free-Grok allowlist) to a moderator who could soft-delete arbitrary posts
+    // or manipulate the topic taxonomy.
+    const adminCsv = Deno.env.get('ADMIN_EMAILS') ?? '';
     const ADMIN_EMAILS = new Set<string>(
       adminCsv.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
     );

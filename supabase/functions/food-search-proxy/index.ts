@@ -81,6 +81,28 @@ Deno.serve(async (req) => {
       return json({ error: 'Invalid auth token' }, 401);
     }
 
+    // 1b. Per-user daily cap. The upstream keys (USDA/Spoonacular/CalorieNinjas)
+    // are SHARED and metered, so without a per-user cap any one signed-in user
+    // could loop and drain the monthly quota for everyone. Free feature → the
+    // cap is generous; it only stops abuse. Atomic via bump_ai_usage (service
+    // role). Fail CLOSED so we never proxy to the metered vendor uncapped.
+    {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: rl, error: rlErr } = await supabase.rpc('bump_ai_usage', {
+        p_user_id: user.id,
+        p_function_name: 'food-search-proxy',
+        p_date: today,
+      });
+      if (rlErr) {
+        console.error('[food-search-proxy] rate-limit check failed; failing closed:', rlErr);
+        return json({ error: 'Food search is temporarily unavailable. Try again shortly.' }, 503);
+      }
+      const count = Array.isArray(rl) && rl[0] ? ((rl[0] as { count?: number }).count ?? 0) : 0;
+      if (count > 300) {
+        return json({ error: 'Daily food-search limit reached. Resets tomorrow.' }, 429);
+      }
+    }
+
     // 2. Parse request.
     const body = await req.json().catch(() => ({}));
     const provider = body?.provider as Provider | undefined;

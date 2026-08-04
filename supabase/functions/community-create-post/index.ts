@@ -96,7 +96,11 @@ Deno.serve(async (req) => {
     const imageUrls: string[] = [];
     for (const u of rawImageUrls) {
       if (typeof u !== 'string') continue;
-      if (R2_PUBLIC_BASE && !u.startsWith(R2_PUBLIC_BASE + '/')) continue;
+      // Unconditional allowlist: reject any URL not under the configured R2
+      // public base. If R2_PUBLIC_BASE is unset, reject ALL (fail closed) so a
+      // misconfig can't let an attacker-supplied URL be stored + later fetched
+      // by community-moderate-image (SSRF).
+      if (!R2_PUBLIC_BASE || !u.startsWith(R2_PUBLIC_BASE + '/')) continue;
       imageUrls.push(u);
       if (imageUrls.length >= 4) break;
     }
