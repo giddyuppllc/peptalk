@@ -111,6 +111,13 @@ Deno.serve(async (req) => {
     if (!objectKey || objectKey.length > 500) {
       return jsonResp({ error: 'objectKey required' }, 400);
     }
+    // Hardening: constrain the object-key shape (no path traversal / crafted
+    // chars) so even a privileged caller can't presign arbitrary keys. A full
+    // manifest allowlist would need the manifest (not importable in the edge
+    // runtime here); this is the safe, no-breakage subset.
+    if (objectKey.includes('..') || !/^[A-Za-z0-9/_.\-]+$/.test(objectKey)) {
+      return jsonResp({ error: 'Invalid objectKey' }, 400);
+    }
     const entry = { slug, objectKey };
 
     // 1. 7-day R2 presigned URL so Stream's async copier has time to pull.
@@ -163,9 +170,7 @@ Deno.serve(async (req) => {
       status: result?.status?.state ?? 'queued',
     });
   } catch (err) {
-    return jsonResp({
-      error: 'Internal error',
-      detail: err instanceof Error ? err.message : String(err),
-    }, 500);
+    console.error('[migrate-video-to-stream] error:', err);
+    return jsonResp({ error: 'Internal error' }, 500);
   }
 });
