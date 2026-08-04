@@ -70,7 +70,10 @@ export default function CommunityUserProfile() {
         });
 
         const { data: postRows } = await (supabase as any)
-          .from('community_posts')
+          // Read the masking view (not the base table) so this keeps working once
+          // base-table SELECT is revoked (audit M1). This query only shows
+          // non-anonymous posts anyway, so masking is a no-op here.
+          .from('community_posts_feed')
           .select('id, user_id, topic_slug, title, body, reaction_count, comment_count, is_deleted, is_anonymous, created_at, updated_at')
           .eq('user_id', profileRow.id)
           .eq('is_deleted', false)
