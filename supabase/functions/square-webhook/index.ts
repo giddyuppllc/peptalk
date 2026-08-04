@@ -40,7 +40,15 @@ async function verify(rawBody: string, signature: string): Promise<boolean> {
   );
   const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(WEBHOOK_URL + rawBody));
   const expected = btoa(String.fromCharCode(...new Uint8Array(mac)));
-  return expected === signature;
+  return timingSafeEqual(expected, signature);
+}
+
+/** Constant-time string compare — avoids leaking the signature via response timing. */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
 }
 
 /** reference_id we set in square-checkout: "<userId>:<tier>:<productId>". */

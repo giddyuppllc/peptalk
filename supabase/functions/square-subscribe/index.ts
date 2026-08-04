@@ -71,6 +71,21 @@ Deno.serve(async (req) => {
       return json({ error: 'Square subscriptions not configured (token/location/plan).' }, 503);
     }
 
+    // Guard against double-charging: refuse if the user already has an active web
+    // subscription (they'd otherwise get a second Square subscription + charge).
+    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    const { data: existing } = await admin
+      .from('subscriptions')
+      .select('tier')
+      .eq('user_id', user.id)
+      .eq('platform', 'web')
+      .eq('is_active', true)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+    if (existing) {
+      return json({ error: 'You already have an active subscription. Manage it from your account.' }, 409);
+    }
+
     // 1) Find or create the Square Customer (reference_id = PepTalk user id).
     let customerId: string | undefined;
     const search = await sq('/v2/customers/search', 'POST', {
@@ -119,7 +134,6 @@ Deno.serve(async (req) => {
     const subscriptionId = sub.data?.subscription?.id;
 
     // 4) Grant the tier immediately (webhook keeps it renewed / revokes on cancel).
-    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const nowIso = new Date().toISOString();
     const expiresAt = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString();
     const { error: subErr } = await admin.from('subscriptions').upsert(
