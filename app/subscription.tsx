@@ -217,6 +217,16 @@ function TierCard({
       const { useAuthStore } = await import('../src/store/useAuthStore');
       const appAccountToken = useAuthStore.getState().user?.id ?? null;
 
+      // WEB (PWA): there is no IAP — send the buyer to Square-hosted checkout.
+      // Entitlement is granted asynchronously by the `square-webhook` edge
+      // function, which writes a platform:'web' subscriptions row that the
+      // store reflects on its next sync. Every native path below is untouched.
+      if (Platform.OS === 'web') {
+        const { startSquareCheckout } = await import('../src/services/squareService');
+        await startSquareCheckout({ productId: plan.productId, tier: info.tier });
+        return; // browser redirects to Square-hosted checkout
+      }
+
       // If the user previously redeemed a referral code, look up the
       // associated Apple Offer Code (set on the referral_codes row at
       // catalog time) and pass it to StoreKit so Apple applies the
