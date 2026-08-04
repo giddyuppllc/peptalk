@@ -14,46 +14,23 @@
  */
 
 import { Platform } from 'react-native';
-import type { SubscriptionTier } from '../types/fitness';
 import { captureException, captureMessage } from './telemetry';
 
-// Product IDs — must match App Store Connect / Play Console exactly.
+// Product catalog + product→tier mapping now live in a pure, RN-free module so
+// they can be unit-tested (see src/lib/products.ts). Re-exported here to keep
+// the historical import surface (`from '../services/iapService'`) unchanged.
 //
-// **Pricing policy:** monthly subscriptions only. Yearly plans are NOT
-// part of the PepTalk product offering — decision made by Edward,
-// 2026-05-09. No plans to ship yearly.
-//
-// The yearly ids remain in the PRODUCT_TO_TIER map purely as defensive
-// resolution: if any legacy sandbox / TestFlight receipt for a yearly
-// purchase ever surfaces (refunds, edge cases), it resolves to the
-// right tier without crashing. They are omitted from ALL_PRODUCT_IDS
-// so getProducts() never asks the store about a SKU that doesn't exist
-// (iOS fails the whole batch if a single id is unknown, which would
-// also break the working monthly SKUs).
-export const PRODUCT_IDS = {
-  plusMonthly: 'peptalk_plus_monthly',
-  plusYearly: 'peptalk_plus_yearly',
-  proMonthly: 'peptalk_pro_monthly',
-  proYearly: 'peptalk_pro_yearly',
-} as const;
+// **Pricing policy:** monthly subscriptions only. Yearly plans are NOT part of
+// the PepTalk product offering — decision made by Edward, 2026-05-09. The
+// yearly ids remain in PRODUCT_TO_TIER purely as defensive resolution for any
+// legacy sandbox / TestFlight yearly receipt; they are omitted from
+// ALL_PRODUCT_IDS so getProducts() never asks the store about a SKU that
+// doesn't exist (iOS fails the whole batch if a single id is unknown).
+import { PRODUCT_IDS, ALL_PRODUCT_IDS, PRODUCT_TO_TIER } from '../lib/products';
+import type { ProductId } from '../lib/products';
 
-export type ProductId = (typeof PRODUCT_IDS)[keyof typeof PRODUCT_IDS];
-
-const ALL_PRODUCT_IDS: string[] = [
-  PRODUCT_IDS.plusMonthly,
-  PRODUCT_IDS.proMonthly,
-  // Monthly-only for v1.9.x — see header comment.
-];
-
-// Map product ID → tier so the store knows which features to unlock.
-// Keep yearly ids mapped so receipt validation still works the day
-// we add yearly back, without a migration.
-export const PRODUCT_TO_TIER: Record<string, SubscriptionTier> = {
-  [PRODUCT_IDS.plusMonthly]: 'plus',
-  [PRODUCT_IDS.plusYearly]: 'plus',
-  [PRODUCT_IDS.proMonthly]: 'pro',
-  [PRODUCT_IDS.proYearly]: 'pro',
-};
+export { PRODUCT_IDS, PRODUCT_TO_TIER };
+export type { ProductId };
 
 // ---------------------------------------------------------------------------
 // Dynamic module loading — works in Expo Go (where react-native-iap is unavailable)

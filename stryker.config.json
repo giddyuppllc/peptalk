@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "Mutation testing scoped to the security-critical money/entitlement modules only. These are pure, fully unit-tested, and where a silent mutation = wrong tier or a bad charge.",
+  "packageManager": "pnpm",
+  "testRunner": "jest",
+  "jest": {
+    "projectType": "custom",
+    "configFile": "jest.config.js"
+  },
+  "reporters": ["clear-text", "progress"],
+  "coverageAnalysis": "off",
+  "concurrency": 2,
+  "ignorePatterns": [
+    "ios",
+    "android",
+    "dist",
+    "public",
+    ".expo",
+    ".vercel",
+    ".vercel-link",
+    "assets",
+    "docs",
+    "scripts",
+    "_elevate_audit",
+    "reports",
+    "*.png"
+  ],
+  "mutate": [
+    "src/lib/entitlement.ts",
+    "src/lib/products.ts",
+    "supabase/functions/_shared/square.ts"
+  ]
+}

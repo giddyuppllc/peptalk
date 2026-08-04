@@ -13,6 +13,12 @@ import { secureStorage } from '../services/secureStorage';
 import type { SubscriptionTier } from '../types/fitness';
 import { TIER_FEATURES } from '../types/fitness';
 import { PRODUCT_TO_TIER } from './../services/iapService';
+import {
+  deriveStatus,
+  computeFeatureAccess,
+  timeUntilExpiry,
+  type SubscriptionStatus,
+} from '../lib/entitlement';
 import { trackUpgradeSucceeded, trackUpgradeFailed } from '../services/analyticsEvents';
 import { maybeAskForReview } from '../services/reviewPrompt';
 
@@ -39,44 +45,12 @@ import { maybeAskForReview } from '../services/reviewPrompt';
 // ---------------------------------------------------------------------------
 
 /**
- * Lifecycle status for the current subscription. UI uses this to decide
- * whether to show win-back banners, renewal prompts, or paywalls.
- *
- * - `none`       — free tier, never subscribed (or subscription was cleared)
- * - `active`     — paid and comfortably valid (>7 days remaining, or no expiry)
- * - `expiring`   — paid but within 7 days of expiry — good time for a renewal prompt
- * - `expired`    — was paid, past the expiry date — candidate for a win-back flow
- * - `cancelled`  — user canceled but still within the paid window (reserved; requires
- *                  receipt-level data from validate-purchase to populate reliably)
- * - `trial`      — in intro/free trial window (reserved; same data requirement)
+ * Lifecycle status for the current subscription — see src/lib/entitlement.ts
+ * for the definition + the pure `deriveStatus` derivation. Re-exported here so
+ * existing `import { SubscriptionStatus } from '.../useSubscriptionStore'`
+ * call sites keep working.
  */
-export type SubscriptionStatus =
-  | 'none'
-  | 'active'
-  | 'expiring'
-  | 'expired'
-  | 'cancelled'
-  | 'trial';
-
-const EXPIRING_SOON_MS = 7 * 24 * 60 * 60 * 1000;
-
-function deriveStatus(input: {
-  tier: SubscriptionTier;
-  expiresAt: string | null;
-  productId: string | null;
-}): SubscriptionStatus {
-  if (input.tier === 'free') return 'none';
-  // Beta grants are treated as active indefinitely.
-  if (input.productId === 'beta_tester_grant') return 'active';
-  // Paid tier without an expiry (lifetime / legacy records) — treat as active.
-  if (!input.expiresAt) return 'active';
-  const exp = new Date(input.expiresAt).getTime();
-  if (Number.isNaN(exp)) return 'active';
-  const now = Date.now();
-  if (exp <= now) return 'expired';
-  if (exp - now <= EXPIRING_SOON_MS) return 'expiring';
-  return 'active';
-}
+export type { SubscriptionStatus };
 
 interface SubscriptionState {
   tier: SubscriptionTier;
@@ -198,22 +172,9 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
         // `profiles.subscription_tier` query so the *cost door* is closed,
         // but client-side UI was happily unlocking features. Now require
         // active flag + non-expired window for paid features. Free-tier
-        // features (`tier === 'free'` lookup) are unaffected.
-        if (tier !== 'free') {
-          if (isActive === false) {
-            const features = TIER_FEATURES.free ?? [];
-            return features.includes(feature);
-          }
-          if (expiresAt) {
-            const expiresMs = new Date(expiresAt).getTime();
-            if (Number.isFinite(expiresMs) && Date.now() > expiresMs) {
-              const features = TIER_FEATURES.free ?? [];
-              return features.includes(feature);
-            }
-          }
-        }
-        const features = TIER_FEATURES[tier] ?? [];
-        return features.includes(feature);
+        // features (`tier === 'free'` lookup) are unaffected. The gating is
+        // implemented in the pure computeFeatureAccess helper (unit-tested).
+        return computeFeatureAccess({ tier, isActive, expiresAt, feature });
       },
 
       activate: (tier, productId, expiresAt) =>
@@ -234,11 +195,7 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
 
       getTimeUntilExpiry: () => {
         const { expiresAt, productId } = get();
-        if (productId === 'beta_tester_grant') return null;
-        if (!expiresAt) return null;
-        const exp = new Date(expiresAt).getTime();
-        if (Number.isNaN(exp)) return null;
-        return exp - Date.now();
+        return timeUntilExpiry({ expiresAt, productId });
       },
 
       setTier: (tier) =>

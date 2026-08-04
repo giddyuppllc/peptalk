@@ -15,6 +15,7 @@
  * SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { SQUARE_PLANS } from '../_shared/square.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -25,10 +26,10 @@ const SQUARE_LOCATION_ID = Deno.env.get('SQUARE_LOCATION_ID') ?? '';
 const SQUARE_BASE =
   SQUARE_ENV === 'production' ? 'https://connect.squareup.com' : 'https://connect.squareupsandbox.com';
 
-const PLAN: Record<string, { tier: 'plus' | 'pro'; planEnv: string }> = {
-  peptalk_plus_monthly: { tier: 'plus', planEnv: 'SQUARE_PLAN_PLUS_MONTHLY' },
-  peptalk_pro_monthly: { tier: 'pro', planEnv: 'SQUARE_PLAN_PRO_MONTHLY' },
-};
+// Product catalog lives in ../_shared/square.ts (SQUARE_PLANS). Only .tier and
+// .planEnv are read here; the extra amountCents/name fields are unused by this
+// function. Behaviour is identical to the previous inline map.
+const PLAN = SQUARE_PLANS;
 
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { 'Content-Type': 'application/json' } });

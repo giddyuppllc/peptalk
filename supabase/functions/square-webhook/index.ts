@@ -14,6 +14,7 @@
  *   SQUARE_WEBHOOK_URL             (this function's public URL — signed into the HMAC)
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { timingSafeEqual, parseRef } from '../_shared/square.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -43,21 +44,9 @@ async function verify(rawBody: string, signature: string): Promise<boolean> {
   return timingSafeEqual(expected, signature);
 }
 
-/** Constant-time string compare — avoids leaking the signature via response timing. */
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
-
-/** reference_id we set in square-checkout: "<userId>:<tier>:<productId>". */
-function parseRef(ref: string | undefined): { userId: string; tier: string; productId: string } | null {
-  if (!ref) return null;
-  const [userId, tier, productId] = ref.split(':');
-  if (!userId || (tier !== 'plus' && tier !== 'pro')) return null;
-  return { userId, tier, productId: productId ?? `peptalk_${tier}_monthly` };
-}
+// timingSafeEqual (HMAC signature compare) and parseRef (reference_id parser)
+// now live in ../_shared/square.ts so they can be unit-tested. Behaviour is
+// identical to the previous inline versions.
 
 async function fetchOrderRef(orderId: string): Promise<string | undefined> {
   const res = await fetch(`${SQUARE_BASE}/v2/orders/${orderId}`, {

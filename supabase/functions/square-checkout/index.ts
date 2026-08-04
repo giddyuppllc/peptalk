@@ -12,6 +12,7 @@
  *   SQUARE_PLAN_PLUS_MONTHLY / SQUARE_PLAN_PRO_MONTHLY   (optional Catalog plan ids)
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { SQUARE_PLANS } from '../_shared/square.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -24,14 +25,9 @@ const SQUARE_BASE =
     ? 'https://connect.squareup.com'
     : 'https://connect.squareupsandbox.com';
 
-// Must mirror src/services/iapService.ts PRODUCT_TO_TIER + the displayed prices.
-const PLAN: Record<
-  string,
-  { tier: 'plus' | 'pro'; amountCents: number; name: string; planEnv: string }
-> = {
-  peptalk_plus_monthly: { tier: 'plus', amountCents: 999, name: 'PepTalk+ (Monthly)', planEnv: 'SQUARE_PLAN_PLUS_MONTHLY' },
-  peptalk_pro_monthly: { tier: 'pro', amountCents: 4999, name: 'PepTalk Pro (Monthly)', planEnv: 'SQUARE_PLAN_PRO_MONTHLY' },
-};
+// Product catalog + prices live in ../_shared/square.ts (SQUARE_PLANS) so they
+// can be unit-tested and stay in one place across the Square edge functions.
+const PLAN = SQUARE_PLANS;
 
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { 'Content-Type': 'application/json' } });
