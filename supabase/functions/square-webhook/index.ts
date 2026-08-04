@@ -145,7 +145,14 @@ Deno.serve(async (req) => {
 
   if (type === 'payment.updated') {
     const payment = obj.payment ?? {};
-    paid = payment.status === 'COMPLETED' || payment.status === 'APPROVED';
+    // COMPLETED only. APPROVED means Square authorized the card but has NOT
+    // captured the funds — an auth that is later voided would otherwise buy a
+    // free month. Payment links autocomplete, so COMPLETED is the normal
+    // terminal state and arrives seconds later.
+    paid = payment.status === 'COMPLETED';
+    if (payment.status === 'APPROVED') {
+      console.log('[square-webhook] payment APPROVED but not captured — waiting for COMPLETED, not granting');
+    }
     if (paid && payment.order_id) referenceId = await fetchOrderRef(payment.order_id);
   } else if (type === 'order.updated') {
     const order = obj.order_updated ?? obj.order ?? {};
@@ -187,14 +194,20 @@ Deno.serve(async (req) => {
   }
 
   // Best-effort event log (dedupe on platform+external_event_id).
+  // Column/value shape MUST match validate-purchase's insert: there is no
+  // `tier` column on subscription_events (tier rides in raw_payload), and
+  // event_type is constrained to the RevenueCat-style vocabulary — 'purchase'
+  // is NOT in it, 'initial_purchase' is.
   await admin
     .from('subscription_events')
     .insert({
-      platform: 'web',
-      external_event_id: event.event_id ?? event.id ?? crypto.randomUUID(),
-      event_type: 'purchase',
       user_id: ref.userId,
-      tier: ref.tier,
+      product_id: ref.productId,
+      platform: 'web',
+      event_type: 'initial_purchase',
+      external_event_id: event.event_id ?? event.id ?? crypto.randomUUID(),
+      raw_payload: { source: 'square-webhook', tier: ref.tier, expiresAt },
+      expires_at: expiresAt,
     })
     .then(({ error }) => { if (error) console.warn('[square-webhook] event log skipped:', error.message); });
 
