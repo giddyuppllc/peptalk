@@ -152,9 +152,7 @@ Deno.serve(async (req) => {
     return jsonResp({ ok: true, saved: rows.length });
   } catch (err) {
     console.error('[save-workout-overrides] error:', err);
-    return jsonResp({
-      error: 'Internal error',
-      detail: err instanceof Error ? err.message : String(err),
-    }, 500);
+    // Detail is logged server-side; don't echo internal error text to the client.
+    return jsonResp({ error: 'Internal error' }, 500);
   }
 });

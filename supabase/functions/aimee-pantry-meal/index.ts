@@ -248,7 +248,8 @@ Deno.serve(async (req) => {
     try {
       parsed = JSON.parse(cleaned);
     } catch (_err) {
-      return json({ error: 'AI returned malformed JSON', raw: content }, 502);
+      console.error('[aimee-pantry-meal] AI returned malformed JSON:', content);
+      return json({ error: 'AI returned malformed JSON. Please try again.' }, 502);
     }
 
     return json({ suggestions: parsed.suggestions ?? [] });

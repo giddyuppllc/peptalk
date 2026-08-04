@@ -150,7 +150,8 @@ Deno.serve(async (req) => {
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();
-      return json({ error: `AI call failed: ${errText}` }, 502);
+      console.error('[aimee-pantry-parse] AI call failed:', aiRes.status, errText);
+      return json({ error: 'The assistant is temporarily unavailable. Please try again.' }, 502);
     }
 
     const aiData = await aiRes.json();
