@@ -15,6 +15,30 @@ import { Platform } from 'react-native';
 
 import { supabase } from './supabase';
 
+/**
+ * RECURRING path: start a Square auto-renew subscription with a tokenized card
+ * (the card token comes from the Web Payments SDK in SquareCardForm.web.tsx).
+ * The edge function creates the Square Customer + card-on-file + Subscription and
+ * grants the tier; square-webhook keeps it renewed. Returns the tier on success.
+ */
+export async function subscribeWithCardToken(opts: {
+  productId: string;
+  cardToken: string;
+}): Promise<{ tier: string }> {
+  if (Platform.OS !== 'web') throw new Error('Square subscribe is web-only; native uses IAP.');
+  const { data, error } = await supabase.functions.invoke('square-subscribe', {
+    body: { productId: opts.productId, cardToken: opts.cardToken },
+  });
+  if (error) throw new Error(error.message ?? 'Subscription could not be started.');
+  const res = data as { ok?: boolean; tier?: string; error?: string } | null;
+  if (!res?.ok) throw new Error(res?.error ?? 'Subscription failed.');
+  return { tier: res.tier ?? '' };
+}
+
+/**
+ * One-time / hosted-checkout fallback (kept for reference; the recurring path
+ * above is now the default web flow).
+ */
 export async function startSquareCheckout(opts: {
   productId: string;
   tier: string;

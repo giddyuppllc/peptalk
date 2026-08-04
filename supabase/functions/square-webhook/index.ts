@@ -62,6 +62,60 @@ async function fetchOrderRef(orderId: string): Promise<string | undefined> {
 
 const ok = () => new Response('ok', { status: 200 });
 
+/** Recurring renewal (invoice.payment_made): extend the web sub's expiry. */
+async function onInvoicePaid(invoice: any): Promise<Response> {
+  const subId = invoice?.subscription_id;
+  if (!subId) return ok();
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  const { data, error } = await admin
+    .from('subscriptions')
+    .update({
+      expires_at: new Date(Date.now() + MONTH_MS).toISOString(),
+      is_active: true,
+      last_validated_at: new Date().toISOString(),
+    })
+    .eq('original_transaction_id', subId)
+    .eq('platform', 'web')
+    .select('user_id');
+  if (error) {
+    console.error('[square-webhook] invoice renew failed', error);
+    return new Response('db error', { status: 500 });
+  }
+  if (!data?.length) console.warn('[square-webhook] invoice.payment_made for unknown sub', subId);
+  else console.log('[square-webhook] renewed web sub', subId);
+  return ok();
+}
+
+/** Subscription lifecycle (subscription.created/updated): active/cancel + expiry. */
+async function onSubscription(sub: any): Promise<Response> {
+  const subId = sub?.id;
+  if (!subId) return ok();
+  const status: string = sub?.status ?? ''; // ACTIVE | CANCELED | DEACTIVATED | PAUSED
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  const patch: Record<string, unknown> = {
+    is_active: status === 'ACTIVE',
+    last_validated_at: new Date().toISOString(),
+  };
+  // charged_through_date ('YYYY-MM-DD') = paid-through; keep access until then
+  // even after a cancel, then it expires naturally.
+  if (sub?.charged_through_date) {
+    patch.expires_at = new Date(`${sub.charged_through_date}T23:59:59Z`).toISOString();
+  }
+  const { data, error } = await admin
+    .from('subscriptions')
+    .update(patch)
+    .eq('original_transaction_id', subId)
+    .eq('platform', 'web')
+    .select('user_id');
+  if (error) {
+    console.error('[square-webhook] subscription update failed', error);
+    return new Response('db error', { status: 500 });
+  }
+  if (!data?.length) console.warn('[square-webhook] subscription event for unknown sub', subId, status);
+  else console.log(`[square-webhook] sub ${subId} → ${status}`);
+  return ok();
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
   const rawBody = await req.text();
@@ -78,9 +132,17 @@ Deno.serve(async (req) => {
   const type: string = event?.type ?? '';
   const obj = event?.data?.object ?? {};
 
-  // Only act on a completed payment / order. (Recurring renewals arrive as
-  // invoice.payment_made / subscription.updated once Catalog plans are wired —
-  // TODO handle those the same way.)
+  // ── Recurring subscription lifecycle (PRIMARY web path) ──
+  // square-subscribe stored original_transaction_id = the Square subscription id,
+  // so these match the existing row directly (no customer lookup needed).
+  if (type === 'subscription.created' || type === 'subscription.updated') {
+    return await onSubscription(obj.subscription ?? {});
+  }
+  if (type === 'invoice.payment_made') {
+    return await onInvoicePaid(obj.invoice ?? {});
+  }
+
+  // ── One-time payment-link fallback (payment.updated / order.updated) ──
   let referenceId: string | undefined;
   let paid = false;
 

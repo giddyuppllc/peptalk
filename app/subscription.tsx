@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard } from '../src/components/GlassCard';
 import { GradientButton } from '../src/components/GradientButton';
+import { SquareCardForm } from '../src/components/SquareCardForm';
 import { Colors, Gradients, Spacing, FontSizes, BorderRadius } from '../src/constants/theme';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
 import type { SubscriptionTier } from '../src/types/fitness';
@@ -159,6 +160,7 @@ function TierCard({
   livePrice?: string;
 }) {
   const [purchasing, setPurchasing] = React.useState(false);
+  const [showSquare, setShowSquare] = React.useState(false); // web: Square card modal
   const plan = info.pricing;
   // Apple 2.3.1/3.1.2: the price shown must match the App Store purchase sheet.
   // Prefer StoreKit's localized price (correct currency for the reviewer's/user's
@@ -222,9 +224,9 @@ function TierCard({
       // function, which writes a platform:'web' subscriptions row that the
       // store reflects on its next sync. Every native path below is untouched.
       if (Platform.OS === 'web') {
-        const { startSquareCheckout } = await import('../src/services/squareService');
-        await startSquareCheckout({ productId: plan.productId, tier: info.tier });
-        return; // browser redirects to Square-hosted checkout
+        setShowSquare(true); // opens the Square Web Payments card modal
+        setPurchasing(false);
+        return; // recurring subscription via square-subscribe (native paths below untouched)
       }
 
       // If the user previously redeemed a referral code, look up the
@@ -283,6 +285,7 @@ function TierCard({
   };
 
   return (
+    <>
     <GlassCard
       variant={isActive || highlighted ? 'glow' : info.badge ? 'elevated' : 'default'}
       glowColor={info.colors[0]}
@@ -359,6 +362,16 @@ function TierCard({
         </View>
       )}
     </GlassCard>
+    {Platform.OS === 'web' && showSquare && plan?.productId ? (
+      <SquareCardForm
+        productId={plan.productId}
+        planName={info.name}
+        priceLabel={`${displayPrice}${plan?.period ?? ''}`}
+        onClose={() => setShowSquare(false)}
+        onSuccess={() => setShowSquare(false)}
+      />
+    ) : null}
+    </>
   );
 }
 
