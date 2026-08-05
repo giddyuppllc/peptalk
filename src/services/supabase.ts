@@ -1,13 +1,18 @@
 /**
  * Supabase client — single instance shared across the app.
  *
- * Uses expo-secure-store for persisting auth tokens so sessions
- * survive app restarts without storing credentials in plaintext.
+ * On native, uses expo-secure-store for persisting auth tokens so sessions
+ * survive app restarts without storing credentials in plaintext. On web,
+ * SecureStore does not exist at all, so localStorage is used instead — see
+ * `webStorageAdapter`.
  */
 
 import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import type { Database } from '../types/database';
+
+const isWeb = Platform.OS === 'web';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -132,6 +137,85 @@ const secureStoreAdapter = {
 };
 
 /**
+ * Web storage adapter.
+ *
+ * expo-secure-store has NO web implementation — the installed
+ * `ExpoSecureStore.web.js` is literally `export default {}`, so every call lands on
+ * `ExpoSecureStore.getValueWithKeyAsync(...)` where that property is `undefined` and
+ * throws a TypeError. `secureStoreAdapter` catches everything, so on web the session
+ * was written NOWHERE and always read back as `null`: the user was silently logged
+ * out on every reload, and with no session every `verify_jwt` edge function answered
+ * 401. That is why the PWA's search / AI bars all appeared dead while the backend was
+ * healthy — the functions were fine, the caller just never had a token.
+ *
+ * localStorage is the correct web equivalent — it is what supabase-js uses by default
+ * on web. No chunking is needed here: the ~5MB origin quota dwarfs a session blob, so
+ * the generation/pointer scheme above (which exists only to work around Android
+ * SecureStore's ~2048-byte per-value limit) would be pure overhead.
+ *
+ * A token in localStorage is the standard web tradeoff — there is no encrypted
+ * browser-side store to use instead — and it is scoped to the origin.
+ *
+ * Falls back to an in-memory Map when localStorage is unreachable: Safari private
+ * mode throws on access, and there is no `window` at all during `expo export`'s
+ * static render. The app still boots in that case; the session just does not survive
+ * a reload.
+ */
+const memoryStore = new Map<string, string>();
+
+let localStorageUsable: boolean | null = null;
+function canUseLocalStorage(): boolean {
+  if (localStorageUsable !== null) return localStorageUsable;
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      localStorageUsable = false;
+    } else {
+      // Presence is not enough — Safari private mode throws on write.
+      const probe = '__peptalk_ls_probe__';
+      window.localStorage.setItem(probe, '1');
+      window.localStorage.removeItem(probe);
+      localStorageUsable = true;
+    }
+  } catch {
+    localStorageUsable = false;
+  }
+  return localStorageUsable;
+}
+
+const webStorageAdapter = {
+  getItem: async (key: string): Promise<string | null> => {
+    try {
+      if (canUseLocalStorage()) return window.localStorage.getItem(key);
+    } catch {
+      // Quota/permission change mid-session — fall through to memory.
+    }
+    return memoryStore.get(key) ?? null;
+  },
+  setItem: async (key: string, value: string): Promise<void> => {
+    try {
+      if (canUseLocalStorage()) {
+        window.localStorage.setItem(key, value);
+        return;
+      }
+    } catch {
+      // Ignore and keep the session in memory for this tab.
+    }
+    memoryStore.set(key, value);
+  },
+  removeItem: async (key: string): Promise<void> => {
+    try {
+      if (canUseLocalStorage()) {
+        window.localStorage.removeItem(key);
+        return;
+      }
+    } catch {
+      // Ignore.
+    }
+    memoryStore.delete(key);
+  },
+};
+
+/**
  * Fail-soft client construction.
  *
  * `createClient` throws at module load when supabaseUrl is empty. That
@@ -159,6 +243,19 @@ function buildClient() {
       // sync, no user-facing error. Telemetry needs to know so the
       // build can be hot-fixed. Lazy-require to avoid a circular
       // import (telemetry might pull this client).
+      // On web there is no crash and no UI error in this state — every call
+      // resolves to "Supabase not configured" and the app just sits there looking
+      // fine with every search/AI bar silently doing nothing. Make it visible in
+      // the browser console so a bad `expo export` is diagnosable from devtools
+      // instead of looking like a backend outage.
+      if (isWeb) {
+        console.error(
+          '[supabase] EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY were not ' +
+            'inlined into this web build — running in offline noop mode, every request ' +
+            'will fail with "Supabase not configured".',
+          { hasUrl: !!supabaseUrl, hasAnonKey: !!supabaseAnonKey },
+        );
+      }
       try {
 
         const { captureMessage } = require('./telemetry');
@@ -175,10 +272,16 @@ function buildClient() {
   }
   return createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
-      storage: secureStoreAdapter,
+      // SecureStore is native-only (see webStorageAdapter for what web did before).
+      storage: isWeb ? webStorageAdapter : secureStoreAdapter,
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false,
+      // On web, magic-link / OAuth / password-reset land the session in the URL
+      // fragment; it must be consumed to complete sign-in, and supabase-js strips
+      // it from the URL afterwards. Leaving this false is why those flows never
+      // completed in the browser. On native the same callbacks arrive as deep
+      // links and are handled there, so parsing the URL here would race that.
+      detectSessionInUrl: isWeb,
     },
   });
 }
