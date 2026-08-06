@@ -93,10 +93,6 @@ const KNOWN_ORPHANS = new Map<string, string>([
     'nutrition/food-scanner',
     'DUPLICATE of nutrition/meal-scan — both photograph a meal and call the same food-scan edge function, both actively maintained. Which one survives is a product call; wiring both would ship two identical scanners.',
   ],
-  [
-    'workouts/build-workout',
-    'SUPERSEDED by workouts/new, which saves to the same store. new.tsx notes the 3-step design replaced "the previous builder" after Jamie found it buried users in prescription fields. Should be deleted, not linked.',
-  ],
 ]);
 
 const allUnreachable = [...routes]
@@ -105,10 +101,13 @@ const allUnreachable = [...routes]
 const unreachable = allUnreachable.filter((r) => !KNOWN_ORPHANS.has(r));
 const stillOrphaned = allUnreachable.filter((r) => KNOWN_ORPHANS.has(r));
 
-// A known orphan that became reachable is good news — drop it from the list so
-// the backlog cannot quietly grow stale and hide a genuine regression.
+// Keep the backlog honest. A stale entry would silently excuse a future screen
+// of the same name, and "reachable now" and "deleted" need different follow-ups
+// — the first check could not tell them apart.
 for (const [route] of KNOWN_ORPHANS) {
-  if (!allUnreachable.includes(route)) {
+  if (!routes.has(route)) {
+    console.log(`  ✅ "${route}" no longer exists — remove it from KNOWN_ORPHANS`);
+  } else if (!allUnreachable.includes(route)) {
     console.log(`  ✅ "${route}" is now reachable — remove it from KNOWN_ORPHANS`);
   }
 }

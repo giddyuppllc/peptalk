@@ -1483,14 +1483,6 @@ function RootLayout() {
             }}
           />
           <Stack.Screen
-            name="workouts/player"
-            options={{
-              headerShown: false,
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
-            }}
-          />
-          <Stack.Screen
             name="workouts/player-v2"
             options={{
               headerShown: false,
@@ -1524,14 +1516,6 @@ function RootLayout() {
             options={{
               headerShown: false,
               animation: 'slide_from_right',
-            }}
-          />
-          <Stack.Screen
-            name="workouts/build-workout"
-            options={{
-              headerShown: false,
-              animation: 'slide_from_bottom',
-              presentation: 'modal',
             }}
           />
           {/* Nutrition screens */}

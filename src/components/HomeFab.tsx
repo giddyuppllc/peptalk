@@ -50,7 +50,6 @@ const HIDDEN_PREFIXES = [
   '/welcome',
   '/onboarding',
   '/peptalk',          // Aimee chat — its header carries its own Home button
-  '/workouts/player',  // workout player is a focus surface
   '/workouts/program', // program day session
   '/subscription',     // paywall — don't let users escape mid-purchase flow
 ];

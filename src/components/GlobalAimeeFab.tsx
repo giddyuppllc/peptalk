@@ -31,7 +31,6 @@ const HIDDEN_PREFIXES = [
   '/welcome',
   '/onboarding',
   '/peptalk',          // Aimee tab — already the chat surface
-  '/workouts/player',  // focus surface
   '/workouts/program', // focus surface
   '/subscription',     // paywall — don't compete for attention
 ];
