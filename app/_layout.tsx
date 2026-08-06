@@ -63,6 +63,7 @@ import { subscribeToReconnect } from '../src/hooks/useNetworkStatus';
 import { initTelemetry, installGlobalErrorHandler, installLifecycleBreadcrumbs, markLifecycle, captureException } from '../src/services/telemetry';
 import { useTheme } from '../src/hooks/useTheme';
 
+import { decideRoute } from '../src/lib/routeGuard';
 // Boot-time telemetry init (no-op if no DSN). Done at module scope so it
 // fires before any component renders or stores hydrate.
 initTelemetry();
@@ -1109,15 +1110,30 @@ function RootLayout() {
     const inOnboarding = segments[0] === 'onboarding';
     const inAuth = segments[0] === 'auth';
 
-    // If onboarding is complete, allow all routes freely (tabs, nutrition, learn, etc.)
-    if (isComplete) return;
-
-    // Not completed yet — only allow onboarding and auth screens
-    if (!inOnboarding && !inAuth) {
-      router.replace('/onboarding');
-      return;
-    }
-  }, [edit, hasHydrated, isComplete, navReady, router, segments]);
+    // Decision lives in src/lib/routeGuard.ts so it is unit-testable. This
+    // used to read `if (isComplete) return;` — completing onboarding once
+    // granted permanent access with no login, which on the PWA meant a
+    // signed-out visitor reached the whole app with a localStorage-forged
+    // tier. Reported live: "it doesn't ask me to login, it just goes to the
+    // page as a non user, with a pro acc".
+    const target = decideRoute({
+      isComplete,
+      authHydrated,
+      isAuthenticated,
+      inOnboarding,
+      inAuth,
+    });
+    if (target) router.replace(target);
+  }, [
+    edit,
+    hasHydrated,
+    authHydrated,
+    isAuthenticated,
+    isComplete,
+    navReady,
+    router,
+    segments,
+  ]);
 
   // Not the installed app → gate instead of running the app in a browser tab.
   if (webGate === 'desktop') {
