@@ -1,13 +1,16 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
-  "_comment": "Mutation testing scoped to the security-critical money/entitlement modules only. These are pure, fully unit-tested, and where a silent mutation = wrong tier or a bad charge.",
+  "_comment": "Mutation testing scoped to modules where a silent mutation causes real harm: wrong tier or a bad charge (entitlement/products/square), a mis-dosed injection (doseSafety), an unauthenticated user walking into the app (routeGuard), or a silently dead video (streamUrl). All are pure and unit-tested.",
   "packageManager": "pnpm",
   "testRunner": "jest",
   "jest": {
     "projectType": "custom",
     "configFile": "jest.config.js"
   },
-  "reporters": ["clear-text", "progress"],
+  "reporters": [
+    "clear-text",
+    "progress"
+  ],
   "coverageAnalysis": "off",
   "concurrency": 2,
   "ignorePatterns": [
@@ -28,6 +31,9 @@
   "mutate": [
     "src/lib/entitlement.ts",
     "src/lib/products.ts",
-    "supabase/functions/_shared/square.ts"
+    "supabase/functions/_shared/square.ts",
+    "src/services/doseSafety.ts",
+    "src/lib/routeGuard.ts",
+    "src/utils/streamUrl.ts"
   ]
 }
