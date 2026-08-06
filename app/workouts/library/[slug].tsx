@@ -7,7 +7,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Video, ResizeMode } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { CATEGORY_LABELS, getVideoBySlug } from '../../../src/data/workoutVideos';
 import { useVideoTaggerStore, combineEdits } from '../../../src/store/useVideoTaggerStore';
@@ -16,6 +15,7 @@ import EXERCISES from '../../../src/data/exercises';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { useSectionAccent } from '../../../src/hooks/useSectionAccent';
 import { FullScreenVideo } from '../../../src/components/FullScreenVideo';
+import { StreamVideoSurface } from '../../../src/components/StreamVideoSurface';
 
 export default function LibraryPlayerScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -119,12 +119,10 @@ export default function LibraryPlayerScreen() {
         )}
         {url && (
           <TouchableOpacity activeOpacity={0.9} style={StyleSheet.absoluteFill} onPress={() => setFullscreen(true)}>
-            <Video
-              source={{ uri: url }}
+            <StreamVideoSurface
+              uri={url}
               style={StyleSheet.absoluteFill}
-              resizeMode={ResizeMode.CONTAIN}
               shouldPlay={false}
-              isMuted
             />
             <View style={s.overlay}>
               <View style={s.playFab}>

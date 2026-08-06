@@ -5,7 +5,7 @@
  * Drops into any educational surface where the user might want to watch
  * a how-to clip. Uses `useLearnVideo(slug)` to fetch a signed R2 URL
  * from the get-learn-video edge function on first mount; the modal
- * mounts the actual <Video> only when the user taps play, so the
+ * mounts the actual player only when the user taps play, so the
  * surface doesn't burn bandwidth on every screen view.
  */
 
@@ -23,9 +23,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Video, ResizeMode } from 'expo-av';
 import { useLearnVideo } from '../hooks/useLearnVideo';
 import { useTheme } from '../hooks/useTheme';
+import { StreamVideoSurface } from './StreamVideoSurface';
 
 interface Props {
   /** Slug from get-learn-video's manifest.json. */
@@ -118,11 +118,9 @@ export function LearnVideoCard({
           />
           <View style={styles.modalContent}>
             {data?.url ? (
-              <Video
-                source={{ uri: data.url }}
+              <StreamVideoSurface
+                uri={data.url}
                 style={styles.videoPlayer}
-                useNativeControls
-                resizeMode={ResizeMode.CONTAIN}
                 shouldPlay
                 isLooping={false}
               />

@@ -50,6 +50,10 @@ import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { Spacing, BorderRadius, FontSizes } from '../../src/constants/theme';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useWorkoutTemplateStore } from '../../src/store/useWorkoutTemplateStore';
+import {
+  StreamVideoSurface,
+  SUPPORTS_TRANSPORT_CONTROL,
+} from '../../src/components/StreamVideoSurface';
 import { getProgramById } from '../../src/data/workoutPrograms';
 import {
   getExerciseById,
@@ -187,16 +191,23 @@ function ExerciseVideoBlock({
         </View>
       )}
       {status === 'ready' && url && (
-        <Video
-          ref={videoRef}
-          source={{ uri: url }}
-          style={StyleSheet.absoluteFill}
-          resizeMode={ResizeMode.COVER}
-          shouldPlay
-          isLooping
-          isMuted
-          onPlaybackStatusUpdate={handleStatus}
-        />
+        SUPPORTS_TRANSPORT_CONTROL ? (
+          <Video
+            ref={videoRef}
+            source={{ uri: url }}
+            style={StyleSheet.absoluteFill}
+            resizeMode={ResizeMode.COVER}
+            shouldPlay
+            isLooping
+            isMuted
+            onPlaybackStatusUpdate={handleStatus}
+          />
+        ) : (
+          // Web: the signed URL is a Cloudflare HLS manifest, which no browser
+          // but Safari plays in a bare <video>. StreamVideoSurface swaps in the
+          // Cloudflare iframe so the demo actually appears mid-workout.
+          <StreamVideoSurface uri={url} style={StyleSheet.absoluteFill} shouldPlay isLooping />
+        )
       )}
     </View>
   );

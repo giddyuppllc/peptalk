@@ -32,7 +32,7 @@ import {
   getExerciseThumbnailUrl,
   hasExerciseVideo,
 } from '../services/videoService';
-import { toStreamIframeUrl } from '../utils/streamUrl';
+import { StreamVideoSurface } from './StreamVideoSurface';
 
 interface ExerciseVideoProps {
   exerciseId: string;
@@ -74,31 +74,11 @@ export function ExerciseVideo({ exerciseId, compact = false }: ExerciseVideoProp
     }
   };
 
-  const iframeUrl = resolvedUrl ? toStreamIframeUrl(resolvedUrl) : null;
-
   return (
     <GlassCard style={compact ? styles.compactCard : styles.card}>
       <View style={styles.videoContainer}>
         {resolvedUrl ? (
-          iframeUrl ? (
-            // react-native-web renders real DOM, so a raw iframe is valid here.
-            <iframe
-              src={iframeUrl}
-              style={{ border: 'none', width: '100%', height: '100%', borderRadius: 12 }}
-              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-              allowFullScreen
-              title="Exercise demonstration"
-            />
-          ) : (
-            // Not a Stream URL (an R2-signed mp4) — a plain video element is fine.
-            <video
-              src={resolvedUrl}
-              controls
-              autoPlay
-              playsInline
-              style={{ width: '100%', height: '100%', borderRadius: 12, background: '#000' }}
-            />
-          )
+          <StreamVideoSurface uri={resolvedUrl} style={styles.player} shouldPlay />
         ) : (
           <TouchableOpacity
             style={styles.poster}
@@ -140,6 +120,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     overflow: 'hidden',
   },
+  player: { width: '100%', height: '100%' },
   poster: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   thumbnail: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   playOverlay: {

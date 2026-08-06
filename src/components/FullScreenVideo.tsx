@@ -23,6 +23,7 @@ import {
   PanResponder,
   StatusBar,
 } from 'react-native';
+import { StreamVideoSurface, SUPPORTS_TRANSPORT_CONTROL } from './StreamVideoSurface';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -169,25 +170,34 @@ export function FullScreenVideo({ visible, uri, onClose, title }: FullScreenVide
           style={StyleSheet.absoluteFill}
           onPress={() => (controls ? setControls(false) : reveal())}
         >
-          {uri && (
-            <Video
-              ref={ref}
-              source={{ uri }}
-              style={StyleSheet.absoluteFill}
-              resizeMode={ResizeMode.CONTAIN}
-              shouldPlay
-              onPlaybackStatusUpdate={onStatus}
-            />
-          )}
+          {uri &&
+            (SUPPORTS_TRANSPORT_CONTROL ? (
+              <Video
+                ref={ref}
+                source={{ uri }}
+                style={StyleSheet.absoluteFill}
+                resizeMode={ResizeMode.CONTAIN}
+                shouldPlay
+                onPlaybackStatusUpdate={onStatus}
+              />
+            ) : (
+              // Web: the Cloudflare iframe owns its own transport, so the
+              // custom controls below are hidden rather than rendered as
+              // buttons that cannot drive it.
+              <StreamVideoSurface uri={uri} style={StyleSheet.absoluteFill} shouldPlay />
+            ))}
         </TouchableOpacity>
 
-        {!loaded && (
+        {/* `loaded` is driven by onPlaybackStatusUpdate, which only the native
+            player emits. Gate on the same flag as the player itself or the web
+            build shows a spinner over the iframe forever. */}
+        {!loaded && SUPPORTS_TRANSPORT_CONTROL && (
           <View style={st.center} pointerEvents="none">
             <ActivityIndicator size="large" color="#fff" />
           </View>
         )}
 
-        {controls && (
+        {controls && SUPPORTS_TRANSPORT_CONTROL && (
           <>
             {/* Top bar: close + title */}
             <View style={st.topBar} pointerEvents="box-none">

@@ -29,7 +29,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Video, ResizeMode } from 'expo-av';
+import { StreamVideoSurface } from '../../src/components/StreamVideoSurface';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import {
@@ -100,7 +100,6 @@ export default function VideoTaggerScreen() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [resolvingUrl, setResolvingUrl] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
-  const videoRef = useRef<Video>(null);
 
   // Reset form when current video changes. If the script (scripts/ai-tag-videos.mjs)
   // populated an aiSuggested block and the human hasn't already set a real value,
@@ -295,14 +294,7 @@ export default function VideoTaggerScreen() {
             </View>
           )}
           {videoUrl && (
-            <Video
-              ref={videoRef}
-              source={{ uri: videoUrl }}
-              style={StyleSheet.absoluteFill}
-              resizeMode={ResizeMode.CONTAIN}
-              useNativeControls
-              shouldPlay={false}
-            />
+            <StreamVideoSurface uri={videoUrl} style={StyleSheet.absoluteFill} shouldPlay={false} />
           )}
         </View>
 
