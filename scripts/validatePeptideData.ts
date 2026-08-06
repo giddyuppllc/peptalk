@@ -465,16 +465,26 @@ const dosingRefIds = (PEPTIDE_DOSING_REFERENCE as Array<{ peptideId: string }>).
 // has a direct entry still never reaches a screen. That is a warning, not an
 // error, because the data is one wired-up accessor away rather than orphaned.
 const aliasedRefIds = new Set(Object.keys(PEPTIDE_VARIANT_PARENTS));
+const aliasedByParent = new Map<string, string[]>();
 for (const id of dosingRefIds) {
   if (!aliasedRefIds.has(id)) continue;
   const parent = PEPTIDE_VARIANT_PARENTS[id];
-  if (dosingRefIds.includes(parent)) {
-    warn(
-      `dosing reference "${id}" aliases to "${parent}", but "${parent}" has its own entry — ` +
-        `getDosingReference returns the direct match, and getAllDosingReferencesForPeptide has no ` +
-        `callers, so "${id}" does not reach any screen.`
+  aliasedByParent.set(parent, [...(aliasedByParent.get(parent) ?? []), id]);
+}
+for (const [parent, ids] of aliasedByParent) {
+  // These used to be unreachable: getDosingReference returns only the direct
+  // match, and getAllDosingReferencesForPeptide had zero callers. The dose
+  // calculator now renders a preparation picker built from that accessor, so
+  // the variant blocks are selectable. Verify the parent is real — a variant
+  // pointing at a peptide that does not exist is still a stranding.
+  if (!peptideIds.has(parent)) {
+    error(
+      `dosing reference variant(s) ${ids.map((i) => `"${i}"`).join(', ')} alias to "${parent}", ` +
+        `but no peptide has that id — the calculator's preparation picker can never show them.`
     );
+    continue;
   }
+  info(`${parent}: ${ids.length + 1} preparations selectable in the calculator (${ids.join(', ')})`);
 }
 
 for (const [label, ids] of [

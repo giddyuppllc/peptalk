@@ -34,6 +34,7 @@ import { PeptideDisclaimerModal } from '../../src/components/PeptideDisclaimerMo
 import { PEPTIDES } from '../../src/data/peptides';
 import {
   getDosingReference,
+  getAllDosingReferencesForPeptide,
   PEPTALK_DOSING_DISCLAIMER,
 } from '../../src/data/peptideDosingReference';
 import { getCalculatorMetadata } from '../../src/data/calculatorMetadata';
@@ -109,10 +110,35 @@ export default function CalculatorV2Screen() {
     () => (peptideId ? getCalculatorMetadata(peptideId) : null),
     [peptideId],
   );
-  const ref = useMemo(
-    () => (peptideId ? getDosingReference(peptideId) : null),
+  // Edward's reference doc defines more than one block for some compounds —
+  // alternate vial sizes (retatrutide 5 mg / 10 mg) and combo blends
+  // (CJC-1295 no-DAC, CJC/Ipamorelin). `getDosingReference` returns only the
+  // direct match, and `getAllDosingReferencesForPeptide` had ZERO callers, so
+  // those extra blocks reached no screen at all.
+  //
+  // That mattered here specifically: the effect below prefills `peptideMg` from
+  // `ref.vialMg`, so someone holding a 10 mg retatrutide vial was silently given
+  // 5 mg maths and therefore the wrong unit count on every draw.
+  const variants = useMemo(
+    () => (peptideId ? getAllDosingReferencesForPeptide(peptideId) : []),
     [peptideId],
   );
+  // Default to whatever getDosingReference would have returned, so behaviour is
+  // unchanged for every peptide with a single block.
+  const [variantId, setVariantId] = useState<string | null>(null);
+  const ref = useMemo(() => {
+    if (!peptideId) return null;
+    const chosen = variantId
+      ? variants.find((v) => v.peptideId === variantId)
+      : null;
+    return chosen ?? getDosingReference(peptideId);
+  }, [peptideId, variantId, variants]);
+
+  // Reset the choice when the peptide changes, or the previous peptide's
+  // variant would stick and quietly drive the wrong vial maths.
+  useEffect(() => {
+    setVariantId(null);
+  }, [peptideId]);
   const peptideName = useMemo(
     () =>
       peptideId
@@ -489,6 +515,39 @@ export default function CalculatorV2Screen() {
               ))}
             </View>
           </View>
+
+          {/* Vial / preparation variant — only when Edward's reference defines
+              more than one block for this compound. Selecting one re-primes the
+              mg-in-vial field below, which is the whole point: the unit count
+              differs between a 5 mg and a 10 mg vial of the same peptide. */}
+          {variants.length > 1 && (
+            <View style={{ marginTop: 14 }}>
+              <Text
+                style={[
+                  styles.fieldLabel,
+                  {
+                    color: t.colors.textSecondary as string,
+                    fontFamily: t.typography.body,
+                  },
+                ]}
+              >
+                Which preparation do you have?
+              </Text>
+              <View style={styles.chipRow}>
+                {variants.map((v) => (
+                  <Chip
+                    key={v.peptideId}
+                    label={v.peptideName}
+                    primary={ref?.peptideId === v.peptideId}
+                    onPress={() => {
+                      tapLight();
+                      setVariantId(v.peptideId);
+                    }}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
         </GlassCard>
 
         {/* mg in vial + diluent volume */}
