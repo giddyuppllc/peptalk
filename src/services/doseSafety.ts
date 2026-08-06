@@ -172,12 +172,14 @@ export function checkDoseGuards(args: {
       (p.contraindications ?? []).some((c) => /pregnan|nursing|breastfeed/i.test(c)),
     );
     if (contra) {
+      /* Copy is Tracker's existing wording, verbatim. Tracker was migrated onto
+         this function on 2026-08-06 and its user-facing text must not change;
+         Calculator inherits the same established phrasing. */
       warnings.push({
         code: 'pregnancy_contraindication',
-        title: 'Check with your provider',
+        title: 'Not recommended during pregnancy / nursing',
         message:
-          `Your profile says you are pregnant or nursing, and ${peptideIdOrName} lists a ` +
-          'pregnancy/nursing contraindication. Please confirm with your provider before continuing.',
+          `Your profile indicates you're pregnant or nursing, and this substance is contraindicated in that scenario per research protocols. Please consult a licensed provider before continuing.`,
       });
     }
   }

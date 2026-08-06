@@ -28,10 +28,10 @@ import { DaySummarySheet } from '../../src/components/DaySummarySheet';
 import { WeeklySummaryCard } from '../../src/components/WeeklySummaryCard';
 import { DoseHeatmap } from '../../src/components/DoseHeatmap';
 import { DOSE_LOG_GATE_DISCLAIMER } from '../../src/constants/legal';
-import { checkDoseSafety } from '../../src/services/doseSafety';
+import { checkDoseGuards } from '../../src/services/doseSafety';
+import { confirmDoseGuards } from '../../src/utils/doseGuardPrompt';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { computeCyclePhase } from '../../src/services/cycleService';
-import { PROTOCOL_TEMPLATES } from '../../src/data/protocols';
 import {
   DoseLogEntry,
   DoseUnit,
@@ -492,25 +492,16 @@ export default function CalendarScreen() {
     // Substance name length cap so a paste-bomb doesn't bloat the row.
     const trimmedName = logSubstanceName.trim().slice(0, 80);
 
-    const safety = checkDoseSafety(trimmedName, amount, logUnit);
-
-    // Pregnancy contraindication check — lookup the peptide's protocol and
-    // if its `contraindications` mentions pregnancy/nursing and the user
-    // has flagged themselves as such in their health profile, warn.
-    const isPregnantOrNursing =
-      useHealthProfileStore.getState().profile?.medical?.pregnantOrNursing === true;
-    const substanceLower = logSubstanceName.trim().toLowerCase();
-    const matchedProtocols = PROTOCOL_TEMPLATES.filter(
-      (p) =>
-        p.peptideId.toLowerCase() === substanceLower ||
-        p.name.toLowerCase().includes(substanceLower) ||
-        substanceLower.includes(p.peptideId.toLowerCase()),
-    );
-    const pregnancyContra =
-      isPregnantOrNursing &&
-      matchedProtocols.some((p) =>
-        (p.contraindications ?? []).some((c) => /pregnan|nursing|breastfeed/i.test(c)),
-      );
+    /* Both guards now come from checkDoseGuards so Tracker and Calculator
+       cannot drift. Same two checks, same order (contraindication first), same
+       wording — this was a straight extraction, not a behaviour change. */
+    const guardWarnings = checkDoseGuards({
+      peptideIdOrName: trimmedName,
+      amount,
+      unit: logUnit,
+      pregnantOrNursing:
+        useHealthProfileStore.getState().profile?.medical?.pregnantOrNursing === true,
+    });
 
     const persist = () => {
       logDose({
@@ -580,65 +571,10 @@ export default function CalendarScreen() {
       }
     };
 
-    if (pregnancyContra) {
-      Alert.alert(
-        'Not recommended during pregnancy / nursing',
-        `Your profile indicates you're pregnant or nursing, and this substance is contraindicated in that scenario per research protocols. Please consult a licensed provider before continuing.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Log anyway',
-            style: 'destructive',
-            onPress: () => {
-              if (!safety.safe) {
-                // Chain to the dose-safety confirm next
-                Alert.alert(
-                  'Double-check this dose',
-                  safety.message ?? 'This dose looks unusual.',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Log anyway',
-                      style: 'destructive',
-                      onPress: () => {
-                        persist();
-                        continueAfterLog();
-                      },
-                    },
-                  ],
-                );
-                return;
-              }
-              persist();
-              continueAfterLog();
-            },
-          },
-        ],
-      );
-      return;
-    }
-
-    if (!safety.safe) {
-      Alert.alert(
-        'Double-check this dose',
-        safety.message ?? 'This dose looks unusual.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Log anyway',
-            style: 'destructive',
-            onPress: () => {
-              persist();
-              continueAfterLog();
-            },
-          },
-        ],
-      );
-      return;
-    }
-
-    persist();
-    continueAfterLog();
+    confirmDoseGuards(guardWarnings, () => {
+      persist();
+      continueAfterLog();
+    });
   };
 
   const alertLevelColor = (level: HealthAlert['level']) => {

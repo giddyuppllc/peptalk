@@ -49,30 +49,9 @@ import {
 } from '../../src/utils/calculatorV2';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
-import { checkDoseGuards, type DoseGuardWarning } from '../../src/services/doseSafety';
+import { checkDoseGuards } from '../../src/services/doseSafety';
+import { confirmDoseGuards } from '../../src/utils/doseGuardPrompt';
 
-
-/**
- * Chain a confirm per warning, then run `onProceed`.
- *
- * Mirrors Tracker: warnings are informational, never hard blocks — a user may
- * have a valid reason for an unusual dose — but they must be SEEN rather than
- * written silently. Cancelling any step aborts the whole write.
- */
-function confirmGuardsThen(warnings: DoseGuardWarning[], onProceed: () => void): void {
-  const step = (i: number): void => {
-    if (i >= warnings.length) {
-      onProceed();
-      return;
-    }
-    const w = warnings[i];
-    Alert.alert(w.title, w.message, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Continue', style: 'destructive', onPress: () => step(i + 1) },
-    ]);
-  };
-  step(0);
-}
 
 const VIAL_SIZES: (3 | 5 | 10)[] = [3, 5, 10];
 type ProtocolIntent = 'gradual' | 'aggressive' | 'maintenance';
@@ -275,7 +254,7 @@ export default function CalculatorV2Screen() {
         useHealthProfileStore.getState().profile?.medical?.pregnantOrNursing === true,
     });
     if (warnings.length > 0) {
-      confirmGuardsThen(warnings, () => void handleAddToCalendarConfirmed());
+      confirmDoseGuards(warnings, () => void handleAddToCalendarConfirmed());
       return;
     }
     await handleAddToCalendarConfirmed();
@@ -331,7 +310,7 @@ export default function CalculatorV2Screen() {
         useHealthProfileStore.getState().profile?.medical?.pregnantOrNursing === true,
     });
     if (cycleWarnings.length > 0) {
-      confirmGuardsThen(cycleWarnings, () => promptScheduleCycle(dates));
+      confirmDoseGuards(cycleWarnings, () => promptScheduleCycle(dates), 'Continue');
       return;
     }
     promptScheduleCycle(dates);
