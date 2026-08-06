@@ -48,6 +48,31 @@ import {
   type CalculatorWarning,
 } from '../../src/utils/calculatorV2';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
+import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import { checkDoseGuards, type DoseGuardWarning } from '../../src/services/doseSafety';
+
+
+/**
+ * Chain a confirm per warning, then run `onProceed`.
+ *
+ * Mirrors Tracker: warnings are informational, never hard blocks — a user may
+ * have a valid reason for an unusual dose — but they must be SEEN rather than
+ * written silently. Cancelling any step aborts the whole write.
+ */
+function confirmGuardsThen(warnings: DoseGuardWarning[], onProceed: () => void): void {
+  const step = (i: number): void => {
+    if (i >= warnings.length) {
+      onProceed();
+      return;
+    }
+    const w = warnings[i];
+    Alert.alert(w.title, w.message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Continue', style: 'destructive', onPress: () => step(i + 1) },
+    ]);
+  };
+  step(0);
+}
 
 const VIAL_SIZES: (3 | 5 | 10)[] = [3, 5, 10];
 type ProtocolIntent = 'gradual' | 'aggressive' | 'maintenance';
@@ -239,6 +264,26 @@ export default function CalculatorV2Screen() {
   const handleAddToCalendar = async () => {
     if (!peptideId || !result || result.hardFailures.length > 0) return;
     tapMedium();
+    /* The same guards Tracker runs. This path wrote to the dose log with none
+       of them until 2026-08-06, so an unusual dose or a pregnancy
+       contraindication was persisted silently from here. */
+    const warnings = checkDoseGuards({
+      peptideIdOrName: peptideId,
+      amount: perShotMg,
+      unit: 'mg',
+      pregnantOrNursing:
+        useHealthProfileStore.getState().profile?.medical?.pregnantOrNursing === true,
+    });
+    if (warnings.length > 0) {
+      confirmGuardsThen(warnings, () => void handleAddToCalendarConfirmed());
+      return;
+    }
+    await handleAddToCalendarConfirmed();
+  };
+
+  /* Split out so the guard path and the clean path share one implementation. */
+  const handleAddToCalendarConfirmed = async () => {
+    if (!peptideId || !result) return;
     try {
       logDose({
         peptideId,
@@ -275,6 +320,26 @@ export default function CalculatorV2Screen() {
       );
       return;
     }
+    /* Guards run BEFORE the "schedule?" prompt: this path writes the whole
+       cycle at once, so a contraindication or a mis-keyed dose would otherwise
+       be multiplied across every planned date. */
+    const cycleWarnings = checkDoseGuards({
+      peptideIdOrName: peptideId,
+      amount: perShotMg,
+      unit: 'mg',
+      pregnantOrNursing:
+        useHealthProfileStore.getState().profile?.medical?.pregnantOrNursing === true,
+    });
+    if (cycleWarnings.length > 0) {
+      confirmGuardsThen(cycleWarnings, () => promptScheduleCycle(dates));
+      return;
+    }
+    promptScheduleCycle(dates);
+  };
+
+  /* The original prompt, unchanged — shared by the guarded and clean paths. */
+  const promptScheduleCycle = (dates: string[]) => {
+    if (!peptideId || !result) return;
     Alert.alert(
       'Schedule cycle?',
       `${dates.length} planned doses across ~${Math.ceil(dates.length / 7) || 1} week${dates.length > 7 ? 's' : ''}. They'll appear in Tracker as planned — confirm each as you take it.`,

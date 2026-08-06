@@ -123,3 +123,73 @@ export function checkDoseSafety(
 
   return { safe: true };
 }
+
+/**
+ * Every guard that must run before a dose is written, in the order they should
+ * be shown.
+ *
+ * WHY THIS EXISTS (2026-08-06): `checkDoseSafety` plus the pregnancy
+ * contraindication check were both implemented inline in the Tracker's
+ * log-dose modal, and NOWHERE else. The dose calculator writes to the same log
+ * via `logDose` and `scheduleCycle` — the latter writing an entire cycle at
+ * once — and ran neither guard. So the same dose that would prompt a
+ * confirmation in Tracker was written silently from Calculator, and a user
+ * flagged pregnant/nursing could schedule a whole cycle of a contraindicated
+ * peptide without ever seeing the warning.
+ *
+ * Pure on purpose: `pregnantOrNursing` is passed in rather than read from the
+ * health-profile store, so this stays testable and free of UI/store imports.
+ *
+ * Returns warnings ONLY — these are informational, never hard blocks, matching
+ * the existing behaviour. The caller chains a confirm per warning.
+ */
+export interface DoseGuardWarning {
+  title: string;
+  message: string;
+  code: 'pregnancy_contraindication' | NonNullable<DoseSafetyResult['code']>;
+}
+
+export function checkDoseGuards(args: {
+  peptideIdOrName: string;
+  amount: number;
+  unit: string;
+  /** From the health profile. Omitted/undefined = do not run the check. */
+  pregnantOrNursing?: boolean;
+}): DoseGuardWarning[] {
+  const { peptideIdOrName, amount, unit, pregnantOrNursing } = args;
+  const warnings: DoseGuardWarning[] = [];
+
+  // Contraindication first — it is the more serious of the two.
+  if (pregnantOrNursing) {
+    const needle = peptideIdOrName.trim().toLowerCase();
+    const matched = PROTOCOL_TEMPLATES.filter(
+      (p) =>
+        p.peptideId.toLowerCase() === needle ||
+        p.name.toLowerCase().includes(needle) ||
+        needle.includes(p.peptideId.toLowerCase()),
+    );
+    const contra = matched.some((p) =>
+      (p.contraindications ?? []).some((c) => /pregnan|nursing|breastfeed/i.test(c)),
+    );
+    if (contra) {
+      warnings.push({
+        code: 'pregnancy_contraindication',
+        title: 'Check with your provider',
+        message:
+          `Your profile says you are pregnant or nursing, and ${peptideIdOrName} lists a ` +
+          'pregnancy/nursing contraindication. Please confirm with your provider before continuing.',
+      });
+    }
+  }
+
+  const safety = checkDoseSafety(peptideIdOrName, amount, unit);
+  if (!safety.safe && safety.code) {
+    warnings.push({
+      code: safety.code,
+      title: 'Double-check this dose',
+      message: safety.message ?? 'This dose looks unusual.',
+    });
+  }
+
+  return warnings;
+}
