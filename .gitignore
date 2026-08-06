@@ -103,3 +103,5 @@ global.css
 assets/icon.original-with-alpha.png
 .commit-msg-tmp
 .vercel-link/
+.vercel
+dist2/
