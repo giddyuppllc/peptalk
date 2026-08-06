@@ -17,6 +17,14 @@
  * Deliberately unlinked routes go in ALLOWED below with a reason. That keeps
  * the check at zero noise, so a new entry in the report means someone shipped a
  * screen nobody can open.
+ *
+ * KNOWN LIMITATION — this counts any path-shaped string as a link, and some are
+ * comparisons rather than navigation. HomeFab and GlobalAimeeFab hold arrays of
+ * "surfaces where the FAB hides" containing entries like '/workouts/player';
+ * that made the superseded workouts/player look reachable when nothing actually
+ * navigates to it. The check therefore under-reports. Distinguishing a
+ * comparison from a navigation needs real call-graph analysis, so treat a clean
+ * run as "no obvious orphans" rather than proof every screen has a door.
  */
 
 import { readdirSync, statSync, readFileSync } from 'node:fs';

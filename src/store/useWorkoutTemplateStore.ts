@@ -29,6 +29,15 @@ export interface WorkoutTemplate {
 
 interface WorkoutTemplateState {
   templates: WorkoutTemplate[];
+  /**
+   * True once the persisted templates have been read back from storage.
+   *
+   * `secureStorage` is asynchronous, so on a cold start `templates` is `[]` for
+   * the first frames. Without this flag a consumer cannot tell "not loaded yet"
+   * from "no such template", and the player rendered "No workout to play" for a
+   * workout that was saved perfectly well.
+   */
+  hasHydrated: boolean;
 }
 
 interface WorkoutTemplateActions {
@@ -43,6 +52,7 @@ export const useWorkoutTemplateStore = create<WorkoutTemplateState & WorkoutTemp
   persist(
     (set, get) => ({
       templates: [],
+      hasHydrated: false,
 
       addTemplate: (name, exercises) => {
         const template: WorkoutTemplate = {
@@ -83,7 +93,15 @@ export const useWorkoutTemplateStore = create<WorkoutTemplateState & WorkoutTemp
     {
       name: 'peptalk-workout-templates',
       storage: createJSONStorage(() => secureStorage),
+      // hasHydrated is derived at runtime, never persisted.
       partialize: (state) => ({ templates: state.templates }),
+      onRehydrateStorage: () => (state, error) => {
+        // Flip the flag even when rehydration FAILS. Leaving it false on error
+        // would strand every consumer in a permanent loading state, which is
+        // worse than showing an honest empty list.
+        if (error) console.warn('[workout-templates] rehydrate failed', error);
+        useWorkoutTemplateStore.setState({ hasHydrated: true });
+      },
     }
   )
 );

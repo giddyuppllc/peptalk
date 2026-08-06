@@ -269,9 +269,20 @@ export default function WorkoutPlayerV2Screen() {
   const templateId = params.templateId;
 
   const program = programId ? getProgramById(programId) : undefined;
-  const template = templateId
-    ? useWorkoutTemplateStore.getState().getTemplateById(templateId)
-    : undefined;
+  // Subscribe, do NOT read .getState() during render.
+  //
+  // The template store persists through secureStorage, which is asynchronous,
+  // so on a cold start `templates` is [] for the first frames. A one-shot
+  // getState() read captured that empty array and never re-ran, so opening a
+  // saved workout after any app restart rendered "No workout to play" — the
+  // workout was saved fine, the player just looked too early. On the PWA every
+  // page reload is a cold start, so it failed there almost every time.
+  const template = useWorkoutTemplateStore((st) =>
+    templateId ? st.templates.find((t) => t.id === templateId) : undefined,
+  );
+  const templatesHydrated = useWorkoutTemplateStore((st) => st.hasHydrated);
+  // Only meaningful for the template path; programs come from a different store.
+  const waitingForTemplate = !!templateId && !template && !templatesHydrated;
 
   const {
     activeProgram,
@@ -587,6 +598,22 @@ export default function WorkoutPlayerV2Screen() {
   // ─────────────────────────────────────────────────────────────────────
   // Render
   // ─────────────────────────────────────────────────────────────────────
+
+  // Still reading templates off disk — say so instead of claiming the workout
+  // does not exist. Telling a user their saved workout is missing when it is
+  // merely still loading is how a working feature reads as broken.
+  if (waitingForTemplate) {
+    return (
+      <SafeAreaView style={[styles.screen, { backgroundColor: t.bg }]}>
+        <View style={styles.fallback}>
+          <ActivityIndicator size="large" color={accent.deep} />
+          <Text style={[styles.fallbackSub, { color: t.textSecondary }]}>
+            Loading your workout…
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!day) {
     return (
