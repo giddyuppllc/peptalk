@@ -1207,6 +1207,44 @@ export const PEPTIDES: Peptide[] = [
     halfLife: '~hours',
     storageTemp: '-20°C',
   },
+
+  // ─── AMINO ACID DERIVATIVES ───────────────────────────────────────────────────
+  // Not peptides. Included because they appear in the master dosing table and
+  // users stack them alongside peptides — a library entry is what makes that
+  // dosing row reachable in the app at all.
+  {
+    id: 'l-carnitine',
+    name: 'L-Carnitine',
+    abbreviation: 'L-Carnitine',
+    aliases: ['Carnitine', 'Levocarnitine', 'ALCAR', 'Acetyl-L-Carnitine'],
+    categories: ['Metabolic', 'Mitochondrial'],
+    researchSummary:
+      'L-Carnitine is a quaternary ammonium compound derived from the amino acids lysine and methionine, not a peptide. It is required for the transport of long-chain fatty acids across the inner mitochondrial membrane, where they undergo beta-oxidation. Research examines its role in fat metabolism, exercise performance, and recovery, with the clearest evidence in primary and secondary carnitine deficiency, for which levocarnitine is FDA-approved. Findings in otherwise healthy, non-deficient subjects are considerably more mixed.',
+    mechanismOfAction:
+      'Acts as the obligatory carrier in the carnitine shuttle. Carnitine palmitoyltransferase I (CPT1) conjugates long-chain acyl-CoA to carnitine, the resulting acylcarnitine crosses the inner mitochondrial membrane via the carnitine-acylcarnitine translocase, and CPT2 regenerates acyl-CoA inside the matrix for beta-oxidation. Also buffers the mitochondrial acyl-CoA/CoA ratio, freeing CoA for other reactions.',
+    receptorTargets: ['CPT1 / CPT2 (substrate)', 'OCTN2 carnitine transporter'],
+    signalingPathways: ['Fatty acid beta-oxidation', 'Carnitine shuttle', 'Mitochondrial acyl-CoA buffering'],
+    stabilityNotes:
+      'Stable at room temperature as a dry powder or capsule; hygroscopic, so keep sealed and dry. Injectable levocarnitine solutions are stored at controlled room temperature and protected from light.',
+    molecularWeight: '161.20 Da',
+    halfLife: '~15 hours (oral)',
+    storageTemp: 'Room temperature',
+    routeOfAdministration: ['Oral', 'Intramuscular', 'Intravenous'],
+    approvalStatus: 'fda_approved',
+    complianceTier: 'supplement',
+    approvalDetails:
+      'Levocarnitine is FDA-approved for primary and secondary carnitine deficiency (Carnitor). Oral L-carnitine is otherwise widely sold as a dietary supplement.',
+    evidenceGrade: 'B',
+    naturalSources: 'Red meat, and to a lesser degree dairy, fish and poultry; also synthesised endogenously in the liver and kidneys.',
+    uses: {
+      primaryUses: ['Fat metabolism', 'Exercise performance', 'Recovery support', 'Carnitine deficiency'],
+      commonGoals: ['Fat loss', 'Endurance', 'Mitochondrial support', 'Reduced post-exercise soreness'],
+      whatPeopleReport:
+        'Users most often take it before training and describe it as a supporting compound rather than something with an obvious acute effect. Reports of reduced post-exercise soreness and improved endurance are common; reports of standalone fat loss without a calorie deficit and training are not. Higher oral doses are sometimes associated with GI upset and a fishy body odour caused by gut bacterial conversion to trimethylamine.',
+      popularWith: ['Fat loss', 'Endurance athletes', 'Metabolic health'],
+      pairsWith: ['mots-c', 'nad-plus', 'aod-9604', 'semaglutide'],
+    },
+  },
 ];
 
 export const getPeptideById = (id: string): Peptide | undefined =>

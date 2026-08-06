@@ -1033,6 +1033,134 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     cautionConditions: ['type 2 diabetes', 'hypothyroidism (treat first)', 'sleep apnea', 'family history of cancer'],
     source: 'published research',
   },
+
+  // ─── USE-CASE PROTOCOLS (Edward, 2026-08-06) ─────────────────────────────────
+  //
+  // Added ALONGSIDE the protocols above, deliberately — not over them. The
+  // master dosing table and the reconstitution reference keep their existing
+  // values; these are named, use-case-specific alternatives so a user can see
+  // both and choose. Same convention peptideDosingReference.ts states for
+  // itself: add an entry rather than rewrite one, so there is a paper trail.
+  //
+  // Where these differ from the master table, that is intentional and known:
+  //   MOTS-c  — table says 200-400mcg DAILY; this is 1-2mg 3x weekly.
+  //   TB-500  — table says 2-5mg weekly; these are 1mg q3-4d and 0.33mg daily.
+  // Marked `source: 'common practice'` because they come from practical use,
+  // not from a cited trial.
+
+  {
+    id: 'proto-motsc-mwf-fasted',
+    peptideId: 'mots-c',
+    name: 'MOTS-c MWF Fasted Training Protocol',
+    typicalDose: { min: 1000, max: 2000, unit: 'mcg' },
+    dosingMode: 'flat',
+    route: 'subcutaneous',
+    frequency: 'tiw',
+    frequencyLabel: '3x weekly (Mon / Wed / Fri)',
+    durationWeeks: { min: 6, max: 8 },
+    timing: 'Fasted, before exercise',
+    storageNotes: 'Store at 2-8°C after reconstitution.',
+    reconstitutionNotes: 'On a 10mg vial with 3ml BAC water (3.33 mg/mL), 1mg = 30 units and 2mg = 60 units.',
+    importantNotes: [
+      'Dose fasted, then train — refuel with protein and carbohydrate afterwards',
+      'Fixed Monday / Wednesday / Friday schedule rather than daily dosing',
+      'Run the cycle twice a year (bi-annually)',
+      'Higher per-dose amount than the daily titration protocol — these are alternatives, do not run both at once',
+    ],
+    contraindications: ['pregnancy'],
+    cautionConditions: ['diabetes', 'hypoglycemia risk'],
+    source: 'common practice',
+  },
+  {
+    id: 'proto-bpc157-acute-injury',
+    peptideId: 'bpc-157',
+    name: 'BPC-157 Acute Injury & Pain Protocol',
+    typicalDose: { min: 330, max: 330, unit: 'mcg' },
+    dosingMode: 'flat',
+    route: 'subcutaneous',
+    frequency: 'twice_daily',
+    frequencyLabel: '2x daily (0.33mg per injection)',
+    durationWeeks: { min: 4, max: 8 },
+    timing: 'Morning and evening; near the injury site where practical',
+    storageNotes: 'Reconstituted solution at 2-8°C. Use within 30 days.',
+    reconstitutionNotes: 'On a 10mg vial with 3ml BAC water (3.33 mg/mL), 0.33mg is approximately 10 units.',
+    importantNotes: [
+      '0.33mg PER injection, twice daily — approximately 0.66mg total per day',
+      'For injuries and acute pain',
+      'Cycle 4-8 weeks on, then 4-8 weeks off',
+      'Inject close to the area of concern when possible',
+    ],
+    contraindications: ['active cancer', 'pregnancy', 'breastfeeding'],
+    cautionConditions: ['autoimmune disease', 'blood clotting disorders'],
+    source: 'common practice',
+  },
+  {
+    id: 'proto-bpc157-evening-recovery',
+    peptideId: 'bpc-157',
+    name: 'BPC-157 Evening Skin & Recovery Protocol',
+    typicalDose: { min: 330, max: 330, unit: 'mcg' },
+    dosingMode: 'flat',
+    route: 'subcutaneous',
+    frequency: 'daily',
+    frequencyLabel: 'Once daily, evening',
+    durationWeeks: { min: 4, max: 8 },
+    timing: 'Evening',
+    storageNotes: 'Reconstituted solution at 2-8°C. Use within 30 days.',
+    reconstitutionNotes: 'On a 10mg vial with 3ml BAC water (3.33 mg/mL), 0.33mg is approximately 10 units.',
+    importantNotes: [
+      'The lower-intensity option: skin, recovery and inflammation rather than acute injury',
+      'Taken in the evening',
+      'Cycle 4-8 weeks on, then 4-8 weeks off',
+    ],
+    contraindications: ['active cancer', 'pregnancy', 'breastfeeding'],
+    cautionConditions: ['autoimmune disease', 'blood clotting disorders'],
+    source: 'common practice',
+  },
+  {
+    id: 'proto-tb500-acute-injury',
+    peptideId: 'tb-500',
+    name: 'TB-500 Acute Injury Protocol',
+    typicalDose: { min: 1000, max: 1000, unit: 'mcg' },
+    dosingMode: 'flat',
+    route: 'subcutaneous',
+    frequency: 'custom',
+    frequencyLabel: 'Every 3-4 days',
+    durationWeeks: { min: 2, max: 4 },
+    storageNotes: 'Reconstituted at 2-8°C, use within 21 days.',
+    reconstitutionNotes: 'On a 10mg vial with 3ml BAC water (3.33 mg/mL), 1mg is approximately 30 units.',
+    importantNotes: [
+      '1mg every 3-4 days for a short 2-4 week course',
+      'For acute injuries specifically',
+      'TB-500 acts systemically — injection site does not matter',
+      'Commonly stacked with BPC-157',
+    ],
+    contraindications: ['active cancer', 'pregnancy', 'breastfeeding'],
+    cautionConditions: ['autoimmune disease', 'blood clotting disorders'],
+    source: 'common practice',
+  },
+  {
+    id: 'proto-tb500-evening-skin-hair',
+    peptideId: 'tb-500',
+    name: 'TB-500 Evening Skin, Hair & Recovery Protocol',
+    typicalDose: { min: 330, max: 330, unit: 'mcg' },
+    dosingMode: 'flat',
+    route: 'subcutaneous',
+    frequency: 'daily',
+    frequencyLabel: 'Once daily, evening',
+    durationWeeks: { min: 4, max: 8 },
+    timing: 'Evening',
+    storageNotes: 'Reconstituted at 2-8°C, use within 21 days.',
+    reconstitutionNotes: 'On a 10mg vial with 3ml BAC water (3.33 mg/mL), 0.33mg is approximately 10 units.',
+    importantNotes: [
+      'For skin, hair and overall recovery rather than acute injury',
+      'Taken in the evening',
+      'Cycle 4-8 weeks on, then 4-8 weeks off',
+      'Much lower per-dose amount than the loading/maintenance protocol — these are alternatives, do not run both at once',
+    ],
+    contraindications: ['active cancer', 'pregnancy', 'breastfeeding'],
+    cautionConditions: ['autoimmune disease', 'blood clotting disorders'],
+    source: 'common practice',
+  },
 ];
 
 export const getProtocolsByPeptide = (peptideId: string): ProtocolTemplate[] =>

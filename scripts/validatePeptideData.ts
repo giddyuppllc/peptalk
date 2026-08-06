@@ -23,6 +23,10 @@ import { EDUCATIONAL_ARTICLES } from '../src/data/educationalArticles';
 import { HOW_TO_GUIDES } from '../src/data/howToGuides';
 import { VIDEOS } from '../src/data/videos';
 import { PROTOCOL_TEMPLATES } from '../src/data/protocols';
+import { PEPTIDE_DOSING_TABLE } from '../src/data/peptideDosingTable';
+import { PEPTIDE_DOSING_REFERENCE } from '../src/data/peptideDosingReference';
+import { PEPTIDE_NUTRITION } from '../src/data/peptideNutrition';
+import { PEPTIDE_TIMING } from '../src/data/peptideTiming';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -418,6 +422,84 @@ const noProtocol = PEPTIDES.filter((p) => !peptidsWithProtocols.has(p.id));
 if (noProtocol.length > 0 && noProtocol.length < 30) {
   info(`Peptides missing protocols: ${noProtocol.map((p) => p.id).join(', ')}`);
 }
+
+// ─── 11. Dosing data reachability ────────────────────────────────────────────
+//
+// THIS IS THE CHECK THAT WAS MISSING, AND IT COST US REAL CONTENT.
+//
+// Dosing lives in two files that this validator never looked at:
+//   • peptideDosingTable.ts     → the dosing range / cycle card on the peptide
+//                                 detail page, and the answers peptalkBot gives
+//   • peptideDosingReference.ts → reconstitution + syringe units for the
+//                                 calculators and the active-cycle hook
+//
+// Every consumer joins them to the library by `peptideId` with
+// `find(...)` and then silently gives up: `if (!entry) return null`. So a row
+// whose peptideId has no entry in peptides.ts is not a warning and not a
+// blank space — it is invisible. Nothing in the app or the build ever said so.
+//
+// That is how 23 transcribed dosing rows (l-carnitine, mk-677, methylene-blue,
+// tesofensine, kpv, klow, glow, alpha-gpc, …) sat in the repo unreachable, and
+// why adding dosing content kept appearing to "not make it back".
+//
+// Stranded rows are ERRORS, not warnings: authored content that no user can
+// reach is a defect, and warnings here have historically gone unread.
+
+section('Dosing Data Reachability');
+
+const dosingTableIds = (PEPTIDE_DOSING_TABLE as Array<{ peptideId: string }>).map((e) => e.peptideId);
+const dosingRefIds = (PEPTIDE_DOSING_REFERENCE as Array<{ peptideId: string }>).map((e) => e.peptideId);
+
+for (const [label, ids] of [
+  ['dosing table', dosingTableIds],
+  ['dosing reference', dosingRefIds],
+] as const) {
+  const seen = new Set<string>();
+  for (const id of ids) {
+    if (seen.has(id)) {
+      // find() returns the first match, so a duplicate id is dead data too.
+      error(`Duplicate ${label} entry for "${id}" — only the first is ever read`);
+    }
+    seen.add(id);
+    if (!peptideIds.has(id)) {
+      error(
+        `${label} has an entry for "${id}" but there is no peptide with that id in peptides.ts — ` +
+          `this row is unreachable in the app. Add the library entry, or remove the row.`
+      );
+    }
+  }
+}
+
+info(`Dosing table entries: ${dosingTableIds.length}, all reachable: ${dosingTableIds.every((id) => peptideIds.has(id))}`);
+info(`Dosing reference entries: ${dosingRefIds.length}, all reachable: ${dosingRefIds.every((id) => peptideIds.has(id))}`);
+
+// Same reachability rule for the other peptide-keyed datasets that were also
+// outside this validator. peptideNutrition is 74KB of authored content keyed
+// the same way, and it had a stranded `liraglutide` row nobody could see.
+for (const [label, ids] of [
+  ['peptide nutrition', Object.values(PEPTIDE_NUTRITION).map((n: { peptideId: string }) => n.peptideId)],
+  ['peptide timing', Object.values(PEPTIDE_TIMING).map((t: { peptideId: string }) => t.peptideId)],
+] as const) {
+  for (const id of ids) {
+    if (!peptideIds.has(id)) {
+      error(
+        `${label} has an entry for "${id}" but there is no peptide with that id in peptides.ts — ` +
+          `this content is unreachable in the app. Add the library entry, or remove the row.`
+      );
+    }
+  }
+}
+
+// The reverse direction is a coverage gap, not a defect: a library entry with
+// no dosing row still renders a full page, it just shows no dosing card.
+const tableIdSet = new Set(dosingTableIds);
+const refIdSet = new Set(dosingRefIds);
+const noTable = PEPTIDES.filter((p) => !tableIdSet.has(p.id)).map((p) => p.id);
+const noRef = PEPTIDES.filter((p) => !refIdSet.has(p.id)).map((p) => p.id);
+info(`Peptides with a dosing table row: ${PEPTIDES.length - noTable.length}/${PEPTIDES.length}`);
+info(`Peptides with a dosing reference row: ${PEPTIDES.length - noRef.length}/${PEPTIDES.length}`);
+if (noTable.length) warn(`No dosing card will render for: ${noTable.join(', ')}`);
+if (noRef.length) warn(`Calculators have no reconstitution reference for: ${noRef.join(', ')}`);
 
 // ─── Summary ─────────────────────────────────────────────────────────────────
 
