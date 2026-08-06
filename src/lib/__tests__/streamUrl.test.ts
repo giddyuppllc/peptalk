@@ -38,6 +38,20 @@ describe('toStreamIframeUrl', () => {
     expect(toStreamIframeUrl('')).toBeNull();
   });
 
+  it('is anchored — a Stream URL embedded elsewhere must not match', () => {
+    // Mutation testing killed this one: dropping the leading ^ let an attacker
+    // smuggle a real-looking manifest inside another URL's query string and
+    // have it converted into an iframe src we then render.
+    expect(
+      toStreamIframeUrl(
+        'https://evil.example/?next=https://videodelivery.net/tok/manifest/video.m3u8',
+      ),
+    ).toBeNull();
+    expect(
+      toStreamIframeUrl('  https://videodelivery.net/tok/manifest/video.m3u8'),
+    ).toBeNull();
+  });
+
   it('does not match a lookalike host', () => {
     // videodelivery.net.evil.com must not be treated as Cloudflare.
     expect(

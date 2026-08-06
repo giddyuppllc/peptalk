@@ -59,6 +59,18 @@ describe('checkDoseSafety — unit-confusion detection', () => {
     expect(checkDoseSafety('semaglutide', -5, 'mcg').safe).toBe(true);
   });
 
+  it('matches the peptide case-insensitively', () => {
+    // Mutation testing surfaced this: the lookup lowercases both sides, and
+    // nothing tested it. A user or an Aimee tool-call passing "Semaglutide"
+    // must get the same guard as "semaglutide" — silently falling back to the
+    // generic unknown-peptide path would raise the warning threshold from
+    // 3x the protocol max to a flat 10,000 mcg.
+    for (const name of ['Semaglutide', 'SEMAGLUTIDE', 'semaglutide']) {
+      expect(checkDoseSafety(name, 250, 'mg').safe).toBe(false);
+      expect(checkDoseSafety(name, 250, 'mcg').safe).toBe(true);
+    }
+  });
+
   it('is unit-aware, not just magnitude-aware', () => {
     // Same number, different unit, opposite verdict — proves the unit is
     // actually converted rather than the raw figure being compared.
@@ -120,6 +132,16 @@ describe('checkDoseGuards — what the user is actually shown', () => {
       pregnantOrNursing: true,
     });
     expect(w.some((x) => x.code === 'pregnancy_contraindication')).toBe(false);
+  });
+
+  it('never produces an empty message, even if the source message is missing', () => {
+    // The dose warning falls back to 'This dose looks unusual.' when
+    // checkDoseSafety returns no message. Mutation testing showed that
+    // fallback was untested — replacing it with '' survived, and an empty
+    // string renders a dialog with a title and no body.
+    const w = checkDoseGuards({ peptideIdOrName: 'semaglutide', amount: 250, unit: 'mg' });
+    expect(w.length).toBeGreaterThan(0);
+    for (const x of w) expect(x.message.trim().length).toBeGreaterThan(0);
   });
 
   it('is pure — the same arguments always give the same answer', () => {

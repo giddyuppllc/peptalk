@@ -11,7 +11,21 @@ module.exports = {
   preset: 'jest-expo',
   // Only run our own unit tests; ignore build output + native folders.
   testMatch: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
-  testPathIgnorePatterns: ['/node_modules/', '/dist/', '/ios/', '/android/'],
+  // '.stryker-tmp' is Stryker's sandbox: full copies of the project, tests
+  // included. Without it here, any jest run during or after a mutation run
+  // silently discovers those copies and reports roughly double the suites —
+  // observed as 16 suites / 178 tests instead of 8 / 89, with coverage
+  // computed over the duplicates. It is gitignored but jest does not read
+  // .gitignore. 'dist2' is the alternate export target used because dist/ is
+  // held by a stray file handle on this machine.
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    '/dist2/',
+    '/ios/',
+    '/android/',
+    '/.stryker-tmp/',
+  ],
   // The Square helpers live under supabase/functions/_shared and are plain TS;
   // include that path so their transform (via babel-preset-expo) applies.
   transformIgnorePatterns: [
