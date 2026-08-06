@@ -23,8 +23,12 @@ import { EDUCATIONAL_ARTICLES } from '../src/data/educationalArticles';
 import { HOW_TO_GUIDES } from '../src/data/howToGuides';
 import { VIDEOS } from '../src/data/videos';
 import { PROTOCOL_TEMPLATES } from '../src/data/protocols';
-import { PEPTIDE_DOSING_TABLE } from '../src/data/peptideDosingTable';
-import { PEPTIDE_DOSING_REFERENCE, PEPTIDE_VARIANT_PARENTS } from '../src/data/peptideDosingReference';
+import { PEPTIDE_DOSING_TABLE, getDosingTableEntry } from '../src/data/peptideDosingTable';
+import {
+  PEPTIDE_DOSING_REFERENCE,
+  PEPTIDE_VARIANT_PARENTS,
+  getDosingReference,
+} from '../src/data/peptideDosingReference';
 import { PEPTIDE_NUTRITION } from '../src/data/peptideNutrition';
 import { PEPTIDE_TIMING } from '../src/data/peptideTiming';
 
@@ -515,10 +519,15 @@ for (const [label, ids] of [
 
 // The reverse direction is a coverage gap, not a defect: a library entry with
 // no dosing row still renders a full page, it just shows no dosing card.
-const tableIdSet = new Set(dosingTableIds);
-const refIdSet = new Set(dosingRefIds);
-const noTable = PEPTIDES.filter((p) => !tableIdSet.has(p.id)).map((p) => p.id);
-const noRef = PEPTIDES.filter((p) => !refIdSet.has(p.id)).map((p) => p.id);
+// Resolve through the SAME accessors the app calls, not raw id membership.
+// getDosingTableEntry has its own TABLE_ALIASES map and getDosingReference has
+// PEPTIDE_VARIANT_PARENTS, so a peptide can render a dosing card without having
+// a row under its own id. Checking membership instead of calling the accessor
+// produced a false "KPV has no dosing card" report — KPV resolved fine via an
+// alias. If this check does not go through the real lookup, it does not
+// describe the app.
+const noTable = PEPTIDES.filter((p) => !getDosingTableEntry(p.id)).map((p) => p.id);
+const noRef = PEPTIDES.filter((p) => !getDosingReference(p.id)).map((p) => p.id);
 info(`Peptides with a dosing table row: ${PEPTIDES.length - noTable.length}/${PEPTIDES.length}`);
 info(`Peptides with a dosing reference row: ${PEPTIDES.length - noRef.length}/${PEPTIDES.length}`);
 if (noTable.length) warn(`No dosing card will render for: ${noTable.join(', ')}`);

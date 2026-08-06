@@ -335,10 +335,10 @@ export const KNOWN_INTERACTIONS: Map<string, PeptideInteraction> = new Map([
 
   // BPC-157 + KPV (Gut Health Stack)
   [
-    makeInteractionKey('bpc-157', 'kpv'),
+    makeInteractionKey('bpc-157', 'kpv-inj'),
     {
       peptideA: 'bpc-157',
-      peptideB: 'kpv',
+      peptideB: 'kpv-inj',
       interactionType: 'synergistic',
       synergyScore: 8,
       mechanismAnalysis:
@@ -449,10 +449,10 @@ export const KNOWN_INTERACTIONS: Map<string, PeptideInteraction> = new Map([
 
   // Thymosin Alpha-1 + KPV (Immune Support)
   [
-    makeInteractionKey('thymosin-alpha-1', 'kpv'),
+    makeInteractionKey('thymosin-alpha-1', 'kpv-inj'),
     {
       peptideA: 'thymosin-alpha-1',
-      peptideB: 'kpv',
+      peptideB: 'kpv-inj',
       interactionType: 'synergistic',
       synergyScore: 7,
       mechanismAnalysis:

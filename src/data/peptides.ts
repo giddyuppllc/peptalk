@@ -241,7 +241,7 @@ export const PEPTIDES: Peptide[] = [
       commonGoals: ['Faster recovery', 'Gut health', 'Joint repair', 'Tissue healing', 'Post-surgical recovery'],
       whatPeopleReport: 'Users commonly report accelerated healing of muscle tears, tendon injuries, and ligament sprains, often noticing improvement within days to weeks. Gut health improvements are frequently cited, including reduced symptoms of leaky gut, IBS, and gastric discomfort. Many users describe it as a foundational recovery peptide they include in almost every stack. Athletes report faster return-to-training timelines after injuries. Some users report improvements in mood and cognitive clarity, which researchers attribute to its effects on dopaminergic and serotonergic systems. Often called the "Wolverine peptide" when stacked with TB-500.',
       popularWith: ['Athletes', 'Injury recovery', 'Gut health', 'Anti-aging enthusiasts', 'Post-surgical healing'],
-      pairsWith: ['tb-500', 'ghk-cu', 'kpv', 'ipamorelin', 'cjc-1295'],
+      pairsWith: ['tb-500', 'ghk-cu', 'kpv-inj', 'ipamorelin', 'cjc-1295'],
     },
   },
   {
@@ -266,7 +266,7 @@ export const PEPTIDES: Peptide[] = [
       commonGoals: ['Recovery from injury', 'Reduced scarring', 'Improved mobility', 'Hair regrowth', 'Systemic healing'],
       whatPeopleReport: 'Users frequently report improved flexibility and range of motion, especially in chronically tight or injured areas. Many describe systemic healing effects that seem to work throughout the body rather than just at the injection site. Reduced scar tissue formation is commonly mentioned by those recovering from surgeries. Some users report noticeable hair regrowth or thickening. The "Wolverine Stack" combination with BPC-157 is one of the most popular peptide pairings in the community, with users reporting synergistic recovery benefits across multiple tissue types including muscle, tendon, ligament, and even nerve tissue.',
       popularWith: ['Athletes', 'Injury recovery', 'Anti-aging enthusiasts', 'Hair restoration', 'Flexibility seekers'],
-      pairsWith: ['bpc-157', 'ghk-cu', 'cjc-1295', 'ipamorelin', 'kpv'],
+      pairsWith: ['bpc-157', 'ghk-cu', 'cjc-1295', 'ipamorelin', 'kpv-inj'],
     },
   },
 
@@ -530,7 +530,7 @@ export const PEPTIDES: Peptide[] = [
       commonGoals: ['Anxiety relief without sedation', 'Mental clarity', 'Immune support', 'Mood stabilization', 'Benzodiazepine alternative'],
       whatPeopleReport: 'Users commonly report a calm, focused state without the sedation or cognitive impairment associated with benzodiazepines. Many describe it as providing anxiolysis while maintaining or even enhancing mental sharpness. The absence of tolerance, dependence, or withdrawal is frequently cited as a major advantage over conventional anxiolytics. Some users report improvements in immune function, particularly during periods of high stress or illness. The N-Acetyl Selank variant is popular for reportedly enhanced potency. Users in the nootropic community often stack it with Semax for a combined anxiolytic-cognitive enhancement protocol.',
       popularWith: ['Anxiety management', 'Nootropic enthusiasts', 'Stress management', 'Immune support', 'Benzodiazepine tapering'],
-      pairsWith: ['semax', 'dsip', 'noopept', 'thymosin-alpha-1', 'kpv'],
+      pairsWith: ['semax', 'dsip', 'noopept', 'thymosin-alpha-1', 'kpv-inj'],
     },
   },
   {
@@ -661,37 +661,11 @@ export const PEPTIDES: Peptide[] = [
       commonGoals: ['Infection resistance', 'Immune support', 'Chronic infection management', 'Wound healing', 'Lyme disease support'],
       whatPeopleReport: 'Users commonly report improved resilience against chronic and recurrent infections. The Lyme disease and chronic infection communities frequently discuss LL-37 for its broad-spectrum antimicrobial activity against bacteria, fungi, and enveloped viruses. Many users describe it as a natural antimicrobial peptide that supports the body\'s innate immune defense without the resistance concerns of traditional antibiotics. Wound healing acceleration is also frequently reported. Some users incorporate it into protocols for biofilm-associated infections where conventional antimicrobials have limited penetration.',
       popularWith: ['Immune support', 'Chronic infection management', 'Lyme disease community', 'Wound healing', 'Antimicrobial research'],
-      pairsWith: ['thymosin-alpha-1', 'kpv', 'bpc-157', 'thymalin', 'nad-plus'],
+      pairsWith: ['thymosin-alpha-1', 'kpv-inj', 'bpc-157', 'thymalin', 'nad-plus'],
     },
   },
 
   // ─── ANTI-INFLAMMATORY ────────────────────────────────────────────────────────
-  {
-    id: 'kpv',
-    name: 'KPV',
-    abbreviation: 'KPV',
-    categories: ['Anti-inflammatory'],
-    researchSummary:
-      'KPV is a C-terminal tripeptide fragment (Lys-Pro-Val) of alpha-melanocyte-stimulating hormone (alpha-MSH) that retains potent anti-inflammatory activity. Research demonstrates it inhibits NF-kB nuclear translocation and reduces pro-inflammatory cytokine production in multiple cell types. Studies in intestinal inflammation models show reduced mucosal damage and inflammatory infiltration. Gut mucosal healing - reduces intestinal inflammation, supports barrier integrity. Direct antimicrobial activity in addition to anti-inflammatory effects.',
-    mechanismOfAction:
-      'Enters cells and directly inhibits NF-kB activation by preventing IkB-alpha degradation and p65 nuclear translocation. Unlike full-length alpha-MSH, KPV may exert anti-inflammatory effects independently of melanocortin receptors, though some MC1R interaction has been reported.',
-    receptorTargets: ['MC1R (partial)', 'Intracellular NF-kB pathway (direct)'],
-    signalingPathways: ['NF-kB inhibition', 'IkB-alpha stabilization', 'PGE2 reduction', 'TNF-alpha suppression'],
-    stabilityNotes:
-      'Store lyophilized at -20°C. Tripeptide with moderate aqueous stability. Reconstitute in sterile water. Short plasma half-life typical of tripeptides but intracellular activity may persist.',
-    molecularWeight: '342.43 Da',
-    sequenceLength: 3,
-    halfLife: '~minutes',
-    storageTemp: '-20°C',
-    uses: {
-      primaryUses: ['Gut inflammation reduction', 'Skin inflammation', 'Intestinal barrier support', 'Systemic anti-inflammatory'],
-      commonGoals: ['Gut healing', 'IBD/IBS support', 'Skin conditions', 'Reduced systemic inflammation', 'Mucosal healing'],
-      whatPeopleReport: 'Users commonly report significant improvements in gut-related symptoms including bloating, discomfort, and irregular digestion. The IBD and IBS communities frequently discuss KPV for its targeted anti-inflammatory effects on intestinal mucosa. Many users describe it as working synergistically with BPC-157 for comprehensive gut healing. Improvements in inflammatory skin conditions are also frequently reported when used topically or systemically. Users appreciate its mechanism of directly inhibiting NF-kB, the master inflammatory switch, without the immunosuppressive effects of conventional anti-inflammatory drugs.',
-      popularWith: ['Gut health', 'IBD/IBS community', 'Skin health', 'Anti-inflammatory protocols', 'Autoimmune support'],
-      pairsWith: ['bpc-157', 'll-37', 'thymosin-alpha-1', 'ghk-cu', 'glutathione'],
-    },
-  },
-
   // ─── MITOCHONDRIAL ────────────────────────────────────────────────────────────
   {
     id: 'mots-c',
@@ -1695,7 +1669,7 @@ export const PEPTIDES: Peptide[] = [
       whatPeopleReport:
         'Chosen over GLOW when inflammation is the main complaint rather than skin appearance alone. Same caveat applies — it is a blend, so effects are hard to attribute to any single component.',
       popularWith: ['Recovery', 'Inflammation', 'Skin health'],
-      pairsWith: ['ghk-cu', 'kpv', 'bpc-157', 'tb-500'],
+      pairsWith: ['ghk-cu', 'kpv-inj', 'bpc-157', 'tb-500'],
     },
   },
   {
@@ -1705,14 +1679,16 @@ export const PEPTIDES: Peptide[] = [
     aliases: ['Lysine-Proline-Valine injectable', 'alpha-MSH (11-13)'],
     categories: ['Anti-inflammatory', 'Immune'],
     researchSummary:
-      'The injectable presentation of KPV, the C-terminal tripeptide of alpha-melanocyte-stimulating hormone. KPV retains alpha-MSH\'s anti-inflammatory activity while lacking the pigmentation effects of the parent hormone, which is what makes the fragment interesting. Research is largely preclinical and concentrated on inflammatory bowel models, where both systemic and local administration reduced colonic inflammation. The injectable route is used where systemic rather than gut-local action is wanted; see the oral entry for the gut-directed route.',
+      'The injectable presentation of KPV, the C-terminal tripeptide (Lys-Pro-Val) of alpha-melanocyte-stimulating hormone. KPV retains alpha-MSH\'s anti-inflammatory activity while lacking the pigmentation effects of the parent hormone, which is what makes the fragment interesting. Research demonstrates inhibition of NF-kB nuclear translocation and reduced pro-inflammatory cytokine production across multiple cell types, and it carries direct antimicrobial activity in addition to the anti-inflammatory effect. Studies in intestinal inflammation models show reduced mucosal damage and inflammatory infiltration. The injectable route is used where systemic rather than gut-local action is wanted; see the oral entry for the gut-directed route.',
     mechanismOfAction:
-      'Enters cells directly and interferes with inflammatory signaling downstream of the receptor, inhibiting NF-kB nuclear translocation and reducing production of TNF-alpha, IL-1beta and IL-6. Unlike alpha-MSH it does not require melanocortin receptor binding for this effect, which is why it is anti-inflammatory without being pigmenting.',
-    receptorTargets: ['Intracellular NF-kB pathway', 'PepT1 transporter (uptake)'],
-    signalingPathways: ['NF-kB inhibition', 'Pro-inflammatory cytokine suppression', 'MAPK modulation'],
-    stabilityNotes: 'Store lyophilized at -20°C, reconstituted at 2-8°C. Small tripeptide — stable but avoid repeated freeze-thaw.',
+      'Enters cells directly and inhibits NF-kB activation by preventing IkB-alpha degradation and p65 nuclear translocation, reducing TNF-alpha, IL-1beta, IL-6 and PGE2 production. Unlike full-length alpha-MSH it may exert these effects independently of melanocortin receptors, though some MC1R interaction has been reported — which is why it is anti-inflammatory without being pigmenting.',
+    receptorTargets: ['Intracellular NF-kB pathway (direct)', 'MC1R (partial)', 'PepT1 transporter (uptake)'],
+    signalingPathways: ['NF-kB inhibition', 'IkB-alpha stabilization', 'TNF-alpha suppression', 'PGE2 reduction'],
+    stabilityNotes: 'Store lyophilized at -20°C, reconstituted at 2-8°C. Tripeptide with moderate aqueous stability — reconstitute in sterile water and avoid repeated freeze-thaw. Short plasma half-life typical of tripeptides, though intracellular activity may persist.',
+    molecularWeight: '342.43 Da',
     sequenceLength: 3,
     aminoAcidSequence: 'Lys-Pro-Val',
+    halfLife: '~minutes (plasma)',
     storageTemp: '2-8°C reconstituted',
     routeOfAdministration: ['Subcutaneous'],
     approvalStatus: 'preclinical',
@@ -1734,12 +1710,13 @@ export const PEPTIDES: Peptide[] = [
     aliases: ['Lysine-Proline-Valine oral', 'alpha-MSH (11-13)'],
     categories: ['Anti-inflammatory', 'Immune'],
     researchSummary:
-      'The oral presentation of KPV, dosed roughly twice as high as the injectable to account for gut absorption. The oral route is the more common choice for gut-directed use, and there is a mechanistic reason for it: intestinal epithelial cells take KPV up through the PepT1 di/tripeptide transporter, delivering it directly to the tissue where inflammatory bowel research has focused. Evidence remains preclinical.',
+      'The oral presentation of KPV, the C-terminal tripeptide (Lys-Pro-Val) of alpha-MSH, dosed roughly twice as high as the injectable to account for gut absorption. The oral route is the more common choice for gut-directed use, and there is a mechanistic reason for it: intestinal epithelial cells take KPV up through the PepT1 di/tripeptide transporter, delivering it directly to the tissue where inflammatory bowel research has focused. Studies in intestinal inflammation models show reduced mucosal damage, reduced inflammatory infiltration and support for barrier integrity, alongside direct antimicrobial activity. Evidence remains preclinical.',
     mechanismOfAction:
-      'Taken up by intestinal epithelial and immune cells via the PepT1 transporter, then acts intracellularly to inhibit NF-kB nuclear translocation and suppress TNF-alpha, IL-1beta and IL-6 production. Local uptake in the gut is what distinguishes this route from systemic injection.',
-    receptorTargets: ['PepT1 transporter (uptake)', 'Intracellular NF-kB pathway'],
-    signalingPathways: ['NF-kB inhibition', 'Pro-inflammatory cytokine suppression', 'Intestinal epithelial signaling'],
+      'Taken up by intestinal epithelial and immune cells via the PepT1 transporter, then acts intracellularly to inhibit NF-kB activation by preventing IkB-alpha degradation and p65 nuclear translocation, suppressing TNF-alpha, IL-1beta, IL-6 and PGE2. Local uptake in the gut is what distinguishes this route from systemic injection.',
+    receptorTargets: ['PepT1 transporter (uptake)', 'Intracellular NF-kB pathway (direct)', 'MC1R (partial)'],
+    signalingPathways: ['NF-kB inhibition', 'IkB-alpha stabilization', 'TNF-alpha suppression', 'Intestinal barrier integrity'],
     stabilityNotes: 'Store capsules or powder dry and cool, protected from moisture. No reconstitution for the oral form.',
+    molecularWeight: '342.43 Da',
     sequenceLength: 3,
     aminoAcidSequence: 'Lys-Pro-Val',
     storageTemp: 'Room temperature, dry',

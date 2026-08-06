@@ -107,8 +107,8 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
 
   // ───────────────────── KPV ─────────────────────
   {
-    peptideId: 'kpv',
-    peptideName: 'KPV',
+    peptideId: 'kpv-inj',
+    peptideName: 'KPV (Injectable)',
     vialMg: 10,
     diluentMl: 3,
     diluent: 'bac_water',

@@ -58,7 +58,7 @@ export const GOAL_PEPTIDE_MATRIX: Record<GoalType, GoalPeptideMatch[]> = {
     { id: 'tb-500', tier: 'primary', reason: 'Thymosin beta-4 fragment, accelerates soft-tissue repair.' },
     { id: 'ghk-cu', tier: 'secondary', reason: 'Copper peptide, collagen synthesis and inflammation modulation.' },
     { id: 'thymosin-alpha-1', tier: 'secondary', reason: 'Immune modulation, supports recovery from over-training.' },
-    { id: 'kpv', tier: 'experimental', reason: 'Anti-inflammatory tripeptide, gut and joint applications.' },
+    { id: 'kpv-inj', tier: 'experimental', reason: 'Anti-inflammatory tripeptide, gut and joint applications.' },
   ],
 
   longevity: [
@@ -100,7 +100,7 @@ export const GOAL_PEPTIDE_MATRIX: Record<GoalType, GoalPeptideMatch[]> = {
 
   gut_health: [
     { id: 'bpc-157', tier: 'primary', reason: 'Body protection compound, gold standard for gut healing.' },
-    { id: 'kpv', tier: 'primary', reason: 'Anti-inflammatory tripeptide, IBD/colitis applications.' },
+    { id: 'kpv-oral', tier: 'primary', reason: 'Anti-inflammatory tripeptide, IBD/colitis applications. Oral route is taken up in the gut via PepT1.' },
     { id: 'larazotide', tier: 'secondary', reason: 'Tight-junction modulator, leaky gut and gluten sensitivity.' },
     { id: 'thymosin-alpha-1', tier: 'secondary', reason: 'Immune modulation supports gut microbiome balance.' },
   ],

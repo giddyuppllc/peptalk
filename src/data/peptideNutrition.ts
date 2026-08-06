@@ -714,7 +714,7 @@ export const PEPTIDE_NUTRITION: Record<string, PeptideNutritionGuidance> = Objec
 
   // ── Healing peptide additions ────────────────────────────────────────────
   g({
-    peptideId: 'kpv',
+    peptideId: 'kpv-inj',
     displayName: 'KPV',
     adjustments: ['collagen_emphasis'],
     microEmphasis: ['vitamin C', 'zinc', 'glycine'],

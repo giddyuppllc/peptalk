@@ -501,7 +501,7 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
   // ─── ANTI-INFLAMMATORY ──────────────────────────────────────────────────
   {
     id: 'proto-kpv',
-    peptideId: 'kpv',
+    peptideId: 'kpv-inj',
     name: 'KPV Anti-Inflammatory Protocol',
     typicalDose: { min: 200, max: 500, unit: 'mcg' },
     route: 'subcutaneous',

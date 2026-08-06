@@ -16,7 +16,7 @@ export const CURATED_STACKS: PeptideStack[] = [
   {
     id: 'curated-gut-health',
     name: 'Gut Health Stack',
-    peptideIds: ['bpc-157', 'kpv'],
+    peptideIds: ['bpc-157', 'kpv-inj'],
     createdAt: now,
     updatedAt: now,
     isCurated: true,
@@ -29,7 +29,7 @@ export const CURATED_STACKS: PeptideStack[] = [
   {
     id: 'curated-healing',
     name: 'Healing Stack',
-    peptideIds: ['bpc-157', 'tb-500', 'kpv'],
+    peptideIds: ['bpc-157', 'tb-500', 'kpv-inj'],
     createdAt: now,
     updatedAt: now,
     isCurated: true,
@@ -186,7 +186,7 @@ export const CURATED_STACKS: PeptideStack[] = [
   {
     id: 'curated-immune',
     name: 'Immune Support Stack',
-    peptideIds: ['thymosin-alpha-1', 'thymalin', 'kpv'],
+    peptideIds: ['thymosin-alpha-1', 'thymalin', 'kpv-inj'],
     createdAt: now,
     updatedAt: now,
     isCurated: true,
@@ -201,7 +201,7 @@ export const CURATED_STACKS: PeptideStack[] = [
   {
     id: 'curated-skin-radiance',
     name: 'Skin + Hair Radiance Stack',
-    peptideIds: ['ghk-cu', 'snap-8', 'kpv'],
+    peptideIds: ['ghk-cu', 'snap-8', 'kpv-inj'],
     createdAt: now,
     updatedAt: now,
     isCurated: true,

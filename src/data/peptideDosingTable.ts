@@ -977,7 +977,6 @@ export const PEPTIDE_DOSING_TABLE: DosingTableEntry[] = RAW_DOSING_TABLE.map((e)
  */
 const TABLE_ALIASES: Record<string, string> = {
   // catalog id : table id
-  'kpv': 'kpv-inj', // catalog has a single `kpv`; table splits inj/oral. Default to inj entry.
   'kisspeptin-10': 'kisspeptin-10',
   // GH-secretagogue variants that share a catalog parent.
   'cjc-1295-no-dac': 'cjc-1295-no-dac',
