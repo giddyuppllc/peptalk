@@ -44,15 +44,24 @@ so it had never run.
 - **L-carnitine added to the library**, which un-stranded the dosing row that was
   already in the repo (`300mg-1000mg`, `1-2x Daily Pre Exercise`).
 
-The gate currently **fails with 25 errors**. That is the backlog below, made
-visible rather than invisible. It is not a regression.
+## Status: RESOLVED 2026-08-06 — gate is green (0 errors)
+
+All 22 stranded compounds and Liraglutide now have library entries.
+**63/63 dosing-table rows are reachable**; the library went 57 -> 80. The
+sections below are kept as the record of what was recovered and what is still
+open. Three warnings remain and are described in section 2.
 
 ---
 
-## 1. Stranded dosing rows — 22 compounds
+## 1. Stranded dosing rows — 22 compounds — RECOVERED
 
-Fully authored dosing, unreachable because there is no library entry.
-Each needs an entry in `peptides.ts` using the **exact id in the left column**.
+Fully authored dosing that was unreachable for want of a library entry.
+**All 22 now have entries in `peptides.ts` under the exact ids below**, so each
+renders a detail page with its dosing card. Framing follows Edward's own grid in
+`supabase/functions/aimee-chat-stream/_prompt.ts`, including its `[Rx]` flags,
+its "no validated human dose" flags, and its safety warnings -- notably
+Cardarine, which leads with the animal-carcinogen finding that ended its
+development.
 
 | id | compound | dose range | cycle | frequency |
 |---|---|---|---|---|
@@ -88,35 +97,54 @@ way, under an "amino acid derivatives" heading that says plainly what they are.
 These are the cheapest wins and the most confusing failures, because the library
 entry looks fine and the dosing looks fine.
 
-| Stranded row | Library has | What the user sees today |
+| Stranded row | Library has | What the user saw before the fix |
 |---|---|---|
 | `kpv-inj`, `kpv-oral` | `kpv` | **KPV shows no dosing card at all**, despite two authored rows |
 | `retatrutide-10mg` (ref) | `retatrutide` | `getDosingReference` returns the 5mg row first — **the 10mg vial is unreachable** |
 | `5-amino-1mq-inj` | `5-amino-1mq` | oral dosing renders; the injectable route does not |
 | `cjc-1295-ipamorelin` | `cjc-1295`, `cjc-1295-no-dac` | the blend has no page |
 
+**Resolved by adding a library entry per variant** (`KPV (Injectable)`,
+`KPV (Oral)`, `5-Amino-1MQ (Injectable)`, the CJC/Ipamorelin blend), rather than
+merging ids -- an oral 500-1000mcg dose and an injectable 250-600mcg dose are
+genuinely different, and `find()` would only ever return the first.
+
+⚠️ **Still open — the variant accessor is not wired to anything.**
+`peptideDosingReference.ts` defines `PEPTIDE_VARIANT_PARENTS` and
+`getAllDosingReferencesForPeptide` for exactly this case, but **that function has
+zero callers**; all eight consumers call `getDosingReference`, which returns the
+direct match. So `retatrutide-10mg`, `cjc-1295-no-dac` and `cjc-1295-ipamorelin`
+reference blocks still never reach a screen. The validator now reports these as
+warnings naming the precise reason. As an interim measure the 10 mg retatrutide
+unit conversion was copied into the 5 mg entry's `notes`, matching the pattern
+MOTS-c already uses to document its 40 mg vial.
+
 **Root cause:** the dosing table is keyed by *product / route variant*
 (`kpv-inj`, `kpv-oral`, `retatrutide-10mg`), the library by *compound* (`kpv`,
-`retatrutide`). The two schemes were never reconciled. Merging the ids is wrong —
-an oral 500-1000mcg dose and an injectable 250-600mcg dose are genuinely
-different, and `find()` would only ever return the first. The fix is either a
-library entry per variant, or a route/vial dimension in the reference schema.
+`retatrutide`). The two schemes were never reconciled.
 
-## 3. Stranded nutrition content
+## 3. Stranded nutrition content — RECOVERED
 
-`peptideNutrition.ts` (74KB, 56 entries) has a **`liraglutide`** row with no
-library entry. Either add Liraglutide to the library or drop the row.
+`peptideNutrition.ts` (74KB, 56 entries) had a **`liraglutide`** row with no
+library entry. Liraglutide has been added (FDA-approved as Victoza/Saxenda,
+including its boxed thyroid C-cell warning), so that content now resolves.
 
 ## 4. Coverage gaps — not defects, but visible holes
 
 A library entry with no dosing row still renders a full page; it just shows no
 dosing card. Currently:
 
-- **16 peptides show no dosing card**: adipotide, ghrp-2, ghrp-6, hexarelin,
+- **17 peptides show no dosing card**: adipotide, ghrp-2, ghrp-6, hexarelin,
   hgh-fragment-176-191, cerebrolysin, thymalin, kpv, hmg, snap-8, oxytocin,
-  dermorphin, pnc-27, noopept, humanin, somatropin
-- **26 peptides have no reconstitution reference**, so the calculators cannot
-  offer a protocol for them
+  dermorphin, pnc-27, noopept, humanin, somatropin, liraglutide
+- **48 peptides have no reconstitution reference**, so the calculators cannot
+  offer a protocol for them. This count rose because the 23 newly added
+  compounds have dosing ranges but no reconstitution spec -- most are oral and
+  never will need one.
+
+Plain `kpv` is in that first list while `kpv-inj` and `kpv-oral` both render
+dosing. Worth deciding whether the generic `kpv` page should remain as the
+"about KPV" entry or be retired in favour of the two route-specific pages.
 
 L-carnitine appears in that second list and should stay there — it is dosed
 orally in milligrams and has nothing to reconstitute.

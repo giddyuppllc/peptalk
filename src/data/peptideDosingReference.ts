@@ -365,6 +365,10 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
     ],
     cycleLength: 'Weekly, titrate to effect',
     route: 'subcutaneous',
+    notes: [
+      'Above figures are for the 5 mg vial (1 ml diluent → 5 mg/mL), where 1 mg = 20 units.',
+      'For a 10 mg vial reconstituted with 1 ml (10 mg/mL), halve the unit count: 1 mg = 10 units. The dose in mg and the weekly titration are unchanged.',
+    ],
   },
 
   // ───────────────────── RETATRUTIDE 10 MG ─────────────────────
@@ -387,6 +391,9 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
     ],
     cycleLength: 'Weekly, titrate to effect',
     route: 'subcutaneous',
+    notes: [
+      'This block is the 10 mg vial. It is aliased to `retatrutide` via PEPTIDE_VARIANT_PARENTS, but every screen calls getDosingReference (direct match wins, returning the 5 mg block) and nothing calls getAllDosingReferencesForPeptide — so these figures do not currently reach the UI on their own. The unit conversion is repeated in the 5 mg entry so the information is visible today.',
+    ],
   },
 
   // ───────────────────── TESAMORELIN ─────────────────────
@@ -896,7 +903,7 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
  * entries in src/data/peptides.ts. Without aliasing, getDosingReference
  * for the parent peptide misses these blocks of authoritative data.
  */
-const PEPTIDE_VARIANT_PARENTS: Record<string, string> = {
+export const PEPTIDE_VARIANT_PARENTS: Record<string, string> = {
   'cjc-1295-no-dac': 'cjc-1295',
   'cjc-1295-ipamorelin': 'cjc-1295',
   'retatrutide-10mg': 'retatrutide',

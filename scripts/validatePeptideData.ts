@@ -24,7 +24,7 @@ import { HOW_TO_GUIDES } from '../src/data/howToGuides';
 import { VIDEOS } from '../src/data/videos';
 import { PROTOCOL_TEMPLATES } from '../src/data/protocols';
 import { PEPTIDE_DOSING_TABLE } from '../src/data/peptideDosingTable';
-import { PEPTIDE_DOSING_REFERENCE } from '../src/data/peptideDosingReference';
+import { PEPTIDE_DOSING_REFERENCE, PEPTIDE_VARIANT_PARENTS } from '../src/data/peptideDosingReference';
 import { PEPTIDE_NUTRITION } from '../src/data/peptideNutrition';
 import { PEPTIDE_TIMING } from '../src/data/peptideTiming';
 
@@ -450,9 +450,32 @@ section('Dosing Data Reachability');
 const dosingTableIds = (PEPTIDE_DOSING_TABLE as Array<{ peptideId: string }>).map((e) => e.peptideId);
 const dosingRefIds = (PEPTIDE_DOSING_REFERENCE as Array<{ peptideId: string }>).map((e) => e.peptideId);
 
+// peptideDosingReference.ts defines variant rows (alternate vial size, combo
+// blends) that alias to a parent peptide via PEPTIDE_VARIANT_PARENTS. Those are
+// intentional and must not be reported as strandings — a false error in a build
+// gate is how build gates get ignored.
+//
+// They are not fully in the clear either: `getDosingReference` returns the
+// DIRECT match first, and `getAllDosingReferencesForPeptide` — the only
+// variant-aware accessor — has zero callers. So an aliased row whose parent also
+// has a direct entry still never reaches a screen. That is a warning, not an
+// error, because the data is one wired-up accessor away rather than orphaned.
+const aliasedRefIds = new Set(Object.keys(PEPTIDE_VARIANT_PARENTS));
+for (const id of dosingRefIds) {
+  if (!aliasedRefIds.has(id)) continue;
+  const parent = PEPTIDE_VARIANT_PARENTS[id];
+  if (dosingRefIds.includes(parent)) {
+    warn(
+      `dosing reference "${id}" aliases to "${parent}", but "${parent}" has its own entry — ` +
+        `getDosingReference returns the direct match, and getAllDosingReferencesForPeptide has no ` +
+        `callers, so "${id}" does not reach any screen.`
+    );
+  }
+}
+
 for (const [label, ids] of [
   ['dosing table', dosingTableIds],
-  ['dosing reference', dosingRefIds],
+  ['dosing reference', dosingRefIds.filter((id) => !aliasedRefIds.has(id))],
 ] as const) {
   const seen = new Set<string>();
   for (const id of ids) {
