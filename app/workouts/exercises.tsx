@@ -109,7 +109,16 @@ const EQUIPMENT_ICONS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 function hasVideo(exercise: Exercise): boolean {
-  return !!exercise.videoUrl;
+  // `videoUrl` is an optional legacy field that NO exercise in
+  // src/data/exercises.ts actually sets — grep it, there are zero occurrences.
+  // So this returned false for every exercise and the list badge never
+  // rendered, even though 141 exercises are mapped to a demo clip. Users had
+  // no way to tell which moves had a video without opening each one.
+  //
+  // The detail view below already resolves videos correctly through
+  // hasExerciseVideo(); the list simply asked a different, dead question.
+  // Keep the legacy field as a fallback in case anything ever populates it.
+  return hasExerciseVideo(exercise.id) || !!exercise.videoUrl;
 }
 
 function formatEquipment(equipment: Equipment): string {
