@@ -159,6 +159,11 @@ export default function WorkoutsScreen() {
   const router = useRouter();
 
   const templates = useWorkoutTemplateStore((st) => st.templates);
+  // Generated plans are a separate collection from saved templates. /workouts/plan
+  // only ever renders the ACTIVE plan, so without the row below a user who
+  // generates a second plan can never get back to the first — my-workouts was
+  // built for exactly that and nothing linked to it.
+  const savedGeneratedWorkouts = useWorkoutStore((st) => st.savedGeneratedWorkouts);
   const deleteTemplate = useWorkoutTemplateStore((st) => st.deleteTemplate);
   const monthlyPlan = useWorkoutStore((st) => st.monthlyPlan);
 
@@ -273,6 +278,31 @@ export default function WorkoutsScreen() {
             </LinearGradient>
           </TouchableOpacity>
         </View>
+
+        {/* Your generated plans — the history behind the CTA above. Hidden
+            until there is at least one, so it never shows an empty list. */}
+        {savedGeneratedWorkouts.length > 0 && (
+          <View style={s.section}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => go('/workouts/my-workouts')}
+              style={[s.savedRow, { backgroundColor: t.surface, borderColor: t.cardBorder }]}
+              accessibilityRole="button"
+              accessibilityLabel="Your generated plans"
+            >
+              <View style={[s.savedIcon, { backgroundColor: `${accent.deep}18` }]}>
+                <Ionicons name="albums" size={20} color={accent.deep} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.savedTitle, { color: t.text }]}>Your generated plans</Text>
+                <Text style={[s.savedMeta, { color: t.textSecondary }]}>
+                  {savedGeneratedWorkouts.length} saved — open an earlier plan any time.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={t.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Build a single workout — secondary CTA */}
         <View style={s.section}>

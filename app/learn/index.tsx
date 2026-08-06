@@ -449,6 +449,32 @@ export default function LearnHubScreen() {
           )}
         </View>
 
+        {/* ── Peptide Cycling ───────────────────────────────────────
+            app/learn/cycling.tsx is a hand-built page, not a KNOWLEDGE_TOPICS
+            or EDUCATIONAL_ARTICLES row, so the data-driven lists above could
+            never surface it and nothing else linked to it. Cycling is core to
+            how this app is used — every protocol has an on/off period — so it
+            gets an explicit card rather than staying invisible. */}
+        <View style={styles.askSection}>
+          <TouchableOpacity
+            style={styles.askBanner}
+            onPress={() => router.push('/learn/cycling')}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Peptide cycling guide"
+          >
+            <Ionicons name="repeat" size={28} color={Colors.pepTeal} />
+            <View style={styles.askBannerText}>
+              <Text style={styles.askBannerTitle}>Peptide cycling</Text>
+              <Text style={styles.askBannerSubtitle}>
+                Why cycling matters, receptor desensitization, and how to structure
+                on and off periods.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.darkTextSecondary} />
+          </TouchableOpacity>
+        </View>
+
         {/* ── Ask PepTalk CTA ───────────────────────────────────── */}
         <View style={styles.askSection}>
           <View style={styles.askBanner}>

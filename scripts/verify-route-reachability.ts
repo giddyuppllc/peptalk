@@ -81,10 +81,14 @@ for (const f of [...walk('app'), ...walk('src')].filter((f) => /\.(ts|tsx)$/.tes
  * warnings went unread for months. New orphans still fail the build.
  */
 const KNOWN_ORPHANS = new Map<string, string>([
-  ['nutrition/food-scanner', 'barcode scanner — nutrition flow never links it'],
-  ['workouts/my-workouts', 'workouts dashboard links only /workouts/new'],
-  ['workouts/build-workout', 'workouts dashboard links only /workouts/new'],
-  ['learn/cycling', 'standalone page; the learn hub is data-driven so nothing lists it'],
+  [
+    'nutrition/food-scanner',
+    'DUPLICATE of nutrition/meal-scan — both photograph a meal and call the same food-scan edge function, both actively maintained. Which one survives is a product call; wiring both would ship two identical scanners.',
+  ],
+  [
+    'workouts/build-workout',
+    'SUPERSEDED by workouts/new, which saves to the same store. new.tsx notes the 3-step design replaced "the previous builder" after Jamie found it buried users in prescription fields. Should be deleted, not linked.',
+  ],
 ]);
 
 const allUnreachable = [...routes]
