@@ -266,12 +266,24 @@ function TierCard({
         // IAP isn't approved yet, or a transient store hiccup) to a clear
         // message instead of a raw error code, so the button never appears
         // broken.
-        const unavailable =
-          lower.includes('unavailable') ||
-          lower.includes('not available') ||
-          lower.includes('invalid product') ||
-          lower.includes('e_item_unavailable') ||
-          lower.includes('not initialized');
+        //
+        // These codes arrive in several shapes depending on platform and
+        // react-native-iap version: 'feature-not-supported' (nitro,
+        // com.margelo.nitro.rniap), 'iap-not-available', 'E_IAP_NOT_AVAILABLE',
+        // 'E_ITEM_UNAVAILABLE', 'Product not available'. Matching spaced
+        // phrases alone missed every hyphenated one, so a tester on a device
+        // without IAP — or any tester while the subscriptions are still
+        // Waiting for Review — saw a raw error string on the paywall.
+        // Normalise the separators and match once rather than chasing literals.
+        const norm = lower.replace(/[^a-z0-9]+/g, ' ');
+        const unavailable = [
+          'unavailable',
+          'not available',
+          'invalid product',
+          'not initialized',
+          'feature not supported',
+          'not supported',
+        ].some((needle) => norm.includes(needle));
         Alert.alert(
           unavailable ? 'Subscriptions unavailable' : 'Purchase Failed',
           unavailable

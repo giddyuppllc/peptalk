@@ -115,5 +115,6 @@
     "tsx": "~4.21.0",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "packageManager": "pnpm@10.24.0"
 }

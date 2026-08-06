@@ -1,0 +1,72 @@
+name: CI
+
+# Nothing ran automatically before this. Every gate in the repo — tsc, jest and
+# nine verifier scripts — only helped if someone remembered to run it, and the
+# peptide-data validator had never been run at all. That is how 24 authored
+# dosing rows sat unreachable in the repo (see DATA_RECOVERY_BACKLOG.md).
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Guards for the two things that have actually broken this app ───────
+      #
+      # 1. `node-linker=hoisted` in .npmrc is LOAD-BEARING. Without it pnpm's
+      #    default isolated node_modules stops Expo autolinking and Nitro
+      #    codegen from wiring react-native-iap's native module, and the
+      #    paywall crashes with "undefined is not a function" on a clean EAS
+      #    build. Local dev masks it because node_modules is already populated.
+      #    A commit once claimed to add this and only did half the job, so the
+      #    crash survived a "fix". Assert it instead of trusting it.
+      #
+      # 2. A package-lock.json means npm installed the tree, which silently
+      #    ignores node-linker and reintroduces the same failure.
+      - name: Guard the native-linking fix
+        run: |
+          grep -qx 'node-linker=hoisted' .npmrc || {
+            echo "::error file=.npmrc::node-linker=hoisted is missing — EAS builds will ship a broken paywall (react-native-iap will not link)."
+            exit 1
+          }
+          if [ -f package-lock.json ]; then
+            echo "::error file=package-lock.json::package-lock.json present — this project installs with pnpm. npm ignores node-linker and breaks react-native-iap native linking."
+            exit 1
+          fi
+          echo "native-linking guards OK"
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+
+      - name: Unit tests
+        run: pnpm exec jest --ci --silent
+
+      # Data integrity. `verify:data` fails the build when a dosing, nutrition
+      # or timing row references a peptide id that does not exist in
+      # peptides.ts — content joined with find() and dropped by
+      # `if (!entry) return null` is invisible in the app, with no error
+      # anywhere. This is the check that was missing.
+      - name: Verify data + calculators
+        run: pnpm run verify:all
