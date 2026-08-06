@@ -60,6 +60,19 @@ jobs:
       - name: Typecheck
         run: pnpm exec tsc --noEmit
 
+      # Lint had never run in CI because it reported 115 errors — 114 of them
+      # react/no-unescaped-entities, a rule for HTML parser ambiguity that does
+      # not apply to React Native's <Text>. With that rule off for the platform
+      # it does not describe, the codebase is at 0 errors.
+      #
+      # The --max-warnings ceiling is a ratchet, not a target: 280 warnings
+      # remain and CI fails if that number grows. Deliberately not 0, because a
+      # pipeline that is red on arrival gets ignored — the same reason the
+      # peptide-data warnings went unread for months. Lower it as warnings are
+      # cleared.
+      - name: Lint
+        run: pnpm run lint:ci
+
       - name: Unit tests
         run: pnpm exec jest --ci --silent
 
@@ -70,3 +83,15 @@ jobs:
       # anywhere. This is the check that was missing.
       - name: Verify data + calculators
         run: pnpm run verify:all
+
+      # Reported, not enforced. The current findings are all in build tooling
+      # rather than shipped code — the one critical is tar via @expo/cli, and
+      # several "production" paths are @expo/cli and @sentry/cli, which run on
+      # a build machine and are not part of the RN bundle. Clearing them means
+      # an Expo SDK upgrade cycle, and blindly bumping transitive pins is what
+      # broke react-native-iap's native linking before. Blocking on it would
+      # make the pipeline permanently red, so it is surfaced for a planned
+      # upgrade instead.
+      - name: Dependency audit (report only)
+        continue-on-error: true
+        run: pnpm audit --prod --audit-level high

@@ -27,7 +27,8 @@
     "verify:functions": "tsx scripts/verify-edge-functions.ts",
     "verify:square": "tsx scripts/verify-square-catalog.ts",
     "verify:routes": "tsx scripts/verify-route-reachability.ts",
-    "verify:videos": "tsx scripts/verify-video-integrity.ts"
+    "verify:videos": "tsx scripts/verify-video-integrity.ts",
+    "lint:ci": "eslint app src --max-warnings 280"
   },
   "expo": {
     "doctor": {
@@ -120,5 +121,9 @@
     "typescript": "~5.9.2"
   },
   "private": true,
-  "packageManager": "pnpm@10.24.0"
+  "packageManager": "pnpm@10.24.0",
+  "engines": {
+    "node": ">=20 <23",
+    "pnpm": ">=10"
+  }
 }
