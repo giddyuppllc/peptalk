@@ -420,7 +420,10 @@ function MealScanScreen() {
         <SafeAreaView style={s.cameraOverlay} edges={['top', 'bottom']}>
           {/* Top header */}
           <View style={s.cameraHeader}>
-            <TouchableOpacity onPress={() => router.back()} style={s.cameraIconBtn}>
+            <TouchableOpacity onPress={() => router.back()} style={s.cameraIconBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Close scanner"
+            >
               <Ionicons name="close" size={24} color="#fff" />
             </TouchableOpacity>
             <Text style={s.cameraTitle}>Meal Scan</Text>
@@ -445,6 +448,8 @@ function MealScanScreen() {
               style={s.shutterBtn}
               onPress={handleCapture}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Take photo"
             >
               <View style={s.shutterInner} />
             </TouchableOpacity>
@@ -473,7 +478,10 @@ function MealScanScreen() {
           <Ionicons name="chevron-back" size={24} color={t.text} />
         </TouchableOpacity>
         <Text style={[s.headerTitle, { color: t.text }]}>Review Scan</Text>
-        <TouchableOpacity onPress={handleRetake} style={s.iconBtn}>
+        <TouchableOpacity onPress={handleRetake} style={s.iconBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Retake photo"
+        >
           <Ionicons name="camera-reverse-outline" size={22} color={t.text} />
         </TouchableOpacity>
       </View>

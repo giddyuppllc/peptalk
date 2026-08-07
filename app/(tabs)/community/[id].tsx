@@ -276,7 +276,10 @@ export default function PostDetailScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
             <Ionicons name="chevron-back" size={24} color={t.text} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: t.text }]}>Post</Text>
@@ -311,7 +314,10 @@ export default function PostDetailScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
             <Ionicons name="chevron-back" size={24} color={t.text} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: t.text }]}>Post</Text>
@@ -427,7 +433,10 @@ export default function PostDetailScreen() {
               <Text style={[styles.replyContextText, { color: t.textSecondary }]}>
                 Replying to a comment
               </Text>
-              <TouchableOpacity onPress={() => setReplyingToCommentId(null)} hitSlop={10}>
+              <TouchableOpacity onPress={() => setReplyingToCommentId(null)} hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel reply"
+              >
                 <Ionicons name="close-circle" size={16} color={t.textSecondary} />
               </TouchableOpacity>
             </View>

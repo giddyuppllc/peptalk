@@ -329,7 +329,10 @@ function GeneratedTrackerScreen() {
       >
         {/* Header */}
         <View style={s.header}>
-          <TouchableOpacity onPress={started ? handleCancel : () => router.back()} style={s.iconBtn}>
+          <TouchableOpacity onPress={started ? handleCancel : () => router.back()} style={s.iconBtn}
+            accessibilityRole="button"
+            accessibilityLabel={started ? 'Cancel workout' : 'Go back'}
+          >
             <Ionicons name={started ? 'close' : 'chevron-back'} size={24} color={t.text} />
           </TouchableOpacity>
           <View style={s.headerCenter}>
@@ -554,6 +557,9 @@ function GeneratedTrackerScreen() {
                     ]}
                     disabled={!started}
                     onPress={() => updateSet(exIdx, setIdx, { completed: !set.completed })}
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={`Set ${setIdx + 1}`}
+                    accessibilityState={{ checked: set.completed, disabled: !started }}
                   >
                     {set.completed ? (
                       <Ionicons name="checkmark" size={16} color="#fff" />

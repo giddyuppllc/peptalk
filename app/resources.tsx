@@ -206,7 +206,10 @@ export default function ResourcesScreen() {
           autoCapitalize="none"
         />
         {query.length > 0 && (
-          <TouchableOpacity onPress={() => setQuery('')}>
+          <TouchableOpacity onPress={() => setQuery('')}
+            accessibilityRole="button"
+            accessibilityLabel="Clear search"
+          >
             <Ionicons name="close-circle" size={16} color={t.textSecondary} />
           </TouchableOpacity>
         )}

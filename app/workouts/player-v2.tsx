@@ -18,8 +18,8 @@
  * runs at finish — any set heavier than the user's previous best on that
  * exercise becomes a PR card on the celebration screen.
  *
- * Old player (app/workouts/player.tsx) is intentionally untouched. We'll
- * cut /workouts/program/[programId] over once Jamie signs off on this.
+ * This is the only player. The old app/workouts/player.tsx was deleted in
+ * c11363c once /workouts/program/[programId] had cut over to this screen.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';

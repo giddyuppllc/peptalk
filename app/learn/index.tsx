@@ -148,7 +148,10 @@ function FeaturedTopicCard({
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
+    <TouchableOpacity activeOpacity={0.85} onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={topic.title}
+    >
       <FeaturedCardInner topic={topic} />
     </TouchableOpacity>
   );
@@ -344,7 +347,10 @@ export default function LearnHubScreen() {
             autoCorrect={false}
           />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')} hitSlop={8 as any}>
+            <TouchableOpacity onPress={() => setSearch('')} hitSlop={8 as any}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+            >
               <Ionicons
                 name="close-circle"
                 size={18}

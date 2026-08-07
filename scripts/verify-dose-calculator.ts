@@ -54,11 +54,21 @@ function assertTrue(name: string, cond: boolean, detail?: unknown) {
 // 10 mg vial / 2 ml BAC water / 250 mcg desired dose
 //   vialMcg            = 10 × 1000        = 10000 mcg
 //   concentration      = 10 / 2           = 5 mg/mL
-//   concentration/tick = 10000 / (2×10)   = 500 mcg per 0.1 ml
+//   concentration/tick = 10000 / (2×100)  = 50 mcg per tick
 //   volume/dose        = 250 / (5 × 1000) = 0.05 ml
-//   ticksU100          = 250 / 500        = 0.5 ticks
+//   ticksU100          = 250 / 50         = 5 ticks
 //   units (U-100)      = 0.05 × 100       = 5 units
 //   doses/vial         = floor(10000/250) = 40
+//
+// One tick IS one U-100 unit (0.01 mL), so ticksU100 and syringeUnits must
+// agree — they are the same number reached two ways, and asserting both is
+// what makes a drift in either one visible.
+//
+// These two expectations previously read 500 and 0.5, encoding the 10x error
+// fixed in doseCalculator.ts (concentration was computed per 0.1 mL, which is
+// ten units, not a tick). The expectations were never updated alongside the
+// fix, so this harness asserted the bug. It went unseen because CI only began
+// running verify:all on the PWA branch; the fix landed on master.
 
 {
   const r = calculateReconstitution({
@@ -68,8 +78,10 @@ function assertTrue(name: string, cond: boolean, detail?: unknown) {
   assertClose('10mg/2ml @ 250mcg — volume', r.volumePerDoseMl, 0.05);
   assertClose('10mg/2ml @ 250mcg — syringeUnits (U-100)', r.syringeUnits, 5);
   assertEq('10mg/2ml @ 250mcg — doses/vial', r.dosesPerVial, 40);
-  assertClose('10mg/2ml @ 250mcg — concentration/tick', r.concentrationMcgPerTick, 500);
-  assertClose('10mg/2ml @ 250mcg — ticksU100', r.ticksU100, 0.5);
+  assertClose('10mg/2ml @ 250mcg — concentration/tick', r.concentrationMcgPerTick, 50);
+  assertClose('10mg/2ml @ 250mcg — ticksU100', r.ticksU100, 5);
+  // A tick is a unit: these must never disagree.
+  assertClose('10mg/2ml @ 250mcg — ticksU100 === syringeUnits', r.ticksU100, r.syringeUnits);
 }
 
 // ─── U-40 syringe ────────────────────────────────────────────────────────────

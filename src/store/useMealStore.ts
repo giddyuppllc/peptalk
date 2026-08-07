@@ -285,7 +285,14 @@ interface MealActions {
 // Default targets (2000 cal balanced diet)
 // ---------------------------------------------------------------------------
 
-const DEFAULT_TARGETS: MacroTargets = {
+/**
+ * Exported so screens that must cope with the optional fields (`fiberGrams`,
+ * `waterOz`) fall back to the SAME number the store seeds, instead of each
+ * inventing its own. The home screen previously defaulted fiber to 28 while
+ * this said 30 and useProgressGoalsStore also said 30 — one screen quietly
+ * disagreeing with the rest of the app about the user's own goal.
+ */
+export const DEFAULT_TARGETS: MacroTargets = {
   calories: 2000,
   proteinGrams: 150,
   carbsGrams: 200,

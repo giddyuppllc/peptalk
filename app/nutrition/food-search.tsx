@@ -253,7 +253,10 @@ function PortionPickerModal({
                 {food.brand && <Text style={styles.brandText}>{food.brand}</Text>}
               </View>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            >
               <Ionicons name="close" size={22} color={Colors.darkText} />
             </TouchableOpacity>
           </View>
@@ -772,7 +775,10 @@ function BarcodeScannerModal({ visible, onClose, onScanned }: BarcodeScannerProp
             <View style={styles.scannerHeaderAbsolute}>
               <SafeAreaView edges={['top']}>
                 <View style={styles.scannerHeaderRow}>
-                  <TouchableOpacity onPress={onClose} style={styles.scannerCloseBtn}>
+                  <TouchableOpacity onPress={onClose} style={styles.scannerCloseBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close"
+                  >
                     <Ionicons name="close" size={28} color="#fff" />
                   </TouchableOpacity>
                   <Text style={styles.scannerTitle}>Scan Barcode</Text>
@@ -802,7 +808,10 @@ function BarcodeScannerModal({ visible, onClose, onScanned }: BarcodeScannerProp
             <View style={styles.scannerHeaderAbsolute}>
               <SafeAreaView edges={['top']}>
                 <View style={styles.scannerHeaderRow}>
-                  <TouchableOpacity onPress={onClose} style={styles.scannerCloseBtn}>
+                  <TouchableOpacity onPress={onClose} style={styles.scannerCloseBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close"
+                  >
                     <Ionicons name="close" size={28} color="#fff" />
                   </TouchableOpacity>
                   <Text style={styles.scannerTitle}>Scan Barcode</Text>
@@ -1179,7 +1188,10 @@ export default function FoodSearchScreen() {
               autoCorrect={false}
             />
             {query.length > 0 && (
-              <TouchableOpacity onPress={() => setQuery('')}>
+              <TouchableOpacity onPress={() => setQuery('')}
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+              >
                 <Ionicons name="close-circle" size={18} color={Colors.darkTextSecondary} />
               </TouchableOpacity>
             )}
@@ -1366,6 +1378,8 @@ export default function FoodSearchScreen() {
                     style={styles.recentAddBtn}
                     onPress={() => handleRecentPress(item)}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Add ${item.foodName}`}
                   >
                     <Ionicons name="add-circle" size={28} color={Colors.almostAquaDeep} />
                   </TouchableOpacity>
@@ -1649,6 +1663,8 @@ export default function FoodSearchScreen() {
                   ])}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   style={{ paddingLeft: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delete ${item.name}`}
                 >
                   <Ionicons name="trash-outline" size={18} color={Colors.error + '88'} />
                 </TouchableOpacity>

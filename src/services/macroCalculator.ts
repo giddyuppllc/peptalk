@@ -95,6 +95,70 @@ function inchesToCm(inches: number): number {
  * Male:   10 * kg + 6.25 * cm − 5 * age + 5
  * Female: 10 * kg + 6.25 * cm − 5 * age − 161
  */
+/**
+ * Onboarding → services adapter.
+ *
+ * Onboarding collects a coarser profile (an age RANGE, a gender string, several
+ * goals) and used to run its own duplicate calculator in utils/macroCalculator.
+ * Both wrote the SAME store (useMealStore.targets, which feeds the home
+ * dashboard, meal plan, pantry suggestions and the LLM), so whichever screen ran
+ * last silently won — 319 cal and 20 g of protein apart for identical inputs.
+ *
+ * ⚠️ ACTIVITY LABELS COLLIDE ACROSS THE TWO SCALES. The multipliers are the
+ * same; only the names differ, which is exactly why the duplicate went
+ * unnoticed:
+ *
+ *     onboarding 'active'      (6-7 days/wk)     1.725  →  services 'very_active'
+ *     onboarding 'very_active' (athlete, 2x/day) 1.9    →  services 'extremely_active'
+ *
+ * Mapping by MULTIPLIER rather than by name keeps every existing user's
+ * calories identical through this consolidation. Mapping by name would have
+ * quietly cut an athlete's TDEE by 10%.
+ */
+export type OnboardingActivity =
+  | 'sedentary'
+  | 'light'
+  | 'moderate'
+  | 'active'
+  | 'very_active';
+
+export function activityFromOnboarding(
+  level: OnboardingActivity | string | null | undefined,
+): ActivityLevel {
+  switch (level) {
+    case 'sedentary': return 'sedentary';        // 1.2
+    case 'light':     return 'light';            // 1.375
+    case 'active':    return 'very_active';      // 1.725 — same multiplier
+    case 'very_active': return 'extremely_active'; // 1.9  — same multiplier
+    case 'moderate':
+    default:          return 'moderate';         // 1.55
+  }
+}
+
+/** Age ranges carry no exact age; these midpoints match what onboarding used. */
+export function ageYearsFromRange(range: string | null | undefined): number {
+  switch (range) {
+    case '18-29': return 24;
+    case '30-44': return 37;
+    case '45-60': return 52;
+    case '60+':   return 65;
+    default:      return 37;
+  }
+}
+
+/**
+ * Onboarding stores MULTIPLE goals; the recommendation takes one. Priority
+ * matches the previous behaviour so nobody's goal silently changes: an explicit
+ * deficit outranks a surplus, which outranks recomposition.
+ */
+export function goalFromOnboarding(goals: readonly string[] | null | undefined): GoalType {
+  const g = goals ?? [];
+  if (g.includes('weight_loss')) return 'weight_loss';
+  if (g.includes('muscle_gain')) return 'muscle_gain';
+  if (g.includes('body_recomp')) return 'body_recomp';
+  return 'maintenance';
+}
+
 export function calcBMR(input: {
   weightLbs: number;
   heightInches: number;

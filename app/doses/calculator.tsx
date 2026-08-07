@@ -25,6 +25,7 @@ import {
   V3DetailShell,
   GlassCard,
   SyringeSVG,
+  VialSVG,
   FlagModal,
   Chip,
 } from '../../src/components/v3';
@@ -775,9 +776,15 @@ export default function CalculatorV2Screen() {
                 <View style={{ marginTop: 12, gap: 10 }}>
                   {ref.schedule.map((p, i) => {
                     const mg = p.doseMcg / 1000;
+                    // `|| 1` here silently computed every schedule row against a
+                    // 1 mL dilution whenever the diluent field was empty or 0 —
+                    // a full table of plausible draw volumes for a
+                    // reconstitution the user never entered.
+                    const dilForSchedule = parseFloat(diluentMl);
                     const conc =
-                      parseFloat(peptideMg) /
-                      (parseFloat(diluentMl) || 1);
+                      Number.isFinite(dilForSchedule) && dilForSchedule > 0
+                        ? parseFloat(peptideMg) / dilForSchedule
+                        : 0;
                     const drawMl = conc > 0 ? mg / conc : 0;
                     return (
                       <View key={i} style={styles.scheduleRow}>
@@ -1184,10 +1191,15 @@ function ReconstituteCard({
           the {mgInVial} mg vial.
         </Text>
         <View style={{ marginTop: 8, alignItems: 'center' }}>
-          <SyringeSVG
-            fillMl={Math.min(1, diluentMl)}
-            capacityMl={1}
-            width={240}
+          {/* A vial, not a syringe: the diluent goes INTO the vial, and the
+              previous SyringeSVG clamped to Math.min(1, diluentMl) — so a 3 mL
+              reconstitution drew as a full 1 mL barrel, understating it 3x. */}
+          <VialSVG
+            vialMg={mgInVial}
+            diluentMl={diluentMl}
+            concentrationMgPerMl={concentrationMgPerMl}
+            isAcetic={isAcetic}
+            width={132}
           />
         </View>
         <Text
@@ -1266,7 +1278,7 @@ function DrawCard({
           Draw to {formatUnits(drawUnits)} — that's {formatVolumeMl(drawMl)} on a U-100 syringe.
         </Text>
         <View style={{ marginTop: 8, alignItems: 'center' }}>
-          <SyringeSVG fillMl={drawMl} capacityMl={1} width={240} />
+          <SyringeSVG fillMl={drawMl} units={drawUnits} capacityMl={1} width={240} />
         </View>
         <Text
           style={[

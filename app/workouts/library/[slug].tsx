@@ -96,6 +96,8 @@ export default function LibraryPlayerScreen() {
         <TouchableOpacity
           onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/workouts/library'); }}
           hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
         >
           <Ionicons name="chevron-back" size={26} color={t.text} />
         </TouchableOpacity>

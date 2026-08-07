@@ -69,7 +69,10 @@ export default function CommunitySearchScreen() {
             autoCapitalize="none"
           />
           {q.length > 0 && (
-            <TouchableOpacity onPress={() => setQ('')} hitSlop={10}>
+            <TouchableOpacity onPress={() => setQ('')} hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+            >
               <Ionicons name="close-circle" size={16} color={t.textSecondary} />
             </TouchableOpacity>
           )}

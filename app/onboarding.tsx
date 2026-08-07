@@ -30,7 +30,12 @@ import { useOnboardingStore } from '../src/store/useOnboardingStore';
 import { useHealthProfileStore } from '../src/store/useHealthProfileStore';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
-import { calculateMacros } from '../src/utils/macroCalculator';
+import {
+  computeMacroRecommendation,
+  activityFromOnboarding,
+  ageYearsFromRange,
+  goalFromOnboarding,
+} from '../src/services/macroCalculator';
 import { isValidEmail, validatePassword, PASSWORD_MIN_LENGTH } from '../src/utils/validation';
 import { useMealStore } from '../src/store/useMealStore';
 import { useProgressGoalsStore } from '../src/store/useProgressGoalsStore';
@@ -330,11 +335,23 @@ export default function OnboardingScreen() {
         // Auto-calculate macros
         const body = useHealthProfileStore.getState().profile.bodyMetrics;
         const life = useHealthProfileStore.getState().profile.lifestyle;
-        const macros = calculateMacros({
-          weightLbs: body.weightLbs, heightInches: body.heightInches,
-          gender: profile.gender, ageRange: profile.ageRange,
-          activityLevel: life.activityLevel, goals: profile.healthGoals,
-        });
+        // Single source of truth: services/macroCalculator. Onboarding used to
+        // run a duplicate (utils/macroCalculator) that wrote the SAME store, so
+        // whichever screen ran last won — 319 cal and 20 g protein apart for
+        // identical inputs. The adapters map onboarding's coarser profile in,
+        // preserving each user's activity MULTIPLIER (the two scales share
+        // multipliers under different names).
+        const macros =
+          body.weightLbs && body.heightInches && (profile.gender === 'Male' || profile.gender === 'Female')
+            ? computeMacroRecommendation({
+                weightLbs: body.weightLbs,
+                heightInches: body.heightInches,
+                ageYears: ageYearsFromRange(profile.ageRange),
+                biologicalSex: profile.gender === 'Male' ? 'male' : 'female',
+                activityLevel: activityFromOnboarding(life.activityLevel),
+                goal: goalFromOnboarding(profile.healthGoals),
+              })
+            : null;
         if (macros) {
           setMealTargets({
             calories: macros.calories, proteinGrams: macros.proteinGrams,

@@ -402,6 +402,8 @@ export default function HealthProfileScreen() {
         <TouchableOpacity
           style={styles.addBtn}
           onPress={() => { if (conditionInput.trim()) { store.addCondition(conditionInput.trim()); setConditionInput(''); } }}
+          accessibilityRole="button"
+          accessibilityLabel="Add condition"
         >
           <Ionicons name="add" size={20} color={Colors.darkBg} />
         </TouchableOpacity>
@@ -420,6 +422,8 @@ export default function HealthProfileScreen() {
         <TouchableOpacity
           style={styles.addBtn}
           onPress={() => { if (medicationInput.trim()) { store.addMedication(medicationInput.trim()); setMedicationInput(''); } }}
+          accessibilityRole="button"
+          accessibilityLabel="Add medication"
         >
           <Ionicons name="add" size={20} color={Colors.darkBg} />
         </TouchableOpacity>
@@ -458,6 +462,8 @@ export default function HealthProfileScreen() {
         <TouchableOpacity
           style={styles.addBtn}
           onPress={() => { if (allergyInput.trim()) { store.addAllergy(allergyInput.trim()); setAllergyInput(''); } }}
+          accessibilityRole="button"
+          accessibilityLabel="Add allergy"
         >
           <Ionicons name="add" size={20} color={Colors.darkBg} />
         </TouchableOpacity>
@@ -606,6 +612,8 @@ export default function HealthProfileScreen() {
               setSupplementInput('');
             }
           }}
+          accessibilityRole="button"
+          accessibilityLabel="Add supplement"
         >
           <Ionicons name="add" size={20} color={Colors.darkBg} />
         </TouchableOpacity>

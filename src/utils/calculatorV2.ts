@@ -89,9 +89,16 @@ export function calculate(input: CalculatorInput): CalculatorResult {
     });
   }
 
-  // Guard against div-by-zero so a half-typed input doesn't render NaN.
-  const safeDiluent = diluentVolumeMl > 0 ? diluentVolumeMl : 1;
-  const concentrationMgPerMl = peptideMgInVial / safeDiluent;
+  // No diluent yet → report ZERO, never a substituted volume.
+  //
+  // This previously fell back to `diluentVolumeMl > 0 ? diluentVolumeMl : 1`,
+  // so entering 0 produced a concentration computed against 1 mL the user never
+  // chose — a plausible-looking number derived from an input that does not
+  // exist. Every calculator defect found in this app has that shape: a
+  // confidently wrong figure rather than a visibly missing one. Zero renders as
+  // "0.00 mg/mL", which reads as "not answered yet".
+  const hasDiluent = diluentVolumeMl > 0;
+  const concentrationMgPerMl = hasDiluent ? peptideMgInVial / diluentVolumeMl : 0;
   const drawPerShotMl =
     concentrationMgPerMl > 0 ? perShotDoseMg / concentrationMgPerMl : 0;
   const drawPerShotUnits = drawPerShotMl * U100_UNITS_PER_ML;

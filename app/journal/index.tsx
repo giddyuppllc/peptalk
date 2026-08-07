@@ -366,7 +366,10 @@ export default function JournalFeedScreen() {
               returnKeyType="search"
             />
             {searchQuery.length > 0 && (
-              <Pressable onPress={() => setSearchQuery('')}>
+              <Pressable onPress={() => setSearchQuery('')}
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+              >
                 <Ionicons name="close-circle" size={18} color={Colors.darkTextSecondary} />
               </Pressable>
             )}
@@ -416,6 +419,8 @@ export default function JournalFeedScreen() {
         <Pressable
           onPress={() => setShowSearch((v) => !v)}
           style={styles.searchBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Search journal"
         >
           <Ionicons
             name={showSearch ? 'close' : 'search'}

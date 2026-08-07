@@ -290,6 +290,7 @@ function Field({
           value={value}
           onChangeText={onChange}
           keyboardType="numeric"
+          accessibilityLabel={`${label} in ${unit}`}
         />
         <Text style={styles.fieldUnit}>{unit}</Text>
       </View>

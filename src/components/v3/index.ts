@@ -13,6 +13,7 @@ export { MacroRing } from './MacroRing';
 export { MacroBar } from './MacroBar';
 export { ActivityRings } from './ActivityRings';
 export { SyringeSVG } from './SyringeSVG';
+export { VialSVG } from './VialSVG';
 export { Chip, ChipRow } from './ChipRow';
 export { StatRow } from './StatRow';
 export { AimeeFAB } from './AimeeFAB';

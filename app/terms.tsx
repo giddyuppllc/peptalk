@@ -23,6 +23,8 @@ export default function TermsOfServiceScreen() {
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.closeButton}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
         >
           <Ionicons name="close" size={24} color={Colors.darkText} />
         </TouchableOpacity>

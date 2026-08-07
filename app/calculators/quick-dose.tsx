@@ -94,11 +94,36 @@ export default function QuickDoseScreen() {
   // Auto-calculate reconstitution — only when we have a verified reference for
   // this peptide. No reference → no auto-draw (protocol notes still render below).
   const reconInfo = useMemo(() => {
+    // Vial strength and diluent volume come from the CURATED per-peptide
+    // reference (memoised as `dosingRef` above), never a constant.
+    //
+    // This screen previously hardcoded `vialMg = 5; waterMl = 2` for every
+    // peptide and then told the user, in as many words, "Add 2ml bacteriostatic
+    // water to your 5mg vial". The 2026-05-16 audit measured the damage — a 2x
+    // concentration error on semaglutide and a 2x under-draw on retatrutide —
+    // and responded by hiding the entry point in calculators/index.tsx. It did
+    // NOT fix the math, and the screen stayed reachable the whole time via the
+    // button in calculators/plan.tsx, so the wrong numbers kept shipping.
+    //
+    // getDosingReference() is the same source app/doses/calculator.tsx uses, so
+    // both screens now agree for a given peptide.
+    // No curated reference → show nothing rather than guess.
     if (!protocol || !dosingRef) return null;
     const vialMg = dosingRef.vialMg;
     const waterMl = dosingRef.diluentMl;
-    // Doc-stated mg/mL is authoritative (honors Edward's unit math).
-    const concentrationMcgPerMl = dosingRef.mgPerMl * 1000;
+    // Guard before dividing: a reference row with a zero/missing vial or
+    // diluent would otherwise produce an Infinity draw volume on screen.
+    if (!(vialMg > 0) || !(waterMl > 0)) return null;
+    // Prefer the doc-stated mg/mL where the reference carries one, so the
+    // screen shows the same concentration the protocol was written against
+    // rather than a re-derived value that can disagree in the last decimal.
+    const concentrationMcgPerMl =
+      dosingRef.mgPerMl > 0 ? dosingRef.mgPerMl * 1000 : (vialMg * 1000) / waterMl;
+    // A few compounds (IGF-1 LR3, Dihexa) reconstitute in ACETIC ACID, not
+    // bacteriostatic water. The old hardcoded copy said "bacteriostatic water"
+    // for every peptide, which is wrong in exactly the cases where it matters.
+    const diluentLabel =
+      dosingRef.diluent === 'acetic_acid' ? 'acetic acid' : 'bacteriostatic water';
     const doseMin = protocol.typicalDose?.min ?? 0;
     const doseMax = protocol.typicalDose?.max ?? 0;
     const doseUnit = protocol.typicalDose?.unit ?? 'mcg';
@@ -118,6 +143,7 @@ export default function QuickDoseScreen() {
     return {
       vialMg,
       waterMl,
+      diluentLabel,
       concentrationMcgPerMl,
       doseMin,
       doseMax,
@@ -128,6 +154,8 @@ export default function QuickDoseScreen() {
       volumeMinUnits,
       volumeMaxUnits,
     };
+    // dosingRef is the real dependency — it already memoises on the selected
+    // peptide id, so depending on it covers every vial/diluent input.
   }, [protocol, dosingRef]);
 
   // ── Peptide Picker ──
@@ -259,7 +287,7 @@ export default function QuickDoseScreen() {
                 <View style={styles.step}>
                   <Text style={styles.stepNum}>1</Text>
                   <Text style={styles.stepText}>
-                    Add {reconInfo.waterMl}ml bacteriostatic water to your {reconInfo.vialMg}mg vial
+                    Add {reconInfo.waterMl}ml {reconInfo.diluentLabel} to your {reconInfo.vialMg}mg vial
                   </Text>
                 </View>
                 <View style={styles.step}>

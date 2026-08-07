@@ -631,6 +631,7 @@ export default function FoodScannerScreen() {
                   onChangeText={(v) => setDraftNum('calories', v)}
                   keyboardType="numeric"
                   style={[styles.editInput, { color: t.text, backgroundColor: t.bg, borderColor: t.cardBorder }]}
+                  accessibilityLabel="Calories"
                 />
               </View>
               <View style={styles.editCol}>
@@ -640,6 +641,7 @@ export default function FoodScannerScreen() {
                   onChangeText={(v) => setDraftNum('protein', v)}
                   keyboardType="numeric"
                   style={[styles.editInput, { color: t.text, backgroundColor: t.bg, borderColor: t.cardBorder }]}
+                  accessibilityLabel="Protein in grams"
                 />
               </View>
             </View>
@@ -652,6 +654,7 @@ export default function FoodScannerScreen() {
                   onChangeText={(v) => setDraftNum('carbs', v)}
                   keyboardType="numeric"
                   style={[styles.editInput, { color: t.text, backgroundColor: t.bg, borderColor: t.cardBorder }]}
+                  accessibilityLabel="Carbs in grams"
                 />
               </View>
               <View style={styles.editCol}>
@@ -661,6 +664,7 @@ export default function FoodScannerScreen() {
                   onChangeText={(v) => setDraftNum('fat', v)}
                   keyboardType="numeric"
                   style={[styles.editInput, { color: t.text, backgroundColor: t.bg, borderColor: t.cardBorder }]}
+                  accessibilityLabel="Fat in grams"
                 />
               </View>
             </View>

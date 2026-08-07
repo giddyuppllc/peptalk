@@ -105,3 +105,7 @@ assets/icon.original-with-alpha.png
 .vercel-link/
 .vercel
 dist2/
+
+# Local git worktrees — never part of the repo (an embedded repo gets committed
+# as a bare gitlink that no clone can resolve).
+.claude/worktrees/
