@@ -31,6 +31,11 @@
     "lint:ci": "eslint app src --max-warnings 280"
   },
   "expo": {
+    "install": {
+      "exclude": [
+        "@sentry/react-native"
+      ]
+    },
     "doctor": {
       "reactNativeDirectoryCheck": {
         "exclude": [
@@ -42,8 +47,10 @@
       }
     }
   },
-  "overrides": {
-    "@expo/fingerprint": "0.15.4"
+  "pnpm": {
+    "overrides": {
+      "@expo/fingerprint": "0.15.4"
+    }
   },
   "dependencies": {
     "@expo-google-fonts/dm-sans": "^0.4.2",
@@ -60,7 +67,7 @@
     "@react-navigation/native-stack": "^7.3.16",
     "@sentry/react-native": "~8.11.1",
     "@supabase/supabase-js": "~2.102.1",
-    "expo": "~54.0.34",
+    "expo": "~54.0.36",
     "expo-av": "~16.0.8",
     "expo-blur": "~15.0.8",
     "expo-build-properties": "~1.0.10",
@@ -109,7 +116,7 @@
     "@aws-sdk/s3-request-presigner": "~3.1045.0",
     "@stryker-mutator/core": "^9.6.1",
     "@stryker-mutator/jest-runner": "^9.6.1",
-    "@types/jest": "^30.0.0",
+    "@types/jest": "^29.5.14",
     "@types/react": "~19.1.0",
     "babel-plugin-transform-import-meta": "^3.0.0",
     "dotenv": "~17.4.1",

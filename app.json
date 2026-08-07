@@ -188,6 +188,7 @@
       "expo-router",
       "expo-font",
       "expo-secure-store",
+      "@sentry/react-native/expo",
       [
         "expo-notifications",
         {

@@ -20,6 +20,33 @@
  * future caller can't accidentally ship raw auth tokens / receipts /
  * chat content into Sentry. The list errs on the side of stripping —
  * better to lose context than leak.
+ *
+ * ── NATIVE SETUP (2026-08-07) ──────────────────────────────────────────────
+ * Capture has always worked: `@sentry/react-native` ships an
+ * expo-module.config.json, so Expo autolinks the native module, and
+ * `initTelemetry()` runs at module scope in app/_layout.tsx. What was MISSING
+ * was the Expo config plugin — `@sentry/react-native/expo` was never listed in
+ * app.json `plugins`. That plugin is what adds the iOS dSYM/source-map upload
+ * phase and the Sentry Android Gradle plugin, so without it every crash
+ * arrived as UNREADABLE minified JS frames and raw native addresses. Registered
+ * now. It is intentionally listed BARE (no inline `organization`/`project`/
+ * `authToken`): the plugin's own guidance is that an inline authToken gets
+ * written into the application package, so it reads SENTRY_ORG / SENTRY_PROJECT
+ * / SENTRY_AUTH_TOKEN from the environment instead. Until those are set as EAS
+ * env vars the plugin only warns and the build still succeeds — symbolication
+ * simply stays off.
+ *
+ * ── WHY WE STAY ON @sentry/react-native 8.x ────────────────────────────────
+ * `expo-doctor` fails "packages match versions required by installed Expo SDK"
+ * because SDK 54's bundledNativeModules.json pins ~7.2.0 while we run 8.11.1.
+ * That pin is Expo's TESTED recommendation, not a hard requirement: 8.11.1
+ * declares `react-native >=0.65.0` and `expo >=49.0.0` as peers (we are on RN
+ * 0.81.5 / SDK 54), and the 8.x line is the actively maintained one — its
+ * changelog is already past 8.22 and references RN 0.87. Downgrading to 7.2.0
+ * would move BACKWARDS onto an unmaintained major. The deviation is therefore
+ * deliberate and recorded in package.json `expo.install.exclude`, which is
+ * Expo's documented mechanism for exactly this. Revisit only if Sentry drops
+ * support for our RN version.
  */
 
 const DSN = process.env.EXPO_PUBLIC_SENTRY_DSN ?? '';
