@@ -60,15 +60,20 @@ describe('checkDoseSafety — unit-confusion detection', () => {
   });
 
   it('matches the peptide case-insensitively', () => {
-    // Mutation testing surfaced this: the lookup lowercases both sides, and
-    // nothing tested it. A user or an Aimee tool-call passing "Semaglutide"
-    // must get the same guard as "semaglutide" — silently falling back to the
-    // generic unknown-peptide path would raise the warning threshold from
-    // 3x the protocol max to a flat 10,000 mcg.
-    for (const name of ['Semaglutide', 'SEMAGLUTIDE', 'semaglutide']) {
-      expect(checkDoseSafety(name, 250, 'mg').safe).toBe(false);
-      expect(checkDoseSafety(name, 250, 'mcg').safe).toBe(true);
-    }
+    // 8000 mcg is the discriminating dose: it exceeds 3x semaglutide's own
+    // maximum, but sits UNDER the flat 10,000 mcg ceiling used for compounds
+    // with no known range. So it is flagged only if the name actually resolves.
+    //
+    // My first attempt at this test used 250 mg and passed while killing no
+    // mutant — at that dose both the known and unknown paths flag it, so
+    // breaking the lookup changed nothing. A test that cannot distinguish the
+    // two paths does not test the lookup.
+    expect(checkDoseSafety('semaglutide', 8000, 'mcg').safe).toBe(false);
+    expect(checkDoseSafety('Semaglutide', 8000, 'mcg').safe).toBe(false);
+    expect(checkDoseSafety('SEMAGLUTIDE', 8000, 'mcg').safe).toBe(false);
+    // Control: an unknown compound at the same dose is NOT flagged, which is
+    // what makes the three assertions above meaningful.
+    expect(checkDoseSafety('zzz-not-real', 8000, 'mcg').safe).toBe(true);
   });
 
   it('is unit-aware, not just magnitude-aware', () => {
