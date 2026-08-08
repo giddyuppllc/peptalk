@@ -540,8 +540,103 @@ const noTable = PEPTIDES.filter((p) => !getDosingTableEntry(p.id)).map((p) => p.
 const noRef = PEPTIDES.filter((p) => !getDosingReference(p.id)).map((p) => p.id);
 info(`Peptides with a dosing table row: ${PEPTIDES.length - noTable.length}/${PEPTIDES.length}`);
 info(`Peptides with a dosing reference row: ${PEPTIDES.length - noRef.length}/${PEPTIDES.length}`);
-if (noTable.length) warn(`No dosing card will render for: ${noTable.join(', ')}`);
-if (noRef.length) warn(`Calculators have no reconstitution reference for: ${noRef.join(', ')}`);
+
+/**
+ * ─── RATCHET ───────────────────────────────────────────────────────────────
+ *
+ * These two were plain warnings, and that is exactly why they went unread for
+ * months: "No dosing card will render for: …16 ids" printed on every run,
+ * directly beneath 26 cosmetic "missing abbreviation" warnings. Jamie
+ * eventually reported one of them (Cerebrolysin) as a bug, which is the
+ * expensive way to learn something your own tooling already knew.
+ *
+ * A warning that is always present carries no information. So the KNOWN gaps
+ * are baselined below and everything else is a hard ERROR: adding a peptide
+ * without dosing coverage now fails the build, while the existing backlog
+ * stays quiet.
+ *
+ * Same ratchet as verify:routes' KNOWN_ORPHANS, and for the same reason — a
+ * permanently red pipeline gets ignored just as reliably as a noisy warning.
+ *
+ * TO SHRINK THESE: add the missing data, then delete the id from the list.
+ * Never add an id to silence a failure — that is how the backlog got here.
+ */
+
+/** Peptides with neither a curated dosing row NOR a protocol to derive one from. */
+const KNOWN_NO_DOSING_CARD = new Set([
+  'adipotide',
+  'dermorphin',
+  'pnc-27',
+  'noopept',
+  'humanin',
+  'liraglutide',
+]);
+
+const unexpectedNoTable = noTable.filter((id) => !KNOWN_NO_DOSING_CARD.has(id));
+const fixedNoTable = [...KNOWN_NO_DOSING_CARD].filter((id) => !noTable.includes(id));
+
+if (unexpectedNoTable.length) {
+  error(
+    `No dosing card will render for: ${unexpectedNoTable.join(', ')}. ` +
+      `Add a row to peptideDosingTable.ts, or a protocol in protocols.ts (the card ` +
+      `derives from one when no row exists). Do NOT add the id to ` +
+      `KNOWN_NO_DOSING_CARD to silence this.`,
+  );
+}
+if (fixedNoTable.length) {
+  // Stale baseline entries hide future regressions, so surface them.
+  warn(
+    `KNOWN_NO_DOSING_CARD is stale — these now render a card and should be ` +
+      `removed from the list: ${fixedNoTable.join(', ')}`,
+  );
+}
+if (KNOWN_NO_DOSING_CARD.size) {
+  info(
+    `Baselined (no dosing card, needs content): ${[...KNOWN_NO_DOSING_CARD].join(', ')}`,
+  );
+}
+
+/**
+ * The reconstitution reference drives the calculator's vial/diluent maths, so
+ * it only means anything for something you actually reconstitute.
+ *
+ * Split deliberately, because lumping them together is what made this a
+ * 47-line warning nobody could act on:
+ *
+ *   NOT_RECONSTITUTED — orals, capsules, blends and ready-to-use solutions.
+ *                       These will NEVER need an entry. Not a backlog.
+ *   MISSING_RECON_REF — injectables that genuinely lack one. This IS a
+ *                       backlog, and it should shrink.
+ */
+const NOT_RECONSTITUTED = new Set([
+  'mk-677', 'cardarine', 'noopept', 'alpha-gpc', 'cdp-choline', 'l-carnitine',
+  'methylene-blue', 'coq10', 'tesofensine', 'enclomiphene', 'yk-11', '9-me-bc',
+  'bam15', 'gc-1', 'itpp', 'dada', 'nad-carnitine-blend', 'kpv-oral',
+  '5-amino-1mq', 'glow', 'klow',
+]);
+
+const MISSING_RECON_REF = new Set([
+  'tirzepatide', 'mazdutide', 'survodutide', 'aod-9604', 'adipotide', 'ghrp-2',
+  'ghrp-6', 'hgh-fragment-176-191', 'cerebrolysin', 'thymalin', 'ss-31',
+  'kisspeptin-10', 'hcg', 'hmg', 'snap-8', 'ara-290', 'dermorphin', 'pnc-27',
+  'humanin', 'foxo4-dri', 'aicar', 'somatropin', 'follistatin-344',
+  'liraglutide', 'peg-mgf', '5-amino-1mq-inj',
+]);
+
+const unexpectedNoRef = noRef.filter(
+  (id) => !NOT_RECONSTITUTED.has(id) && !MISSING_RECON_REF.has(id),
+);
+if (unexpectedNoRef.length) {
+  error(
+    `Calculators have no reconstitution reference for: ${unexpectedNoRef.join(', ')}. ` +
+      `Add an entry to peptideDosingReference.ts, or add the id to ` +
+      `NOT_RECONSTITUTED if it is an oral/ready-to-use compound.`,
+  );
+}
+info(
+  `Reconstitution reference: ${NOT_RECONSTITUTED.size} N/A (oral/ready-to-use), ` +
+    `${MISSING_RECON_REF.size} injectables still missing one`,
+);
 
 // ─── Summary ─────────────────────────────────────────────────────────────────
 
