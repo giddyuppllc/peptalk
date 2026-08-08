@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 /**
  * Storage strategy:
@@ -56,6 +57,19 @@ let warnedOnce = false;
 function warnIfUnencrypted(): void {
   if (warnedOnce || isEncryptionAvailable()) return;
   warnedOnce = true;
+  // 2026-08-07: WEB IS NOT A DEFECT. `react-native-encrypted-storage` is
+  // native-only and a browser has no keychain, so on the PWA the AsyncStorage
+  // (localStorage) fallback is the designed behaviour, permanently. This check
+  // exists to catch a NATIVE build whose module failed to link — reporting web
+  // would fire once for every PWA session forever, burning quota and training
+  // everyone to ignore the one signal it was built to surface. Stays silent on
+  // web, unchanged on native.
+  //
+  // Consequence worth stating plainly: on the PWA, persisted health data
+  // (meals, journal, doses, labs, check-ins) sits in plaintext localStorage.
+  // That is inherent to the platform — any key the JS could use to encrypt it
+  // would have to live somewhere the same JS can read.
+  if (Platform.OS === 'web') return;
   try {
 
     const { captureMessage } = require('./telemetry');
