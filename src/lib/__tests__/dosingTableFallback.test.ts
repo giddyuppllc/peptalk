@@ -50,8 +50,12 @@ describe('dosing card — derived from protocol when no row exists', () => {
   });
 
   it('carries the protocol frequency label verbatim', () => {
+    // Updated when Jamie supplied the full schedule: it is 5 days on / 2 days
+    // off, not plain daily. The point of the assertion is that the derived card
+    // reproduces the protocol's own wording rather than re-deriving a label
+    // from the frequency enum, which would flatten "5 on / 2 off" into "Daily".
     expect(getDosingTableEntry('cerebrolysin')?.frequencyWeekly)
-      .toBe('Daily for 10-20 days, repeated as courses');
+      .toBe('5 days on, 2 days off — cycles of 10-20 dosing days');
   });
 
   it('IU protocols stay IU', () => {

@@ -50,6 +50,9 @@ const FREQUENCY_PER_WEEK: Record<ProtocolFrequency, number> = {
   daily:        7,
   twice_daily:  14,
   eod:          3.5,
+  // 5 consecutive days then 2 off. Modelled as 5/week rather than folded into
+  // `daily`, which would overstate every supply count by 40%.
+  five_on_two_off: 5,
   tiw:          3,
   biw:          2,
   weekly:       1,

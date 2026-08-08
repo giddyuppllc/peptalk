@@ -953,16 +953,24 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     // The old value was wrong twice over: wrong unit for the product form, and
     // it made this the only 'ml' protocol in the dataset — which is what let it
     // slip through the mcg-formatting bug for so long.
-    typicalDose: { min: 20, max: 30, unit: 'mg' },
+    // Full spec from Jamie (2026-08-08): 10-30 mg on a dosing day, 5 days on /
+    // 2 days off, cycles of 10-20 days. 60 mg vial + 3 mL bacteriostatic water
+    // = 20 mg/mL, so the standard 20 mg dose is 1 mL = 100 units on a U-100
+    // syringe. Her three figures agree with each other, which is why they are
+    // taken as given: 60/3 = 20 mg/mL, and 100 units = 1 mL = 20 mg.
+    typicalDose: { min: 10, max: 30, unit: 'mg' },
     route: 'intramuscular',
-    frequency: 'daily',
-    frequencyLabel: 'Daily for 10-20 days, repeated as courses',
+    // 5 doses a week, not 7. Folding this into 'daily' would overstate every
+    // vial and syringe count by 40%.
+    frequency: 'five_on_two_off',
+    frequencyLabel: '5 days on, 2 days off — cycles of 10-20 dosing days',
     durationWeeks: { min: 2, max: 4 },
     timing: 'Morning, before light meal',
     storageNotes: 'Lyophilised powder at 2-8°C, protected from light. Do not freeze. Reconstituted, use within the window on the vial.',
     importantNotes: [
       'Porcine-derived neurotrophic peptide complex; approved in 50+ countries for stroke, dementia, TBI rehabilitation',
-      'Typical course: 20-30 mg daily for 10-20 days, repeated every 3-6 months',
+      '60 mg vial + 3 mL bacteriostatic water = 20 mg/mL. A 20 mg dose is 1 mL (100 units on a U-100 syringe)',
+      'Typical course: 10-30 mg per dosing day, 5 on / 2 off, for 10-20 dosing days',
       'Cumulative effect — benefits develop over multiple courses, not from single injections',
       'Do not mix in syringe with other medications — protein complex may aggregate',
       'Anaphylaxis is rare but documented; physician supervision strongly recommended for first dose',

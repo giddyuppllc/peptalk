@@ -616,9 +616,12 @@ const NOT_RECONSTITUTED = new Set([
   '5-amino-1mq', 'glow', 'klow',
 ]);
 
+// 'cerebrolysin' came off this list 2026-08-08 — Jamie supplied the diluent
+// volume and schedule, so it now has a full reference. This is what shrinking
+// the baseline looks like; do not add ids back to silence a failure.
 const MISSING_RECON_REF = new Set([
   'tirzepatide', 'mazdutide', 'survodutide', 'aod-9604', 'adipotide', 'ghrp-2',
-  'ghrp-6', 'hgh-fragment-176-191', 'cerebrolysin', 'thymalin', 'ss-31',
+  'ghrp-6', 'hgh-fragment-176-191', 'thymalin', 'ss-31',
   'kisspeptin-10', 'hcg', 'hmg', 'snap-8', 'ara-290', 'dermorphin', 'pnc-27',
   'humanin', 'foxo4-dri', 'aicar', 'somatropin', 'follistatin-344',
   'liraglutide', 'peg-mgf', '5-amino-1mq-inj',

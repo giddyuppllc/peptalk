@@ -1015,6 +1015,7 @@ const FREQUENCY_LABELS: Record<string, { daily?: string; weekly?: string }> = {
   daily:       { daily: '1x Daily',        weekly: 'Daily' },
   twice_daily: { daily: '2x Daily',        weekly: 'Daily' },
   eod:         { daily: '1x On Dosing Days', weekly: 'Every Other Day' },
+  five_on_two_off: { daily: '1x Daily', weekly: '5 On 2 Off' },
   tiw:         { daily: '1x On Dosing Days', weekly: '3x Weekly' },
   biw:         { daily: '1x On Dosing Days', weekly: '2x Weekly' },
   weekly:      { daily: '1x On Dosing Days', weekly: '1x Weekly' },

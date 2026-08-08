@@ -433,6 +433,7 @@ export type ProtocolFrequency =
   | 'daily'
   | 'twice_daily'
   | 'eod'            // every other day
+  | 'five_on_two_off' // 5 consecutive days, then 2 rest days — 5 doses/week
   | 'tiw'            // 3x/week
   | 'biw'            // 2x/week
   | 'weekly'

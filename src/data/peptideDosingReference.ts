@@ -891,6 +891,56 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
     cycleLength: '8-12 weeks',
     route: 'subcutaneous',
   },
+
+  // ───────────────────── Cerebrolysin ─────────────────────
+  // Added 2026-08-08 from Jamie's spec, with the vial size corroborated by the
+  // AgeReCode catalog ("Cerebrolysin (60mg), Lyophilized Powder").
+  //
+  // Her three figures are mutually consistent, which is why they are taken as
+  // given rather than reconciled: 60 mg in 3 mL is 20 mg/mL; a U-100 syringe
+  // draws 100 units to 1 mL; 1 mL at 20 mg/mL is the stated 20 mg dose.
+  //
+  // This is the first of the 16 injectables that had no reconstitution
+  // reference. The catalog supplies vialMg; diluentMl, diluent and the schedule
+  // came from Jamie — none of it was inferred.
+  {
+    peptideId: 'cerebrolysin',
+    peptideName: 'Cerebrolysin',
+    vialMg: 60,
+    diluentMl: 3,
+    diluent: 'bac_water',
+    mgPerMl: 20,
+    schedule: [
+      {
+        label: 'Standard',
+        doseMcg: 20000,
+        doseStated: '20 mg (100 units / 1 mL)',
+        units: 100,
+        frequency: 'five_on_two_off',
+        notes:
+          'A full 1 mL draw. At 20 mg/mL a 60 mg vial is three doses, so a 10-20 day cycle needs several vials — unusual for this app, where most vials cover weeks.',
+      },
+      {
+        label: 'Low',
+        doseMcg: 10000,
+        doseStated: '10 mg (50 units / 0.5 mL)',
+        units: 50,
+        frequency: 'five_on_two_off',
+        notes: 'Bottom of the 10-30 mg range.',
+      },
+      {
+        label: 'High',
+        doseMcg: 30000,
+        doseStated: '30 mg (150 units / 1.5 mL)',
+        units: 150,
+        frequency: 'five_on_two_off',
+        notes:
+          'Top of the range. Exceeds one U-100 syringe, so it is drawn as 1 mL plus 0.5 mL.',
+      },
+    ],
+    cycleLength: '10-20 dosing days (5 on / 2 off)',
+    route: 'intramuscular',
+  },
 ];
 
 /**
