@@ -30,6 +30,7 @@ import {
   getAllDosingReferencesForPeptide,
   PEPTALK_DOSING_DISCLAIMER,
 } from '../../src/data/peptideDosingReference';
+import { getVialSizeOptions, STANDARD_VIAL_MG } from '../../src/data/supplierVialSizes';
 import { getCalculatorMetadata } from '../../src/data/calculatorMetadata';
 import { getDosingTableEntry } from '../../src/data/peptideDosingTable';
 import {
@@ -119,6 +120,13 @@ export default function CalculatorV2Screen() {
   // Default to whatever getDosingReference would have returned, so behaviour is
   // unchanged for every peptide with a single block.
   const [variantId, setVariantId] = useState<string | null>(null);
+  // Vial strengths to offer as quick-picks: the supplier's own list for this
+  // compound where we have it, else the standard ladder. Only decides which
+  // chips appear — the mg field remains free-text either way.
+  const vialSizeOptions = useMemo(
+    () => (peptideId ? getVialSizeOptions(peptideId) : STANDARD_VIAL_MG),
+    [peptideId],
+  );
   const ref = useMemo(() => {
     if (!peptideId) return null;
     const chosen = variantId
@@ -551,6 +559,31 @@ export default function CalculatorV2Screen() {
             onChange={setPeptideMg}
             suffix="mg"
           />
+          {/* Quick-pick vial strengths.
+              Vial size is a property of the SUPPLIER, not the compound — the
+              same peptide ships as 5 mg from one source and 10 or 30 from
+              another. The field was already free-text, but it prefills from the
+              reference, so anyone holding a different vial had to notice the
+              mismatch and retype it. That is the retatrutide failure: a 10 mg
+              vial silently got 5 mg maths and the wrong unit count on every
+              draw.
+
+              Shows the supplier's own strengths for this compound where we have
+              them, otherwise the standard ladder. The field stays free-text for
+              anything unusual (0.1 mg IGF-1 LR3, 500 mg NAD+). */}
+          <View style={styles.chipRow}>
+            {vialSizeOptions.map((mg) => (
+              <Chip
+                key={mg}
+                label={`${mg} mg`}
+                primary={parseFloat(peptideMg) === mg}
+                onPress={() => {
+                  tapLight();
+                  setPeptideMg(String(mg));
+                }}
+              />
+            ))}
+          </View>
           <NumericField
             label="Diluent volume"
             value={diluentMl}

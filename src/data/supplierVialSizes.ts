@@ -141,3 +141,32 @@ export const SUPPLIER_VIAL_SIZES: Record<string, SupplierVial> = {
 export function getSupplierVialSizes(peptideId: string): SupplierVial | null {
   return SUPPLIER_VIAL_SIZES[peptideId] ?? null;
 }
+
+/**
+ * The vial strengths that actually exist across the catalog, smallest first.
+ *
+ * WHY A LADDER RATHER THAN A PER-COMPOUND NUMBER
+ * Vial size is a property of the SUPPLIER, not of the compound. The same
+ * peptide ships as 5 mg from one source and 10 or 30 from another, and pinning
+ * one number per compound would hand a confidently wrong concentration to
+ * everyone holding a different vial — which is exactly what happened to
+ * retatrutide, where a 10 mg vial silently got 5 mg maths and therefore the
+ * wrong unit count on every single draw.
+ *
+ * So the calculator offers these and the user picks what they are holding.
+ * Every value is observed in the AgeReCode catalog; none is invented. The
+ * long tail (0.1 mg IGF-1 LR3, 500 mg NAD+, 1500 mg glutathione) is left out
+ * of the quick-pick — the field stays free-text for anything unusual.
+ */
+export const STANDARD_VIAL_MG: number[] = [2, 5, 10, 15, 20, 30, 50, 60, 100];
+
+/**
+ * Vial strengths to offer for a peptide: the supplier's own list where we have
+ * it, otherwise the standard ladder. Either way the user chooses — this only
+ * decides which chips are worth showing first.
+ */
+export function getVialSizeOptions(peptideId: string): number[] {
+  const supplier = SUPPLIER_VIAL_SIZES[peptideId];
+  if (supplier && supplier.vialMg.length > 0) return supplier.vialMg;
+  return STANDARD_VIAL_MG;
+}
