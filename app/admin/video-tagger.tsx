@@ -121,13 +121,28 @@ export default function VideoTaggerScreen() {
     });
   }, [current?.slug]);
 
-  const filteredExercises = useMemo(() => {
+  /**
+   * Capped at 60 of 384 — this list is a plain ScrollView, not virtualised, so
+   * rendering the lot would make the tagger crawl. The cap stays; what changes
+   * is that it is now VISIBLE. It used to truncate in silence, which in a tool
+   * whose entire job is picking the right exercise means a tagger could scroll
+   * to the bottom, not find what they wanted, and pick the closest thing they
+   * could see. We already have 31 clips tagged to exercise ids that do not
+   * exist.
+   */
+  const EXERCISE_LIMIT = 60;
+  const exerciseMatches = useMemo(() => {
     const q = search.toLowerCase().trim();
-    if (!q) return EXERCISES.slice(0, 60);
+    if (!q) return EXERCISES;
     const norm = (s: string) => s.toLowerCase().replace(/[-\s]/g, '');
     const nq = norm(q);
-    return EXERCISES.filter((e) => norm(e.name).includes(nq) || norm(e.id).includes(nq)).slice(0, 60);
+    return EXERCISES.filter((e) => norm(e.name).includes(nq) || norm(e.id).includes(nq));
   }, [search]);
+  const filteredExercises = useMemo(
+    () => exerciseMatches.slice(0, EXERCISE_LIMIT),
+    [exerciseMatches],
+  );
+  const hiddenExerciseCount = exerciseMatches.length - filteredExercises.length;
 
   const selectedExercise = exerciseId ? EXERCISES.find((e) => e.id === exerciseId) : null;
 
@@ -378,7 +393,10 @@ export default function VideoTaggerScreen() {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search 289 exercises…"
+            /* Was hardcoded "Search 289 exercises…" — the catalog is 384 and
+               has been for a while. A stale count in the one place a tagger
+               looks to know what they are searching is worse than no count. */
+            placeholder={`Search ${EXERCISES.length} exercises…`}
             placeholderTextColor={t.placeholder}
             style={[styles.input, { backgroundColor: t.surface, color: t.text, borderColor: t.cardBorder }]}
           />
@@ -402,6 +420,18 @@ export default function VideoTaggerScreen() {
                 </TouchableOpacity>
               );
             })}
+            {hiddenExerciseCount > 0 && (
+              <Text style={[styles.exerciseMuscle, { color: t.textSecondary, padding: 10 }]}>
+                Showing {filteredExercises.length} of {exerciseMatches.length} matches —
+                {' '}{hiddenExerciseCount} more. Narrow your search to see them.
+              </Text>
+            )}
+            {exerciseMatches.length === 0 && (
+              <Text style={[styles.exerciseMuscle, { color: t.textSecondary, padding: 10 }]}>
+                No exercise matches “{search}”. Don’t tag this clip to the nearest
+                thing you can see — leave it and flag the name instead.
+              </Text>
+            )}
           </View>
         </View>
 

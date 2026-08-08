@@ -45,18 +45,28 @@ export default function QuickDoseScreen() {
 
   const weightKg = weightLbs ? Math.round(weightLbs / 2.20462) : null;
 
+  /**
+   * No cap. Every match, every time.
+   *
+   * This was `.slice(0, 20)` on all three branches. The list renders inside a
+   * ScrollView, so the cap bought nothing and cost discovery: browsing without
+   * a search showed the first 20 of 79 and gave no sign the other 59 existed.
+   * Anything past the twentieth entry was reachable only by already knowing its
+   * name well enough to type it — in an app whose job is to let people explore
+   * compounds they have not heard of yet.
+   */
   const filteredPeptides = useMemo(() => {
-    if (!search.trim()) return PEPTIDES.slice(0, 20);
+    if (!search.trim()) return PEPTIDES;
     // Dash/space-tolerant — "MOTSC" finds "MOTS-c", "BPC157" finds "BPC-157".
     const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
     const q = norm(search);
-    if (!q) return PEPTIDES.slice(0, 20);
+    if (!q) return PEPTIDES;
     return PEPTIDES.filter(
       (p) =>
         norm(p.name).includes(q) ||
         norm(p.id).includes(q) ||
         (p.abbreviation && norm(p.abbreviation).includes(q)),
-    ).slice(0, 20);
+    );
   }, [search]);
 
   const selectedPeptide = useMemo(

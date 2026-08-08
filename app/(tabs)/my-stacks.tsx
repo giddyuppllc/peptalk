@@ -227,14 +227,17 @@ function CalculatorTab() {
     ? PEPTIDES.find((p) => p.id === selectedPeptideId)
     : null;
 
+  // Uncapped — this dropdown scrolls (maxHeight 220, nestedScrollEnabled), so
+  // the old `.slice(0, 30)` only hid 49 of the 79 compounds from anyone
+  // browsing rather than typing an exact name.
   const filteredPeptides = useMemo(() => {
     const q = peptideSearch.trim().toLowerCase();
-    if (!q) return PEPTIDES.slice(0, 30);
+    if (!q) return PEPTIDES;
     return PEPTIDES.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
         p.abbreviation?.toLowerCase().includes(q),
-    ).slice(0, 30);
+    );
   }, [peptideSearch]);
 
   const numericVialMg = parseFloat(vialMg) || 0;

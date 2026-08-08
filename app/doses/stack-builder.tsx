@@ -495,7 +495,13 @@ export default function StackBuilderScreen() {
             {(searchQuery.trim() || selectedCategory) &&
             filteredPeptides.length > 0 ? (
               <View style={styles.resultsList}>
-                {filteredPeptides.slice(0, 12).map((peptide) => (
+                {/* No cap. This used to be `.slice(0, 12)` with nothing saying
+                    a cap existed, so tapping the Metabolic category showed 12
+                    of 23 matches and the other 11 simply were not there —
+                    indistinguishable from them not existing. Growth Hormone
+                    hid 4, Neuropeptide 1. The whole library is 79 rows and
+                    this list already scrolls, so there is nothing to cap for. */}
+                {filteredPeptides.map((peptide) => (
                   <TouchableOpacity
                     key={peptide.id}
                     style={[styles.resultRow, { borderBottomColor: cardBorder }]}

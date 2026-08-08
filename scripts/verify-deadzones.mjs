@@ -72,13 +72,48 @@ for (const file of files) {
   }
 }
 
-if (findings.length === 0) {
-  console.log(`— Dead-zone scan —\nScanned ${files.length} screens.\n`);
-  console.log('✓ No unhandled render dead zones found.');
-  process.exit(0);
+/**
+ * SECOND CHECK — silent truncation of a catalog.
+ *
+ * `CATALOG.slice(0, N)` in a picker caps what the user can ever see, and
+ * nothing on screen says a cap exists. Missing rows are indistinguishable from
+ * rows that do not exist. Found in three places at once:
+ *
+ *   stack-builder    12 of 79 — the Metabolic category alone hid 11
+ *   quick-dose       20 of 79 — 59 compounds unreachable without typing a name
+ *   my-stacks        30 of 79
+ *
+ * A cap is legitimate when the list is long and unvirtualised (video-tagger
+ * holds 384 exercises). What is not legitimate is hiding it, so a capped list
+ * must render a count of what it left out. `TRUNCATION_ALLOWED` records the
+ * ones that do, with the reason — same ratchet as KNOWN_ORPHANS in
+ * verify:routes: baseline what exists, fail on anything new.
+ */
+const CATALOGS = ['PEPTIDES', 'EXERCISES', 'VIDEOS', 'PROTOCOLS'];
+
+const TRUNCATION_ALLOWED = new Map([
+  [
+    'app/admin/video-tagger.tsx',
+    'Admin tool. 384 exercises in a plain ScrollView would crawl, so it caps at ' +
+      '60 AND renders "Showing X of Y matches — N more".',
+  ],
+]);
+
+const truncations = [];
+for (const file of files) {
+  const rel = file.replace(/\\/g, '/');
+  const lines = readFileSync(file, 'utf8').split(/\r?\n/);
+  lines.forEach((line, idx) => {
+    for (const cat of CATALOGS) {
+      if (!new RegExp(String.raw`\b${cat}\s*\.slice\(\s*0\s*,`).test(line)) continue;
+      if (TRUNCATION_ALLOWED.has(rel)) continue;
+      truncations.push({ file: rel, line: idx + 1, cat, src: line.trim() });
+    }
+  });
 }
 
 console.log(`— Dead-zone scan —\nScanned ${files.length} screens.\n`);
+
 for (const f of findings) {
   console.log(`✗ ${f.file}:${f.line}`);
   console.log(`    {${f.a} && ${f.b} && (   … main content`);
@@ -86,5 +121,20 @@ for (const f of findings) {
   console.log(`    When ${f.a} is truthy and ${f.b} is falsy, NEITHER renders.`);
   console.log(`    Fix: split the gate, or add {${f.a} && !${f.b} && (…)} explaining the gap.\n`);
 }
-console.log(`${findings.length} dead zone(s) found.`);
+
+for (const t of truncations) {
+  console.log(`✗ ${t.file}:${t.line}  silent truncation of ${t.cat}`);
+  console.log(`    ${t.src}`);
+  console.log(`    A capped catalog must say what it left out, or not cap.`);
+  console.log(`    Fix: drop the slice, or render "Showing X of Y". If the cap is`);
+  console.log(`    genuinely required, add the file to TRUNCATION_ALLOWED with a reason.\n`);
+}
+
+const total = findings.length + truncations.length;
+if (total === 0) {
+  console.log('✓ No unhandled render dead zones.');
+  console.log('✓ No silent catalog truncation.');
+  process.exit(0);
+}
+console.log(`${findings.length} dead zone(s), ${truncations.length} silent truncation(s).`);
 process.exit(1);
