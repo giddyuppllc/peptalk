@@ -25,11 +25,27 @@
  * or a dose schedule for an injectable is precisely the class of invention this
  * app cannot afford.
  *
- * NOT INCLUDED: the catalog's white-label codes (GLP-1SG, GLP-2TZ, GLP-3RT,
- * GLP-1SV, GLP-1MZ, GLP-1CG). They almost certainly map to semaglutide,
- * tirzepatide, retatrutide and so on, but "almost certainly" is not a basis for
- * writing a vial strength into a dosing app. Confirm the mapping with Edward
- * and add them then.
+ * THE GLP-* WHITE-LABEL CODES ARE RESOLVED — by CAS number, not by guessing.
+ * They were held back at first because "GLP-2TZ is probably tirzepatide" is not
+ * a basis for writing a vial strength into a dosing app. It turned out not to
+ * need a judgement call: every one of them carries an explicit Chemical Name
+ * AND a CAS registry number, which is a unique identifier for a substance.
+ *
+ *   GLP-1SG  Semaglutide    CAS 910463-68-2
+ *   GLP-2TZ  Tirzepatide    CAS 2023788-19-2
+ *   GLP-3RT  Retatrutide    CAS 2381089-83-2
+ *   GLP-1SV  Survodutide    CAS 2805997-46-8
+ *   GLP-1MZ  Mazdutide      CAS 2259884-03-0
+ *   GLP-1CG  Cagrilintide   CAS 1415456-99-3
+ *
+ * The CAS numbers are recorded on each entry so this is auditable later — a
+ * chemical name can be edited in a product listing; a CAS number identifies the
+ * molecule.
+ *
+ * Sourcing note (Edward, 2026-08-08): these arrive as a liquid product from
+ * Eli Lilly and are lyophilised in-house. So the shipped form is powder, dosed
+ * by mass, consistent with every other vial here — and the same reason
+ * Cerebrolysin's protocol was corrected off 'ml'.
  */
 
 export interface SupplierVial {
@@ -39,6 +55,12 @@ export interface SupplierVial {
   vialMg: number[];
   /** Form as the catalog states it. */
   form: string;
+  /**
+   * CAS registry number, where the catalog gives one. Recorded for the
+   * white-label codes especially: it is what makes "GLP-2TZ is tirzepatide" a
+   * verifiable fact rather than a plausible reading of a product name.
+   */
+  cas?: string;
 }
 
 /**
@@ -71,6 +93,48 @@ export const SUPPLIER_VIAL_SIZES: Record<string, SupplierVial> = {
     form: 'Lyophilized Powder',
   },
   'aod-9604': { productName: 'AOD-9604', vialMg: [5, 10], form: 'Lyophilized peptide powder' },
+
+  // ── White-label GLP codes, resolved by CAS ────────────────────────────────
+  // Liquid from Eli Lilly, lyophilised in-house — shipped as powder.
+  'tirzepatide': {
+    productName: 'GLP-2TZ',
+    vialMg: [5, 10, 15, 30, 60],
+    form: 'Lyophilized Powder',
+    cas: '2023788-19-2',
+  },
+  'survodutide': {
+    productName: 'GLP-1SV (10mg)',
+    vialMg: [10],
+    form: 'Lyophilized Powder',
+    cas: '2805997-46-8',
+  },
+  'mazdutide': {
+    productName: 'GLP-1MZ (10mg)',
+    vialMg: [10],
+    form: 'Lyophilized Powder',
+    cas: '2259884-03-0',
+  },
+  // These three already have a reconstitution reference; recorded so the
+  // supplier vial strengths are on file in one place and a future entry does
+  // not have to re-derive them from a product page.
+  'semaglutide': {
+    productName: 'GLP-1SG',
+    vialMg: [5, 10, 30],
+    form: 'Lyophilized Powder',
+    cas: '910463-68-2',
+  },
+  'retatrutide': {
+    productName: 'GLP-3RT',
+    vialMg: [5, 10, 30, 60],
+    form: 'Lyophilized Powder',
+    cas: '2381089-83-2',
+  },
+  'cagrilintide': {
+    productName: 'GLP-1CG',
+    vialMg: [5, 10],
+    form: 'Lyophilized Powder',
+    cas: '1415456-99-3',
+  },
 };
 
 /** Vial strengths the supplier lists for a peptide, or null if unknown. */
