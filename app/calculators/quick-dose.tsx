@@ -151,6 +151,34 @@ export default function QuickDoseScreen() {
     // peptide id, so depending on it covers every vial/diluent input.
   }, [protocol, dosingRef]);
 
+  /**
+   * The dose itself, from the PROTOCOL ALONE.
+   *
+   * This used to be read off `reconInfo`, which meant the "Your Dose" card —
+   * amount, route, frequency, timing — was gated behind having a curated
+   * reconstitution reference. It never needed one: every field here comes from
+   * the protocol. 14 compounds have a full protocol and no reference, and for
+   * those the entire block below (dose, route, frequency, timing, injection
+   * steps, cycling, storage, contraindications) was hidden. `!protocol` was
+   * false too, so the "no protocol available" fallback did not render either
+   * — they fell into the gap between the two branches and showed a name, a
+   * summary and a disclaimer.
+   */
+  // Always non-null, so the render below gates on `protocol` ALONE. A second
+  // operand in that gate — even a redundant one — is how the original defect
+  // was written, and `npm run verify:deadzones` flags the shape on sight.
+  const doseInfo = useMemo(() => {
+    const unit = protocol?.typicalDose?.unit ?? 'mcg';
+    return {
+      min: protocol?.typicalDose?.min ?? 0,
+      max: protocol?.typicalDose?.max ?? 0,
+      unit,
+      // IU is an activity unit with no peptide-agnostic mass conversion, so a
+      // mg/mcg restatement of it would be invented precision.
+      unitConvertible: unit !== 'IU',
+    };
+  }, [protocol]);
+
   // ── Peptide Picker ──
   if (!selectedPeptide) {
     return (
@@ -224,7 +252,7 @@ export default function QuickDoseScreen() {
           </Text>
         </GlassCard>
 
-        {protocol && reconInfo && (
+        {protocol && (
           <>
             {/* Dosing */}
             <GlassCard variant="glow" glowColor="#E89672" style={styles.section}>
@@ -236,15 +264,15 @@ export default function QuickDoseScreen() {
                 <View style={styles.doseItem}>
                   <Text style={styles.doseLabel}>Amount</Text>
                   <Text style={styles.doseValue}>
-                    {reconInfo.doseMin}-{reconInfo.doseMax} {reconInfo.doseUnit}
+                    {doseInfo.min}-{doseInfo.max} {doseInfo.unit}
                   </Text>
                   {/* IU is an activity unit with no fixed mass conversion, so a
                       mg/mcg restatement would be bogus — show it only for mg/mcg. */}
-                  {reconInfo.unitConvertible && (
+                  {doseInfo.unitConvertible && (
                     <Text style={styles.doseConversion}>
-                      = {fmt(toMg(reconInfo.doseMin, reconInfo.doseUnit))}-{fmt(toMg(reconInfo.doseMax, reconInfo.doseUnit))} mg
+                      = {fmt(toMg(doseInfo.min, doseInfo.unit))}-{fmt(toMg(doseInfo.max, doseInfo.unit))} mg
                       {' · '}
-                      {fmt(toMcg(reconInfo.doseMin, reconInfo.doseUnit), 0)}-{fmt(toMcg(reconInfo.doseMax, reconInfo.doseUnit), 0)} mcg
+                      {fmt(toMcg(doseInfo.min, doseInfo.unit), 0)}-{fmt(toMcg(doseInfo.max, doseInfo.unit), 0)} mcg
                     </Text>
                   )}
                 </View>
@@ -270,7 +298,12 @@ export default function QuickDoseScreen() {
               )}
             </GlassCard>
 
-            {/* Reconstitution */}
+            {/* Reconstitution — the ONLY section that genuinely needs a curated
+                reference, because it states a specific vial and diluent. Where
+                we have no reference we say so and hand off to the full
+                calculator, which takes the user's own vial. Silently omitting
+                the card left a hole with no explanation. */}
+            {reconInfo ? (
             <GlassCard variant="glow" glowColor="#A4D9D1" style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="water" size={20} color="#A4D9D1" />
@@ -338,6 +371,33 @@ export default function QuickDoseScreen() {
                 </Text>
               </View>
             </GlassCard>
+            ) : (
+              <GlassCard variant="glow" glowColor="#A4D9D1" style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="water" size={20} color="#A4D9D1" />
+                  <Text style={styles.sectionTitle}>How to Reconstitute</Text>
+                </View>
+                <Text style={styles.sectionText}>
+                  {selectedPeptide.name} ships at different vial strengths depending
+                  on the supplier, so there is no single reconstitution to quote here.
+                  Open the full calculator, enter the vial you have, and it will work
+                  out your concentration and syringe draw.
+                </Text>
+                <AnimatedPress
+                  onPress={() =>
+                    router.push(`/doses/calculator?peptideId=${selectedPeptide.id}` as any)
+                  }
+                  style={styles.askAimeeBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open the full dose calculator for ${selectedPeptide.name}`}
+                >
+                  <LinearGradient colors={['#A4D9D1', '#B8913D']} style={styles.askAimeeBtnGradient}>
+                    <Ionicons name="calculator" size={16} color="#fff" />
+                    <Text style={styles.askAimeeBtnText}>Open full calculator</Text>
+                  </LinearGradient>
+                </AnimatedPress>
+              </GlassCard>
+            )}
 
             {/* How to inject */}
             <GlassCard style={styles.section}>
