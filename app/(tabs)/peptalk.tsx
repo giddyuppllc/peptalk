@@ -78,6 +78,7 @@ import { useV3BridgeTheme as useTheme } from '../../src/hooks/useTheme.v3Bridge'
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
 import { useIsOnline } from '../../src/hooks/useNetworkStatus';
+import { isAllowedNavigationPath } from '../../src/lib/aimeeNavAllowlist';
 // All validation/clamping for Aimee `client_action` payloads lives in
 // a pure module so it can be unit-tested without a renderer. See
 // scripts/verify-aimee-action-sanitize.ts for the contract.
@@ -106,56 +107,11 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   });
 }
 
-/**
- * Allowlist guard for navigation paths supplied by the Aimee edge fn
- * (navigate / open_dosing_calculator client_actions). Even though the
- * server already maps known screen names through SCREEN_TO_PATH, this
- * second check refuses any unexpected path so a prompt-injection
- * escape can't land users on /admin/* or any /dev-* route. Allow:
- *   - / (root tab group)
- *   - /(tabs)/<one of the visible tabs>
- *   - /calculators/<screen>
- *   - /peptide/<id>
- *   - /subscription
- *   - /auth (sign-in / sign-up)
- */
-function isAllowedNavigationPath(path: string): boolean {
-  if (typeof path !== 'string' || path.length > 200) return false;
-  if (path.startsWith('//') || path.includes('..')) return false;
-  // No /admin/, no /dev-, no internal-only routes.
-  if (/^\/?(admin|dev-)/.test(path)) return false;
-  const allowed = [
-    /^\/?$/,
-    /^\/?\(tabs\)\/?$/,
-    /^\/?\(tabs\)\/(home|my-stacks|peptalk|nutrition|workouts|community|check-in|calendar|profile|stack-builder)(\?|\/|$)/,
-    /^\/?calculators(\/[\w-]+)?(\?.*)?$/,
-    /^\/?peptide\/[\w-]+(\?.*)?$/,
-    /^\/?subscription(\?.*)?$/,
-    /^\/?auth(\?.*)?$/,
-    /^\/?learn(\/.*)?$/,
-    /^\/?nutrition(\/[\w-]+)*(\?.*)?$/,
-    /^\/?workouts(\/[\w-]+)*(\?.*)?$/,
-    // v3 surfaces — added after the v3 refactor so navigate_to_screen
-    // can reach the new drill-ins, doses sub-routes, labs, body comp,
-    // pantry, aimee reports, community-v2, etc.
-    /^\/?tracker(\/[\w-]+)*(\?.*)?$/,
-    /^\/?doses(\/[\w-]+)*(\?.*)?$/,
-    /^\/?activity(\/[\w-]+)*(\?.*)?$/,
-    /^\/?labs(\/[\w-]+)*(\?.*)?$/,
-    /^\/?body-composition(\/[\w-]+)*(\?.*)?$/,
-    /^\/?pantry(\/[\w-]+)*(\?.*)?$/,
-    /^\/?aimee(\/[\w-]+)*(\?.*)?$/,
-    /^\/?community(\/[\w-]+)*(\?.*)?$/,
-    /^\/?journal(\/[\w-]+)*(\?.*)?$/,
-    /^\/?cycle(\/[\w-]+)*(\?.*)?$/,
-    /^\/?settings(\/[\w-]+)*(\?.*)?$/,
-    /^\/?profile(\/[\w-]+)*(\?.*)?$/,
-    /^\/?onboarding(\?.*)?$/,
-    /^\/?health-profile(\?.*)?$/,
-  ];
-  return allowed.some((rx) => rx.test(path));
-}
-
+// isAllowedNavigationPath now lives in src/lib/aimeeNavAllowlist.ts so that
+// `npm run verify:aimee` can evaluate the SAME function the app does. A copy of
+// a security allowlist is a copy that drifts, and drift here fails silently in
+// both directions: the app refusing a screen Aimee legitimately offered, or a
+// check blessing a path the app rejects.
 /* ─── Journal Toast Component ────────────────────────────────────── */
 
 const JournalToast: React.FC = () => {
