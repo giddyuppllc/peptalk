@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -17,7 +17,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+// Dimensions are read per-render via useWindowDimensions() rather than captured
+// once at module scope. Targeting Android 16 (API 36) means the system IGNORES
+// `screenOrientation` on any display >= 600dp, so tablets and unfolded
+// foldables can now rotate freely. A module-scope Dimensions.get() is evaluated
+// exactly once at import and never updates, so after a rotation every value
+// derived from it is stale — confetti would spawn across the OLD screen width
+// and fall to the OLD screen height.
 const PARTICLE_COUNT = 40;
 
 const COLORS = [
@@ -52,6 +58,7 @@ function ConfettiParticle({
   const rotate = useSharedValue(0);
   const translateX = useSharedValue(particle.x);
   const reduceMotion = useReduceMotion();
+  const { height: screenH } = useWindowDimensions();
 
   // 2026-05-17 perf+a11y: cancel worklet on unmount + honor Reduce Motion
   useEffect(() => {
@@ -71,7 +78,7 @@ function ConfettiParticle({
       );
       translateY.value = withDelay(
         particle.delay,
-        withTiming(SCREEN_H + 50, {
+        withTiming(screenH + 50, {
           duration: 2000 + Math.random() * 1000,
           easing: Easing.bezier(0.25, 0.1, 0.25, 1),
         }),
@@ -93,7 +100,7 @@ function ConfettiParticle({
       cancelAnimation(translateX);
       cancelAnimation(rotate);
     };
-  }, [visible, particle, translateY, opacity, rotate, translateX, reduceMotion]);
+  }, [visible, particle, translateY, opacity, rotate, translateX, reduceMotion, screenH]);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [
@@ -128,16 +135,19 @@ interface ConfettiProps {
 }
 
 export function Confetti({ visible, onComplete }: ConfettiProps) {
+  const { width: screenW } = useWindowDimensions();
+  // screenW is a real dependency — on rotation the particles must be re-laid
+  // out across the new width, not the width at first mount.
   const particles = useMemo<Particle[]>(() => {
     return Array.from({ length: PARTICLE_COUNT }, () => ({
-      x: Math.random() * SCREEN_W,
+      x: Math.random() * screenW,
       delay: Math.random() * 500,
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
       size: 6 + Math.random() * 8,
       rotation: 360 + Math.random() * 720,
       drift: (Math.random() - 0.5) * 100,
     }));
-  }, []);
+  }, [screenW]);
 
   useEffect(() => {
     if (visible && onComplete) {
