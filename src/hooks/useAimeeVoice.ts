@@ -17,7 +17,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Linking } from 'react-native';
+import { Linking } from 'react-native';
+import { Alert } from '../lib/alert';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import { supabase } from '../services/supabase';

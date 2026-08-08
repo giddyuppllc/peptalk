@@ -10,7 +10,7 @@
  * decline — callers should abort the AI request when it returns false.
  */
 
-import { Alert } from 'react-native';
+import { Alert } from '../lib/alert';
 import { useAiConsentStore } from '../store/useAiConsentStore';
 
 export function hasAiConsent(): boolean {

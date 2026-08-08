@@ -4,14 +4,8 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Dimensions,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { Alert } from '../lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,

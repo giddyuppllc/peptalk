@@ -15,19 +15,8 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Image,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-  TextInput,
-  Platform,
-  Linking,
-} from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image, ScrollView, ActivityIndicator, TextInput, Platform, Linking } from 'react-native';
+import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';

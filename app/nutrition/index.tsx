@@ -11,14 +11,8 @@
  */
 
 import React, { useMemo } from 'react';
-import {
-  ScrollView,
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Alert,
-} from 'react-native';
+import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
+import { Alert } from '../../src/lib/alert';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {

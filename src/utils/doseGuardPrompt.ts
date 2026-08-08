@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { Alert } from '../lib/alert';
 import type { DoseGuardWarning } from '../services/doseSafety';
 
 /**

@@ -1,15 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  Animated,
-  ScrollView,
-  Alert,
-  Modal,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated, ScrollView, Modal } from 'react-native';
+import { Alert } from '../lib/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { useSectionAccent } from '../hooks/useSectionAccent';

@@ -1,17 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  Platform,
-  ActivityIndicator,
-  Image,
-  KeyboardAvoidingView,
-} from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, Image, KeyboardAvoidingView } from 'react-native';
+import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';

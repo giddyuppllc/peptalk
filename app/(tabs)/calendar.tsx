@@ -1,18 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Modal,
-  TextInput,
-  StyleSheet,
-  Alert,
-  Animated,
-  Dimensions,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, StyleSheet, Animated, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
+import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';

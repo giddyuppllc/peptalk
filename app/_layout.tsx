@@ -8,7 +8,8 @@ import {
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Animated, Text, AppState , Platform, Linking, Alert } from 'react-native';
+import { View, StyleSheet, Animated, Text, AppState, Platform, Linking } from 'react-native';
+import { Alert } from '../src/lib/alert';
 import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';

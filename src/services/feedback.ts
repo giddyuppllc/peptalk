@@ -7,7 +7,8 @@
  * a support-desk integration. Swap for a proper ticket submission later.
  */
 
-import { Alert, Linking, Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
+import { Alert } from '../lib/alert';
 import Constants from 'expo-constants';
 
 const FEEDBACK_EMAIL = 'support@peptalk.bio';

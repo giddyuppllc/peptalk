@@ -12,17 +12,8 @@
  */
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import {
-  ScrollView,
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Pressable,
-  ActivityIndicator,
-  StyleSheet,
-  Alert,
-} from 'react-native';
+import { ScrollView, View, Text, TextInput, TouchableOpacity, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
+import { Alert } from '../../src/lib/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { V3DetailShell, GlassCard } from '../../src/components/v3';

@@ -7,7 +7,7 @@
 
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { Alert } from 'react-native';
+import { Alert } from '../lib/alert';
 import { User } from '../types';
 import { secureStorage } from '../services/secureStorage';
 import { supabase } from '../services/supabase';

@@ -7,17 +7,8 @@
  */
 
 import React, { useState } from 'react';
-import {
-  ScrollView,
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { ScrollView, View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { Alert } from '../../src/lib/alert';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { V3DetailShell, GlassCard } from '../../src/components/v3';

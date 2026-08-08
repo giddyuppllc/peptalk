@@ -4,22 +4,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 // non-trivial native bridge surface; the profile tab loads at app
 // boot and only ~5% of users ever tap the avatar. Save the parse +
 // bridge init for users who actually need it.
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-  Switch,
-  StyleSheet,
-  Animated,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Linking,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Switch, StyleSheet, Animated, Image, KeyboardAvoidingView, Platform, Linking } from 'react-native';
+import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';

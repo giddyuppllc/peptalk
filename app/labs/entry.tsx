@@ -8,16 +8,8 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  ScrollView,
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  Alert,
-  Platform,
-} from 'react-native';
+import { ScrollView, View, Text, TextInput, Pressable, StyleSheet, Platform } from 'react-native';
+import { Alert } from '../../src/lib/alert';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { V3DetailShell, GlassCard, Chip } from '../../src/components/v3';

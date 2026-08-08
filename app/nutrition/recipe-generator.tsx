@@ -4,17 +4,8 @@
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-  Image,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';

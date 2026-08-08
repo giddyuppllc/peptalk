@@ -8,19 +8,8 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  TextInput,
-  Switch,
-  StyleSheet,
-  Alert,
-  Dimensions,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, Switch, StyleSheet, Dimensions, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
+import { Alert } from '../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';

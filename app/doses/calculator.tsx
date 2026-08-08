@@ -9,16 +9,8 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  ScrollView,
-  TextInput,
-  StyleSheet,
-  Modal,
-  Alert,
-} from 'react-native';
+import { View, Text, Pressable, ScrollView, TextInput, StyleSheet, Modal } from 'react-native';
+import { Alert } from '../../src/lib/alert';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
