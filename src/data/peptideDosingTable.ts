@@ -33,6 +33,9 @@
  * "details pending" hint when absent.
  */
 
+import { getProtocolsByPeptide } from './protocols';
+import { formatDoseRange, normalizeDoseRange } from '../lib/doseUnits';
+
 export interface DosingTableEntry {
   /**
    * Canonical peptide id from src/data/peptides.ts when a match exists,
@@ -1005,8 +1008,78 @@ const TABLE_ALIASES: Record<string, string> = {
 };
 
 /**
+ * How often the protocol frequency enum reads in the two frequency columns.
+ * Only the values a protocol actually carries — nothing is inferred.
+ */
+const FREQUENCY_LABELS: Record<string, { daily?: string; weekly?: string }> = {
+  daily:       { daily: '1x Daily',        weekly: 'Daily' },
+  twice_daily: { daily: '2x Daily',        weekly: 'Daily' },
+  eod:         { daily: '1x On Dosing Days', weekly: 'Every Other Day' },
+  tiw:         { daily: '1x On Dosing Days', weekly: '3x Weekly' },
+  biw:         { daily: '1x On Dosing Days', weekly: '2x Weekly' },
+  weekly:      { daily: '1x On Dosing Days', weekly: '1x Weekly' },
+  biweekly:    { daily: '1x On Dosing Days', weekly: 'Every 2 Weeks' },
+  monthly:     { daily: '1x On Dosing Days', weekly: 'Monthly' },
+};
+
+/**
+ * Build a dosing-table entry from a protocol when the master table has no row.
+ *
+ * WHY THIS EXISTS
+ * `npm run verify:data` reported "No dosing card will render for: …16 ids" on
+ * every run, buried under 26 cosmetic warnings, and nobody read it. Ten of
+ * those sixteen — including cerebrolysin, which Jamie asked about directly
+ * ("is there a way to have this on the actual dosing?") — have a COMPLETE
+ * protocol in protocols.ts. The dosing information existed; the card simply
+ * read from a table that had no row for them, so the section vanished.
+ *
+ * The tempting fix is to transcribe those numbers into PEPTIDE_DOSING_TABLE.
+ * That is what produced the MOTS-c defect: the table said 200mcg-400mcg while
+ * the protocol next to it said 1000-2000 mcg, and the card rendered the wrong
+ * one. Two copies of a dosing number will eventually disagree, and the user
+ * sees whichever one the UI happens to read.
+ *
+ * So this DERIVES the row instead. Only fields the protocol genuinely carries
+ * are filled; `timeOffBetweenCycles` and `fasted` are left undefined rather
+ * than guessed, because a wrong "Fasted: No" is worse than a blank row.
+ * Dose formatting goes through src/lib/doseUnits so an IU or ml protocol is
+ * never rendered as micrograms.
+ */
+function deriveEntryFromProtocol(peptideId: string): DosingTableEntry | null {
+  const protocols = getProtocolsByPeptide(peptideId);
+  const protocol = protocols[0];
+  if (!protocol) return null;
+
+  const { typicalDose, durationWeeks, frequency } = protocol;
+  const range = normalizeDoseRange(typicalDose.min, typicalDose.max, typicalDose.unit);
+  const freq = FREQUENCY_LABELS[frequency];
+
+  return {
+    peptideId,
+    compound: protocol.name,
+    inCatalog: true,
+    dosingRange: formatDoseRange(range),
+    cycleLength:
+      durationWeeks.min === durationWeeks.max
+        ? `${durationWeeks.min} Weeks`
+        : `${durationWeeks.min}-${durationWeeks.max} Weeks`,
+    frequencyDaily: freq?.daily,
+    // The protocol's own frequencyLabel is more specific than the enum when it
+    // exists ("Daily for 10-20 days, repeated as courses"), so prefer it.
+    frequencyWeekly: protocol.frequencyLabel ?? freq?.weekly,
+    // 0 = derived, not a reference into the master table's Notes [1..63] pages.
+    titrationNoteRef: 0,
+    titrationNote: protocol.importantNotes?.[0],
+    titrationNotePending: false,
+    // timeOffBetweenCycles / fasted intentionally omitted — a protocol does not
+    // carry them and inventing a value would be worse than showing nothing.
+  };
+}
+
+/**
  * Look up the master dosing-table entry for a peptide id. Falls back to
- * alias resolution. Returns null when the compound isn't in the table.
+ * alias resolution, then to deriving one from the peptide's protocol.
+ * Returns null only when the compound has neither.
  */
 export function getDosingTableEntry(peptideId: string): DosingTableEntry | null {
   if (!peptideId) return null;
@@ -1017,7 +1090,7 @@ export function getDosingTableEntry(peptideId: string): DosingTableEntry | null 
     const aliased = PEPTIDE_DOSING_TABLE.find((e) => e.peptideId === aliasTarget);
     if (aliased) return aliased;
   }
-  return null;
+  return deriveEntryFromProtocol(peptideId);
 }
 
 /** All entries (e.g. for an at-a-glance reference screen). */
