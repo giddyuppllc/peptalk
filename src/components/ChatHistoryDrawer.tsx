@@ -1,13 +1,19 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated, ScrollView, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions, Animated, ScrollView, Modal } from 'react-native';
 import { Alert } from '../lib/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { useSectionAccent } from '../hooks/useSectionAccent';
 import { useChatStore, Chat } from '../store/useChatStore';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.82, 340);
+// Drawer width tracks the LIVE window. It was derived from a module-scope
+// Dimensions.get(), evaluated once at import, so after a rotation the drawer
+// kept the old width AND its closed offset (-DRAWER_WIDTH) no longer pushed it
+// fully off-screen — a sliver would sit pinned to the edge. Android 16 ignores
+// screenOrientation on displays >= 600dp, so rotation is now possible.
+function drawerWidth(windowWidth: number): number {
+  return Math.min(windowWidth * 0.82, 340);
+}
 
 interface Props {
   visible: boolean;
@@ -34,8 +40,17 @@ function formatRelative(iso: string): string {
 export const ChatHistoryDrawer: React.FC<Props> = ({ visible, onClose }) => {
   const t = useTheme();
   const accent = useSectionAccent();
+  const { width: windowW } = useWindowDimensions();
+  const DRAWER_WIDTH = drawerWidth(windowW);
   const translateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
+
+  // Re-park a CLOSED drawer at the new offset when the window changes. Without
+  // this the ref keeps the value it was seeded with, so rotating while closed
+  // leaves the drawer partially on screen.
+  useEffect(() => {
+    if (!visible) translateX.setValue(-DRAWER_WIDTH);
+  }, [DRAWER_WIDTH, visible, translateX]);
 
   const chats = useChatStore((s) => s.chats);
   const activeChatId = useChatStore((s) => s.activeChatId);
@@ -72,7 +87,7 @@ export const ChatHistoryDrawer: React.FC<Props> = ({ visible, onClose }) => {
         }),
       ]).start();
     }
-  }, [visible, translateX, backdropOpacity]);
+  }, [visible, translateX, backdropOpacity, DRAWER_WIDTH]);
 
   const handleNewChat = () => {
     newChat();
@@ -128,6 +143,9 @@ export const ChatHistoryDrawer: React.FC<Props> = ({ visible, onClose }) => {
           style={[
             styles.drawer,
             {
+              // width is inline: StyleSheet.create runs once at module scope and
+              // cannot read a hook, so it could never track the window.
+              width: DRAWER_WIDTH,
               backgroundColor: t.bg,
               borderRightColor: t.cardBorder,
               transform: [{ translateX }],
@@ -229,7 +247,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     left: 0,
-    width: DRAWER_WIDTH,
+    // width applied inline at the call site — it tracks the window.
     borderRightWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 0 },

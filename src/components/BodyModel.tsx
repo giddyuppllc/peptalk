@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import Svg, { Path, G, Defs, RadialGradient, Stop, Circle } from 'react-native-svg';
 import Animated, {
   useSharedValue,
@@ -17,9 +17,19 @@ import Animated, {
 import { tapLight } from '../utils/haptics';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-const SVG_W = Math.min(SCREEN_W - 48, 300);
-const SVG_H = SVG_W * 1.9;
+/**
+ * The SVG is sized from the live window width via useWindowDimensions() rather
+ * than a module-scope Dimensions.get(), which is evaluated once at import and
+ * never updates. Android 16 ignores `screenOrientation` on displays >= 600dp,
+ * so tablets and unfolded foldables rotate freely and a captured width would
+ * leave the body model sized for the previous orientation.
+ *
+ * The `min(width - 48, 300)` cap is unchanged — it just recomputes now.
+ */
+function svgSize(windowWidth: number): { w: number; h: number } {
+  const w = Math.min(windowWidth - 48, 300);
+  return { w, h: w * 1.9 };
+}
 
 interface BodyModelProps {
   selectedRegion: string | null;
@@ -79,6 +89,8 @@ const REGION_PATHS: Record<string, { d: string; cx: number; cy: number }> = {
 export function BodyModel({ selectedRegion, onSelectRegion, regionColors }: BodyModelProps) {
   const pulse = useSharedValue(0.6);
   const reduceMotion = useReduceMotion();
+  const { width: windowW } = useWindowDimensions();
+  const { w: SVG_W, h: SVG_H } = svgSize(windowW);
 
   // 2026-05-17 perf+a11y: cancel worklet on unmount + honor Reduce Motion
   React.useEffect(() => {
@@ -102,7 +114,10 @@ export function BodyModel({ selectedRegion, onSelectRegion, regionColors }: Body
 
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.glowBg, pulseStyle]}>
+      {/* Size is applied inline, not in StyleSheet.create — that runs once at
+          module scope and cannot read a hook, so a rotation would leave the
+          glow at the previous orientation's dimensions. */}
+      <Animated.View style={[styles.glowBg, { width: SVG_W, height: SVG_H }, pulseStyle]}>
         {selectedRegion && (
           <View
             style={[
@@ -194,8 +209,7 @@ const styles = StyleSheet.create({
   },
   glowBg: {
     position: 'absolute',
-    width: SVG_W,
-    height: SVG_H,
+    // width/height applied inline at the call site — they depend on window size.
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,

@@ -185,8 +185,11 @@ const ratingLabel = (v: number): string => {
   }
 };
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DAY_CELL_SIZE = (SCREEN_WIDTH - Spacing.md * 4) / 7;
+// SCREEN_WIDTH / DAY_CELL_SIZE removed 2026-08-08: DAY_CELL_SIZE was computed
+// and never read, so both were dead. They were also a rotation hazard — a
+// module-scope Dimensions.get() is evaluated once at import and never updates,
+// and Android 16 lets displays >= 600dp rotate freely regardless of
+// screenOrientation. Deleting beats migrating code nothing uses.
 
 // ---------------------------------------------------------------------------
 // Animated Day Detail Panel

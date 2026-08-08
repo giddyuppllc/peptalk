@@ -26,7 +26,7 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -36,7 +36,12 @@ import { useTutorialStore, type TargetRect, type TourVariant } from '../../store
 import { useTier } from '../../hooks/useFeatureGate';
 import { TOUR_SCRIPTS, type TourStep } from '../../config/tourSteps';
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+// Screen height comes from useWindowDimensions() in SpotlightLayout, not a
+// module-scope Dimensions.get() — that is evaluated once at import and never
+// updates. It decides whether the tooltip sits above or below the highlighted
+// element, so a stale value after rotation can park the tooltip off-screen.
+// Android 16 ignores screenOrientation on displays >= 600dp, so rotation can
+// now happen. (SCREEN_W was destructured and never used — dropped.)
 
 const HIGHLIGHT_PADDING = 10;
 const TOOLTIP_GAP = 14;
@@ -139,6 +144,8 @@ interface SpotlightLayoutProps extends LayoutProps {
 }
 
 function SpotlightLayout({ rect, step, stepIndex, totalSteps, onNext, onSkip, isLast }: SpotlightLayoutProps) {
+  const { height: screenH } = useWindowDimensions();
+
   // Expand the rect by padding for a softer highlight area
   const highlightX = Math.max(0, rect.x - HIGHLIGHT_PADDING);
   const highlightY = Math.max(0, rect.y - HIGHLIGHT_PADDING);
@@ -146,7 +153,7 @@ function SpotlightLayout({ rect, step, stepIndex, totalSteps, onNext, onSkip, is
   const highlightH = rect.height + HIGHLIGHT_PADDING * 2;
 
   // Decide tooltip position — below target unless target is in bottom half
-  const tooltipAbove = rect.y + rect.height / 2 > SCREEN_H / 2;
+  const tooltipAbove = rect.y + rect.height / 2 > screenH / 2;
   const tooltipY = tooltipAbove
     ? Math.max(60, highlightY - TOOLTIP_GAP - 210) // 210 ~= tooltip height estimate
     : highlightY + highlightH + TOOLTIP_GAP;

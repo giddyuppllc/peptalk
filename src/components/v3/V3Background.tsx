@@ -12,13 +12,18 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useV3Theme } from '../../theme/V3ThemeProvider';
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
-
 export function V3Background() {
+  // Every blob below is sized and positioned as a multiple of the window. Read
+  // live via useWindowDimensions() rather than a module-scope Dimensions.get(),
+  // which is evaluated once at import and never updates — on rotation the whole
+  // background would stay scaled to the previous orientation, leaving hard
+  // edges where the blobs no longer cover the screen. Android 16 ignores
+  // screenOrientation on displays >= 600dp, so this can now happen.
+  const { width: SCREEN_W, height: SCREEN_H } = useWindowDimensions();
   const t = useV3Theme();
 
   if (t.isDark) {

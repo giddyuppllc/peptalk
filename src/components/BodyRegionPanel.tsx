@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import { Alert } from '../lib/alert';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -23,8 +23,13 @@ import { getExercisesByMuscle } from '../data/exercises';
 import { useCheckinStore } from '../store/useCheckinStore';
 import { useBodyMapStore } from '../store/useBodyMapStore';
 
-const { height: SCREEN_H } = Dimensions.get('window');
-const PANEL_H = SCREEN_H * 0.52;
+// Panel height is 52% of the LIVE window height. It used to be derived from a
+// module-scope Dimensions.get(), evaluated once at import, so after a rotation
+// the sheet kept the previous orientation's height — and its hidden position
+// (PANEL_H + 50) would no longer be off-screen, leaving a strip visible.
+// Android 16 ignores screenOrientation on displays >= 600dp, so this can now
+// actually happen.
+const PANEL_HEIGHT_RATIO = 0.52;
 
 interface BodyRegionPanelProps {
   region: BodyRegion | null;
@@ -32,14 +37,18 @@ interface BodyRegionPanelProps {
 
 export function BodyRegionPanel({ region }: BodyRegionPanelProps) {
   const router = useRouter();
-  const translateY = useSharedValue(PANEL_H + 50);
+  const { height: screenH } = useWindowDimensions();
+  const panelH = screenH * PANEL_HEIGHT_RATIO;
+  const translateY = useSharedValue(panelH + 50);
 
   useEffect(() => {
-    translateY.value = withSpring(region ? 0 : PANEL_H + 50, {
+    translateY.value = withSpring(region ? 0 : panelH + 50, {
       damping: 20,
       stiffness: 200,
     });
-  }, [region]);
+    // panelH is a real dependency: on rotation the closed position must move to
+    // the new off-screen offset, or the panel peeks back into view.
+  }, [region, panelH, translateY]);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
@@ -118,7 +127,7 @@ export function BodyRegionPanel({ region }: BodyRegionPanelProps) {
   if (!region) return null;
 
   return (
-    <Animated.View style={[styles.panel, animStyle]}>
+    <Animated.View style={[styles.panel, { height: panelH }, animStyle]}>
       <LinearGradient
         colors={['rgba(15,23,32,0.98)', 'rgba(26,37,53,0.99)']}
         style={styles.gradient}
@@ -262,7 +271,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: PANEL_H,
+    // height applied inline at the call site — it tracks the window.
     zIndex: 100,
   },
   gradient: {

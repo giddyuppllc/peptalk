@@ -16,7 +16,7 @@ import {
   Text,
   Pressable,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Animated, {
@@ -28,8 +28,12 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { useV3Theme } from '../../theme/V3ThemeProvider';
 
-const { height: SCREEN_H } = Dimensions.get('window');
-const SHEET_HEIGHT = SCREEN_H * 0.65;
+// Sheet height is 65% of the LIVE window height. It was derived from a
+// module-scope Dimensions.get(), evaluated once at import, so after a rotation
+// the sheet kept the old height and its closed position (translateY =
+// SHEET_HEIGHT) no longer pushed it off-screen. Android 16 ignores
+// screenOrientation on displays >= 600dp, so rotation is now possible.
+const SHEET_HEIGHT_RATIO = 0.65;
 
 interface Props {
   visible: boolean;
@@ -40,6 +44,8 @@ interface Props {
 
 export function AimeeChatSheet({ visible, onClose, intent }: Props) {
   const t = useV3Theme();
+  const { height: screenH } = useWindowDimensions();
+  const SHEET_HEIGHT = screenH * SHEET_HEIGHT_RATIO;
   const translateY = useSharedValue(SHEET_HEIGHT);
   const backdropOpacity = useSharedValue(0);
 
@@ -51,7 +57,7 @@ export function AimeeChatSheet({ visible, onClose, intent }: Props) {
       translateY.value = withSpring(SHEET_HEIGHT, { mass: 1, stiffness: 280, damping: 30 });
       backdropOpacity.value = withTiming(0, { duration: 180 });
     }
-  }, [visible, translateY, backdropOpacity]);
+  }, [visible, translateY, backdropOpacity, SHEET_HEIGHT]);
 
   const sheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],

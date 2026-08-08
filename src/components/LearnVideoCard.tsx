@@ -19,7 +19,7 @@ import {
   ActivityIndicator,
   StatusBar,
   Pressable,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,7 +38,10 @@ interface Props {
   gradientColors?: [string, string, ...string[]];
 }
 
-const { width: SCREEN_W } = Dimensions.get('window');
+// Width comes from useWindowDimensions() inside the component, not a
+// module-scope Dimensions.get() — that is evaluated once at import and never
+// updates, and Android 16 ignores screenOrientation on displays >= 600dp, so a
+// rotation would leave the full-screen video sized to the old orientation.
 
 export function LearnVideoCard({
   slug,
@@ -47,6 +50,7 @@ export function LearnVideoCard({
   gradientColors,
 }: Props) {
   const t = useTheme();
+  const { width: screenW } = useWindowDimensions();
   const { data, loading, error, refresh } = useLearnVideo(slug);
   const [open, setOpen] = useState(false);
 
@@ -120,7 +124,7 @@ export function LearnVideoCard({
             {data?.url ? (
               <StreamVideoSurface
                 uri={data.url}
-                style={styles.videoPlayer}
+                style={[styles.videoPlayer, { width: screenW }]}
                 shouldPlay
                 isLooping={false}
               />
@@ -228,7 +232,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   videoPlayer: {
-    width: SCREEN_W,
+    // width applied inline at the call site — it tracks the window.
     aspectRatio: 16 / 9,
   },
   modalLoading: {

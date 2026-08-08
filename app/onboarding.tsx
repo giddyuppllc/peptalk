@@ -66,7 +66,9 @@ const COMMUNITY_PRESETS: {
   },
 ];
 
-const { width: SW } = Dimensions.get('window');
+// `SW` removed 2026-08-08 — it was declared and never read. It was also a
+// rotation hazard: module-scope Dimensions.get() is evaluated once at import,
+// and Android 16 lets displays >= 600dp rotate regardless of screenOrientation.
 
 // ─── Options ────────────────────────────────────────────────────────────────
 

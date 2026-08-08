@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, FlatList, StyleSheet, TextInput, Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Image, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, FlatList, StyleSheet, TextInput, Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Image, useWindowDimensions } from 'react-native';
 import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -41,7 +41,9 @@ import {
 } from '../../src/services/foodSearchService';
 import { todayLocalISO } from '../../src/utils/dateUtil';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+// Scanner cutout dimensions come from useWindowDimensions() inside the modal,
+// not a module-scope Dimensions.get() evaluated once at import. Android 16
+// ignores screenOrientation on displays >= 600dp, so the window can change.
 
 // ---------------------------------------------------------------------------
 // Food category → icon + color mapping
@@ -711,6 +713,10 @@ interface BarcodeScannerProps {
 }
 
 function BarcodeScannerModal({ visible, onClose, onScanned }: BarcodeScannerProps) {
+  // Scanner cutout is sized off the LIVE window — a rotation while the scanner
+  // is open must resize the aiming box, or it no longer matches where the
+  // camera is actually reading.
+  const { width: windowW } = useWindowDimensions();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
@@ -808,7 +814,7 @@ function BarcodeScannerModal({ visible, onClose, onScanned }: BarcodeScannerProp
 
             {/* Scan overlay */}
             <View style={styles.scanOverlay}>
-              <View style={styles.scanCutout}>
+              <View style={[styles.scanCutout, { width: windowW * 0.7, height: windowW * 0.45 }]}>
                 <View style={[styles.scanCorner, styles.scanCornerTL]} />
                 <View style={[styles.scanCorner, styles.scanCornerTR]} />
                 <View style={[styles.scanCorner, styles.scanCornerBL]} />
@@ -2299,7 +2305,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   scanCutout: {
-    width: SCREEN_WIDTH * 0.7, height: SCREEN_WIDTH * 0.45,
+    // width/height applied inline at the call site — they track the window.
     borderWidth: 2, borderColor: Colors.almostAquaDeep, borderRadius: 16,
     position: 'relative',
   },

@@ -7,7 +7,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Switch, Image, Dimensions } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Switch, Image, useWindowDimensions } from 'react-native';
 import { Alert } from '../../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -28,6 +28,10 @@ import {
 export default function PostDetailScreen() {
   const t = useTheme();
   const router = useRouter();
+  // Two images per row, minus the row's horizontal padding and the 6px gap.
+  // Derived from the LIVE window so a rotation re-lays the grid out.
+  const { width: windowW } = useWindowDimensions();
+  const postImageWidth = (windowW - Spacing.md * 2 - Spacing.lg * 2 - 6) / 2;
   const { id } = useLocalSearchParams<{ id: string }>();
   const postId = String(id ?? '');
 
@@ -380,7 +384,10 @@ export default function PostDetailScreen() {
                   <Image
                     key={url}
                     source={{ uri: url }}
-                    style={styles.postImage}
+                    // Width is inline: it derives from the window, and
+                    // StyleSheet.create runs once at module scope so it cannot
+                    // track a rotation.
+                    style={[styles.postImage, { width: postImageWidth }]}
                     resizeMode="cover"
                   />
                 ))}
@@ -652,7 +659,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   postImage: {
-    width: (Dimensions.get('window').width - Spacing.md * 2 - Spacing.lg * 2 - 6) / 2,
+    // width applied inline at the call site — it derives from the window.
     aspectRatio: 1,
     borderRadius: 10,
   },
