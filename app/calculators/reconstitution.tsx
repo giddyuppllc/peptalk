@@ -65,6 +65,33 @@ export default function ReconstitutionCalculatorScreen() {
   const vialMcg = vialUnit === 'mg' ? vialRaw * 1000 : vialRaw;
   const doseMcg = doseUnit === 'mg' ? doseRaw * 1000 : doseRaw;
 
+  /**
+   * mg/mcg slip guard.
+   *
+   * First attempt used doseSafety's unknown-compound path (>10,000 mcg reads as
+   * mg/mcg confusion). A test caught that it fires on LEGITIMATE doses: 20 mg
+   * is 20,000 mcg, so Cerebrolysin (20-30 mg) and thymalin (up to 20 mg) — real
+   * powders dosed in mg — would warn every time. A warning that fires on
+   * correct input is how users learn to dismiss warnings.
+   *
+   * This screen can do better, because unlike the other calculators it knows
+   * the VIAL as well as the dose. A single dose cannot exceed what is in the
+   * vial. That is true regardless of compound, unit, or how the vial was
+   * reconstituted — so it never fires on a correct entry, and it catches the
+   * slip precisely: 250 typed as mg against a 10 mg vial is 250,000 mcg out of
+   * 10,000, which is impossible rather than merely unusual.
+   */
+  const doseWarning = useMemo(() => {
+    if (vialMcg <= 0 || doseMcg <= 0) return null;
+    if (doseMcg <= vialMcg) return null;
+    const dosesShort = doseMcg / vialMcg;
+    return (
+      `That dose is ${dosesShort >= 10 ? Math.round(dosesShort) : dosesShort.toFixed(1)}x ` +
+      `the entire vial — check the ${doseUnit === 'mg' ? 'mg' : 'mcg'} toggle on the dose. ` +
+      `A single dose can't be larger than what's in the vial.`
+    );
+  }, [vialMcg, doseMcg, doseUnit]);
+
   // Core calculations (per peptidedosages.com formula)
   const concentrationPerMl = waterMl > 0 ? vialMcg / waterMl : 0; // mcg per 1mL
   // U-100 insulin syringe: 100 ticks/units per 1mL, so 1 tick = 0.01mL.
@@ -277,6 +304,32 @@ export default function ReconstitutionCalculatorScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+
+            {/* mg/mcg slip guard.
+                This screen has three free-text fields and TWO input unit
+                toggles, and doseUnit defaults to 'mg'. Typing 250 meaning
+                250 mcg without noticing the toggle computes a syringe draw for
+                250 mg — a 1000x error, silently, with a confident-looking
+                result. It was the only calculator checkDoseGuards was never
+                wired into.
+
+                There is no peptide picker here, so this uses the guard's
+                unknown-compound path: anything over 10,000 mcg is treated as
+                probable mg/mcg confusion. That leaves a plausible dose silent
+                (a warning on every calculation is a warning nobody reads) and
+                catches the slip that actually hurts.
+
+                Advisory, not blocking — the screen writes nothing, so there is
+                no action to gate. It sits directly under the input that
+                caused it. */}
+            {doseWarning ? (
+              <View style={[styles.slipWarning, { borderColor: '#B45309', backgroundColor: '#B4530918' }]}>
+                <Ionicons name="warning-outline" size={16} color="#B45309" />
+                <Text style={[styles.slipWarningText, { color: '#7C3D06' }]}>
+                  {doseWarning}
+                </Text>
+              </View>
+            ) : null}
           </GlassCard>
         </View>
 
@@ -541,6 +594,22 @@ const styles = StyleSheet.create({
     padding: 3,
     borderRadius: BorderRadius.md,
     backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  // mg/mcg slip warning — sits directly beneath the dose input that caused it.
+  slipWarning: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginTop: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+  },
+  slipWarningText: {
+    flex: 1,
+    fontSize: FontSizes.sm,
+    lineHeight: 18,
+    fontWeight: '600',
   },
   unitToggleBtn: {
     paddingVertical: 6,

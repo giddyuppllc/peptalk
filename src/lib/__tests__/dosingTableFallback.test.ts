@@ -34,11 +34,19 @@ describe('dosing card — derived from protocol when no row exists', () => {
     expect(e?.dosingRange).toBeTruthy();
   });
 
-  it('cerebrolysin shows ML, never micrograms', () => {
-    // The whole reason Jamie flagged it: an ml dose was rendering as mcg.
+  it('cerebrolysin shows MG, never micrograms', () => {
+    // Two corrections landed here in sequence, and the order matters:
+    //   1. The renderer was printing an 'ml' dose as 'mcg'. Fixed in doseUnits.
+    //   2. Then Edward confirmed the product is a POWDER, not the European
+    //      ready-mixed ampoule — so 'ml' was the wrong unit for the form
+    //      entirely. The protocol is now 20-30 mg (Jamie's figure).
+    // This asserts the end state: mg, and never mcg. An earlier version of
+    // this test asserted 'ml' and failed the moment the data was corrected,
+    // which is the test doing its job.
     const e = getDosingTableEntry('cerebrolysin');
-    expect(e?.dosingRange).toContain('ml');
+    expect(e?.dosingRange).toContain('mg');
     expect(e?.dosingRange).not.toContain('mcg');
+    expect(e?.dosingRange).not.toContain('ml');
   });
 
   it('carries the protocol frequency label verbatim', () => {

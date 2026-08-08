@@ -943,17 +943,26 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     id: 'proto-cerebrolysin-im',
     peptideId: 'cerebrolysin',
     name: 'Cerebrolysin Neuroprotective Protocol',
-    typicalDose: { min: 5, max: 30, unit: 'ml' },
+    // CORRECTED 2026-08-08 (Jamie Esposito, confirmed by Edward: "it's a powder
+    // for the peptide in question"). This read `{ min: 5, max: 30, unit: 'ml' }`,
+    // which described the EUROPEAN PHARMACEUTICAL AMPOULE — a ready-mixed
+    // solution dosed by volume. What users of this app actually have is
+    // lyophilised powder, which is dosed by MASS and reconstituted like every
+    // other compound here. Jamie's figure is 20-30 mg daily for 10-20 days.
+    //
+    // The old value was wrong twice over: wrong unit for the product form, and
+    // it made this the only 'ml' protocol in the dataset — which is what let it
+    // slip through the mcg-formatting bug for so long.
+    typicalDose: { min: 20, max: 30, unit: 'mg' },
     route: 'intramuscular',
     frequency: 'daily',
     frequencyLabel: 'Daily for 10-20 days, repeated as courses',
     durationWeeks: { min: 2, max: 4 },
     timing: 'Morning, before light meal',
-    storageNotes: 'Refrigerate (2-8°C), protected from light. Do not freeze. Use ampoules within their stamped expiry.',
+    storageNotes: 'Lyophilised powder at 2-8°C, protected from light. Do not freeze. Reconstituted, use within the window on the vial.',
     importantNotes: [
       'Porcine-derived neurotrophic peptide complex; approved in 50+ countries for stroke, dementia, TBI rehabilitation',
-      'Standard course: 5-10 ml IM daily for 10-20 days, repeated every 3-6 months',
-      'High-dose IV infusion (10-50 ml in saline, slow) used in stroke/dementia clinical settings',
+      'Typical course: 20-30 mg daily for 10-20 days, repeated every 3-6 months',
       'Cumulative effect — benefits develop over multiple courses, not from single injections',
       'Do not mix in syringe with other medications — protein complex may aggregate',
       'Anaphylaxis is rare but documented; physician supervision strongly recommended for first dose',
