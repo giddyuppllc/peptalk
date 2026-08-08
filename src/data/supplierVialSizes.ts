@@ -143,30 +143,76 @@ export function getSupplierVialSizes(peptideId: string): SupplierVial | null {
 }
 
 /**
- * The vial strengths that actually exist across the catalog, smallest first.
+ * Common vial strengths, offered as quick-picks in the calculator.
  *
- * WHY A LADDER RATHER THAN A PER-COMPOUND NUMBER
- * Vial size is a property of the SUPPLIER, not of the compound. The same
- * peptide ships as 5 mg from one source and 10 or 30 from another, and pinning
- * one number per compound would hand a confidently wrong concentration to
- * everyone holding a different vial — which is exactly what happened to
- * retatrutide, where a 10 mg vial silently got 5 mg maths and therefore the
- * wrong unit count on every single draw.
+ * Vial size is a property of the SUPPLIER, not the compound — the same peptide
+ * ships as 5 mg from one source and 10 or 30 from another. Pinning one number
+ * per compound hands a confidently wrong concentration to everyone holding a
+ * different vial: that is the retatrutide case, where a 10 mg vial silently got
+ * 5 mg maths and the wrong unit count on every draw.
  *
- * So the calculator offers these and the user picks what they are holding.
- * Every value is observed in the AgeReCode catalog; none is invented. The
- * long tail (0.1 mg IGF-1 LR3, 500 mg NAD+, 1500 mg glutathione) is left out
- * of the quick-pick — the field stays free-text for anything unusual.
+ * So the user picks, and the maths follows. These values are the ones that
+ * actually turn up in practice (read off the AgeReCode catalog rather than
+ * invented), but they are a CONVENIENCE, not a constraint — the mg field is
+ * free-text, so any vial works, including the long tail these skip: 0.1 mg
+ * IGF-1 LR3, 500 mg NAD+, 1500 mg glutathione.
  */
 export const STANDARD_VIAL_MG: number[] = [2, 5, 10, 15, 20, 30, 50, 60, 100];
 
 /**
- * Vial strengths to offer for a peptide: the supplier's own list where we have
- * it, otherwise the standard ladder. Either way the user chooses — this only
- * decides which chips are worth showing first.
+ * Vial strengths to offer as quick-picks. The SAME ladder for every compound.
+ *
+ * An earlier version narrowed this to the supplier's own list where we had one,
+ * so Cerebrolysin offered 60 mg and nothing else. That is wrong for what this
+ * app is. PepTalk is an education resource, not a storefront: someone reading
+ * about a compound should be able to put in whatever vial they are curious
+ * about — one they hold, one they saw elsewhere, one they are comparing
+ * against — and have the maths follow. Restricting the options to what one
+ * supplier stocks turns an exploration tool into a catalogue, and quietly tells
+ * the user their vial does not exist.
+ *
+ * SUPPLIER_VIAL_SIZES stays as reference data — it is where the ladder's values
+ * came from, and it records the CAS mapping for the white-label codes — but it
+ * does not gate what the calculator will compute.
  */
-export function getVialSizeOptions(peptideId: string): number[] {
-  const supplier = SUPPLIER_VIAL_SIZES[peptideId];
-  if (supplier && supplier.vialMg.length > 0) return supplier.vialMg;
+export function getVialSizeOptions(_peptideId?: string): number[] {
   return STANDARD_VIAL_MG;
+}
+
+/**
+ * The most common vial strength — the starting point when we have nothing
+ * better. 10 mg is the modal size across the catalog.
+ */
+export const DEFAULT_VIAL_MG = 10;
+
+/**
+ * A vial strength to PREFILL the calculator with, so the maths runs the moment
+ * a compound is opened instead of sitting on a dead form.
+ *
+ * WHY THIS EXISTS
+ * The calculator only primed its inputs when the compound had a curated
+ * reconstitution reference. 33 of 79 compounds have one, so the other 46 — 58%
+ * of the library — opened to an empty mg field, which made `result` null and
+ * rendered no concentration, no syringe draw, no vial-duration, nothing. The
+ * calculator was silently unavailable for most of the app while looking
+ * perfectly normal.
+ *
+ * Preference order, best evidence first:
+ *   1. the curated reference's vialMg  (caller passes it — real, verified)
+ *   2. the supplier catalog listing    (real product data)
+ *   3. DEFAULT_VIAL_MG                 (a starting point, nothing more)
+ *
+ * ⚠️ This is a PREFILL FOR AN INPUT, not a claim about the compound, and the
+ * distinction is the whole point. Inventing a dose or a schedule would be
+ * asserting clinical fact we do not have — that is the line this app must not
+ * cross. Choosing which number to put in a user-editable box, sitting directly
+ * above a row of one-tap alternatives with the current one highlighted, asserts
+ * nothing: the vial in play is always visible on screen and always one tap from
+ * being changed. That visibility is what stops the retatrutide failure, where
+ * the assumed strength was buried in a text field nobody re-read.
+ */
+export function getDefaultVialMg(peptideId?: string, referenceVialMg?: number): number {
+  if (referenceVialMg && referenceVialMg > 0) return referenceVialMg;
+  const supplier = peptideId ? SUPPLIER_VIAL_SIZES[peptideId] : undefined;
+  return supplier?.vialMg[0] ?? DEFAULT_VIAL_MG;
 }

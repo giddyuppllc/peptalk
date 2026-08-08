@@ -19,7 +19,7 @@ import {
 } from '../../data/supplierVialSizes';
 
 describe('the standard ladder', () => {
-  it('is offered when we have no supplier list for the compound', () => {
+  it('is offered for every compound, known or not', () => {
     expect(getVialSizeOptions('some-unknown-peptide')).toEqual(STANDARD_VIAL_MG);
     expect(getVialSizeOptions('')).toEqual(STANDARD_VIAL_MG);
   });
@@ -43,27 +43,43 @@ describe('the standard ladder', () => {
   });
 });
 
-describe('supplier list wins where we have one', () => {
-  it('tirzepatide offers the five strengths the supplier sells', () => {
-    expect(getVialSizeOptions('tirzepatide')).toEqual([5, 10, 15, 30, 60]);
+describe('the supplier catalog does NOT narrow the options', () => {
+  /**
+   * Edward, correcting the first cut of this: "this isnt a supplier app / its
+   * education resource / just have it do the fuckin math for them let them
+   * explore."
+   *
+   * The first version returned the supplier's own list where we had one, so
+   * Cerebrolysin offered 60 mg and nothing else and Follistatin-344 offered
+   * only 1 mg. That is a catalogue, not a teaching tool — it tells a reader
+   * their vial does not exist and refuses to do the arithmetic. These tests are
+   * the inversion of the three that used to assert the narrowing.
+   */
+  it('cerebrolysin gets the full ladder, not just its 60 mg listing', () => {
+    expect(getVialSizeOptions('cerebrolysin')).toEqual(STANDARD_VIAL_MG);
+    expect(getVialSizeOptions('cerebrolysin')).toContain(5);
   });
 
-  it('cerebrolysin offers only 60 mg — the one size it ships in', () => {
-    // Offering a 5 mg chip here would invite a concentration for a vial that
-    // does not exist.
-    expect(getVialSizeOptions('cerebrolysin')).toEqual([60]);
+  it('follistatin-344 gets the full ladder, not just its 1 mg listing', () => {
+    expect(getVialSizeOptions('follistatin-344')).toEqual(STANDARD_VIAL_MG);
   });
 
-  it('follistatin-344 offers 1 mg, outside the standard ladder', () => {
-    // Proves the supplier list genuinely overrides rather than merging: 1 mg is
-    // deliberately not in STANDARD_VIAL_MG.
-    expect(getVialSizeOptions('follistatin-344')).toEqual([1]);
-    expect(STANDARD_VIAL_MG).not.toContain(1);
+  it('a compound we stock and one we do not are offered the same choices', () => {
+    // The single strongest statement of the model: what the supplier happens to
+    // sell has no bearing on what the calculator will compute.
+    expect(getVialSizeOptions('tirzepatide')).toEqual(getVialSizeOptions('not-a-real-peptide'));
+  });
+
+  it('takes no id at all', () => {
+    // The options do not depend on the compound, so the argument is optional.
+    // If a future change makes them compound-specific, this stops compiling —
+    // which is the intended tripwire.
+    expect(getVialSizeOptions()).toEqual(STANDARD_VIAL_MG);
   });
 
   it('never returns an empty list', () => {
     // An empty list renders no chips and silently removes the feature.
-    for (const id of ['tirzepatide', 'cerebrolysin', 'unknown', 'ghrp-2']) {
+    for (const id of ['tirzepatide', 'cerebrolysin', 'unknown', 'ghrp-2', '']) {
       expect(getVialSizeOptions(id).length).toBeGreaterThan(0);
     }
   });

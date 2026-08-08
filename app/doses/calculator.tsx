@@ -30,7 +30,11 @@ import {
   getAllDosingReferencesForPeptide,
   PEPTALK_DOSING_DISCLAIMER,
 } from '../../src/data/peptideDosingReference';
-import { getVialSizeOptions, STANDARD_VIAL_MG } from '../../src/data/supplierVialSizes';
+import {
+  getVialSizeOptions,
+  getDefaultVialMg,
+  STANDARD_VIAL_MG,
+} from '../../src/data/supplierVialSizes';
 import { getCalculatorMetadata } from '../../src/data/calculatorMetadata';
 import { getDosingTableEntry } from '../../src/data/peptideDosingTable';
 import {
@@ -169,10 +173,23 @@ export default function CalculatorV2Screen() {
   );
 
   // Re-prime inputs from metadata + reference whenever the peptide changes.
+  //
+  // This used to bail when the compound had no curated reconstitution
+  // reference (`if (!meta || !ref) return`). 46 of the 79 compounds have no
+  // reference, so for 58% of the library the mg field stayed empty, `result`
+  // stayed null, and the calculator rendered no concentration, no draw volume
+  // and no vial duration — a dead form that looked completely normal.
+  //
+  // `meta` is synthesized for every id (getCalculatorMetadata never returns
+  // null), so the only genuinely missing input was vial strength. It now falls
+  // back to supplier data and then to a common default, both of which are
+  // starting points in an editable field rather than assertions. The dose
+  // itself is NOT invented: `phase` stays null without a reference, so the
+  // per-shot box stays empty until the user types one.
   useEffect(() => {
-    if (!meta || !ref) return;
+    if (!meta) return;
     setVialSizeMl(meta.standardVialSizeMl);
-    setPeptideMg(String(ref.vialMg));
+    setPeptideMg(String(getDefaultVialMg(peptideId ?? undefined, ref?.vialMg)));
     setDiluentMl(
       String(meta.recommendedReconstitutionMl ?? meta.standardVialSizeMl),
     );
@@ -180,7 +197,7 @@ export default function CalculatorV2Screen() {
     setPerShotOverride('');
     setDiluentOverride(null);
     if (meta.diluentType === 'aceticAcid') setShowAceticFlag(true);
-  }, [meta, ref]);
+  }, [meta, ref, peptideId]);
 
   // Apply Aimee deep-link overrides AFTER the metadata effect so they win.
   // Aimee tool open_dosing_calculator passes:
@@ -192,7 +209,13 @@ export default function CalculatorV2Screen() {
   const deepLinkApplied = useRef(false);
   useEffect(() => {
     if (deepLinkApplied.current) return;
-    if (!meta || !ref) return; // wait for metadata defaults first
+    // Wait for the priming effect above to land, then override it. Gated on
+    // `meta` only: this used to require `ref` as well, which meant Aimee's
+    // open_dosing_calculator deep link was silently ignored for the 46
+    // compounds with no reconstitution reference — she would hand over the
+    // vial size and dose she had just talked the user through, and the screen
+    // would open showing none of it.
+    if (!meta) return;
     const doseMcg = params.doseMcg ? Number(params.doseMcg) : NaN;
     const vialMg = params.vialMg ? Number(params.vialMg) : NaN;
     const waterMl = params.waterMl ? Number(params.waterMl) : NaN;
