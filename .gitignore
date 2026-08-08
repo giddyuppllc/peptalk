@@ -111,6 +111,9 @@ dist2/
 # of the app and must never reach a build.
 .asc-*.mjs
 .play-*.mjs
+.audit-server.mjs
+.probe-*.mjs
+dist-test*/
 
 # Local git worktrees — never part of the repo (an embedded repo gets committed
 # as a bare gitlink that no clone can resolve).

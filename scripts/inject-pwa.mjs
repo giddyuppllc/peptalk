@@ -13,6 +13,7 @@
  * Run after export:  expo export -p web && node scripts/inject-pwa.mjs
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, readdirSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { join } from 'node:path';
 
 const INDEX = 'dist/index.html';
@@ -95,5 +96,26 @@ html = html.replace('</head>', `  ${HEAD_TAGS}\n  </head>`);
 // 3) Register the service worker + icon font right before </body>.
 html = html.replace('</body>', `  ${ICON_FONT_SCRIPT}\n  ${SW_SCRIPT}\n</body>`);
 
+// 4) Stamp the commit this bundle was built from.
+//
+// dist/ is a build artifact with no memory of its source. On 2026-08-08 it sat
+// four commits behind HEAD and looked complete — the dose-unit fix, the peptide
+// back button, the TB-500 correction and the Aimee banner fix were all missing,
+// and it was about to be deployed as "built and verified". Nothing in the
+// artifact could contradict that. Now something can: `npm run verify:build`
+// compares this stamp against HEAD and refuses a stale deploy.
+let buildSha = 'unknown';
+try {
+  buildSha = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+} catch {
+  // Not a git checkout (CI tarball, etc.) — leave it 'unknown' rather than fail
+  // the build; verify:build treats unknown as "cannot confirm", not "fresh".
+}
+html = html.replace(
+  '</head>',
+  `  <meta name="peptalk-build-commit" content="${buildSha}" />\n  </head>`,
+);
+
 writeFileSync(INDEX, html);
 console.log('[inject-pwa] stamped manifest + PWA meta + service worker into', INDEX);
+console.log(`[inject-pwa] build commit: ${buildSha.slice(0, 7)}`);

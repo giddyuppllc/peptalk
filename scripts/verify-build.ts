@@ -1,0 +1,137 @@
+/**
+ * verify-build — refuse to deploy a stale dist/.
+ *
+ * WHY THIS EXISTS
+ * On 2026-08-08 `dist/` was four commits behind HEAD. It contained the Alert
+ * fix but NOT the dose-unit fix, the peptide back button, the TB-500
+ * correction or the Aimee banner fix. It looked complete, it had been
+ * "verified" — headers, service worker, bundle hash all checked out — and it
+ * was one command away from being deployed and reported as those fixes
+ * shipping. Nothing in the artifact could contradict the claim, because a
+ * build has no memory of its source.
+ *
+ * That is the whole failure mode: a patch that solves for an inaccurate
+ * picture of the system. So the artifact now carries its commit, and this
+ * checks it.
+ *
+ * Also verifies the deploy-critical headers, because a bundle built from the
+ * right commit but served without CSP/HSTS is its own kind of silent wrong.
+ *
+ * Run before any web deploy:  npm run verify:build
+ */
+import { readFileSync, existsSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+
+const INDEX = 'dist/index.html';
+let failures = 0;
+
+function fail(msg: string, detail?: string) {
+  failures++;
+  console.log(`  ✗ ${msg}`);
+  if (detail) console.log(`      ${detail}`);
+}
+function pass(msg: string) {
+  console.log(`  ✓ ${msg}`);
+}
+
+console.log('\n— build freshness —\n');
+
+if (!existsSync(INDEX)) {
+  console.log(`  ✗ ${INDEX} not found — run "npm run export:web" first.\n`);
+  process.exit(1);
+}
+
+const html = readFileSync(INDEX, 'utf8');
+
+// ── 1. Does the artifact match HEAD? ───────────────────────────────────────
+const stamped = html.match(/name="peptalk-build-commit"\s+content="([0-9a-f]{7,40}|unknown)"/)?.[1];
+let head = '';
+try {
+  head = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+} catch {
+  /* not a git checkout */
+}
+
+if (!stamped) {
+  fail(
+    'no build stamp in dist/index.html',
+    'Built by an older inject-pwa. Re-run "npm run export:web" to stamp it.',
+  );
+} else if (stamped === 'unknown') {
+  fail('build stamp is "unknown"', 'Built outside a git checkout — freshness cannot be confirmed.');
+} else if (!head) {
+  console.log('  ~ cannot compare (not a git checkout); stamp is ' + stamped.slice(0, 7));
+} else if (stamped !== head) {
+  const behind = (() => {
+    try {
+      return execSync(`git rev-list --count ${stamped}..${head}`, { encoding: 'utf8' }).trim();
+    } catch {
+      return '?';
+    }
+  })();
+  fail(
+    `dist/ was built from ${stamped.slice(0, 7)}, HEAD is ${head.slice(0, 7)} (${behind} commit(s) ahead)`,
+    'Re-run "npm run export:web" before deploying, or you will ship missing fixes.',
+  );
+  try {
+    const missing = execSync(
+      `git log --format="  %h %s" ${stamped}..${head} -- app src supabase/functions assets`,
+      { encoding: 'utf8' },
+    ).trim();
+    if (missing) {
+      console.log('      user-facing commits NOT in this build:');
+      for (const line of missing.split('\n').slice(0, 15)) console.log(`    ${line}`);
+    }
+  } catch {
+    /* best effort */
+  }
+} else {
+  pass(`dist/ matches HEAD (${head.slice(0, 7)})`);
+}
+
+// ── 2. Deploy-critical artifacts ───────────────────────────────────────────
+console.log('\n— deploy artifacts —\n');
+
+const REQUIRED_IN_HTML: [string, RegExp][] = [
+  ['manifest linked', /rel="manifest"/],
+  ['service worker registered', /serviceWorker/],
+  ['viewport is app-like', /viewport-fit=cover/],
+];
+for (const [label, re] of REQUIRED_IN_HTML) {
+  if (re.test(html)) pass(label);
+  else fail(`${label} missing from dist/index.html`);
+}
+
+if (!existsSync('dist/vercel.json')) {
+  fail('dist/vercel.json missing', 'Security headers would not be applied on deploy.');
+} else {
+  const cfg = JSON.parse(readFileSync('dist/vercel.json', 'utf8'));
+  const keys = new Set(
+    (cfg.headers ?? []).flatMap((e: any) => (e.headers ?? []).map((h: any) => h.key)),
+  );
+  for (const h of [
+    'Content-Security-Policy',
+    'Strict-Transport-Security',
+    'X-Content-Type-Options',
+    'X-Frame-Options',
+    'Referrer-Policy',
+  ]) {
+    if (keys.has(h)) pass(`header ${h}`);
+    else fail(`header ${h} missing from dist/vercel.json`);
+  }
+}
+
+if (existsSync('dist/sw.js')) {
+  const sw = readFileSync('dist/sw.js', 'utf8');
+  if (/peptalk-shell-v\d+/.test(sw)) pass('service worker has a versioned cache');
+  else fail('service worker cache is unversioned', 'A stale shell can never be evicted.');
+} else {
+  fail('dist/sw.js missing');
+}
+
+console.log('');
+if (failures > 0) {
+  console.log(`✗ ${failures} problem(s) — do NOT deploy this build.\n`);
+  process.exit(1);
+}
+console.log('✓ Build is current and deployable.\n');
