@@ -24,6 +24,7 @@ import { HOW_TO_GUIDES } from '../src/data/howToGuides';
 import { VIDEOS } from '../src/data/videos';
 import { PROTOCOL_TEMPLATES } from '../src/data/protocols';
 import { PEPTIDE_DOSING_TABLE, getDosingTableEntry } from '../src/data/peptideDosingTable';
+import { getSupplierVialSizes } from '../src/data/supplierVialSizes';
 import {
   PEPTIDE_DOSING_REFERENCE,
   PEPTIDE_VARIANT_PARENTS,
@@ -637,6 +638,24 @@ info(
   `Reconstitution reference: ${NOT_RECONSTITUTED.size} N/A (oral/ready-to-use), ` +
     `${MISSING_RECON_REF.size} injectables still missing one`,
 );
+
+// Make the backlog ACTIONABLE rather than a list of ids. A reference needs
+// vialMg + diluentMl + diluent + schedule; the supplier catalog gives the first.
+// Printing which ones already have an authoritative vial size turns "26 missing"
+// into "13 need only a diluent volume and a schedule".
+const withVial = [...MISSING_RECON_REF].filter((id) => getSupplierVialSizes(id));
+const withoutVial = [...MISSING_RECON_REF].filter((id) => !getSupplierVialSizes(id));
+if (withVial.length) {
+  info(
+    `  ${withVial.length} have a supplier vial size on file (need diluent mL + schedule): ` +
+      withVial
+        .map((id) => `${id} [${getSupplierVialSizes(id)!.vialMg.join('/')}mg]`)
+        .join(', '),
+  );
+}
+if (withoutVial.length) {
+  info(`  ${withoutVial.length} need a vial size too: ${withoutVial.join(', ')}`);
+}
 
 // ─── Summary ─────────────────────────────────────────────────────────────────
 
