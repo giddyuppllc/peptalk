@@ -34,7 +34,7 @@ import { Spacing, FontSizes } from '../constants/theme';
 import type { ProtocolTemplate, ProtocolFrequency } from '../types';
 import {
   type ProtocolIntensity,
-  intensityToDoseRangeMcg,
+  intensityToDoseRange,
 } from './ProtocolIntensityPicker';
 
 interface SuppliesEstimatorCardProps {
@@ -88,9 +88,15 @@ export function SuppliesEstimatorCard({ protocol, vialMcg, bacWaterMl, intensity
   const periods = useMemo<PeriodTotals[]>(() => {
     // Range shifts with intensity (Mild/Standard/Aggressive); supplies math
     // tracks the chosen tier so vial counts don't lie about your supply.
-    const range = intensityToDoseRangeMcg(protocol, intensity ?? 'standard');
+    const range = intensityToDoseRange(protocol, intensity ?? 'standard');
     const minMcg = range.min;
     const maxMcg = range.max;
+    // Vials are derived from a mcg-per-vial concentration, so the whole vial /
+    // BAC-water chain only means anything for a MASS dose. An IU or ml protocol
+    // (hcg, oxytocin, hmg, cerebrolysin) has no mass equivalent in this
+    // dataset — count syringes and swabs, but say nothing about vials rather
+    // than treating millilitres as micrograms.
+    const massBased = range.massBased;
     const perWeek = FREQUENCY_PER_WEEK[protocol.frequency] ?? 1;
 
     // Build three planning horizons: 1 week, 2 weeks, and the upper
@@ -108,7 +114,7 @@ export function SuppliesEstimatorCard({ protocol, vialMcg, bacWaterMl, intensity
     return horizons.map(({ label, weeks }) => {
       const doses = Math.ceil(perWeek * weeks);
       const vialsRange =
-        vialMcg && vialMcg > 0
+        massBased && vialMcg && vialMcg > 0
           ? ceilRange((minMcg * doses) / vialMcg, (maxMcg * doses) / vialMcg)
           : null;
       const totalBacMl = vialsRange ? vialsRange[1] * bacPerVialMl : null;
@@ -124,6 +130,13 @@ export function SuppliesEstimatorCard({ protocol, vialMcg, bacWaterMl, intensity
   }, [protocol, vialMcg, bacWaterMl, intensity]);
 
   const hasVialMath = periods[0]?.vialsRange != null;
+  // Whether a vial count is even POSSIBLE for this protocol. For an IU or ml
+  // dose it never is, so telling the user to "enter vial size" would send them
+  // to fill in a field that can never produce an answer.
+  const doseIsMassBased = useMemo(
+    () => intensityToDoseRange(protocol, intensity ?? 'standard').massBased,
+    [protocol, intensity],
+  );
 
   return (
     <GlassCard style={styles.card}>
@@ -191,7 +204,9 @@ export function SuppliesEstimatorCard({ protocol, vialMcg, bacWaterMl, intensity
 
       {!hasVialMath && (
         <Text style={[styles.hint, { color: t.textSecondary }]}>
-          Enter vial size + BAC water above to see exact vials and BAC water totals.
+          {doseIsMassBased
+            ? 'Enter vial size + BAC water above to see exact vials and BAC water totals.'
+            : `This protocol is dosed in ${protocol.typicalDose.unit}, which doesn't convert to a vial weight — syringe and swab counts still apply.`}
         </Text>
       )}
 

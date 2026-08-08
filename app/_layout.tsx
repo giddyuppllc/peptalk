@@ -1301,12 +1301,13 @@ function RootLayout() {
           <Stack.Screen
             name="peptide/[id]"
             options={{
-              headerShown: true,
-              headerTransparent: true,
-              headerTintColor: t.headerTint,
-              headerTitle: '',
-              headerBackTitle: 'Back',
-              headerStyle: { backgroundColor: 'transparent' },
+              // Header off deliberately. It was transparent with an empty title,
+              // and testers reported no visible back control on this screen —
+              // leaving the floating Home button as the only exit, which is why
+              // "back" appeared to go to the Home screen. The screen now renders
+              // its own always-visible back control (see app/peptide/[id].tsx),
+              // so there is exactly one, and it cannot be invisible.
+              headerShown: false,
             }}
           />
           <Stack.Screen

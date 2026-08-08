@@ -9,7 +9,8 @@ import { useStackStore } from '../../src/store/useStackStore';
 import { GlassCard } from '../../src/components/GlassCard';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
 import { ProtocolPlanCard } from '../../src/components/ProtocolPlanCard';
-import { intensityToDoseRangeMcg, intensityToDoseMcg } from '../../src/components/ProtocolIntensityPicker';
+import { intensityToDoseRange, intensityToDose } from '../../src/components/ProtocolIntensityPicker';
+import { formatDoseAmount } from '../../src/lib/doseUnits';
 import { ActivateProtocolButton } from '../../src/components/ActivateProtocolButton';
 import { SuppliesEstimatorCard } from '../../src/components/SuppliesEstimatorCard';
 import { DosingReferenceTableCard } from '../../src/components/DosingReferenceTableCard';
@@ -174,9 +175,29 @@ export default function PeptideDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Breathing room above the title — SafeAreaView handles the
-            status-bar / dynamic-island inset; this is just visual padding. */}
-        <View style={styles.headerSpacer} />
+        {/* Explicit back control.
+            This screen previously had NO back control of its own and leaned on
+            a transparent native header, which Jamie reported as "no back button
+            visible ... it just takes you to Home Screen": with nothing visible
+            to tap, the only way out was the floating Home button. The header is
+            now off for this route (see app/_layout.tsx) and the control lives
+            here, where it is always rendered.
+
+            canGoBack() guards the deep-link case — opening a peptide straight
+            from a notification or URL leaves nothing to pop, and back() would
+            be a no-op. Fall back to the library, which is where Jamie expected
+            to land anyway. */}
+        <View style={styles.backRow}>
+          <TouchableOpacity
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/doses/library'))}
+            style={styles.backBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel="Back to peptide library"
+          >
+            <Ionicons name="chevron-back" size={26} color="#2D2D2D" />
+          </TouchableOpacity>
+        </View>
 
         {/* Name and Abbreviation */}
         <View style={styles.titleSection}>
@@ -1151,16 +1172,13 @@ export default function PeptideDetailScreen() {
 
 // ─── Beginner / Advanced quick-dose card ────────────────────────────────────
 // Derives two range pills from the peptide's protocol research bounds.
-// Beginner = lower-third (matches `intensityToDoseRangeMcg('mild')`);
-// Advanced = upper-third (`intensityToDoseRangeMcg('aggressive')`). Tapping
+// Beginner = lower-third (matches `intensityToDoseRange('mild')`);
+// Advanced = upper-third (`intensityToDoseRange('aggressive')`). Tapping
 // a pill deep-links into /doses/calculator pre-pointed at that intensity.
-
-function formatDoseMcg(value: number): string {
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(value >= 10000 ? 1 : 2)} mg`;
-  }
-  return `${Math.round(value)} mcg`;
-}
+//
+// Formatting goes through src/lib/doseUnits so an IU or ml protocol renders in
+// its own unit. The old local helper assumed every value was micrograms, which
+// is how Cerebrolysin's 5-30 ml showed up here as "5 mcg - 30 mcg".
 
 // One-tap protocol activation card. Modelled after the Selank
 // activation screen Edward called out — plain-language summary in big
@@ -1175,11 +1193,8 @@ function ActivationCard({
   peptide: ReturnType<typeof getPeptideById> & { id: string; name: string };
   protocol: ReturnType<typeof getProtocolsByPeptide>[number];
 }) {
-  const { mcg: starterMcg, displayUnit } = intensityToDoseMcg(protocol, 'mild');
-  const doseLabel =
-    displayUnit === 'mg'
-      ? `${(starterMcg / 1000).toFixed(2).replace(/\.?0+$/, '')} mg`
-      : `${Math.round(starterMcg)} mcg`;
+  const starter = intensityToDose(protocol, 'mild');
+  const doseLabel = formatDoseAmount(starter.value, starter.unit);
 
   // Frequency string mapped from the protocol enum to the 5-key set the
   // ActivateProtocolButton expects. Unknown freqs (twice_daily, biweekly,
@@ -1219,7 +1234,8 @@ function ActivationCard({
         peptideId={peptide.id}
         peptideName={peptide.name}
         protocol={protocol}
-        doseMcg={starterMcg}
+        dose={starter.value}
+        doseUnit={starter.unit}
         frequency={calcFrequency}
       />
 
@@ -1283,8 +1299,8 @@ function BeginnerAdvancedDoseCard({
   protocol: ReturnType<typeof getProtocolsByPeptide>[number];
   onPick: (intensity: 'mild' | 'aggressive') => void;
 }) {
-  const beginner = intensityToDoseRangeMcg(protocol, 'mild');
-  const advanced = intensityToDoseRangeMcg(protocol, 'aggressive');
+  const beginner = intensityToDoseRange(protocol, 'mild');
+  const advanced = intensityToDoseRange(protocol, 'aggressive');
 
   return (
     <GlassCard style={styles.section}>
@@ -1298,14 +1314,14 @@ function BeginnerAdvancedDoseCard({
           activeOpacity={0.85}
           style={[dosePillStyles.pill, { borderColor: '#6FA89155', backgroundColor: '#6FA8910D' }]}
           accessibilityRole="button"
-          accessibilityLabel={`Beginner dose ${formatDoseMcg(beginner.min)} to ${formatDoseMcg(beginner.max)}`}
+          accessibilityLabel={`Beginner dose ${formatDoseAmount(beginner.min, beginner.unit)} to ${formatDoseAmount(beginner.max, beginner.unit)}`}
         >
           <View style={dosePillStyles.pillTopRow}>
             <Ionicons name="leaf-outline" size={14} color="#6FA891" />
             <Text style={[dosePillStyles.pillLabel, { color: '#3F6E5A' }]}>Beginner</Text>
           </View>
           <Text style={dosePillStyles.pillRange}>
-            {formatDoseMcg(beginner.min)} – {formatDoseMcg(beginner.max)}
+            {formatDoseAmount(beginner.min, beginner.unit)} – {formatDoseAmount(beginner.max, beginner.unit)}
           </Text>
           <Text style={dosePillStyles.pillHint}>Cautious start</Text>
         </TouchableOpacity>
@@ -1315,14 +1331,14 @@ function BeginnerAdvancedDoseCard({
           activeOpacity={0.85}
           style={[dosePillStyles.pill, { borderColor: '#B4530955', backgroundColor: '#B453090D' }]}
           accessibilityRole="button"
-          accessibilityLabel={`Advanced dose ${formatDoseMcg(advanced.min)} to ${formatDoseMcg(advanced.max)}`}
+          accessibilityLabel={`Advanced dose ${formatDoseAmount(advanced.min, advanced.unit)} to ${formatDoseAmount(advanced.max, advanced.unit)}`}
         >
           <View style={dosePillStyles.pillTopRow}>
             <Ionicons name="flash-outline" size={14} color="#B45309" />
             <Text style={[dosePillStyles.pillLabel, { color: '#7A3A05' }]}>Advanced</Text>
           </View>
           <Text style={dosePillStyles.pillRange}>
-            {formatDoseMcg(advanced.min)} – {formatDoseMcg(advanced.max)}
+            {formatDoseAmount(advanced.min, advanced.unit)} – {formatDoseAmount(advanced.max, advanced.unit)}
           </Text>
           <Text style={dosePillStyles.pillHint}>Experienced users</Text>
         </TouchableOpacity>
@@ -1441,6 +1457,19 @@ const styles = StyleSheet.create({
   // height + a small breathing buffer).
   headerSpacer: {
     height: 52,
+  },
+
+  // Back control. Replaces the old blank headerSpacer — same vertical budget,
+  // but now occupied by something the user can actually see and press.
+  backRow: {
+    height: 52,
+    justifyContent: 'center',
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
 
   // ── Not Found ───────────────────────────────────────────────

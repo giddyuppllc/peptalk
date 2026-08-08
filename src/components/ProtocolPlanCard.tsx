@@ -27,9 +27,10 @@ import { useTheme } from '../hooks/useTheme';
 import { useHealthProfileStore } from '../store/useHealthProfileStore';
 import { Spacing, FontSizes } from '../constants/theme';
 import type { Peptide, ProtocolTemplate, GoalType, ProtocolFrequency } from '../types';
+import { formatDoseRange } from '../lib/doseUnits';
 import {
   type ProtocolIntensity,
-  intensityToDoseRangeMcg,
+  intensityToDoseRange,
 } from './ProtocolIntensityPicker';
 
 interface ProtocolPlanCardProps {
@@ -96,15 +97,8 @@ const GOAL_CYCLE_GUIDANCE: Partial<Record<GoalType, string>> = {
     'GH-axis peptides: cycle 8–12 weeks on, 4 weeks off. Pituitary down-regulation accumulates with extended runs.',
 };
 
-function formatDose(mcg: number): string {
-  if (mcg >= 1000) return `${(mcg / 1000).toFixed(mcg >= 10000 ? 1 : 2)} mg`;
-  return `${Math.round(mcg)} mcg`;
-}
-
-function formatRange(min: number, max: number): string {
-  if (min === max) return formatDose(min);
-  return `${formatDose(min)}–${formatDose(max)}`;
-}
+// Dose formatting lives in src/lib/doseUnits.ts so IU/ml can't be rendered as
+// micrograms. The mass rollup (>=1000 mcg -> mg) is unchanged.
 
 export function ProtocolPlanCard({ peptide, protocol, vialMcg, goal, intensity }: ProtocolPlanCardProps) {
   const t = useTheme();
@@ -117,19 +111,26 @@ export function ProtocolPlanCard({ peptide, protocol, vialMcg, goal, intensity }
     // Aggressive = upper 1/3 of the published typical range. Standard is
     // the default when no intensity is set so existing call sites are
     // unchanged.
-    const range = intensityToDoseRangeMcg(protocol, intensity ?? 'standard');
-    const minMcg = range.min;
-    const maxMcg = range.max;
+    const range = intensityToDoseRange(protocol, intensity ?? 'standard');
     const perWeek = FREQUENCY_PER_WEEK[frequency] ?? 1;
     const totalInjMin = perWeek * durationWeeks.min;
     const totalInjMax = perWeek * durationWeeks.max;
-    const totalMcgMin = minMcg * totalInjMin;
-    const totalMcgMax = maxMcg * totalInjMax;
-    const vialsMin = vialMcg && vialMcg > 0 ? Math.ceil(totalMcgMin / vialMcg) : null;
-    const vialsMax = vialMcg && vialMcg > 0 ? Math.ceil(totalMcgMax / vialMcg) : null;
+    // Total-over-cycle is just dose x injections, so it stays valid in whatever
+    // unit the protocol uses — including IU and ml.
+    const totalRange = {
+      ...range,
+      min: range.min * totalInjMin,
+      max: range.max * totalInjMax,
+    };
+    // Vials come from a mcg/vial concentration, so they are meaningful ONLY for
+    // a mass dose. For an IU or ml protocol there is no conversion, and
+    // inventing one is exactly how Cerebrolysin ended up reading "5 mcg-30 mcg".
+    const canCountVials = range.massBased && !!vialMcg && vialMcg > 0;
+    const vialsMin = canCountVials ? Math.ceil(totalRange.min / vialMcg!) : null;
+    const vialsMax = canCountVials ? Math.ceil(totalRange.max / vialMcg!) : null;
     return {
-      perDoseLabel: formatRange(minMcg, maxMcg),
-      totalDoseLabel: formatRange(totalMcgMin, totalMcgMax),
+      perDoseLabel: formatDoseRange(range),
+      totalDoseLabel: formatDoseRange(totalRange),
       vialsLabel:
         vialsMin != null && vialsMax != null
           ? vialsMin === vialsMax ? `${vialsMin} vial${vialsMin === 1 ? '' : 's'}` : `${vialsMin}–${vialsMax} vials`

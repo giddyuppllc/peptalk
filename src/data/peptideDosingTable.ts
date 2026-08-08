@@ -230,16 +230,26 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
   },
   // ───────────── MITOCHONDRIAL / METABOLIC RESEARCH ─────────────
   {
+    // CORRECTED 2026-08-07 by Jamie Esposito (coach), superseding the
+    // transcribed row. The source table read 200mcg-400mcg / 4-16 Weeks /
+    // 1x Daily, which contradicted BOTH this row's own titration note ("work
+    // your dose higher beyond 1-2mg") and the MOTS-c MWF Fasted Training
+    // Protocol already in protocols.ts (1000-2000 mcg, 3x weekly Mon/Wed/Fri,
+    // 6-8 weeks, fasted before exercise). The protocol was right; this
+    // at-a-glance row was what the Dosing reference card rendered, so users
+    // saw a dose 5x too low next to a note contradicting it.
     peptideId: 'mots-c',
     compound: 'Mots-c',
     inCatalog: true,
-    dosingRange: '200mcg-400mcg',
-    cycleLength: '4-16 Weeks',
-    frequencyDaily: '1x Daily',
-    frequencyWeekly: '5 On 2 Off or Daily',
+    dosingRange: '1mg-2mg',
+    cycleLength: '6-8 Weeks',
+    frequencyDaily: '1x On Dosing Days',
+    frequencyWeekly: '3x Weekly (Mon/Wed/Fri)',
     titrationNoteRef: 13,
-    titrationNotePending: true,
-    timeOffBetweenCycles: '4 Weeks',
+    titrationNote:
+      'Take fasted, follow with exercise, then refuel with protein and carbohydrates. Run the 6-8 week cycle twice a year.',
+    titrationNotePending: false,
+    timeOffBetweenCycles: 'Bi-annual cycles',
     fasted: true,
   },
   {
@@ -519,29 +529,38 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // CORRECTED 2026-08-07 by Jamie Esposito (coach): cycle length 4-12 -> 4-8
+    // weeks. The 250mcg-1mg range already brackets her 0.33mg practice, so the
+    // range is unchanged; the note below records how she splits it.
     peptideId: 'bpc-157',
     compound: 'Bpc-157 (inj/oral)',
     inCatalog: true,
     dosingRange: '250mcg-1mg',
-    cycleLength: '4-12 Weeks',
+    cycleLength: '4-8 Weeks',
     frequencyDaily: '1-2x Daily Am and PM',
     frequencyWeekly: '5 On 2 Off or Daily',
     titrationNoteRef: 35,
-    titrationNotePending: true,
+    titrationNote:
+      'Injury and acute pain: some research supports two injections daily of 0.33mg. For skin, recovery and lowering inflammation, most take 0.33mg in the evening.',
+    titrationNotePending: false,
     timeOffBetweenCycles: '4-8 Weeks',
     fasted: false,
   },
   // ───────────── RECOVERY / REGENERATIVE ─────────────
   {
+    // CORRECTED 2026-08-07 by Jamie Esposito (coach). The transcribed row read
+    // 2mg-5mg, roughly 5x her actual practice, and 4-12 week cycles.
     peptideId: 'tb-500',
     compound: 'TB-500',
     inCatalog: true,
-    dosingRange: '2mg-5mg',
-    cycleLength: '4-12 Weeks',
-    frequencyDaily: '1x Daily',
-    frequencyWeekly: '1-2x a Week',
+    dosingRange: '0.33mg-1mg',
+    cycleLength: '4-8 Weeks',
+    frequencyDaily: '1x Daily (PM)',
+    frequencyWeekly: 'Every 3-4 Days (acute) or Daily',
     titrationNoteRef: 36,
-    titrationNotePending: true,
+    titrationNote:
+      'Acute injury: 1mg every 3-4 days for 2-4 weeks. Skin, hair and general recovery: 0.33mg in the evening.',
+    titrationNotePending: false,
     timeOffBetweenCycles: '4-8 Weeks',
     fasted: false,
   },

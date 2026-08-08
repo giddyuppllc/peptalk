@@ -22,7 +22,12 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { Spacing, FontSizes } from '../constants/theme';
-import type { ProtocolTemplate, DoseUnit } from '../types';
+import type { ProtocolTemplate } from '../types';
+import {
+  formatDoseAmount,
+  normalizeDoseRange,
+  type DoseRange,
+} from '../lib/doseUnits';
 
 export type ProtocolIntensity = 'mild' | 'standard' | 'aggressive';
 
@@ -65,22 +70,25 @@ const OPTIONS: IntensityOption[] = [
 ];
 
 /**
- * Derive a dose value (in mcg) for the chosen intensity from the protocol's
- * typical dose range. Mild = min, Standard = midpoint, Aggressive = max.
+ * Derive a single dose for the chosen intensity from the protocol's typical
+ * range. Mild = min, Standard = midpoint, Aggressive = max.
+ *
+ * The returned `unit` is authoritative — it is NOT always mcg. See
+ * src/lib/doseUnits.ts: mg normalises to mcg, but IU and ml are activity and
+ * volume units with no mass equivalent, so they come back untouched. Callers
+ * must format with the unit rather than assuming mcg.
  */
-export function intensityToDoseMcg(
+export function intensityToDose(
   protocol: ProtocolTemplate,
   intensity: ProtocolIntensity,
-): { mcg: number; displayUnit: DoseUnit } {
+): DoseRange & { value: number } {
   const { typicalDose } = protocol;
-  const minMcg = typicalDose.unit === 'mg' ? typicalDose.min * 1000 : typicalDose.min;
-  const maxMcg = typicalDose.unit === 'mg' ? typicalDose.max * 1000 : typicalDose.max;
-  const midMcg = (minMcg + maxMcg) / 2;
-  const mcg =
-    intensity === 'mild'       ? minMcg :
-    intensity === 'aggressive' ? maxMcg :
-    midMcg;
-  return { mcg, displayUnit: typicalDose.unit };
+  const r = normalizeDoseRange(typicalDose.min, typicalDose.max, typicalDose.unit);
+  const value =
+    intensity === 'mild'       ? r.min :
+    intensity === 'aggressive' ? r.max :
+    (r.min + r.max) / 2;
+  return { ...r, value };
 }
 
 /**
@@ -91,22 +99,25 @@ export function intensityToDoseMcg(
  *   - Mild:       lower-third of typical range
  *   - Standard:   full typical range (default behavior)
  *   - Aggressive: upper-third of typical range
+ *
+ * Carries `unit` + `massBased` through, so a caller doing mass-only maths
+ * (vials from a mcg/vial concentration) can decline rather than silently
+ * treat millilitres as micrograms.
  */
-export function intensityToDoseRangeMcg(
+export function intensityToDoseRange(
   protocol: ProtocolTemplate,
   intensity: ProtocolIntensity,
-): { min: number; max: number } {
+): DoseRange {
   const { typicalDose } = protocol;
-  const minMcg = typicalDose.unit === 'mg' ? typicalDose.min * 1000 : typicalDose.min;
-  const maxMcg = typicalDose.unit === 'mg' ? typicalDose.max * 1000 : typicalDose.max;
-  const span = maxMcg - minMcg;
+  const r = normalizeDoseRange(typicalDose.min, typicalDose.max, typicalDose.unit);
+  const span = r.max - r.min;
   if (intensity === 'mild') {
-    return { min: minMcg, max: minMcg + span * 0.33 };
+    return { ...r, min: r.min, max: r.min + span * 0.33 };
   }
   if (intensity === 'aggressive') {
-    return { min: minMcg + span * 0.66, max: maxMcg };
+    return { ...r, min: r.min + span * 0.66, max: r.max };
   }
-  return { min: minMcg, max: maxMcg };
+  return r;
 }
 
 export function ProtocolIntensityPicker({
@@ -122,9 +133,9 @@ export function ProtocolIntensityPicker({
       <View style={styles.row}>
         {OPTIONS.map((opt) => {
           const active = opt.key === value;
-          const { mcg } = intensityToDoseMcg(protocol, opt.key);
-          const display =
-            mcg >= 1000 ? `${(mcg / 1000).toFixed(mcg >= 10000 ? 1 : 2)} mg` : `${Math.round(mcg)} mcg`;
+          // Renamed off `value` — that is the selected-intensity prop above.
+          const { value: doseValue, unit } = intensityToDose(protocol, opt.key);
+          const display = formatDoseAmount(doseValue, unit);
           return (
             <TouchableOpacity
               key={opt.key}

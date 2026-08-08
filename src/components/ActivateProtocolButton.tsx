@@ -26,7 +26,7 @@ import {
   scheduleDoseReminder,
   cancelRemindersByTag,
 } from '../services/notificationService';
-import type { ProtocolTemplate, AdministrationRoute } from '../types';
+import type { ProtocolTemplate, AdministrationRoute, DoseUnit } from '../types';
 
 let Notifications: any = null;
 try {
@@ -39,8 +39,17 @@ interface ActivateProtocolButtonProps {
   peptideId: string;
   peptideName: string;
   protocol: ProtocolTemplate;
-  /** mcg amount user has dialed in via the calculator. */
-  doseMcg: number;
+  /**
+   * Dose amount to seed the active protocol with, in `doseUnit`.
+   *
+   * This used to be `doseMcg` and the activation hardcoded `unit: 'mcg'`.
+   * Protocols dosed in IU or ml (hcg, oxytocin, hmg, cerebrolysin) therefore
+   * wrote a fabricated microgram figure into the user's tracked protocol —
+   * Cerebrolysin's 5 ml became "5 mcg". The unit now travels with the number.
+   */
+  dose: number;
+  /** Unit `dose` is expressed in. Stored as-is on the active protocol. */
+  doseUnit: DoseUnit;
   /** User-selected frequency (daily / eod / 2x_week / 3x_week / weekly). */
   frequency: 'daily' | 'eod' | '2x_week' | '3x_week' | 'weekly';
 }
@@ -101,7 +110,8 @@ export function ActivateProtocolButton({
   peptideId,
   peptideName,
   protocol,
-  doseMcg,
+  dose,
+  doseUnit,
   frequency,
 }: ActivateProtocolButtonProps) {
   const t = useTheme();
@@ -109,7 +119,7 @@ export function ActivateProtocolButton({
   const [activating, setActivating] = useState(false);
 
   const handleActivate = () => {
-    if (doseMcg <= 0) {
+    if (dose <= 0) {
       Alert.alert('Set a dose first', 'Enter your target dose before activating the protocol.');
       return;
     }
@@ -130,8 +140,8 @@ export function ActivateProtocolButton({
               addProtocol({
                 peptideId,
                 templateId: protocol.id,
-                dose: doseMcg,
-                unit: 'mcg',
+                dose,
+                unit: doseUnit,
                 route: protocol.route as AdministrationRoute,
                 frequency: frequencyToProtocolFrequency(frequency),
                 startDate: startDateIso,
