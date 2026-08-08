@@ -77,6 +77,7 @@ import {
 import { useV3BridgeTheme as useTheme } from '../../src/hooks/useTheme.v3Bridge';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
+import { useIsOnline } from '../../src/hooks/useNetworkStatus';
 // All validation/clamping for Aimee `client_action` payloads lives in
 // a pure module so it can be unit-tested without a renderer. See
 // scripts/verify-aimee-action-sanitize.ts for the contract.
@@ -194,6 +195,9 @@ export default function PepTalkScreen() {
   const t = useTheme();
   const accent = useSectionAccent();
   const router = useRouter();
+  // Drives the header status line — see the status block below for why AI
+  // reachability alone was not enough.
+  const isDeviceOnline = useIsOnline();
   const aimeeInputRef = useTourTarget('aimee_chat_input');
   const { prefill, message: prefillMessage, speak: speakFlag } = useLocalSearchParams<{
     prefill?: string;
@@ -806,7 +810,13 @@ export default function PepTalkScreen() {
 
     const context = buildContext();
 
-    if (useAI) {
+    // Skip both network attempts when the device is offline. They cannot
+    // succeed, and the cost of finding out is a placeholder bubble sitting
+    // empty behind a blinking caret for the full AIMEE_RESPONSE_TIMEOUT_MS
+    // before step 3 runs — which is what Jamie screenshotted next to the
+    // offline banner. The local fallback below is instant and always answers,
+    // so go straight to it.
+    if (useAI && isDeviceOnline) {
       // 1. Try the streaming Claude-backed endpoint first.
       //
       // The streaming helper returns true when SSE produced at least one
@@ -872,6 +882,7 @@ export default function PepTalkScreen() {
     setTyping,
     buildContext,
     useAI,
+    isDeviceOnline,
     streamAimeeResponse,
   ]);
 
@@ -1138,6 +1149,21 @@ export default function PepTalkScreen() {
               {(() => {
                 const aiReachable = isAIAvailable();
                 const consented = canSendToCloud();
+                // 2026-08-07: network state comes FIRST. isAIAvailable() only
+                // reports whether the AI service is configured and consented —
+                // it never pings the network. So a device with no connection
+                // still read "Online", which is exactly what Jamie screenshotted:
+                // the offline banner and a green "Online" dot on the same frame.
+                if (!isDeviceOnline) {
+                  return (
+                    <View style={styles.headerSubRow}>
+                      <View style={[styles.statusDot, { backgroundColor: t.textSecondary }]} />
+                      <Text style={[styles.headerSub, { color: t.textSecondary }]}>
+                        No connection
+                      </Text>
+                    </View>
+                  );
+                }
                 if (aiReachable && consented) {
                   return (
                     <View style={styles.headerSubRow}>

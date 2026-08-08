@@ -1,13 +1,30 @@
 /**
- * Tiny persistent banner that appears across the top of the app when the
- * device loses connectivity. Rendered at the root layout so every screen
- * sees it without wiring up individually.
+ * Tiny persistent banner shown when the device loses connectivity. Rendered at
+ * the root layout so every screen gets it without wiring up individually.
  *
  * Deliberately minimal:
  *   - 1 line tall
  *   - Brief, non-alarming copy ("You're offline — changes will sync when you reconnect")
  *   - Fades in/out with a small transition
  *   - No dismiss button; it hides itself when connection returns
+ *
+ * ── WHY IT SITS AT THE BOTTOM (2026-08-07) ────────────────────────────────
+ * It used to be pinned to the TOP, absolutely positioned at z-index 10000.
+ * Because it overlays rather than displaces, it covered whatever each screen
+ * put at the top — Jamie's screenshot of the Aimee tab shows it clipping the
+ * header, with the "Aimee" title and the icon row cut in half.
+ *
+ * Making it push content down instead would mean putting it in the layout
+ * flow at the root, and every screen already renders its own
+ * `SafeAreaView edges={['top']}`. Those compute padding from the WINDOW
+ * insets, not from remaining space, so the status-bar inset would be applied
+ * twice and every screen would gain a band of dead space whenever the user
+ * went offline. Anchoring to the bottom avoids the collision entirely without
+ * touching a single screen, and matches the usual snackbar placement.
+ *
+ * It clears the floating action buttons via `bottom` offset, and keeps
+ * pointerEvents="none" plus a z-index BELOW the FABs so it can never swallow
+ * or obscure a tap target.
  *
  * Recovery happens automatically via `subscribeToReconnect` in the root
  * layout — this component is just the visual indicator.
@@ -22,7 +39,8 @@ import { useIsOnline } from '../hooks/useNetworkStatus';
 function OfflineBannerImpl() {
   const isOnline = useIsOnline();
   const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(-16)).current;
+  // Slides up from below now that the banner is bottom-anchored.
+  const translateY = useRef(new Animated.Value(16)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -32,7 +50,7 @@ function OfflineBannerImpl() {
         useNativeDriver: true,
       }),
       Animated.timing(translateY, {
-        toValue: isOnline ? -16 : 0,
+        toValue: isOnline ? 16 : 0,
         duration: 220,
         useNativeDriver: true,
       }),
@@ -46,7 +64,7 @@ function OfflineBannerImpl() {
       pointerEvents="none"
       style={[styles.wrap, { opacity, transform: [{ translateY }] }]}
     >
-      <SafeAreaView edges={['top']}>
+      <SafeAreaView edges={['bottom']}>
         <Animated.View style={styles.banner}>
           <Ionicons name="cloud-offline-outline" size={14} color="#92400E" />
           <Text style={styles.text} numberOfLines={1}>
@@ -61,10 +79,14 @@ function OfflineBannerImpl() {
 const styles = StyleSheet.create({
   wrap: {
     position: 'absolute',
-    top: 0,
+    // Bottom-anchored so it can never cover a screen's header — see the file
+    // header for why displacing content at the top was the worse option.
+    bottom: 0,
     left: 0,
     right: 0,
-    zIndex: 10_000,
+    // Deliberately BELOW the floating action buttons (which sit above the
+    // default stacking order). At the old 10_000 the banner painted over them.
+    zIndex: 50,
   },
   banner: {
     flexDirection: 'row',
@@ -74,6 +96,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 6,
     backgroundColor: 'rgba(245, 158, 11, 0.95)',
+    // Clears the FAB row so the two never visually collide.
+    marginBottom: 76,
+    marginHorizontal: 12,
+    borderRadius: 10,
   },
   text: {
     fontSize: 12,
