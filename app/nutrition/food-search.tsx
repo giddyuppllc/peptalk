@@ -1099,13 +1099,18 @@ export default function FoodSearchScreen() {
         vitaminCMg: macros.vitaminCMg,
       };
 
-      if (params.mealId) {
-        const existing = meals.find((m) => m.id === params.mealId);
-        if (existing) {
-          updateMeal(params.mealId, {
-            foods: [...existing.foods, foodEntry],
-          });
-        }
+      // Append to an existing entry when we arrived with a mealId.
+      //
+      // If that meal no longer exists — deleted from the diary in another tab,
+      // or the id is stale — this used to do NOTHING: no append, no new meal,
+      // no message. The food the user just confirmed simply evaporated. That
+      // never surfaced because nothing sent `mealId` until the diary shipped,
+      // so the branch had never run. Falling through to addMeal keeps the food.
+      const existing = params.mealId ? meals.find((m) => m.id === params.mealId) : undefined;
+      if (existing) {
+        updateMeal(existing.id, {
+          foods: [...existing.foods, foodEntry],
+        });
       } else {
         addMeal({
           id: `meal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,

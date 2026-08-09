@@ -24,6 +24,14 @@ import {
 import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 import { tapLight, tapMedium } from '../../src/utils/haptics';
 import { useMealStore } from '../../src/store/useMealStore';
+import {
+  groupMealsByType,
+  mealMacros,
+  mealSummaryLine,
+  fmtGrams,
+  MEAL_TYPE_LABELS,
+} from '../../src/lib/mealDiary';
+import type { MealEntry } from '../../src/types/fitness';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import {
   useAppetiteLogStore,
@@ -52,6 +60,15 @@ export default function NutritionScreen() {
   const waterOz = useMealStore((s) => s.getWater(today));
   const logWater = useMealStore((s) => s.logWater);
   const getDailyTotals = useMealStore((s) => s.getDailyTotals);
+  const removeMeal = useMealStore((s) => s.removeMeal);
+  // Derived from the already-selected `meals` array rather than calling
+  // getMealsByDate in the selector — that returns a fresh array each call and
+  // Zustand's reference check would loop, the same bug the comment above
+  // describes for getDailyTotals.
+  const todaysMeals = useMemo(
+    () => meals.filter((m) => m.date === today),
+    [meals, today],
+  );
   const totals = useMemo(
     () => getDailyTotals(today),
     [getDailyTotals, today, meals],
@@ -619,6 +636,45 @@ export default function NutritionScreen() {
           </GlassCard>
         </Pressable>
 
+        {/* ── Today's food diary ─────────────────────────────────────────────
+            This screen selected `meals` only to recompute the totals ring and
+            never rendered a single one. useMealStore has always exposed
+            getMealsByDate, updateMeal and removeMeal, and NONE of them had a
+            caller in app/ — so food could be logged and then never seen,
+            corrected, or deleted. A mistyped entry was permanent and invisible,
+            and the only evidence it existed was a calorie ring that would not
+            add up.
+
+            Tapping a meal opens food-search with `mealId`, which that screen
+            has always implemented ("if provided, adds to an existing meal
+            entry") and which nothing ever sent. This is the door. */}
+        <TodaysMealsSection
+          meals={todaysMeals}
+          onOpenMeal={(meal) =>
+            router.push(
+              `/nutrition/food-search?mealId=${meal.id}&mealType=${meal.mealType}` as never,
+            )
+          }
+          onDeleteMeal={(meal) => {
+            Alert.alert(
+              'Delete this entry?',
+              `${MEAL_TYPE_LABELS[meal.mealType] ?? 'Meal'} — ${mealSummaryLine(meal)}`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: () => {
+                    tapMedium();
+                    removeMeal(meal.id);
+                  },
+                },
+              ],
+            );
+          }}
+          t={t}
+        />
+
         {/* Quick logger entry — sends user to existing food search */}
         <Pressable
           onPress={() => {
@@ -653,7 +709,170 @@ export default function NutritionScreen() {
   );
 }
 
+/**
+ * Today's logged meals, grouped by meal type.
+ *
+ * Tap a row to add to that meal (food-search?mealId=…, a path that has been
+ * implemented and unreachable). Long-press to delete — removeMeal has existed
+ * in the store since it was written with no caller anywhere in the app, so
+ * until now a mistyped entry could not be removed.
+ *
+ * Long-press rather than a visible trash icon: the common action is "add to
+ * this meal", and a delete control sitting next to it on a row-sized target is
+ * how people destroy a day's logging by accident. The Alert names the meal it
+ * is about to remove.
+ */
+function TodaysMealsSection({
+  meals,
+  onOpenMeal,
+  onDeleteMeal,
+  t,
+}: {
+  meals: MealEntry[];
+  onOpenMeal: (meal: MealEntry) => void;
+  onDeleteMeal: (meal: MealEntry) => void;
+  t: ReturnType<typeof useV3Theme>;
+}) {
+  const groups = useMemo(() => groupMealsByType(meals), [meals]);
+
+  return (
+    <GlassCard style={styles.cardSpacing}>
+      <View style={styles.diaryHeader}>
+        <Text
+          style={[
+            styles.cardTitle,
+            {
+              color: t.colors.textPrimary as string,
+              fontFamily: t.isDark ? t.typography.headlineMale : t.typography.headlineFemale,
+            },
+          ]}
+        >
+          Today&apos;s food
+        </Text>
+        {meals.length > 0 ? (
+          <Text
+            style={[
+              styles.cardSub,
+              { color: t.colors.textSecondary as string, fontFamily: t.typography.body },
+            ]}
+          >
+            {meals.length} {meals.length === 1 ? 'entry' : 'entries'}
+          </Text>
+        ) : null}
+      </View>
+
+      {groups.length === 0 ? (
+        <Text
+          style={[
+            styles.cardSub,
+            { color: t.colors.textSecondary as string, fontFamily: t.typography.body },
+          ]}
+        >
+          Nothing logged yet today. Anything you add shows up here, and you can
+          tap it later to add more or fix it.
+        </Text>
+      ) : (
+        groups.map((group) => (
+          <View key={group.mealType} style={styles.diaryGroup}>
+            <View style={styles.diaryGroupHeader}>
+              <Text
+                style={[
+                  styles.diaryGroupLabel,
+                  { color: t.colors.textPrimary as string, fontFamily: t.typography.label },
+                ]}
+              >
+                {group.label.toUpperCase()}
+              </Text>
+              <Text
+                style={[
+                  styles.diaryGroupKcal,
+                  { color: t.colors.textSecondary as string, fontFamily: t.typography.body },
+                ]}
+              >
+                {Math.round(group.macros.calories)} kcal
+              </Text>
+            </View>
+
+            {group.meals.map((meal) => {
+              const m = mealMacros(meal);
+              return (
+                <Pressable
+                  key={meal.id}
+                  onPress={() => {
+                    tapLight();
+                    onOpenMeal(meal);
+                  }}
+                  onLongPress={() => onDeleteMeal(meal)}
+                  delayLongPress={450}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${group.label}: ${mealSummaryLine(meal)}, ${Math.round(
+                    m.calories,
+                  )} calories. Tap to add to this meal, long press to delete.`}
+                  style={[styles.diaryRow, { borderTopColor: t.colors.cardBorder as string }]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.diaryRowTitle,
+                        { color: t.colors.textPrimary as string, fontFamily: t.typography.body },
+                      ]}
+                    >
+                      {mealSummaryLine(meal)}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.diaryRowMacros,
+                        {
+                          color: t.colors.textSecondary as string,
+                          fontFamily: t.typography.body,
+                        },
+                      ]}
+                    >
+                      P {fmtGrams(m.proteinGrams)}g · C {fmtGrams(m.carbsGrams)}g · F{' '}
+                      {fmtGrams(m.fatGrams)}g
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.diaryRowKcal,
+                      { color: t.colors.textPrimary as string, fontFamily: t.typography.bodyBold },
+                    ]}
+                  >
+                    {Math.round(m.calories)}
+                  </Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={16}
+                    color={t.colors.textSecondary as string}
+                  />
+                </Pressable>
+              );
+            })}
+          </View>
+        ))
+      )}
+    </GlassCard>
+  );
+}
+
 const styles = StyleSheet.create({
+  diaryHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  diaryGroup: { marginTop: 14 },
+  diaryGroupHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  diaryGroupLabel: { fontSize: 10, letterSpacing: 1.3 },
+  diaryGroupKcal: { fontSize: 11 },
+  diaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 6,
+  },
+  diaryRowTitle: { fontSize: 14 },
+  diaryRowMacros: { fontSize: 11, marginTop: 2 },
+  diaryRowKcal: { fontSize: 14 },
   cardSpacing: { marginTop: 12 },
   cardTitle: {
     fontSize: 17,

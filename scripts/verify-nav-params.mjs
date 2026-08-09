@@ -185,14 +185,6 @@ const READ_ALLOWED = new Map([
       'expanded), so the screen is correct without it. Wiring it up is a UX ' +
       'choice, not a fix.',
   ],
-  [
-    'app/nutrition/food-search.tsx::mealId',
-    'Documented as "if provided, adds to an existing meal entry" and fully ' +
-      'implemented — it updates the existing meal rather than adding a new ' +
-      'one. But no screen renders logged meals as a tappable list, so there is ' +
-      'no door into it anywhere in the app. The add-to-existing-meal FEATURE ' +
-      'was never built; this param is all that remains of the intent.',
-  ],
 ]);
 
 const unsent = [];
