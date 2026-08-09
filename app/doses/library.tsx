@@ -23,22 +23,20 @@ import { V3DetailShell, GlassCard } from '../../src/components/v3';
 import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 import { tapLight } from '../../src/utils/haptics';
 import { PEPTIDES } from '../../src/data/peptides';
+import { searchPeptides } from '../../src/lib/peptideSearch';
 
 export default function PeptideLibraryScreen() {
   const t = useV3Theme();
   const router = useRouter();
   const [query, setQuery] = useState('');
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return PEPTIDES;
-    return PEPTIDES.filter((p) => {
-      if (p.name.toLowerCase().includes(q)) return true;
-      if ((p.abbreviation ?? '').toLowerCase().includes(q)) return true;
-      if (p.categories?.some((c) => c.toLowerCase().includes(q))) return true;
-      return false;
-    });
-  }, [query]);
+  // Searches aliases too, via the shared matcher. This screen used to check
+  // name + abbreviation + category only, so MK-677 was unfindable by
+  // "Ibutamoren" — the name most people know it by.
+  const filtered = useMemo(
+    () => searchPeptides(PEPTIDES, query, { includeCategories: true }),
+    [query],
+  );
 
   return (
     <V3DetailShell

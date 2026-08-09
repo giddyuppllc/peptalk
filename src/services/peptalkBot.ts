@@ -156,6 +156,16 @@ PEPTIDES.forEach((p) => {
   PEPTIDE_ALIASES.set(p.name.toLowerCase(), p.id);
   PEPTIDE_ALIASES.set(p.id.toLowerCase(), p.id);
   if (p.abbreviation) PEPTIDE_ALIASES.set(p.abbreviation.toLowerCase(), p.id);
+  // The catalog's own `aliases` — the names people actually arrive with.
+  // These were populated on 19 peptides and read by NOTHING, so asking Aimee
+  // about "Ibutamoren" (MK-677), "Victoza" (liraglutide) or "GW501516"
+  // (cardarine) failed to resolve to a compound at all. She would fall through
+  // to a generic answer rather than say she did not recognise it, which reads
+  // as the compound not being covered.
+  for (const alias of p.aliases ?? []) {
+    PEPTIDE_ALIASES.set(alias.toLowerCase(), p.id);
+    PEPTIDE_ALIASES.set(alias.toLowerCase().replace(/[^a-z0-9]/g, ''), p.id);
+  }
   // Common shorthand
   const shortName = p.name.toLowerCase().replace(/[-\s]/g, '');
   PEPTIDE_ALIASES.set(shortName, p.id);

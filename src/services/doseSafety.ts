@@ -8,6 +8,7 @@
 
 import { PROTOCOL_TEMPLATES } from '../data/protocols';
 import { PEPTIDES } from '../data/peptides';
+import { findPeptideByQuery } from '../lib/peptideSearch';
 
 export interface DoseSafetyResult {
   /** true = no issue, false = show confirmation to the user */
@@ -39,13 +40,14 @@ function getTypicalRangeMcg(
   if (!q) return null;
 
   // Try exact peptide id / name / abbreviation match first
-  const peptide = PEPTIDES.find(
-    (p) =>
-      p.id.toLowerCase() === q ||
-      p.name.toLowerCase() === q ||
-      p.abbreviation?.toLowerCase() === q ||
-      p.name.toLowerCase().includes(q),
-  );
+  // Exact identifier first, then substring — precedence matters here more than
+  // anywhere else in the app: resolving the wrong compound means applying the
+  // wrong dose guard. `findPeptideByQuery` encodes that order, and adds the
+  // catalog's `aliases`, so a dose logged as "Ibutamoren" now resolves to
+  // MK-677 and gets its guards instead of falling through unguarded.
+  const peptide =
+    findPeptideByQuery(PEPTIDES, q) ??
+    PEPTIDES.find((p) => p.name.toLowerCase().includes(q));
 
   const matchingProtocols = peptide
     ? PROTOCOL_TEMPLATES.filter((t) => t.peptideId === peptide.id)

@@ -20,6 +20,7 @@ import { V3DetailShell, GlassCard } from '../../src/components/v3';
 import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 import { tapLight, tapMedium } from '../../src/utils/haptics';
 import { PEPTIDES, getPeptideById } from '../../src/data/peptides';
+import { searchPeptides } from '../../src/lib/peptideSearch';
 import {
   KNOWN_INTERACTIONS,
   makeInteractionKey,
@@ -137,16 +138,9 @@ export default function StackBuilderScreen() {
     if (selectedCategory) {
       results = results.filter((p) => p.categories.includes(selectedCategory));
     }
-    const q = searchQuery.toLowerCase().trim();
-    if (q) {
-      results = results.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          (p.abbreviation && p.abbreviation.toLowerCase().includes(q)) ||
-          p.categories.some((c) => c.toLowerCase().includes(q)),
-      );
-    }
-    return results;
+    // Shared matcher — adds alias search (Ibutamoren → MK-677) and separator
+    // tolerance (BPC157 → BPC-157) that this screen never had.
+    return searchPeptides(results, searchQuery, { includeCategories: true });
   }, [searchQuery, selectedCategory, currentStack]);
 
   // Stack-level intent (top-3 categories by membership).

@@ -8,6 +8,7 @@ import { useStackStore } from '../../src/store/useStackStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { getPeptideById , PEPTIDES } from '../../src/data/peptides';
+import { searchPeptides } from '../../src/lib/peptideSearch';
 import { PROTOCOL_TEMPLATES } from '../../src/data/protocols';
 import { getDosingReference } from '../../src/data/peptideDosingReference';
 import { GlassCard } from '../../src/components/GlassCard';
@@ -230,15 +231,11 @@ function CalculatorTab() {
   // Uncapped — this dropdown scrolls (maxHeight 220, nestedScrollEnabled), so
   // the old `.slice(0, 30)` only hid 49 of the 79 compounds from anyone
   // browsing rather than typing an exact name.
-  const filteredPeptides = useMemo(() => {
-    const q = peptideSearch.trim().toLowerCase();
-    if (!q) return PEPTIDES;
-    return PEPTIDES.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.abbreviation?.toLowerCase().includes(q),
-    );
-  }, [peptideSearch]);
+  // Uncapped and alias-aware — see src/lib/peptideSearch.
+  const filteredPeptides = useMemo(
+    () => searchPeptides(PEPTIDES, peptideSearch),
+    [peptideSearch],
+  );
 
   const numericVialMg = parseFloat(vialMg) || 0;
   const numericBacMl = parseFloat(bacMl) || 0;

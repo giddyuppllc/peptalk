@@ -14,6 +14,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
 import { PEPTIDES } from '../../src/data/peptides';
+import { searchPeptides } from '../../src/lib/peptideSearch';
 import { getProtocolsByPeptide } from '../../src/data/protocols';
 import { getDosingReference } from '../../src/data/peptideDosingReference';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
@@ -55,19 +56,7 @@ export default function QuickDoseScreen() {
    * name well enough to type it — in an app whose job is to let people explore
    * compounds they have not heard of yet.
    */
-  const filteredPeptides = useMemo(() => {
-    if (!search.trim()) return PEPTIDES;
-    // Dash/space-tolerant — "MOTSC" finds "MOTS-c", "BPC157" finds "BPC-157".
-    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const q = norm(search);
-    if (!q) return PEPTIDES;
-    return PEPTIDES.filter(
-      (p) =>
-        norm(p.name).includes(q) ||
-        norm(p.id).includes(q) ||
-        (p.abbreviation && norm(p.abbreviation).includes(q)),
-    );
-  }, [search]);
+  const filteredPeptides = useMemo(() => searchPeptides(PEPTIDES, search), [search]);
 
   const selectedPeptide = useMemo(
     () => PEPTIDES.find((p) => p.id === selectedPeptideId),
