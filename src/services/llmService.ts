@@ -609,6 +609,7 @@ function describeRoute(route: string): { label: string; icon: string } {
     '/calculators/reconstitution': { label: 'Reconstitution', icon: 'flask-outline' },
     '/calculators/plan': { label: 'Plan a cycle', icon: 'compass-outline' },
     '/cycle': { label: 'Cycle dashboard', icon: 'flower-outline' },
+    '/plan': { label: 'My plan', icon: 'calendar-outline' },
     '/journal': { label: 'Journal', icon: 'book-outline' },
     '/health-profile': { label: 'Health profile', icon: 'body-outline' },
     '/health-report': { label: 'Health report', icon: 'document-text-outline' },

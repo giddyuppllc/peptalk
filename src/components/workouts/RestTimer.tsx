@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { AnimatedPress } from '../AnimatedPress';
 import { FontSizes } from '../../constants/theme';
 import { notifySuccess, tapLight } from '../../utils/haptics';
+import { playCue } from '../../lib/cue';
 
 interface RestTimerProps {
   /** Total seconds the rest should run for */
@@ -86,9 +87,26 @@ export function RestTimer({
     if (remaining <= 0 && total > 0 && !completedRef.current) {
       completedRef.current = true;
       notifySuccess();
+      // Rest ending is the one moment in this app you are NOT looking at the
+      // screen — the phone is on a bench and you are between sets. Haptics
+      // alone were the only signal, and haptics.ts no-ops on web entirely, so
+      // on the PWA this timer finished with nothing perceptible at all.
+      // Additive: the haptic and the on-screen change still happen, so a
+      // muted phone does not mean missing the end of a rest period.
+      void playCue('restComplete');
       onComplete?.();
     }
   }, [remaining, total, onComplete]);
+
+  // Last three seconds — a quieter, lower tick so you can start moving before
+  // the timer is up rather than reacting after it.
+  const lastTickRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!running || remaining <= 0 || remaining > 3) return;
+    if (lastTickRef.current === remaining) return;
+    lastTickRef.current = remaining;
+    void playCue('countdown');
+  }, [remaining, running]);
 
   const mins = Math.floor(remaining / 60);
   const secs = remaining % 60;

@@ -47,6 +47,11 @@ const ALLOWED: RegExp[] = [
   /^\/?pantry(\/[\w-]+)*(\?.*)?$/,
   /^\/?aimee(\/[\w-]+)*(\?.*)?$/,
   /^\/?community(\/[\w-]+)*(\?.*)?$/,
+  // /plan — Aimee's own copy promises "I can create a plan combining: weekly
+  // workout schedule · meal plan framework · peptide protocol timing · daily
+  // check-in reminders". Until the screen existed she could not send anyone to
+  // it, so the promise had nowhere to land.
+  /^\/?plan(\/[\w-]+)*(\?.*)?$/,
   /^\/?journal(\/[\w-]+)*(\?.*)?$/,
   /^\/?cycle(\/[\w-]+)*(\?.*)?$/,
   /^\/?settings(\/[\w-]+)*(\?.*)?$/,
