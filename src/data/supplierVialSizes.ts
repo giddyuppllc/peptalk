@@ -42,10 +42,14 @@
  * chemical name can be edited in a product listing; a CAS number identifies the
  * molecule.
  *
- * Sourcing note (Edward, 2026-08-08): these arrive as a liquid product from
- * Eli Lilly and are lyophilised in-house. So the shipped form is powder, dosed
- * by mass, consistent with every other vial here — and the same reason
- * Cerebrolysin's protocol was corrected off 'ml'.
+ * Form note (Edward, 2026-08-08): these arrive as a liquid and are lyophilised
+ * in-house, so the shipped form is powder, dosed by mass — consistent with
+ * every other vial here, and the same reason Cerebrolysin's protocol was
+ * corrected off 'ml'.
+ *
+ * ⚠️ Upstream sourcing is deliberately NOT recorded here. Supplier identity is
+ * confidential and stays in internal procurement — see the standing rule. The
+ * numbers below are what the app needs; where they came from is not.
  */
 
 export interface SupplierVial {
@@ -95,7 +99,7 @@ export const SUPPLIER_VIAL_SIZES: Record<string, SupplierVial> = {
   'aod-9604': { productName: 'AOD-9604', vialMg: [5, 10], form: 'Lyophilized peptide powder' },
 
   // ── White-label GLP codes, resolved by CAS ────────────────────────────────
-  // Liquid from Eli Lilly, lyophilised in-house — shipped as powder.
+  // Received as liquid, lyophilised in-house — shipped as powder.
   'tirzepatide': {
     productName: 'GLP-2TZ',
     vialMg: [5, 10, 15, 30, 60],
