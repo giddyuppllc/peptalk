@@ -150,12 +150,35 @@ const CATEGORY_LIST: PeptideCategory[] = [
   'Antimicrobial',
 ];
 
-// Build a lookup for fuzzy peptide name matching
-const PEPTIDE_ALIASES: Map<string, string> = new Map();
+/**
+ * Alias → peptide ids. Plural, deliberately.
+ *
+ * This was Map<string, string>, one id per alias, so a name shared by two
+ * compounds silently resolved to whichever was written last. Exactly one alias
+ * in the catalog collides — "alpha-MSH (11-13)" belongs to BOTH kpv-inj and
+ * kpv-oral, because it is the same tripeptide in two delivery routes — and the
+ * injectable form lost. Asking Aimee about it got you the oral one with no
+ * indication a second existed, which for a compound whose whole distinction IS
+ * the route is a materially wrong answer.
+ *
+ * A shared alias should return everything it names and let the caller decide.
+ * Caught by the "every alias resolves to its own peptide" test, which asserts
+ * the general case rather than sampling.
+ */
+const PEPTIDE_ALIASES: Map<string, string[]> = new Map();
+const addAlias = (raw: string | undefined, id: string) => {
+  if (!raw) return;
+  const key = raw.toLowerCase().trim();
+  if (!key) return;
+  const existing = PEPTIDE_ALIASES.get(key);
+  if (!existing) PEPTIDE_ALIASES.set(key, [id]);
+  else if (!existing.includes(id)) existing.push(id);
+};
+
 PEPTIDES.forEach((p) => {
-  PEPTIDE_ALIASES.set(p.name.toLowerCase(), p.id);
-  PEPTIDE_ALIASES.set(p.id.toLowerCase(), p.id);
-  if (p.abbreviation) PEPTIDE_ALIASES.set(p.abbreviation.toLowerCase(), p.id);
+  addAlias(p.name, p.id);
+  addAlias(p.id, p.id);
+  addAlias(p.abbreviation, p.id);
   // The catalog's own `aliases` — the names people actually arrive with.
   // These were populated on 19 peptides and read by NOTHING, so asking Aimee
   // about "Ibutamoren" (MK-677), "Victoza" (liraglutide) or "GW501516"
@@ -163,12 +186,11 @@ PEPTIDES.forEach((p) => {
   // to a generic answer rather than say she did not recognise it, which reads
   // as the compound not being covered.
   for (const alias of p.aliases ?? []) {
-    PEPTIDE_ALIASES.set(alias.toLowerCase(), p.id);
-    PEPTIDE_ALIASES.set(alias.toLowerCase().replace(/[^a-z0-9]/g, ''), p.id);
+    addAlias(alias, p.id);
+    addAlias(alias.toLowerCase().replace(/[^a-z0-9]/g, ''), p.id);
   }
   // Common shorthand
-  const shortName = p.name.toLowerCase().replace(/[-\s]/g, '');
-  PEPTIDE_ALIASES.set(shortName, p.id);
+  addAlias(p.name.toLowerCase().replace(/[-\s]/g, ''), p.id);
 });
 
 // Manual aliases for commonly used shorthand
@@ -204,14 +226,14 @@ const EXTRA_ALIASES: Record<string, string> = {
 };
 
 Object.entries(EXTRA_ALIASES).forEach(([alias, id]) => {
-  PEPTIDE_ALIASES.set(alias.toLowerCase(), id);
+  addAlias(alias, id);
 });
 
 // ---------------------------------------------------------------------------
 // Peptide detection in user message
 // ---------------------------------------------------------------------------
 
-function findMentionedPeptides(message: string): Peptide[] {
+export function findMentionedPeptides(message: string): Peptide[] {
   const lower = message.toLowerCase();
   const found = new Set<string>();
 
@@ -220,10 +242,12 @@ function findMentionedPeptides(message: string): Peptide[] {
     (a, b) => b[0].length - a[0].length
   );
 
-  for (const [alias, id] of sortedAliases) {
+  for (const [alias, ids] of sortedAliases) {
     if (alias.length < 3) continue; // skip very short aliases
     if (lower.includes(alias)) {
-      found.add(id);
+      // An alias can name more than one compound — "alpha-MSH (11-13)" is both
+      // KPV routes. Add every id it covers rather than an arbitrary one.
+      for (const id of ids) found.add(id);
     }
   }
 
