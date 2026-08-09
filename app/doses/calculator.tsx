@@ -55,6 +55,29 @@ import { confirmDoseGuards } from '../../src/utils/doseGuardPrompt';
 const VIAL_SIZES: (3 | 5 | 10)[] = [3, 5, 10];
 type ProtocolIntent = 'gradual' | 'aggressive' | 'maintenance';
 
+/**
+ * ProtocolIntensity (what the peptide screen's Beginner/Advanced pills emit)
+ * → ProtocolIntent (what this screen selects a schedule phase with).
+ *
+ *   mild        → gradual       the titration start, schedule[0]
+ *   aggressive  → aggressive    the full target, last phase
+ *   standard    → maintenance   the middle / maintenance-labelled phase
+ *
+ * Anything unrecognised falls back to maintenance, which is the value this
+ * screen defaulted to before the parameter was wired up — so an unexpected
+ * string degrades to the previous behaviour rather than to something arbitrary.
+ */
+function intentFromIntensity(intensity: string | undefined): ProtocolIntent {
+  switch (intensity) {
+    case 'mild':
+      return 'gradual';
+    case 'aggressive':
+      return 'aggressive';
+    default:
+      return 'maintenance';
+  }
+}
+
 const INTENT_LABELS: Record<ProtocolIntent, string> = {
   gradual: 'Gradual',
   aggressive: 'Aggressive',
@@ -93,6 +116,20 @@ export default function CalculatorV2Screen() {
     doseMcg?: string;
     vialMg?: string;
     waterMl?: string;
+    /**
+     * Sent by the Beginner/Advanced card on the peptide detail screen, whose
+     * stated purpose is "tap a pill to open the calculator pre-pointed at that
+     * intensity". This screen never read it, so both pills opened the
+     * calculator on its default 'maintenance' intent and produced identical
+     * numbers — the user made a choice and it was silently discarded.
+     *
+     * The two sides also speak different vocabularies: the card emits the
+     * ProtocolIntensity words ('mild' | 'aggressive'), this screen thinks in
+     * ProtocolIntent ('gradual' | 'aggressive' | 'maintenance'). Translated in
+     * intentFromIntensity rather than by renaming either, since both names are
+     * used elsewhere and mean subtly different things.
+     */
+    intensity?: string;
   }>();
   const logDose = useDoseLogStore((s) => s.logDose);
   const scheduleCycle = useDoseLogStore((s) => s.scheduleCycle);
@@ -157,7 +194,9 @@ export default function CalculatorV2Screen() {
   const [vialSizeMl, setVialSizeMl] = useState<3 | 5 | 10>(3);
   const [peptideMg, setPeptideMg] = useState<string>('');
   const [diluentMl, setDiluentMl] = useState<string>('');
-  const [intent, setIntent] = useState<ProtocolIntent>('maintenance');
+  const [intent, setIntent] = useState<ProtocolIntent>(() =>
+    intentFromIntensity(params.intensity),
+  );
   const [perShotOverride, setPerShotOverride] = useState<string>('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [displayUnit, setDisplayUnit] = useState<'mg' | 'mcg'>('mg');
