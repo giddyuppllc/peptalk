@@ -553,7 +553,7 @@ export default function NutritionScreen() {
                   ]}
                 >
                   {isPro
-                    ? '7-day meals + grocery list, from your targets.'
+                    ? '7-day meals from your targets.'
                     : 'Pro: weekly plan from your targets, dietary prefs, and cycle.'}
                 </Text>
               </View>
@@ -625,6 +625,70 @@ export default function NutritionScreen() {
                   ]}
                 >
                   Pick what you're cooking — macros auto-tally and pantry quantities decrement.
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={t.colors.textSecondary as string}
+              />
+            </View>
+          </GlassCard>
+        </Pressable>
+
+        {/* Grocery list — useGroceryStore had full CRUD and no screen at all;
+            its only consumer was the logout handler clearing it. This is the
+            door. */}
+        <Pressable
+          onPress={() => {
+            tapMedium();
+            router.push('/nutrition/grocery' as never);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Open your grocery list"
+        >
+          <GlassCard style={styles.cardSpacing}>
+            <View style={styles.photoRow}>
+              <View
+                style={[
+                  styles.cameraBubble,
+                  { backgroundColor: t.isDark ? 'rgba(201,136,90,0.22)' : 'rgba(229,146,141,0.22)' },
+                ]}
+              >
+                <Ionicons
+                  name="cart-outline"
+                  size={24}
+                  color={
+                    t.isDark
+                      ? ((t.colors as any).accentCognac as string)
+                      : ((t.colors as any).accentRose as string)
+                  }
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.cardTitle,
+                    {
+                      color: t.colors.textPrimary as string,
+                      fontFamily: t.isDark
+                        ? t.typography.headlineMale
+                        : t.typography.headlineFemale,
+                    },
+                  ]}
+                >
+                  Grocery list
+                </Text>
+                <Text
+                  style={[
+                    styles.cardSub,
+                    {
+                      color: t.colors.textSecondary as string,
+                      fontFamily: t.typography.body,
+                    },
+                  ]}
+                >
+                  What you need, by aisle. Tick things off as you shop.
                 </Text>
               </View>
               <Ionicons
