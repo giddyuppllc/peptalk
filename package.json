@@ -23,7 +23,7 @@
     "build-gap": "tsx scripts/build-gap.ts",
     "backlog:dosing": "tsx scripts/gen-dosing-backlog.ts > DOSING_DATA_BACKLOG.md",
     "verify:build": "tsx scripts/verify-build.ts",
-    "verify:all": "npm run verify:data && npm run verify:functions && npm run verify:square && npm run verify:csp && npm run verify:aimee && npm run verify:routes && npm run verify:videos && npm run verify:calc && npm run verify:sanitize && npm run verify:cycle && npm run verify:adherence && npm run verify:labparsers && npm run verify:mealmath && npm run verify:dosecalc && npm run verify:inbody && npm run verify:deadzones",
+    "verify:all": "npm run verify:data && npm run verify:functions && npm run verify:square && npm run verify:csp && npm run verify:aimee && npm run verify:routes && npm run verify:videos && npm run verify:calc && npm run verify:sanitize && npm run verify:cycle && npm run verify:adherence && npm run verify:labparsers && npm run verify:mealmath && npm run verify:dosecalc && npm run verify:inbody && npm run verify:deadzones && npm run verify:peptiderefs",
     "verify:deploy": "bash scripts/verify-deploy.sh",
     "lint": "expo lint",
     "export:web": "expo export --platform web && node scripts/inject-pwa.mjs",
@@ -34,7 +34,8 @@
     "verify:routes": "tsx scripts/verify-route-reachability.ts",
     "verify:videos": "tsx scripts/verify-video-integrity.ts",
     "lint:ci": "eslint app src --max-warnings 280",
-    "verify:deadzones": "node scripts/verify-deadzones.mjs"
+    "verify:deadzones": "node scripts/verify-deadzones.mjs",
+    "verify:peptiderefs": "tsx scripts/verify-peptide-refs.ts"
   },
   "expo": {
     "install": {

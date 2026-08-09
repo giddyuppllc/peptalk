@@ -62,7 +62,7 @@ export const GOAL_PEPTIDE_MATRIX: Record<GoalType, GoalPeptideMatch[]> = {
   ],
 
   longevity: [
-    { id: 'epitalon', tier: 'primary', reason: 'Telomerase activator, well-researched longevity peptide.' },
+    { id: 'epithalon', tier: 'primary', reason: 'Telomerase activator, well-researched longevity peptide.' },
     { id: 'mots-c', tier: 'primary', reason: 'Mitochondrial-derived peptide, age-related metabolic decline.' },
     { id: 'thymalin', tier: 'secondary', reason: 'Thymic peptide, immune resilience with age.' },
     { id: 'thymosin-alpha-1', tier: 'secondary', reason: 'Immune modulation; prophylactic longevity stack staple.' },
@@ -81,7 +81,7 @@ export const GOAL_PEPTIDE_MATRIX: Record<GoalType, GoalPeptideMatch[]> = {
     { id: 'dsip', tier: 'primary', reason: 'Delta-sleep-inducing peptide, deeper slow-wave sleep.' },
     { id: 'cjc-1295', tier: 'secondary', reason: 'GH pulse improves sleep architecture; pre-bed dose.' },
     { id: 'ipamorelin', tier: 'secondary', reason: 'Pairs with CJC for nocturnal GH; minimal cortisol bump.' },
-    { id: 'epitalon', tier: 'experimental', reason: 'Melatonin/circadian effects via pineal peptides.' },
+    { id: 'epithalon', tier: 'experimental', reason: 'Melatonin/circadian effects via pineal peptides.' },
   ],
 
   energy: [
@@ -109,11 +109,11 @@ export const GOAL_PEPTIDE_MATRIX: Record<GoalType, GoalPeptideMatch[]> = {
     { id: 'ghk-cu', tier: 'primary', reason: 'Copper peptide, collagen + hair follicle stimulation.' },
     { id: 'tb-500', tier: 'primary', reason: 'Tissue repair, skin elasticity and wound healing.' },
     { id: 'bpc-157', tier: 'secondary', reason: 'Collagen synthesis support; topical and systemic applications.' },
-    { id: 'melanotan-ii', tier: 'experimental', reason: 'Melanocortin agonist, tanning and skin pigmentation.' },
+    { id: 'melanotan-2', tier: 'experimental', reason: 'Melanocortin agonist, tanning and skin pigmentation.' },
   ],
 
   hormonal: [
-    { id: 'kisspeptin', tier: 'primary', reason: 'GnRH stimulation, fertility and endogenous hormone support.' },
+    { id: 'kisspeptin-10', tier: 'primary', reason: 'GnRH stimulation, fertility and endogenous hormone support.' },
     { id: 'pt-141', tier: 'primary', reason: 'Melanocortin agonist, sexual desire pathway.' },
     { id: 'gonadorelin', tier: 'secondary', reason: 'GnRH analog, HPG axis maintenance during TRT.' },
     { id: 'cjc-1295', tier: 'secondary', reason: 'GHRH analog supports natural GH/IGF-1 axis.' },
@@ -123,7 +123,7 @@ export const GOAL_PEPTIDE_MATRIX: Record<GoalType, GoalPeptideMatch[]> = {
     { id: 'bpc-157', tier: 'primary', reason: 'Versatile recovery peptide, broad applications.' },
     { id: 'mots-c', tier: 'primary', reason: 'Metabolic and mitochondrial support.' },
     { id: 'thymosin-alpha-1', tier: 'secondary', reason: 'Immune resilience and stress recovery.' },
-    { id: 'epitalon', tier: 'secondary', reason: 'Longevity and circadian support.' },
+    { id: 'epithalon', tier: 'secondary', reason: 'Longevity and circadian support.' },
   ],
 };
 
