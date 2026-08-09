@@ -13,6 +13,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { PEPTIDES } from '../data/peptides';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, FontSizes, BorderRadius, Gradients } from '../constants/theme';
@@ -30,7 +31,8 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
   // Free tier features
   peptide_library: {
     name: 'Peptide Library',
-    description: 'Browse our comprehensive library of 55+ peptides.',
+    // Derived — the literal said 55+ against a library of 79.
+    description: `Browse our comprehensive library of ${PEPTIDES.length} peptides.`,
   },
   peptide_info: {
     name: 'Peptide Information',

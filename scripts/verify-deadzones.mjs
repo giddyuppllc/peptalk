@@ -112,7 +112,62 @@ for (const file of files) {
   });
 }
 
+/**
+ * THIRD CHECK — a catalog size typed as a literal in user-facing copy.
+ *
+ * These are the numbers nobody re-checks after the data moves, and they were
+ * all wrong at once:
+ *
+ *   peptalkBot   "3,000+ exercises with video demos"   → 384, 97 with a clip
+ *   peptalkBot   "42 structured programs"              → the tab shows 1
+ *   video-tagger "Search 289 exercises…"               → 384
+ *   subscription "55+ peptides"                        → 79
+ *
+ * Aimee is the surface users trust most and she was the least accurate: ask
+ * her for a workout, get promised thousands of exercises and 42 programs, open
+ * the tab, find one. Every one of these is derivable — `${EXERCISES.length}`
+ * cannot go stale — so a literal is never the right answer here.
+ *
+ * Only string/JSX contexts count; comments are skipped, or this file's own
+ * explanation of the bug would trip it.
+ */
+const COUNT_RE = /['"`>][^'"`]*?\b\d{2,3}(,\d{3})*\+?\s+(peptides|exercises|programs|compounds|workouts|videos)\b/i;
+
+/**
+ * Files where a number followed by a catalog noun is a TARGET, not a claim
+ * about how much content exists. "Complete 10 workouts" is a goal the user
+ * works toward; it does not go stale when the library grows.
+ */
+const COUNT_ALLOWED = new Map([
+  [
+    'src/store/useAchievementStore.ts',
+    'Achievement descriptions are goals ("Complete 10 workouts"), not catalog sizes.',
+  ],
+]);
+
+const sourceFiles = globSync('{app,src}/**/*.{ts,tsx}').sort();
+const staleCounts = [];
+for (const file of sourceFiles) {
+  const rel = file.replace(/\\/g, '/');
+  if (rel.includes('__tests__')) continue;
+  if (COUNT_ALLOWED.has(rel)) continue;
+  readFileSync(file, 'utf8')
+    .split(/\r?\n/)
+    .forEach((line, idx) => {
+      const t = line.trim();
+      if (t.startsWith('*') || t.startsWith('//') || t.startsWith('/*')) return;
+      if (COUNT_RE.test(line)) staleCounts.push({ file: rel, line: idx + 1, src: t });
+    });
+}
+
 console.log(`— Dead-zone scan —\nScanned ${files.length} screens.\n`);
+
+for (const s of staleCounts) {
+  console.log(`✗ ${s.file}:${s.line}  catalog count hardcoded in copy`);
+  console.log(`    ${s.src}`);
+  console.log(`    Derive it: \`\${EXERCISES.length}\`, \`\${PEPTIDES.length}\`, etc.`);
+  console.log(`    A literal here is a claim that silently stops being true.\n`);
+}
 
 for (const f of findings) {
   console.log(`✗ ${f.file}:${f.line}`);
@@ -130,11 +185,12 @@ for (const t of truncations) {
   console.log(`    genuinely required, add the file to TRUNCATION_ALLOWED with a reason.\n`);
 }
 
-const total = findings.length + truncations.length;
+const total = findings.length + truncations.length + staleCounts.length;
 if (total === 0) {
   console.log('✓ No unhandled render dead zones.');
   console.log('✓ No silent catalog truncation.');
+  console.log('✓ No hardcoded catalog counts in copy.');
   process.exit(0);
 }
-console.log(`${findings.length} dead zone(s), ${truncations.length} silent truncation(s).`);
+console.log(`${findings.length} dead zone(s), ${truncations.length} silent truncation(s), ${staleCounts.length} hardcoded count(s).`);
 process.exit(1);

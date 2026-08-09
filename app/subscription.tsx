@@ -14,6 +14,7 @@ import { GradientButton } from '../src/components/GradientButton';
 import { SquareCardForm } from '../src/components/SquareCardForm';
 import { Colors, Gradients, Spacing, FontSizes, BorderRadius } from '../src/constants/theme';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
+import { PEPTIDES } from '../src/data/peptides';
 import type { SubscriptionTier } from '../src/types/fitness';
 import {
   PRODUCT_IDS,
@@ -117,10 +118,14 @@ const TIERS: TierInfo[] = [
 // prohibits misleading metadata. Numbers below are pulled from the actual
 // shipped data and architecture, so anything a reviewer cross-checks is
 // real.
+// Derived, not typed. The literal read "55+ peptides" against a library that
+// has grown to 79 — accurate when written, stale now, and the comment directly
+// above promises a reviewer can cross-check it. A count in marketing copy is
+// exactly the kind of number nobody re-checks after the data moves.
 const SOCIAL_PROOF = [
   {
     icon: 'flask-outline' as const,
-    title: '55+ peptides',
+    title: `${PEPTIDES.length} peptides`,
     body: 'cited research library, fully offline',
   },
   {

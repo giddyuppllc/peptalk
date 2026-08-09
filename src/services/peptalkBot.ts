@@ -29,6 +29,90 @@ import { analyzeStack, getKnownInteraction } from './analysisEngine';
 import { getProtocolsByPeptide, PROTOCOL_TEMPLATES } from '../data/protocols';
 import { getDosingTableEntry } from '../data/peptideDosingTable';
 import { BOT_MEDICAL_SUFFIX, BOT_INFO_SUFFIX } from '../constants/legal';
+import { EXERCISES } from '../data/exercises';
+import { WORKOUT_PROGRAMS } from '../data/workoutPrograms';
+
+/**
+ * Catalog sizes Aimee quotes, DERIVED — never typed as a literal.
+ *
+ * She was telling users the app had "3,000+ exercises with video demos" and
+ * "42 structured programs in the Workouts tab". The real numbers are 384
+ * exercises, 97 of which have a clip, and a Workouts tab that deliberately
+ * shows ONE program (Jamie's Lusciously Lean BODYreCOMP — the other curated
+ * programs were culled from the landing screen on her feedback).
+ *
+ * So someone asked Aimee for a workout, was promised thousands of exercises
+ * with video and 42 programs, went to the tab and found one program. That is
+ * the exact failure Edward named: a tester asks for something that "exists",
+ * and the real cause is that they were shown wrong information. Aimee is the
+ * most trusted surface in the app and she was the least accurate.
+ *
+ * Deriving these means they cannot rot. The stale literal in video-tagger
+ * ("Search 289 exercises…" against a catalog of 384) is the same bug in a
+ * quieter place.
+ */
+export const CATALOG = {
+  get exercises() {
+    return EXERCISES.length;
+  },
+  get programs() {
+    return WORKOUT_PROGRAMS.length;
+  },
+};
+
+/**
+ * Body-part word the user typed → the `primaryMuscle` values in the exercise
+ * catalog that satisfy it.
+ *
+ * Aimee used to answer "what should I do for chest?" from a hardcoded list:
+ * Bench Press, Incline Dumbbell Press, Cable Flyes, Push-Ups. Not one of those
+ * four is in this app's catalog. Across all seven body parts, 22 of the 28
+ * exercises she named did not exist — she was describing a generic gym app.
+ *
+ * So the user searched the library for what Aimee told them to do, found
+ * nothing, and reported the exercises as missing. Naming things that are not
+ * there is worse than naming nothing: it sends someone looking, and what comes
+ * back reads like a feature request instead of a bug.
+ *
+ * The muscle keys below are the real `primaryMuscle` values on EXERCISES —
+ * core, back, biceps, calves, chest, full_body, glutes, hamstrings, quads,
+ * shoulders, trapezius, triceps.
+ */
+export const BODYPART_MUSCLES: Record<string, string[]> = {
+  chest: ['chest'],
+  back: ['back', 'trapezius'],
+  legs: ['quads', 'hamstrings', 'calves'],
+  shoulders: ['shoulders'],
+  arms: ['biceps', 'triceps'],
+  bicep: ['biceps'],
+  tricep: ['triceps'],
+  core: ['core'],
+  abs: ['core'],
+  glute: ['glutes'],
+};
+
+/**
+ * Up to `limit` real exercise names for the given muscles, spread across them
+ * rather than taking the first N from whichever muscle sorts first — asking
+ * for "arms" should not return four biceps movements and no triceps.
+ */
+export function exercisesForMuscles(muscles: string[], limit = 4): string[] {
+  const byMuscle = muscles.map((m) =>
+    (EXERCISES as any[]).filter((e) => e.primaryMuscle === m).map((e) => e.name as string),
+  );
+  const out: string[] = [];
+  for (let i = 0; out.length < limit; i++) {
+    let addedThisRound = false;
+    for (const list of byMuscle) {
+      if (i >= list.length) continue;
+      out.push(list[i]);
+      addedThisRound = true;
+      if (out.length === limit) break;
+    }
+    if (!addedThisRound) break; // every list exhausted
+  }
+  return out;
+}
 
 // Intents that involve dosing, safety, or medical topics get a stronger disclaimer
 const MEDICAL_INTENTS: BotIntent[] = [
@@ -1496,39 +1580,56 @@ function respondWorkoutSuggest(message: string, context: BotContext): string {
   const isProgram = /\b(program|routine|split|plan)\b/i.test(lower);
 
   if (isBodypart) {
-    const bodypartMap: Record<string, string[]> = {
-      'chest': ['Bench Press', 'Incline Dumbbell Press', 'Cable Flyes', 'Push-Ups'],
-      'back': ['Pull-Ups', 'Barbell Rows', 'Lat Pulldown', 'Seated Cable Row'],
-      'legs': ['Barbell Squat', 'Romanian Deadlift', 'Leg Press', 'Walking Lunges'],
-      'shoulders': ['Overhead Press', 'Lateral Raises', 'Face Pulls', 'Arnold Press'],
-      'arms': ['Barbell Curl', 'Tricep Pushdown', 'Hammer Curls', 'Skull Crushers'],
-      'core': ['Planks', 'Cable Woodchops', 'Hanging Leg Raises', 'Ab Wheel Rollouts'],
-      'glutes': ['Hip Thrust', 'Bulgarian Split Squat', 'Cable Kickbacks', 'Sumo Deadlift'],
-    };
-
-    for (const [part, exercises] of Object.entries(bodypartMap)) {
-      if (lower.includes(part)) {
-        parts.push(`**${part.charAt(0).toUpperCase() + part.slice(1)} Exercises:**`);
-        exercises.forEach((e) => parts.push(`• ${e}`));
-        parts.push('');
-        break;
-      }
+    for (const [part, muscles] of Object.entries(BODYPART_MUSCLES)) {
+      if (!lower.includes(part)) continue;
+      const picks = exercisesForMuscles(muscles);
+      if (picks.length === 0) continue;
+      parts.push(`**${part.charAt(0).toUpperCase() + part.slice(1)} Exercises:**`);
+      picks.forEach((e) => parts.push(`• ${e}`));
+      parts.push('');
+      parts.push(`Search any of these in the exercise library to see the demo.`);
+      parts.push('');
+      break;
     }
   } else if (isProgram) {
-    parts.push(`We have **42 workout programs** available in the Workouts tab:`);
+    /**
+     * This block used to open with "We have **42 workout programs** available
+     * in the Workouts tab:" and then name five that do not exist in this app:
+     * Push/Pull/Legs, Upper/Lower, Full Body, Strength Focus, Metabolic
+     * Conditioning. They are plausible names for a generic fitness app and
+     * none of them is a program we ship.
+     *
+     * The Workouts tab shows ONE structured program, matched to the user
+     * (Men's BUILD or Lusciously Lean BODYreCOMP), plus build-your-own. So a
+     * user asked Aimee about programs, was given a menu of five, went to the
+     * tab and found none of them — then reported the programs as missing.
+     * That is the failure mode exactly: what they were told did not match what
+     * was there, and the request that came back read like a feature request.
+     *
+     * Names are now read from WORKOUT_PROGRAMS. The programming itself is
+     * untouched — this only stops Aimee describing something else.
+     */
+    parts.push(`Structured programs in the **Workouts** tab:`);
     parts.push('');
-    parts.push(`• **Push/Pull/Legs** — Classic 6-day split for muscle growth`);
-    parts.push(`• **Upper/Lower** — 4-day balanced split`);
-    parts.push(`• **Full Body** — 3-day for beginners or busy schedules`);
-    parts.push(`• **Strength Focus** — Powerlifting-style compound movements`);
-    parts.push(`• **Metabolic Conditioning** — HIIT + circuits for fat loss`);
+    for (const p of WORKOUT_PROGRAMS as any[]) {
+      const weeks = p.durationWeeks ? ` — ${p.durationWeeks}-week program` : '';
+      parts.push(`• **${p.name}**${weeks}`);
+    }
     parts.push('');
-    parts.push(`Head to the **Workouts** tab to browse all programs with video demos.`);
+    parts.push(
+      `You'll see the one matched to your profile on the Workouts tab. You can also ` +
+        `**build your own** workout exercise-by-exercise from the same screen, ` +
+        `drawing on the ${CATALOG.exercises}-exercise library.`,
+    );
   } else {
     parts.push(`I can help you find the right workout! Here are some options:`);
     parts.push('');
-    parts.push(`• **Browse Programs** — 42 structured programs in the Workouts tab`);
-    parts.push(`• **Exercise Library** — 3,000+ exercises with video demos`);
+    parts.push(
+      CATALOG.programs === 1
+        ? `• **Browse Programs** — Jamie's structured program in the Workouts tab`
+        : `• **Browse Programs** — ${CATALOG.programs} structured programs in the Workouts tab`,
+    );
+    parts.push(`• **Exercise Library** — ${CATALOG.exercises} exercises, many with video demos`);
     parts.push(`• **By Body Part** — Ask me about chest, back, legs, etc.`);
     parts.push('');
     parts.push(`**Peptide Synergies for Training:**`);
@@ -1642,7 +1743,7 @@ function respondCreatePlan(context: BotContext): string {
     parts.push(`3. **Log some check-ins** so I can see your baseline`);
     parts.push('');
     parts.push(`Once your profile is set, I can create a plan combining:`);
-    parts.push(`• Weekly workout schedule (from 42+ programs)`);
+    parts.push(`• Weekly workout schedule`);
     parts.push(`• Meal plan framework with macro targets`);
     parts.push(`• Peptide protocol timing (if applicable)`);
     parts.push(`• Daily check-in reminders`);
