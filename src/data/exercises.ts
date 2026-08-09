@@ -235,9 +235,36 @@ export function searchExercises(query: string): Exercise[] {
 }
 
 /** Filter by muscle group */
+/**
+ * Exercises that train a given region.
+ *
+ * Matches `tags` as well as the muscle fields. The body map's `head` region
+ * asks for 'cardio', which is not a primaryMuscle — the 17 cardio movements
+ * (burpees, star jumps, skaters, butt kicks) are `primaryMuscle: full_body`
+ * and tagged `circuit_cardio`. So that region rendered a "Top Exercises"
+ * heading and a "See All" link over an empty list: the content existed, the
+ * lookup asked the wrong field.
+ *
+ * Matched on tag TOKENS rather than the whole tag, so 'cardio' finds
+ * `circuit_cardio` without resorting to substring matching. The full tag
+ * vocabulary is six values over eight tokens (circuit, warm, up, upper, lower,
+ * push, pull, cardio) and none of them collides with a muscle name, so this
+ * cannot over-match.
+ *
+ * Widening is safe here — BodyRegionPanel is the only caller, and it wants
+ * "exercises for this part of the body", which is what a tag expresses just as
+ * well as a muscle. Anything not in the catalog at all still returns [] and
+ * still renders as empty; 'forearms' is the remaining case, and there are zero
+ * forearm exercises anywhere in the 384.
+ */
 export function getExercisesByMuscle(muscle: MuscleGroup): Exercise[] {
   return EXERCISES.filter(
-    (e) => e.primaryMuscle === muscle || e.secondaryMuscles.includes(muscle),
+    (e) =>
+      e.primaryMuscle === muscle ||
+      e.secondaryMuscles.includes(muscle) ||
+      ((e.tags ?? []) as unknown as string[]).some((t) =>
+        t.split('_').includes(muscle as unknown as string),
+      ),
   );
 }
 

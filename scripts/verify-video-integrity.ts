@@ -133,6 +133,42 @@ if (deadMapEntries.length) {
   );
 }
 
+/**
+ * 3b. Duplicate exercises — the same movement entered twice under a reordered
+ *     name. Two pairs exist:
+ *
+ *       "Bent over Cable bar row"  /  "cable bar bent over row"
+ *       "overhead tricep barbell extensions"  /  "Barbell overhead tricep extensions"
+ *
+ *     Same primary muscle, same equipment, same words. They cost twice:
+ *     the library lists one movement twice, and only ONE copy of each pair
+ *     carries clips — so a user can land on the empty twin and conclude the
+ *     exercise has no demo. They are also why resolveExerciseId refuses
+ *     token-order matching for these token sets: with two real candidates
+ *     there is no unambiguous answer, so a clip tagged with a scrambled form
+ *     stays unreachable rather than risk attaching to the wrong one.
+ *
+ *     Reported, never auto-merged — deduplicating a catalog means deciding
+ *     which id survives, and every clip, program and saved workout referencing
+ *     the loser has to move with it. That is Edward's call.
+ */
+const wordKey = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).sort().join('-');
+const byWords = new Map<string, string[]>();
+for (const e of exercises as { id: string; name?: string }[]) {
+  const k = wordKey(e.name ?? e.id);
+  byWords.set(k, [...(byWords.get(k) ?? []), e.id]);
+}
+const dupeExercises = [...byWords.values()].filter((v) => v.length > 1);
+if (dupeExercises.length) {
+  warn(
+    `${dupeExercises.length} duplicate exercise pair(s) — same words, different order. ` +
+      `Only one of each carries clips, and they block token-order video resolution: ` +
+      dupeExercises.map((v) => v.join(' / ')).join('  ·  '),
+  );
+} else {
+  ok('no duplicate exercises');
+}
+
 // 4. Coverage — reviewed clips whose exercise is real but which the map omits,
 //    so the exercise detail shows no video even though one exists.
 const missingFromMap = [
