@@ -562,9 +562,23 @@ export default function QuickDoseScreen() {
         {!protocol && (
           <GlassCard style={styles.section}>
             <Text style={styles.sectionText}>
-              No standardized protocol available for this peptide yet.
-              Ask Aimee for personalized guidance based on your goals.
+              No standardized dosing protocol for {selectedPeptide.name} yet, so
+              there's no dose to suggest. You can still open the full calculator
+              and work out the concentration and draw for a vial you have.
             </Text>
+            <AnimatedPress
+              onPress={() =>
+                router.push(`/doses/calculator?peptideId=${selectedPeptide.id}` as any)
+              }
+              style={styles.askAimeeBtn}
+              accessibilityRole="button"
+              accessibilityLabel={`Open the full dose calculator for ${selectedPeptide.name}`}
+            >
+              <LinearGradient colors={['#A4D9D1', '#B8913D']} style={styles.askAimeeBtnGradient}>
+                <Ionicons name="calculator" size={16} color="#fff" />
+                <Text style={styles.askAimeeBtnText}>Open full calculator</Text>
+              </LinearGradient>
+            </AnimatedPress>
             <AnimatedPress
               onPress={() => router.push('/(tabs)/peptalk' as any)}
               style={styles.askAimeeBtn}

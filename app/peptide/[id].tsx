@@ -823,7 +823,7 @@ export default function PeptideDetailScreen() {
               {peptide.name} doesn't have a published human-trial dosing
               protocol in our catalog. Most of what's known comes from
               preclinical or limited early-phase research, so we
-              intentionally keep the calculator out rather than guess at
+              intentionally don't suggest a dose rather than guess at
               numbers.
             </Text>
             <Text style={{ fontSize: 14, lineHeight: 20, color: '#2D2D2D', marginTop: 10 }}>
@@ -832,6 +832,52 @@ export default function PeptideDetailScreen() {
               its use, work directly with a licensed clinician — that's
               the only safe path for research-grade compounds.
             </Text>
+            {/* The calculator IS still available here, and saying so matters.
+                This card used to read "we intentionally keep the calculator
+                out", which was true when the calculator refused to prime
+                without a curated reference — it opened blank for these 39
+                compounds. It now computes for all 79, so the copy was
+                describing a limitation that no longer exists.
+
+                The distinction the wording has to hold: withholding a DOSE is
+                deliberate and stays, because a dose is a clinical claim we do
+                not have the evidence to make. Concentration and draw volume
+                are arithmetic on numbers the reader supplies about a vial they
+                are holding. Refusing to do that arithmetic protects nobody —
+                it just sends them to do it by hand. */}
+            <Text style={{ fontSize: 14, lineHeight: 20, color: '#2D2D2D', marginTop: 10 }}>
+              You can still open the calculator for {peptide.name} — enter the
+              vial and diluent you have and it will work out the concentration
+              and syringe draw. It does the arithmetic; it doesn't suggest a
+              dose.
+            </Text>
+            <TouchableOpacity
+              onPress={() =>
+                router.push({
+                  pathname: '/doses/calculator',
+                  params: { peptideId: peptide.id },
+                } as any)
+              }
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={`Open the reconstitution calculator for ${peptide.name}`}
+              style={{
+                marginTop: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                paddingVertical: 12,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: '#7ABED0',
+              }}
+            >
+              <Ionicons name="calculator-outline" size={16} color="#7ABED0" />
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#7ABED0' }}>
+                Open reconstitution calculator
+              </Text>
+            </TouchableOpacity>
             <Text style={{ fontSize: 12, lineHeight: 18, color: '#6B7280', marginTop: 10, fontStyle: 'italic' }}>
               PepTalk is an educational + tracking tool. We don't
               prescribe, recommend, or supply peptides.
