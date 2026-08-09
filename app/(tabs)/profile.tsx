@@ -37,6 +37,7 @@ import { useMealStore } from '../../src/store/useMealStore';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useChatStore } from '../../src/store/useChatStore';
 import { useCycleStore } from '../../src/store/useCycleStore';
+import { setCuesEnabled } from '../../src/lib/cue';
 import { usePantryStore } from '../../src/store/usePantryStore';
 import { useStackStore } from '../../src/store/useStackStore';
 import { useBodyMapStore } from '../../src/store/useBodyMapStore';
@@ -976,6 +977,7 @@ function NotificationSettings() {
     preferences,
     setDailyCheckInReminder,
     setDoseReminders,
+    setSoundCuesEnabled,
     setEnabled,
     setWorkoutReminderEnabled,
     setWorkoutReminder,
@@ -1098,6 +1100,36 @@ function NotificationSettings() {
             onValueChange={handleToggleEnabled}
             trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(199, 215, 230, 0.4)' }}
             thumbColor={notifEnabled ? '#c7d7e6' : '#6B7280'}
+          />
+        </View>
+
+        {/* Sound cues — the rest timer between sets.
+            It signalled completion with haptics alone, and haptics.ts no-ops
+            on web, so on the PWA the timer ended with nothing perceptible at
+            all. Now it beeps. This is the off switch — shipping the cue with
+            a setCuesEnabled() that nothing called would have been the same
+            dead-API shape this session has spent its time removing. */}
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
+            <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(199, 215, 230, 0.12)' }]}>
+              <Ionicons name="volume-medium-outline" size={18} color="#c7d7e6" />
+            </View>
+            <View style={styles.settingTextContainer}>
+              <Text style={[styles.settingTitle, { color: t.text }]}>Workout sounds</Text>
+              <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
+                A beep when a rest timer ends. Follows your silent switch.
+              </Text>
+            </View>
+          </View>
+          <Switch
+            value={preferences.soundCuesEnabled !== false}
+            onValueChange={(v) => {
+              setCuesEnabled(v);
+              setSoundCuesEnabled(v);
+            }}
+            trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(199, 215, 230, 0.4)' }}
+            thumbColor={preferences.soundCuesEnabled !== false ? '#c7d7e6' : '#6B7280'}
+            accessibilityLabel="Workout sounds"
           />
         </View>
 

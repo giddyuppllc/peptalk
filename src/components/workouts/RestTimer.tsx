@@ -15,6 +15,7 @@ import { AnimatedPress } from '../AnimatedPress';
 import { FontSizes } from '../../constants/theme';
 import { notifySuccess, tapLight } from '../../utils/haptics';
 import { playCue } from '../../lib/cue';
+import { useNotificationStore } from '../../store/useNotificationStore';
 
 interface RestTimerProps {
   /** Total seconds the rest should run for */
@@ -41,6 +42,16 @@ export function RestTimer({
   onSkip,
   label = 'Rest',
 }: RestTimerProps) {
+  /**
+   * Read the preference here rather than trusting cue.ts's module-level flag.
+   *
+   * That flag is set by the Settings toggle for immediate effect, but it lives
+   * in module scope and resets to ON every cold start — so a user who turned
+   * sounds off would get beeped at again after relaunching. Reading the
+   * persisted store is what actually makes the setting stick.
+   */
+  const soundsOn = useNotificationStore((st) => st.preferences.soundCuesEnabled !== false);
+
   const [remaining, setRemaining] = useState(durationSeconds);
   const [total, setTotal] = useState(durationSeconds);
   const [running, setRunning] = useState(durationSeconds > 0);
@@ -93,10 +104,10 @@ export function RestTimer({
       // on the PWA this timer finished with nothing perceptible at all.
       // Additive: the haptic and the on-screen change still happen, so a
       // muted phone does not mean missing the end of a rest period.
-      void playCue('restComplete');
+      if (soundsOn) void playCue('restComplete');
       onComplete?.();
     }
-  }, [remaining, total, onComplete]);
+  }, [remaining, total, onComplete, soundsOn]);
 
   // Last three seconds — a quieter, lower tick so you can start moving before
   // the timer is up rather than reacting after it.
@@ -105,8 +116,8 @@ export function RestTimer({
     if (!running || remaining <= 0 || remaining > 3) return;
     if (lastTickRef.current === remaining) return;
     lastTickRef.current = remaining;
-    void playCue('countdown');
-  }, [remaining, running]);
+    if (soundsOn) void playCue('countdown');
+  }, [remaining, running, soundsOn]);
 
   const mins = Math.floor(remaining / 60);
   const secs = remaining % 60;

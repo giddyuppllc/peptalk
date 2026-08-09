@@ -19,6 +19,7 @@ interface NotificationStore {
   setDailyCheckInReminder: (enabled: boolean) => void;
   setCheckInReminderTime: (time: string) => void;
   setDoseReminders: (enabled: boolean) => void;
+  setSoundCuesEnabled: (enabled: boolean) => void;
   setPushToken: (token: string) => void;
   setWorkoutReminderEnabled: (enabled: boolean) => void;
   setWorkoutReminder: (time: string, days: number[]) => void;
@@ -34,6 +35,7 @@ interface NotificationStore {
 
 const DEFAULT_PREFERENCES: NotificationPreferences = {
   enabled: true,
+  soundCuesEnabled: true,
   dailyCheckInReminder: true,
   checkInReminderTime: '09:00',
   doseReminders: true,
@@ -83,6 +85,11 @@ export const useNotificationStore = create<NotificationStore>()(
       setDoseReminders: (enabled: boolean) =>
         set((state) => ({
           preferences: { ...state.preferences, doseReminders: enabled },
+        })),
+
+      setSoundCuesEnabled: (enabled: boolean) =>
+        set((state) => ({
+          preferences: { ...state.preferences, soundCuesEnabled: enabled },
         })),
 
       setPushToken: (token: string) =>

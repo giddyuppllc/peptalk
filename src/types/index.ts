@@ -853,6 +853,17 @@ export interface ClinicalTrial {
 
 export interface NotificationPreferences {
   enabled: boolean;
+  /**
+   * In-app sound cues — currently the rest timer between sets.
+   *
+   * Lives here rather than in a new settings store because it is the same kind
+   * of thing as the rest of this block (does the app make a noise at me, and
+   * when) and it surfaces in the same Settings section. Default ON: the rest
+   * timer is the one moment a user is deliberately NOT looking at the screen,
+   * and it previously had no audible signal at all — silent on web, where
+   * haptics no-op entirely.
+   */
+  soundCuesEnabled: boolean;
   dailyCheckInReminder: boolean;
   checkInReminderTime: string; // HH:mm
   doseReminders: boolean;
