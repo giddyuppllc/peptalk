@@ -20,15 +20,10 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { PasswordToggle } from '../../src/components/PasswordToggle';
 import { Disclaimer } from '../../src/components/Disclaimer';
 import { trackConsentUpdated } from '../../src/services/analyticsEvents';
-import { useNotificationStore } from '../../src/store/useNotificationStore';
 import { notificationsAvailable ,
-  scheduleDailyCheckInReminder,
-  cancelAllReminders,
   scheduleWorkoutReminder,
   scheduleMealReminder,
   scheduleDoseReminder,
-  scheduleWeeklyReport,
-  cancelRemindersByTag,
 } from '../../src/services/notificationService';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useCheckinStore } from '../../src/store/useCheckinStore';
@@ -37,7 +32,6 @@ import { useMealStore } from '../../src/store/useMealStore';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useChatStore } from '../../src/store/useChatStore';
 import { useCycleStore } from '../../src/store/useCycleStore';
-import { setCuesEnabled } from '../../src/lib/cue';
 import { usePantryStore } from '../../src/store/usePantryStore';
 import { useStackStore } from '../../src/store/useStackStore';
 import { useBodyMapStore } from '../../src/store/useBodyMapStore';
@@ -965,353 +959,21 @@ const actionStyles = StyleSheet.create({
 // ---------------------------------------------------------------------------
 // Notification Settings
 // ---------------------------------------------------------------------------
+// WEEKDAY_NUMBERS and weekdayNumberToLabel went with NotificationSettings —
+// they existed only to render its workout-reminder day picker. DAY_LABELS stays;
+// it is still used below.
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const WEEKDAY_NUMBERS = [1, 2, 3, 4, 5, 6, 7];
 
-function weekdayNumberToLabel(n: number): string {
-  return DAY_LABELS[n - 1] ?? '';
-}
-
-function NotificationSettings() {
-  const {
-    preferences,
-    setDailyCheckInReminder,
-    setDoseReminders,
-    setSoundCuesEnabled,
-    setEnabled,
-    setWorkoutReminderEnabled,
-    setWorkoutReminder,
-    setMealRemindersEnabled,
-    setMealReminderTime,
-    toggleWeeklyReport,
-  } = useNotificationStore();
-  const t = useTheme();
-
-  const notifEnabled = preferences.enabled;
-
-  const handleToggleEnabled = async (value: boolean) => {
-    setEnabled(value);
-    if (!value) {
-      await cancelAllReminders();
-    } else {
-      if (preferences.dailyCheckInReminder) {
-        await scheduleDailyCheckInReminder(preferences.checkInReminderTime);
-      }
-      if (preferences.workoutReminderEnabled) {
-        await rescheduleWorkouts(preferences.workoutReminderTime, preferences.workoutReminderDays);
-      }
-      if (preferences.mealRemindersEnabled) {
-        await rescheduleAllMeals(preferences.mealReminderTimes);
-      }
-      if (preferences.weeklyReportEnabled) {
-        await scheduleWeeklyReport();
-      }
-    }
-  };
-
-  const handleToggleCheckIn = async (value: boolean) => {
-    setDailyCheckInReminder(value);
-    if (value && notifEnabled) {
-      await scheduleDailyCheckInReminder(preferences.checkInReminderTime);
-    } else {
-      await cancelRemindersByTag('checkin');
-    }
-  };
-
-  const handleToggleDose = async (value: boolean) => {
-    setDoseReminders(value);
-    if (value && notifEnabled) {
-      await rescheduleAllDoses();
-    } else {
-      // `dose-` (hyphen) prefix matches the scheduled-dose identifiers
-      // (`dose-${peptideId}` / `dose-${peptideId}-slot-N`) without sweeping
-      // the `dose_missed_*` foreground nudges, which use an underscore.
-      await cancelRemindersByTag('dose-');
-    }
-  };
-
-  const handleToggleWorkout = async (value: boolean) => {
-    setWorkoutReminderEnabled(value);
-    if (value && notifEnabled) {
-      await rescheduleWorkouts(preferences.workoutReminderTime, preferences.workoutReminderDays);
-    } else {
-      await cancelRemindersByTag('workout');
-    }
-  };
-
-  const handleToggleWorkoutDay = async (day: number) => {
-    const days = preferences.workoutReminderDays.includes(day)
-      ? preferences.workoutReminderDays.filter((d) => d !== day)
-      : [...preferences.workoutReminderDays, day].sort();
-    setWorkoutReminder(preferences.workoutReminderTime, days);
-    if (preferences.workoutReminderEnabled && notifEnabled) {
-      await cancelRemindersByTag('workout');
-      await rescheduleWorkouts(preferences.workoutReminderTime, days);
-    }
-  };
-
-  const handleToggleMeals = async (value: boolean) => {
-    setMealRemindersEnabled(value);
-    if (value && notifEnabled) {
-      await rescheduleAllMeals(preferences.mealReminderTimes);
-    } else {
-      // Cancel the meal-time reminders (breakfast/lunch/dinner). Do NOT
-      // use `'meal'` as the tag — that would also sweep the
-      // `meal-safety-...` identifiers from scheduleMealSafetyChecks
-      // (the leftovers / fridge-check reminders), which is a separate
-      // toggle. P1 from Wave 76.9 push audit.
-      // Meal ids have no trailing dash (`meal-breakfast`), and cancel matches
-      // by startsWith — so the tag must omit the dash or nothing cancels.
-      await cancelRemindersByTag('meal-breakfast');
-      await cancelRemindersByTag('meal-lunch');
-      await cancelRemindersByTag('meal-dinner');
-    }
-  };
-
-  const handleToggleWeeklyReport = async () => {
-    const willEnable = !preferences.weeklyReportEnabled;
-    toggleWeeklyReport();
-    if (willEnable && notifEnabled) {
-      await scheduleWeeklyReport();
-    } else {
-      await cancelRemindersByTag('weekly-report');
-    }
-  };
-
-  return (
-    <View style={styles.researchSection}>
-      <Text style={[styles.settingsSectionTitle, { color: t.text }]}>Notifications</Text>
-
-      {/* Master + Check-in + Dose */}
-      <GlassCard variant="elevated" style={notifStyles.card}>
-        {/* Master toggle */}
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(199, 215, 230, 0.12)' }]}>
-              <Ionicons name="notifications-outline" size={18} color="#c7d7e6" />
-            </View>
-            <View style={styles.settingTextContainer}>
-              <Text style={[styles.settingTitle, { color: t.text }]}>Enable Notifications</Text>
-              <Text style={[styles.settingDescription, { color: t.textSecondary }]}>Reminders and alerts</Text>
-            </View>
-          </View>
-          <Switch
-            value={notifEnabled}
-            onValueChange={handleToggleEnabled}
-            trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(199, 215, 230, 0.4)' }}
-            thumbColor={notifEnabled ? '#c7d7e6' : '#6B7280'}
-          />
-        </View>
-
-        {/* Sound cues — the rest timer between sets.
-            It signalled completion with haptics alone, and haptics.ts no-ops
-            on web, so on the PWA the timer ended with nothing perceptible at
-            all. Now it beeps. This is the off switch — shipping the cue with
-            a setCuesEnabled() that nothing called would have been the same
-            dead-API shape this session has spent its time removing. */}
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(199, 215, 230, 0.12)' }]}>
-              <Ionicons name="volume-medium-outline" size={18} color="#c7d7e6" />
-            </View>
-            <View style={styles.settingTextContainer}>
-              <Text style={[styles.settingTitle, { color: t.text }]}>Workout sounds</Text>
-              <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
-                A beep when a rest timer ends. Follows your silent switch.
-              </Text>
-            </View>
-          </View>
-          <Switch
-            value={preferences.soundCuesEnabled !== false}
-            onValueChange={(v) => {
-              setCuesEnabled(v);
-              setSoundCuesEnabled(v);
-            }}
-            trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(199, 215, 230, 0.4)' }}
-            thumbColor={preferences.soundCuesEnabled !== false ? '#c7d7e6' : '#6B7280'}
-            accessibilityLabel="Workout sounds"
-          />
-        </View>
-
-        {/* Daily check-in */}
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(185, 203, 182, 0.12)' }]}>
-              <Ionicons name="today-outline" size={18} color="#b9cbb6" />
-            </View>
-            <View style={styles.settingTextContainer}>
-              <Text style={[styles.settingTitle, { color: t.text }]}>Daily Check-In Reminder</Text>
-              <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
-                Remind at {preferences.checkInReminderTime}
-              </Text>
-            </View>
-          </View>
-          <Switch
-            value={preferences.dailyCheckInReminder && notifEnabled}
-            onValueChange={handleToggleCheckIn}
-            disabled={!notifEnabled}
-            trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(185, 203, 182, 0.4)' }}
-            thumbColor={
-              preferences.dailyCheckInReminder && notifEnabled ? '#b9cbb6' : '#6B7280'
-            }
-          />
-        </View>
-
-        {/* Dose reminders */}
-        <View style={[styles.settingRow, { marginBottom: 0 }]}>
-          <View style={styles.settingInfo}>
-            <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(227, 167, 161, 0.12)' }]}>
-              <Ionicons name="alarm-outline" size={18} color="#e3a7a1" />
-            </View>
-            <View style={styles.settingTextContainer}>
-              <Text style={[styles.settingTitle, { color: t.text }]}>Dose Reminders</Text>
-              <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
-                Reminders for active protocols
-              </Text>
-            </View>
-          </View>
-          <Switch
-            value={preferences.doseReminders && notifEnabled}
-            onValueChange={handleToggleDose}
-            disabled={!notifEnabled}
-            trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(227, 167, 161, 0.4)' }}
-            thumbColor={
-              preferences.doseReminders && notifEnabled ? '#e3a7a1' : '#6B7280'
-            }
-          />
-        </View>
-      </GlassCard>
-
-      {/* Workout Reminders */}
-      <GlassCard variant="elevated" style={notifStyles.card}>
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(245, 158, 11, 0.12)' }]}>
-              <Ionicons name="barbell-outline" size={18} color="#F4ECC2" />
-            </View>
-            <View style={styles.settingTextContainer}>
-              <Text style={[styles.settingTitle, { color: t.text }]}>Workout Reminders</Text>
-              <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
-                Daily at {preferences.workoutReminderTime}
-              </Text>
-            </View>
-          </View>
-          <Switch
-            value={preferences.workoutReminderEnabled && notifEnabled}
-            onValueChange={handleToggleWorkout}
-            disabled={!notifEnabled}
-            trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(245, 158, 11, 0.4)' }}
-            thumbColor={
-              preferences.workoutReminderEnabled && notifEnabled ? '#F4ECC2' : '#6B7280'
-            }
-          />
-        </View>
-
-        {/* Day picker chips */}
-        {preferences.workoutReminderEnabled && notifEnabled && (
-          <View style={notifStyles.dayRow}>
-            {WEEKDAY_NUMBERS.map((day) => {
-              const active = preferences.workoutReminderDays.includes(day);
-              return (
-                <TouchableOpacity
-                  key={day}
-                  style={[notifStyles.dayChip, { backgroundColor: t.glass, borderColor: t.glassBorder }, active && notifStyles.dayChipActive]}
-                  onPress={() => handleToggleWorkoutDay(day)}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[notifStyles.dayChipText, { color: t.textSecondary }, active && notifStyles.dayChipTextActive]}
-                  >
-                    {weekdayNumberToLabel(day)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-      </GlassCard>
-
-      {/* Meal Reminders */}
-      <GlassCard variant="elevated" style={notifStyles.card}>
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(16, 185, 129, 0.12)' }]}>
-              <Ionicons name="nutrition-outline" size={18} color="#10b981" />
-            </View>
-            <View style={styles.settingTextContainer}>
-              <Text style={[styles.settingTitle, { color: t.text }]}>Meal Reminders</Text>
-              <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
-                Breakfast, lunch, and dinner
-              </Text>
-            </View>
-          </View>
-          <Switch
-            value={preferences.mealRemindersEnabled && notifEnabled}
-            onValueChange={handleToggleMeals}
-            disabled={!notifEnabled}
-            trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(16, 185, 129, 0.4)' }}
-            thumbColor={
-              preferences.mealRemindersEnabled && notifEnabled ? '#10b981' : '#6B7280'
-            }
-          />
-        </View>
-
-        {/* Per-meal time display */}
-        {preferences.mealRemindersEnabled && notifEnabled && (
-          <View style={notifStyles.mealList}>
-            {(['breakfast', 'lunch', 'dinner'] as const).map((meal) => (
-              <View key={meal} style={[notifStyles.mealRow, { backgroundColor: t.glass }]}>
-                <Ionicons
-                  name={
-                    meal === 'breakfast'
-                      ? 'sunny-outline'
-                      : meal === 'lunch'
-                        ? 'partly-sunny-outline'
-                        : 'moon-outline'
-                  }
-                  size={16}
-                  color={t.textSecondary}
-                />
-                <Text style={[notifStyles.mealLabel, { color: t.text }]}>
-                  {meal.charAt(0).toUpperCase() + meal.slice(1)}
-                </Text>
-                <Text style={notifStyles.mealTime}>
-                  {preferences.mealReminderTimes[meal] ?? '--:--'}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
-      </GlassCard>
-
-      {/* Weekly Health Report */}
-      <GlassCard variant="elevated" style={notifStyles.card}>
-        <View style={[styles.settingRow, { marginBottom: 0 }]}>
-          <View style={styles.settingInfo}>
-            <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(59, 130, 246, 0.12)' }]}>
-              <Ionicons name="stats-chart-outline" size={18} color="#E89672" />
-            </View>
-            <View style={styles.settingTextContainer}>
-              <Text style={[styles.settingTitle, { color: t.text }]}>Weekly Health Report</Text>
-              <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
-                Summary every Sunday at 7:00 PM
-              </Text>
-            </View>
-          </View>
-          <Switch
-            value={preferences.weeklyReportEnabled && notifEnabled}
-            onValueChange={handleToggleWeeklyReport}
-            disabled={!notifEnabled}
-            trackColor={{ false: 'rgba(0,0,0,0.08)', true: 'rgba(59, 130, 246, 0.4)' }}
-            thumbColor={
-              preferences.weeklyReportEnabled && notifEnabled ? '#E89672' : '#6B7280'
-            }
-          />
-        </View>
-      </GlassCard>
-    </View>
-  );
-}
+// NotificationSettings() lived here — ~340 lines defining the whole
+// notification preferences UI, referenced by nothing. It was superseded by
+// app/settings/notifications.tsx (reachable from the Settings row below), and
+// the dead copy stayed behind looking authoritative.
+//
+// Found by grepping the exported web bundle: "Enable Notifications" and every
+// other string in it was absent, because the bundler tree-shook a component
+// nothing renders. A Workout-sounds toggle added to this copy earlier today
+// type-checked, linted and could never be reached — which is the whole reason
+// to check the built artifact rather than the source.
 
 /** Schedule workout reminders for the given days. */
 async function rescheduleWorkouts(time: string, days: number[]): Promise<void> {

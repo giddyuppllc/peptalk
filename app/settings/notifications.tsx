@@ -23,6 +23,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { Spacing, FontSizes } from '../../src/constants/theme';
 import { useNotificationStore } from '../../src/store/useNotificationStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
+import { setCuesEnabled } from '../../src/lib/cue';
 import { getPeptideById } from '../../src/data/peptides';
 import {
   scheduleDoseReminder,
@@ -121,6 +122,7 @@ export default function NotificationSettingsScreen() {
   const setDailyCheckInReminder = useNotificationStore((s) => s.setDailyCheckInReminder);
   const setCheckInReminderTime = useNotificationStore((s) => s.setCheckInReminderTime);
   const setDoseReminders = useNotificationStore((s) => s.setDoseReminders);
+  const setSoundCuesEnabled = useNotificationStore((s) => s.setSoundCuesEnabled);
   const setWorkoutReminderEnabled = useNotificationStore((s) => s.setWorkoutReminderEnabled);
   const setWorkoutReminderTime = useNotificationStore((s) => s.setWorkoutReminderTime);
   const setMealRemindersEnabled = useNotificationStore((s) => s.setMealRemindersEnabled);
@@ -233,6 +235,37 @@ export default function NotificationSettingsScreen() {
                   onCommit={setCheckInReminderTime}
                 />
               )}
+            </GlassCard>
+
+            {/* Workout sounds — an in-app cue, not a push notification, but it
+                belongs with the rest of "does the app make a noise at me" and
+                this is the screen users actually reach.
+
+                It was first added to a NotificationSettings() component inside
+                app/(tabs)/profile.tsx that is defined and never rendered — the
+                toggle compiled, type-checked, and could not be reached. Caught
+                by grepping the exported web bundle for its label and not
+                finding it. */}
+            <GlassCard style={styles.section}>
+              <View style={styles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.rowTitle, { color: t.text }]}>Workout sounds</Text>
+                  <Text style={[styles.rowSub, { color: t.textSecondary }]}>
+                    A beep when a rest timer ends, so you don't have to watch the
+                    screen between sets. Follows your silent switch.
+                  </Text>
+                </View>
+                <Switch
+                  value={prefs.soundCuesEnabled !== false}
+                  onValueChange={(v) => {
+                    setCuesEnabled(v);
+                    setSoundCuesEnabled(v);
+                  }}
+                  trackColor={{ true: t.primary + '88', false: t.cardBorder }}
+                  thumbColor={prefs.soundCuesEnabled !== false ? t.primary : '#fff'}
+                  accessibilityLabel="Workout sounds"
+                />
+              </View>
             </GlassCard>
 
             {/* Dose reminders */}
