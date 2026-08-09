@@ -91,10 +91,10 @@ function coachingNoteFor(exerciseId: string): string | null {
   return sentence.length > 120 ? sentence.slice(0, 117) + '…' : sentence;
 }
 
-/** Round to nearest 5 lb, with a 0-lb floor. */
-function snap5(n: number): number {
-  return Math.max(0, Math.round(n / 5) * 5);
-}
+// snap5 lived here. Its rounding moved to src/lib/workoutWeight.snapToPlate
+// when the weight precedence rule was extracted, and every call site went with
+// it — leaving this definition orphaned. Removed rather than left as a second
+// copy of the same rule waiting to drift from the tested one.
 
 /** ISO-week Monday → Sunday day labels */
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

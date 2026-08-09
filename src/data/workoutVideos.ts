@@ -14,6 +14,7 @@
  */
 
 import rawManifest from './workoutVideos.json';
+import { EXERCISES } from './exercises';
 
 export type WorkoutVideoCategory =
   | 'weight_loss'
@@ -108,13 +109,16 @@ export function getVideoBySlug(slug: string): WorkoutVideo | undefined {
 const tokenKey = (id: string) =>
   id.toLowerCase().replace(/-\d+$/, '').split('-').filter(Boolean).sort().join('-');
 
-/** Built once, lazily — importing EXERCISES at module scope is avoidable work. */
+/**
+ * Built once on first use. A static import is fine here — exercises.ts pulls in
+ * only types and a JSON file, and nothing in that direction imports back, so
+ * there is no cycle to dodge. An earlier version used require() to "stay cheap
+ * to import", which bought nothing (the catalog is imported almost everywhere
+ * anyway) and cost the type safety of a real import.
+ */
 let idIndex: { real: Set<string>; byTokens: Map<string, string[]> } | null = null;
 function getIdIndex() {
   if (idIndex) return idIndex;
-  // Required lazily so this module stays cheap to import and free of any
-  // load-order coupling with the exercise catalog.
-  const { EXERCISES } = require('./exercises') as { EXERCISES: { id: string }[] };
   const real = new Set(EXERCISES.map((e) => e.id));
   const byTokens = new Map<string, string[]>();
   for (const e of EXERCISES) {

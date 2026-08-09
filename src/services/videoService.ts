@@ -25,6 +25,7 @@
  */
 
 import { supabase } from './supabase';
+import { resolveExerciseId } from '../data/workoutVideos';
 
 /**
  * exerciseId → server video slug (from get-workout-video manifest).
@@ -395,10 +396,6 @@ let _alias: Map<string, string> | null = null;
 function aliasKey(exerciseId: string): string | null {
   if (exerciseId in EXERCISE_VIDEO_SLUG_MAP) return exerciseId;
   if (!_alias) {
-    // Required lazily to keep this module's import graph flat.
-    const { resolveExerciseId } = require('../data/workoutVideos') as {
-      resolveExerciseId: (t: string | null) => string | null;
-    };
     _alias = new Map();
     for (const key of Object.keys(EXERCISE_VIDEO_SLUG_MAP)) {
       const real = resolveExerciseId(key);

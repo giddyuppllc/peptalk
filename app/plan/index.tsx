@@ -76,7 +76,10 @@ export default function PlanScreen() {
   const [generating, setGenerating] = useState(false);
   const [showFullText, setShowFullText] = useState(false);
 
-  const goals = profile?.primaryGoals ?? [];
+  // Memoised because `?? []` builds a fresh array every render, which would
+  // change handleGenerate's dependency on every pass and rebuild the callback
+  // continuously.
+  const goals = useMemo(() => profile?.primaryGoals ?? [], [profile?.primaryGoals]);
   const dayOfWeek = todayDayOfWeek();
 
   // Derived from `activePlan` rather than calling the store getters in a
