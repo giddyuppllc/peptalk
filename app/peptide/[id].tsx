@@ -23,6 +23,8 @@ import { Disclaimer } from '../../src/components/Disclaimer';
 import { trackPeptideView } from '../../src/services/analyticsEvents';
 import { getProtocolsByPeptide } from '../../src/data/protocols';
 import { getSourcesByPeptide } from '../../src/data/sources';
+import { useSideEffectStore } from '../../src/store/useSideEffectStore';
+import { tallySymptoms, describeTally } from '../../src/lib/sideEffectSummary';
 import { getTrialsByPeptideId } from '../../src/data/clinicalTrials';
 import { getSafetyProfileByPeptideId } from '../../src/data/safetyProfiles';
 import { getCuratedStacksByPeptideId } from '../../src/data/curatedStacks';
@@ -117,6 +119,14 @@ export default function PeptideDetailScreen() {
   const nutritionGuidance = useMemo(() => peptideKey ? getPeptideNutrition(peptideKey) : null, [peptideKey]);
   const relatedVideos = useMemo(() => peptideKey ? getVideosByPeptideId(peptideKey) : [], [peptideKey]);
   const relatedGuides = useMemo(() => peptideKey ? getGuidesByPeptideId(peptideKey) : [], [peptideKey]);
+  // Selected from `entries` rather than calling getByPeptide() in the
+  // selector: that builds a new array per call and Zustand's reference
+  // check reads it as a change on every render.
+  const sideEffectEntries = useSideEffectStore((s) => s.entries);
+  const myTallies = useMemo(
+    () => (peptideKey ? tallySymptoms(sideEffectEntries.filter((e) => e.peptideId === peptideKey)) : []),
+    [sideEffectEntries, peptideKey],
+  );
 
   useEffect(() => {
     if (!peptide) return;
@@ -666,6 +676,61 @@ export default function PeptideDetailScreen() {
                 </Text>
               </View>
             )}
+          </GlassCard>
+        )}
+
+        {/* ── What YOU logged for this compound ──────────────────────────
+            The block below renders safetyProfile.commonSideEffects — the
+            literature's list, and only for the 15 peptides that have a curated
+            profile. Nothing on this screen has ever shown the user's OWN
+            logged side effects for the compound they are reading about.
+
+            useSideEffectStore.getByPeptide exists for precisely this and had
+            no caller anywhere in the app. So someone could log nausea on
+            semaglutide three times, open the semaglutide page, and read what
+            is common in general while their own record of the same compound
+            sat two screens away, unreferenced.
+
+            Rendered OUTSIDE the safetyProfile gate on purpose: your own
+            history is worth showing whether or not we happen to carry a
+            curated profile for that compound. */}
+        {myTallies.length > 0 && (
+          <GlassCard style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="pulse-outline" size={18} color="#E89672" />
+              <Text style={styles.sectionTitle}>What you&apos;ve logged</Text>
+            </View>
+            {myTallies.map((tally) => (
+              <View key={tally.symptom} style={styles.bulletRow}>
+                <Text style={styles.bulletDot}>•</Text>
+                <Text style={styles.bulletText}>
+                  {tally.symptom} — {describeTally(tally)}
+                </Text>
+              </View>
+            ))}
+            <TouchableOpacity
+              onPress={() => router.push('/doses/side-effects' as any)}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Open your full side-effect log"
+              style={{ marginTop: 10 }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#E89672' }}>
+                See the full log
+              </Text>
+            </TouchableOpacity>
+            <Text
+              style={{
+                fontSize: 11,
+                lineHeight: 16,
+                color: '#6B7280',
+                marginTop: 10,
+                fontStyle: 'italic',
+              }}
+            >
+              Your own entries, not medical advice. Anything persistent or
+              severe is worth raising with a clinician.
+            </Text>
           </GlassCard>
         )}
 

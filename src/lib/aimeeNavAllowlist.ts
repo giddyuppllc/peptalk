@@ -52,6 +52,10 @@ const ALLOWED: RegExp[] = [
   // check-in reminders". Until the screen existed she could not send anyone to
   // it, so the promise had nowhere to land.
   /^\/?plan(\/[\w-]+)*(\?.*)?$/,
+  // /insights — Aimee already quotes these correlations in chat via
+  // buildCorrelationSummaryForBot. Until the screen existed she could cite the
+  // numbers and had nowhere to send anyone to see them.
+  /^\/?insights(\?.*)?$/,
   /^\/?journal(\/[\w-]+)*(\?.*)?$/,
   /^\/?cycle(\/[\w-]+)*(\?.*)?$/,
   /^\/?settings(\/[\w-]+)*(\?.*)?$/,
