@@ -151,12 +151,36 @@ for (const file of sourceFiles) {
   const rel = file.replace(/\\/g, '/');
   if (rel.includes('__tests__')) continue;
   if (COUNT_ALLOWED.has(rel)) continue;
+  /**
+   * Track block-comment state across lines instead of testing each line on its
+   * own.
+   *
+   * The per-line version only skipped lines whose FIRST character was `*`,
+   * `//` or `/*`, so a continuation line inside a `/* … *\/` block that happened
+   * to start with ordinary prose was treated as code. It flagged a comment on
+   * app/peptide/[id] explaining that only 15 peptides carry a curated safety
+   * profile — a sentence about the data, not a claim rendered to anyone.
+   *
+   * A verifier that fires on its own documentation trains people to ignore it,
+   * which costs more than the check is worth.
+   */
+  let inBlock = false;
   readFileSync(file, 'utf8')
     .split(/\r?\n/)
     .forEach((line, idx) => {
       const t = line.trim();
+      const wasInBlock = inBlock;
+      // Update state first: a line can both open and close a block.
+      const opens = line.lastIndexOf('/*');
+      const closes = line.lastIndexOf('*/');
+      if (opens !== -1 && (closes === -1 || closes < opens)) inBlock = true;
+      else if (closes !== -1 && inBlock && (opens === -1 || opens < closes)) inBlock = false;
+
+      if (wasInBlock || inBlock) return;
       if (t.startsWith('*') || t.startsWith('//') || t.startsWith('/*')) return;
-      if (COUNT_RE.test(line)) staleCounts.push({ file: rel, line: idx + 1, src: t });
+      // Strip trailing line comments so a `// 15 peptides` note is not code.
+      const code = line.replace(/(^|[^:])\/\/.*$/, '$1');
+      if (COUNT_RE.test(code)) staleCounts.push({ file: rel, line: idx + 1, src: t });
     });
 }
 
