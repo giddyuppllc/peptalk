@@ -155,7 +155,12 @@ export const ChatHistoryDrawer: React.FC<Props> = ({ visible, onClose }) => {
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: t.cardBorder }]}>
             <Text style={[styles.headerTitle, { color: t.text }]}>Chats</Text>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Close chat history"
+            >
               <Ionicons name="close" size={22} color={t.textSecondary} />
             </TouchableOpacity>
           </View>

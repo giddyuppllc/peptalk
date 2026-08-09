@@ -1,70 +1,121 @@
 # PepTalk app — punch list
 
-Compiled 2026-05-15 from a read-only audit of this repo against the marketing site claims at `giddyuppllc/Peptalk.biowebcontainer`. Items are ranked by App Review impact.
+Compiled 2026-05-15 from a read-only audit of this repo against the marketing
+site claims at `giddyuppllc/Peptalk.biowebcontainer`.
+
+> **RE-VERIFIED 2026-08-09.** Every item below was checked against the code as
+> it stands, not carried forward on trust. Most of the "blocks App Review" list
+> was already fixed and the doc had gone stale — which is its own hazard: a
+> stale punch list gets acted on, and two of these items were instructions to
+> change things that are now correct.
+>
+> Status legend: **DONE** verified fixed · **OPEN** verified still true ·
+> **WAS WRONG** the item itself was inaccurate · **NEEDS YOU** content or
+> credentials only Edward/Jamie can supply.
 
 ---
 
 ## CRITICAL — marketing/legal mismatch (fix before App Store submit)
 
-- [ ] **`src/services/integrations/healthKitAdapter.ts` (around the `connect()` permission call)** — Marketing claims PepTalk writes daily check-ins, body weight, and mindful minutes back to HealthKit. The actual auth call passes a write permission array that doesn't include them. Append `bodyMass`, `mindfulSession`, and `sleepAnalysis` to the write scopes; add a `scopeToHKWritePerms()` helper if a clean mapping doesn't exist yet. Note: `src/services/healthKitService.ts` is the *deprecated* path — comment at line 39 (`const HKModule: any = null`) confirms it's inactive — but its read permission list (lines 67-89) is still the authoritative list of what the app *intends* to request. Cross-check that `healthKitAdapter.ts` now requests all 15 read categories listed there.
+- **WAS WRONG** — **HealthKit write permissions.** The item said marketing
+  claims writes of Body Mass, Mindful Session and Sleep Analysis while the app
+  requests none. Checked: `getWriteScope()` requests Weight + MindfulSession,
+  and BOTH are exercised — `writeWeightToHealth` from the check-in flow,
+  `writeCheckInToHealth` (check-in) and `writeSymptomToHealth` (side-effect
+  log) for MindfulSession. Sleep is not claimed to users: app.json's
+  `NSHealthUpdateUsageDescription` reads "PepTalk writes your check-ins and
+  weight back to Apple Health". Scope, plist and behaviour all agree. The stale
+  comment in healthKitAdapter that repeated the sleep claim has been corrected,
+  because it read as an instruction to widen a write scope that does not need
+  widening.
 
-- [ ] **`src/services/healthConnectService.ts` + `src/services/integrations/healthConnectAdapter.ts`** — Health Connect (Android) is stubbed. The adapter returns empty arrays and a note "Health Connect read paths land in 1.9.x". The marketing site lists Google Health Connect as a supported integration. Either ship real read paths in this release, or gate the Android Health Connect feature behind "coming soon" copy and remove `/integrations/google-health-connect` from the marketing site footer until ready.
+- **OPEN / NEEDS YOU** — **Health Connect (Android) is stubbed.** The adapter
+  still returns empty arrays. Either ship read paths or keep it marked "coming
+  soon". The in-app integrations screen already labels it correctly; the
+  marketing site is outside this repo.
 
-- [ ] **`src/data/videos.ts` lines 16, 30, 44, 58, 72, 85, 98, 111, 124** — Eight Learn Hub video entries have `videoUrl: '…/PLACEHOLDER_*'`. Tapping any of them opens an invalid URL. Either replace with real YouTube/Vimeo URLs or remove the entries (and the empty-state copy if the Learn category goes empty).
+- **DONE** — **8 Learn Hub videos with PLACEHOLDER URLs.** No longer reachable:
+  `isRealVideo` filters on `comingSoon !== true && !/PLACEHOLDER/`, and every
+  list/gallery/deep-link surface goes through it. All 9 entries are currently
+  placeholders, so the Learn video screen shows an honest "Coming Soon" state
+  rather than broken links.
 
-- [x] **`src/services/adService.ts` — REMOVE ENTIRELY** — User confirmed AdMob is being pulled from the app; PepTalk will not run ads at launch. Delete `src/services/adService.ts`, any AdMob-related dependencies in `package.json` (e.g. `react-native-google-mobile-ads`), the iOS `Info.plist` SKAdNetworkItems / NSUserTrackingUsageDescription if AdMob was the only reason for them, and any UI surfaces that render the ad banner/interstitial. Marketing site has been updated to reflect "no ads in app."
+- **DONE** — `src/services/adService.ts` removed.
 
-- [ ] **`tester-feedback.md` lines 5-8** — Four unfixed bugs reported by testers, any of which is plausibly an App Review reject: back button broken on video screen, video playback failure, AI Recipe Generator → blank page, MOTSC in Dosing Calculator → freeze. Reproduce + fix each in the submit build.
+- **DONE** — **4 tester bugs.** Back button, video playback (`19fccf7` — HLS
+  with no HLS player on web), AI Recipe Generator, and the MOTSC dosing-calculator
+  freeze (the memoisation note in `app/peptide/[id].tsx` documents the fix).
 
 ---
 
 ## HIGH — feature shipped-but-incomplete
 
-- [ ] **`docs/WORKOUT_VIDEOS.md:5-14`** — 311 workout videos uploaded to R2 (`peptalktraining` bucket → `videos.peptalkapp.com`), **zero** tagged with `exerciseId`. Pro tier currently shows "Video coming soon" on every exercise. Auto-tagger script exists at `scripts/ai-tag-videos.mjs` — run it, then Jamie reviews suggestions in the tagger UI and exports the manifest. This unblocks the Pro tier's core marketing promise.
+- **DONE** — **311 workout videos, zero tagged.** Now 264 tagged and 251
+  reaching a real exercise; 122 of 384 exercises have at least one clip. 53 of
+  those were recovered on 2026-08-09 by tolerant id resolution — the tags were
+  present but one character off (`plank-289` → `plank`).
 
-- [ ] **`VIDEO_CONTENT_TODO.md`** — Confirms Tasks 1 + 2 (replace 8 Learn placeholders, populate exercise demo manifest for 308 remaining videos) still outstanding.
+- **NEEDS YOU** — 5 clips still resolve to no exercise because the exercise is
+  missing from the catalog: `dumbbell-pullover`, `dumbbell-skull-crusher`,
+  `narrow-grip-seated-cable-row`, `ball-straight-leg-bridge`, `dumbbell-fly`.
+  Add the exercises or retag the clips. Reported every run by `verify:videos`.
 
-- [ ] **`src/data/howToGuides.ts`** — Only 3-4 guides exist (reconstitution, subq injection, read COA). If the Learn UI surfaces "guides" as a category expecting more, either add more or update the UI copy to match what's shipped.
+- **NEEDS YOU** — **2 duplicate exercises** (same words, different order; only
+  one of each pair carries clips): `bent-over-cable-bar-row` /
+  `cable-bar-bent-over-row`, and `overhead-tricep-barbell-extensions` /
+  `barbell-overhead-tricep-extensions`. Not auto-merged: deduplicating means
+  choosing which id survives and moving every clip, program and saved workout
+  that points at the loser.
 
-- [ ] **`src/services/integrations/whoopAdapter.ts:31, 36, 43`** — Whoop OAuth marked `TODO(1.9.x)`; status returns "not yet implemented". Either implement or hide from the integrations menu so users don't see a connect button that does nothing.
+- **OPEN** — `src/data/howToGuides.ts` still has 3 guides. All 3 resolve and
+  render; it is a content gap, not a defect.
 
-- [ ] **`src/services/integrations/ouraAdapter.ts:33, 38, 45`** — Same as Whoop. Hide or implement.
+- **DONE** — **Whoop / Oura connect buttons.** Both render as "coming soon"
+  cards with copy ("partnership in progress", "approval in progress") and no
+  connect button, so nothing does nothing.
 
-- [ ] **`supabase/functions/community-moderate-image/index.ts`** — Grok-Vision-backed moderation is deployed but has a fail-safe "auto-approve on error" path. Verify the function logs in Supabase for recent errors — repeated Grok API failures would let flagged content through. Confirm the Grok API key is set in Supabase secrets.
-
-- [ ] **`supabase/functions/lab-scan/index.ts`** — Pro-tier lab-scan extraction relies on `BETA_TESTER_EMAILS` Supabase secret to gate access. Verify it's actually set (`supabase secrets list`) or the function will 401 everyone.
+- **NEEDS YOU** — `community-moderate-image` auto-approve-on-error path and the
+  `lab-scan` `BETA_TESTER_EMAILS` secret both need checking against live
+  Supabase; not verifiable from the repo.
 
 ---
 
 ## MEDIUM — polish / accessibility / tests
 
-- [ ] **`ACCESSIBILITY_TODO.md`** — Roughly 30 back buttons + 30 close buttons lack `accessibilityLabel`. Run `grep -rn 'name="chevron-back"\|name="arrow-back"\|name="close"' app/ src/components/` and add labels (or migrate to the `<BackButton />` component if it has them baked in). App Review flags missing VoiceOver labels.
+- **DONE** — **Accessibility labels on back/close buttons.** The item estimated
+  ~60 missing. Measured 2026-08-09: 118 back/close icons, 5 without a label.
+  All 5 fixed (food-scanner ×2, FullScreenVideo, DaySummarySheet,
+  ChatHistoryDrawer). Now 0 of 118.
 
-- [ ] **`SUPABASE_RLS_CHECKLIST.md`** — Checklist is entirely unchecked. Run the SQL query in lines 30-40 against the prod DB to confirm `rls_enabled=true` and `policy_count >= 4` for all 11 user-data tables (profiles, check_ins, dose_logs, meal_entries, workout_logs, journal_entries, saved_stacks, health_profiles, active_protocols, consultation_requests, chat_messages). Enable RLS on any tables missing it.
+- **DONE** — **Hardcoded test accounts.** No `@test.com` bypass exists anywhere
+  in `src/` or `app/`. `TEST_PROFILES` is an empty map, so no test data ships.
 
-- [ ] **`src/store/useAuthStore.ts:98-102`** — Hardcoded test accounts (`free@test.com`, `plus@test.com`, `pro@test.com`, `jamie@test.com`, `jake@test.com`) bypass Supabase auth and override tiers. Wrap in `__DEV__` guard or remove from the production build path.
-
-- [ ] **`src/constants/testProfiles.ts:19-26`** — Test profile data keyed on `@test.com` emails. Confirm these are not loaded in production.
+- **NEEDS YOU** — `SUPABASE_RLS_CHECKLIST.md` needs running against prod.
 
 ---
 
 ## LOW — nice-to-have / future
 
-- [ ] **`docs/WORKOUT_VIDEOS.md:156-166`** — "Server-side overrides table", "Vision-API auto-tag", "Bucket sync script" are listed as future work. Lower priority unless Pro tier video gripes show up post-launch.
+- **WAS WRONG** — Sentry is not "commented out". The DSN is an EAS server-side
+  environment variable, invisible to a repo grep, and the Expo plugin
+  registration was fixed in `2a2f5c9`.
 
-- [ ] **`src/services/telemetry.ts:48, 60, 69, 77`** — Sentry integration commented out with `// TODO(sentry):`. If error tracking is desired, finish the integration; otherwise leave as-is.
+- **OPEN** — `docs/WORKOUT_VIDEOS.md` future work (server-side overrides table,
+  bucket sync script).
 
-- [ ] **`tester-feedback.md:11-24`** — Feature requests (Personalize macros, Greek yogurt measurements, multi-set Military Press, Workouts by category, Remove Trainerize videos, Lab work upload + AI, Apple Health sleep, Autocomplete search bars). The "Remove Trainerize videos" item suggests some third-party content may still be shipping — verify nothing copyrighted is in the bundle.
+- **OPEN / NEEDS YOU** — tester feature requests. Two are now built: weight
+  per set (multi-set logging) and Apple Health sleep is read (not written, and
+  not claimed). "Remove Trainerize videos" still wants a copyright check on the
+  bundle.
 
-- [ ] **`src/types/fitness.ts:426-430`** — Comment notes "AI vision food scanner moved into Plus per Edward's pricing call ($9.99 zone)". Confirm `meal_scan` / `ai_food_scanner` features are correctly gated behind Plus tier in `PaywallModal` + all feature-check call sites.
+- **OPEN** — confirm `meal_scan` / `ai_food_scanner` gating matches the Plus
+  pricing call at every feature-check call site.
 
 ---
 
-## Summary — what blocks App Review
+## Summary — what actually blocks App Review now
 
-1. **HealthKit write permissions** — marketing claims writes, app requests none. (Top priority — affects credibility + Apple's privacy disclosure checks.)
-2. **Health Connect Android** — stubbed. Either ship or temporarily mark "coming soon" in marketing.
-3. **8 Learn Hub videos with PLACEHOLDER URLs** — user-facing broken links.
-4. **311 untagged Pro-tier videos** — every Pro exercise shows "video coming soon"; the auto-tagger needs to run.
-5. **AdMob placeholder unit IDs** — monetization broken.
-6. **4 unfixed tester bugs** — back button, video playback, AI Recipe Generator, Dosing Calculator freeze.
+Nothing in this file, on the evidence above. The remaining items are content
+(5 unmatched clips, 2 duplicate exercises, 3 guides, 48 peptides with no
+safety profile), live-infrastructure checks that need Supabase credentials, or
+decisions only you can make.

@@ -201,7 +201,13 @@ export function FullScreenVideo({ visible, uri, onClose, title }: FullScreenVide
           <>
             {/* Top bar: close + title */}
             <View style={st.topBar} pointerEvents="box-none">
-              <TouchableOpacity onPress={onClose} hitSlop={16} style={st.iconBtn}>
+              <TouchableOpacity
+                onPress={onClose}
+                hitSlop={16}
+                style={st.iconBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Close the video"
+              >
                 <Ionicons name="close" size={28} color="#fff" />
               </TouchableOpacity>
               {!!title && (

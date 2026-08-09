@@ -105,7 +105,12 @@ export function DaySummarySheet({ visible, dateKey, onClose }: DaySummarySheetPr
                   <Text style={[styles.headerEmpty, { color: t.textMuted }]}>Nothing logged</Text>
                 )}
               </View>
-              <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <TouchableOpacity
+                onPress={onClose}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityRole="button"
+                accessibilityLabel="Close the day summary"
+              >
                 <Ionicons name="close" size={22} color={t.textSecondary} />
               </TouchableOpacity>
             </View>

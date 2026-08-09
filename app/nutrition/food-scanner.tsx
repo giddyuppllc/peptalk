@@ -394,7 +394,12 @@ export default function FoodScannerScreen() {
         <CameraView ref={cameraRef} style={styles.camera} facing="back">
           <SafeAreaView style={styles.cameraOverlay} edges={['top']}>
             <View style={styles.cameraHeader}>
-              <AnimatedPress onPress={() => router.back()} style={styles.cameraBackBtn}>
+              <AnimatedPress
+                onPress={() => router.back()}
+                style={styles.cameraBackBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Close the camera"
+              >
                 <Ionicons name="close" size={24} color="#fff" />
               </AnimatedPress>
               <Text style={styles.cameraTitle}>Scan Your Meal</Text>
@@ -429,7 +434,12 @@ export default function FoodScannerScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
       <StatusBar style={t.statusBar} />
       <View style={styles.header}>
-        <AnimatedPress onPress={retake} style={[styles.backBtn, { backgroundColor: t.surface }]}>
+        <AnimatedPress
+          onPress={retake}
+          style={[styles.backBtn, { backgroundColor: t.surface }]}
+          accessibilityRole="button"
+          accessibilityLabel="Retake the photo"
+        >
           <Ionicons name="chevron-back" size={24} color={t.text} />
         </AnimatedPress>
         <Text style={[styles.headerTitle, { color: t.text }]}>Scan Results</Text>

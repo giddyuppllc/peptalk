@@ -263,11 +263,24 @@ function initHealthKit(permissions: {
 }
 
 /**
- * HealthKit categories PepTalk writes back to. Marketing copy claims
- * we write Body Mass, Mindful Session, and Sleep Analysis (e.g. a
- * user logs sleep in our check-in flow → it lands in Health), so the
- * Info.plist `NSHealthUpdateUsageDescription` is set up and Apple's
- * permission sheet shows the right toggles on first connect.
+ * HealthKit categories PepTalk writes back to: Body Mass and Mindful Session.
+ *
+ * SLEEP IS DELIBERATELY NOT HERE. An earlier version of this comment said
+ * marketing claimed we also write Sleep Analysis, and PUNCH_LIST.md carried it
+ * as a legal mismatch to fix before submission. Checked against what the user
+ * is actually shown — app.json's NSHealthUpdateUsageDescription reads "PepTalk
+ * writes your check-ins and weight back to Apple Health" — and that is exactly
+ * what this scope requests and what the code writes. There is no mismatch, and
+ * nothing to add.
+ *
+ * Left explicit because the stale comment was an instruction to widen a
+ * HealthKit write scope that does not need widening, and the note below is
+ * right that plist and scope must stay in sync or connect crashes.
+ *
+ * Both scopes are exercised, so this is not an unused permission request:
+ *   Weight          → writeWeightToHealth, called from the check-in flow
+ *   MindfulSession  → writeCheckInToHealth (check-in) and writeSymptomToHealth
+ *                     (side-effect log)
  *
  * If the underlying react-native-health module isn't loaded (Expo
  * Go, simulator without HealthKit) PERMS will be {} and this resolves
