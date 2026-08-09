@@ -51,11 +51,76 @@ const decode = (s) =>
     .replace(/&ndash;/g, '\u2013')
     .replace(/\uFFFD/g, '');
 
-const textOf = (fragment) =>
-  decode(fragment.replace(/<[^>]+>/g, '\n'))
-    .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean);
+/** Inline tags stripped to nothing, block boundaries to a space. */
+const flatten = (s) =>
+  decode(s.replace(/<[^>]+>/g, ' '))
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/**
+ * Pull a fragment apart into whole statements.
+ *
+ * The guides are clean HTML — `<ul><li>…</li></ul>` for contraindication lists,
+ * `<strong>Absolute Contraindications:</strong>` as the label above them. The
+ * first version of this replaced EVERY tag with a newline, which shredded any
+ * item containing inline emphasis:
+ *
+ *   <li>Personal or family history of <strong>medullary thyroid carcinoma</strong></li>
+ *
+ * became two bullets — "Personal or family history of" and "medullary thyroid
+ * carcinoma (MTC)". On a safety screen the first of those is worse than no
+ * bullet at all: it is a dangling clause presented as a contraindication.
+ *
+ * So list items and paragraphs are taken as ATOMIC units and their inner tags
+ * flattened to spaces. Only genuine block boundaries produce a new line.
+ */
+const textOf = (fragment) => {
+  const out = [];
+
+  /**
+   * Labels and list items IN DOCUMENT ORDER.
+   *
+   * Collecting all labels and then all items floated "Absolute
+   * Contraindications" and "Relative Contraindications" to the top, detached
+   * from the lists they head. On a safety screen that is a real loss —
+   * "Pregnancy" reads very differently depending on which heading it sat
+   * under, and an absolute contraindication shown as though it were relative
+   * is exactly the kind of confident-but-wrong output this app keeps getting
+   * caught by.
+   *
+   * `[^<]*` on the label capture, not `[\s\S]*?` — the list ITEMS carry their
+   * own <strong> tags, so a permissive capture ran from a <strong> inside one
+   * <li> to a </strong> before the NEXT <ul> and swallowed four
+   * contraindications into one unreadable blob.
+   */
+  const ordered = new RegExp(
+    '<strong[^>]*>([^<]*)</strong>\\s*(?=<ul|<ol)' + '|' + '<li[^>]*>([\\s\\S]*?)</li>',
+    'gi',
+  );
+  for (const m of fragment.matchAll(ordered)) {
+    const label = m[1] !== undefined ? flatten(m[1]).replace(/:$/, '') : null;
+    const item = m[2] !== undefined ? flatten(m[2]) : null;
+    const line = label || item;
+    if (line) out.push(line);
+  }
+
+  // Paragraphs, only where there were no list items to take.
+  if (out.length === 0) {
+    for (const m of fragment.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)) {
+      const line = flatten(m[1]);
+      if (line) out.push(line);
+    }
+  }
+
+  // Nothing structured — fall back to whole-fragment text rather than dropping
+  // content, but as ONE line so it cannot fragment.
+  if (out.length === 0) {
+    const line = flatten(fragment);
+    if (line) out.push(line);
+  }
+
+  return out;
+};
 
 /**
  * Split a guide into { title, lines } by heading.
@@ -74,33 +139,95 @@ function sectionsOf(html) {
   let m;
   while ((m = re.exec(html))) {
     heads.push({
+      level: Number(m[1]),
       title: decode(m[2].replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim(),
       end: re.lastIndex,
     });
   }
   return heads.map((h, i) => {
     const nextStart = i + 1 < heads.length ? html.lastIndexOf('<h', heads[i + 1].end) : html.length;
-    return { title: h.title, lines: textOf(html.slice(h.end, Math.max(h.end, nextStart))) };
+    return {
+      level: h.level,
+      title: h.title,
+      lines: textOf(html.slice(h.end, Math.max(h.end, nextStart))),
+    };
   });
 }
 
-/** Deduped lines under every heading whose title matches. */
+/**
+ * Deduped lines under every matching heading AND its child headings.
+ *
+ * The guides use two shapes for the same thing:
+ *
+ *   A  <h2>9. Contraindications & Precautions</h2>
+ *      <div><strong>Absolute Contraindications:</strong><ul><li>…</li></ul></div>
+ *
+ *   B  <h2>9. Contraindications & Precautions</h2>
+ *      <h3>Absolute</h3><ul><li>…</li></ul>
+ *      <h3>Relative</h3><ul><li>…</li></ul>
+ *
+ * Taking only the matching section handles A and yields NOTHING for B, because
+ * a section's body stops at the next heading and B's items all live under
+ * <h3>s whose titles ("Absolute", "Relative") do not contain "contraindic".
+ * That is why 25 guides looked empty while their source plainly had the data —
+ * an extractor reporting "no contraindications" for IGF-1 LR3 is worse than
+ * one that fails loudly.
+ *
+ * So a match absorbs every following section at a DEEPER level, stopping at the
+ * next heading of the same or shallower level. The child's title comes through
+ * as a label, which is what keeps "Absolute" attached to its items.
+ */
+/**
+ * Boilerplate that must never become PepTalk data.
+ *
+ * Absorbing child sections picks up whatever trails the safety block, and in
+ * these guides that is a long legal disclaimer. Two separate problems:
+ *
+ *  1. "Use at your own risk", "no representations or warranties", "does not
+ *     constitute labeling under FDA definitions" are not monitoring
+ *     parameters. Rendering them under "Monitoring Required" on a peptide
+ *     screen is noise at best and misleading at worst.
+ *  2. The disclaimer names the Peptide Protocol Portal. PepTalk and PPP are
+ *     separate products, and shipping one's brand inside the other's data is a
+ *     leak — the same class of mistake as the supplier note removed earlier.
+ *
+ * Filtered at extraction rather than at render, so it never reaches a file.
+ */
+const BOILERPLATE =
+  /disclaimer|liabilit|no representations|warrant(y|ies)|at your own risk|FDA definitions|Peptide Protocol Portal|educational purposes only|informational purposes|not medical advice|consult all relevant laws|shall not be held|by using this document|regulatory compliance/i;
+
 function collect(sections, pattern) {
   const seen = new Set();
   const out = [];
-  for (const s of sections) {
-    if (!pattern.test(s.title)) continue;
-    // "Absolute Contraindications" / "Relative" are meaningful labels to keep.
-    if (/^(absolute|relative|subjective|objective)/i.test(s.title) && s.lines.length) {
-      out.push(s.title.replace(/:$/, ''));
+
+  const take = (s, useTitleAsLabel) => {
+    // A boilerplate HEADING ends the useful part of the section — everything
+    // under it is legal text, not clinical content.
+    if (BOILERPLATE.test(s.title)) return;
+    if (useTitleAsLabel && s.lines.length && s.title) {
+      const label = s.title.replace(/:$/, '').trim();
+      if (label && !seen.has(label.toLowerCase())) {
+        seen.add(label.toLowerCase());
+        out.push(label);
+      }
     }
     for (const line of s.lines) {
       if (line.length < 2 || line.length > 300) continue;
       if (/^\d+(\.\d+)*\.?$/.test(line)) continue;
+      if (BOILERPLATE.test(line)) continue;
       const key = line.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
       out.push(line);
+    }
+  };
+
+  for (let i = 0; i < sections.length; i++) {
+    const s = sections[i];
+    if (!pattern.test(s.title)) continue;
+    take(s, /^(absolute|relative|subjective|objective)/i.test(s.title));
+    for (let j = i + 1; j < sections.length && sections[j].level > s.level; j++) {
+      take(sections[j], true);
     }
   }
   return out;

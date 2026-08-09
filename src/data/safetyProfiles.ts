@@ -1,4 +1,5 @@
 import { SafetyProfile } from '../types';
+import { GUIDE_SAFETY_PROFILES } from './safetyProfilesFromGuides';
 
 /**
  * Safety profiles for peptides. Data sourced from FDA prescribing information
@@ -455,7 +456,29 @@ export const SAFETY_PROFILES: SafetyProfile[] = [
   },
 ];
 
+/**
+ * Curated first, guide-derived second.
+ *
+ * The 15 profiles above are hand-written and stay AUTHORITATIVE — a generated
+ * entry never shadows a reviewed one. GUIDE_SAFETY_PROFILES only fills
+ * peptides that had nothing at all, which before this was 64 of 79: the whole
+ * safety card simply did not render for them, so the screen showed the
+ * literature's side-effect list for a handful of compounds and silence for the
+ * rest.
+ *
+ * Order matters and is the only thing keeping that promise, so it is asserted
+ * in the tests rather than left to the reading.
+ */
 export const getSafetyProfileByPeptideId = (
   peptideId: string
 ): SafetyProfile | undefined =>
-  SAFETY_PROFILES.find((p) => p.peptideId === peptideId);
+  SAFETY_PROFILES.find((p) => p.peptideId === peptideId) ??
+  GUIDE_SAFETY_PROFILES.find((p) => p.peptideId === peptideId);
+
+/** Every profile the app can show, curated taking precedence. */
+export const ALL_SAFETY_PROFILES: SafetyProfile[] = [
+  ...SAFETY_PROFILES,
+  ...GUIDE_SAFETY_PROFILES.filter(
+    (g) => !SAFETY_PROFILES.some((c) => c.peptideId === g.peptideId),
+  ),
+];
