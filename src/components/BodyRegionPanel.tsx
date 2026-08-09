@@ -22,6 +22,8 @@ import type { BodyRegion } from '../data/bodyMapData';
 import { getExercisesByMuscle } from '../data/exercises';
 import { useCheckinStore } from '../store/useCheckinStore';
 import { useBodyMapStore } from '../store/useBodyMapStore';
+import { PEPTIDES } from '../data/peptides';
+import { findPeptideByQuery } from '../lib/peptideSearch';
 
 // Panel height is 52% of the LIVE window height. It used to be derived from a
 // module-scope Dimensions.get(), evaluated once at import, so after a rotation
@@ -244,18 +246,49 @@ export function BodyRegionPanel({ region }: BodyRegionPanelProps) {
             </AnimatedPress>
           </GlassCard>
 
-          {/* ── Related Peptides ─────────────────────────── */}
+          {/* ── Related Peptides ───────────────────────────
+              Every one of these pills was a dead link. `relatedPeptides` holds
+              DISPLAY NAMES ("BPC-157", "IGF-1 LR3"), and this pushed them
+              straight into /peptide/[id], which resolves by ID ("bpc-157",
+              "igf-1-lr3"). getPeptideById is an exact match, so all 15 pills on
+              the body map led to a screen that found nothing.
+
+              Resolved through the shared search primitive, which handles case
+              and separators. 14 of the 15 map to a real compound.
+
+              "Pentadecapeptide" does not — it is a description of BPC-157
+              (a 15-amino-acid peptide) rather than a separate compound, so
+              there is no entry to link to. It now renders as plain text instead
+              of a tappable pill: a label that does nothing is honest, a link
+              that goes nowhere is not. */}
           <Text style={styles.sectionTitle}>Related Peptides</Text>
           <View style={styles.peptideRow}>
-            {region.relatedPeptides.map((name) => (
-              <AnimatedPress
-                key={name}
-                onPress={() => router.push(`/peptide/${encodeURIComponent(name)}` as any)}
-                style={[styles.peptidePill, { borderColor: `${region.color}50` }]}
-              >
-                <Text style={[styles.peptideName, { color: region.color }]}>{name}</Text>
-              </AnimatedPress>
-            ))}
+            {region.relatedPeptides.map((name) => {
+              const match = findPeptideByQuery(PEPTIDES, name);
+              if (!match) {
+                return (
+                  <View
+                    key={name}
+                    style={[styles.peptidePill, { borderColor: `${region.color}30` }]}
+                  >
+                    <Text style={[styles.peptideName, { color: `${region.color}99` }]}>
+                      {name}
+                    </Text>
+                  </View>
+                );
+              }
+              return (
+                <AnimatedPress
+                  key={name}
+                  onPress={() => router.push(`/peptide/${match.id}` as any)}
+                  style={[styles.peptidePill, { borderColor: `${region.color}50` }]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${match.name}`}
+                >
+                  <Text style={[styles.peptideName, { color: region.color }]}>{name}</Text>
+                </AnimatedPress>
+              );
+            })}
           </View>
 
           <View style={{ height: 40 }} />

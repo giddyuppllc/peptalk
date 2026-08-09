@@ -37,6 +37,12 @@ const ALLOWED = new Map<string, string>([
       'recommendation but the compound has no library entry yet.',
   ],
   [
+    'retatrutide-10mg',
+    'Deliberate VARIANT id in peptideDosingReference — the 10 mg vial block, ' +
+      'aliased to `retatrutide` through PEPTIDE_VARIANT_PARENTS and surfaced ' +
+      'by getAllDosingReferencesForPeptide. Not a peptide in its own right.',
+  ],
+  [
     'gonadorelin',
     'hormonal/secondary — GnRH analog. Referenced as a goal recommendation but ' +
       'the compound has no library entry yet.',
@@ -72,6 +78,79 @@ const walkIds = (node: unknown, where: string) => {
   Object.values(o).forEach((v) => walkIds(v, where));
 };
 Object.values(goalMatrix).forEach((v) => walkIds(v, 'goalPeptideMatrix'));
+
+/**
+ * ── Every other data module ─────────────────────────────────────────────────
+ * A peptideId key anywhere in the data must resolve. Swept generically rather
+ * than module by module, so a new data file is covered the day it lands
+ * instead of the day someone remembers to add it here.
+ */
+const MODULES = [
+  'curatedStacks',
+  'clinicalTrials',
+  'educationalArticles',
+  'howToGuides',
+  'knowledgeTopics',
+  'peptideNutrition',
+  'peptideTiming',
+  'safetyProfiles',
+  'protocols',
+  'peptideDosingReference',
+  'peptideDosingTable',
+  'calculatorMetadata',
+  'videos',
+];
+const ID_KEYS = /^(peptideId|peptideIds|relatedPeptideIds)$/;
+for (const m of MODULES) {
+  let mod: Record<string, unknown>;
+  try {
+    mod = require(`../src/data/${m}`);
+  } catch {
+    continue; // module has a runtime dep we cannot load here; not a data problem
+  }
+  const walk = (node: unknown) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) return node.forEach(walk);
+    for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+      if (ID_KEYS.test(k)) {
+        const list = typeof v === 'string' ? [v] : Array.isArray(v) ? v : [];
+        for (const x of list) if (typeof x === 'string') note(m, x);
+      }
+      walk(v);
+    }
+  };
+  Object.values(mod).forEach(walk);
+}
+
+/**
+ * ── Body map "related peptides" ─────────────────────────────────────────────
+ * These hold DISPLAY NAMES ("BPC-157", "IGF-1 LR3"), not ids, so they cannot
+ * be checked with the id sweep above — and that difference is exactly what
+ * broke them. BodyRegionPanel pushed the name straight into /peptide/[id],
+ * which resolves by id, so all 15 pills on the body map led to a screen that
+ * found nothing. They now resolve through findPeptideByQuery; this asserts
+ * every name still lands on a real compound.
+ */
+const NAME_ALLOWED = new Map<string, string>([
+  [
+    'Pentadecapeptide',
+    'A description of BPC-157 (a 15-amino-acid peptide), not a separate ' +
+      'compound. Renders as plain text rather than a link.',
+  ],
+]);
+{
+  const { BODY_REGIONS } = require('../src/data/bodyMapData') as {
+    BODY_REGIONS: { relatedPeptides?: string[] }[];
+  };
+  const { findPeptideByQuery } = require('../src/lib/peptideSearch') as {
+    findPeptideByQuery: (list: unknown[], q: string) => unknown;
+  };
+  const names = [...new Set(BODY_REGIONS.flatMap((r) => r.relatedPeptides ?? []))];
+  for (const n of names) {
+    if (NAME_ALLOWED.has(n)) continue;
+    if (!findPeptideByQuery(PEPTIDES as unknown[], n)) note('bodyMapData.relatedPeptides', n);
+  }
+}
 
 // ── interaction pairs
 const walkPairs = (node: unknown) => {
