@@ -34,6 +34,7 @@ import {
   workoutForPlannedDay,
 } from '../../../src/services/monthlyPlan';
 import type { WorkoutDay, ExerciseGender, WorkoutLog } from '../../../src/types/fitness';
+import { Alert } from '../../../src/lib/alert';
 
 // ---------------------------------------------------------------------------
 // Day Preview
@@ -75,7 +76,7 @@ export default function ProgramDetailScreen() {
   const params = useLocalSearchParams<{ programId?: string }>();
   const programId = params.programId ?? '';
   const program = getProgramById(programId);
-  const { activeProgram, startProgram } = useWorkoutStore();
+  const { activeProgram, startProgram, quitProgram } = useWorkoutStore();
   const setMonthlyPlan = useWorkoutStore((st) => st.setMonthlyPlan);
   const addPlannedLog = useWorkoutStore((st) => st.addPlannedLog);
   const biologicalSex = useHealthProfileStore((st) => st.profile.biologicalSex);
@@ -223,6 +224,43 @@ export default function ProgramDetailScreen() {
               colors={[Colors.raindropsDeep, Colors.raindropsDeep]}
             />
           )}
+
+          {/* Leave the program.
+              You could start one and never stop. `startProgram` had a button;
+              `quitProgram` existed in the store with no caller anywhere, so
+              once enrolled the active-program banner sat on the Workouts
+              dashboard permanently and there was no way to switch to a
+              different program or step off one that was not working.
+
+              Only shown while this IS the active program, so it cannot be
+              mistaken for "delete this program". */}
+          {isActive && (
+            <TouchableOpacity
+              onPress={() =>
+                Alert.alert(
+                  'Leave this program?',
+                  'The banner and planned sessions stop. Workouts you have already logged are kept.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Leave',
+                      style: 'destructive',
+                      onPress: () => {
+                        quitProgram();
+                        router.back();
+                      },
+                    },
+                  ],
+                )
+              }
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={`Leave ${program.name}`}
+              style={styles.leaveBtn}
+            >
+              <Text style={styles.leaveBtnText}>Leave this program</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -234,6 +272,8 @@ export default function ProgramDetailScreen() {
 // ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
+  leaveBtn: { marginTop: 12, paddingVertical: 12, alignItems: 'center' },
+  leaveBtnText: { fontSize: 14, fontWeight: '600', color: '#9ca3af' },
   container: { flex: 1, backgroundColor: Colors.darkBg },
   center: {
     flex: 1,
