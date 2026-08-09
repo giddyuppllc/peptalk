@@ -8,7 +8,7 @@ import { View, Text, TouchableOpacity, ScrollView, TextInput, StyleSheet, Activi
 import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard } from '../../src/components/GlassCard';
@@ -68,7 +68,7 @@ interface GeneratedRecipe {
   };
 }
 
-function RecipeCard({ recipe, onLog, mealType }: { recipe: GeneratedRecipe; onLog: (recipe: GeneratedRecipe) => void; mealType: string }) {
+function RecipeCard({ recipe, onLog, mealType, asTemplate }: { recipe: GeneratedRecipe; onLog: (recipe: GeneratedRecipe) => void; mealType: string; asTemplate?: boolean }) {
   const t = useTheme();
   const [expanded, setExpanded] = useState(false);
   const [logged, setLogged] = useState(false);
@@ -168,7 +168,7 @@ function RecipeCard({ recipe, onLog, mealType }: { recipe: GeneratedRecipe; onLo
               color={logged ? '#10b981' : '#fff'}
             />
             <Text style={[styles.logMealText, logged && { color: '#10b981' }]}>
-              {logged ? 'Logged!' : 'Log This Meal'}
+              {logged ? (asTemplate ? 'Saved!' : 'Logged!') : asTemplate ? 'Save to My Meals' : 'Log This Meal'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -201,6 +201,20 @@ export default function RecipeGeneratorScreen() {
   }, []);
 
   const addMeal = useMealStore((s) => s.addMeal);
+  const saveMealAsTemplate = useMealStore((s) => s.saveMealAsTemplate);
+  /**
+   * `asTemplate=1` — sent by the "Create meal" button on food-search's My
+   * Meals tab, which lists reusable meal templates. It has been sent since
+   * that button was written and this screen never read it, so tapping "Create
+   * meal" opened a plain AI recipe generator whose only action was "Log This
+   * Meal": you got one meal on today's diary and nothing in My Meals, which is
+   * the opposite of what the button said.
+   *
+   * The machinery existed on both sides — useMealStore.saveMealAsTemplate and
+   * a My Meals tab that renders templates — with nothing joining them.
+   */
+  const routeParams = useLocalSearchParams<{ asTemplate?: string }>();
+  const asTemplate = routeParams.asTemplate === '1';
   const canUse = hasFeature('recipe_generator');
 
   const handleLogRecipe = useCallback((recipe: GeneratedRecipe) => {
@@ -216,8 +230,9 @@ export default function RecipeGeneratorScreen() {
     // an Aimee chat log would. Same caps as sanitizeLogMeal.quickLog.
     const safeName = clampString(recipe.name, 100) || 'AI recipe';
     const safeCalories = clamp(recipe.macros.calories, 5000);
+    const mealId = `meal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     addMeal({
-      id: `meal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id: mealId,
       date: toDateKey(new Date()),
       mealType: mealType as any,
       foods: [],
@@ -232,12 +247,22 @@ export default function RecipeGeneratorScreen() {
       timestamp: new Date().toISOString(),
     });
 
+    // Arrived from "Create meal" on the My Meals tab — the point was to end up
+    // with a reusable meal, not just one entry on today's diary. Save the meal
+    // we just logged as a template so it appears in My Meals and can be
+    // re-logged with one tap.
+    if (asTemplate) {
+      saveMealAsTemplate(mealId, { name: safeName });
+    }
+
     notifySuccess();
     Alert.alert(
-      'Meal Logged!',
-      `${safeName} (${safeCalories} cal) added to today's nutrition.`,
+      asTemplate ? 'Saved to My Meals' : 'Meal Logged!',
+      asTemplate
+        ? `${safeName} (${safeCalories} cal) is on today's diary and saved to My Meals for next time.`
+        : `${safeName} (${safeCalories} cal) added to today's nutrition.`,
     );
-  }, [addMeal, mealType]);
+  }, [addMeal, mealType, asTemplate, saveMealAsTemplate]);
 
   const FALLBACK_RECIPES: GeneratedRecipe[] = [
     {
@@ -502,7 +527,7 @@ export default function RecipeGeneratorScreen() {
             <Text style={[styles.sectionTitle, { color: t.text }]}>Your Recipes</Text>
             {recipes.map((recipe, i) => (
               <View key={i} style={{ marginBottom: 10 }}>
-                <RecipeCard recipe={recipe} onLog={handleLogRecipe} mealType={mealType} />
+                <RecipeCard recipe={recipe} onLog={handleLogRecipe} mealType={mealType} asTemplate={asTemplate} />
               </View>
             ))}
           </View>

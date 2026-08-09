@@ -16,6 +16,7 @@ import {
   groupMealsByType,
   sumMacros,
   fmtGrams,
+  templateFoodRows,
   MEAL_TYPE_ORDER,
   MEAL_TYPE_LABELS,
 } from '../mealDiary';
@@ -188,5 +189,67 @@ describe('gram formatting', () => {
   it('rounds at or above 1g', () => {
     expect(fmtGrams(1.4)).toBe('1');
     expect(fmtGrams(22.6)).toBe('23');
+  });
+});
+
+describe('templateFoodRows — saving a meal to My Meals', () => {
+  /**
+   * `saveMealAsTemplate` read `source.foods` directly, so saving a QUICK-LOGGED
+   * meal produced a template with zero calories, zero macros and an empty food
+   * list. Silently — no error, just a row in My Meals that logs as nothing when
+   * tapped. Quick-logs are not rare: the AI recipe generator, meal scanner,
+   * voice-log and Aimee's log_meal all write them.
+   *
+   * It never surfaced because saveMealAsTemplate had NO CALLERS — built,
+   * unreachable and wrong at once. Fixed before wiring "Create meal" to it, or
+   * the first thing that feature would have shipped is empty meals.
+   */
+  it('carries a quick-log across instead of saving nothing', () => {
+    const m = meal({
+      foods: [],
+      quickLog: {
+        description: 'Sheet-pan chicken',
+        calories: 640,
+        proteinGrams: 52,
+        carbsGrams: 38,
+        fatGrams: 27,
+      },
+    });
+    const rows = templateFoodRows(m, 'Fallback');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].calories).toBe(640);
+    expect(rows[0].proteinGrams).toBe(52);
+    expect(rows[0].foodName).toBe('Sheet-pan chicken');
+  });
+
+  it('produces a row at all — an empty list logs as nothing', () => {
+    // logMealTemplate rebuilds a meal from `foods`. This is the property that
+    // makes the saved template usable rather than decorative.
+    const m = meal({ foods: [], quickLog: { description: 'X', calories: 1, proteinGrams: 0, carbsGrams: 0, fatGrams: 0 } });
+    expect(templateFoodRows(m, 'F').length).toBeGreaterThan(0);
+  });
+
+  it('falls back to the template name when the quick-log has no description', () => {
+    const m = meal({ foods: [], quickLog: { description: '', calories: 100, proteinGrams: 0, carbsGrams: 0, fatGrams: 0 } });
+    expect(templateFoodRows(m, 'Unnamed dinner')[0].foodName).toBe('Unnamed dinner');
+  });
+
+  it('leaves itemised meals alone', () => {
+    // Regression guard: the path that already worked must not change.
+    const m = meal({ foods: [food('Rice', 200, 4, 45, 1), food('Chicken', 300, 40, 0, 12)] });
+    const rows = templateFoodRows(m, 'F');
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.foodName)).toEqual(['Rice', 'Chicken']);
+  });
+
+  it('copies rows rather than aliasing them', () => {
+    // A shared reference means editing the logged meal later mutates the saved
+    // template too.
+    const m = meal({ foods: [food('Rice', 200)] });
+    expect(templateFoodRows(m, 'F')[0]).not.toBe(m.foods[0]);
+  });
+
+  it('returns nothing when there is nothing to carry', () => {
+    expect(templateFoodRows(meal({ foods: [], quickLog: undefined }), 'F')).toEqual([]);
   });
 });

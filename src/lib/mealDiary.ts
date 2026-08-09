@@ -139,6 +139,41 @@ export function sumMacros(list: readonly MealMacros[]): MealMacros {
   );
 }
 
+/**
+ * The food rows to store when turning a logged meal into a reusable template.
+ *
+ * `saveMealAsTemplate` used to read `source.foods` directly, so saving a
+ * QUICK-LOGGED meal produced a template with zero calories, zero macros and an
+ * empty food list — silently. No error, just a row in My Meals that logs as
+ * nothing when tapped. Quick-logs are not rare: the AI recipe generator, the
+ * meal scanner, voice-log and Aimee's log_meal all write them.
+ *
+ * A quick-log becomes ONE food row rather than staying a quickLog, because
+ * logMealTemplate rebuilds a meal from `foods` and an empty list would log
+ * nothing. `fallbackName` covers a quick-log saved with no description.
+ *
+ * Lives here rather than in the store so it can be tested without an RN
+ * runtime — same reason the rest of this file does.
+ */
+export function templateFoodRows(
+  meal: Pick<MealEntry, 'id' | 'foods' | 'quickLog'>,
+  fallbackName: string,
+): MealEntry['foods'] {
+  if (meal.foods && meal.foods.length > 0) return meal.foods.map((f) => ({ ...f }));
+  if (!meal.quickLog) return [];
+  return [
+    {
+      foodId: `quicklog-${meal.id}`,
+      foodName: meal.quickLog.description || fallbackName,
+      servings: 1,
+      calories: meal.quickLog.calories || 0,
+      proteinGrams: meal.quickLog.proteinGrams || 0,
+      carbsGrams: meal.quickLog.carbsGrams || 0,
+      fatGrams: meal.quickLog.fatGrams || 0,
+    },
+  ];
+}
+
 /** Round for display without turning 0.4 g of fat into a bare "0". */
 export function fmtGrams(n: number): string {
   if (n <= 0) return '0';

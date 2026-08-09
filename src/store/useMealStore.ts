@@ -5,6 +5,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
+import { templateFoodRows } from '../lib/mealDiary';
 import { syncRecord, deleteRecord, fetchUserRecords } from '../services/syncService';
 import type { MealEntry, MealType, MacroTargets, FoodItem } from '../types/fitness';
 import { STORE_LIMITS, capNewestFirst } from '../utils/storeLimits';
@@ -639,16 +640,35 @@ export const useMealStore = create<MealState & MealActions>()(
       saveMealAsTemplate: (mealId, opts) => {
         const source = get().meals.find((m) => m.id === mealId);
         if (!source) return;
-        const totalCalories = source.foods.reduce((s, f) => s + (f.calories || 0), 0);
-        const totalProteinGrams = source.foods.reduce((s, f) => s + (f.proteinGrams || 0), 0);
-        const totalCarbsGrams = source.foods.reduce((s, f) => s + (f.carbsGrams || 0), 0);
-        const totalFatGrams = source.foods.reduce((s, f) => s + (f.fatGrams || 0), 0);
+
+        /**
+         * A meal is EITHER itemised `foods` OR a `quickLog`. This summed only
+         * `foods`, so saving a quick-logged meal produced a template with zero
+         * calories, zero macros and nothing in it — silently. And quick-logs
+         * are not an edge case: the AI recipe generator, the meal scanner,
+         * voice-log and Aimee's log_meal all write them.
+         *
+         * It never surfaced because saveMealAsTemplate had no callers at all —
+         * built, unreachable, and wrong in the same breath. Fixed before wiring
+         * a caller to it, or the first thing that feature would have done is
+         * create empty meals.
+         *
+         * The quick-log becomes a single food row so the template stays
+         * loggable: logMealTemplate rebuilds a meal from `foods`, and a
+         * template with an empty list would log as nothing.
+         */
+        const foods = templateFoodRows(source, opts.name);
+
+        const totalCalories = foods.reduce((s, f) => s + (f.calories || 0), 0);
+        const totalProteinGrams = foods.reduce((s, f) => s + (f.proteinGrams || 0), 0);
+        const totalCarbsGrams = foods.reduce((s, f) => s + (f.carbsGrams || 0), 0);
+        const totalFatGrams = foods.reduce((s, f) => s + (f.fatGrams || 0), 0);
         const now = new Date().toISOString();
         const template: MealTemplate = {
           id: `tpl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           name: opts.name,
           defaultMealType: source.mealType,
-          foods: source.foods.map((f) => ({ ...f })),
+          foods,
           totalCalories,
           totalProteinGrams,
           totalCarbsGrams,

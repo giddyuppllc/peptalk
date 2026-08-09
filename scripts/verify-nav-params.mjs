@@ -114,14 +114,9 @@ for (const file of files) {
  * (which would be inventing product behaviour).
  */
 const ALLOWED = new Map([
-  [
-    '/nutrition/recipe-generator::asTemplate',
-    'The "Create meal" button on food-search\'s My Meals tab sends asTemplate=1, ' +
-      'meaning "build a reusable meal template rather than log one meal". ' +
-      'recipe-generator is an AI recipe tool with no template concept at all — ' +
-      'it generates a recipe and offers "Log meal". The flag expresses a feature ' +
-      'that was never built. Needs a product decision, not a code fix.',
-  ],
+  // Empty. `asTemplate` lived here until the feature it described was built —
+  // recipe-generator now saves to My Meals when it arrives with the flag. An
+  // allowlist that outlives its reason is how a ratchet stops ratcheting.
 ]);
 
 const problems = [];
