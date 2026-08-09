@@ -1768,7 +1768,20 @@ function respondCreatePlan(context: BotContext): string {
 
     parts.push(`• **Check-ins:** Daily mood/energy tracking to monitor progress`);
     parts.push('');
-    parts.push(`The AI can generate a detailed weekly plan for you. Use the **PepTalk Chat** with AI enabled to say "Create a weekly health plan" for a fully personalized schedule.`);
+    /**
+     * Points at the screen that now exists.
+     *
+     * This used to say "use the PepTalk Chat with AI enabled to say 'Create a
+     * weekly health plan'" — which was a loop back into the same chat, from a
+     * branch already reached by asking for a plan. There was no plan screen, no
+     * route, and usePlanStore's create/complete/progress actions had no callers
+     * at all, so the instruction led nowhere no matter how it was followed.
+     *
+     * app/plan now builds one from the user's goals, tracks completion and
+     * shows weekly progress, and /plan is on Aimee's navigation allowlist so
+     * she can open it directly.
+     */
+    parts.push(`Open **My Plan** (Profile → My Plan) and tap "Build my plan" — it drafts a 4-week schedule from your goals, and you tick items off as you go.`);
   } else {
     parts.push(`To create a personalized health plan, I need to know more about you:`);
     parts.push('');
@@ -1776,7 +1789,7 @@ function respondCreatePlan(context: BotContext): string {
     parts.push(`2. **Set your goals** — weight loss, muscle gain, recovery, etc.`);
     parts.push(`3. **Log some check-ins** so I can see your baseline`);
     parts.push('');
-    parts.push(`Once your profile is set, I can create a plan combining:`);
+    parts.push(`Then open **My Plan** (Profile → My Plan) and tap "Build my plan". It drafts a 4-week schedule from your goals covering:`);
     parts.push(`• Weekly workout schedule`);
     parts.push(`• Meal plan framework with macro targets`);
     parts.push(`• Peptide protocol timing (if applicable)`);

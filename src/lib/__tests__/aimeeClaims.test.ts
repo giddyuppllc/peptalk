@@ -26,7 +26,12 @@
  */
 import { EXERCISES } from '../../data/exercises';
 import { WORKOUT_PROGRAMS } from '../../data/workoutPrograms';
-import { CATALOG, BODYPART_MUSCLES, exercisesForMuscles } from '../../services/peptalkBot';
+import {
+  CATALOG,
+  BODYPART_MUSCLES,
+  exercisesForMuscles,
+  generateLocalBotResponse,
+} from '../../services/peptalkBot';
 
 const exerciseNames = new Set((EXERCISES as any[]).map((e) => e.name));
 
@@ -127,5 +132,37 @@ describe('the programs Aimee lists are the ones that ship', () => {
       expect(typeof p.name).toBe('string');
       expect(p.name.trim().length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('Aimee points at destinations that exist', () => {
+  /**
+   * Her plan answer used to end with "use the PepTalk Chat with AI enabled to
+   * say 'Create a weekly health plan'" — a loop back into the same chat, from
+   * a branch already reached by asking for a plan. There was no plan screen, no
+   * route, and usePlanStore's create/complete/progress actions had no callers,
+   * so the instruction led nowhere however it was followed.
+   *
+   * app/plan exists now, so the answer names it.
+   */
+  const planReply = (ctx: any) => generateLocalBotResponse('create a health plan for me', ctx);
+
+  it('names My Plan rather than sending the user back into the chat', () => {
+    const reply = planReply({ userProfile: null, checkIns: [], doseLogs: [], stacks: [] });
+    expect(reply.content).toContain('My Plan');
+    expect(reply.content).not.toContain('with AI enabled to say');
+  });
+
+  it('says the same thing whether or not a profile is set', () => {
+    // Both branches of the plan answer previously promised something with no
+    // destination. Neither should now.
+    const withProfile = planReply({
+      userProfile: { primaryGoals: ['weight_loss'] },
+      checkIns: [],
+      doseLogs: [],
+      stacks: [],
+    });
+    const without = planReply({ userProfile: null, checkIns: [], doseLogs: [], stacks: [] });
+    for (const r of [withProfile, without]) expect(r.content).toContain('My Plan');
   });
 });
