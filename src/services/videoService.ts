@@ -365,7 +365,49 @@ const _signedUrlCache = new Map<string, SignedUrlCacheEntry>();
  * to decide between "render a player" and "render the placeholder".
  */
 export function hasExerciseVideo(exerciseId: string): boolean {
-  return exerciseId in EXERCISE_VIDEO_SLUG_MAP;
+  return exerciseId in EXERCISE_VIDEO_SLUG_MAP || aliasKey(exerciseId) !== null;
+}
+
+/**
+ * ── Alias index for map keys that carry a stale exercise id ──────────────────
+ *
+ * 40 of the 142 entries in EXERCISE_VIDEO_SLUG_MAP are keyed by an exercise id
+ * that does not exist — `barbell-goodmorning-367`, `barbell-rdl-379`,
+ * `cable-bar-bent-over-row-331`. They were pasted from the same tagging pass
+ * that produced the bad `exerciseId` tags in workoutVideos.json, so the map and
+ * the manifest are wrong in exactly the same way.
+ *
+ * The consequence is the whole point: the real exercise `barbell-goodmorning`
+ * looks itself up, finds no key, and `hasExerciseVideo` returns false — so the
+ * screen renders the placeholder and the clip that exists is never offered.
+ * Fixing the manifest side alone would have been worse than useless: the video
+ * would start appearing in listings and then fail to play, because the play
+ * path resolves its slug through THIS map.
+ *
+ * So both sides resolve the same way, through the same function. Built lazily
+ * and only where the real id is not already a direct key — a direct hit always
+ * wins, and `resolveExerciseId` refuses ambiguous matches.
+ *
+ * As with the manifest, this is deliberately a read-time fix rather than an
+ * edit to the mapping table: the standing rule is not to overwrite stored data.
+ */
+let _alias: Map<string, string> | null = null;
+function aliasKey(exerciseId: string): string | null {
+  if (exerciseId in EXERCISE_VIDEO_SLUG_MAP) return exerciseId;
+  if (!_alias) {
+    // Required lazily to keep this module's import graph flat.
+    const { resolveExerciseId } = require('../data/workoutVideos') as {
+      resolveExerciseId: (t: string | null) => string | null;
+    };
+    _alias = new Map();
+    for (const key of Object.keys(EXERCISE_VIDEO_SLUG_MAP)) {
+      const real = resolveExerciseId(key);
+      if (!real || real === key) continue;
+      if (real in EXERCISE_VIDEO_SLUG_MAP) continue; // a direct key already covers it
+      if (!_alias.has(real)) _alias.set(real, key);
+    }
+  }
+  return _alias.get(exerciseId) ?? null;
 }
 
 /**
@@ -373,7 +415,8 @@ export function hasExerciseVideo(exerciseId: string): boolean {
  * exercise has no mapped video yet.
  */
 export function getExerciseVideoSlug(exerciseId: string): string | null {
-  return EXERCISE_VIDEO_SLUG_MAP[exerciseId] ?? null;
+  const key = aliasKey(exerciseId);
+  return key ? (EXERCISE_VIDEO_SLUG_MAP[key] ?? null) : null;
 }
 
 /**
@@ -386,7 +429,13 @@ export function getExerciseVideoSlug(exerciseId: string): string | null {
  * the 6 plank videos shows.
  */
 export function getAllExerciseVideoSlugs(exerciseId: string): readonly string[] {
-  return EXERCISE_VIDEO_SLUGS[exerciseId] ?? [];
+  const direct = EXERCISE_VIDEO_SLUGS[exerciseId];
+  if (direct) return direct;
+  // Same stale-key problem as the canonical map — see aliasKey. Without this,
+  // an exercise whose takes are filed under the old id shows one video from the
+  // alias fallback and loses the alternate angles.
+  const key = aliasKey(exerciseId);
+  return key ? (EXERCISE_VIDEO_SLUGS[key] ?? []) : [];
 }
 
 /**

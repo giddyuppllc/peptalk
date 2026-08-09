@@ -81,18 +81,54 @@ for (const v of reviewedUnsignable) {
 // 3. Referential drift. Real content debt, but not a crash: the app simply
 //    never surfaces these. Reported loudly, does not fail the build, because
 //    fixing it means re-tagging clips by hand and a red pipeline gets ignored.
-const strandedVideos = [...new Set(reviewed.filter((v) => !exerciseIds.has(v.exerciseId!)).map((v) => v.exerciseId!))];
-const deadMapEntries = [...slugMap.keys()].filter((id) => !exerciseIds.has(id));
+/**
+ * Both sides are now read through `resolveExerciseId`, which tolerates the
+ * stale-id shapes this tagging pass produced — a trailing number (`plank-289`)
+ * or the same words reordered (`chest-press-machine`). So a tag only counts as
+ * stranded if it resolves to NOTHING; a tag that needs the tolerant path still
+ * reaches the user, and reporting it as broken would be noise that buries the
+ * real gaps.
+ *
+ * Recovered by resolution: 53 clips (198 → 251 reachable) and 25 exercises
+ * (97 → 122 with at least one clip). What is left below is genuine content
+ * debt — the clip exists, the exercise does not — and must stay visible.
+ */
+// require, not await import — this script compiles to CJS, where top-level
+// await is unavailable.
+const { resolveExerciseId } = require('../src/data/workoutVideos') as {
+  resolveExerciseId: (t: string | null) => string | null;
+};
 
-if (strandedVideos.length) {
+const stranded = [
+  ...new Set(reviewed.filter((v) => !resolveExerciseId(v.exerciseId)).map((v) => v.exerciseId!)),
+];
+const recoveredTags = [
+  ...new Set(
+    reviewed
+      .filter((v) => !exerciseIds.has(v.exerciseId!) && resolveExerciseId(v.exerciseId))
+      .map((v) => v.exerciseId!),
+  ),
+];
+const deadMapEntries = [...slugMap.keys()].filter((id) => !resolveExerciseId(id));
+const recoveredMapKeys = [...slugMap.keys()].filter(
+  (id) => !exerciseIds.has(id) && resolveExerciseId(id),
+);
+
+if (recoveredTags.length || recoveredMapKeys.length) {
+  ok(
+    `${recoveredTags.length} clip tag(s) and ${recoveredMapKeys.length} map key(s) carry a stale ` +
+      `exercise id and are recovered at read time (see resolveExerciseId)`,
+  );
+}
+if (stranded.length) {
   warn(
-    `${strandedVideos.length} exerciseId(s) are tagged on reviewed clips but no such exercise exists — ` +
-      `those clips can never appear: ${strandedVideos.slice(0, 6).join(', ')}${strandedVideos.length > 6 ? ' …' : ''}`,
+    `${stranded.length} exerciseId(s) resolve to NO exercise, so those clips can never appear — ` +
+      `the exercise itself is missing from the catalog: ${stranded.join(', ')}`,
   );
 }
 if (deadMapEntries.length) {
   warn(
-    `${deadMapEntries.length} map entr(ies) point at a non-existent exercise — dead lookups: ` +
+    `${deadMapEntries.length} map entr(ies) resolve to no exercise — dead lookups: ` +
       `${deadMapEntries.slice(0, 6).join(', ')}${deadMapEntries.length > 6 ? ' …' : ''}`,
   );
 }

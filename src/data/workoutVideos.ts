@@ -79,8 +79,72 @@ export function getVideoBySlug(slug: string): WorkoutVideo | undefined {
   return WORKOUT_VIDEOS.find((v) => v.slug === slug);
 }
 
+/**
+ * ── Tolerant exercise-id matching ────────────────────────────────────────────
+ *
+ * 66 of the 264 tagged clips carried an `exerciseId` that matches no exercise
+ * in the catalog, so those videos loaded, sat in the manifest, and reached no
+ * screen. `getVideosByExerciseId` did an exact string compare, so a tag that
+ * was one character off was identical to no tag at all.
+ *
+ * They are not random. 31 distinct bad ids, and 26 of them are the real id
+ * with a trailing number (`plank-289` → `plank`, `side-plank-292` →
+ * `side-plank`, `leg-lowers-296` → `leg-lowers`) or the same words in a
+ * different order (`chest-press-machine` → `machine-chest-press`). That is a
+ * tagging pipeline that saw a numbered list, not 26 separate mistakes.
+ *
+ * Fixed HERE rather than in workoutVideos.json, deliberately: the standing
+ * rule is not to overwrite stored data records. The manifest stays
+ * byte-identical, the resolution happens at read time, and the same tolerance
+ * covers future tags with the same shape instead of needing another sweep.
+ *
+ * The matching is strict about ambiguity. A token-order match is only accepted
+ * when exactly ONE real exercise has that token set — two pairs in the catalog
+ * collide (`bent-over-cable-bar-row`/`cable-bar-bent-over-row` and
+ * `overhead-tricep-barbell-extensions`/`barbell-overhead-tricep-extensions`,
+ * which look like the same movement entered twice), and showing a clip on the
+ * wrong exercise is worse than showing it on none.
+ */
+const tokenKey = (id: string) =>
+  id.toLowerCase().replace(/-\d+$/, '').split('-').filter(Boolean).sort().join('-');
+
+/** Built once, lazily — importing EXERCISES at module scope is avoidable work. */
+let idIndex: { real: Set<string>; byTokens: Map<string, string[]> } | null = null;
+function getIdIndex() {
+  if (idIndex) return idIndex;
+  // Required lazily so this module stays cheap to import and free of any
+  // load-order coupling with the exercise catalog.
+  const { EXERCISES } = require('./exercises') as { EXERCISES: { id: string }[] };
+  const real = new Set(EXERCISES.map((e) => e.id));
+  const byTokens = new Map<string, string[]>();
+  for (const e of EXERCISES) {
+    const k = tokenKey(e.id);
+    byTokens.set(k, [...(byTokens.get(k) ?? []), e.id]);
+  }
+  idIndex = { real, byTokens };
+  return idIndex;
+}
+
+/**
+ * The catalog id a tag refers to, or null when nothing matches unambiguously.
+ * Exported so `verify:videos` can report what is still unreachable.
+ */
+export function resolveExerciseId(tag: string | null): string | null {
+  if (!tag) return null;
+  const { real, byTokens } = getIdIndex();
+  if (real.has(tag)) return tag;
+
+  const stripped = tag.replace(/-\d+$/, '');
+  if (stripped !== tag && real.has(stripped)) return stripped;
+
+  const candidates = byTokens.get(tokenKey(tag)) ?? [];
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
 export function getVideosByExerciseId(exerciseId: string): WorkoutVideo[] {
-  return WORKOUT_VIDEOS.filter((v) => v.exerciseId === exerciseId && !v.needsReview);
+  return WORKOUT_VIDEOS.filter(
+    (v) => !v.needsReview && resolveExerciseId(v.exerciseId) === exerciseId,
+  );
 }
 
 export const CATEGORY_LABELS: Record<WorkoutVideoCategory, string> = {
