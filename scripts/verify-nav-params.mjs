@@ -145,6 +145,90 @@ for (const f of findings) {
   }
 }
 
+/**
+ * ── The mirror: a param a screen READS that nobody sends ─────────────────────
+ *
+ * The same broken contract from the other end. The screen supports something —
+ * "open scrolled to this item", "add to this existing meal" — and no door into
+ * it was ever built, so the branch is dead code that reads like a feature.
+ *
+ * Found: the paywall. app/subscription.tsx reads `highlight`, maps it to a tier
+ * and glows that plan, AND feeds it to trackPaywallViewed. PaywallModal knew
+ * exactly which feature was gated — it passes it to trackPaywallDismissed — and
+ * pushed '/subscription' without it. So no tier was ever highlighted, and every
+ * paywall view was logged as 'direct'/'plus' no matter what triggered it.
+ *
+ * Route SEGMENTS ([username], [eventId]) are excluded — expo-router supplies
+ * those from the path, not from a params object.
+ */
+const READ_ALLOWED = new Map([
+  [
+    'app/doses/calculator.tsx::doseMcg',
+    'Sent by Aimee SERVER-SIDE — execOpenDosingCalculator in ' +
+      'supabase/functions/aimee-chat-stream/_tools.ts builds ' +
+      '/doses/calculator?peptideId=..&doseMcg=..&vialMg=..&waterMl=.. and ships ' +
+      'it as a navigate client_action. No client file sends it, and that is ' +
+      'correct. Same for vialMg and waterMl.',
+  ],
+  [
+    'app/doses/calculator.tsx::vialMg',
+    'See doseMcg — sent by the aimee-chat-stream edge function.',
+  ],
+  [
+    'app/doses/calculator.tsx::waterMl',
+    'See doseMcg — sent by the aimee-chat-stream edge function.',
+  ],
+  [
+    'app/workouts/my-workouts.tsx::highlight',
+    'Expands a saved workout on arrival. Nothing sends it — after saving, ' +
+      'workouts/new returns to /workouts instead. Degrades to null (nothing ' +
+      'expanded), so the screen is correct without it. Wiring it up is a UX ' +
+      'choice, not a fix.',
+  ],
+  [
+    'app/nutrition/food-search.tsx::mealId',
+    'Documented as "if provided, adds to an existing meal entry" and fully ' +
+      'implemented — it updates the existing meal rather than adding a new ' +
+      'one. But no screen renders logged meals as a tappable list, so there is ' +
+      'no door into it anywhere in the app. The add-to-existing-meal FEATURE ' +
+      'was never built; this param is all that remains of the intent.',
+  ],
+]);
+
+const unsent = [];
+{
+  const appScreens = files.filter((f) => f.startsWith('app/'));
+  // Senders live in .ts too — useAimeeRouter builds `?message=...` in a hook,
+  // not a screen. Scanning only .tsx reported `message` as unsent, which is
+  // the checker being wrong rather than the app.
+  const senderFiles = globSync('{app,src}/**/*.{ts,tsx}').map(slash);
+  const sentKeys = new Set();
+  for (const f of senderFiles) {
+    const src = stripComments(readFileSync(f, 'utf8'));
+    for (const m of src.matchAll(/params:\s*\{([^}]*)\}/g)) {
+      for (const kv of m[1].split(',')) {
+        const k = kv.split(':')[0].trim();
+        if (/^[A-Za-z_$][\w$]*$/.test(k)) sentKeys.add(k);
+      }
+    }
+    for (const m of src.matchAll(/[?&]([A-Za-z_$][\w$]*)=/g)) sentKeys.add(m[1]);
+  }
+  for (const f of appScreens) {
+    // expo-router fills dynamic segments from the path itself.
+    const segments = [...f.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]);
+    const src = stripComments(readFileSync(f, 'utf8'));
+    const keys = new Set();
+    for (const m of src.matchAll(/useLocalSearchParams\s*<\{([^}]*)\}>/g))
+      for (const k of m[1].matchAll(/([A-Za-z_$][\w$]*)\s*\??\s*:/g)) keys.add(k[1]);
+    for (const k of keys) {
+      if (segments.includes(k)) continue;
+      if (sentKeys.has(k)) continue;
+      if (READ_ALLOWED.has(`${f}::${k}`)) continue;
+      unsent.push({ file: f, key: k });
+    }
+  }
+}
+
 console.log('\n— Navigation parameter contracts —');
 console.log(`  ${findings.length} navigation(s) carrying params, across ${files.length} screens`);
 if (ALLOWED.size) {
@@ -152,12 +236,23 @@ if (ALLOWED.size) {
   for (const [k, why] of ALLOWED) console.log(`     ${k} — ${why}`);
 }
 
-if (problems.length === 0) {
-  console.log('\n✓ Every parameter sent is read by its destination.\n');
+if (READ_ALLOWED.size) {
+  console.log(`  ℹ️  ${READ_ALLOWED.size} param(s) read with no door built:`);
+  for (const [k, why] of READ_ALLOWED) console.log(`     ${k} — ${why}`);
+}
+
+if (problems.length === 0 && unsent.length === 0) {
+  console.log('\n✓ Every parameter sent is read by its destination.');
+  console.log('✓ Every parameter read is sent by someone.\n');
   process.exit(0);
 }
 
 console.log('');
+for (const u of unsent) {
+  console.log(`  ❌ ${u.file} reads '${u.key}' but nothing sends it`);
+  console.log(`     A supported behaviour with no way to reach it. Wire a sender,`);
+  console.log(`     or record it in READ_ALLOWED with the reason.\n`);
+}
 for (const p of problems) {
   console.log(`  ❌ ${p.file}:${p.line} sends '${p.key}' to ${p.route}`);
   console.log(`     ${p.dest} never mentions it — the value is silently dropped.\n`);

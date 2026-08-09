@@ -25,6 +25,7 @@ import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 import { tapLight, tapMedium } from '../../src/utils/haptics';
 import { PeptideDisclaimerModal } from '../../src/components/PeptideDisclaimerModal';
 import { PEPTIDES } from '../../src/data/peptides';
+import { findPeptideByQuery } from '../../src/lib/peptideSearch';
 import {
   getDosingReference,
   getAllDosingReferencesForPeptide,
@@ -134,9 +135,30 @@ export default function CalculatorV2Screen() {
   const logDose = useDoseLogStore((s) => s.logDose);
   const scheduleCycle = useDoseLogStore((s) => s.scheduleCycle);
 
-  const [peptideId, setPeptideId] = useState<string | null>(
-    params.peptideId ?? null,
-  );
+  /**
+   * Resolve the incoming peptideId, because it is not always an id.
+   *
+   * Aimee's open_dosing_calculator tool builds the deep link server-side and
+   * falls back to the peptide NAME when the model did not supply an id:
+   *
+   *   if (typeof input.peptideId === 'string') params.set('peptideId', input.peptideId);
+   *   else if (typeof input.peptideName === 'string') params.set('peptideId', input.peptideName);
+   *
+   * So this screen can arrive with peptideId="BPC-157" when the catalog id is
+   * "bpc-157". Every lookup here is an exact match, so that silently missed:
+   * no curated reference, no variant blocks, generic defaults — a calculator
+   * that does not know which compound it is calculating for, opened by Aimee
+   * saying "opening the dosing calculator" as if it did.
+   *
+   * Same class as the body map, where display names were pushed into
+   * /peptide/[id]. Fixed on the CLIENT rather than in the edge function so it
+   * holds for any caller, including deep links typed by hand.
+   */
+  const [peptideId, setPeptideId] = useState<string | null>(() => {
+    const incoming = params.peptideId;
+    if (!incoming) return null;
+    return findPeptideByQuery(PEPTIDES, incoming)?.id ?? incoming;
+  });
   const [pickerOpen, setPickerOpen] = useState(false);
   const [showAceticFlag, setShowAceticFlag] = useState(false);
   const [showProtocol, setShowProtocol] = useState(false);

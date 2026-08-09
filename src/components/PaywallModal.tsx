@@ -282,7 +282,15 @@ export function PaywallModal({ visible, feature, onDismiss }: PaywallModalProps)
 
   const handleUpgrade = () => {
     onDismiss();
-    router.push('/subscription');
+    // Carry the gated feature across. The subscription screen reads a
+    // `highlight` param, maps it to a tier via tierForFeature, and glows that
+    // plan — and it feeds trackPaywallViewed. This push omitted it, so
+    // `highlight` was undefined on every arrival: no tier was ever highlighted,
+    // and every paywall view was recorded as 'direct' / 'plus' regardless of
+    // what actually triggered it. Someone blocked by a Pro-only feature landed
+    // on a page that drew no attention to Pro, and the funnel data said nobody
+    // ever arrived from a feature gate.
+    router.push({ pathname: '/subscription', params: { highlight: feature } });
   };
 
   const handleDismiss = () => {
