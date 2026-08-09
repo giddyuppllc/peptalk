@@ -7,7 +7,7 @@
 >
 > The calculator no longer depends on any of this. It used to refuse to prime
 > its inputs without a curated reconstitution reference, so 46 of 79 compounds
-> opened a dead form. It now primes from supplier data or a common default for
+> opened a dead form. It now primes from a known strength or a common default for
 > every compound, with the vial ladder one tap away, so **anyone can put in
 > their own vial and diluent and get real concentration, draw volume and vial
 > duration for any compound in the library.**

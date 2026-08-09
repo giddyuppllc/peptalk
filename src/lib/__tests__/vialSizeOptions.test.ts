@@ -1,22 +1,26 @@
 /**
  * Vial-size quick-picks.
  *
- * Edward: "vial size can change incrementally based on an individual supplier
- * — we should have the standard vial size options for the calc to do math and
- * let people select theirs off."
+ * Edward: "we should have the standard vial size options for the calc to do
+ * math and let people select theirs off." Then, correcting the first cut:
+ * "this isnt a supplier app / its education resource / just have it do the
+ * fuckin math for them let them explore" — and "if this is peptalk, there is
+ * zero suppliers and sales, this is all education."
  *
- * That is the right model, and the app had the wrong one. Vial size is a
- * property of the SUPPLIER, not the compound: the same peptide ships as 5 mg
- * from one source and 10 or 30 from another. The mg field prefilled from the
- * reference, so anyone holding a different vial had to notice the mismatch and
- * retype it. That is exactly the retatrutide failure — a 10 mg vial silently
- * got 5 mg maths, and therefore the wrong unit count on every draw.
+ * Vial size is a property of the VIAL, not the compound: the same peptide
+ * turns up as 5 mg from one source and 10 or 30 from another. The mg field
+ * prefilled from the reference, so anyone holding a different vial had to
+ * notice the mismatch and retype it — exactly the retatrutide failure, where a
+ * 10 mg vial silently got 5 mg maths and the wrong unit count on every draw.
+ *
+ * The fix is NOT to encode who stocks what. It is to offer every compound the
+ * same realistic ladder and compute whatever the reader enters.
  */
 import {
   STANDARD_VIAL_MG,
   getVialSizeOptions,
-  getSupplierVialSizes,
-} from '../../data/supplierVialSizes';
+  getKnownVialSizes,
+} from '../../data/vialSizes';
 
 describe('the standard ladder', () => {
   it('is offered for every compound, known or not', () => {
@@ -31,25 +35,25 @@ describe('the standard ladder', () => {
     expect(new Set(STANDARD_VIAL_MG).size).toBe(STANDARD_VIAL_MG.length);
   });
 
-  it('contains only strengths actually observed in the supplier catalog', () => {
-    // Every value here was read off a real product listing. If someone adds a
-    // plausible-looking number that nobody sells, this is the guard.
+  it('contains only strengths that actually occur', () => {
+    // Every value here was observed on a real vial. If someone adds a
+    // plausible-looking round number that does not exist, this is the guard.
     const observed = new Set([2, 5, 10, 15, 20, 30, 50, 60, 100]);
     for (const mg of STANDARD_VIAL_MG) expect(observed.has(mg)).toBe(true);
   });
 
-  it('covers the sizes the catalog actually sells most', () => {
+  it('covers the strengths that turn up most often', () => {
     for (const mg of [5, 10, 30]) expect(STANDARD_VIAL_MG).toContain(mg);
   });
 });
 
-describe('the supplier catalog does NOT narrow the options', () => {
+describe('known per-compound strengths do NOT narrow the options', () => {
   /**
    * Edward, correcting the first cut of this: "this isnt a supplier app / its
    * education resource / just have it do the fuckin math for them let them
    * explore."
    *
-   * The first version returned the supplier's own list where we had one, so
+   * The first version returned the per-compound list where we had one, so
    * Cerebrolysin offered 60 mg and nothing else and Follistatin-344 offered
    * only 1 mg. That is a catalogue, not a teaching tool — it tells a reader
    * their vial does not exist and refuses to do the arithmetic. These tests are
@@ -64,9 +68,9 @@ describe('the supplier catalog does NOT narrow the options', () => {
     expect(getVialSizeOptions('follistatin-344')).toEqual(STANDARD_VIAL_MG);
   });
 
-  it('a compound we stock and one we do not are offered the same choices', () => {
-    // The single strongest statement of the model: what the supplier happens to
-    // sell has no bearing on what the calculator will compute.
+  it('a compound we have data for and one we do not are offered the same choices', () => {
+    // The single strongest statement of the model: what we happen to know
+    // about a compound has no bearing on what the calculator will compute.
     expect(getVialSizeOptions('tirzepatide')).toEqual(getVialSizeOptions('not-a-real-peptide'));
   });
 
@@ -85,21 +89,21 @@ describe('the supplier catalog does NOT narrow the options', () => {
   });
 });
 
-describe('recorded supplier data stays internally consistent', () => {
+describe('recorded vial data stays internally consistent', () => {
   it('every recorded vial list is ascending and positive', () => {
     for (const id of ['tirzepatide', 'ghrp-2', 'aod-9604', 'cerebrolysin']) {
-      const v = getSupplierVialSizes(id)!;
+      const v = getKnownVialSizes(id)!;
       expect(v.vialMg.length).toBeGreaterThan(0);
       for (const mg of v.vialMg) expect(mg).toBeGreaterThan(0);
       expect(v.vialMg).toEqual([...v.vialMg].sort((a, b) => a - b));
     }
   });
 
-  it('the white-label codes carry a CAS number', () => {
+  it('the GLP-* codes carry a CAS number', () => {
     // The CAS is what makes "GLP-2TZ is tirzepatide" auditable rather than a
-    // plausible reading of a product name.
+    // plausible reading of a name.
     for (const id of ['tirzepatide', 'semaglutide', 'retatrutide', 'survodutide', 'mazdutide', 'cagrilintide']) {
-      expect(getSupplierVialSizes(id)?.cas).toMatch(/^\d+-\d+-\d$/);
+      expect(getKnownVialSizes(id)?.cas).toMatch(/^\d+-\d+-\d$/);
     }
   });
 });

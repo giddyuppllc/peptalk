@@ -24,7 +24,7 @@ import { HOW_TO_GUIDES } from '../src/data/howToGuides';
 import { VIDEOS } from '../src/data/videos';
 import { PROTOCOL_TEMPLATES } from '../src/data/protocols';
 import { PEPTIDE_DOSING_TABLE, getDosingTableEntry } from '../src/data/peptideDosingTable';
-import { getSupplierVialSizes } from '../src/data/supplierVialSizes';
+import { getKnownVialSizes } from '../src/data/vialSizes';
 import {
   PEPTIDE_DOSING_REFERENCE,
   PEPTIDE_VARIANT_PARENTS,
@@ -646,13 +646,13 @@ info(
 // vialMg + diluentMl + diluent + schedule; the supplier catalog gives the first.
 // Printing which ones already have an authoritative vial size turns "26 missing"
 // into "13 need only a diluent volume and a schedule".
-const withVial = [...MISSING_RECON_REF].filter((id) => getSupplierVialSizes(id));
-const withoutVial = [...MISSING_RECON_REF].filter((id) => !getSupplierVialSizes(id));
+const withVial = [...MISSING_RECON_REF].filter((id) => getKnownVialSizes(id));
+const withoutVial = [...MISSING_RECON_REF].filter((id) => !getKnownVialSizes(id));
 if (withVial.length) {
   info(
     `  ${withVial.length} have a supplier vial size on file (need diluent mL + schedule): ` +
       withVial
-        .map((id) => `${id} [${getSupplierVialSizes(id)!.vialMg.join('/')}mg]`)
+        .map((id) => `${id} [${getKnownVialSizes(id)!.vialMg.join('/')}mg]`)
         .join(', '),
   );
 }

@@ -2,7 +2,7 @@
 import { PEPTIDES } from '../src/data/peptides';
 import { getDosingReference } from '../src/data/peptideDosingReference';
 import { getDosingTableEntry } from '../src/data/peptideDosingTable';
-import { getSupplierVialSizes } from '../src/data/supplierVialSizes';
+import { getKnownVialSizes } from '../src/data/vialSizes';
 import { getProtocolsByPeptide } from '../src/data/protocols';
 
 const NOT_RECONSTITUTED = new Set([
@@ -24,15 +24,15 @@ console.log(`## A. No dosing card at all (${noCard.length}) — needs a full pro
 console.log('These render NO dosing section. Need: dose range, frequency, cycle length.\n');
 for (const id of noCard) console.log(`- [ ] **${name(id)}**  (\`${id}\`)`);
 
-const withVial = noRef.filter((id) => getSupplierVialSizes(id));
-const withoutVial = noRef.filter((id) => !getSupplierVialSizes(id));
+const withVial = noRef.filter((id) => getKnownVialSizes(id));
+const withoutVial = noRef.filter((id) => !getKnownVialSizes(id));
 
 console.log(`\n## B. Have vial size, need diluent + schedule (${withVial.length})\n`);
 console.log('Calculator can\'t compute reconstitution. Need: mL of bac water, and dose per draw.\n');
 console.log('| compound | vial (mg) | bac water (mL) | dose | units | frequency |');
 console.log('|---|---|---|---|---|---|');
 for (const id of withVial) {
-  const v = getSupplierVialSizes(id)!;
+  const v = getKnownVialSizes(id)!;
   const p = getProtocolsByPeptide(id)[0];
   const known = p ? `${p.typicalDose.min}-${p.typicalDose.max} ${p.typicalDose.unit}` : '?';
   console.log(`| **${name(id)}** | ${v.vialMg.join(' / ')} | ? | ${known} | ? | ${p?.frequency ?? '?'} |`);

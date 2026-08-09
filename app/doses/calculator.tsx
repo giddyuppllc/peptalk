@@ -34,7 +34,7 @@ import {
   getVialSizeOptions,
   getDefaultVialMg,
   STANDARD_VIAL_MG,
-} from '../../src/data/supplierVialSizes';
+} from '../../src/data/vialSizes';
 import { getCalculatorMetadata } from '../../src/data/calculatorMetadata';
 import { getDosingTableEntry } from '../../src/data/peptideDosingTable';
 import {
@@ -124,9 +124,10 @@ export default function CalculatorV2Screen() {
   // Default to whatever getDosingReference would have returned, so behaviour is
   // unchanged for every peptide with a single block.
   const [variantId, setVariantId] = useState<string | null>(null);
-  // Vial strengths to offer as quick-picks: the supplier's own list for this
-  // compound where we have it, else the standard ladder. Only decides which
-  // chips appear — the mg field remains free-text either way.
+  // Vial strengths to offer as quick-picks. The SAME ladder for every compound
+  // — PepTalk teaches rather than sells, so nothing here narrows by what a
+  // particular source carries. Only decides which chips appear; the mg field
+  // is free-text regardless.
   const vialSizeOptions = useMemo(
     () => (peptideId ? getVialSizeOptions(peptideId) : STANDARD_VIAL_MG),
     [peptideId],
@@ -182,8 +183,8 @@ export default function CalculatorV2Screen() {
   //
   // `meta` is synthesized for every id (getCalculatorMetadata never returns
   // null), so the only genuinely missing input was vial strength. It now falls
-  // back to supplier data and then to a common default, both of which are
-  // starting points in an editable field rather than assertions. The dose
+  // back to a known strength for the compound and then to a common default,
+  // both starting points in an editable field rather than assertions. The dose
   // itself is NOT invented: `phase` stays null without a reference, so the
   // per-shot box stays empty until the user types one.
   useEffect(() => {
@@ -583,17 +584,18 @@ export default function CalculatorV2Screen() {
             suffix="mg"
           />
           {/* Quick-pick vial strengths.
-              Vial size is a property of the SUPPLIER, not the compound — the
-              same peptide ships as 5 mg from one source and 10 or 30 from
-              another. The field was already free-text, but it prefills from the
-              reference, so anyone holding a different vial had to notice the
-              mismatch and retype it. That is the retatrutide failure: a 10 mg
-              vial silently got 5 mg maths and the wrong unit count on every
-              draw.
+              Vial size is a property of the VIAL, not the compound — the same
+              peptide turns up as 5 mg from one source and 10 or 30 from
+              another. The field was already free-text, but it prefills, so
+              anyone holding a different vial had to notice the mismatch and
+              retype it. That is the retatrutide failure: a 10 mg vial silently
+              got 5 mg maths and the wrong unit count on every draw. These
+              chips make the assumed strength visible and one tap to change.
 
-              Shows the supplier's own strengths for this compound where we have
-              them, otherwise the standard ladder. The field stays free-text for
-              anything unusual (0.1 mg IGF-1 LR3, 500 mg NAD+). */}
+              The SAME ladder for every compound. An earlier cut narrowed it per
+              compound, which turned an exploration tool into a catalogue and
+              told readers their vial did not exist. Field stays free-text for
+              anything off the ladder (0.1 mg IGF-1 LR3, 500 mg NAD+). */}
           <View style={styles.chipRow}>
             {vialSizeOptions.map((mg) => (
               <Chip

@@ -24,8 +24,8 @@ import {
   getDefaultVialMg,
   getVialSizeOptions,
   DEFAULT_VIAL_MG,
-  SUPPLIER_VIAL_SIZES,
-} from '../../data/supplierVialSizes';
+  KNOWN_VIAL_SIZES,
+} from '../../data/vialSizes';
 import { calculate } from '../../utils/calculatorV2';
 
 /** Mirrors the priming effect in app/doses/calculator.tsx. */
@@ -80,21 +80,21 @@ describe('every compound primes to a computable state', () => {
 
 describe('priming prefers real data over the default', () => {
   it('a curated reference wins over everything', () => {
-    // Cerebrolysin's reference says 60 mg; its supplier listing also says 60.
+    // Cerebrolysin's reference says 60 mg; the known-strength entry agrees.
     // Pass a deliberately different reference value to prove precedence rather
     // than coincidence.
     expect(getDefaultVialMg('cerebrolysin', 60)).toBe(60);
     expect(getDefaultVialMg('cerebrolysin', 25)).toBe(25);
   });
 
-  it('falls back to the supplier catalog when there is no reference', () => {
-    // Thymalin has no reconstitution reference but the catalog lists 10 mg.
+  it('falls back to a known strength when there is no reference', () => {
+    // Thymalin has no reconstitution reference but is known to come as 10 mg.
     expect(getDosingReference('thymalin')).toBeNull();
     expect(getDefaultVialMg('thymalin', undefined)).toBe(10);
-    // Follistatin-344 ships at 1 mg — well off the standard ladder. Real data
+    // Follistatin-344 comes as 1 mg — well off the standard ladder. Real data
     // must beat the generic default, or this compound primes 10x wrong.
     expect(getDefaultVialMg('follistatin-344', undefined)).toBe(1);
-    expect(SUPPLIER_VIAL_SIZES['follistatin-344'].vialMg).toEqual([1]);
+    expect(KNOWN_VIAL_SIZES['follistatin-344'].vialMg).toEqual([1]);
   });
 
   it('falls back to the common default only when nothing is known', () => {
