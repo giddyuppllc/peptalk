@@ -108,6 +108,14 @@ function SavedWorkoutRow({
   const accent = useSectionAccent();
 
   const totalSets = template.exercises.reduce((sum, e) => sum + e.targetSets, 0);
+  // Total planned load — sets × reps × weight, across every exercise that has
+  // a weight on it. Shown so a saved workout says what it actually is: "12
+  // sets" alone reads the same for an empty-bar session and a heavy one, and
+  // until now there was no weight in a template at all to distinguish them.
+  const totalVolumeLbs = template.exercises.reduce(
+    (sum, e) => sum + e.targetSets * e.targetReps * (e.targetWeightLbs ?? 0),
+    0,
+  );
   const first = template.exercises
     .slice(0, 2)
     .map((e) => getExerciseById(e.exerciseId)?.name ?? e.exerciseId)
@@ -130,6 +138,7 @@ function SavedWorkoutRow({
         </Text>
         <Text style={[s.savedMeta, { color: t.textSecondary }]} numberOfLines={1}>
           {template.exercises.length} exercises · {totalSets} sets
+          {totalVolumeLbs > 0 ? ` · ${totalVolumeLbs.toLocaleString()} lb volume` : ''}
         </Text>
         {first ? (
           <Text style={[s.savedFirst, { color: t.textSecondary }]} numberOfLines={1}>

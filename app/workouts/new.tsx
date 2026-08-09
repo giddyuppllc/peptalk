@@ -149,9 +149,29 @@ export default function NewWorkoutScreen() {
     });
   }, []);
 
-  const updatePicked = (exerciseId: string, field: 'targetSets' | 'targetReps', value: number) => {
+  /**
+   * Jamie, repeatedly: "We can log the reps and sets but need a spot to log the
+   * weight used."
+   *
+   * She was right, and the gap was here. TemplateExercise has carried
+   * `targetWeightLbs` since the store was written — its own header says users
+   * "pick exercises, set target reps/sets/weight" — but this builder only ever
+   * rendered Sets and Reps steppers, and the player never read the field. So
+   * the model promised weight, the docs promised weight, and there was nowhere
+   * to type one.
+   *
+   * `targetWeightLbs` clamps at 0, not 1, because 0 is meaningful: bodyweight,
+   * or "I'll decide at the rack". Sets and reps keep their floor of 1 — zero
+   * sets is not a workout.
+   */
+  const updatePicked = (
+    exerciseId: string,
+    field: 'targetSets' | 'targetReps' | 'targetWeightLbs',
+    value: number,
+  ) => {
+    const floor = field === 'targetWeightLbs' ? 0 : 1;
     setPicked((prev) =>
-      prev.map((p) => (p.exerciseId === exerciseId ? { ...p, [field]: Math.max(1, value) } : p)),
+      prev.map((p) => (p.exerciseId === exerciseId ? { ...p, [field]: Math.max(floor, value) } : p)),
     );
   };
 
@@ -478,7 +498,11 @@ function RepsStep({
   t,
 }: {
   picked: TemplateExercise[];
-  onUpdate: (id: string, field: 'targetSets' | 'targetReps', value: number) => void;
+  onUpdate: (
+    id: string,
+    field: 'targetSets' | 'targetReps' | 'targetWeightLbs',
+    value: number,
+  ) => void;
   onRemove: (id: string) => void;
   showAdvanced: boolean;
   accent: string;
@@ -548,6 +572,23 @@ function RepsStep({
                 t={t}
                 stepBy={exercise.isTimeBased ? 5 : 1}
               />
+              {/* Weight — hidden for time-based moves (a plank has no load) and
+                  optional everywhere else. 0 reads as "Body", because that is
+                  what it means, rather than a bare 0 that looks unset. Steps by
+                  5 lb to match the plate maths and the player's snap5 seeding. */}
+              {!exercise.isTimeBased && (
+                <Stepper
+                  label="Weight"
+                  value={ex.targetWeightLbs ?? 0}
+                  onChange={(v) => onUpdate(ex.exerciseId, 'targetWeightLbs', v)}
+                  accent={accent}
+                  t={t}
+                  stepBy={5}
+                  min={0}
+                  zeroLabel="Body"
+                  suffix="lb"
+                />
+              )}
             </View>
           </View>
         );
@@ -569,6 +610,9 @@ function Stepper({
   accent,
   t,
   stepBy = 1,
+  min = 1,
+  zeroLabel,
+  suffix,
 }: {
   label: string;
   value: number;
@@ -576,6 +620,12 @@ function Stepper({
   accent: string;
   t: ReturnType<typeof useTheme>;
   stepBy?: number;
+  /** Lowest allowed value. Weight uses 0 (bodyweight); sets/reps stay at 1. */
+  min?: number;
+  /** Rendered instead of "0" — "Body" says what 0 means on a weight stepper. */
+  zeroLabel?: string;
+  /** Unit appended to the value, e.g. "lb". */
+  suffix?: string;
 }) {
   return (
     <View style={s.stepper}>
@@ -584,7 +634,7 @@ function Stepper({
         <TouchableOpacity
           onPress={() => {
             tapLight();
-            onChange(Math.max(1, value - stepBy));
+            onChange(Math.max(min, value - stepBy));
           }}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
@@ -592,7 +642,9 @@ function Stepper({
         >
           <Ionicons name="remove-circle-outline" size={28} color={t.textSecondary} />
         </TouchableOpacity>
-        <Text style={[s.stepperValue, { color: t.text }]}>{value}</Text>
+        <Text style={[s.stepperValue, { color: t.text }]}>
+          {value === 0 && zeroLabel ? zeroLabel : `${value}${suffix ? ` ${suffix}` : ''}`}
+        </Text>
         <TouchableOpacity
           onPress={() => {
             tapLight();

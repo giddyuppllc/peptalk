@@ -60,6 +60,7 @@ import type {
   WorkoutLogSet,
 } from '../../src/types/fitness';
 import { notifySuccess, tapLight, tapMedium } from '../../src/utils/haptics';
+import { resolveSetWeight, targetWeightMap } from '../../src/lib/workoutWeight';
 
 import {
   WorkoutProgressRing,
@@ -362,25 +363,56 @@ export default function WorkoutPlayerV2Screen() {
   const targetReps = currentEx?.reps[setIdx] ?? 0;
   const targetSeconds = currentEx?.timeSeconds;
 
-  // Seed weight when exercise changes — runs once per exId
+  /**
+   * The weight the user set when BUILDING this workout.
+   *
+   * Templates have carried `targetWeightLbs` all along and this screen never
+   * read it, so a weight chosen in the builder vanished on the way to the
+   * player — which is the other half of Jamie's "need a spot to log the weight
+   * used". There was a spot to log it per set here, but nothing carried the
+   * plan in, so every first run of a new workout started at 0 lb and you
+   * re-entered what you had already typed.
+   *
+   * Programs are untouched: this reads only from `template`, so the P0–P4
+   * programming path behaves exactly as before.
+   */
+  const targetWeightByExercise = useMemo(
+    () => targetWeightMap(template?.exercises),
+    [template],
+  );
+
+  // Seed weight when exercise changes — runs once per exId.
+  // Falls back to the builder's target when there is no history, so a brand new
+  // workout opens on the weight you planned instead of 0.
   useEffect(() => {
     if (!currentExId) return;
     if (weightByExercise[currentExId] != null) return;
     const history = getExerciseHistory(currentExId);
-    const seed = history?.bestWeight ?? 0;
+    const seed = resolveSetWeight({
+      historyBest: history?.bestWeight,
+      targetWeight: targetWeightByExercise[currentExId],
+    });
     setWeightByExercise((prev) =>
-      prev[currentExId] != null ? prev : { ...prev, [currentExId]: snap5(seed) },
+      prev[currentExId] != null ? prev : { ...prev, [currentExId]: seed },
     );
-  }, [currentExId, getExerciseHistory, weightByExercise]);
+  }, [currentExId, getExerciseHistory, weightByExercise, targetWeightByExercise]);
 
   // Resolve weight synchronously when there's no entry yet — avoids a 1-frame
   // 0 lb flash when moving to a new exercise.
+  //
+  // Precedence: what the user has already dialled in this session > what they
+  // actually lifted last time > what they planned when building. History beats
+  // the plan deliberately — a real previous lift is better evidence than an
+  // intention typed weeks ago — and the plan only fills the first-run gap,
+  // where history is empty and the old code fell to 0.
   const currentWeight = useMemo(() => {
     if (!currentExId) return 0;
-    if (weightByExercise[currentExId] != null) return weightByExercise[currentExId];
-    const history = getExerciseHistory(currentExId);
-    return snap5(history?.bestWeight ?? 0);
-  }, [currentExId, weightByExercise, getExerciseHistory]);
+    return resolveSetWeight({
+      sessionWeight: weightByExercise[currentExId],
+      historyBest: getExerciseHistory(currentExId)?.bestWeight,
+      targetWeight: targetWeightByExercise[currentExId],
+    });
+  }, [currentExId, weightByExercise, getExerciseHistory, targetWeightByExercise]);
 
   // Totals
   const totalSets = useMemo(
