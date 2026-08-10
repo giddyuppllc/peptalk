@@ -66,10 +66,78 @@ did not exist, the field stayed empty and the screen says so.
 
 ---
 
-## 3a. TWO DOSING SOURCES THAT CONTRADICT EACH OTHER — read this first
+## 3a. THREE DOSING SOURCES, AND WHERE EACH CAME FROM — read this first
 
-Added 2026-08-10. This is the largest single data problem found, and it is not
-a UI bug.
+Added 2026-08-10, provenance traced the same day after Edward asked which of
+the two is the trump. The answer turned out to be "there are three, and the
+question has a real answer."
+
+| # | File | Origin | Verifiable? |
+|---|---|---|---|
+| 1 | `peptideDosingReference.ts` | **Edward's PEPTALK_DOSES doc**, 2026-05-15. A ladder of worked doses: vial mg, diluent mL, syringe units, resulting mcg | **YES — self-verifying** |
+| 2 | `peptideDosingTable.ts` | **Edward's master table**, photographed (`IMG_4146.jpeg`, "page 2 of 11"), transcribed verbatim 2026-06-16, commit `649603b` | No — assertion, but attributed |
+| 3 | `protocols.ts` | Launch commit `cb57f66`, 2026-02-16 | No — **and unattributed** |
+
+**Source 1 is the trump, and not because of who supplied it.** It is the only
+one whose numbers can be checked from inside the app, because it stores the
+concentration *and* the unit count *and* the resulting dose, so the arithmetic
+has to close:
+
+```
+MOTS-c: 10mg / 3mL = 3.333 mg/mL
+        6 units = 0.06mL × 3.333 = 200mcg   ✓ matches "200 mcg (6 units)"
+```
+
+All 33 entries pass. The other two state a range and offer nothing to check it
+against.
+
+**Source 3 claims a provenance it does not have.** Its header says "compiled
+from published literature, clinical guidelines, and widely-referenced research
+sources", but the `source` field on all 46 entries is one of exactly two
+placeholder strings — `'published research'` (40) and `'common practice'` (6).
+Zero PMIDs, DOIs, author names or study titles in the entire file.
+
+**And the least attributable source drives the most behaviour:**
+
+| | imported by |
+|---|---|
+| `protocols.ts` (uncited) | **11 modules** — incl. `doseSafety.ts`, both calculators, Aimee, dose logging, adherence |
+| `peptideDosingTable.ts` (yours) | 3 — display card + calculator screen only |
+
+`doseSafety.ts:9` imports `PROTOCOL_TEMPLATES`. **The overdose guard rails are
+computed from the unattributed figures.**
+
+### The triage — run by `verify:doseprovenance`
+
+25 compounds carry all three. Asking only "does Edward's own worked dose fall
+inside the range each source advertises?" — which needs no clinical judgement —
+splits them:
+
+- **10** — both published ranges contain the worked dose. No action.
+- **6 🔴 outside BOTH** — TB-500, CJC-1295 (with DAC), Hexarelin,
+  Thymosin Alpha-1, Melanotan-2, Glutathione. Every advertised range excludes
+  the dose Edward actually reconstitutes. Highest priority.
+- **5 🟠 only `protocols.ts` contains it** → evidence the **master table** is
+  wrong: Semaglutide, IGF-1 LR3, LL-37, MOTS-c, **NAD+**.
+- **4 🟡 only the master table contains it** → evidence **`protocols.ts`** is
+  wrong: Cagrilintide, Ipamorelin, Tesamorelin, GHK-Cu. These four matter most
+  operationally, because `protocols.ts` is what decides whether a logged dose
+  is an overdose.
+
+**NAD+ is now settled by evidence, not opinion.** Edward's ladder doses
+60,000mcg (60mg); `protocols.ts` says 50–200mg and contains it; the master
+table says `200mcg-600mcg`. Exactly 100× — a transcription slip on page 2, not
+a clinical disagreement. So "the table always wins" cannot be applied as a
+blanket rule.
+
+**Only page 2 of 11 was ever ingested.** 66 compounds came from one page of an
+eleven-page document. The remaining ten pages have never entered the app —
+including the "Click For Notes [1–63]" titration prose, still flagged
+`titrationNotePending` today.
+
+### The original two-source finding
+
+This is the largest single data problem found, and it is not a UI bug.
 
 `peptideDosingTable.ts` and `protocols.ts` each carry a dose range for the same
 compound. **Both reach users**, and on `app/peptide/[id]` both render on the
