@@ -111,5 +111,51 @@ if (differ.length) {
   console.log('');
 }
 
-if (differ.length && FAIL_ON_MISMATCH) process.exit(1);
+/* ── Cycle length: the same two sources, a field nobody compared ──────────── */
+
+/**
+ * The dose range was only ONE of the fields these two files both carry. Cycle
+ * length is stored twice as well — `cycleLength` (free text, e.g. "4-8 Weeks")
+ * on the table and `durationWeeks` {min,max} on the protocol — and until now
+ * nothing compared them. Finding a disagreement in one field is a reason to
+ * check the others, not a reason to stop.
+ */
+const cycleRaw = execSync('npx tsx scripts/_cycle-consistency-extract.ts', {
+  encoding: 'utf8',
+  maxBuffer: 1e8,
+});
+const cycleRows = JSON.parse(cycleRaw.trim().split('\n').filter((l) => l.startsWith('[')).pop());
+
+if (cycleRows.length < 10) {
+  console.error(
+    `\n✗ SELF-CHECK FAILED — only ${cycleRows.length} comparable cycle pairs found.`,
+  );
+  process.exit(1);
+}
+
+// +/- 1 week. These are ranges written by hand in two places; a one-week
+// difference is a rounding choice, not a contradiction.
+const cycleDiffer = cycleRows.filter(
+  (r) => Math.abs(r.table[0] - r.protocol[0]) > 1 || Math.abs(r.table[1] - r.protocol[1]) > 1,
+);
+
+console.log('\n— Cycle length: table vs protocol —');
+console.log(`  ${cycleRows.length} compounds carry BOTH a cycle length and a protocol duration`);
+console.log(`  ✓ agree      : ${cycleRows.length - cycleDiffer.length}`);
+console.log(`  ⚠️  disagree  : ${cycleDiffer.length}`);
+
+if (cycleDiffer.length) {
+  console.log('');
+  cycleDiffer
+    .sort((a, b) => Math.abs(b.table[1] - b.protocol[1]) - Math.abs(a.table[1] - a.protocol[1]))
+    .forEach((r) => {
+      console.log(
+        `  ${r.name.padEnd(22)} table "${r.tableText}"`.padEnd(58) +
+          ` protocol ${r.protocol[0]}-${r.protocol[1]} weeks`,
+      );
+    });
+  console.log('');
+}
+
+if ((differ.length || cycleDiffer.length) && FAIL_ON_MISMATCH) process.exit(1);
 process.exit(0);
