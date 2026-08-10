@@ -63,17 +63,14 @@ const OVERRIDES: Record<string, Override> = {
   // the calculator pre-fill.
   'retatrutide-10mg': { recommendedReconstitutionMl: 1 },
 
-  // §8.6 — mcg-native peptides. These commonly dose in 100s of mcg, so
-  // the user-facing default unit stays mcg even though storage is mg.
-  'bpc-157': { displayUnit: 'mcg' },
-  kpv: { displayUnit: 'mcg' },
-  'tb-500': { displayUnit: 'mcg' },
-  'ghk-cu': { displayUnit: 'mcg' },
-  'thymosin-alpha-1': { displayUnit: 'mcg' },
-  selank: { displayUnit: 'mcg' },
-  semax: { displayUnit: 'mcg' },
-  dsip: { displayUnit: 'mcg' },
-  'll-37': { displayUnit: 'mcg' },
+  // §8.6 — mcg-native display is now DERIVED from the dosing ladder by
+  // inferDisplayUnit(), not listed. The nine entries that used to live here
+  // (bpc-157, kpv, tb-500, ghk-cu, thymosin-alpha-1, selank, semax, dsip,
+  // ll-37) are all produced by the rule, and the rule additionally catches the
+  // fourteen mcg-native compounds the list had missed.
+  //
+  // Add a displayUnit override here only for a compound whose convention
+  // genuinely disagrees with its own doses, and say why.
 };
 
 /**
@@ -96,6 +93,34 @@ const DEFAULTS = {
   diluentType: 'bacWater' as const,
 };
 
+/**
+ * Which unit this compound's doses actually want, DERIVED from the doses.
+ *
+ * §8.6 used to be a hand-written list of nine peptides carrying
+ * `displayUnit: 'mcg'`, under a comment stating the rule: "peptides typically
+ * dosed in the 100s of mcg". That rule is computable — peptideDosingReference
+ * holds every dose — but it was frozen into a list instead, and the list missed
+ * FOURTEEN mcg-native compounds. Ipamorelin doses at 100 mcg and the calculator
+ * rendered it "0.1 mg"; Sermorelin, Hexarelin, MOTS-c, Melanotan-1/2, VIP,
+ * Oxytocin, IGF-1 LR3, Cagrilintide, CJC-1295 and KPV all had the same problem.
+ *
+ * This is the class of bug Edward described: a real rule gets applied once as a
+ * list, the list never grows with the data, and every new compound silently
+ * inherits the wrong answer.
+ *
+ * THE RULE: if any routine dose in the ladder is under 1 mg, show mcg. That is
+ * the dose needing sub-milligram precision and the one people quote. OVERRIDES
+ * still wins where a compound is a genuine exception — but the list is no
+ * longer the only way to get mcg.
+ */
+function inferDisplayUnit(ref: DosingReference | null): 'mg' | 'mcg' | null {
+  const doses = (ref?.schedule ?? [])
+    .map((s) => s.doseMcg)
+    .filter((n): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0);
+  if (!doses.length) return null;
+  return Math.min(...doses) < 1000 ? 'mcg' : 'mg';
+}
+
 function inferVialSize(ref: DosingReference | null): 3 | 5 | 10 {
   // Take the reference's `diluentMl` as a hint about the physical vial
   // the doc author had in mind, then clamp to the three legal sizes.
@@ -112,7 +137,7 @@ export function getCalculatorMetadata(peptideId: string): CalculatorMetadata {
   const standardVialSizeMl = ov.standardVialSizeMl ?? inferredVial;
   return {
     peptideId,
-    displayUnit: ov.displayUnit ?? DEFAULTS.displayUnit,
+    displayUnit: ov.displayUnit ?? inferDisplayUnit(ref) ?? DEFAULTS.displayUnit,
     standardVialSizeMl,
     maxVialCapacityMl: ov.maxVialCapacityMl ?? standardVialSizeMl,
     diluentType:

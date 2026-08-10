@@ -16,6 +16,8 @@
  *   per_shot_dose outside protocol range      — warn but allow
  */
 
+import { formatDoseAmount } from '../lib/doseUnits';
+
 export interface CalculatorInput {
   /** Manufacturer-stated mg in the vial (user-editable, pre-filled). */
   peptideMgInVial: number;
@@ -146,13 +148,25 @@ export function calculate(input: CalculatorInput): CalculatorResult {
   };
 }
 
-/** §8.6 display-unit conversion. */
+/**
+ * §8.6 display-unit conversion.
+ *
+ * Unlike formatDoseAmount this HONOURS an explicit unit choice — the calculator
+ * has a mg/mcg toggle and a per-compound default in calculatorMetadata, and a
+ * user who picks mcg means it. It only borrows the canonical number rendering
+ * so the digits match everywhere else in the app.
+ *
+ * It used to do its own: `mg.toFixed(mg >= 10 ? 1 : 2)`, which printed
+ * "1.00 mg" and "60.0 mg" — trailing zeros implying a precision the source data
+ * does not have, and disagreeing with every other dose the app showed.
+ */
 export function formatDose(mg: number, displayUnit: 'mg' | 'mcg'): string {
-  if (displayUnit === 'mcg') {
-    return `${Math.round(mg * 1000)} mcg`;
-  }
-  const decimals = mg >= 10 ? 1 : 2;
-  return `${mg.toFixed(decimals)} mg`;
+  if (displayUnit === 'mcg') return `${Math.round(mg * 1000)} mcg`;
+  // formatDoseAmount(_, 'mg'), NOT formatMassMcg — the latter rolls a sub-1mg
+  // value down into mcg, which would silently overrule the unit the user just
+  // picked. A 0.25 mg dose must read "0.25 mg" here even though the app's
+  // automatic rendering would call it "250 mcg".
+  return formatDoseAmount(mg, 'mg');
 }
 
 /** Convert from the chosen display unit back to mg for storage. */

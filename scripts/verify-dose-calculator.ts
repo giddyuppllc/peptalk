@@ -19,9 +19,14 @@
 import {
   calculateReconstitution,
   suggestBacWaterForRoundUnits,
-  formatDose,
   formatVolume,
 } from '../src/services/doseCalculator';
+// doseCalculator had its own formatDose() — one of four competing dose
+// renderers. These assertions pinned the RIGHT behaviour ("1 mg", not
+// "1.00 mg" or "1000 mcg"), so that behaviour became the canonical
+// formatMassMcg and the duplicate was removed. The checks below now guard the
+// one implementation the whole app uses.
+import { formatMassMcg as formatDose } from '../src/lib/doseUnits';
 
 interface Check {
   name: string;

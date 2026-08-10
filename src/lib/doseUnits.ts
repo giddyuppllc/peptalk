@@ -65,14 +65,41 @@ function trim(value: number): string {
 }
 
 /**
- * Format one amount. Mass amounts roll up to mg past 1000 mcg, matching the
- * behaviour the Cycle plan already had. IU/ml render in their own unit.
+ * THE canonical mass rendering. Every dose the app shows should come through
+ * here.
+ *
+ * Edward: "the units were like mcg and weird shit — we just wanted increments
+ * people would actually know", and separately: "instead of working them out, a
+ * weird rule is made that fixes the minor issue once."
+ *
+ * Both complaints have the same cause. Four functions rendered a dose and no
+ * two agreed — 1000 mcg came out as "1.00 mg" here, "1 mg" in doseCalculator
+ * and "1000 mcg" in calculatorV2, and 60 mg of NAD+ rendered as "60000 mcg" on
+ * the calculator. Each was locally reasonable and there was no one place to fix
+ * it, so every complaint produced another local rule.
+ *
+ * TWO DECISIONS, stated rather than buried:
+ *
+ *  1. Roll up to mg at 1000 mcg. Nobody reads "60000 mcg". This is what
+ *     TitrationScheduleCard already did, with a comment saying exactly that,
+ *     and it is the behaviour Edward has asked for twice.
+ *  2. Trim trailing zeros. "1.00 mg" claims a hundredth-of-a-milligram
+ *     precision the source data does not have; "1 mg" is the increment people
+ *     actually use. Capped at 2dp so 1.25 mg survives.
+ */
+export function formatMassMcg(mcg: number): string {
+  if (!Number.isFinite(mcg)) return '';
+  if (Math.abs(mcg) >= 1000) return `${trim(mcg / 1000)} mg`;
+  return `${Math.round(mcg)} mcg`;
+}
+
+/**
+ * Format one amount. Mass amounts roll up to mg past 1000 mcg. IU and ml render
+ * in their own unit — neither converts to a mass without a compound-specific
+ * potency or concentration this dataset does not carry.
  */
 export function formatDoseAmount(value: number, unit: DoseUnit): string {
-  if (unit === 'mcg') {
-    if (value >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 1 : 2)} mg`;
-    return `${Math.round(value)} mcg`;
-  }
+  if (unit === 'mcg') return formatMassMcg(value);
   if (unit === 'mg') return `${trim(value)} mg`;
   return `${trim(value)} ${unit}`;
 }

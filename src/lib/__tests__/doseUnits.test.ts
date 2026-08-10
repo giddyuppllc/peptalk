@@ -7,9 +7,11 @@
 import {
   formatDoseAmount,
   formatDoseRange,
+  formatMassMcg,
   isMassUnit,
   normalizeDoseRange,
 } from '../doseUnits';
+import { formatDose as formatDoseV2 } from '../../utils/calculatorV2';
 
 describe('isMassUnit', () => {
   it('treats mcg and mg as mass, IU and ml as not', () => {
@@ -70,11 +72,19 @@ describe('formatDoseAmount — mass rollup preserved', () => {
     expect(formatDoseAmount(999, 'mcg')).toBe('999 mcg');
   });
 
-  it('rolls up to mg at 1000 and uses one decimal past 10000', () => {
-    // Matches the previous formatDose() exactly — this behaviour was correct.
-    expect(formatDoseAmount(1000, 'mcg')).toBe('1.00 mg');
-    expect(formatDoseAmount(2000, 'mcg')).toBe('2.00 mg');
-    expect(formatDoseAmount(10000, 'mcg')).toBe('10.0 mg');
+  it('rolls up to mg at 1000 and trims trailing zeros', () => {
+    // Edward: "we just wanted increments people would actually know."
+    // These used to read "1.00 mg" / "10.0 mg" — trailing zeros claiming a
+    // hundredth-of-a-mg precision the source data does not have.
+    expect(formatDoseAmount(1000, 'mcg')).toBe('1 mg');
+    expect(formatDoseAmount(2000, 'mcg')).toBe('2 mg');
+    expect(formatDoseAmount(10000, 'mcg')).toBe('10 mg');
+    expect(formatDoseAmount(60000, 'mcg')).toBe('60 mg');
+  });
+
+  it('keeps a real fraction rather than rounding it away', () => {
+    expect(formatDoseAmount(1250, 'mcg')).toBe('1.25 mg');
+    expect(formatDoseAmount(2500, 'mcg')).toBe('2.5 mg');
   });
 
   it('rounds mcg rather than showing false precision', () => {
@@ -100,6 +110,29 @@ describe('formatDoseRange', () => {
 
   it('mots-c 1-2mg reads as mg after normalisation', () => {
     // Jamie: MOTS-c is 1-2 mg, not mcg.
-    expect(formatDoseRange(normalizeDoseRange(1, 2, 'mg'))).toBe('1.00 mg–2.00 mg');
+    expect(formatDoseRange(normalizeDoseRange(1, 2, 'mg'))).toBe('1 mg–2 mg');
+  });
+});
+
+describe('one implementation, not four', () => {
+  it('formatMassMcg is what formatDoseAmount uses for mcg', () => {
+    // Four functions used to render a dose and no two agreed: 1000 mcg came out
+    // as "1.00 mg" (doseUnits), "1 mg" (doseCalculator, dead) and "1000 mcg"
+    // (calculatorV2). Every caller now funnels through this one.
+    for (const v of [100, 999, 1000, 1250, 60000]) {
+      expect(formatDoseAmount(v, 'mcg')).toBe(formatMassMcg(v));
+    }
+  });
+
+  it('calculatorV2 borrows the same digits for its mg rendering', () => {
+    // It still honours an explicit mcg choice — that toggle is the user's —
+    // but the number itself must match the rest of the app.
+    expect(formatDoseV2(1, 'mg')).toBe(formatMassMcg(1000));
+    expect(formatDoseV2(60, 'mg')).toBe(formatMassMcg(60000));
+    expect(formatDoseV2(1.25, 'mg')).toBe(formatMassMcg(1250));
+  });
+
+  it('an explicit mcg choice is still honoured', () => {
+    expect(formatDoseV2(0.25, 'mcg')).toBe('250 mcg');
   });
 });

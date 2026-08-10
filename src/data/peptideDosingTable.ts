@@ -22,15 +22,25 @@
  * by count. The two are complementary and looked up by the same
  * peptideId; nothing here duplicates the reconstitution math.
  *
- * TITRATION NOTES ("Click For Notes [1..63]")
- * -------------------------------------------
+ * TITRATION NOTES ("Click For Notes [1..63]") — COMPLETE since 2026-06-30
+ * ----------------------------------------------------------------------
  * The source table's "Titration Strategy" column is a reference link
- * ("Click For Notes [n]") whose actual prose lives on SEPARATE pages that
- * were NOT part of the ingested image. Each entry below records the note
- * INDEX in `titrationNoteRef` and flags it `titrationNotePending: true`.
- * When the Notes [1-63] pages are supplied, fill `titrationNote` with the
- * transcribed prose; the UI already renders it when present and shows a
- * "details pending" hint when absent.
+ * ("Click For Notes [n]") whose prose lived on SEPARATE pages not part of the
+ * original image. Edward supplied them and all 63 were transcribed in
+ * `8c19758`, into the TITRATION_NOTES map at the bottom of this file.
+ *
+ * READ THE EXPORT, NOT THE LITERAL. The raw array below still carries
+ * `titrationNotePending: true` on 59 entries; `withTitrationNotes()` fills
+ * `titrationNote` from `titrationNoteRef` and clears the flag, so the EXPORTED
+ * table is 63/63 filled and 0 pending. Grepping the source literal reports 59
+ * pending and is wrong — this header used to say the notes were still
+ * outstanding and cost an audit pass chasing data that was never lost.
+ *
+ * PROVENANCE OF THE REST — see verify:doseprovenance. This file is a verbatim
+ * transcription of ONE page of an eleven-page document, so a slip here is a
+ * transcription error, not a clinical disagreement: NAD+ is recorded as
+ * "200mcg-600mcg" for a compound Edward's own reconstitution ladder doses at
+ * 60mg, exactly 100x out.
  */
 
 import { getProtocolsByPeptide } from './protocols';

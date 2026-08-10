@@ -208,7 +208,10 @@ assertEq('U-100 constant equals 100 units/mL', U100_UNITS_PER_ML, 100);
   // formatDose under each unit
   assertEq('formatDose(0.25, mg) → "0.25 mg"', formatDose(0.25, 'mg'), '0.25 mg');
   assertEq('formatDose(0.25, mcg) → "250 mcg"', formatDose(0.25, 'mcg'), '250 mcg');
-  assertEq('formatDose(15, mg) shows 1 decimal', formatDose(15, 'mg'), '15.0 mg');
+  // Was '15.0 mg'. Edward: "we just wanted increments people would actually
+  // know" — a trailing zero claims a tenth-of-a-mg precision the source data
+  // does not have. Whole milligrams now render whole, everywhere.
+  assertEq('formatDose(15, mg) → "15 mg", no trailing zero', formatDose(15, 'mg'), '15 mg');
   assertEq('formatVolumeMl(0.1) → "0.10 mL"', formatVolumeMl(0.1), '0.10 mL');
   assertEq('formatUnits(10) → "10.0 units"', formatUnits(10), '10.0 units');
 }

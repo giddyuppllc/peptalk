@@ -14,6 +14,7 @@ import { GlassCard } from './GlassCard';
 import { useTheme } from '../hooks/useTheme';
 import { Spacing, FontSizes, BorderRadius } from '../constants/theme';
 import type { TitrationStep, ProtocolTemplate } from '../types';
+import { formatDoseAmount, type DoseUnit } from '../lib/doseUnits';
 
 interface Props {
   protocol: ProtocolTemplate;
@@ -25,16 +26,10 @@ function formatStepRange(step: TitrationStep): string {
   return `Week ${step.weekStart}–${step.weekEnd}`;
 }
 
-function formatDose(step: TitrationStep): string {
-  // Render mcg as mg when ≥1000 for readability — peptidedosagescalculator
-  // shows "1 mg" not "1000 mcg" on the maintenance steps.
-  if (step.unit === 'mcg' && step.dose >= 1000) {
-    const mg = step.dose / 1000;
-    const formatted = Number.isInteger(mg) ? mg : Number(mg.toFixed(2));
-    return `${formatted} mg`;
-  }
-  return `${step.dose} ${step.unit}`;
-}
+// This card's own rollup — "1 mg" not "1000 mcg" on the maintenance steps —
+// was the behaviour the whole app should have had, so it moved into
+// formatDoseAmount rather than staying a local rule here. Called inline below;
+// a wrapper would just be a fifth thing named formatDose.
 
 export function TitrationScheduleCard({ protocol }: Props) {
   const t = useTheme();
@@ -76,7 +71,7 @@ export function TitrationScheduleCard({ protocol }: Props) {
                 {formatStepRange(step)}
               </Text>
               <Text style={[styles.colDose, styles.cell, styles.doseCell, { color: t.text }]}>
-                {formatDose(step)}
+                {formatDoseAmount(step.dose, step.unit as DoseUnit)}
               </Text>
               <Text style={[styles.colFreq, styles.cell, { color: t.textSecondary }]}>
                 {step.frequencyLabel}

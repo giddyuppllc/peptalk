@@ -146,13 +146,9 @@ export function suggestBacWaterForRoundUnits(
   return best ? best.bac : 0.5;
 }
 
-/**
- * Format a dose in the most readable unit (mg if ≥1mg, otherwise mcg).
- */
-export function formatDose(mcg: number): string {
-  if (mcg >= 1000) return `${(mcg / 1000).toFixed(2).replace(/\.?0+$/, '')} mg`;
-  return `${Math.round(mcg)} mcg`;
-}
+// formatDose() lived here and had ZERO callers — a fourth implementation of
+// "render a dose", competing with three others that all disagreed. Use
+// formatMassMcg / formatDoseAmount from src/lib/doseUnits.
 
 /**
  * Format a volume in ml with 2-3 significant figures.
