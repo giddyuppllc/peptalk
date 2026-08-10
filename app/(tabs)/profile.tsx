@@ -19,12 +19,9 @@ import { useTutorialStore } from '../../src/store/useTutorialStore';
 import { GlassCard } from '../../src/components/GlassCard';
 import { PasswordToggle } from '../../src/components/PasswordToggle';
 import { Disclaimer } from '../../src/components/Disclaimer';
-import { trackConsentUpdated } from '../../src/services/analyticsEvents';
-import { notificationsAvailable ,
-  scheduleWorkoutReminder,
-  scheduleMealReminder,
-  scheduleDoseReminder,
-} from '../../src/services/notificationService';
+// The three schedule* imports went with the dead NotificationSettings block —
+// app/settings/notifications.tsx owns that scheduling now.
+import { notificationsAvailable } from '../../src/services/notificationService';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useCheckinStore } from '../../src/store/useCheckinStore';
 import { useJournalStore } from '../../src/store/useJournalStore';
@@ -38,18 +35,15 @@ import { useBodyMapStore } from '../../src/store/useBodyMapStore';
 import { useAllergyStore } from '../../src/store/useAllergyStore';
 import { useLabResultsStore } from '../../src/store/useLabResultsStore';
 import { useIntegrationsStore } from '../../src/store/useIntegrationsStore';
-import { getPeptideById } from '../../src/data/peptides';
 import {
   Colors,
   FontSizes,
   Spacing,
   BorderRadius,
-  Gradients,
 } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useIsAdmin } from '../../src/hooks/useIsAdmin';
 import { useThemeStore } from '../../src/store/useThemeStore';
-import { getTestProfile } from '../../src/constants/testProfiles';
 import { sendFeedback } from '../../src/services/feedback';
 import { disableReviewPrompt } from '../../src/services/reviewPrompt';
 
@@ -592,348 +586,20 @@ function AdvancedFitnessToggle({ t }: { t: ReturnType<typeof useTheme> }) {
 // ---------------------------------------------------------------------------
 // Research Profile Card
 // ---------------------------------------------------------------------------
-function ResearchProfileCard() {
-  const router = useRouter();
-  const {
-    profile,
-    isComplete,
-    setAcceptedSafety,
-    setDataShareConsent,
-    reset,
-  } = useOnboardingStore();
-  const { user } = useAuthStore();
-  const t = useTheme();
-
-  // Use hardcoded data for test accounts, fall back to onboarding store
-  const testProfile = getTestProfile(user?.email);
-  const displayGender = testProfile?.gender ?? profile.gender ?? 'Not set';
-  const displayAgeRange = testProfile?.ageRange ?? profile.ageRange ?? 'Not set';
-  const displayInterests = testProfile?.interests ?? (profile.interestCategories.length > 0 ? profile.interestCategories : null);
-  const displayGoals = testProfile?.goals ?? (profile.healthGoals.length > 0 ? profile.healthGoals : null);
-
-  const handleSafetyToggle = (value: boolean) => {
-    setAcceptedSafety(value);
-    trackConsentUpdated(value, profile.dataShareConsent);
-  };
-
-  const handleShareToggle = (value: boolean) => {
-    setDataShareConsent(value);
-    trackConsentUpdated(profile.acceptedSafety, value);
-  };
-
-  const handleReset = () => {
-    Alert.alert(
-      'Restart Onboarding',
-      'This will clear your research profile selections.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Restart',
-          style: 'destructive',
-          onPress: () => {
-            reset();
-            router.push('/onboarding');
-          },
-        },
-      ]
-    );
-  };
-
-  return (
-    <View style={styles.researchSection}>
-      <View style={styles.sectionHeaderRow}>
-        <Text style={[styles.settingsSectionTitle, { color: t.text }]}>Research Profile</Text>
-        {!isComplete && (
-          <View style={styles.incompleteBadgeWrap}>
-            <Ionicons name="alert-circle" size={12} color="#f0d68a" />
-            <Text style={styles.incompleteBadge}>Incomplete</Text>
-          </View>
-        )}
-      </View>
-      <GlassCard variant="elevated" style={styles.researchCard}>
-        <View style={[styles.profileRow, { borderBottomColor: t.glassBorder }]}>
-          <Text style={[styles.profileLabel, { color: t.textSecondary }]}>Gender</Text>
-          <Text style={[styles.profileValue, { color: t.text }]}>
-            {displayGender}
-          </Text>
-        </View>
-        <View style={[styles.profileRow, { borderBottomColor: t.glassBorder }]}>
-          <Text style={[styles.profileLabel, { color: t.textSecondary }]}>Age Range</Text>
-          <Text style={[styles.profileValue, { color: t.text }]}>
-            {displayAgeRange}
-          </Text>
-        </View>
-        <View style={[styles.profileRow, { borderBottomColor: t.glassBorder }]}>
-          <Text style={[styles.profileLabel, { color: t.textSecondary }]}>Goals</Text>
-          <Text style={[styles.profileValue, { color: t.text }]}>
-            {displayGoals
-              ? displayGoals.map((g) => g.replace(/_/g, ' ')).join(', ')
-              : 'Not set'}
-          </Text>
-        </View>
-        <View style={[styles.profileRow, { borderBottomWidth: 0 }]}>
-          <Text style={[styles.profileLabel, { color: t.textSecondary }]}>Interests</Text>
-          <Text style={[styles.profileValue, { color: t.text }]}>
-            {displayInterests
-              ? displayInterests.join(', ')
-              : 'Not set'}
-          </Text>
-        </View>
-
-        <View style={[styles.consentDivider, { backgroundColor: t.glassBorder }]} />
-
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(240, 214, 138, 0.12)' }]}>
-              <Ionicons name="shield-outline" size={18} color="#f0d68a" />
-            </View>
-            <View style={styles.settingTextContainer}>
-              <Text style={[styles.settingTitle, { color: t.text }]}>Safety Acknowledgement</Text>
-              <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
-                Research-only usage confirmed
-              </Text>
-            </View>
-          </View>
-          <Switch
-            value={profile.acceptedSafety}
-            onValueChange={handleSafetyToggle}
-            trackColor={{
-              false: 'rgba(0,0,0,0.08)',
-              true: 'rgba(240, 214, 138, 0.4)',
-            }}
-            thumbColor={profile.acceptedSafety ? '#f0d68a' : '#6B7280'}
-          />
-        </View>
-
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <View style={[styles.settingIconWrap, { backgroundColor: 'rgba(199, 215, 230, 0.12)' }]}>
-              <Ionicons name="analytics-outline" size={18} color="#c7d7e6" />
-            </View>
-            <View style={styles.settingTextContainer}>
-              <Text style={[styles.settingTitle, { color: t.text }]}>Data Sharing</Text>
-              <Text style={[styles.settingDescription, { color: t.textSecondary }]}>
-                Share anonymous usage insights
-              </Text>
-            </View>
-          </View>
-          <Switch
-            value={profile.dataShareConsent}
-            onValueChange={handleShareToggle}
-            trackColor={{
-              false: 'rgba(0,0,0,0.08)',
-              true: 'rgba(199, 215, 230, 0.4)',
-            }}
-            thumbColor={profile.dataShareConsent ? '#c7d7e6' : '#6B7280'}
-          />
-        </View>
-      </GlassCard>
-
-      <View style={styles.profileActions}>
-        <TouchableOpacity
-          style={[styles.profileActionButton, { backgroundColor: t.glass, borderColor: t.glassBorder, flex: 1 }]}
-          onPress={() => router.push('/onboarding?edit=true')}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="create-outline" size={16} color={t.tint} />
-          <Text style={[styles.profileActionText, { color: t.tint }]}>Edit Profile</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
+// ResearchProfileCard() removed — defined here, rendered nowhere (150 lines).
 
 // ---------------------------------------------------------------------------
 // Health Profile Card
 // ---------------------------------------------------------------------------
-function HealthProfileCard() {
-  const router = useRouter();
-  const { profile, getBMI } = useHealthProfileStore();
-  const bmi = getBMI();
-  const completeness = profile.profileCompleteness;
-  const t = useTheme();
-
-  return (
-    <View style={styles.researchSection}>
-      <View style={styles.sectionHeaderRow}>
-        <Text style={[styles.settingsSectionTitle, { color: t.text }]}>Health Profile</Text>
-        {!profile.setupComplete && (
-          <View style={styles.incompleteBadgeWrap}>
-            <Ionicons name="alert-circle" size={12} color="#f0d68a" />
-            <Text style={styles.incompleteBadge}>
-              {completeness > 0 ? `${completeness}%` : 'Not Started'}
-            </Text>
-          </View>
-        )}
-      </View>
-      <GlassCard variant="elevated" style={styles.researchCard}>
-        {/* Completeness Ring + Progress */}
-        <View style={[healthStyles.progressSection, { borderBottomColor: t.glassBorder }]}>
-          <ProgressRing progress={completeness} size={60} strokeWidth={4} color={Colors.sage} />
-          <View style={healthStyles.progressInfo}>
-            <Text style={[healthStyles.progressTitle, { color: t.text }]}>Profile Completion</Text>
-            <View style={[healthStyles.progressTrack, { backgroundColor: t.glass }]}>
-              <LinearGradient
-                colors={[Colors.sage, Colors.sageDark]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[
-                  healthStyles.progressFill,
-                  { width: `${Math.max(completeness, 2)}%` },
-                ]}
-              />
-            </View>
-            <Text style={[healthStyles.progressHint, { color: t.textSecondary }]}>
-              {completeness === 100
-                ? 'Your health profile is complete'
-                : `${100 - completeness}% remaining to complete`}
-            </Text>
-          </View>
-        </View>
-
-        {/* Quick stats */}
-        {(profile.bodyMetrics.weightLbs || bmi !== null) && (
-          <View style={[styles.profileRow, { borderBottomColor: t.glassBorder }]}>
-            <Text style={[styles.profileLabel, { color: t.textSecondary }]}>Body</Text>
-            <Text style={[styles.profileValue, { color: t.text }]}>
-              {[
-                profile.bodyMetrics.weightLbs
-                  ? `${profile.bodyMetrics.weightLbs} lbs`
-                  : null,
-                bmi !== null ? `BMI ${bmi.toFixed(1)}` : null,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </Text>
-          </View>
-        )}
-
-        {(profile.primaryGoals?.length ?? 0) > 0 && (
-          <View style={[styles.profileRow, { borderBottomColor: t.glassBorder }]}>
-            <Text style={[styles.profileLabel, { color: t.textSecondary }]}>Goals</Text>
-            <Text style={[styles.profileValue, { color: t.text }]} numberOfLines={2}>
-              {profile.primaryGoals?.slice(0, 3).join(', ')}
-            </Text>
-          </View>
-        )}
-
-        {(profile.medical?.conditions?.length ?? 0) > 0 && (
-          <View style={[styles.profileRow, { borderBottomColor: t.glassBorder }]}>
-            <Text style={[styles.profileLabel, { color: t.textSecondary }]}>Conditions</Text>
-            <Text style={[styles.profileValue, { color: t.text }]} numberOfLines={2}>
-              {profile.medical.conditions.join(', ')}
-            </Text>
-          </View>
-        )}
-
-        {(profile.medical?.allergies?.length ?? 0) > 0 && (
-          <View style={[styles.profileRow, { borderBottomColor: t.glassBorder }]}>
-            <Text style={[styles.profileLabel, { color: t.textSecondary }]}>Allergies</Text>
-            <Text style={[styles.profileValue, { color: t.text }]} numberOfLines={2}>
-              {profile.medical.allergies.join(', ')}
-            </Text>
-          </View>
-        )}
-
-        {profile.peptideExperience && profile.peptideExperience !== 'none' && (
-          <View style={[styles.profileRow, { borderBottomWidth: 0 }]}>
-            <Text style={[styles.profileLabel, { color: t.textSecondary }]}>Experience</Text>
-            <Text style={[styles.profileValue, { color: t.text }]}>
-              {profile.peptideExperience.charAt(0).toUpperCase() +
-                profile.peptideExperience.slice(1)}
-            </Text>
-          </View>
-        )}
-      </GlassCard>
-
-      <TouchableOpacity
-        onPress={() => router.push('/health-profile')}
-        activeOpacity={0.8}
-      >
-        <LinearGradient
-          colors={profile.setupComplete ? ['rgba(199, 215, 230, 0.15)', 'rgba(199, 215, 230, 0.05)'] : Gradients.primary}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={healthStyles.editButton}
-        >
-          <Ionicons
-            name={profile.setupComplete ? 'create-outline' : 'add-circle-outline'}
-            size={16}
-            color={profile.setupComplete ? t.tint : '#fff'}
-          />
-          <Text style={[healthStyles.editButtonText, { color: t.tint }, !profile.setupComplete && { color: '#fff' }]}>
-            {profile.setupComplete ? 'Edit Health Profile' : 'Set Up Health Profile'}
-          </Text>
-        </LinearGradient>
-      </TouchableOpacity>
-    </View>
-  );
-}
+// HealthProfileCard() removed — defined here, rendered nowhere (123 lines).
 
 // ---------------------------------------------------------------------------
 // Quick Links Section
 // ---------------------------------------------------------------------------
-function QuickLinksSection() {
-  const router = useRouter();
-  const t = useTheme();
-
-  // NOTE: "Export My Data" was removed — it routed to the same
-  // /health-report screen as "Share Health Report", so it was a duplicate
-  // action dressed up as a second feature. The Health Report screen already
-  // covers generating + sharing (which is the export path). One honest
-  // action instead of two doing the same thing.
-  const links = [
-    { icon: 'document-text-outline' as const, label: 'Share Health Report', route: '/health-report' as const, color: '#E89672', desc: 'Generate and share with your provider' },
-    { icon: 'book-outline' as const, label: 'My Journal', route: '/journal' as const, color: '#F4ECC2', desc: 'View and manage journal entries' },
-  ];
-
-  return (
-    <View style={styles.researchSection}>
-      <Text style={[styles.settingsSectionTitle, { color: t.text }]}>Quick Actions</Text>
-
-      {/* Gradient action button for sharing the health report */}
-      <View style={actionStyles.row}>
-        <TouchableOpacity
-          style={actionStyles.btn}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          onPress={() => router.push(links[0].route)}
-        >
-          <LinearGradient
-            colors={['#E89672', '#C76B45']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={actionStyles.gradient}
-          >
-            <Ionicons name="share-outline" size={22} color="#fff" />
-            <Text style={actionStyles.label}>Share Health Report</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
-
-      {/* Link rows */}
-      {links.slice(1).map((link) => (
-        <TouchableOpacity
-          key={link.route + link.label}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          onPress={() => router.push(link.route)}
-        >
-          <GlassCard style={linkStyles.row}>
-            <View style={[linkStyles.iconWrap, { backgroundColor: `${link.color}15` }]}>
-              <Ionicons name={link.icon} size={18} color={link.color} />
-            </View>
-            <View style={linkStyles.textWrap}>
-              <Text style={[linkStyles.label, { color: t.text }]}>{link.label}</Text>
-              <Text style={[linkStyles.desc, { color: t.textSecondary }]}>{link.desc}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={t.textSecondary} />
-          </GlassCard>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-}
+// QuickLinksSection() removed — defined here, rendered nowhere (61 lines).
+// Its two links were Health Report (already a live row) and My Journal, which
+// had NO other route into it anywhere in the app. A live Journal row was added
+// before this deletion, or the app would have lost its only path to /journal.
 
 const actionStyles = StyleSheet.create({
   row: {
@@ -976,19 +642,10 @@ const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 // to check the built artifact rather than the source.
 
 /** Schedule workout reminders for the given days. */
-async function rescheduleWorkouts(time: string, days: number[]): Promise<void> {
-  for (const day of days) {
-    const dayLabel = DAY_LABELS[day - 1] ?? 'Workout';
-    await scheduleWorkoutReminder(dayLabel, time);
-  }
-}
+
 
 /** Schedule meal reminders for all meal types. */
-async function rescheduleAllMeals(mealTimes: Record<string, string>): Promise<void> {
-  for (const [meal, time] of Object.entries(mealTimes)) {
-    await scheduleMealReminder(meal, time);
-  }
-}
+
 
 /**
  * Re-schedule dose reminders for every active protocol. Mirrors the auto-
@@ -996,21 +653,7 @@ async function rescheduleAllMeals(mealTimes: Record<string, string>): Promise<vo
  * anchored to the protocol start date). scheduleDoseReminder sweeps the
  * peptide's existing identifiers first, so this is idempotent.
  */
-async function rescheduleAllDoses(): Promise<void> {
-  const protocols = useDoseLogStore
-    .getState()
-    .protocols.filter((p) => p.isActive);
-  for (const protocol of protocols) {
-    const peptideName = getPeptideById(protocol.peptideId)?.name ?? protocol.peptideId;
-    await scheduleDoseReminder(
-      protocol.peptideId,
-      peptideName,
-      '08:00',
-      protocol.frequency,
-      protocol.startDate,
-    );
-  }
-}
+
 
 // ---------------------------------------------------------------------------
 // Legal Links
@@ -1389,6 +1032,16 @@ export default function ProfileScreen() {
               <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
               <ProfileRow icon="calendar-outline" label="My Plan" onPress={() => router.push('/plan' as any)} color={t.text} />
               <ProfileRow icon="analytics-outline" label="Insights" onPress={() => router.push('/insights' as any)} color={t.text} />
+              {/* Journal — restoring a door that only existed inside dead code.
+                  app/journal has two working screens and health-report reads
+                  its entries, but the ONLY navigation to '/journal' anywhere in
+                  the app was the route string inside QuickLinksSection, a
+                  component defined here and rendered nowhere.
+
+                  verify:routes did not catch it because that check counts any
+                  path-shaped string as a link — a limitation its own header
+                  documents. A string in dead code satisfied it. */}
+              <ProfileRow icon="book-outline" label="My Journal" onPress={() => router.push('/journal' as any)} color={t.text} />
               <ProfileRow icon="document-text-outline" label="Health Report" onPress={() => router.push('/health-report' as any)} color={t.text} />
               <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
               <ProfileRow icon="library-outline" label="Sources & references" onPress={() => router.push('/resources' as any)} color={t.text} />
