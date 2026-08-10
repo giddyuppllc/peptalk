@@ -43,6 +43,7 @@
     "verify:doseprovenance": "node scripts/verify-dose-provenance.mjs",
     "verify:doseformat": "node scripts/verify-dose-format.mjs",
     "verify:scannercontrols": "node scripts/verify-scanner-controls.mjs",
+    "export:review": "tsx scripts/export-clinical-review.ts",
     "verify:vacuous": "node scripts/verify-scanner-mutation.mjs"
   },
   "expo": {
