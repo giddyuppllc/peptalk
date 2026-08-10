@@ -23,7 +23,7 @@
     "build-gap": "tsx scripts/build-gap.ts",
     "backlog:dosing": "tsx scripts/gen-dosing-backlog.ts > DOSING_DATA_BACKLOG.md",
     "verify:build": "tsx scripts/verify-build.ts",
-    "verify:all": "npm run verify:data && npm run verify:functions && npm run verify:square && npm run verify:csp && npm run verify:aimee && npm run verify:routes && npm run verify:videos && npm run verify:calc && npm run verify:sanitize && npm run verify:cycle && npm run verify:adherence && npm run verify:labparsers && npm run verify:mealmath && npm run verify:dosecalc && npm run verify:inbody && npm run verify:deadzones && npm run verify:peptiderefs && npm run verify:navparams && npm run verify:deadcomponents && npm run verify:deadfiles",
+    "verify:all": "npm run verify:data && npm run verify:functions && npm run verify:square && npm run verify:csp && npm run verify:aimee && npm run verify:routes && npm run verify:videos && npm run verify:calc && npm run verify:sanitize && npm run verify:cycle && npm run verify:adherence && npm run verify:labparsers && npm run verify:mealmath && npm run verify:dosecalc && npm run verify:inbody && npm run verify:deadzones && npm run verify:peptiderefs && npm run verify:navparams && npm run verify:deadcomponents && npm run verify:deadfiles && npm run verify:dosingconsistency",
     "verify:deploy": "bash scripts/verify-deploy.sh",
     "lint": "expo lint",
     "export:web": "expo export --platform web && node scripts/inject-pwa.mjs",
@@ -38,7 +38,8 @@
     "verify:peptiderefs": "tsx scripts/verify-peptide-refs.ts",
     "verify:navparams": "node scripts/verify-nav-params.mjs",
     "verify:deadcomponents": "node scripts/verify-dead-components.mjs",
-    "verify:deadfiles": "node scripts/verify-dead-files.mjs"
+    "verify:deadfiles": "node scripts/verify-dead-files.mjs",
+    "verify:dosingconsistency": "node scripts/verify-dosing-consistency.mjs"
   },
   "expo": {
     "install": {

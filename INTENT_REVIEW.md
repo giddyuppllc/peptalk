@@ -64,6 +64,65 @@ What I did NOT do, deliberately: invent adverse effects, contraindications,
 diluent volumes or dose schedules for anything missing them. Where a source
 did not exist, the field stayed empty and the screen says so.
 
+---
+
+## 3a. TWO DOSING SOURCES THAT CONTRADICT EACH OTHER — read this first
+
+Added 2026-08-10. This is the largest single data problem found, and it is not
+a UI bug.
+
+`peptideDosingTable.ts` and `protocols.ts` each carry a dose range for the same
+compound. **Both reach users**, and on `app/peptide/[id]` both render on the
+SAME SCREEN — the dosing card shows the table, the Beginner/Advanced card shows
+the protocol a few hundred pixels below. The calculators use the protocol.
+
+Of the 37 mass-dosed compounds carrying both: **11 agree, 25 disagree, 1 unparseable.**
+
+| Compound | Table | Protocol | Apart |
+|---|---|---|---|
+| **NAD+** | 200-600 mcg | 50,000-200,000 mcg | **~250x** |
+| **CJC-1295 (with DAC)** | 1000-2000 mcg | 100-300 mcg | ~10x |
+| **GHK-Cu** | 1000-5000 mcg | 200-600 mcg | ~8x |
+| **TB-500** | 330-1000 mcg | 2000-5000 mcg | ~6x |
+| **MOTS-c** | 1000-2000 mcg | 200-1000 mcg | ~5x |
+| Glutathione | 200-400 mg | 600-1200 mg | ~3x |
+| Epithalon | 2000-5000 mcg | 5000-10000 mcg | ~2x |
+| Survodutide | 500-2700 mcg | 2400-6000 mcg | ~2x |
+| Cagrilintide | 300-4500 mcg | 1200-2400 mcg | — |
+| Retatrutide | 500-12000 mcg | 1000-12000 mcg | — |
+| Tirzepatide | 500-15000 mcg | 2500-15000 mcg | — |
+| BPC-157 | 250-1000 mcg | 200-500 mcg | — |
+| Ipamorelin | 100-500 mcg | 200-300 mcg | — |
+| Tesamorelin | 500-2000 mcg | 1000-2000 mcg | — |
+| Thymosin Alpha-1 | 500-2000 mcg | 1000-1600 mcg | — |
+| LL-37 | 100-500 mcg | 50-200 mcg | — |
+| Kisspeptin-10 | 50-200 mcg | 30-100 mcg | — |
+| PT-141 | 500-2000 mcg | 1000-2000 mcg | — |
+| Melanotan-2 | 250-1000 mcg | 250-500 mcg | — |
+| DSIP | 100-500 mcg | 100-300 mcg | — |
+| Mazdutide | 3000-6000 mcg | 3000-9000 mcg | — |
+| IGF-1 LR3 | 25-100 mcg | 20-80 mcg | — |
+| KPV (Injectable) | 250-600 mcg | 200-500 mcg | — |
+| Selank | 200-600 mcg | 200-500 mcg | — |
+| Semaglutide | 250-2400 mcg | 250-2500 mcg | — |
+
+**No code decided which is right, and none should.** Choosing between two
+clinical figures is Jamie's call; the wrong choice is a dose error carrying the
+app's full authority.
+
+NAD+ is worth looking at first: 200-600 **mcg** for a compound normally dosed
+in tens of milligrams looks like a unit error in the table rather than a
+disagreement about the dose.
+
+Reported every run by `verify:dosingconsistency`. It warns rather than fails
+today, deliberately — a permanently red gate gets switched off within a week.
+Once the list is settled, flip `FAIL_ON_MISMATCH` and it becomes a real gate.
+
+MOTS-c is on this list despite having been "fixed" earlier: that fix corrected
+the dosing CARD against Jamie's protocol and did not touch `protocols.ts`, so
+the two are still 5x apart. A fix aimed at one source cannot resolve a
+disagreement between two.
+
 ## 4. Parked work — exists, deliberately not launched
 
 | Item | Lines | Status |

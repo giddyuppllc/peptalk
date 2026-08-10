@@ -6,6 +6,14 @@ import {
   getDosingTableEntry,
   PEPTIDE_DOSING_TABLE_DISCLAIMER,
 } from '../data/peptideDosingTable';
+import { getDosingReference } from '../data/peptideDosingReference';
+import { getProtocolsByPeptide } from '../data/protocols';
+import {
+  unitRangeForDose,
+  reconstitutionNote,
+  tableAgreesWithProtocol,
+} from '../lib/syringeUnits';
+import { normalizeDoseRange } from '../lib/doseUnits';
 
 /**
  * Surfaces the master dosing-reference TABLE row for a peptide:
@@ -20,8 +28,55 @@ export function DosingReferenceTableCard({ peptideId }: { peptideId: string }) {
   const entry = getDosingTableEntry(peptideId);
   if (!entry) return null;
 
+  /**
+   * "200mcg-400mcg" is not an increment anyone acts on. The syringe is marked
+   * in units, and until now the user had to convert mass → volume → ticks
+   * themselves — the exact arithmetic this app exists to do for them. The
+   * calculator has always done it; this card never did, even for the compounds
+   * where the concentration is already known.
+   *
+   * Shown ONLY where a curated reconstitution reference exists, and always with
+   * the reconstitution it assumes. A tick count without the vial it came from
+   * is a confident wrong number for anyone who mixed theirs differently.
+   */
+  const ref = getDosingReference(peptideId);
+  const protocol = getProtocolsByPeptide(peptideId)[0];
+  const syringe = (() => {
+    if (!ref?.mgPerMl || !protocol?.typicalDose) return null;
+    const dose = normalizeDoseRange(
+      protocol.typicalDose.min,
+      protocol.typicalDose.max,
+      protocol.typicalDose.unit,
+    );
+    // normalizeDoseRange only converts MASS units. IU is an activity unit and
+    // ml is already a volume — deriving ticks from either invents a number.
+    if (!dose.massBased) return null;
+
+    /**
+     * Only when the TABLE and the PROTOCOL agree on the dose.
+     *
+     * They disagree for 27 of the 37 mass-dosed compounds, sometimes by a lot
+     * — TB-500 is 330-1000mcg in the table and 2000-5000mcg in the protocol,
+     * a 6x gap — and BOTH already reach the user, on this very screen: this
+     * card renders the table range while BeginnerAdvancedDoseCard renders the
+     * protocol range a few hundred pixels below.
+     *
+     * A tick count derived from one of two contradictory sources, printed
+     * beside the other, would be the most confident wrong number on the page.
+     * So it renders only where the two agree; the rest is reported by
+     * verify:dosingconsistency for Jamie to settle. See INTENT_REVIEW.md.
+     */
+    if (!tableAgreesWithProtocol(entry.dosingRange, dose.min, dose.max)) return null;
+
+    const range = unitRangeForDose(dose.min, dose.max, ref.mgPerMl);
+    if (!range) return null;
+    const note = reconstitutionNote(ref.vialMg, ref.diluentMl);
+    return note ? `${range.label} ${note}` : range.label;
+  })();
+
   const rows: { label: string; value?: string; icon: string }[] = [
     { label: 'Dosing range', value: entry.dosingRange, icon: 'flask-outline' },
+    { label: 'On the syringe', value: syringe ?? undefined, icon: 'medical-outline' },
     { label: 'Cycle length', value: entry.cycleLength, icon: 'time-outline' },
     { label: 'Frequency (daily)', value: entry.frequencyDaily, icon: 'today-outline' },
     { label: 'Frequency (weekly)', value: entry.frequencyWeekly, icon: 'calendar-outline' },
