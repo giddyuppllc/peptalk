@@ -27,7 +27,7 @@
     "verify:deploy": "bash scripts/verify-deploy.sh",
     "lint": "expo lint",
     "export:web": "expo export --platform web && node scripts/inject-pwa.mjs",
-    "deploy:web": "npm run export:web && npm run verify:build && mkdir -p dist/.vercel && cp .vercel-link/project.json dist/.vercel/project.json && cd dist && vercel deploy --prod --yes --scope giddyupp",
+    "deploy:web": "npm run export:web && npm run verify:build && node scripts/deploy-web.mjs",
     "verify:data": "tsx scripts/validatePeptideData.ts",
     "verify:functions": "tsx scripts/verify-edge-functions.ts",
     "verify:square": "tsx scripts/verify-square-catalog.ts",
