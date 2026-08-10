@@ -24,6 +24,7 @@
  */
 
 import { PEPTIDES } from '../data/peptides';
+import type { Peptide } from '../types';
 
 export type GoalType = 'weight_loss' | 'maintenance' | 'body_recomp' | 'muscle_gain';
 
@@ -64,24 +65,52 @@ export interface MacroRecommendation {
   rationale: string[];
 }
 
-/** Peptide IDs that push protein target higher (GLP-1 agonists — preserve lean mass during deficit). */
-const GLP1_PEPTIDE_IDS = new Set([
-  'semaglutide',
-  'tirzepatide',
-  'retatrutide',
-  'liraglutide',
-  'cagrilintide',
-]);
+/**
+ * Peptides that push the protein target higher — GLP-1 agonists, where a
+ * deficit without enough protein costs lean mass.
+ *
+ * DERIVED, not listed. This was five hardcoded ids and it had gone stale:
+ * Mazdutide and Survodutide both carry GLP-1R in `receptorTargets` and both
+ * were missing, so anyone running them got 1.0 g/lb instead of 1.1 — losing
+ * exactly the lean-mass protection the bump exists to provide. Every compound
+ * added to the catalog from here on is picked up automatically.
+ *
+ * Same failure as the calculator's displayUnit list: a real rule frozen into a
+ * snapshot that the data outgrew.
+ */
+const GLP1_RECEPTOR = /^glp-?1r$/i;
 
-/** Peptide IDs that imply a caloric-deficit context even if the user didn't say "weight loss". */
-const CUTTING_PEPTIDE_IDS = new Set([
-  'semaglutide',
-  'tirzepatide',
-  'retatrutide',
-  'tesofensine',
-  'aod-9604',
-  'aod9604',
-]);
+/**
+ * Amylin analogues, added deliberately. Cagrilintide targets AMY1R/AMY2R/AMY3R
+ * and CTR — not GLP-1R — so the receptor rule alone would drop it, but it is an
+ * appetite-suppressant run in the same deficit context and was in the original
+ * list on purpose. Anything else here needs the same justification.
+ */
+const AMYLIN_ANALOGUE_IDS = new Set(['cagrilintide']);
+
+const GLP1_PEPTIDE_IDS = new Set(
+  (PEPTIDES as Peptide[])
+    .filter(
+      (p) =>
+        (p.receptorTargets ?? []).some((r) => GLP1_RECEPTOR.test(r)) ||
+        AMYLIN_ANALOGUE_IDS.has(p.id),
+    )
+    .map((p) => p.id),
+);
+
+/**
+ * Peptides implying a caloric-deficit context even when the user did not say
+ * "weight loss". Every GLP-1 qualifies, plus non-GLP-1 agents used for the same
+ * purpose.
+ *
+ * The literal list this replaces held four of the seven GLP-1s and also carried
+ * 'aod9604' beside the correct 'aod-9604' — a hedge against a hyphen typo
+ * rather than a fix, and the kind of thing that quietly outlives the bug it was
+ * added for.
+ */
+const NON_GLP1_CUTTING_IDS = ['tesofensine', 'aod-9604'];
+
+const CUTTING_PEPTIDE_IDS = new Set([...GLP1_PEPTIDE_IDS, ...NON_GLP1_CUTTING_IDS]);
 
 function lbsToKg(lbs: number): number {
   return lbs / 2.20462;
@@ -213,10 +242,13 @@ export function computeMacroRecommendation(input: MacroRecommendationInput): Mac
   }
   if (onGlp1 || (onCuttingPep && goal !== 'muscle_gain')) {
     proteinPerLb = Math.max(proteinPerLb, 1.1);
-    const peptideName =
+    // These are IDs and this string is shown to the user — it read "you're on
+    // aod-9604". peptideNameById exists in this file, with a docstring saying
+    // it is "for the rationale line", and the rationale line never called it.
+    const activeId =
       activePeptides.find((p) => GLP1_PEPTIDE_IDS.has(p))
-      ?? activePeptides.find((p) => CUTTING_PEPTIDE_IDS.has(p))
-      ?? 'your peptide';
+      ?? activePeptides.find((p) => CUTTING_PEPTIDE_IDS.has(p));
+    const peptideName = activeId ? peptideNameById(activeId) : 'your peptide';
     rationale.push(
       `Protein bumped to ${proteinPerLb} g/lb because you're on ${peptideName} (preserves lean mass during deficit)`,
     );
