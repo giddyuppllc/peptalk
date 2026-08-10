@@ -1,10 +1,10 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 // 2026-05-17 perf fix: lazy-required inside the pickAvatar handler
 // instead of statically imported. expo-image-picker pulls in a
 // non-trivial native bridge surface; the profile tab loads at app
 // boot and only ~5% of users ever tap the avatar. Save the parse +
 // bridge init for users who actually need it.
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Switch, StyleSheet, Animated, Image, KeyboardAvoidingView, Platform, Linking } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Switch, StyleSheet, Image, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
@@ -50,63 +50,7 @@ import { disableReviewPrompt } from '../../src/services/reviewPrompt';
 // ---------------------------------------------------------------------------
 // Progress Ring Component
 // ---------------------------------------------------------------------------
-function ProgressRing({
-  progress,
-  size = 64,
-  strokeWidth = 5,
-  color = Colors.sage,
-}: {
-  progress: number;
-  size?: number;
-  strokeWidth?: number;
-  color?: string;
-}) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const animValue = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(animValue, {
-      toValue: progress / 100,
-      duration: 800,
-      useNativeDriver: false,
-    }).start();
-  }, [progress]);
-
-  return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      {/* Background track */}
-      <View
-        style={{
-          position: 'absolute',
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          borderWidth: strokeWidth,
-          borderColor: 'rgba(0,0,0,0.05)',
-        }}
-      />
-      {/* Filled portion - simplified arc using border trick */}
-      <View
-        style={{
-          position: 'absolute',
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          borderWidth: strokeWidth,
-          borderColor: color,
-          borderTopColor: progress > 75 ? color : 'transparent',
-          borderRightColor: progress > 50 ? color : 'transparent',
-          borderBottomColor: progress > 25 ? color : 'transparent',
-          borderLeftColor: progress > 0 ? color : 'transparent',
-          transform: [{ rotate: '-90deg' }],
-          opacity: 0.8,
-        }}
-      />
-      <Text style={{ fontSize: FontSizes.sm, fontWeight: '800', color }}>{progress}%</Text>
-    </View>
-  );
-}
+// ProgressRing() removed — defined here, rendered nowhere (57 lines).
 
 // ---------------------------------------------------------------------------
 // Tier Badge
@@ -658,47 +602,7 @@ const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 // ---------------------------------------------------------------------------
 // Legal Links
 // ---------------------------------------------------------------------------
-function LegalLinks() {
-  const router = useRouter();
-  const t = useTheme();
-
-  return (
-    <View style={[linkStyles.legalSection, { borderTopColor: t.glassBorder }]}>
-      <View style={linkStyles.legalRow}>
-        <TouchableOpacity
-          style={linkStyles.legalLink}
-          onPress={() => router.push('/privacy')}
-          activeOpacity={0.7}
-          accessibilityRole="link"
-        >
-          <Ionicons name="shield-checkmark-outline" size={14} color={t.textSecondary} />
-          <Text style={[linkStyles.privacyText, { color: t.textSecondary }]}>Privacy Policy</Text>
-        </TouchableOpacity>
-        <Text style={[linkStyles.legalDivider, { color: t.textMuted }]}>|</Text>
-        <TouchableOpacity
-          style={linkStyles.legalLink}
-          onPress={() => router.push('/terms')}
-          activeOpacity={0.7}
-          accessibilityRole="link"
-        >
-          <Ionicons name="document-text-outline" size={14} color={t.textSecondary} />
-          <Text style={[linkStyles.privacyText, { color: t.textSecondary }]}>Terms of Service</Text>
-        </TouchableOpacity>
-        <Text style={[linkStyles.legalDivider, { color: t.textMuted }]}>|</Text>
-        <TouchableOpacity
-          style={linkStyles.legalLink}
-          onPress={() => router.push('/subscription')}
-          activeOpacity={0.7}
-          accessibilityRole="link"
-        >
-          <Ionicons name="card-outline" size={14} color={t.textSecondary} />
-          <Text style={[linkStyles.privacyText, { color: t.textSecondary }]}>Subscription</Text>
-        </TouchableOpacity>
-      </View>
-      <Text style={[linkStyles.versionText, { color: t.textMuted }]}>PepTalk v{Constants.expoConfig?.version ?? '1.9.8'}</Text>
-    </View>
-  );
-}
+// LegalLinks() removed — defined here, rendered nowhere (41 lines).
 
 const linkStyles = StyleSheet.create({
   row: {
@@ -765,44 +669,7 @@ const linkStyles = StyleSheet.create({
 // ---------------------------------------------------------------------------
 // Delete Data Section
 // ---------------------------------------------------------------------------
-function DeleteDataSection() {
-  const { deleteAllHealthData } = useHealthProfileStore();
-  const t = useTheme();
-
-  const handleDelete = () => {
-    Alert.alert(
-      'Delete All Health Data',
-      'This will permanently erase your health profile, dose logs, check-ins, and chat history. This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete Everything',
-          style: 'destructive',
-          onPress: () => {
-            deleteAllHealthData();
-            Alert.alert('Done', 'All health data has been deleted.');
-          },
-        },
-      ]
-    );
-  };
-
-  return (
-    <View style={{ marginTop: Spacing.lg }}>
-      <TouchableOpacity
-        style={deleteStyles.button}
-        onPress={handleDelete}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="trash-outline" size={16} color="#ef4444" />
-        <Text style={deleteStyles.text}>Delete My Data</Text>
-      </TouchableOpacity>
-      <Text style={[deleteStyles.hint, { color: t.textSecondary }]}>
-        Permanently removes all health data, dose logs, check-ins, and chat history from this device.
-      </Text>
-    </View>
-  );
-}
+// DeleteDataSection() removed — defined here, rendered nowhere (38 lines).
 
 const deleteStyles = StyleSheet.create({
   button: {
