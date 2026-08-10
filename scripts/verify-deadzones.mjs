@@ -36,6 +36,27 @@ import { globSync } from 'glob';
 const IDENT = String.raw`[A-Za-z_$][\w$.?]*`;
 const files = globSync('{app,src}/**/*.tsx').sort();
 
+/**
+ * Positive control.
+ *
+ * A scanner passes by finding nothing, so an empty corpus and a clean codebase
+ * produce IDENTICAL output. Mutation-testing this file on 2026-08-10 — pointing
+ * its glob at a directory that cannot exist — made it print
+ * "✓ No silent catalog truncation" and "✓ No hardcoded catalog counts in copy"
+ * and exit 0, having read zero files.
+ *
+ * This app has well over 100 .tsx files. Anything near zero means the glob or
+ * the working directory is wrong, and a clean result from it is meaningless.
+ */
+const MIN_TSX = 50;
+if (files.length < MIN_TSX) {
+  console.error(
+    `\n✗ SELF-CHECK FAILED — found only ${files.length} .tsx files (expected >= ${MIN_TSX}).` +
+      '\n  The corpus is empty or the glob is broken; a clean scan would prove nothing.',
+  );
+  process.exit(1);
+}
+
 const findings = [];
 
 for (const file of files) {

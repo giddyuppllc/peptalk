@@ -27,6 +27,27 @@ import { globSync } from 'glob';
 const slash = (s) => s.split(String.fromCharCode(92)).join('/');
 const files = globSync('{app,src}/**/*.tsx').map(slash);
 
+/**
+ * Positive control.
+ *
+ * This check took three attempts to get right — v1 passed because an
+ * explanatory comment of mine mentioned `intensity`, v2 because a helper's
+ * PARAMETER was named `intensity` — and it could still pass having examined
+ * nothing at all. Mutation-testing it on 2026-08-10 with a glob pointed at a
+ * nonexistent directory produced "✓ Every parameter sent is read by its
+ * destination" and exit 0 over an empty corpus.
+ *
+ * A route-param check is worthless without routes to check.
+ */
+const MIN_TSX = 50;
+if (files.length < MIN_TSX) {
+  console.error(
+    `\n✗ SELF-CHECK FAILED — found only ${files.length} .tsx files (expected >= ${MIN_TSX}).` +
+      '\n  No corpus means no routes; a clean result would prove nothing.',
+  );
+  process.exit(1);
+}
+
 /** '/doses/calculator' → the file that implements it, or null. */
 function routeFile(route) {
   const clean = route.replace(/^\//, '').replace(/\/$/, '');

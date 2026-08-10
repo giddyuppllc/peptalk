@@ -49,6 +49,24 @@ const onDisk = readdirSync(FUNCTIONS_DIR)
   })
   .sort();
 
+/**
+ * Positive control.
+ *
+ * A MISSING supabase/functions throws, but an EMPTY one — or a run from the
+ * wrong working directory — yields zero functions, zero mismatches, and a
+ * clean report. Two sibling scanners were caught printing their success lines
+ * over an empty corpus on 2026-08-10.
+ */
+const MIN_FUNCTIONS = 10;
+if (onDisk.length < MIN_FUNCTIONS) {
+  console.error(
+    `\n✗ SELF-CHECK FAILED — only ${onDisk.length} edge functions found in ${FUNCTIONS_DIR} ` +
+      `(expected >= ${MIN_FUNCTIONS}).\n  Wrong working directory or an empty tree; a clean result ` +
+      'would be meaningless.',
+  );
+  process.exit(1);
+}
+
 // ─── 2. Every function name the client actually calls ────────────────────────
 
 const SOURCE_DIRS = ['src', 'app'];

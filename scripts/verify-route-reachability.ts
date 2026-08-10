@@ -67,6 +67,27 @@ for (const f of walk('app').filter((f) => f.endsWith('.tsx'))) {
   if (isTab) tabRoutes.add(n);
 }
 
+/**
+ * Positive control.
+ *
+ * `walk('app')` throws if app/ is missing, but an app/ that is merely EMPTY —
+ * or a run from the wrong working directory — yields zero routes, zero
+ * unreachable screens, and "✅ no NEW unreachable screens". A reachability
+ * check with no routes proves nothing.
+ *
+ * Two sibling scanners were caught doing exactly this on 2026-08-10:
+ * verify:deadzones and verify:navparams both printed their success lines over
+ * an empty corpus.
+ */
+const MIN_ROUTES = 40;
+if (routes.size < MIN_ROUTES) {
+  console.error(
+    `\n✗ SELF-CHECK FAILED — only ${routes.size} routes discovered (expected >= ${MIN_ROUTES}).` +
+      '\n  Wrong working directory or an empty app/; a clean result would be meaningless.',
+  );
+  process.exit(1);
+}
+
 const linked = new Set<string>();
 for (const f of [...walk('app'), ...walk('src')].filter((f) => /\.(ts|tsx)$/.test(f))) {
   for (const m of readFileSync(f, 'utf8').matchAll(/['"`](\/[^'"`\n]*)['"`]/g)) {
