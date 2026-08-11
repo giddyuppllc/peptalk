@@ -27,6 +27,7 @@ import { mlToTsp } from '../../src/utils/unitConversions';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
 import { AdherenceDial, CycleProgressBar, DoseStrip } from '../../src/components/peptides';
 import { notifySuccess, selectionTick } from '../../src/utils/haptics';
+import { parseDecimalOrNull } from '../../src/lib/decimalInput';
 import {
   resolveActiveCycle,
   doseLoggedAt,
@@ -237,9 +238,9 @@ function CalculatorTab() {
     [peptideSearch],
   );
 
-  const numericVialMg = parseFloat(vialMg) || 0;
+  const numericVialMg = parseDecimalOrNull(vialMg) ?? 0;
   const numericBacMl = parseFloat(bacMl) || 0;
-  const numericDoseMcg = parseFloat(doseMcg) || 0;
+  const numericDoseMcg = parseDecimalOrNull(doseMcg) ?? 0;
 
   // If "auto BAC" is on, recompute BAC volume to give a round unit count
   const effectiveBacMl = autoBac

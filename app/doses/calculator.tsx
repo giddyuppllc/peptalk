@@ -51,6 +51,7 @@ import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { checkDoseGuards } from '../../src/services/doseSafety';
 import { confirmDoseGuards } from '../../src/utils/doseGuardPrompt';
+import { parseDecimalOrNull } from '../../src/lib/decimalInput';
 
 
 const VIAL_SIZES: (3 | 5 | 10)[] = [3, 5, 10];
@@ -317,7 +318,7 @@ export default function CalculatorV2Screen() {
   }, [ref, intent]);
 
   const perShotMg = useMemo(() => {
-    const override = parseFloat(perShotOverride);
+    const override = parseDecimalOrNull(perShotOverride) ?? NaN;
     if (Number.isFinite(override) && override > 0) {
       return parseDoseToMg(override, displayUnit);
     }
@@ -325,8 +326,8 @@ export default function CalculatorV2Screen() {
   }, [perShotOverride, displayUnit, phase]);
 
   const result = useMemo(() => {
-    const mg = parseFloat(peptideMg);
-    const dil = parseFloat(diluentMl);
+    const mg = parseDecimalOrNull(peptideMg) ?? NaN;
+    const dil = parseDecimalOrNull(diluentMl) ?? NaN;
     if (!Number.isFinite(mg) || !Number.isFinite(dil)) return null;
     return calculate({
       peptideMgInVial: mg,
@@ -594,7 +595,7 @@ export default function CalculatorV2Screen() {
                     tapLight();
                     setVialSizeMl(s);
                     // Clamp diluent to new vial cap.
-                    const cur = parseFloat(diluentMl);
+                    const cur = parseDecimalOrNull(diluentMl) ?? NaN;
                     if (Number.isFinite(cur) && cur > s) setDiluentMl(String(s));
                   }}
                 />
@@ -835,8 +836,8 @@ export default function CalculatorV2Screen() {
         {result && peptideId ? (
           <ReconstituteCard
             isAcetic={isAcetic}
-            mgInVial={parseFloat(peptideMg) || 0}
-            diluentMl={parseFloat(diluentMl) || 0}
+            mgInVial={parseDecimalOrNull(peptideMg) ?? 0}
+            diluentMl={parseDecimalOrNull(diluentMl) ?? 0}
             concentrationMgPerMl={result.concentrationMgPerMl}
             warnings={[...result.warnings, ...result.hardFailures]}
           />
@@ -891,7 +892,7 @@ export default function CalculatorV2Screen() {
                     // 1 mL dilution whenever the diluent field was empty or 0 —
                     // a full table of plausible draw volumes for a
                     // reconstitution the user never entered.
-                    const dilForSchedule = parseFloat(diluentMl);
+                    const dilForSchedule = parseDecimalOrNull(diluentMl) ?? NaN;
                     const conc =
                       Number.isFinite(dilForSchedule) && dilForSchedule > 0
                         ? parseFloat(peptideMg) / dilForSchedule

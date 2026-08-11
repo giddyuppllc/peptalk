@@ -22,6 +22,7 @@ import { Colors, Spacing, FontSizes, BorderRadius, Gradients } from '../../src/c
 import { LearnVideoCard } from '../../src/components/LearnVideoCard';
 import { SyringeSVG } from '../../src/components/v3';
 import { ACETIC_ACID_PEPTIDE_NAMES } from '../../src/data/calculatorMetadata';
+import { parseDecimalOrNull } from '../../src/lib/decimalInput';
 
 const VIAL_PRESETS = [2, 5, 10, 15, 30];
 const WATER_PRESETS = [1, 2, 3, 5];
@@ -57,9 +58,9 @@ export default function ReconstitutionCalculatorScreen() {
   // Clamp at parse so a transient negative input (user typing "-5") can't
   // propagate negative concentration / volume into the downstream display.
   // Mirrors the same guard in app/doses/calculator.tsx.
-  const vialRaw = Math.max(0, parseFloat(vialSize) || 0);
+  const vialRaw = Math.max(0, parseDecimalOrNull(vialSize) ?? 0);
   const waterMl = Math.max(0, parseFloat(waterVolume) || 0);
-  const doseRaw = Math.max(0, parseFloat(desiredDose) || 0);
+  const doseRaw = Math.max(0, parseDecimalOrNull(desiredDose) ?? 0);
 
   // Normalize everything to mcg (matching peptidedosages.com logic)
   const vialMcg = vialUnit === 'mg' ? vialRaw * 1000 : vialRaw;

@@ -31,6 +31,7 @@ import { getPeptideById } from '../../src/data/peptides';
 import { getProtocolsByPeptide } from '../../src/data/protocols';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import type { GoalType, ActivityLevel } from '../../src/types';
+import { parseDecimalOrNull } from '../../src/lib/decimalInput';
 
 const ACTIVITY_OPTIONS: { value: ActivityLevel; label: string }[] = [
   { value: 'sedentary', label: 'Sedentary' },
@@ -203,7 +204,7 @@ export default function PlanCycleScreen() {
   const totalAvailable = selectedGoal ? GOAL_PEPTIDE_MATRIX[selectedGoal]?.length ?? 0 : 0;
 
   const commitWeight = () => {
-    const w = parseFloat(weightInput);
+    const w = parseDecimalOrNull(weightInput) ?? NaN;
     if (!isNaN(w) && w > 0 && w !== profile.bodyMetrics.weightLbs) {
       setBodyMetrics({ weightLbs: w });
     }
