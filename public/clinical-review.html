@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>PepTalk — Clinical Data Review</title>
+<style>
+  :root {
+    --paper:      #EDF0EE;
+    --card:       #F7F9F7;
+    --ink:        #14201E;
+    --ink-soft:   #4A5A57;
+    --ink-faint:  #7C8C89;
+    --rule:       #D3DAD7;
+    --accent:     #1F6F6B;
+    --accent-dim: #1F6F6B22;
+    --severe:     #A32F26;
+    --warn:       #A8700C;
+    --ok:         #2F6B3A;
+    --sev-bg:     #A32F2614;
+    --warn-bg:    #A8700C14;
+    --ok-bg:      #2F6B3A14;
+
+    --f-display: "Iowan Old Style", Charter, Georgia, "Times New Roman", serif;
+    --f-body:    system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --f-data:    ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+
+    --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+    --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px;
+    --maxw: 1120px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #0F1614; --card: #161F1D; --ink: #E4EAE8; --ink-soft: #A3B2AF;
+      --ink-faint: #71817E; --rule: #26332F; --accent: #5FBDB5; --accent-dim: #5FBDB522;
+      --severe: #E8776C; --warn: #E0A63C; --ok: #6FBE7E;
+      --sev-bg: #E8776C1A; --warn-bg: #E0A63C1A; --ok-bg: #6FBE7E1A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0F1614; --card: #161F1D; --ink: #E4EAE8; --ink-soft: #A3B2AF;
+    --ink-faint: #71817E; --rule: #26332F; --accent: #5FBDB5; --accent-dim: #5FBDB522;
+    --severe: #E8776C; --warn: #E0A63C; --ok: #6FBE7E;
+    --sev-bg: #E8776C1A; --warn-bg: #E0A63C1A; --ok-bg: #6FBE7E1A;
+  }
+  :root[data-theme="light"] {
+    --paper: #EDF0EE; --card: #F7F9F7; --ink: #14201E; --ink-soft: #4A5A57;
+    --ink-faint: #7C8C89; --rule: #D3DAD7; --accent: #1F6F6B; --accent-dim: #1F6F6B22;
+    --severe: #A32F26; --warn: #A8700C; --ok: #2F6B3A;
+    --sev-bg: #A32F2614; --warn-bg: #A8700C14; --ok-bg: #2F6B3A14;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--f-body); font-size: 16px; line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--s5); }
+
+  /* ---- masthead ---- */
+  header.top { border-bottom: 1px solid var(--rule); padding: var(--s7) 0 var(--s6); }
+  .eyebrow {
+    font-family: var(--f-data); font-size: 11px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 var(--s3);
+  }
+  h1 {
+    font-family: var(--f-display); font-weight: 600; font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.1; margin: 0 0 var(--s4); text-wrap: balance; letter-spacing: -.01em;
+  }
+  .standfirst {
+    max-width: 62ch; color: var(--ink-soft); font-size: 17px; margin: 0 0 var(--s5);
+  }
+  .standfirst strong { color: var(--ink); font-weight: 600; }
+
+  /* ---- summary counts ---- */
+  .counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--s3); }
+  .count {
+    background: var(--card); border: 1px solid var(--rule); border-radius: 3px;
+    padding: var(--s4); display: flex; flex-direction: column; gap: var(--s1);
+    text-decoration: none; color: inherit;
+  }
+  .count:hover { border-color: var(--accent); }
+  .count .n {
+    font-family: var(--f-data); font-size: 30px; font-weight: 600;
+    font-variant-numeric: tabular-nums; line-height: 1;
+  }
+  .count .l { font-size: 13px; color: var(--ink-soft); }
+  .count.sev .n { color: var(--severe); }
+  .count.wrn .n { color: var(--warn); }
+
+  /* ---- sections ---- */
+  section { padding: var(--s8) 0 var(--s6); border-bottom: 1px solid var(--rule); }
+  .sec-head { display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s2); }
+  h2 {
+    font-family: var(--f-display); font-size: clamp(22px, 3vw, 30px); font-weight: 600;
+    margin: 0; letter-spacing: -.01em;
+  }
+  .tag {
+    font-family: var(--f-data); font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 2px; border: 1px solid currentColor;
+  }
+  .tag.sev { color: var(--severe); background: var(--sev-bg); }
+  .tag.wrn { color: var(--warn); background: var(--warn-bg); }
+  .tag.neu { color: var(--ink-faint); }
+  .lede { max-width: 68ch; color: var(--ink-soft); margin: 0 0 var(--s5); }
+  .lede code { font-family: var(--f-data); font-size: .88em; background: var(--accent-dim); padding: 1px 5px; border-radius: 2px; }
+
+  /* ---- conflict rows ---- */
+  .rows { display: flex; flex-direction: column; gap: var(--s2); }
+  .row {
+    background: var(--card); border: 1px solid var(--rule); border-radius: 3px;
+    border-left: 3px solid var(--ink-faint); padding: var(--s4);
+    display: grid; gap: var(--s3) var(--s4);
+    grid-template-columns: minmax(150px, 1.1fr) minmax(220px, 2fr) minmax(150px, 1fr);
+    align-items: center;
+  }
+  .row.sev { border-left-color: var(--severe); }
+  .row.wrn { border-left-color: var(--warn); }
+  .row.decided { border-left-color: var(--ok); background: var(--ok-bg); }
+  .cmp { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .cmp b { font-size: 15px; font-weight: 600; }
+  .cmp .id { font-family: var(--f-data); font-size: 11px; color: var(--ink-faint); }
+
+  .figs { display: flex; flex-direction: column; gap: var(--s2); min-width: 0; }
+  .fig { display: grid; grid-template-columns: 74px 1fr auto; align-items: center; gap: var(--s2); }
+  .fig .src {
+    font-family: var(--f-data); font-size: 10px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--ink-faint);
+  }
+  .track { height: 9px; background: var(--accent-dim); border-radius: 1px; position: relative; overflow: hidden; }
+  .bar { position: absolute; top: 0; bottom: 0; background: var(--accent); border-radius: 1px; opacity: .55; }
+  .fig.b .bar { background: var(--warn); }
+  .fig .val {
+    font-family: var(--f-data); font-size: 13px; font-variant-numeric: tabular-nums;
+    white-space: nowrap; color: var(--ink);
+  }
+  .mark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--severe); }
+  .axis {
+    display: flex; justify-content: space-between; font-family: var(--f-data);
+    font-size: 10px; color: var(--ink-faint); padding-left: 82px;
+  }
+
+  .verdict { display: flex; flex-direction: column; gap: var(--s2); align-items: flex-start; }
+  .ratio {
+    font-family: var(--f-data); font-size: 20px; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .ratio.sev { color: var(--severe); } .ratio.wrn { color: var(--warn); }
+  .picker { display: flex; gap: 3px; flex-wrap: wrap; }
+  .picker button {
+    font: inherit; font-size: 12px; padding: 4px 9px; cursor: pointer;
+    background: transparent; color: var(--ink-soft);
+    border: 1px solid var(--rule); border-radius: 2px;
+  }
+  .picker button:hover { border-color: var(--accent); color: var(--ink); }
+  .picker button[aria-pressed="true"] {
+    background: var(--ok); border-color: var(--ok); color: var(--paper); font-weight: 600;
+  }
+  .picker button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---- plain tables ---- */
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 9px var(--s3); border-bottom: 1px solid var(--rule); }
+  th {
+    font-family: var(--f-data); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-faint); font-weight: 500; white-space: nowrap;
+  }
+  td.num { font-family: var(--f-data); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tbody tr:hover { background: var(--accent-dim); }
+  .chk { width: 18px; height: 18px; accent-color: var(--ok); cursor: pointer; }
+  tr.done td:not(.keep) { color: var(--ink-faint); text-decoration: line-through; }
+
+  /* ---- callout ---- */
+  .note {
+    border: 1px solid var(--rule); border-left: 3px solid var(--accent);
+    background: var(--card); padding: var(--s4); border-radius: 3px; margin: var(--s5) 0;
+  }
+  .note p { margin: 0 0 var(--s2); }
+  .note p:last-child { margin: 0; }
+  .note b { font-weight: 600; }
+
+  /* ---- toolbar ---- */
+  .bar-actions {
+    position: sticky; bottom: 0; background: var(--paper);
+    border-top: 1px solid var(--rule); padding: var(--s3) 0; margin-top: var(--s6);
+    display: flex; gap: var(--s3); align-items: center; flex-wrap: wrap; z-index: 5;
+  }
+  .btn {
+    font: inherit; font-size: 14px; padding: 8px 16px; cursor: pointer; border-radius: 2px;
+    background: var(--accent); color: var(--paper); border: 1px solid var(--accent); font-weight: 600;
+  }
+  .btn.ghost { background: transparent; color: var(--ink); border-color: var(--rule); font-weight: 400; }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .progress { font-family: var(--f-data); font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+  footer { padding: var(--s6) 0 var(--s8); color: var(--ink-faint); font-size: 13px; }
+  footer a { color: var(--accent); }
+
+  @media (max-width: 860px) {
+    .row { grid-template-columns: 1fr; }
+    .axis { padding-left: 82px; }
+  }
+  @media print {
+    .bar-actions, .picker { display: none; }
+    body { background: #fff; color: #000; }
+    section { break-inside: avoid; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <p class="eyebrow">PepTalk · clinical data review · generated 568d2bc</p>
+    <h1>Two sources, one dose. Which one is right?</h1>
+    <p class="standfirst">
+      PepTalk stores dosing in more than one place, and those places disagree. Code can prove
+      <em>that</em> they disagree; it cannot decide which figure is correct — that is a clinical
+      judgement, and the wrong pick becomes a dose error carrying the app's full authority.
+      <strong>Every row below needs a human verdict.</strong> Nothing here is auto-resolved.
+    </p>
+    <div class="counts">
+      <a class="count sev" href="#doses"><span class="n">25</span><span class="l">Dose ranges disagree</span></a>
+      <a class="count wrn" href="#cycles"><span class="n">16</span><span class="l">Cycle lengths disagree</span></a>
+      <a class="count sev" href="#ladder"><span class="n">15</span><span class="l">Contradict your own ladder</span></a>
+      <a class="count" href="#uncited"><span class="n">63</span><span class="l">Uncited clinical claims</span></a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<section id="sources">
+  <div class="sec-head"><h2>Where each number comes from</h2></div>
+  <p class="lede">
+    Three files carry a dose for the same compound and all three reach users. They are not equally
+    trustworthy, and the difference is provenance rather than opinion.
+  </p>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Source</th><th>Origin</th><th>Can it be checked?</th><th>What it drives</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="keep"><b>Reconstitution ladder</b><br><span class="id">peptideDosingReference.ts</span></td>
+        <td>Edward's PEPTALK_DOSES document, 15 May 2026</td>
+        <td><b style="color:var(--ok)">Yes — it self-checks.</b> Stores concentration, unit count <em>and</em> resulting dose, so the arithmetic has to close. All 33 entries do.</td>
+        <td>The calculator's reconstitution maths</td>
+      </tr>
+      <tr>
+        <td class="keep"><b>Master table</b><br><span class="id">peptideDosingTable.ts</span></td>
+        <td>Edward's photographed reference, <em>page 2 of 11</em>, transcribed 16 Jun 2026</td>
+        <td>No — but attributed. A slip here is a transcription error, not a clinical disagreement.</td>
+        <td>The dosing card on each peptide screen</td>
+      </tr>
+      <tr>
+        <td class="keep"><b>Protocols</b><br><span class="id">protocols.ts</span></td>
+        <td>Original app build, 16 Feb 2026</td>
+        <td><b style="color:var(--severe)">No — and unattributed.</b> Claims "published literature"; carries zero PMIDs, DOIs or author names across all 46 entries.</td>
+        <td><b>The overdose guard</b>, both calculators, Aimee, dose logging</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <p><b>The uncomfortable part:</b> the least attributable source drives the most behaviour.
+    <span class="id">protocols.ts</span> is imported by 11 modules to the master table's 3 — including
+    the code that decides whether a logged dose counts as an overdose.</p>
+    <p><b>And "the table always wins" cannot be a blanket rule.</b> NAD+ proves it: the ladder doses
+    60&nbsp;mg, the table says 200–600&nbsp;mcg. Exactly 100× out — a transcription slip, not a
+    difference of clinical opinion.</p>
+  </div>
+</section>
+
+<section id="doses">
+  <div class="sec-head"><h2>Dose ranges that disagree</h2><span class="tag sev">25 compounds · highest risk</span></div>
+  <p class="lede">
+    Both figures reach users, and on the peptide screen they render on the <em>same page</em> — the
+    dosing card shows the table, the Beginner/Advanced card shows the protocol a few hundred pixels
+    below. Bars are on a log scale so a 300× gap and a 1.5× gap look different. Sorted worst first.
+  </p>
+  <div class="rows" id="rows-doses"></div>
+</section>
+
+<section id="cycles">
+  <div class="sec-head"><h2>Cycle lengths that disagree</h2><span class="tag wrn">16 compounds</span></div>
+  <p class="lede">
+    Same two sources, a different field. Bars show each stated window on a shared 0–52 week axis, so
+    you can see whether they overlap at all. Tolerance is ±1 week — a one-week difference is a
+    rounding choice, not a contradiction.
+  </p>
+  <div class="rows" id="rows-cycles"></div>
+</section>
+
+<section id="ladder">
+  <div class="sec-head"><h2>Where a source contradicts your own ladder</h2><span class="tag sev">15 compounds</span></div>
+  <p class="lede">
+    This asks one question that needs no clinical judgement to <em>pose</em>: does the dose Edward
+    actually reconstitutes fall inside the range each source advertises? A range that excludes the
+    real worked dose is wrong about that compound, whoever wrote it. The red marker is the ladder.
+  </p>
+  <div class="rows" id="rows-prov"></div>
+</section>
+
+<section id="uncited">
+  <div class="sec-head"><h2>Clinical claims with no citation</h2><span class="tag neu">63 of 79 peptides</span></div>
+  <p class="lede">
+    Every peptide in the app carries a research summary and a mechanism-of-action paragraph.
+    <b>16 have a cited source. 63 do not.</b> This is the largest block of
+    unverified assertion in the product — nobody currently knows which of it is sourced, paraphrased
+    or invented. Tick a row once its text has been read and judged. Longest first, since word count
+    tracks how much is being claimed.
+  </p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th style="width:34px"></th><th>Compound</th><th>Categories</th><th class="num">Words asserted</th></tr></thead>
+      <tbody id="rows-uncited"></tbody>
+    </table>
+  </div>
+</section>
+
+<div class="bar-actions">
+  <button class="btn" id="copy">Copy decisions</button>
+  <button class="btn ghost" id="print">Print / save PDF</button>
+  <button class="btn ghost" id="reset">Clear all</button>
+  <span class="progress" id="progress"></span>
+</div>
+
+<footer>
+  <p>
+    Decisions are saved in this browser only — they are not sent anywhere. Use <b>Copy decisions</b>
+    to put them on the clipboard and paste them back to Edward.
+  </p>
+  <p>
+    Generated from the repository at commit 568d2bc by <span class="id">verify:dosingconsistency</span>
+    and <span class="id">verify:doseprovenance</span>, which run on every build. If a figure changes in
+    the code, this page changes with it.
+  </p>
+</footer>
+</div>
+
+</head>
+<body>
+<script>
+const DATA = {"generated":"568d2bc","totals":{"peptides":79,"doses":25,"cycles":16,"provenance":15,"uncited":63,"cited":16},"doses":[{"name":"NAD+","id":"nad-plus","table":[200,600],"protocol":[50000,200000],"tableText":"200mcg-600mcg","ratio":333.3},{"name":"GHK-Cu","id":"ghk-cu","table":[1000,5000],"protocol":[200,600],"tableText":"1mg-5mg","ratio":8.3},{"name":"CJC-1295 (with DAC)","id":"cjc-1295","table":[1000,2000],"protocol":[100,300],"tableText":"1mg-2mg","ratio":6.7},{"name":"TB-500","id":"tb-500","table":[330,1000],"protocol":[2000,5000],"tableText":"0.33mg-1mg","ratio":5},{"name":"Glutathione","id":"glutathione","table":[200000,400000],"protocol":[600000,1200000],"tableText":"200mg-400mg","ratio":3},{"name":"LL-37","id":"ll-37","table":[100,500],"protocol":[50,200],"tableText":"100mcg-500mcg","ratio":2.5},{"name":"Survodutide","id":"survodutide","table":[500,2700],"protocol":[2400,6000],"tableText":"0.5mg-2.7mg","ratio":2.2},{"name":"BPC-157","id":"bpc-157","table":[250,1000],"protocol":[200,500],"tableText":"250mcg-1mg","ratio":2},{"name":"MOTS-c","id":"mots-c","table":[1000,2000],"protocol":[200,1000],"tableText":"1mg-2mg","ratio":2},{"name":"Epithalon","id":"epithalon","table":[2000,5000],"protocol":[5000,10000],"tableText":"2mg-5mg","ratio":2},{"name":"Kisspeptin-10","id":"kisspeptin-10","table":[50,200],"protocol":[30,100],"tableText":"50mcg-200mcg","ratio":2},{"name":"Melanotan-2","id":"melanotan-2","table":[250,1000],"protocol":[250,500],"tableText":"250mcg-1000mcg","ratio":2},{"name":"Cagrilintide","id":"cagrilintide","table":[300,4500],"protocol":[1200,2400],"tableText":"0.3mg-4.5mg","ratio":1.9},{"name":"Ipamorelin","id":"ipamorelin","table":[100,500],"protocol":[200,300],"tableText":"100mcg-500mcg","ratio":1.7},{"name":"DSIP","id":"dsip","table":[100,500],"protocol":[100,300],"tableText":"100mcg-500mcg","ratio":1.7},{"name":"Mazdutide","id":"mazdutide","table":[3000,6000],"protocol":[3000,9000],"tableText":"3mg-6mg","ratio":1.5},{"name":"IGF-1 LR3","id":"igf-1-lr3","table":[25,100],"protocol":[20,80],"tableText":"25mcg-100mcg","ratio":1.3},{"name":"Thymosin Alpha-1","id":"thymosin-alpha-1","table":[500,2000],"protocol":[1000,1600],"tableText":"0.5mg-2mg","ratio":1.3},{"name":"Selank","id":"selank","table":[200,600],"protocol":[200,500],"tableText":"200mcg-600mcg","ratio":1.2},{"name":"KPV (Injectable)","id":"kpv-inj","table":[250,600],"protocol":[200,500],"tableText":"250mcg-600mcg","ratio":1.2},{"name":"Semaglutide","id":"semaglutide","table":[250,2400],"protocol":[250,2500],"tableText":"0.25mg-2.4mg","ratio":1},{"name":"Tirzepatide","id":"tirzepatide","table":[500,15000],"protocol":[2500,15000],"tableText":"0.5mg-15mg","ratio":1},{"name":"Retatrutide","id":"retatrutide","table":[500,12000],"protocol":[1000,12000],"tableText":"0.5mg-12mg","ratio":1},{"name":"Tesamorelin","id":"tesamorelin","table":[500,2000],"protocol":[1000,2000],"tableText":"0.5mg-2mg","ratio":1},{"name":"PT-141","id":"pt-141","table":[500,2000],"protocol":[1000,2000],"tableText":"0.5mg-2mg","ratio":1}],"cycles":[{"name":"TB-500","id":"tb-500","tableText":"4-8 Weeks","table":[4,8],"protocol":[4,12]},{"name":"CJC-1295 (with DAC)","id":"cjc-1295","tableText":"3-6 Months","table":[13,26],"protocol":[8,16]},{"name":"Ipamorelin","id":"ipamorelin","tableText":"3-6 Months","table":[13,26],"protocol":[8,12]},{"name":"Sermorelin","id":"sermorelin","tableText":"3-6 Months","table":[13,26],"protocol":[12,24]},{"name":"IGF-1 LR3","id":"igf-1-lr3","tableText":"4-8 Week","table":[4,8],"protocol":[4,6]},{"name":"Semax","id":"semax","tableText":"4-8 Weeks","table":[4,8],"protocol":[2,4]},{"name":"Selank","id":"selank","tableText":"4-8 Weeks","table":[4,8],"protocol":[2,4]},{"name":"Thymosin Alpha-1","id":"thymosin-alpha-1","tableText":"4-12 Weeks","table":[4,12],"protocol":[4,26]},{"name":"LL-37","id":"ll-37","tableText":"3-6 Weeks","table":[3,6],"protocol":[2,4]},{"name":"MOTS-c","id":"mots-c","tableText":"6-8 Weeks","table":[6,8],"protocol":[6,10]},{"name":"SS-31","id":"ss-31","tableText":"4-8 Weeks Max of 12 weeks","table":[4,8],"protocol":[4,12]},{"name":"DSIP","id":"dsip","tableText":"2-4 Weeks","table":[2,4],"protocol":[2,6]},{"name":"Kisspeptin-10","id":"kisspeptin-10","tableText":"4-12 Weeks","table":[4,12],"protocol":[1,4]},{"name":"hCG","id":"hcg","tableText":"4-12 Weeks","table":[4,12],"protocol":[8,52]},{"name":"PT-141","id":"pt-141","tableText":"2-8 Weeks","table":[2,8],"protocol":[1,24]},{"name":"KPV (Injectable)","id":"kpv-inj","tableText":"4-12 Weeks","table":[4,12],"protocol":[4,8]}],"provenance":[{"name":"Semaglutide","id":"semaglutide","ladder":[1250,2500],"table":[250,2400],"protocol":[250,2500],"verdict":"protoOnly"},{"name":"Cagrilintide","id":"cagrilintide","ladder":[600,600],"table":[300,4500],"protocol":[1200,2400],"verdict":"tableOnly"},{"name":"TB-500","id":"tb-500","ladder":[500,1500],"table":[330,1000],"protocol":[2000,5000],"verdict":"neither"},{"name":"CJC-1295 (with DAC)","id":"cjc-1295","ladder":[300,1000],"table":[1000,2000],"protocol":[100,300],"verdict":"neither"},{"name":"Ipamorelin","id":"ipamorelin","ladder":[100,100],"table":[100,500],"protocol":[200,300],"verdict":"tableOnly"},{"name":"Tesamorelin","id":"tesamorelin","ladder":[500,1000],"table":[500,2000],"protocol":[1000,2000],"verdict":"tableOnly"},{"name":"Hexarelin","id":"hexarelin","ladder":[250,250],"table":[100,200],"protocol":[100,200],"verdict":"neither"},{"name":"IGF-1 LR3","id":"igf-1-lr3","ladder":[20,50],"table":[25,100],"protocol":[20,80],"verdict":"protoOnly"},{"name":"Thymosin Alpha-1","id":"thymosin-alpha-1","ladder":[300,500],"table":[500,2000],"protocol":[1000,1600],"verdict":"neither"},{"name":"LL-37","id":"ll-37","ladder":[87,87],"table":[100,500],"protocol":[50,200],"verdict":"protoOnly"},{"name":"MOTS-c","id":"mots-c","ladder":[200,800],"table":[1000,2000],"protocol":[200,1000],"verdict":"protoOnly"},{"name":"NAD+","id":"nad-plus","ladder":[60000,60000],"table":[200,600],"protocol":[50000,200000],"verdict":"protoOnly"},{"name":"GHK-Cu","id":"ghk-cu","ladder":[2667,2667],"table":[1000,5000],"protocol":[200,600],"verdict":"tableOnly"},{"name":"Melanotan-2","id":"melanotan-2","ladder":[100,125],"table":[250,1000],"protocol":[250,500],"verdict":"neither"},{"name":"Glutathione","id":"glutathione","ladder":[100000,100000],"table":[200000,400000],"protocol":[600000,1200000],"verdict":"neither"}],"uncited":[{"name":"KPV (Injectable)","id":"kpv-inj","categories":["Anti-inflammatory","Immune"],"words":145},{"name":"Methylene Blue","id":"methylene-blue","categories":["Mitochondrial","Nootropic"],"words":140},{"name":"BAM15","id":"bam15","categories":["Mitochondrial","Metabolic"],"words":140},{"name":"CJC-1295 (No DAC)","id":"cjc-1295-no-dac","categories":["Growth Hormone"],"words":138},{"name":"NAD+ / Carnitine Amino Blend","id":"nad-carnitine-blend","categories":["Mitochondrial","Metabolic"],"words":138},{"name":"CDP-Choline (Citicoline)","id":"cdp-choline","categories":["Nootropic"],"words":137},{"name":"GHK-Cu","id":"ghk-cu","categories":["Cosmetic","Recovery","Anti-inflammatory","Neuropeptide"],"words":136},{"name":"KPV (Oral)","id":"kpv-oral","categories":["Anti-inflammatory","Immune"],"words":136},{"name":"GLOW (GHK-Cu / BPC-157 / TB-500 Blend)","id":"glow","categories":["Cosmetic","Recovery"],"words":134},{"name":"Liraglutide","id":"liraglutide","categories":["Metabolic"],"words":133},{"name":"DSIP","id":"dsip","categories":["Sleep","Neuropeptide"],"words":132},{"name":"Cardarine (GW-501516)","id":"cardarine","categories":["Metabolic"],"words":132},{"name":"Cerebrolysin","id":"cerebrolysin","categories":["Nootropic","Neuropeptide"],"words":131},{"name":"ITPP","id":"itpp","categories":["Metabolic"],"words":131},{"name":"Enclomiphene","id":"enclomiphene","categories":["Reproductive"],"words":129},{"name":"YK-11","id":"yk-11","categories":["Recovery","Growth Hormone"],"words":128},{"name":"Tesofensine","id":"tesofensine","categories":["Metabolic"],"words":127},{"name":"MK-677 (Ibutamoren)","id":"mk-677","categories":["Growth Hormone","Metabolic"],"words":126},{"name":"PEG-MGF","id":"peg-mgf","categories":["Recovery","Growth Hormone"],"words":125},{"name":"Alpha-GPC","id":"alpha-gpc","categories":["Nootropic"],"words":125},{"name":"CJC-1295 (No DAC) / Ipamorelin Blend","id":"cjc-1295-ipamorelin","categories":["Growth Hormone"],"words":123},{"name":"DADA (Diisopropylamine Dichloroacetate)","id":"dada","categories":["Metabolic","Mitochondrial"],"words":123},{"name":"Selank","id":"selank","categories":["Nootropic","Neuropeptide","Immune"],"words":122},{"name":"L-Carnitine","id":"l-carnitine","categories":["Metabolic","Mitochondrial"],"words":122},{"name":"GC-1 (Sobetirome)","id":"gc-1","categories":["Metabolic"],"words":121},{"name":"Thymosin Alpha-1","id":"thymosin-alpha-1","categories":["Immune"],"words":118},{"name":"Semax","id":"semax","categories":["Nootropic","Neuropeptide"],"words":116},{"name":"5-Amino-1MQ (Injectable)","id":"5-amino-1mq-inj","categories":["Metabolic"],"words":113},{"name":"Dihexa","id":"dihexa","categories":["Nootropic","Neuropeptide"],"words":110},{"name":"Thymalin","id":"thymalin","categories":["Immune","Longevity"],"words":110},{"name":"CoQ10 (Injectable)","id":"coq10","categories":["Mitochondrial","Longevity"],"words":110},{"name":"FOXO4-DRI","id":"foxo4-dri","categories":["Longevity"],"words":108},{"name":"9-ME-BC","id":"9-me-bc","categories":["Nootropic","Neuropeptide"],"words":108},{"name":"SS-31","id":"ss-31","categories":["Mitochondrial"],"words":107},{"name":"PT-141","id":"pt-141","categories":["Sexual Health"],"words":107},{"name":"Follistatin-344","id":"follistatin-344","categories":["Growth Hormone","Recovery"],"words":104},{"name":"Somatropin","id":"somatropin","categories":["Growth Hormone"],"words":102},{"name":"KLOW (GHK-Cu / KPV / BPC-157 / TB-500 Blend)","id":"klow","categories":["Recovery","Anti-inflammatory","Cosmetic"],"words":102},{"name":"Oxytocin","id":"oxytocin","categories":["Neuropeptide","Reproductive"],"words":100},{"name":"NAD+","id":"nad-plus","categories":["Mitochondrial","Longevity"],"words":94},{"name":"Noopept","id":"noopept","categories":["Nootropic"],"words":92},{"name":"Humanin","id":"humanin","categories":["Mitochondrial","Longevity","Neuropeptide"],"words":92},{"name":"Glutathione","id":"glutathione","categories":["Anti-inflammatory","Longevity"],"words":90},{"name":"ARA-290","id":"ara-290","categories":["Neuropeptide","Anti-inflammatory"],"words":90},{"name":"Dermorphin","id":"dermorphin","categories":["Neuropeptide"],"words":90},{"name":"Kisspeptin-10","id":"kisspeptin-10","categories":["Reproductive"],"words":89},{"name":"SLU-PP-332","id":"slu-pp-332","categories":["Mitochondrial"],"words":88},{"name":"PNC-27","id":"pnc-27","categories":["Immune"],"words":88},{"name":"AICAR","id":"aicar","categories":["Mitochondrial","Metabolic"],"words":88},{"name":"Pinealon","id":"pinealon","categories":["Nootropic","Neuropeptide"],"words":86},{"name":"Melanotan-2","id":"melanotan-2","categories":["Tanning","Sexual Health"],"words":86},{"name":"HMG","id":"hmg","categories":["Reproductive"],"words":85},{"name":"VIP","id":"vip","categories":["Neuropeptide","Immune","Anti-inflammatory"],"words":85},{"name":"SNAP-8","id":"snap-8","categories":["Cosmetic"],"words":83},{"name":"Adipotide","id":"adipotide","categories":["Metabolic"],"words":82},{"name":"HGH Fragment 176-191","id":"hgh-fragment-176-191","categories":["Growth Hormone","Metabolic"],"words":81},{"name":"hCG","id":"hcg","categories":["Reproductive"],"words":81},{"name":"LL-37","id":"ll-37","categories":["Immune","Antimicrobial"],"words":80},{"name":"Cagrilintide","id":"cagrilintide","categories":["Metabolic"],"words":76},{"name":"Melanotan-1","id":"melanotan-1","categories":["Tanning"],"words":76},{"name":"5-Amino-1MQ","id":"5-amino-1mq","categories":["Metabolic"],"words":69},{"name":"Survodutide","id":"survodutide","categories":["Metabolic"],"words":67},{"name":"Mazdutide","id":"mazdutide","categories":["Metabolic"],"words":62}]};
+
+const store = (() => {
+  const KEY = 'peptalk-clinical-review-v1';
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { s = {}; }
+  return {
+    get: (k) => s[k],
+    set: (k, v) => { if (v == null) delete s[k]; else s[k] = v;
+      try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} },
+    all: () => s,
+    clear: () => { s = {}; try { localStorage.removeItem(KEY); } catch (e) {} },
+  };
+})();
+
+const fmt = (n) => n >= 1000 ? (n / 1000).toFixed(n % 1000 === 0 ? 0 : 2).replace(/\.?0+$/, '') + ' mg'
+                             : Math.round(n) + ' mcg';
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* Log scale: dose figures span 20 mcg to 200,000 mcg, so a linear axis would
+   flatten every small compound into one pixel. */
+const LO = Math.log10(10), HI = Math.log10(250000);
+const pos = (v) => Math.max(0, Math.min(1, (Math.log10(Math.max(v, 10)) - LO) / (HI - LO))) * 100;
+
+function sevOf(ratio) { return ratio >= 5 ? 'sev' : ratio >= 2 ? 'wrn' : ''; }
+
+function figRow(label, lo, hi, cls) {
+  const l = pos(lo), w = Math.max(1.2, pos(hi) - pos(lo));
+  return '<div class="fig ' + cls + '"><span class="src">' + label + '</span>' +
+    '<div class="track"><div class="bar" style="left:' + l + '%;width:' + w + '%"></div></div>' +
+    '<span class="val">' + fmt(lo) + '–' + fmt(hi) + '</span></div>';
+}
+
+function picker(key, opts) {
+  const cur = store.get(key);
+  return '<div class="picker" data-key="' + key + '">' + opts.map((o) =>
+    '<button type="button" data-v="' + o[0] + '" aria-pressed="' + (cur === o[0]) + '">' + o[1] + '</button>'
+  ).join('') + '</div>';
+}
+
+/* ---- dose conflicts ---- */
+document.getElementById('rows-doses').innerHTML = DATA.doses.map((d) => {
+  const sev = sevOf(d.ratio);
+  const key = 'dose:' + d.id;
+  return '<div class="row ' + sev + (store.get(key) ? ' decided' : '') + '" id="r-' + key + '">' +
+    '<div class="cmp"><b>' + esc(d.name) + '</b><span class="id">' + esc(d.id) + '</span></div>' +
+    '<div class="figs">' +
+      figRow('Table', d.table[0], d.table[1], 'a') +
+      figRow('Protocol', d.protocol[0], d.protocol[1], 'b') +
+      '<div class="axis"><span>10 mcg</span><span>1 mg</span><span>100 mg</span></div>' +
+    '</div>' +
+    '<div class="verdict"><span class="ratio ' + sev + '">' + d.ratio + '×</span>' +
+      picker(key, [['table', 'Table'], ['protocol', 'Protocol'], ['other', 'Neither']]) +
+    '</div></div>';
+}).join('');
+
+/* ---- cycle conflicts: a shared 0-52 week axis ---- */
+const WK = 52;
+document.getElementById('rows-cycles').innerHTML = DATA.cycles.map((c) => {
+  const key = 'cycle:' + c.id;
+  const bar = (lo, hi, cls) => {
+    const l = (lo / WK) * 100, w = Math.max(1.2, ((hi - lo) / WK) * 100);
+    return '<div class="track"><div class="bar" style="left:' + l + '%;width:' + w + '%"></div></div>';
+  };
+  const overlap = Math.min(c.table[1], c.protocol[1]) - Math.max(c.table[0], c.protocol[0]);
+  return '<div class="row ' + (overlap <= 0 ? 'sev' : 'wrn') + (store.get(key) ? ' decided' : '') + '">' +
+    '<div class="cmp"><b>' + esc(c.name) + '</b><span class="id">' +
+      (overlap <= 0 ? 'no overlap at all' : 'overlap ' + overlap + ' wk') + '</span></div>' +
+    '<div class="figs">' +
+      '<div class="fig a"><span class="src">Table</span>' + bar(c.table[0], c.table[1]) +
+        '<span class="val">' + esc(c.tableText) + '</span></div>' +
+      '<div class="fig b"><span class="src">Protocol</span>' + bar(c.protocol[0], c.protocol[1]) +
+        '<span class="val">' + c.protocol[0] + '–' + c.protocol[1] + ' wk</span></div>' +
+      '<div class="axis"><span>0</span><span>26 wk</span><span>52 wk</span></div>' +
+    '</div>' +
+    '<div class="verdict">' +
+      picker(key, [['table', 'Table'], ['protocol', 'Protocol'], ['other', 'Neither']]) +
+    '</div></div>';
+}).join('');
+
+/* ---- three-way vs the ladder ---- */
+const VERDICT_LABEL = {
+  neither: ['sev', 'Outside BOTH ranges'],
+  tableOnly: ['wrn', 'Only the table contains it'],
+  protoOnly: ['wrn', 'Only the protocol contains it'],
+};
+const order = { neither: 0, protoOnly: 1, tableOnly: 2 };
+document.getElementById('rows-prov').innerHTML = DATA.provenance
+  .slice().sort((a, b) => order[a.verdict] - order[b.verdict])
+  .map((p) => {
+    const key = 'prov:' + p.id;
+    const [cls, label] = VERDICT_LABEL[p.verdict];
+    const markAt = pos(p.ladder[0]);
+    const track = (lo, hi) => {
+      const l = pos(lo), w = Math.max(1.2, pos(hi) - pos(lo));
+      return '<div class="track"><div class="bar" style="left:' + l + '%;width:' + w + '%"></div>' +
+        '<div class="mark" style="left:' + markAt + '%"></div></div>';
+    };
+    return '<div class="row ' + cls + (store.get(key) ? ' decided' : '') + '">' +
+      '<div class="cmp"><b>' + esc(p.name) + '</b><span class="id">' + label + '</span></div>' +
+      '<div class="figs">' +
+        '<div class="fig a"><span class="src">Table</span>' + track(p.table[0], p.table[1]) +
+          '<span class="val">' + fmt(p.table[0]) + '–' + fmt(p.table[1]) + '</span></div>' +
+        '<div class="fig b"><span class="src">Protocol</span>' + track(p.protocol[0], p.protocol[1]) +
+          '<span class="val">' + fmt(p.protocol[0]) + '–' + fmt(p.protocol[1]) + '</span></div>' +
+        '<div class="axis"><span>10 mcg</span><span>1 mg</span><span>100 mg</span></div>' +
+      '</div>' +
+      '<div class="verdict">' +
+        '<span class="ratio" style="font-size:13px;color:var(--severe)">ladder ' +
+          (p.ladder[0] === p.ladder[1] ? fmt(p.ladder[0]) : fmt(p.ladder[0]) + '–' + fmt(p.ladder[1])) + '</span>' +
+        picker(key, [['table', 'Table'], ['protocol', 'Protocol'], ['ladder', 'Ladder'], ['other', 'None']]) +
+      '</div></div>';
+  }).join('');
+
+/* ---- uncited ---- */
+document.getElementById('rows-uncited').innerHTML = DATA.uncited.map((u) => {
+  const key = 'cite:' + u.id;
+  const done = !!store.get(key);
+  return '<tr class="' + (done ? 'done' : '') + '" data-key="' + key + '">' +
+    '<td class="keep"><input class="chk" type="checkbox" ' + (done ? 'checked' : '') +
+      ' aria-label="Mark ' + esc(u.name) + ' as reviewed"></td>' +
+    '<td>' + esc(u.name) + '</td>' +
+    '<td>' + esc((u.categories || []).join(', ')) + '</td>' +
+    '<td class="num">' + u.words + '</td></tr>';
+}).join('');
+
+/* ---- interaction ---- */
+function refresh() {
+  const total = DATA.doses.length + DATA.cycles.length + DATA.provenance.length + DATA.uncited.length;
+  const done = Object.keys(store.all()).length;
+  document.getElementById('progress').textContent = done + ' of ' + total + ' resolved';
+}
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.picker button');
+  if (btn) {
+    const box = btn.closest('.picker');
+    const key = box.dataset.key;
+    const v = btn.dataset.v;
+    const next = store.get(key) === v ? null : v;
+    store.set(key, next);
+    box.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === next)));
+    box.closest('.row').classList.toggle('decided', !!next);
+    refresh();
+  }
+});
+
+document.addEventListener('change', (e) => {
+  if (!e.target.classList.contains('chk')) return;
+  const tr = e.target.closest('tr');
+  store.set(tr.dataset.key, e.target.checked ? 'reviewed' : null);
+  tr.classList.toggle('done', e.target.checked);
+  refresh();
+});
+
+document.getElementById('print').addEventListener('click', () => window.print());
+
+document.getElementById('reset').addEventListener('click', () => {
+  store.clear();
+  document.querySelectorAll('.picker button').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+  document.querySelectorAll('.row').forEach((r) => r.classList.remove('decided'));
+  document.querySelectorAll('.chk').forEach((c) => { c.checked = false; c.closest('tr').classList.remove('done'); });
+  refresh();
+});
+
+document.getElementById('copy').addEventListener('click', async () => {
+  const s = store.all();
+  const name = (id) => (DATA.doses.concat(DATA.cycles, DATA.provenance, DATA.uncited)
+    .find((x) => x.id === id) || {}).name || id;
+  const lines = ['PepTalk clinical review — decisions', 'commit ' + DATA.generated, ''];
+  const group = (prefix, title) => {
+    const rows = Object.keys(s).filter((k) => k.startsWith(prefix));
+    if (!rows.length) return;
+    lines.push(title);
+    rows.forEach((k) => lines.push('  ' + name(k.slice(prefix.length)) + ' -> ' + s[k]));
+    lines.push('');
+  };
+  group('dose:', 'DOSE RANGE — which source is correct');
+  group('cycle:', 'CYCLE LENGTH — which source is correct');
+  group('prov:', 'CONTRADICTS THE LADDER — which source is correct');
+  group('cite:', 'CITATION REVIEWED');
+  const text = lines.join('\n');
+  const btn = document.getElementById('copy');
+  try {
+    await navigator.clipboard.writeText(text);
+    btn.textContent = 'Copied';
+  } catch (err) {
+    // Clipboard can be blocked; never leave the user with nothing.
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText = 'position:fixed;top:10%;left:10%;width:80%;height:70%;z-index:99';
+    document.body.appendChild(ta); ta.select();
+    btn.textContent = 'Select and copy';
+  }
+  setTimeout(() => { btn.textContent = 'Copy decisions'; }, 2200);
+});
+
+refresh();
+</script>
