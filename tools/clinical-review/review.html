@@ -425,9 +425,18 @@ const sync = (() => {
       const res = await fetch(ENDPOINT + '?t=' + encodeURIComponent(token));
       if (!res.ok) throw new Error(await res.text());
       const { decisions } = await res.json();
-      if (decisions && Object.keys(decisions).length) {
-        store.merge(decisions);
+      const server = decisions || {};
+      if (Object.keys(server).length) {
+        store.merge(server);
         applyToDom();
+      }
+      /* Backfill: answers given before this page could save (or while the
+         endpoint was down) live only in localStorage. Push anything the server
+         hasn't got, so work done on the old local-only page isn't stranded. */
+      const orphans = Object.keys(store.all()).filter((k) => !(k in server));
+      if (orphans.length) {
+        paint('Uploading ' + orphans.length + ' earlier answer(s)…', '');
+        for (const k of orphans) await push(k, store.get(k));
       }
     } catch (e) {
       paint('Could not load saved answers — working locally', 'bad');
@@ -439,8 +448,16 @@ const sync = (() => {
   return { push, hydrate, enabled: () => !!token };
 })();
 
-const fmt = (n) => n >= 1000 ? (n / 1000).toFixed(n % 1000 === 0 ? 0 : 2).replace(/\.?0+$/, '') + ' mg'
-                             : Math.round(n) + ' mcg';
+/* Trailing zeros may only be trimmed AFTER a decimal point. The previous
+   `.replace(/\.?0+$/, '')` ran on integers too, so 200000 mcg printed as
+   "2 mg" and 50000 as "5 mg" — NAD+'s 50-200 mg protocol range rendered as
+   "5 mg-2 mg", a range whose top was below its bottom. */
+const fmt = (n) => {
+  if (n < 1000) return Math.round(n) + ' mcg';
+  const mg = n / 1000;
+  if (Number.isInteger(mg)) return mg + ' mg';
+  return mg.toFixed(2).replace(/0+$/, '').replace(/\.$/, '') + ' mg';
+};
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 /* Log scale: dose figures span 20 mcg to 200,000 mcg, so a linear axis would
