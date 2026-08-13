@@ -14,7 +14,7 @@
  *   SQUARE_WEBHOOK_URL             (this function's public URL — signed into the HMAC)
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { timingSafeEqual, parseRef } from '../_shared/square.ts';
+import { timingSafeEqual, parseRef, planForProduct } from '../_shared/square.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -89,14 +89,28 @@ async function onSubscription(sub: any): Promise<Response> {
   if (!subId) return ok();
   const status: string = sub?.status ?? ''; // ACTIVE | CANCELED | DEACTIVATED | PAUSED
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-  const patch: Record<string, unknown> = {
-    is_active: status === 'ACTIVE',
-    last_validated_at: new Date().toISOString(),
-  };
   // charged_through_date ('YYYY-MM-DD') = paid-through; keep access until then
   // even after a cancel, then it expires naturally.
-  if (sub?.charged_through_date) {
-    patch.expires_at = new Date(`${sub.charged_through_date}T23:59:59Z`).toISOString();
+  const chargedThroughMs = sub?.charged_through_date
+    ? new Date(`${sub.charged_through_date}T23:59:59Z`).getTime()
+    : null;
+  const paidThroughFuture = chargedThroughMs != null && chargedThroughMs > Date.now();
+
+  /* CANCELED does NOT mean "access ends now". Square cancels at the END of the
+     billing period already paid for, so a subscription sits in CANCELED with a
+     charged_through_date still in the future — Square's own example shows
+     status CANCELED, canceled_date 2021-10-30, charged_through_date 2021-11-20.
+     This previously read `is_active: status === 'ACTIVE'`, and because
+     resolveEffectiveTier() selects on is_active = true, cancelling revoked a
+     paying customer's Pro instantly and threw away up to a month they had
+     already been billed for — the exact opposite of the line above it.
+     DEACTIVATED (billing failure / hard stop) and PAUSED still revoke. */
+  const patch: Record<string, unknown> = {
+    is_active: status === 'ACTIVE' || (status === 'CANCELED' && paidThroughFuture),
+    last_validated_at: new Date().toISOString(),
+  };
+  if (chargedThroughMs != null) {
+    patch.expires_at = new Date(chargedThroughMs).toISOString();
   }
   const { data, error } = await admin
     .from('subscriptions')
@@ -142,9 +156,12 @@ Deno.serve(async (req) => {
   // ── One-time payment-link fallback (payment.updated / order.updated) ──
   let referenceId: string | undefined;
   let paid = false;
+  /** Amount actually captured, in cents — used to flag a tier/price mismatch. */
+  let paidCents: number | undefined;
 
   if (type === 'payment.updated') {
     const payment = obj.payment ?? {};
+    paidCents = Number(payment.amount_money?.amount ?? NaN);
     // COMPLETED only. APPROVED means Square authorized the card but has NOT
     // captured the funds — an auth that is later voided would otherwise buy a
     // free month. Payment links autocomplete, so COMPLETED is the normal
@@ -156,6 +173,7 @@ Deno.serve(async (req) => {
     if (paid && payment.order_id) referenceId = await fetchOrderRef(payment.order_id);
   } else if (type === 'order.updated') {
     const order = obj.order_updated ?? obj.order ?? {};
+    paidCents = Number(order.total_money?.amount ?? NaN);
     paid = order.state === 'COMPLETED';
     referenceId = order.reference_id;
     if (paid && !referenceId && order.order_id) referenceId = await fetchOrderRef(order.order_id);
@@ -168,6 +186,20 @@ Deno.serve(async (req) => {
   if (!ref) {
     console.error('[square-webhook] no/invalid reference_id on paid event', type, referenceId);
     return ok();
+  }
+
+  /* The granted tier comes from reference_id alone — nothing here checks that
+     the money actually captured matches what that tier costs. Deliberately a
+     LOUD WARNING and not a rejection: Square totals can legitimately differ
+     from the plan price (tax, tips, a partial refund landing first), and
+     refusing a real payment is worse than granting one that needs review.
+     Promote to a hard reject only with a tolerance that accounts for tax. */
+  const expectedCents = planForProduct(ref.productId)?.amountCents;
+  if (expectedCents != null && paidCents != null && Number.isFinite(paidCents) && paidCents !== expectedCents) {
+    console.warn(
+      `[square-webhook] AMOUNT MISMATCH — captured ${paidCents}c but ` +
+        `${ref.productId} lists ${expectedCents}c. Granting on reference_id; review this payment.`,
+    );
   }
 
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
