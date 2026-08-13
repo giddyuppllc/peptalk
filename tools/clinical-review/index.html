@@ -102,6 +102,16 @@
 
   .more{font:inherit;font-size:12px;padding:4px 8px;cursor:pointer;background:transparent;color:var(--accent);
         border:1px solid var(--rule);border-radius:2px;white-space:nowrap}
+  /* safety / interaction cells: the shipped text sits UNDER the box that
+     replaces it, so she can see what she is overriding while typing */
+  .cellarea{width:100%;min-width:200px;min-height:44px;font:inherit;font-size:12px;padding:5px 7px;
+    border:1px solid var(--rule);border-radius:2px;background:var(--paper);color:var(--ink);resize:vertical}
+  .cellarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+  .ships{font-size:11px;color:var(--ink-soft);white-space:pre-wrap;margin-top:4px;max-width:34ch;
+         max-height:88px;overflow:auto;line-height:1.35}
+  .ships.none{color:var(--severe);font-family:var(--f-data);font-size:10px}
+  .srcbtn.sign{text-align:center;white-space:nowrap}
+  table.grid td{vertical-align:top}
   tr.detail td{background:var(--card);padding:14px 16px 20px}
   tr.detail h4{font-family:var(--f-data);font-size:10px;letter-spacing:.09em;text-transform:uppercase;
                color:var(--ink-faint);margin:14px 0 5px;font-weight:500}
@@ -122,19 +132,24 @@
 
 <header class="top"><div class="wrap">
   <p class="eyebrow">PepTalk · clinical data workbench</p>
-  <h1>Every peptide, every source, one answer each.</h1>
+  <h1>Everything PepTalk asserts, in one pass.</h1>
   <p class="standfirst">
-    Each row is one compound and each column is one place PepTalk stores its dose. Blank means that
-    source has no entry — not zero. <b>Click a cell to say that figure is the right one</b>, or type
-    the correct value in the last column if none of them are. Nothing here changes the app; the
-    answers are collected so the code can be fixed deliberately.
+    Four things need a clinician: <b>Dose</b> and <b>Cycle</b>, where the app stores the same figure
+    in several places and they disagree; <b>Safety</b>, where 64 of 79 compounds ship with no
+    contraindications, adverse effects or pregnancy note at all; and <b>Interactions</b>, where the
+    app suggests 139 peptide pairings but holds data on 25. Blank means nothing is on file — not
+    zero, not safe. <b>Click a cell to accept that figure, or type the right one.</b> Red is a gap or
+    a disagreement; green agrees but still needs your sign-off. Nothing here changes the app —
+    answers are collected so the code can be corrected deliberately.
   </p>
 </div></header>
 
 <div class="wrap">
   <div class="toolbar">
-    <button class="btn" id="mode-dose" data-mode="dose" aria-pressed="true">Dose</button>
-    <button class="btn" id="mode-cycle" data-mode="cycle" aria-pressed="false">Cycle length</button>
+    <button class="btn" data-mode="dose" aria-pressed="true">Dose</button>
+    <button class="btn" data-mode="cycle" aria-pressed="false">Cycle</button>
+    <button class="btn" data-mode="safety" aria-pressed="false">Safety</button>
+    <button class="btn" data-mode="inter" aria-pressed="false">Interactions</button>
     <span class="sep"></span>
     <button class="btn filter" data-f="all" aria-pressed="true">All</button>
     <button class="btn filter" data-f="conflict" aria-pressed="false">● Disagreements</button>
@@ -149,14 +164,7 @@
 
   <div class="scroll">
     <table class="grid">
-      <thead><tr>
-        <th style="min-width:190px">Compound</th>
-        <th id="h-table">Dosing table<small>transcribed, p.2 of 11</small></th>
-        <th id="h-proto">Protocol<small>unattributed — drives the overdose guard</small></th>
-        <th id="h-ladder">Reconstitution ladder<small>self-checking, Edward’s own</small></th>
-        <th id="h-ans">✔ Correct answer<small>click a cell, or type your own</small></th>
-        <th></th>
-      </tr></thead>
+      <thead id="head"></thead>
       <tbody id="rows"></tbody>
     </table>
   </div>
@@ -187,7 +195,11 @@ const store = (() => {
   };
 })();
 
-const EDIT_FIELDS = ['correctedDose','correctedCycle','citation','note','researchSummary','mechanismOfAction'];
+const EDIT_FIELDS = [
+  'correctedDose','correctedCycle','citation','note','researchSummary','mechanismOfAction',
+  'safetyContraindications','safetySerious','safetyPregnancy','safetyDrugInteractions',
+  'interType','interMechanism','interStability','interCitation',
+];
 
 const sync = (() => {
   const q = new URLSearchParams(location.search);
@@ -349,27 +361,118 @@ function detailHtml(c) {
     '</div></td></tr>';
 }
 
+/* ---- safety: 64 of 79 compounds ship with nothing here ----------------- */
+const listOr = (arr) => (arr && arr.length ? arr.join('\n') : '');
+function safetyRowHtml(s) {
+  const signed = !!store.get('safety:' + s.id);
+  const empty = !s.has;
+  const fld = (name, val) => {
+    const cur = store.get('edit:' + s.id + ':' + name);
+    const v = cur != null ? cur : '';
+    return '<td><textarea class="cellarea" data-edit="' + name + '" data-id="' + s.id +
+      '" placeholder="' + (val ? 'shipped — edit to correct' : 'nothing on file — add it') + '">' + esc(v) + '</textarea>' +
+      (val ? '<div class="ships">' + esc(val) + '</div>' : '<div class="ships none">— none on file —</div>') + '</td>';
+  };
+  return '<tr class="row ' + (signed ? 'signed' : empty ? 'conflict' : '') + '" data-id="' + s.id +
+      '" data-name="' + esc(s.name.toLowerCase()) + '" data-kinds="safety">' +
+    '<td class="cmp"><b>' + esc(s.name) + '</b><span class="id">' + esc(s.id) + '</span>' +
+      (signed ? '<span class="state signed">✓ signed off</span>'
+              : empty ? '<span class="state conflict">● no safety profile</span>'
+                      : '<span class="state agree">● has profile — needs sign-off</span>') + '</td>' +
+    fld('safetyContraindications', listOr(s.contraindications)) +
+    fld('safetySerious', listOr(s.seriousAdverseEffects)) +
+    fld('safetyPregnancy', s.pregnancyCategory || '') +
+    fld('safetyDrugInteractions', listOr(s.drugInteractions)) +
+    '<td><button type="button" class="srcbtn sign" data-sign="safety" data-id="' + s.id +
+      '" aria-pressed="' + signed + '">✓ Sign off</button></td>' +
+  '</tr>';
+}
+
+/* ---- interactions: pairs the app SUGGESTS, most with no data ----------- */
+function interRowHtml(i) {
+  const signed = !!store.get('inter:' + i.id);
+  const empty = !i.has;
+  const fld = (name, val, ph) => {
+    const cur = store.get('edit:' + i.id + ':' + name);
+    return '<td><textarea class="cellarea" data-edit="' + name + '" data-id="' + i.id +
+      '" placeholder="' + esc(ph) + '">' + esc(cur != null ? cur : '') + '</textarea>' +
+      (val ? '<div class="ships">' + esc(val) + '</div>' : '<div class="ships none">— none on file —</div>') + '</td>';
+  };
+  return '<tr class="row ' + (signed ? 'signed' : empty ? 'conflict' : '') + '" data-id="' + i.id +
+      '" data-name="' + esc(i.name.toLowerCase()) + '" data-kinds="inter">' +
+    '<td class="cmp"><b>' + esc(i.name) + '</b><span class="id">' + esc(i.id) + '</span>' +
+      (signed ? '<span class="state signed">✓ signed off</span>'
+              : empty ? '<span class="state conflict">● app pairs these, says nothing</span>'
+                      : '<span class="state agree">● has data — needs sign-off</span>') + '</td>' +
+    fld('interType', [i.interactionType, i.synergyScore != null ? 'synergy ' + i.synergyScore + '/10' : ''].filter(Boolean).join(' · '), 'synergistic / neutral / avoid') +
+    fld('interMechanism', i.mechanism || '', 'why they interact') +
+    fld('interStability', i.stability || '', 'co-storage / stability') +
+    fld('interCitation', (i.citations || []).join('\n'), 'PMID / DOI / URL') +
+    '<td><button type="button" class="srcbtn sign" data-sign="inter" data-id="' + i.id +
+      '" aria-pressed="' + signed + '">✓ Sign off</button></td>' +
+  '</tr>';
+}
+
+const HEADS = {
+  dose: '<tr><th style="min-width:190px">Compound</th>' +
+    '<th>Dosing table<small>transcribed, p.2 of 11</small></th>' +
+    '<th>Protocol<small>unattributed — drives the overdose guard</small></th>' +
+    '<th>Reconstitution ladder<small>self-checking, Edward’s own</small></th>' +
+    '<th>✔ Correct answer<small>click a cell, or type your own</small></th><th></th></tr>',
+  cycle: '<tr><th style="min-width:190px">Compound</th>' +
+    '<th>Dosing table<small>cycle length</small></th>' +
+    '<th>Protocol<small>duration weeks</small></th>' +
+    '<th>✔ Correct answer<small>click a cell, or type your own</small></th><th></th></tr>',
+  safety: '<tr><th style="min-width:190px">Compound</th>' +
+    '<th>Contraindications</th><th>Serious adverse effects</th>' +
+    '<th>Pregnancy</th><th>Drug interactions</th><th>Sign-off</th></tr>',
+  inter: '<tr><th style="min-width:210px">Pair</th>' +
+    '<th>Type / synergy</th><th>Mechanism</th><th>Stability</th><th>Citation</th><th>Sign-off</th></tr>',
+};
+
 function render() {
-  document.getElementById('rows').innerHTML = W.cards.map(rowHtml).join('');
-  const dose = MODE === 'dose';
-  document.getElementById('h-ladder').style.display = dose ? '' : 'none';
-  document.querySelectorAll('.row').forEach((tr) => {
-    const tds = tr.children;
-    if (tds[3]) tds[3].style.display = dose ? '' : 'none';
-  });
+  document.getElementById('head').innerHTML = HEADS[MODE];
+  const body = document.getElementById('rows');
+  if (MODE === 'safety') body.innerHTML = (W.safety || []).map(safetyRowHtml).join('');
+  else if (MODE === 'inter') body.innerHTML = (W.interactions || []).map(interRowHtml).join('');
+  else {
+    body.innerHTML = W.cards.map(rowHtml).join('');
+    // the ladder holds no cycle, so drop that column in cycle mode
+    if (MODE === 'cycle') document.querySelectorAll('tr.row').forEach((tr) => {
+      if (tr.children[3]) tr.children[3].remove();
+    });
+  }
   refresh(); applyFilter();
 }
+
 function refresh() {
+  const el = document.getElementById('progress');
+  if (MODE === 'safety') {
+    const rows = W.safety || [];
+    const done = rows.filter((s) => store.get('safety:' + s.id)).length;
+    const gaps = rows.filter((s) => !s.has && !store.get('safety:' + s.id)).length;
+    el.textContent = done + ' / ' + rows.length + ' signed · ' + gaps + ' with no profile at all';
+    return;
+  }
+  if (MODE === 'inter') {
+    const rows = W.interactions || [];
+    const done = rows.filter((i) => store.get('inter:' + i.id)).length;
+    const gaps = rows.filter((i) => !i.has && !store.get('inter:' + i.id)).length;
+    el.textContent = done + ' / ' + rows.length + ' signed · ' + gaps + ' paired with no data';
+    return;
+  }
   const done = W.cards.filter(isAnswered).length;
   const conflicts = W.cards.filter((c) => isConflict(c) && !isAnswered(c)).length;
-  document.getElementById('progress').textContent =
-    done + ' / ' + W.cards.length + ' signed · ' + conflicts + ' disagreement' + (conflicts === 1 ? '' : 's') + ' left';
+  el.textContent = done + ' / ' + W.cards.length + ' signed · ' + conflicts +
+    ' disagreement' + (conflicts === 1 ? '' : 's') + ' left';
 }
 
 /* ---- interaction ------------------------------------------------------- */
 document.addEventListener('click', (e) => {
-  // pick a source cell as the right answer
-  const pick = e.target.closest('.srcbtn');
+  // pick a source cell as the right answer. Must match [data-pick]: the
+  // sign-off button shares the .srcbtn look and would otherwise be caught
+  // here and stored as an undefined verdict.
+  const pick = e.target.closest('.srcbtn[data-pick]');
   if (pick) {
     const id = pick.dataset.id, which = pick.dataset.pick;
     const c = W.cards.find((x) => x.id === id);
@@ -402,12 +505,20 @@ document.addEventListener('click', (e) => {
     more.textContent = 'Hide';
     return;
   }
+  // sign-off button on the safety / interactions grids
+  const sign = e.target.closest('[data-sign]');
+  if (sign) {
+    const kind = sign.dataset.sign, id = sign.dataset.id;
+    const next = store.get(kind + ':' + id) ? null : 'reviewed';
+    store.set(kind + ':' + id, next);
+    sync.pushVerdict(kind, id, next);
+    render();
+    return;
+  }
   const mode = e.target.closest('[data-mode]');
   if (mode) {
     MODE = mode.dataset.mode;
     document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b === mode)));
-    document.getElementById('h-ans').innerHTML =
-      '✔ Correct answer<small>' + (MODE === 'dose' ? 'click a cell, or type your own' : 'cycle length') + '</small>';
     render();
     return;
   }
@@ -452,16 +563,27 @@ function applyFilter() {
   const f = act ? act.dataset.f : 'all';
   const q = (document.getElementById('search').value || '').trim().toLowerCase();
   document.querySelectorAll('tr.row').forEach((tr) => {
-    const c = W.cards.find((x) => x.id === tr.dataset.id);
-    const kinds = tr.dataset.kinds.split(' ').filter(Boolean);
+    const id = tr.dataset.id;
     let ok = true;
-    if (f === 'conflict') ok = isConflict(c);
-    else if (f === 'agree') ok = !isConflict(c) && !isAnswered(c);
-    else if (f === 'uncited') ok = kinds.includes('uncited');
-    else if (f === 'open') ok = !isAnswered(c);
-    if (ok && q) ok = tr.dataset.name.includes(q) || tr.dataset.id.includes(q);
+    if (MODE === 'safety' || MODE === 'inter') {
+      // "conflict" here means the app asserts something with nothing behind it
+      const missing = tr.classList.contains('conflict');
+      const signed = tr.classList.contains('signed');
+      if (f === 'conflict') ok = missing;
+      else if (f === 'agree') ok = !missing && !signed;
+      else if (f === 'open') ok = !signed;
+      else if (f === 'uncited') ok = missing;
+    } else {
+      const c = W.cards.find((x) => x.id === id);
+      const kinds = tr.dataset.kinds.split(' ').filter(Boolean);
+      if (f === 'conflict') ok = isConflict(c);
+      else if (f === 'agree') ok = !isConflict(c) && !isAnswered(c);
+      else if (f === 'uncited') ok = kinds.includes('uncited');
+      else if (f === 'open') ok = !isAnswered(c);
+    }
+    if (ok && q) ok = tr.dataset.name.includes(q) || id.toLowerCase().includes(q);
     tr.style.display = ok ? '' : 'none';
-    const d = document.querySelector('tr.detail[data-detail="' + tr.dataset.id + '"]');
+    const d = document.querySelector('tr.detail[data-detail="' + id + '"]');
     if (d) d.style.display = ok ? '' : 'none';
   });
 }

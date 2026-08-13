@@ -51,7 +51,9 @@ function tokenOk(given: string): boolean {
 // table, which the page keys as `cite:` — normalised to `uncited` on the way in
 // so the stored vocabulary matches the column's check constraint.
 // 'edit' carries a payload of corrections instead of a verdict.
-const KINDS = new Set(['dose', 'cycle', 'prov', 'uncited', 'edit']);
+// 'safety' / 'inter' are sign-offs on the safety-profile and interaction grids;
+// for 'inter' the peptide_id is a pair key ("a+b").
+const KINDS = new Set(['dose', 'cycle', 'prov', 'uncited', 'edit', 'safety', 'inter']);
 // 'reviewed' is what the uncited checkboxes store; the rest are conflict picks.
 const VERDICTS = new Set(['table', 'protocol', 'ladder', 'other', 'reviewed']);
 

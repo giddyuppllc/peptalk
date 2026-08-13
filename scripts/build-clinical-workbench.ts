@@ -29,6 +29,8 @@ import { getDosingTableEntry } from '../src/data/peptideDosingTable';
 import { getProtocolsByPeptide } from '../src/data/protocols';
 import { PEPTIDE_DOSING_REFERENCE } from '../src/data/peptideDosingReference';
 import { getSourcesByPeptide } from '../src/data/sources';
+import { SAFETY_PROFILES } from '../src/data/safetyProfiles';
+import { KNOWN_INTERACTIONS } from '../src/data/interactions';
 
 const ENDPOINT = 'https://zniucpbeepxysvkshpir.supabase.co/functions/v1/clinical-review';
 
@@ -211,9 +213,78 @@ const totals = {
   uncited: cards.filter((c) => c.issues.some((i: Issue) => i.kind === 'uncited')).length,
 };
 
+/* ── safety: 79 rows, most of them empty ─────────────────────────────────
+   Only 15 peptides carry a safety profile. The other 64 ship a research
+   summary and a dose with NO contraindications, no adverse effects and no
+   pregnancy category. Blank rows are the point of this view. */
+const safetyById = new Map((SAFETY_PROFILES as any[]).map((s) => [s.peptideId, s]));
+const safety = (PEPTIDES as any[]).map((p) => {
+  const s: any = safetyById.get(p.id);
+  return {
+    id: p.id,
+    name: p.name,
+    categories: p.categories ?? [],
+    has: !!s,
+    contraindications: s?.contraindications ?? [],
+    seriousAdverseEffects: s?.seriousAdverseEffects ?? [],
+    commonSideEffects: s?.commonSideEffects ?? [],
+    drugInteractions: (s?.drugInteractions ?? []).map((d: any) => `${d.drug} (${d.severity}) — ${d.mechanism}`),
+    pregnancyCategory: s?.pregnancyCategory ?? null,
+    monitoring: s?.monitoringRecommendations ?? s?.monitoring ?? [],
+  };
+});
+
+/* ── interactions: every pair the app SUGGESTS, covered or not ───────────
+   `uses.pairsWith` is a recommendation surfaced to users. The app suggests
+   far more pairs than it holds interaction data for, so the uncovered ones
+   are assertions by omission — "we put these together and said nothing". */
+const interByKey = new Map<string, any>();
+for (const i of KNOWN_INTERACTIONS.values() as any) {
+  interByKey.set([i.peptideA, i.peptideB].sort().join('+'), i);
+}
+const nameOf = new Map((PEPTIDES as any[]).map((p) => [p.id, p.name]));
+const suggestedKeys = new Set<string>();
+for (const p of PEPTIDES as any[])
+  for (const q of p.uses?.pairsWith ?? []) if (p.id !== q && nameOf.has(q)) suggestedKeys.add([p.id, q].sort().join('+'));
+// include covered pairs even if nothing suggests them, so nothing is hidden
+for (const k of interByKey.keys()) suggestedKeys.add(k);
+
+const interactions = [...suggestedKeys].map((k) => {
+  const [a, b] = k.split('+');
+  const i = interByKey.get(k);
+  return {
+    id: k,
+    name: `${nameOf.get(a) ?? a} + ${nameOf.get(b) ?? b}`,
+    a, b,
+    has: !!i,
+    suggestedByApp: true,
+    interactionType: i?.interactionType ?? null,
+    synergyScore: i?.synergyScore ?? null,
+    mechanism: i?.mechanismAnalysis ?? null,
+    stability: i?.stabilityConsiderations ?? null,
+    precedent: i?.researchPrecedent ?? null,
+    citations: i?.pubmedLinks ?? [],
+  };
+}).sort((x, y) => Number(x.has) - Number(y.has) || x.name.localeCompare(y.name));
+
 mkdirSync('tools/clinical-review', { recursive: true });
+const allTotals = {
+  ...totals,
+  safetyMissing: safety.filter((s) => !s.has).length,
+  interactionRows: interactions.length,
+  interactionsMissing: interactions.filter((i) => !i.has).length,
+  interactionsUncited: interactions.filter((i) => i.has && !i.citations.length).length,
+};
+
 writeFileSync(
   'tools/clinical-review/data.js',
-  `window.WORKBENCH = ${JSON.stringify({ generated: process.env.COMMIT ?? 'HEAD', endpoint: ENDPOINT, totals, cards })};\n`,
+  `window.WORKBENCH = ${JSON.stringify({
+    generated: process.env.COMMIT ?? 'HEAD',
+    endpoint: ENDPOINT,
+    totals: allTotals,
+    cards,
+    safety,
+    interactions,
+  })};\n`,
 );
-console.log(JSON.stringify(totals, null, 2));
+console.log(JSON.stringify(allTotals, null, 2));
