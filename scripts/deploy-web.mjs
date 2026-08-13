@@ -47,7 +47,15 @@ console.log(`\n→ deploying dist/ (commit ${commit.slice(0, 7)}) to ${projectNa
 const res = spawnSync(
   process.platform === 'win32' ? 'npx.cmd' : 'npx',
   ['vercel', 'deploy', '--prod', '--yes', '--scope', 'giddyupp'],
-  { cwd: 'dist', stdio: 'inherit' },
+  {
+    cwd: 'dist',
+    stdio: 'inherit',
+    // .cmd shims need a shell on Windows; without it spawnSync returns EINVAL
+    // and this script reported "could not run vercel" having deployed nothing.
+    // Same trap as scripts/verify-scanner-mutation.mjs — fixed there first and
+    // not carried across, which is exactly how a class of bug survives.
+    shell: process.platform === 'win32',
+  },
 );
 
 if (res.error) {

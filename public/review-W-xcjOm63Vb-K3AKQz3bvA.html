@@ -325,12 +325,15 @@
   <button class="btn ghost" id="print">Print / save PDF</button>
   <button class="btn ghost" id="reset">Clear all</button>
   <span class="progress" id="progress"></span>
+  <span class="progress" id="syncstate"></span>
 </div>
 
 <footer>
   <p>
-    Decisions are saved in this browser only — they are not sent anywhere. Use <b>Copy decisions</b>
-    to put them on the clipboard and paste them back to Edward.
+    Every answer saves the moment you tap it — the status beside the progress count says where.
+    If your link ends in <span class="id">?t=…</span> answers are saved to PepTalk and will still be
+    here on another device; otherwise they stay in this browser, and <b>Copy decisions</b> puts them
+    on the clipboard to send back to Edward. There is nothing to submit at the end.
   </p>
   <p>
     Generated from the repository at commit 568d2bc by <span class="id">verify:dosingconsistency</span>
@@ -355,7 +358,85 @@ const store = (() => {
       try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} },
     all: () => s,
     clear: () => { s = {}; try { localStorage.removeItem(KEY); } catch (e) {} },
+    merge: (obj) => { Object.assign(s, obj);
+      try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} },
   };
+})();
+
+/* ---- server sync ----
+   Verdicts used to live in this browser only, so a closed tab lost the work and
+   the whole exercise depended on someone remembering to press "Copy decisions".
+   When the link carries a token (?t=...) every click is ALSO written to Supabase
+   through the clinical-review function, and previous answers are loaded back on
+   open. Without a token the page behaves exactly as it always did — local only —
+   so it still works offline and when printed. */
+const sync = (() => {
+  const q = new URLSearchParams(location.search);
+  const token = q.get('t') || '';
+  const reviewer = (q.get('who') || 'unknown').slice(0, 120);
+  const ENDPOINT = 'https://zniucpbeepxysvkshpir.supabase.co/functions/v1/clinical-review';
+  let inflight = 0, failed = 0;
+
+  const paint = (msg, tone) => {
+    const n = document.getElementById('syncstate');
+    if (!n) return;
+    n.textContent = msg;
+    n.style.color = tone === 'bad' ? 'var(--severe)' : tone === 'ok' ? 'var(--ok)' : 'var(--ink-soft)';
+  };
+  const status = () => {
+    if (!token) return paint('Saved in this browser only', '');
+    if (inflight) return paint('Saving…', '');
+    if (failed) return paint(failed + ' not saved — still safe in this browser', 'bad');
+    return paint('Saved · ' + reviewer, 'ok');
+  };
+
+  /* Page keys are `dose:`, `cycle:`, `prov:` and `cite:`; the table stores the
+     last one as `uncited`. A peptide id never contains a colon, but split this
+     way regardless so an id with one can't silently truncate. */
+  const split = (key) => {
+    const i = key.indexOf(':');
+    const prefix = key.slice(0, i);
+    return { kind: prefix === 'cite' ? 'uncited' : prefix, peptideId: key.slice(i + 1) };
+  };
+
+  async function push(key, verdict) {
+    if (!token) return;
+    const { kind, peptideId } = split(key);
+    inflight++; status();
+    try {
+      const res = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ t: token, kind, peptideId, verdict, reviewer }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      if (failed > 0) failed--;
+    } catch (e) {
+      failed++;
+    } finally {
+      inflight--; status();
+    }
+  }
+
+  async function hydrate() {
+    status();
+    if (!token) return;
+    try {
+      const res = await fetch(ENDPOINT + '?t=' + encodeURIComponent(token));
+      if (!res.ok) throw new Error(await res.text());
+      const { decisions } = await res.json();
+      if (decisions && Object.keys(decisions).length) {
+        store.merge(decisions);
+        applyToDom();
+      }
+    } catch (e) {
+      paint('Could not load saved answers — working locally', 'bad');
+      return;
+    }
+    status();
+  }
+
+  return { push, hydrate, enabled: () => !!token };
 })();
 
 const fmt = (n) => n >= 1000 ? (n / 1000).toFixed(n % 1000 === 0 ? 0 : 2).replace(/\.?0+$/, '') + ' mg'
@@ -476,6 +557,24 @@ function refresh() {
   document.getElementById('progress').textContent = done + ' of ' + total + ' resolved';
 }
 
+/* Re-point the whole page at whatever `store` currently holds. Needed because
+   answers can arrive from the server after the rows have already rendered. */
+function applyToDom() {
+  document.querySelectorAll('.picker').forEach((box) => {
+    const v = store.get(box.dataset.key);
+    box.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+    const row = box.closest('.row');
+    if (row) row.classList.toggle('decided', !!v);
+  });
+  document.querySelectorAll('.chk').forEach((c) => {
+    const tr = c.closest('tr');
+    const on = !!store.get(tr.dataset.key);
+    c.checked = on;
+    tr.classList.toggle('done', on);
+  });
+  refresh();
+}
+
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('.picker button');
   if (btn) {
@@ -487,25 +586,32 @@ document.addEventListener('click', (e) => {
     box.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === next)));
     box.closest('.row').classList.toggle('decided', !!next);
     refresh();
+    sync.push(key, next);
   }
 });
 
 document.addEventListener('change', (e) => {
   if (!e.target.classList.contains('chk')) return;
   const tr = e.target.closest('tr');
-  store.set(tr.dataset.key, e.target.checked ? 'reviewed' : null);
+  const next = e.target.checked ? 'reviewed' : null;
+  store.set(tr.dataset.key, next);
   tr.classList.toggle('done', e.target.checked);
   refresh();
+  sync.push(tr.dataset.key, next);
 });
 
 document.getElementById('print').addEventListener('click', () => window.print());
 
 document.getElementById('reset').addEventListener('click', () => {
+  /* Clear the server too — otherwise the next open would re-hydrate everything
+     that was just cleared, which reads as the button not having worked. */
+  const keys = Object.keys(store.all());
   store.clear();
   document.querySelectorAll('.picker button').forEach((b) => b.setAttribute('aria-pressed', 'false'));
   document.querySelectorAll('.row').forEach((r) => r.classList.remove('decided'));
   document.querySelectorAll('.chk').forEach((c) => { c.checked = false; c.closest('tr').classList.remove('done'); });
   refresh();
+  keys.forEach((k) => sync.push(k, null));
 });
 
 document.getElementById('copy').addEventListener('click', async () => {
@@ -540,4 +646,6 @@ document.getElementById('copy').addEventListener('click', async () => {
 });
 
 refresh();
+/* Pull anything already answered — on another device, or before a tab close. */
+sync.hydrate();
 </script>
