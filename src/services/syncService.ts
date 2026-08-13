@@ -280,19 +280,16 @@ export async function hydrateFromServer<Row, Entry extends { id: string }>(
   }
 }
 
-/**
- * Sync subscription tier to profile.
+/*
+ * syncSubscriptionTier() used to live here: it UPDATEd
+ * profiles.subscription_tier / is_pro from the client. Removed because it had
+ * zero callers AND could not have worked if it had any — the
+ * `profiles_protect_tier` BEFORE UPDATE trigger reverts subscription_tier,
+ * is_pro and is_plus to their OLD values for every caller that is not
+ * service_role. The UPDATE returned no error, so it looked like it worked.
+ *
+ * That mirror is maintained server-side only, by the IAP/Square lifecycle
+ * webhooks running under the service role. And the mirror is not the
+ * entitlement anyway — resolveEffectiveTier() reads the `subscriptions` table,
+ * which is the source of truth. Nothing client-side should be writing tier.
  */
-export async function syncSubscriptionTier(tier: string): Promise<void> {
-  const userId = await getUserId();
-  if (!userId) return;
-
-  try {
-    await db
-      .from('profiles')
-      .update({ subscription_tier: tier, is_pro: tier === 'pro' })
-      .eq('id', userId);
-  } catch (e) {
-    if (__DEV__) console.warn('[sync] tier sync error:', e);
-  }
-}
