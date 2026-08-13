@@ -508,8 +508,19 @@ for (const [label, ids] of [
   }
 }
 
+// An aliased variant resolves through its parent — the same rule the error
+// check above applies via `dosingRefIds.filter(id => !aliasedRefIds.has(id))`.
+// This summary line used a bare `peptideIds.has(id)` and so reported
+// "all reachable: false" off the single deliberate variant (retatrutide-10mg),
+// flatly contradicting the "0 errors" printed a few lines later. A validator
+// that says data is stranded when it is not sends someone hunting for a defect
+// that does not exist — the same way the dosing-table header's stale
+// "notes still outstanding" claim cost an audit pass.
+const refReachable = (id: string) =>
+  peptideIds.has(id) || (aliasedRefIds.has(id) && peptideIds.has(PEPTIDE_VARIANT_PARENTS[id]));
+
 info(`Dosing table entries: ${dosingTableIds.length}, all reachable: ${dosingTableIds.every((id) => peptideIds.has(id))}`);
-info(`Dosing reference entries: ${dosingRefIds.length}, all reachable: ${dosingRefIds.every((id) => peptideIds.has(id))}`);
+info(`Dosing reference entries: ${dosingRefIds.length}, all reachable: ${dosingRefIds.every(refReachable)}`);
 
 // Same reachability rule for the other peptide-keyed datasets that were also
 // outside this validator. peptideNutrition is 74KB of authored content keyed

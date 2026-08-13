@@ -225,6 +225,14 @@ function CalculatorTab() {
   const [syringe, setSyringe] = useState<'U-100' | 'U-40'>('U-100');
   const [autoBac, setAutoBac] = useState(true);
 
+  /* Subscribed, not read via getState(). The weight-scaled dose range below is
+     derived from this: `getState()` inside render returns the right value for
+     THAT render but never triggers one, so editing your weight in Profile or
+     the plan calculator left this tab showing a range scaled to the old figure
+     until something unrelated re-rendered it. quick-dose.tsx already selects
+     this the subscribing way; these two screens disagreed. */
+  const profileWeightLbs = useHealthProfileStore((s) => s.profile?.bodyMetrics?.weightLbs);
+
   const selectedPeptide = selectedPeptideId
     ? PEPTIDES.find((p) => p.id === selectedPeptideId)
     : null;
@@ -375,7 +383,7 @@ function CalculatorTab() {
         const proto = PROTOCOL_TEMPLATES.find((pt) => pt.peptideId === selectedPeptide.id);
         if (!proto?.typicalDose) return null;
 
-        const profileLbs = useHealthProfileStore.getState().profile?.bodyMetrics?.weightLbs ?? 0;
+        const profileLbs = profileWeightLbs ?? 0;
         const userKg = profileLbs > 0 ? profileLbs * 0.4536 : 0;
         const isWeightBased = proto.dosingMode === 'weight_based' && !!proto.dosePerKg && userKg > 0;
 

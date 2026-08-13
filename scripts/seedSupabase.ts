@@ -13,11 +13,27 @@ import * as path from 'path';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
+/**
+ * Service role, NOT the anon key.
+ *
+ * This script used EXPO_PUBLIC_SUPABASE_ANON_KEY, which only worked because
+ * peptides / protocols / safety_profiles / interactions / curated_stacks /
+ * exercises each carried an "Allow insert/update" RLS policy granted to the
+ * `public` role. That key ships inside the published PWA bundle, so those
+ * policies let anyone rewrite dosing and contraindications in production.
+ * The policies are dropped in 20260813040000; a maintenance script run from a
+ * laptop is the right place for the service role instead.
+ */
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error('Missing SUPABASE_URL or SUPABASE_ANON_KEY in .env');
+  console.error(
+    'Missing EXPO_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.\n' +
+      'The service role key is required: these reference tables are no longer\n' +
+      'writable with the anon key. Supabase dashboard → Project Settings →\n' +
+      'API → service_role. Keep it out of the app bundle and out of git.',
+  );
   process.exit(1);
 }
 
