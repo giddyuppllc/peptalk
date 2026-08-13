@@ -142,8 +142,9 @@ for (const p of PEPTIDES as any[]) {
   if (words > 0 && citations.length === 0)
     issues.push({ kind: 'uncited', label: `${words} words asserted with no citation`, severity: 'neu' });
 
-  if (!issues.length) continue;
-
+  // EVERY peptide gets a row, not just the ones in conflict. A compound with
+  // one source and no disagreement still needs a human to say the figure is
+  // right — "nothing to compare" is not the same as "verified".
   cards.push({
     id: p.id,
     name: p.name,
@@ -192,13 +193,18 @@ for (const p of PEPTIDES as any[]) {
   });
 }
 
-// worst first: severe issues, then by how far apart the doses are
-const rank = (c: any) => (c.issues.some((i: Issue) => i.severity === 'sev') ? 0 : c.issues.some((i: Issue) => i.severity === 'wrn') ? 1 : 2);
+// worst first: severe issues, then by how far apart the doses are, then A-Z so
+// the long tail of quiet compounds stays findable.
+const rank = (c: any) =>
+  c.issues.some((i: Issue) => i.severity === 'sev') ? 0
+  : c.issues.some((i: Issue) => i.severity === 'wrn') ? 1
+  : c.issues.length ? 2 : 3;
 cards.sort((a, b) => rank(a) - rank(b) || b.ratio - a.ratio || a.name.localeCompare(b.name));
 
 const totals = {
   peptides: (PEPTIDES as any[]).length,
   cards: cards.length,
+  clean: cards.filter((c) => !c.issues.length).length,
   dose: cards.filter((c) => c.issues.some((i: Issue) => i.kind === 'dose')).length,
   cycle: cards.filter((c) => c.issues.some((i: Issue) => i.kind === 'cycle')).length,
   prov: cards.filter((c) => c.issues.some((i: Issue) => i.kind === 'prov')).length,
