@@ -23,6 +23,13 @@ export function confirmDoseGuards(
   warnings: DoseGuardWarning[],
   onProceed: () => void,
   confirmLabel: string = 'Log anyway',
+  /**
+   * Optional — fires when the user backs out at any step. Callers that only
+   * need the happy path can keep ignoring it (Tracker and Calculator do);
+   * it exists so a caller awaiting the outcome can settle instead of hanging
+   * forever when the user declines. Cancelling still aborts the whole write.
+   */
+  onCancel?: () => void,
 ): void {
   const step = (i: number): void => {
     if (i >= warnings.length) {
@@ -31,7 +38,7 @@ export function confirmDoseGuards(
     }
     const w = warnings[i];
     Alert.alert(w.title, w.message, [
-      { text: 'Cancel', style: 'cancel' },
+      { text: 'Cancel', style: 'cancel', onPress: () => onCancel?.() },
       { text: confirmLabel, style: 'destructive', onPress: () => step(i + 1) },
     ]);
   };

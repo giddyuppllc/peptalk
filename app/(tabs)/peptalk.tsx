@@ -45,6 +45,8 @@ import { usePantryStore } from '../../src/store/usePantryStore';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
+import { checkDoseGuards } from '../../src/services/doseSafety';
+import { confirmDoseGuards } from '../../src/utils/doseGuardPrompt';
 import { PEPTIDES , getPeptideById } from '../../src/data/peptides';
 import { generateLocalBotResponse } from '../../src/services/peptalkBot';
 import {
@@ -360,9 +362,34 @@ export default function PepTalkScreen() {
       const safe = sanitizeLogDose({ ...payload, peptideId: canonical });
       if (!safe) {
         if (__DEV__) console.warn('[aimee] log_dose rejected by sanitizer:', payload);
-        return;
+        return Promise.resolve(false);
       }
-      logDoseAction(safe as any);
+
+      /* Same guards the Tracker and Calculator run. The sanitizer only enforces
+         ABSOLUTE caps (100 mg / 100,000 mcg), so Aimee could propose 50 mg of a
+         compound whose range tops out at 1 mg and the card would ask the user to
+         confirm it with no warning at all — and the pregnancy contraindication
+         check never ran on this path either. A model-proposed dose is the one
+         most likely to carry a wrong number, so it needs the guard more than a
+         hand-typed one, not less. */
+      return new Promise<boolean>((resolve) => {
+        const warnings = checkDoseGuards({
+          peptideIdOrName: canonical,
+          amount: safe.amount,
+          unit: safe.unit,
+          pregnantOrNursing:
+            useHealthProfileStore.getState().profile?.medical?.pregnantOrNursing === true,
+        });
+        const persist = () => {
+          logDoseAction(safe as any);
+          resolve(true);
+        };
+        if (warnings.length === 0) {
+          persist();
+          return;
+        }
+        confirmDoseGuards(warnings, persist, 'Log anyway', () => resolve(false));
+      });
     },
     [logDoseAction],
   );
@@ -946,7 +973,12 @@ export default function PepTalkScreen() {
                   // matching apply handler with the payload Aimee proposed.
                   try {
                     if (action.tool === 'log_dose') {
-                      applyLogDoseAction(action.preview);
+                      // Awaited: the dose guards prompt, and declining one must
+                      // not report the dose as saved when it was not written.
+                      const logged = await applyLogDoseAction(action.preview);
+                      if (!logged) {
+                        return { ok: false, error: 'Not logged — safety check declined' };
+                      }
                     } else if (action.tool === 'log_meal') {
                       applyLogMealAction(action.preview);
                     } else if (action.tool === 'schedule_workout') {
