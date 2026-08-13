@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- This page inventories unverified clinical claims. It must never be indexed. -->
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<title>PepTalk — Clinical Data Workbench</title>
+<style>
+  :root{
+    --paper:#EDF0EE; --card:#F7F9F7; --ink:#14201E; --ink-soft:#4A5A57; --ink-faint:#7C8C89;
+    --rule:#D3DAD7; --accent:#1F6F6B; --accent-dim:#1F6F6B22;
+    --severe:#A32F26; --warn:#A8700C; --ok:#2F6B3A;
+    --sev-bg:#A32F2614; --warn-bg:#A8700C14; --ok-bg:#2F6B3A14;
+    --f-display:"Iowan Old Style",Charter,Georgia,serif;
+    --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --f-data:ui-monospace,"Cascadia Mono","SF Mono",Menlo,Consolas,monospace;
+    --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:48px;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --paper:#0F1614;--card:#161F1D;--ink:#E4EAE8;--ink-soft:#A3B2AF;--ink-faint:#71817E;
+    --rule:#26332F;--accent:#5FBDB5;--accent-dim:#5FBDB522;
+    --severe:#E8776C;--warn:#E0A63C;--ok:#6FBE7E;
+    --sev-bg:#E8776C1A;--warn-bg:#E0A63C1A;--ok-bg:#6FBE7E1A;
+  }}
+  :root[data-theme="dark"]{
+    --paper:#0F1614;--card:#161F1D;--ink:#E4EAE8;--ink-soft:#A3B2AF;--ink-faint:#71817E;
+    --rule:#26332F;--accent:#5FBDB5;--accent-dim:#5FBDB522;
+    --severe:#E8776C;--warn:#E0A63C;--ok:#6FBE7E;
+    --sev-bg:#E8776C1A;--warn-bg:#E0A63C1A;--ok-bg:#6FBE7E1A;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-body);
+       font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 var(--s5)}
+  header.top{border-bottom:1px solid var(--rule);padding:var(--s7) 0 var(--s5)}
+  .eyebrow{font-family:var(--f-data);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+           color:var(--accent);margin:0 0 var(--s3)}
+  h1{font-family:var(--f-display);font-weight:600;font-size:clamp(28px,5vw,42px);line-height:1.1;
+     margin:0 0 var(--s4);letter-spacing:-.01em}
+  .standfirst{max-width:64ch;color:var(--ink-soft);margin:0 0 var(--s5)}
+  .standfirst b{color:var(--ink)}
+
+  .toolbar{display:flex;gap:var(--s2);flex-wrap:wrap;align-items:center;
+           position:sticky;top:0;z-index:10;background:var(--paper);
+           padding:var(--s3) 0;border-bottom:1px solid var(--rule)}
+  .filter{font:inherit;font-size:13px;padding:5px 11px;cursor:pointer;background:transparent;
+          color:var(--ink-soft);border:1px solid var(--rule);border-radius:2px}
+  .filter[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--paper);font-weight:600}
+  .grow{flex:1}
+  .status{font-family:var(--f-data);font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+  #search{font:inherit;font-size:13px;padding:5px 9px;border:1px solid var(--rule);border-radius:2px;
+          background:var(--card);color:var(--ink);min-width:180px}
+
+  .card{background:var(--card);border:1px solid var(--rule);border-left:3px solid var(--ink-faint);
+        border-radius:3px;padding:var(--s5);margin:var(--s4) 0}
+  .card.sev{border-left-color:var(--severe)} .card.wrn{border-left-color:var(--warn)}
+  .card.done{border-left-color:var(--ok);background:var(--ok-bg)}
+  .chead{display:flex;align-items:baseline;gap:var(--s3);flex-wrap:wrap;margin-bottom:var(--s2)}
+  .chead h2{font-family:var(--f-display);font-size:24px;margin:0;font-weight:600}
+  .chead .id{font-family:var(--f-data);font-size:11px;color:var(--ink-faint)}
+  .badges{display:flex;gap:var(--s1);flex-wrap:wrap;margin-bottom:var(--s4)}
+  .badge{font-family:var(--f-data);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+         padding:3px 7px;border-radius:2px;border:1px solid currentColor}
+  .badge.sev{color:var(--severe);background:var(--sev-bg)}
+  .badge.wrn{color:var(--warn);background:var(--warn-bg)}
+  .badge.neu{color:var(--ink-faint)}
+
+  h3.sub{font-size:12px;font-family:var(--f-data);letter-spacing:.1em;text-transform:uppercase;
+         color:var(--ink-faint);margin:var(--s5) 0 var(--s2);font-weight:500}
+  .scroll{overflow-x:auto}
+  table.src{border-collapse:collapse;width:100%;font-size:14px}
+  table.src th,table.src td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+  table.src th{font-family:var(--f-data);font-size:10px;letter-spacing:.09em;text-transform:uppercase;
+               color:var(--ink-faint);font-weight:500;white-space:nowrap}
+  table.src td.who{font-weight:600;white-space:nowrap}
+  table.src td.who small{display:block;font-weight:400;color:var(--ink-faint);font-size:11px}
+  .val{font-family:var(--f-data);font-variant-numeric:tabular-nums}
+  .val.big{font-size:15px;font-weight:600}
+  .raw{color:var(--ink-faint);font-size:11px;font-family:var(--f-data)}
+  .drives{font-size:12px;color:var(--ink-soft);max-width:34ch}
+  .flag{color:var(--severe);font-weight:600}
+
+  .pick{margin:var(--s3) 0;display:flex;gap:var(--s3);align-items:center;flex-wrap:wrap}
+  .pick .lbl{font-size:13px;color:var(--ink-soft)}
+  .picker{display:flex;gap:3px;flex-wrap:wrap}
+  .picker button{font:inherit;font-size:12px;padding:4px 10px;cursor:pointer;background:transparent;
+                 color:var(--ink-soft);border:1px solid var(--rule);border-radius:2px}
+  .picker button[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:var(--paper);font-weight:600}
+  .picker button:focus-visible,.filter:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:var(--s3);margin-top:var(--s3)}
+  .f label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:3px}
+  .f input,.f textarea{width:100%;font:inherit;font-size:14px;padding:7px 9px;border:1px solid var(--rule);
+                       border-radius:2px;background:var(--paper);color:var(--ink)}
+  .f textarea{min-height:96px;resize:vertical;line-height:1.5}
+  .f input:focus,.f textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+  .full{grid-column:1/-1}
+  details{margin-top:var(--s4);border-top:1px solid var(--rule);padding-top:var(--s3)}
+  summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:600}
+  .prose{font-size:14px;color:var(--ink-soft);margin:var(--s2) 0;white-space:pre-wrap}
+  .cites{font-size:13px;color:var(--ink-soft)}
+  .edited{font-family:var(--f-data);font-size:10px;color:var(--ok);text-transform:uppercase;letter-spacing:.08em}
+  footer{padding:var(--s6) 0 var(--s7);color:var(--ink-faint);font-size:13px;border-top:1px solid var(--rule);margin-top:var(--s6)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <p class="eyebrow">PepTalk · clinical data workbench</p>
+  <h1>What each source says — and what it should say.</h1>
+  <p class="standfirst">
+    PepTalk keeps dosing in three places and they disagree. Every field each source holds is
+    printed below, unedited, so a choice can be made on what is actually written rather than on
+    a chart. <b>Where a source is wrong, correct it here.</b> Nothing on this page changes the app:
+    these answers are collected so the code can be fixed deliberately.
+  </p>
+</div></header>
+
+<div class="wrap">
+  <div class="toolbar">
+    <button class="filter" data-f="all" aria-pressed="true">All</button>
+    <button class="filter" data-f="dose" aria-pressed="false">Dose</button>
+    <button class="filter" data-f="cycle" aria-pressed="false">Cycle</button>
+    <button class="filter" data-f="prov" aria-pressed="false">Vs ladder</button>
+    <button class="filter" data-f="uncited" aria-pressed="false">Uncited</button>
+    <button class="filter" data-f="open" aria-pressed="false">Unanswered</button>
+    <input id="search" type="search" placeholder="Find a compound…" aria-label="Find a compound">
+    <span class="grow"></span>
+    <span class="status" id="progress"></span>
+    <span class="status" id="syncstate"></span>
+  </div>
+  <div id="cards"></div>
+  <footer>
+    <p>Every change saves as you make it — the status above says where. Generated from the repository,
+    so a figure corrected in the code changes this page rather than leaving a stale copy behind.</p>
+  </footer>
+</div>
+
+<script src="data.js"></script>
+<script>
+const W = window.WORKBENCH || { cards: [], totals: {}, endpoint: '' };
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---- local store + server sync ---------------------------------------- */
+const store = (() => {
+  const KEY = 'peptalk-workbench-v1';
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { s = {}; }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} };
+  return {
+    get: (k) => s[k],
+    set: (k, v) => { if (v == null || v === '') delete s[k]; else s[k] = v; save(); },
+    all: () => s,
+    merge: (o) => { Object.assign(s, o); save(); },
+  };
+})();
+
+const sync = (() => {
+  const q = new URLSearchParams(location.search);
+  const token = q.get('t') || '';
+  const reviewer = (q.get('who') || 'unknown').slice(0, 120);
+  let inflight = 0, failed = 0;
+  const paint = (msg, tone) => {
+    const n = document.getElementById('syncstate');
+    n.textContent = msg;
+    n.style.color = tone === 'bad' ? 'var(--severe)' : tone === 'ok' ? 'var(--ok)' : 'var(--ink-soft)';
+  };
+  const status = () => {
+    if (!token) return paint('Saved in this browser only', '');
+    if (inflight) return paint('Saving…', '');
+    if (failed) return paint(failed + ' not saved — still safe in this browser', 'bad');
+    return paint('Saved · ' + reviewer, 'ok');
+  };
+  async function post(body) {
+    if (!token) return;
+    inflight++; status();
+    try {
+      const r = await fetch(W.endpoint, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.assign({ t: token, reviewer }, body)),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      if (failed) failed--;
+    } catch (e) { failed++; } finally { inflight--; status(); }
+  }
+  const pushVerdict = (kind, peptideId, verdict) => post({ kind, peptideId, verdict });
+  /* Text fields save on a trailing debounce — one row per peptide, rewritten
+     whole, so a half-typed sentence never lands as its own revision. */
+  const timers = {};
+  function pushEdit(peptideId) {
+    clearTimeout(timers[peptideId]);
+    timers[peptideId] = setTimeout(() => {
+      const payload = {};
+      for (const f of EDIT_FIELDS) {
+        const v = store.get('edit:' + peptideId + ':' + f);
+        if (v) payload[f] = v;
+      }
+      post({ kind: 'edit', peptideId, payload });
+    }, 700);
+  }
+  async function hydrate() {
+    status();
+    if (!token) return;
+    try {
+      const r = await fetch(W.endpoint + '?t=' + encodeURIComponent(token));
+      if (!r.ok) throw new Error(await r.text());
+      const { decisions, edits } = await r.json();
+      const flat = {};
+      Object.assign(flat, decisions || {});
+      for (const [pid, payload] of Object.entries(edits || {}))
+        for (const [f, v] of Object.entries(payload || {})) flat['edit:' + pid + ':' + f] = v;
+      if (Object.keys(flat).length) { store.merge(flat); render(); }
+    } catch (e) { paint('Could not load saved answers — working locally', 'bad'); return; }
+    status();
+  }
+  return { pushVerdict, pushEdit, hydrate, enabled: () => !!token };
+})();
+
+const EDIT_FIELDS = ['correctedDose','correctedCycle','citation','note','researchSummary','mechanismOfAction'];
+
+/* ---- rendering --------------------------------------------------------- */
+const WHAT_DRIVES = {
+  table:    'The dosing card on each peptide screen',
+  protocol: 'The overdose guard, both calculators, Aimee, dose logging',
+  ladder:   "The calculator's reconstitution maths",
+};
+
+function sourceRow(who, label, sub, s, extraFlag) {
+  if (!s) return '<tr><td class="who">' + label + '<small>' + sub + '</small></td>' +
+                 '<td colspan="4" class="raw">no entry for this compound</td></tr>';
+  return '<tr>' +
+    '<td class="who">' + label + '<small>' + sub + '</small></td>' +
+    '<td><span class="val big">' + esc(s.doseNorm || '—') + '</span>' +
+      (s.dose && s.dose !== s.doseNorm ? '<div class="raw">written as “' + esc(s.dose) + '”</div>' : '') +
+      (s.perKg ? '<div class="raw">' + esc(s.perKg) + '</div>' : '') + '</td>' +
+    '<td class="val">' + esc(s.cycle || '—') + '</td>' +
+    '<td class="val">' + esc(s.frequency || '—') +
+      (s.route ? '<div class="raw">' + esc(s.route) + '</div>' : '') +
+      (s.timeOff ? '<div class="raw">' + esc(s.timeOff) + ' off</div>' : '') + '</td>' +
+    '<td class="drives">' + WHAT_DRIVES[who] +
+      (s.attribution ? '<div class="raw">claims: ' + esc(s.attribution) + '</div>' : '') +
+      (extraFlag ? '<div class="flag">' + extraFlag + '</div>' : '') + '</td>' +
+  '</tr>';
+}
+
+function picker(kind, id, opts) {
+  const cur = store.get(kind + ':' + id);
+  return '<div class="picker" data-kind="' + kind + '" data-id="' + id + '">' + opts.map((o) =>
+    '<button type="button" data-v="' + o[0] + '" aria-pressed="' + (cur === o[0]) + '">' + o[1] + '</button>'
+  ).join('') + '</div>';
+}
+
+function field(id, name, label, placeholder, isArea, value) {
+  const v = store.get('edit:' + id + ':' + name) ?? (value || '');
+  const el = isArea
+    ? '<textarea data-edit="' + name + '" data-id="' + id + '" placeholder="' + esc(placeholder) + '">' + esc(v) + '</textarea>'
+    : '<input data-edit="' + name + '" data-id="' + id + '" value="' + esc(v) + '" placeholder="' + esc(placeholder) + '">';
+  return '<div class="f' + (isArea ? ' full' : '') + '"><label>' + esc(label) + '</label>' + el + '</div>';
+}
+
+function answered(c) {
+  if (c.issues.some((i) => i.kind !== 'uncited') &&
+      !c.issues.filter((i) => i.kind !== 'uncited').every((i) => store.get(i.kind + ':' + c.id))) return false;
+  if (c.issues.some((i) => i.kind === 'uncited') && !store.get('uncited:' + c.id)) return false;
+  return true;
+}
+
+function cardHtml(c) {
+  const sev = c.issues.some((i) => i.severity === 'sev') ? 'sev'
+            : c.issues.some((i) => i.severity === 'wrn') ? 'wrn' : '';
+  const t = c.sources.table, p = c.sources.protocol, l = c.sources.ladder;
+
+  /* The table's own titration note sometimes contradicts its dose range — that
+     is the tell that separates a transcription slip from a clinical dispute,
+     so surface it next to the range rather than burying it. */
+  let tableFlag = '';
+  if (t && t.titrationNote && t.doseNorm) {
+    const m = t.titrationNote.match(/(\d+(?:\.\d+)?)\s*(mg|mcg)/i);
+    if (m && !new RegExp('\\b' + m[1] + '\\s*' + m[2], 'i').test(t.doseNorm))
+      tableFlag = 'its own note says ' + m[1] + m[2].toLowerCase();
+  }
+
+  const conflicts = [];
+  if (c.issues.some((i) => i.kind === 'dose'))
+    conflicts.push('<div class="pick"><span class="lbl">Correct <b>dose</b> source:</span>' +
+      picker('dose', c.id, [['table','Dosing table'],['protocol','Protocol'],['other','Neither — see below']]) + '</div>');
+  if (c.issues.some((i) => i.kind === 'cycle'))
+    conflicts.push('<div class="pick"><span class="lbl">Correct <b>cycle</b> source:</span>' +
+      picker('cycle', c.id, [['table','Dosing table'],['protocol','Protocol'],['other','Neither — see below']]) + '</div>');
+  if (c.issues.some((i) => i.kind === 'prov'))
+    conflicts.push('<div class="pick"><span class="lbl">Range that should contain the worked dose:</span>' +
+      picker('prov', c.id, [['table','Dosing table'],['protocol','Protocol'],['ladder','Ladder is wrong'],['other','None']]) + '</div>');
+
+  const cites = c.claims.citations.length
+    ? c.claims.citations.map((x) => '<li>' + esc(x.text) + (x.url ? ' — <a href="' + esc(x.url) + '" target="_blank" rel="noopener">link</a>' : '') + '</li>').join('')
+    : '<li><b>No citation of any kind.</b></li>';
+
+  return '<article class="card ' + (answered(c) ? 'done' : sev) + '" data-id="' + c.id +
+      '" data-kinds="' + c.issues.map((i) => i.kind).join(' ') + '" data-name="' + esc(c.name.toLowerCase()) + '">' +
+    '<div class="chead"><h2>' + esc(c.name) + '</h2><span class="id">' + esc(c.id) + '</span>' +
+      '<span class="id">' + esc((c.categories || []).join(', ')) + '</span></div>' +
+    '<div class="badges">' + c.issues.map((i) => '<span class="badge ' + i.severity + '">' + esc(i.label) + '</span>').join('') + '</div>' +
+
+    '<h3 class="sub">What each source actually says</h3>' +
+    '<div class="scroll"><table class="src">' +
+      '<thead><tr><th>Source</th><th>Dose</th><th>Cycle</th><th>Frequency</th><th>What it drives</th></tr></thead><tbody>' +
+      sourceRow('table','Dosing table','transcribed, p.2 of 11', t, tableFlag) +
+      sourceRow('protocol','Protocol','unattributed, 2026 build', p, null) +
+      sourceRow('ladder','Reconstitution ladder','self-checking; Edward’s own', l, null) +
+      '</tbody></table></div>' +
+    (t && t.titrationNote ? '<p class="prose"><b>Titration note (dosing table):</b> ' + esc(t.titrationNote) + '</p>' : '') +
+    (p && p.importantNotes && p.importantNotes.length
+      ? '<p class="prose"><b>Protocol notes:</b> ' + esc(p.importantNotes.join(' · ')) + '</p>' : '') +
+
+    (conflicts.length ? '<h3 class="sub">Which one is right</h3>' + conflicts.join('') : '') +
+
+    '<h3 class="sub">Correct it</h3>' +
+    '<div class="fields">' +
+      field(c.id, 'correctedDose', 'Correct dose range', 'e.g. 50 mg – 200 mg', false) +
+      field(c.id, 'correctedCycle', 'Correct cycle length', 'e.g. 4–12 weeks', false) +
+      field(c.id, 'citation', 'Citation (PMID / DOI / URL)', 'e.g. PMID 12345678', false) +
+      field(c.id, 'note', 'Note', 'anything the code owner needs to know', false) +
+    '</div>' +
+
+    '<details><summary>What the app claims about ' + esc(c.name) + ' — read and correct</summary>' +
+      '<h3 class="sub">Currently shipped · research summary</h3>' +
+      '<p class="prose">' + (esc(c.claims.researchSummary) || '<i>none</i>') + '</p>' +
+      '<h3 class="sub">Currently shipped · mechanism of action</h3>' +
+      '<p class="prose">' + (esc(c.claims.mechanismOfAction) || '<i>none</i>') + '</p>' +
+      '<h3 class="sub">Sources on file</h3><ul class="cites">' + cites + '</ul>' +
+      '<div class="fields">' +
+        field(c.id, 'researchSummary', 'Rewrite the research summary (leave blank to keep as-is)', 'Only what you can stand behind…', true) +
+        field(c.id, 'mechanismOfAction', 'Rewrite the mechanism of action (leave blank to keep as-is)', 'Only what you can stand behind…', true) +
+      '</div>' +
+      '<div class="pick"><span class="lbl">Prose checked:</span>' +
+        picker('uncited', c.id, [['reviewed','Read and judged']]) + '</div>' +
+    '</details>' +
+  '</article>';
+}
+
+function render() {
+  document.getElementById('cards').innerHTML = W.cards.map(cardHtml).join('');
+  refresh();
+  applyFilter();
+}
+function refresh() {
+  const done = W.cards.filter(answered).length;
+  document.getElementById('progress').textContent = done + ' of ' + W.cards.length + ' compounds resolved';
+}
+
+/* ---- interaction ------------------------------------------------------- */
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.picker button');
+  if (btn) {
+    const box = btn.closest('.picker');
+    const kind = box.dataset.kind, id = box.dataset.id, v = btn.dataset.v;
+    const key = kind + ':' + id;
+    const next = store.get(key) === v ? null : v;
+    store.set(key, next);
+    box.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === next)));
+    const card = btn.closest('.card');
+    const c = W.cards.find((x) => x.id === id);
+    card.classList.toggle('done', answered(c));
+    refresh();
+    sync.pushVerdict(kind === 'uncited' ? 'uncited' : kind, id, next);
+    return;
+  }
+  const f = e.target.closest('.filter');
+  if (f) {
+    document.querySelectorAll('.filter').forEach((b) => b.setAttribute('aria-pressed', String(b === f)));
+    applyFilter();
+  }
+});
+
+document.addEventListener('input', (e) => {
+  const el = e.target.closest('[data-edit]');
+  if (el) {
+    store.set('edit:' + el.dataset.id + ':' + el.dataset.edit, el.value.trim());
+    sync.pushEdit(el.dataset.id);
+    return;
+  }
+  if (e.target.id === 'search') applyFilter();
+});
+
+function applyFilter() {
+  const active = document.querySelector('.filter[aria-pressed="true"]');
+  const f = active ? active.dataset.f : 'all';
+  const q = (document.getElementById('search').value || '').trim().toLowerCase();
+  document.querySelectorAll('.card').forEach((el) => {
+    const kinds = el.dataset.kinds.split(' ');
+    const c = W.cards.find((x) => x.id === el.dataset.id);
+    let ok = f === 'all' ? true : f === 'open' ? !answered(c) : kinds.includes(f);
+    if (ok && q) ok = el.dataset.name.includes(q) || el.dataset.id.includes(q);
+    el.style.display = ok ? '' : 'none';
+  });
+}
+
+render();
+sync.hydrate();
+</script>
+</body>
+</html>

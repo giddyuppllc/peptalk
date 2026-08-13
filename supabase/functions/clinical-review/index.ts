@@ -50,7 +50,8 @@ function tokenOk(given: string): boolean {
 // Kinds match the review page's localStorage key prefixes, except the uncited
 // table, which the page keys as `cite:` — normalised to `uncited` on the way in
 // so the stored vocabulary matches the column's check constraint.
-const KINDS = new Set(['dose', 'cycle', 'prov', 'uncited']);
+// 'edit' carries a payload of corrections instead of a verdict.
+const KINDS = new Set(['dose', 'cycle', 'prov', 'uncited', 'edit']);
 // 'reviewed' is what the uncited checkboxes store; the rest are conflict picks.
 const VERDICTS = new Set(['table', 'protocol', 'ladder', 'other', 'reviewed']);
 
@@ -69,17 +70,21 @@ Deno.serve(async (req) => {
 
       const { data, error } = await db
         .from('clinical_review_decisions')
-        .select('kind, peptide_id, verdict, reviewer, updated_at');
+        .select('kind, peptide_id, verdict, reviewer, payload, updated_at');
       if (error) return json({ error: error.message }, 500);
+
+      // Edits are keyed by peptide alone (kind 'edit'), verdicts by kind+peptide.
+      const edits: Record<string, unknown> = {};
+      for (const row of data ?? []) if (row.payload) edits[row.peptide_id] = row.payload;
 
       // Collapse to the flat key shape the page already uses in localStorage,
       // mapping `uncited` back to the page's `cite:` prefix.
       const decisions: Record<string, string> = {};
       for (const row of data ?? []) {
         const prefix = row.kind === 'uncited' ? 'cite' : row.kind;
-        decisions[`${prefix}:${row.peptide_id}`] = row.verdict;
+        if (row.verdict) decisions[`${prefix}:${row.peptide_id}`] = row.verdict;
       }
-      return json({ decisions, count: (data ?? []).length });
+      return json({ decisions, edits, count: (data ?? []).length });
     }
 
     if (req.method === 'POST') {
@@ -94,6 +99,23 @@ Deno.serve(async (req) => {
 
       if (!KINDS.has(kind)) return json({ error: 'Unknown kind' }, 400);
       if (!peptideId || peptideId.length > 120) return json({ error: 'Bad peptideId' }, 400);
+
+      /* kind 'edit' carries the reviewer's corrections rather than a verdict:
+         corrected figures, a citation, notes, rewritten prose. One row per
+         peptide per reviewer, upserted on every keystroke-debounced save. */
+      if (kind === 'edit') {
+        const payload = body?.payload;
+        if (payload == null || typeof payload !== 'object' || Array.isArray(payload))
+          return json({ error: 'payload must be an object' }, 400);
+        if (JSON.stringify(payload).length > 40000)
+          return json({ error: 'payload too large' }, 413);
+        const { error } = await db.from('clinical_review_decisions').upsert(
+          { kind, peptide_id: peptideId, verdict: null, reviewer, payload, updated_at: new Date().toISOString() },
+          { onConflict: 'kind,peptide_id,reviewer' },
+        );
+        if (error) return json({ error: error.message }, 500);
+        return json({ ok: true });
+      }
 
       // Un-picking an answer removes the row rather than storing an empty verdict.
       if (!rawVerdict) {
