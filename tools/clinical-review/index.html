@@ -204,6 +204,23 @@ const EDIT_FIELDS = [
 const sync = (() => {
   const q = new URLSearchParams(location.search);
   const token = q.get('t') || '';
+
+  /* A link without ?t= silently degrades to localStorage. The reviewer gets no
+     error, the page says "Saved", and none of it reaches the database — which
+     is exactly how a full review session can be lost by opening the page on a
+     different device. Refuse to be quiet about it. */
+  if (!token) {
+    const warn = document.createElement('div');
+    warn.setAttribute('role', 'alert');
+    warn.style.cssText =
+      'position:sticky;top:0;z-index:99;background:#7f1d1d;color:#fff;padding:14px 18px;' +
+      'font-weight:600;line-height:1.45;border-bottom:3px solid #ef4444';
+    warn.innerHTML =
+      'This link is missing its access code, so <u>nothing you do here is being saved to the server</u>. ' +
+      'Answers stay in this browser only and will be lost if you switch device or clear history.<br>' +
+      '<span style="font-weight:400">Ask Edward for the full review link (it ends in <code>?t=…</code>) and reopen it there.</span>';
+    document.body.prepend(warn);
+  }
   const reviewer = (q.get('who') || 'unknown').slice(0, 120);
   let inflight = 0, failed = 0;
   const paint = (m, tone) => {
@@ -212,7 +229,12 @@ const sync = (() => {
     n.style.color = tone === 'bad' ? 'var(--severe)' : tone === 'ok' ? 'var(--ok)' : 'var(--ink-soft)';
   };
   const status = () => {
-    if (!token) return paint('Saved in this browser only', '');
+    // No token means this page can only write to localStorage — the work never
+    // reaches the database and nobody else can see it. That used to be a grey
+    // one-liner reading "Saved in this browser only", which is easy to read as
+    // success. It is not: close the tab on a different device and the work is
+    // gone. Say so in red, and the banner below says it again in full.
+    if (!token) return paint('NOT SAVED TO SERVER — this browser only', 'bad');
     if (inflight) return paint('Saving…', '');
     if (failed) return paint(failed + ' not saved — still safe in this browser', 'bad');
     return paint('Saved · ' + reviewer, 'ok');
