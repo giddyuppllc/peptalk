@@ -11,6 +11,9 @@
  * POST { t, kind, peptideId, verdict, reviewer?, note? }
  *                          -> { ok: true }
  *   verdict null/'' deletes the row (reviewer un-picked an answer).
+ * POST { t, kind: 'edit', peptideId, payload, reviewer? }
+ *                          -> { ok: true }
+ *   payload null or {} deletes the row (reviewer cleared every field).
  *
  * Deploy (no JWT — the token below is the auth, and the reviewer has no session):
  *   supabase secrets set CLINICAL_REVIEW_TOKEN=<random-string>
@@ -107,6 +110,26 @@ Deno.serve(async (req) => {
          peptide per reviewer, upserted on every keystroke-debounced save. */
       if (kind === 'edit') {
         const payload = body?.payload;
+
+        /* An edit row exists only to carry corrections, so when there are none
+           left the row goes rather than lingering as an empty shell that still
+           shows up in a count or an export. Two ways to say "none left":
+           an explicit `payload: null`, and `{}`, which is what the page sends
+           once the reviewer has cleared every field — pushEdit only copies
+           truthy fields in, so clearing them all produces an empty object.
+           Note `payload === null`, not `== null`: a *missing* payload is a
+           malformed request and still earns a 400 below. */
+        const empty = payload === null ||
+          (typeof payload === 'object' && !Array.isArray(payload) && Object.keys(payload).length === 0);
+        if (empty) {
+          const { error } = await db
+            .from('clinical_review_decisions')
+            .delete()
+            .match({ kind, peptide_id: peptideId, reviewer });
+          if (error) return json({ error: error.message }, 500);
+          return json({ ok: true, cleared: true });
+        }
+
         if (payload == null || typeof payload !== 'object' || Array.isArray(payload))
           return json({ error: 'payload must be an object' }, 400);
         if (JSON.stringify(payload).length > 40000)

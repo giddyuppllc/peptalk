@@ -201,6 +201,62 @@ const EDIT_FIELDS = [
   'interType','interMechanism','interStability','interCitation',
 ];
 
+/* Every localStorage shape this page has written on this origin, newest first.
+   This matters because of how the failure actually looked: a reviewer whose
+   link carried a dead token still filled the whole grid in — every POST 401'd,
+   but `store.set()` kept working — so her answers are sitting in one of these
+   keys on her own device and nowhere else. localStorage is per-origin and a
+   phone has no devtools console, so reading them from inside this page is the
+   only way to get that work back. */
+const LEGACY_KEYS = ['peptalk-workbench-v2', 'peptalk-workbench-v1', 'peptalk-clinical-review-v1'];
+
+/* The first version of the review spoke a slightly different vocabulary:
+   `cite:` for what the table stores as `uncited`, and `checked` for what is
+   now `reviewed`. Translate on the way out rather than widening the function's
+   allow-lists to accept vocabulary nothing writes any more. */
+const KIND_ALIAS = { cite: 'uncited' };
+const VERDICT_ALIAS = { checked: 'reviewed' };
+
+/** Everything this browser holds, merged newest-key-first so an older duplicate
+    never overwrites a newer answer. */
+function localWork() {
+  const out = {};
+  for (const k of LEGACY_KEYS) {
+    let o = {};
+    try { o = JSON.parse(localStorage.getItem(k) || '{}'); } catch (e) { continue; }
+    if (!o || typeof o !== 'object') continue;
+    for (const [kk, v] of Object.entries(o)) if (v && !(kk in out)) out[kk] = v;
+  }
+  return out;
+}
+
+/** Flat localStorage keys -> the request bodies the function accepts. */
+function toRequests(flat) {
+  const reqs = [], edits = {};
+  for (const [k, v] of Object.entries(flat)) {
+    if (!v) continue;
+    if (k.indexOf('edit:') === 0) {
+      // edit:<peptideId>:<field> — keep whatever fields are there rather than
+      // filtering to EDIT_FIELDS, so a field an older build wrote is recovered
+      // instead of silently dropped.
+      const j = k.indexOf(':', 5);
+      if (j <= 5) continue;
+      const id = k.slice(5, j), field = k.slice(j + 1);
+      if (!id || !field) continue;
+      (edits[id] || (edits[id] = {}))[field] = v;
+      continue;
+    }
+    const i = k.indexOf(':');
+    if (i < 1) continue;
+    const kind = KIND_ALIAS[k.slice(0, i)] || k.slice(0, i);
+    const id = k.slice(i + 1);              // `inter` ids are pair keys ("a+b")
+    if (!id) continue;
+    reqs.push({ kind, peptideId: id, verdict: VERDICT_ALIAS[v] || v });
+  }
+  for (const [id, payload] of Object.entries(edits)) reqs.push({ kind: 'edit', peptideId: id, payload });
+  return reqs;
+}
+
 const sync = (() => {
   const q = new URLSearchParams(location.search);
   const token = q.get('t') || '';
@@ -259,22 +315,104 @@ const sync = (() => {
       post({ kind: 'edit', peptideId: id, payload });
     }, 700);
   }
+  /* Upload everything this browser is holding that the server has not got.
+     One request at a time on purpose: a reviewer recovering a full session is
+     sending a few hundred of these, and the point of the exercise is to know
+     exactly how many landed — so nothing here swallows a failure. */
+  async function recover(onProgress) {
+    const reqs = toRequests(localWork());
+    let done = 0, bad = 0;
+    for (const body of reqs) {
+      try {
+        const r = await fetch(W.endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.assign({ t: token, reviewer }, body)) });
+        if (!r.ok) throw new Error(await r.text());
+        done++;
+      } catch (e) { bad++; }
+      onProgress(done, bad, reqs.length);
+    }
+    return { done, bad, total: reqs.length };
+  }
+
+  /* What is in this browser but not on the server. Compared by key, so a v1
+     row that says `checked` where the server says `reviewed` still counts as
+     present rather than being offered for upload again. */
+  function unsynced(serverFlat) {
+    const local = localWork();
+    return Object.keys(local).filter((k) => local[k] && serverFlat[k] === undefined);
+  }
+
   async function hydrate() {
     status();
     if (!token) return;
+    let flat;
     try {
       const r = await fetch(W.endpoint + '?t=' + encodeURIComponent(token));
       if (!r.ok) throw new Error(await r.text());
       const { decisions, edits } = await r.json();
-      const flat = Object.assign({}, decisions || {});
+      flat = Object.assign({}, decisions || {});
       for (const [pid, p] of Object.entries(edits || {}))
         for (const [f, v] of Object.entries(p || {})) flat['edit:' + pid + ':' + f] = v;
       if (Object.keys(flat).length) { store.merge(flat); render(); }
     } catch (e) { paint('Could not load saved answers — working locally', 'bad'); return; }
     status();
+    // Only now, with a working token and the server's side of it in hand, is it
+    // possible to tell stranded local work apart from work already saved.
+    offerRecovery(unsynced(flat).length);
   }
-  return { pushVerdict, pushEdit, hydrate };
+  return { pushVerdict, pushEdit, hydrate, recover };
 })();
+
+/* ---- recovering work that never left the browser ----------------------- */
+/* A dead or missing token meant every answer went to localStorage and none of
+   it reached the database, while the page carried on accepting input. The work
+   is not lost — it is on the device it was typed on — but only this origin can
+   read it back, and a reviewer on a phone has no console. So: say plainly that
+   there is unsaved work here, and give it a button. */
+function offerRecovery(n) {
+  if (!n) return;
+  const bar = document.createElement('div');
+  bar.setAttribute('role', 'alert');
+  bar.style.cssText =
+    'position:sticky;top:0;z-index:98;background:#78350f;color:#fff;padding:14px 18px;' +
+    'line-height:1.5;border-bottom:3px solid #f59e0b';
+  const msg = document.createElement('div');
+  msg.innerHTML = '<strong>' + n + ' answer' + (n === 1 ? '' : 's') + ' on this device ' +
+    (n === 1 ? 'has' : 'have') + ' never reached the server.</strong> ' +
+    'They were saved here while the link was not working. Upload them now and they are safe everywhere.';
+  const note = document.createElement('div');
+  note.style.cssText = 'margin-top:6px;font-size:13px;opacity:.9';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = 'Upload ' + n + ' to the server';
+  btn.style.cssText =
+    'margin-top:10px;background:#f59e0b;color:#1c1917;border:0;border-radius:6px;' +
+    'padding:9px 16px;font-weight:700;font-size:14px;cursor:pointer';
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.style.opacity = '.6';
+    btn.textContent = 'Uploading…';
+    const { done, bad, total } = await sync.recover((d, b, t) => {
+      note.textContent = 'Uploaded ' + d + ' of ' + t + (b ? ' — ' + b + ' failed' : '');
+    });
+    // Nothing is removed from localStorage either way: it stays as the backup
+    // copy, and a partial upload must not look like a finished one.
+    if (bad) {
+      btn.textContent = 'Retry the ' + bad + ' that failed';
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      note.textContent = done + ' of ' + total + ' uploaded. ' + bad + ' failed — leave this page open and try again.';
+    } else {
+      bar.style.background = '#14532d';
+      bar.style.borderBottomColor = '#22c55e';
+      msg.innerHTML = '<strong>All ' + total + ' saved to the server.</strong> Your work is no longer only on this device.';
+      note.textContent = '';
+      btn.remove();
+    }
+  });
+  bar.append(msg, note, btn);
+  document.body.prepend(bar);
+}
 
 /* ---- per-mode accessors ------------------------------------------------ */
 const FIELD = () => (MODE === 'dose' ? 'correctedDose' : 'correctedCycle');
