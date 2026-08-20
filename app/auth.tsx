@@ -13,6 +13,7 @@ import { PasswordToggle } from '../src/components/PasswordToggle';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useOnboardingStore } from '../src/store/useOnboardingStore';
 import { isValidEmail, validatePassword, PASSWORD_MIN_LENGTH } from '../src/utils/validation';
+import { authRedirectUrl } from '../src/lib/authRedirect';
 
 const ACCENT = '#E89672';
 
@@ -103,7 +104,7 @@ export default function AuthScreen() {
       const { supabase } = await import('../src/services/supabase');
       const { error: resetErr } = await (supabase as any).auth.resetPasswordForEmail(
         normalizedEmail,
-        { redirectTo: 'peptalk://auth/callback' },
+        { redirectTo: authRedirectUrl() },
       );
       if (resetErr) throw resetErr;
       Alert.alert(
