@@ -115,6 +115,10 @@ if (!existsSync('dist/vercel.json')) {
     'X-Content-Type-Options',
     'X-Frame-Options',
     'Referrer-Policy',
+    // Added 2026-08-21. Absent from the live site until then; listed here so
+    // they cannot quietly fall out of public/vercel.json again.
+    'Permissions-Policy',
+    'Cross-Origin-Opener-Policy',
   ]) {
     if (keys.has(h)) pass(`header ${h}`);
     else fail(`header ${h} missing from dist/vercel.json`);
