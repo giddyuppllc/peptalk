@@ -129,6 +129,51 @@ if (existsSync('dist/sw.js')) {
   fail('dist/sw.js missing');
 }
 
+// ---------------------------------------------------------------------------
+// Payments environment.
+//
+// 2026-08-21: the live PWA was found shipping Square's SANDBOX SDK and the
+// sandbox Application ID. src/config/square.ts defaults SQUARE_ENV to
+// 'sandbox' when EXPO_PUBLIC_SQUARE_ENV is unset, and it was unset on the
+// build machine — so every web build silently produced a checkout that cannot
+// take a real payment. Nothing failed, nothing warned; the subscribe button
+// rendered a card form wired to sandbox.
+//
+// EXPO_PUBLIC_* values are inlined into the bundle at export time, so the
+// built artifact is the only honest place to check this.
+// ---------------------------------------------------------------------------
+console.log('\n— payments environment —\n');
+{
+  const bundles = execSync('ls dist/_expo/static/js/web/*.js 2>/dev/null || true', {
+    encoding: 'utf8',
+  })
+    .split(/\r?\n/)
+    .filter(Boolean);
+
+  if (bundles.length === 0) {
+    fail('no web bundle found in dist/', 'cannot tell which Square environment shipped');
+  } else {
+    const js = bundles.map(b => readFileSync(b, 'utf8')).join('');
+    const sandboxSdk = js.includes('sandbox.web.squarecdn.com');
+    const sandboxAppId = /sandbox-sq0idb-/.test(js);
+    const prodSdk = /(?<!sandbox\.)web\.squarecdn\.com/.test(js);
+
+    if (sandboxSdk || sandboxAppId) {
+      fail(
+        'this build ships Square SANDBOX — it cannot take a real payment',
+        'set EXPO_PUBLIC_SQUARE_ENV=production, EXPO_PUBLIC_SQUARE_APPLICATION_ID and ' +
+          'EXPO_PUBLIC_SQUARE_LOCATION_ID to their production values, then re-export.',
+      );
+    } else if (!prodSdk) {
+      // Neither present: the form may have been removed, which is a decision,
+      // not a defect — but say so rather than passing silently.
+      pass('no Square web checkout in this build');
+    } else {
+      pass('Square web checkout is on the production SDK');
+    }
+  }
+}
+
 console.log('');
 if (failures > 0) {
   console.log(`✗ ${failures} problem(s) — do NOT deploy this build.\n`);
