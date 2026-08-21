@@ -187,8 +187,7 @@ const SeverityPicker: React.FC<{
 
 export default function CheckInScreen() {
   const t = useTheme();
-  const { entries, saveCheckIn, getCheckInByDate, getStreak, getEmotionFrequency } =
-    useCheckinStore();
+  const { saveCheckIn, getCheckInByDate, getStreak } = useCheckinStore();
   const { getActiveProtocols } = useDoseLogStore();
 
   // Accept optional ?date=YYYY-MM-DD search param (e.g. from calendar)

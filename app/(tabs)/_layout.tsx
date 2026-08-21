@@ -2,7 +2,6 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { selectionTick } from '../../src/utils/haptics';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
@@ -63,11 +62,6 @@ const TAB_CONFIG: TabConfig[] = [
 export default function TabsLayout() {
   const t = useTheme();
   const accent = useSectionAccent();
-  const insets = useSafeAreaInsets();
-  // Modern iPhones (X+) have a 34px home-indicator inset. iOS Pre-X
-  // returns 0 here. Build the tab bar to clear the indicator with breathing
-  // room — content area 50px + insets.bottom + a tiny floor of 10 so old
-  // hardware still has touch targets that meet HIG.
   return (
     <View style={{ flex: 1 }}>
     <Tabs

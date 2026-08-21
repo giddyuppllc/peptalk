@@ -238,7 +238,7 @@ function LoginForm() {
 // User Profile
 // ---------------------------------------------------------------------------
 function UserProfile() {
-  const { user, logout, setAvatar } = useAuthStore();
+  const { user, setAvatar } = useAuthStore();
   const { tier } = useSubscriptionStore();
   // Single source of truth for Pro status: the subscription store's `tier`
   // (what the badge, the Pro-Active banner, and feature gating all use).
@@ -249,7 +249,6 @@ function UserProfile() {
   const isPro = tier === 'pro';
   const t = useTheme();
   const router = useRouter();
-  const darkMode = t.isDark;
 
   const pickAvatar = useCallback(async () => {
     // Lazy-load the native module so boot doesn't pay for it.

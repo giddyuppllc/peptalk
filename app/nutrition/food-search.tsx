@@ -716,7 +716,7 @@ function BarcodeScannerModal({ visible, onClose, onScanned }: BarcodeScannerProp
   // camera is actually reading.
   const { width: windowW } = useWindowDimensions();
   const [permission, requestPermission] = useCameraPermissions();
-  const [scanning, setScanning] = useState(false);
+  const [, setScanning] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
   const lastScannedRef = useRef<string>('');
 

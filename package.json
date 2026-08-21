@@ -33,7 +33,7 @@
     "verify:square": "tsx scripts/verify-square-catalog.ts",
     "verify:routes": "tsx scripts/verify-route-reachability.ts",
     "verify:videos": "tsx scripts/verify-video-integrity.ts",
-    "lint:ci": "eslint app src --max-warnings 120",
+    "lint:ci": "eslint app src --max-warnings 40",
     "verify:deadzones": "node scripts/verify-deadzones.mjs",
     "verify:peptiderefs": "tsx scripts/verify-peptide-refs.ts",
     "verify:navparams": "node scripts/verify-nav-params.mjs",

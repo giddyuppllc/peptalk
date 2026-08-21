@@ -17,7 +17,6 @@ import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/th
 import { useTheme } from '../../src/hooks/useTheme';
 import { tapMedium, notifySuccess } from '../../src/utils/haptics';
 import { useMealStore } from '../../src/store/useMealStore';
-import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { generateRecipe, isAIAvailable } from '../../src/services/llmService';
 import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
@@ -185,7 +184,6 @@ export default function RecipeGeneratorScreen() {
   const router = useRouter();
   const t = useTheme();
   const { targets } = useMealStore();
-  const { hasFeature } = useSubscriptionStore();
   const [diet, setDiet] = useState('any');
   const [mealType, setMealType] = useState('lunch');
   const [preferences, setPreferences] = useState('');

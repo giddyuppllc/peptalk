@@ -143,7 +143,7 @@ function GeneratedTrackerScreen() {
   // Rest timer — auto-starts when a set is marked complete
   const [restRemaining, setRestRemaining] = useState<number>(0);
   const [restTotal, setRestTotal] = useState<number>(0);
-  const [restLabel, setRestLabel] = useState<string>('');
+  const [, setRestLabel] = useState<string>('');
 
   // Re-sync if user navigates between days (params change)
   React.useEffect(() => {

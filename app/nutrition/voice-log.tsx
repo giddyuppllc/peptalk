@@ -59,7 +59,7 @@ function VoiceLogScreen() {
   const addMeal = useMealStore((state) => state.addMeal);
 
   const [text, setText] = useState('');
-  const [mealType, setMealType] = useState<MealType>(paramMealType ?? inferMealType());
+  const [mealType] = useState<MealType>(paramMealType ?? inferMealType());
   const [parsing, setParsing] = useState(false);
   const [results, setResults] = useState<UnifiedFood[]>([]);
   const [selected, setSelected] = useState<Record<string, boolean>>({});

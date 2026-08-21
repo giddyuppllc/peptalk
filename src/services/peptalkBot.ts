@@ -1681,7 +1681,6 @@ function respondMealSuggest(message: string, context: BotContext): string {
   parts.push('');
 
   const isMealType = /\b(breakfast|lunch|dinner|snack|pre.?workout|post.?workout)\b/i.test(lower);
-  const isDiet = /\b(keto|vegan|vegetarian|paleo|carnivore|mediterranean|high.?protein|low.?carb)\b/i.test(lower);
   const isRecipe = /\b(recipe|cook|make|prepare)\b/i.test(lower);
   const isMacro = /\b(macro|calorie|protein|carb|fat|track|count)\b/i.test(lower);
 

@@ -110,6 +110,8 @@ const PATHS = {
 type RegionKey = keyof typeof PATHS;
 
 /** Convert a hex color to an rgba() string at the given alpha. */
+// Unreferenced helper left from an earlier fill treatment.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function withAlpha(hex: string, alpha: number): string {
   // Accept #rgb, #rrggbb, or any rgb/rgba string by returning a safe
   // fallback. Most callers pass theme accent colors as #RRGGBB.

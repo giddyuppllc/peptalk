@@ -414,6 +414,10 @@ async function searchOpenFoodFacts(query: string, limit = 25): Promise<UnifiedFo
 // Nutritionix (fast food, restaurants, common foods)
 // ---------------------------------------------------------------------------
 
+// Unwired: nothing calls this, and NUTRITIONIX_APP_ID / NUTRITIONIX_API_KEY
+// above are empty strings — the provider was written but never given
+// credentials. Kept rather than deleted; wiring it up is a product call.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function searchNutritionix(query: string, limit = 10): Promise<UnifiedFood[]> {
   // Skip if no API credentials configured
   if (!NUTRITIONIX_APP_ID && !NUTRITIONIX_API_KEY) {
@@ -550,6 +554,9 @@ function isNaturalLanguageQuery(query: string): boolean {
   return false;
 }
 
+// Unwired: nothing calls this. Second unused food provider alongside
+// searchNutritionix. Kept rather than deleted; wiring it up is a product call.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function searchCalorieNinjas(query: string): Promise<UnifiedFood[]> {
   if (!isNaturalLanguageQuery(query)) return [];
 

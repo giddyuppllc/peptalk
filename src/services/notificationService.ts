@@ -940,6 +940,9 @@ function parseAnchorDate(dateStr?: string): Date | null {
 // Back-compat shim — old callers got a single trigger. Returns the
 // first trigger so existing single-trigger schedule sites keep working
 // during migration. New call sites should use buildTriggersForFrequency.
+// Unreferenced since the reminder scheduler was reworked. Left in place so
+// the frequency-to-trigger mapping is not lost; delete once confirmed dead.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function buildTriggerForFrequency(frequency: string, hours: number, minutes: number): any {
   return buildTriggersForFrequency(frequency, hours, minutes)[0];
 }

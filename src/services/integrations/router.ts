@@ -9,7 +9,7 @@
  * SOURCE_PRIORITY (manual > device > aggregator).
  */
 
-import type { SyncResult, ScalarSample, SleepSample } from './types';
+import type { SyncResult, ScalarSample } from './types';
 import type { BiomarkerSource } from '../../types/cycle';
 import { SOURCE_PRIORITY } from '../../types/cycle';
 

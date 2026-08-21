@@ -312,13 +312,11 @@ export default function CalendarScreen() {
 
   const {
     doses,
-    protocols,
     alerts,
     logDose,
     deleteDose,
     dismissAlert,
     getDosesByDate,
-    getActiveProtocols,
     getDatesWithDoses,
     hasAcceptedDoseDisclaimer,
     acceptDoseDisclaimer,
