@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { GradientButton } from './GradientButton';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../constants/theme';
 import { useMealStore, type CustomMeal, type CustomMealIngredient } from '../store/useMealStore';
-import { searchAllFoods, calcUnifiedMacros, type UnifiedFood } from '../services/foodSearchService';
+import { searchAllFoods, type UnifiedFood } from '../services/foodSearchService';
 
 // ---------------------------------------------------------------------------
 // Types

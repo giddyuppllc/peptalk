@@ -13,12 +13,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
 import { useTheme } from '../../src/hooks/useTheme';
-import { Colors, Spacing, FontSizes, BorderRadius, Gradients } from '../../src/constants/theme';
+import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 import { LearnVideoCard } from '../../src/components/LearnVideoCard';
 import { SyringeSVG } from '../../src/components/v3';
 import { ACETIC_ACID_PEPTIDE_NAMES } from '../../src/data/calculatorMetadata';

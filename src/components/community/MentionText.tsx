@@ -13,7 +13,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../hooks/useTheme';
 import { FontSizes } from '../../constants/theme';

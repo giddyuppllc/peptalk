@@ -10,7 +10,7 @@
  * All data stays on-device. This service reads from local stores only.
  */
 
-import { CheckInEntry, ActiveProtocol, DoseLogEntry } from '../types';
+import { CheckInEntry, ActiveProtocol } from '../types';
 
 // ---------------------------------------------------------------------------
 // Types

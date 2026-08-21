@@ -14,7 +14,6 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../hooks/useTheme';
 import { useCommunityStore } from '../../store/useCommunityStore';
-import { FontSizes } from '../../constants/theme';
 import type { CommunityReactionKind } from '../../types/community';
 
 interface ReactionRowProps {

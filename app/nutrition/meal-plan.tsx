@@ -13,7 +13,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
-import { Spacing, FontSizes, BorderRadius, Colors } from '../../src/constants/theme';
+import { Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 import { PaywallGate } from '../../src/hooks/useFeatureGate';
 import { useMealStore } from '../../src/store/useMealStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';

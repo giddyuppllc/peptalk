@@ -7,7 +7,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
+import { syncRecord, hydrateFromServer } from '../services/syncService';
 import type {
   ConnectedIntegration,
   BiomarkerSource,

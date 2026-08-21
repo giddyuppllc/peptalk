@@ -43,6 +43,15 @@ const ALLOWED = new Map([
       'feedback (1140 lines to 238), not deleted. Deleting it would also ' +
       'strand useFeatureWaitlistStore.',
   ],
+  [
+    'src/components/TrendCard.tsx',
+    'Already orphaned before it looked orphaned: check-in.tsx imported it and ' +
+      'never rendered it, and that unused import was the only thing keeping ' +
+      'this scanner quiet. Surfaced 2026-08-21 when the unused import was ' +
+      'removed. Check-in draws its own trends inline now. Left in place ' +
+      'rather than deleted — wiring it back or removing it is a product call, ' +
+      'not a lint fix.',
+  ],
 ]);
 
 const modules = globSync('src/**/*.{ts,tsx}')

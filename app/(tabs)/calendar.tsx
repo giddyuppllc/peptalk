@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, StyleSheet, Animated, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Modal, TextInput, StyleSheet, Animated, KeyboardAvoidingView, Platform } from 'react-native';
 import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,21 +20,8 @@ import { checkDoseGuards } from '../../src/services/doseSafety';
 import { confirmDoseGuards } from '../../src/utils/doseGuardPrompt';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { computeCyclePhase } from '../../src/services/cycleService';
-import {
-  DoseLogEntry,
-  DoseUnit,
-  AdministrationRoute,
-  ActiveProtocol,
-  HealthAlert,
-  JournalCategory,
-} from '../../src/types';
-import {
-  Colors,
-  FontSizes,
-  Spacing,
-  BorderRadius,
-  Gradients,
-} from '../../src/constants/theme';
+import { DoseUnit, AdministrationRoute, HealthAlert, JournalCategory } from '../../src/types';
+import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 
 // ---------------------------------------------------------------------------

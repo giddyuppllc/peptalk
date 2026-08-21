@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Polyline } from 'react-native-svg';
 import { V3DetailShell, GlassCard } from '../../src/components/v3';
 import { useV3Theme } from '../../src/theme/V3ThemeProvider';
-import { tapLight, tapMedium } from '../../src/utils/haptics';
+import { tapMedium } from '../../src/utils/haptics';
 import { useBodyCompositionStore } from '../../src/store/useBodyCompositionStore';
 
 export default function BodyCompositionScreen() {

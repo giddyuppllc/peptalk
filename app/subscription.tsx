@@ -2,7 +2,7 @@
  * Subscription / Paywall screen — 4-tier plan comparison with upgrade CTAs.
  */
 
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Linking, Platform } from 'react-native';
 import { Alert } from '../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,7 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard } from '../src/components/GlassCard';
 import { GradientButton } from '../src/components/GradientButton';
 import { SquareCardForm } from '../src/components/SquareCardForm';
-import { Colors, Gradients, Spacing, FontSizes, BorderRadius } from '../src/constants/theme';
+import { Colors, Spacing, FontSizes, BorderRadius } from '../src/constants/theme';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
 import { PEPTIDES } from '../src/data/peptides';
 import type { SubscriptionTier } from '../src/types/fitness';

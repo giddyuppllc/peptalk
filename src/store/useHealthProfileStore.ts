@@ -3,22 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { useDoseLogStore } from './useDoseLogStore';
 import { useChatStore } from './useChatStore';
 import { useCheckinStore } from './useCheckinStore';
-import {
-  HealthProfile,
-  BodyMetrics,
-  MedicalHistory,
-  NutritionProfile,
-  SleepProfile,
-  LifestyleProfile,
-  DeviceConnections,
-  GoalType,
-  BiologicalSex,
-  DietType,
-  SleepPattern,
-  ActivityLevel,
-  ConnectedDevice,
-  CycleTracking,
-} from '../types';
+import { HealthProfile, BodyMetrics, MedicalHistory, NutritionProfile, SleepProfile, LifestyleProfile, DeviceConnections, GoalType, BiologicalSex, CycleTracking } from '../types';
 import { secureStorage } from '../services/secureStorage';
 import { syncHealthProfile } from '../services/syncService';
 import { Clamps, clampNumber } from '../utils/inputClamps';

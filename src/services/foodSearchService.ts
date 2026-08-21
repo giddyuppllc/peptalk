@@ -9,7 +9,7 @@
  * Falls back to local COMMON_FOODS when offline.
  */
 
-import { COMMON_FOODS, calcMacros, type BuiltinFood } from '../data/commonFoods';
+import { COMMON_FOODS, type BuiltinFood } from '../data/commonFoods';
 import { searchRestaurantFoods, type RestaurantFood } from '../data/restaurantFoods';
 import { useMealStore, type CachedFood } from '../store/useMealStore';
 

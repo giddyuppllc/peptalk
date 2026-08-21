@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 import { PasswordToggle } from '../src/components/PasswordToggle';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useOnboardingStore } from '../src/store/useOnboardingStore';
-import { isValidEmail, validatePassword, PASSWORD_MIN_LENGTH } from '../src/utils/validation';
+import { isValidEmail, validatePassword } from '../src/utils/validation';
 import { authRedirectUrl } from '../src/lib/authRedirect';
 
 const ACCENT = '#E89672';

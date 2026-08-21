@@ -9,13 +9,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { ChatMessage } from '../types';
-import {
-  Colors,
-  FontSizes,
-  Spacing,
-  BorderRadius,
-  Gradients,
-} from '../constants/theme';
+import { Colors, FontSizes, Spacing, BorderRadius } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useSectionAccent } from '../hooks/useSectionAccent';
 import { PepTalkCharacter } from './PepTalkCharacter';

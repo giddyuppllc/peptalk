@@ -6,15 +6,7 @@
 
 import React, { useEffect, useMemo } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  cancelAnimation,
-  Easing,
-  runOnJS,
-} from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, cancelAnimation, Easing } from 'react-native-reanimated';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 
 // Dimensions are read per-render via useWindowDimensions() rather than captured

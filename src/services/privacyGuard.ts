@@ -5,7 +5,7 @@
  * never leaks through logs, analytics, or API calls without explicit consent.
  */
 
-import { EnhancedBotContext, HealthProfile } from '../types';
+import { EnhancedBotContext } from '../types';
 import { useHealthProfileStore } from '../store/useHealthProfileStore';
 
 // ---------------------------------------------------------------------------

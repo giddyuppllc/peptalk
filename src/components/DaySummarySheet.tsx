@@ -21,7 +21,6 @@ import { useDaySummary } from '../hooks/useDaySummary';
 import { useTheme } from '../hooks/useTheme';
 import { useSectionAccent } from '../hooks/useSectionAccent';
 import { getPeptideById } from '../data/peptides';
-import { Colors, FontSizes } from '../constants/theme';
 import { useHealthProfileStore } from '../store/useHealthProfileStore';
 import { computeCyclePhase, PHASE_LABELS } from '../services/cycleService';
 import { useBiometricsStore } from '../store/useBiometricsStore';

@@ -13,20 +13,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  withRepeat,
-  withSequence,
-  Easing,
-} from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, Easing } from 'react-native-reanimated';
 import { ChatBubble, TypingIndicator } from '../../src/components/ChatBubble';
 import { AimeePendingActionCard } from '../../src/components/AimeePendingActionCard';
 import { AimeeToolResultCard } from '../../src/components/AimeeToolResultCard';
 import { getAimeeNudges } from '../../src/services/aimeeNudges';
-import { PepTalkCharacter } from '../../src/components/PepTalkCharacter';
 import { AimeeSparkIcon } from '../../src/components/AimeeSparkIcon';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { ChatHistoryDrawer } from '../../src/components/ChatHistoryDrawer';
@@ -57,8 +48,7 @@ import {
 import { canSendToCloud } from '../../src/services/privacyGuard';
 import { generateCorrelationInsights, buildCorrelationSummaryForBot } from '../../src/services/watchCorrelationService';
 import { useJournalStore } from '../../src/store/useJournalStore';
-import { ChatMessage, EnhancedBotContext, GoalType } from '../../src/types';
-import { getGoalLabel } from '../../src/constants/goals';
+import { ChatMessage, EnhancedBotContext } from '../../src/types';
 // Layout primitives only — Spacing / BorderRadius / FontSizes are
 // purely numeric tokens shared across v2 and v3. Colors is kept for
 // the three static `darkBg` / `darkText*` fallbacks inside StyleSheet

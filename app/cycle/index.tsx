@@ -25,7 +25,7 @@ import Svg, { Circle, G, Line } from 'react-native-svg';
 import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
 import { useTheme } from '../../src/hooks/useTheme';
-import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
+import { Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 import { useCycleStore } from '../../src/store/useCycleStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import {

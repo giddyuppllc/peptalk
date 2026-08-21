@@ -12,7 +12,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from './GlassCard';
 import { useTheme } from '../hooks/useTheme';
-import { Spacing, FontSizes, BorderRadius } from '../constants/theme';
+import { Spacing, FontSizes } from '../constants/theme';
 import type { TitrationStep, ProtocolTemplate } from '../types';
 import { formatDoseAmount, type DoseUnit } from '../lib/doseUnits';
 

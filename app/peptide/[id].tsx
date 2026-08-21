@@ -31,7 +31,6 @@ import { getCuratedStacksByPeptideId } from '../../src/data/curatedStacks';
 import { getPeptideNutrition } from '../../src/data/peptideNutrition';
 import { getVideosByPeptideId } from '../../src/data/videos';
 import { getGuidesByPeptideId } from '../../src/data/howToGuides';
-import { getInteractionsByPeptideId } from '../../src/data/interactions';
 import { CollapsibleSection } from '../../src/components/CollapsibleSection';
 import { AskAimeeButton } from '../../src/components/AskAimeeButton';
 

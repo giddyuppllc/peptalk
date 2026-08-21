@@ -15,7 +15,7 @@ import { useWorkoutStore } from '../../store/useWorkoutStore';
 import { useMealStore } from '../../store/useMealStore';
 import { useDoseLogStore } from '../../store/useDoseLogStore';
 import { useCheckinStore } from '../../store/useCheckinStore';
-import { Spacing, FontSizes } from '../../constants/theme';
+import { Spacing } from '../../constants/theme';
 
 const DOT_COLORS = {
   workout: '#E89672',

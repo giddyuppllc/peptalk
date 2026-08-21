@@ -16,7 +16,7 @@ import React from 'react';
 import { Text, StyleSheet, TouchableOpacity, ViewStyle, StyleProp } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AimeeSparkIcon } from './AimeeSparkIcon';
-import { FontSizes, Spacing } from '../constants/theme';
+import { FontSizes } from '../constants/theme';
 
 interface AskAimeeButtonProps {
   /** Pre-loaded question text to populate Aimee's input. */

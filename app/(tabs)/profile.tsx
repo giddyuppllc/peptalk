@@ -18,7 +18,6 @@ import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { useTutorialStore } from '../../src/store/useTutorialStore';
 import { GlassCard } from '../../src/components/GlassCard';
 import { PasswordToggle } from '../../src/components/PasswordToggle';
-import { Disclaimer } from '../../src/components/Disclaimer';
 // The three schedule* imports went with the dead NotificationSettings block —
 // app/settings/notifications.tsx owns that scheduling now.
 import { notificationsAvailable } from '../../src/services/notificationService';

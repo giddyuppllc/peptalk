@@ -20,7 +20,7 @@ import {
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
-import { useAchievementStore, getLevelForXP } from '../store/useAchievementStore';
+import { useAchievementStore } from '../store/useAchievementStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { LinearGradient } from 'expo-linear-gradient';
 

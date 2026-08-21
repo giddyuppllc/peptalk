@@ -1,17 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, Image, KeyboardAvoidingView } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
 import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
-import { GlassCard } from '../../src/components/GlassCard';
-import { TrendCard } from '../../src/components/TrendCard';
-import { GradientButton } from '../../src/components/GradientButton';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
-import { Disclaimer } from '../../src/components/Disclaimer';
 import { selectionTick, notifySuccess } from '../../src/utils/haptics';
 import { useCheckinStore } from '../../src/store/useCheckinStore';
-import { computeTrend } from '../../src/utils/trends';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useMealStore } from '../../src/store/useMealStore';

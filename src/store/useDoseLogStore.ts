@@ -1,14 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import {
-  DoseLogEntry,
-  ActiveProtocol,
-  DoseUnit,
-  AdministrationRoute,
-  ProtocolFrequency,
-  HealthAlert,
-  AlertLevel,
-} from '../types';
+import { DoseLogEntry, ActiveProtocol, DoseUnit, AdministrationRoute, ProtocolFrequency, HealthAlert } from '../types';
 import { secureStorage } from '../services/secureStorage';
 import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
 import { getPeptideById } from '../data/peptides';

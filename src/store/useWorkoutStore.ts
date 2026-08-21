@@ -5,7 +5,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
+import { syncRecord, hydrateFromServer } from '../services/syncService';
 import type { WorkoutLog, WorkoutLogSet, Exercise } from '../types/fitness';
 import type { GeneratedWorkout } from '../services/workoutGenerator';
 import type { MonthlyPlan, ProgramPlan } from '../services/monthlyPlan';

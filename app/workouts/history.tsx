@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
+import { Colors, Spacing, FontSizes } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import type { WorkoutLog } from '../../src/types/fitness';

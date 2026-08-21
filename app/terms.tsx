@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from '../src/components/GlassCard';
-import { Colors, FontSizes, Spacing, BorderRadius } from '../src/constants/theme';
+import { Colors, FontSizes, Spacing } from '../src/constants/theme';
 import { TOS_SECTIONS, MASTER_DISCLAIMER } from '../src/constants/legal';
 
 export default function TermsOfServiceScreen() {

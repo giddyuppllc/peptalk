@@ -6,7 +6,7 @@
  * top-level and replies in the same flat list, with replies indented.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Switch, Image, useWindowDimensions } from 'react-native';
 import { Alert } from '../../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';

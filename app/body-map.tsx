@@ -21,7 +21,7 @@ import { GlassCard } from '@/components/GlassCard';
 import { BodyModel } from '@/components/BodyModel';
 import { BodyRegionPanel } from '@/components/BodyRegionPanel';
 import { BODY_REGIONS, BODY_REGION_MAP } from '@/data/bodyMapData';
-import { Colors, FontSizes, Spacing, BorderRadius, Gradients } from '@/constants/theme';
+import { Colors, FontSizes, Spacing, BorderRadius } from '@/constants/theme';
 
 export default function BodyMapScreen() {
   const insets = useSafeAreaInsets();

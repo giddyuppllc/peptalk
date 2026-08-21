@@ -19,7 +19,7 @@
  *   - Tier-aware steps are filtered up-front in TOUR_SCRIPTS[variant]
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   Modal,
   View,
@@ -32,7 +32,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { useTutorialStore, type TargetRect, type TourVariant } from '../../store/useTutorialStore';
+import { useTutorialStore, type TargetRect } from '../../store/useTutorialStore';
 import { useTier } from '../../hooks/useFeatureGate';
 import { TOUR_SCRIPTS, type TourStep } from '../../config/tourSteps';
 
