@@ -159,6 +159,13 @@ console.log('\n— payments environment —\n');
     : [];
 
   if (bundles.length === 0) {
+    // Positive control. This check reads a corpus it discovers, so an empty
+    // corpus means it verified nothing — which must never look like a pass.
+    // verify-scanner-controls enforces that every discovering verifier says so.
+    console.log(
+      '  ✗ SELF-CHECK FAILED — found 0 bundles in dist/_expo/static/js/web; ' +
+        'cannot tell which Square environment shipped.',
+    );
     fail('no web bundle found in dist/', 'cannot tell which Square environment shipped');
   } else {
     const js = bundles.map(b => readFileSync(b, 'utf8')).join('');
