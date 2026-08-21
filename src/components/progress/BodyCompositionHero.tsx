@@ -33,6 +33,8 @@ export const BodyCompositionHero: React.FC = () => {
   // the stable scans array + the (stable) method ref and derive in useMemo.
   const scans = useBodyCompositionStore((s) => s.scans);
   const deltaWindow = useBodyCompositionStore((s) => s.deltaWindow);
+  // scans is a
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const delta = useMemo(() => deltaWindow(30), [deltaWindow, scans]);
 
   const open = () => {

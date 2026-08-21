@@ -197,7 +197,7 @@ function DayDetailPanel({ children, selectedDate }: { children: React.ReactNode;
     } else {
       anim.setValue(1);
     }
-  }, [selectedDate]);
+  }, [selectedDate, anim]);
 
   return (
     <Animated.View
@@ -237,7 +237,7 @@ function TodayGlow() {
     );
     loop.start();
     return () => loop.stop();
-  }, []);
+  }, [glow]);
 
   return (
     <Animated.View
@@ -330,7 +330,8 @@ export default function CalendarScreen() {
   const meals = useMealStore((s) => s.meals);
   const getMealsByDate = useMealStore((s) => s.getMealsByDate);
 
-  const datesWithDoses = useMemo(() => getDatesWithDoses(), [doses]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const datesWithDoses = useMemo(() => getDatesWithDoses(), [getDatesWithDoses, doses]);
   const checkinDates = useMemo(
     () => new Set((checkins ?? []).map((c) => c.date)),
     [checkins]
@@ -350,7 +351,11 @@ export default function CalendarScreen() {
 
   const selectedDayDoses = useMemo(
     () => getDosesByDate(selectedDate),
-    [selectedDate, doses]
+    // `doses` is a deliberate recompute trigger: the getter above reads it
+    // from the store instead of closing over it, so dropping it would leave
+    // this stale when the underlying data changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [getDosesByDate, selectedDate, doses]
   );
 
   const selectedDayCheckin = useMemo(
@@ -360,17 +365,29 @@ export default function CalendarScreen() {
 
   const selectedDayJournal = useMemo(
     () => getJournalByDate(selectedDate),
-    [selectedDate, journalEntries]
+    // `journalEntries` is a deliberate recompute trigger: the getter above reads it
+    // from the store instead of closing over it, so dropping it would leave
+    // this stale when the underlying data changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [getJournalByDate, selectedDate, journalEntries]
   );
 
   const selectedDayWorkouts = useMemo(
     () => getWorkoutLogsByDate(selectedDate),
-    [selectedDate, workoutLogs]
+    // `workoutLogs` is a deliberate recompute trigger: the getter above reads it
+    // from the store instead of closing over it, so dropping it would leave
+    // this stale when the underlying data changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [getWorkoutLogsByDate, selectedDate, workoutLogs]
   );
 
   const selectedDayMeals = useMemo(
     () => getMealsByDate(selectedDate),
-    [selectedDate, meals]
+    // `meals` is a deliberate recompute trigger: the getter above reads it
+    // from the store instead of closing over it, so dropping it would leave
+    // this stale when the underlying data changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [getMealsByDate, selectedDate, meals]
   );
 
 

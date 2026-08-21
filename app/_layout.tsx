@@ -331,7 +331,8 @@ function RootLayout() {
     // re-runs this effect and dismisses the splash. Without it, a stuck store
     // flips hydrationReady=true but nothing re-triggers here → splash forever
     // (tester report, build 55: "app stuck on splash").
-  }, [fontsReady, hydrationReady, hasHydrated, authHydrated, subscriptionHasHydrated, isComplete, isAuthenticated]);
+  }, [fontsReady, hydrationReady, hasHydrated, authHydrated, subscriptionHasHydrated, isComplete, isAuthenticated,
+      logoOpacity, logoScale, splashOpacity, splashScale]);
 
   // Final failsafe: the splash overlay must NEVER trap the app. Even if an
   // Animated completion callback never fires (observed on some iOS/Hermes
@@ -935,7 +936,7 @@ function RootLayout() {
       try { appStateSub?.remove(); } catch {}
       try { notificationSub?.remove(); } catch {}
     };
-  }, []);
+  }, [router]);
 
   // Auth deep-link handler — peptalk://auth/callback?code=... lands here
   // when a user taps the email-confirmation link (or password-reset link)

@@ -264,6 +264,10 @@ export default function CheckInScreen() {
         }
       );
     });
+  // `activeProtocols` is intentionally narrowed to the key(s) listed above rather than
+  // the whole object: the store returns a fresh reference on unrelated updates,
+  // and depending on the object itself would re-run this every time.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProtocols.length]);
 
   // ── Hydrate from existing entry ───────────────────────────────────────────

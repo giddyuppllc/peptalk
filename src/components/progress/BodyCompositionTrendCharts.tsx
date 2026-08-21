@@ -24,8 +24,13 @@ export const BodyCompositionTrendCharts: React.FC = () => {
   // Select the raw scans + the method ref and derive in useMemo instead.
   const allScans = useBodyCompositionStore((s) => s.scans);
   const recentScans = useBodyCompositionStore((s) => s.recentScans);
+  // allScans is a
   const scans = useMemo(
     () => recentScans(WINDOW_DAYS),
+    // `allScans` is a deliberate recompute trigger: the getter above reads it
+    // from the store instead of closing over it, so dropping it would leave
+    // this stale when the underlying data changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [recentScans, allScans],
   );
 

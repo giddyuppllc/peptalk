@@ -230,6 +230,9 @@ export default function HealthReportScreen() {
     lines.push('This report is informational only and does not constitute medical advice.');
 
     return lines.join('\n');
+  // `now` is deliberately excluded: it is `new Date()`, so listing it would
+  // recompute this on every render and defeat the memo.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     onboardingProfile,
     healthProfile,

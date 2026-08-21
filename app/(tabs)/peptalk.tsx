@@ -667,11 +667,16 @@ export default function PepTalkScreen() {
       }
       return true;
     },
+    // `` is intentionally narrowed to the key(s) listed above rather than
+    // the whole object: the store returns a fresh reference on unrelated updates,
+    // and depending on the object itself would re-run this every time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       addMessage,
       updateMessage,
       removeMessage,
       router,
+      isPro,
       applyLogDoseAction,
       applyLogMealAction,
       applyScheduleWorkoutAction,
@@ -1056,7 +1061,7 @@ export default function PepTalkScreen() {
         </View>
       </View>
     ),
-    [handleQuickReply, t],
+    [handleQuickReply, t, accent.deep],
   );
 
   // NOTE: do not wrap this entire tab in <PaywallGate>. Tabs can't pop

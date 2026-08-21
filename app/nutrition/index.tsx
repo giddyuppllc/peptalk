@@ -69,8 +69,13 @@ export default function NutritionScreen() {
     () => meals.filter((m) => m.date === today),
     [meals, today],
   );
+  // meals is a
   const totals = useMemo(
     () => getDailyTotals(today),
+    // `meals` is a deliberate recompute trigger: the getter above reads it
+    // from the store instead of closing over it, so dropping it would leave
+    // this stale when the underlying data changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [getDailyTotals, today, meals],
   );
   const tier = useSubscriptionStore((s) => s.tier);

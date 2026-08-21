@@ -67,6 +67,10 @@ export default function LiveEventChatScreen() {
       subscribe(eventId);
     }
     return () => unsubscribe();
+  // `active` is intentionally narrowed to the key(s) listed above rather than
+  // the whole object: the store returns a fresh reference on unrelated updates,
+  // and depending on the object itself would re-run this every time.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId, active?.id, hydrateEvent, subscribe, unsubscribe]);
 
   // Auto-scroll to newest message on every new arrival.

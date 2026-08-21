@@ -124,7 +124,7 @@ export default function OnboardingScreen() {
       }, 1800); // Let the animation play for 1.8s then auto-route
       return () => clearTimeout(timer);
     }
-  }, [step, isAuthenticated, isComplete, isEditMode]);
+  }, [step, isAuthenticated, isComplete, isEditMode, router]);
 
   // Age (exact)
   const [selectedAge, setSelectedAge] = useState(0);
