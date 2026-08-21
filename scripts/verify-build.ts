@@ -19,7 +19,7 @@
  *
  * Run before any web deploy:  npm run verify:build
  */
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 
 const INDEX = 'dist/index.html';
@@ -148,11 +148,15 @@ if (existsSync('dist/sw.js')) {
 // ---------------------------------------------------------------------------
 console.log('\n— payments environment —\n');
 {
-  const bundles = execSync('ls dist/_expo/static/js/web/*.js 2>/dev/null || true', {
-    encoding: 'utf8',
-  })
-    .split(/\r?\n/)
-    .filter(Boolean);
+  // readdirSync, not a shell glob: `ls dist/.../*.js` is not portable and on
+  // Windows returned "cannot find the path", which made this report "no web
+  // bundle" instead of actually checking the bundle that was about to ship.
+  const BUNDLE_DIR = 'dist/_expo/static/js/web';
+  const bundles = existsSync(BUNDLE_DIR)
+    ? readdirSync(BUNDLE_DIR)
+        .filter((f) => f.endsWith('.js'))
+        .map((f) => `${BUNDLE_DIR}/${f}`)
+    : [];
 
   if (bundles.length === 0) {
     fail('no web bundle found in dist/', 'cannot tell which Square environment shipped');
@@ -163,11 +167,21 @@ console.log('\n— payments environment —\n');
     const prodSdk = /(?<!sandbox\.)web\.squarecdn\.com/.test(js);
 
     if (sandboxSdk || sandboxAppId) {
-      fail(
-        'this build ships Square SANDBOX — it cannot take a real payment',
-        'set EXPO_PUBLIC_SQUARE_ENV=production, EXPO_PUBLIC_SQUARE_APPLICATION_ID and ' +
-          'EXPO_PUBLIC_SQUARE_LOCATION_ID to their production values, then re-export.',
-      );
+      // Escape hatch. Without it this gate holds every unrelated fix hostage
+      // to the Square configuration — a security header or a crash fix could
+      // not ship while payments were misconfigured. Explicit, loud, and opt-in
+      // per invocation, so it cannot become the silent default.
+      if (process.env.ALLOW_SANDBOX_PAYMENTS === '1') {
+        console.log('  ! Square SANDBOX in this build — allowed via ALLOW_SANDBOX_PAYMENTS=1');
+        console.log('      Web checkout CANNOT take a real payment in this deploy.');
+      } else {
+        fail(
+          'this build ships Square SANDBOX — it cannot take a real payment',
+          'set EXPO_PUBLIC_SQUARE_ENV=production, EXPO_PUBLIC_SQUARE_APPLICATION_ID and ' +
+            'EXPO_PUBLIC_SQUARE_LOCATION_ID to their production values, then re-export. ' +
+            'To ship an unrelated fix meanwhile: ALLOW_SANDBOX_PAYMENTS=1 npm run deploy:web',
+        );
+      }
     } else if (!prodSdk) {
       // Neither present: the form may have been removed, which is a decision,
       // not a defect — but say so rather than passing silently.
