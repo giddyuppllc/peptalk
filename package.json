@@ -45,7 +45,8 @@
     "verify:scannercontrols": "node scripts/verify-scanner-controls.mjs",
     "export:review": "tsx scripts/export-clinical-review.ts",
     "verify:vacuous": "node scripts/verify-scanner-mutation.mjs",
-    "verify:skips": "node scripts/verify-skips.mjs"
+    "verify:skips": "node scripts/verify-skips.mjs",
+    "apply:review": "tsx scripts/apply-clinical-review.ts"
   },
   "expo": {
     "install": {
