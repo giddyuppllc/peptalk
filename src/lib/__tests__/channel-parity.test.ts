@@ -94,7 +94,6 @@ describe('payment channels stay walled off from each other', () => {
     // build is an App Store 3.1.1 rejection, so the native file must stay a
     // stub even though app/subscription.tsx imports it unconditionally.
     //
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { SquareCardForm } = require('../../components/SquareCardForm');
     expect(SquareCardForm({} as never)).toBeNull();
   });

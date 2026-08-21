@@ -32,7 +32,6 @@ let HCModule: HealthConnectModule | null = null;
 
 try {
   if (Platform.OS === 'android') {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     HCModule = require('react-native-health-connect') as HealthConnectModule;
   }
 } catch {

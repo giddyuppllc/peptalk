@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CATEGORY_LABELS, getVideoBySlug } from '../../../src/data/workoutVideos';
 import { useVideoTaggerStore, combineEdits } from '../../../src/store/useVideoTaggerStore';
 import { resolveVideoUrl } from '../../../src/services/r2VideoResolver';
-import EXERCISES from '../../../src/data/exercises';
+import { EXERCISES } from '../../../src/data/exercises';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { useSectionAccent } from '../../../src/hooks/useSectionAccent';
 import { FullScreenVideo } from '../../../src/components/FullScreenVideo';

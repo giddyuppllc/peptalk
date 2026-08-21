@@ -294,14 +294,16 @@ export const useCycleStore = create<CycleState & CycleActions>()(
       toggleSymptom: (date, symptom) => {
         const existing = get().getDayLog(date);
         const current = new Set(existing?.symptoms ?? []);
-        current.has(symptom) ? current.delete(symptom) : current.add(symptom);
+        if (current.has(symptom)) current.delete(symptom);
+        else current.add(symptom);
         get().upsertDayLog(date, { symptoms: Array.from(current) });
       },
 
       toggleMood: (date, mood) => {
         const existing = get().getDayLog(date);
         const current = new Set(existing?.moods ?? []);
-        current.has(mood) ? current.delete(mood) : current.add(mood);
+        if (current.has(mood)) current.delete(mood);
+        else current.add(mood);
         get().upsertDayLog(date, { moods: Array.from(current) });
       },
 

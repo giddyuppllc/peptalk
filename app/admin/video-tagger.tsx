@@ -32,7 +32,7 @@ import {
 import { useVideoTaggerStore, applyEdits, combineEdits } from '../../src/store/useVideoTaggerStore';
 import { saveWorkoutOverrides } from '../../src/services/workoutOverrides';
 import { resolveVideoUrl } from '../../src/services/r2VideoResolver';
-import EXERCISES from '../../src/data/exercises';
+import { EXERCISES } from '../../src/data/exercises';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { selectionTick, notifySuccess as successTick } from '../../src/utils/haptics';

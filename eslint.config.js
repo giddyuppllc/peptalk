@@ -23,6 +23,28 @@ module.exports = defineConfig([
        * not apply to is what makes the rest of the linter usable in CI.
        */
       'react/no-unescaped-entities': 'off',
+
+      /**
+       * OFF for React Native.
+       *
+       * 88 of these, and converting them would break the app. The pattern they
+       * flag is the standard way to load an optional native module:
+       *
+       *   let NetInfo = null;
+       *   try { NetInfo = require('@react-native-community/netinfo'); }
+       *   catch { }        // web / Expo Go / jest — no native module present
+       *
+       * A static `import` is hoisted and cannot be wrapped in try/catch, so
+       * rewriting these would turn a graceful degradation into a hard failure
+       * on every platform that lacks the module. The rest are lazy requires
+       * inside functions, deferring native work until it is actually needed.
+       *
+       * Same reasoning as no-unescaped-entities above: the rule encodes an
+       * assumption (one module system, everything statically resolvable) that
+       * does not hold on this platform. Left on, it is 88 permanent warnings
+       * that train everyone to ignore the linter.
+       */
+      '@typescript-eslint/no-require-imports': 'off',
     },
   },
 ]);

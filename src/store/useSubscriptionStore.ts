@@ -404,13 +404,13 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
               .order('last_validated_at', { ascending: false })
               .limit(5);
             if (error) throw error;
-            const candidates: Array<{
+            const candidates: {
               tier: SubscriptionTier;
               product_id: string;
               expires_at: string | null;
               is_active: boolean | null;
               last_validated_at: string | null;
-            }> = Array.isArray(rows) ? rows : [];
+            }[] = Array.isArray(rows) ? rows : [];
             const nowMs = Date.now();
             const tierRank: Record<SubscriptionTier, number> = {
               free: 0, plus: 1, pro: 2,

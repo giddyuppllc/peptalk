@@ -3,10 +3,10 @@
  * web user is unopenable in a browser, so the account exists, the email
  * arrives, and confirmation is impossible. Nothing throws.
  */
-jest.mock('react-native', () => ({ Platform: { OS: 'ios' } }));
-
 import { Platform } from 'react-native';
 import { authRedirectUrl, NATIVE_AUTH_REDIRECT } from '../authRedirect';
+
+jest.mock('react-native', () => ({ Platform: { OS: 'ios' } }));
 
 describe('authRedirectUrl', () => {
   const origWindow = (global as any).window;

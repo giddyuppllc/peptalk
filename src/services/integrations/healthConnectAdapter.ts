@@ -32,7 +32,6 @@ type HealthConnectModule = typeof import('react-native-health-connect');
 let HealthConnect: HealthConnectModule | null = null;
 try {
   if (Platform.OS === 'android') {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     HealthConnect = require('react-native-health-connect') as HealthConnectModule;
   }
 } catch {
