@@ -541,7 +541,6 @@ export default function SubscriptionScreen() {
             if (restoring) return;
             setRestoring(true);
             trackRestoreAttempted();
-            const tierBefore = useSubscriptionStore.getState().tier;
             try {
               const count = await restorePurchases();
               // Each restored purchase fires the purchaseUpdatedListener,

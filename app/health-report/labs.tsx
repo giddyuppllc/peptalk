@@ -141,7 +141,6 @@ export default function LabsScreen() {
   const [values, setValues] = useState<Record<string, string>>({});
   const [expandedCategory, setExpandedCategory] = useState<LabCategory | null>('lipid');
   const [scanning, setScanning] = useState(false);
-  const tier = useSubscriptionStore((s) => s.tier);
   // Wave 76.35: hasFeature() so plus + pro both unlock (matches server)
   // and TestFlight preview builds bypass paywall. Testers reported lab
   // scanning never worked — they got the PRO upsell wall.
@@ -267,7 +266,7 @@ export default function LabsScreen() {
         'Pre-filled',
         `Parsed ${count} lab value${count === 1 ? '' : 's'} from your image. Review the panels below and tap Save.${unmappedMsg}`,
       );
-    } catch (err) {
+    } catch {
       Alert.alert('Network error', 'Could not reach the lab parser. Try again or enter values manually.');
     } finally {
       setScanning(false);

@@ -32,7 +32,6 @@ interface FieldRowProps {
 
 function FieldRow({ label, required, value, placeholder, onChangeText, keyboardType = 'default', unit }: FieldRowProps) {
   const t = useTheme();
-  const accent = useSectionAccent();
   return (
     <View style={[s.row, { borderBottomColor: t.cardBorder }]}>
       <View style={{ flex: 1 }}>

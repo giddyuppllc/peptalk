@@ -97,7 +97,6 @@ export default function ReconstitutionCalculatorScreen() {
   // U-100 insulin syringe: 100 ticks/units per 1mL, so 1 tick = 0.01mL.
   const concentrationPerTick = concentrationPerMl / 100; // mcg per 0.01mL tick
   const volumeToInject = concentrationPerMl > 0 ? doseMcg / concentrationPerMl : 0; // mL
-  const syringeUnits = volumeToInject * 100; // U-100 insulin syringe
   const ticksToDrawTo = volumeToInject * 100; // 0.01mL ticks (1 tick = 1 unit)
   const dosesPerVial = doseMcg > 0 && volumeToInject > 0 ? waterMl / volumeToInject : 0;
 
@@ -132,11 +131,6 @@ export default function ReconstitutionCalculatorScreen() {
 
   // Syringe visual: 1mL insulin syringe = 100 units = 100 ticks of 0.01mL
   // Show where the fill line is
-  const syringeFillPercent = useMemo(() => {
-    if (!canCalculate || !showResults) return 0;
-    const pct = (volumeToInject / 1.0) * 100; // percentage of 1mL syringe
-    return Math.min(pct, 100);
-  }, [canCalculate, showResults, volumeToInject]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>

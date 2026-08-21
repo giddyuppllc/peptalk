@@ -375,7 +375,6 @@ export default function CalendarScreen() {
     [selectedDate, meals]
   );
 
-  const activeProtocols = useMemo(() => getActiveProtocols(), [protocols]);
 
   const activeAlerts = useMemo(
     () => alerts.filter((a) => !a.dismissed),

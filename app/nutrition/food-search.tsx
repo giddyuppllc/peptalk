@@ -120,7 +120,6 @@ const MEAL_TYPES: { key: MealType; label: string; icon: string }[] = [
   { key: 'post_workout', label: 'Post-Workout', icon: 'fitness-outline' },
 ];
 
-type WeightUnit = 'g' | 'oz';
 
 const OZ_TO_GRAMS = 28.3495;
 

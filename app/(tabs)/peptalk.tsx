@@ -120,7 +120,6 @@ const JournalToast: React.FC = () => {
     opacity: opacity.value,
   }));
 
-  const t = useTheme();
   const accent = useSectionAccent();
   return (
     <Animated.View style={[styles.journalToast, animStyle]}>

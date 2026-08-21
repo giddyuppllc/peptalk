@@ -24,7 +24,6 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../hooks/useTheme';
 import { Spacing, FontSizes, BorderRadius } from '../constants/theme';
 import { notifySuccess, tapLight } from '../utils/haptics';
 import { useFeatureWaitlistStore } from '../store/useFeatureWaitlistStore';
@@ -37,7 +36,6 @@ interface MaxYourStackCardProps {
 const FEATURE_KEY = 'max_your_stack';
 
 export function MaxYourStackCard({ compact = false }: MaxYourStackCardProps) {
-  const t = useTheme();
   const onWaitlist = useFeatureWaitlistStore((s) => !!s.signups[FEATURE_KEY]);
   const join = useFeatureWaitlistStore((s) => s.join);
   const [pulse, setPulse] = useState(false);

@@ -79,7 +79,7 @@ function VoiceLogScreen() {
       const initial: Record<string, boolean> = {};
       foods.slice(0, 5).forEach((f) => { initial[f.id] = true; });
       setSelected(initial);
-    } catch (err) {
+    } catch {
       Alert.alert('Could not parse', 'Try rephrasing what you ate, or use the regular search instead.');
     } finally {
       setParsing(false);

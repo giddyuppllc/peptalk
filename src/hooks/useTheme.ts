@@ -109,7 +109,6 @@ const ICE_MELT = '#D8E3E7';           // 13-4302 TCX — male pastel blue
 const ICE_MELT_DEEP = '#7FB3C2';      // Derived darker for CTAs
 const ICE_MELT_DARKER = '#5C92A3';    // Derived darker still
 const ALMOST_AQUA = '#A4D9D1';        // 12-5409 TCX — male mint secondary
-const NIMBUS_CLOUD = '#D5D6D2';       // 14-4504 TCX — male soft gray accent
 const CREAM_COOL = '#F3F5F2';         // Cooler Cloud Dancer for male surface band
 const BORDER_COOL = '#E0E4E1';        // Soft gray border
 

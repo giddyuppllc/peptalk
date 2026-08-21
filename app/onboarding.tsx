@@ -102,7 +102,6 @@ const PLANS: { tier: 'free' | 'plus' | 'pro'; name: string; price: string; badge
 
 // Colors — gender-neutral until user selects gender
 const ACCENT = '#2D2D2D';       // Clean black (Jamie's "black glass" buttons)
-const ACCENT_LIGHT = '#4A4A4A';
 const SURFACE = '#F7F7F7';      // Neutral warm gray
 const HIGHLIGHT = '#E89672';    // Subtle warm pop for selected states
 
@@ -170,7 +169,6 @@ export default function OnboardingScreen() {
   >('nothing');
 
   // Stores
-  const login = useAuthStore((s) => s.login);
   const signup = useAuthStore((s) => s.signup);
   const isLoggingIn = useAuthStore((s) => s.isLoading);
   const setTier = useSubscriptionStore((s) => s.setTier);

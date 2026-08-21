@@ -11,7 +11,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, ScrollView, TextInput, StyleSheet, Modal } from 'react-native';
 import { Alert } from '../../src/lib/alert';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
   V3DetailShell,
@@ -112,7 +112,6 @@ const START_DATE_OPTIONS: { label: string; delta: number }[] = [
 
 export default function CalculatorV2Screen() {
   const t = useV3Theme();
-  const router = useRouter();
   const params = useLocalSearchParams<{
     peptideId?: string;
     doseMcg?: string;

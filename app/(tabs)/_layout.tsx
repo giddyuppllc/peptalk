@@ -68,8 +68,6 @@ export default function TabsLayout() {
   // returns 0 here. Build the tab bar to clear the indicator with breathing
   // room — content area 50px + insets.bottom + a tiny floor of 10 so old
   // hardware still has touch targets that meet HIG.
-  const tabContent = 50;
-  const tabBarHeight = tabContent + Math.max(insets.bottom, 10);
   return (
     <View style={{ flex: 1 }}>
     <Tabs

@@ -27,7 +27,6 @@ function LogItem({ log }: { log: WorkoutLog }) {
     month: 'short',
     day: 'numeric',
   });
-  const completedSets = log.sets.filter((s) => s.completed).length;
 
   return (
     <View style={styles.logRow}>

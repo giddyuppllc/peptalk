@@ -1198,7 +1198,7 @@ export async function* generateAIResponseStream(
     let fullText = '';
     try {
       fullText = await res.text();
-    } catch (e) {
+    } catch {
       yield { type: 'error', message: 'Failed to read response' };
       return;
     }

@@ -114,7 +114,6 @@ interface CommunityState {
   clearAll: () => void;
 }
 
-const POST_AUTHOR_FIELDS = 'id, username, display_name, avatar_url';
 
 /** Feed page size. Doubles as the initial hydrateFeed limit AND the
  *  loadMoreFeed page size so "is this page full?" maps cleanly to

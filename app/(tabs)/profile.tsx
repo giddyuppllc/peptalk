@@ -42,7 +42,6 @@ import {
 } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useIsAdmin } from '../../src/hooks/useIsAdmin';
-import { useThemeStore } from '../../src/store/useThemeStore';
 import { sendFeedback } from '../../src/services/feedback';
 import { disableReviewPrompt } from '../../src/services/reviewPrompt';
 
@@ -250,8 +249,6 @@ function UserProfile() {
   const isPro = tier === 'pro';
   const t = useTheme();
   const router = useRouter();
-  const themeMode = useThemeStore((s) => s.mode);
-  const setThemeMode = useThemeStore((s) => s.setMode);
   const darkMode = t.isDark;
 
   const pickAvatar = useCallback(async () => {
@@ -544,26 +541,6 @@ function AdvancedFitnessToggle({ t }: { t: ReturnType<typeof useTheme> }) {
 // had NO other route into it anywhere in the app. A live Journal row was added
 // before this deletion, or the app would have lost its only path to /journal.
 
-const actionStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  btn: { flex: 1 },
-  gradient: {
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    height: 100,
-    justifyContent: 'space-between',
-  },
-  label: {
-    fontSize: FontSizes.sm,
-    fontWeight: '700',
-    color: '#fff',
-    lineHeight: 18,
-  },
-});
 
 // ---------------------------------------------------------------------------
 // Notification Settings
@@ -571,7 +548,6 @@ const actionStyles = StyleSheet.create({
 // WEEKDAY_NUMBERS and weekdayNumberToLabel went with NotificationSettings —
 // they existed only to render its workout-reminder day picker. DAY_LABELS stays;
 // it is still used below.
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 // NotificationSettings() lived here — ~340 lines defining the whole
 // notification preferences UI, referenced by nothing. It was superseded by
@@ -603,98 +579,12 @@ const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 // ---------------------------------------------------------------------------
 // LegalLinks() removed — defined here, rendered nowhere (41 lines).
 
-const linkStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  textWrap: { flex: 1 },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2D2D2D',
-  },
-  desc: {
-    fontSize: 11,
-    color: '#6B7280',
-    marginTop: 1,
-  },
-  legalSection: {
-    marginTop: Spacing.lg,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
-    alignItems: 'center',
-  },
-  legalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  legalLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  legalDivider: {
-    fontSize: 11,
-    color: 'rgba(0,0,0,0.10)',
-  },
-  privacyText: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  versionText: {
-    fontSize: 11,
-    color: 'rgba(0,0,0,0.12)',
-    marginTop: 10,
-    letterSpacing: 0.5,
-  },
-});
 
 // ---------------------------------------------------------------------------
 // Delete Data Section
 // ---------------------------------------------------------------------------
 // DeleteDataSection() removed — defined here, rendered nowhere (38 lines).
 
-const deleteStyles = StyleSheet.create({
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.25)',
-    backgroundColor: 'rgba(239, 68, 68, 0.06)',
-  },
-  text: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#ef4444',
-  },
-  hint: {
-    fontSize: 11,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 16,
-  },
-});
 
 // ---------------------------------------------------------------------------
 // Main Screen
@@ -734,8 +624,6 @@ export default function ProfileScreen() {
   const { isAuthenticated, logout, user } = useAuthStore();
   const t = useTheme();
   const router = useRouter();
-  const themeMode = useThemeStore((s) => s.mode);
-  const setThemeMode = useThemeStore((s) => s.setMode);
   const isAdmin = useIsAdmin();
 
   const handleDelete = () => {
@@ -1524,121 +1412,9 @@ const styles = StyleSheet.create({
 // ---------------------------------------------------------------------------
 // Health Profile Styles
 // ---------------------------------------------------------------------------
-const healthStyles = StyleSheet.create({
-  progressSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    marginBottom: Spacing.md,
-    paddingBottom: Spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-  },
-  progressInfo: {
-    flex: 1,
-  },
-  progressTitle: {
-    fontSize: FontSizes.sm,
-    fontWeight: '700',
-    color: Colors.darkText,
-    marginBottom: 6,
-  },
-  progressTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(0,0,0,0.06)',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  progressHint: {
-    fontSize: FontSizes.xs,
-    color: Colors.darkTextSecondary,
-    marginTop: 4,
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: BorderRadius.md,
-    paddingVertical: 12,
-    gap: 6,
-    marginTop: 12,
-  },
-  editButtonText: {
-    fontSize: FontSizes.xs,
-    fontWeight: '700',
-    color: '#c7d7e6',
-  },
-});
 
 // ---------------------------------------------------------------------------
 // Notification Styles
 // ---------------------------------------------------------------------------
-const notifStyles = StyleSheet.create({
-  card: {
-    paddingVertical: Spacing.sm,
-    marginTop: 10,
-  },
-  dayRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingHorizontal: 4,
-    paddingBottom: 8,
-    marginTop: 4,
-  },
-  dayChip: {
-    width: 40,
-    height: 34,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
-  },
-  dayChipActive: {
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-    borderColor: 'rgba(245, 158, 11, 0.5)',
-  },
-  dayChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  dayChipTextActive: {
-    color: '#F4ECC2',
-  },
-  mealList: {
-    paddingHorizontal: 4,
-    paddingBottom: 8,
-    gap: 6,
-  },
-  mealRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.03)',
-  },
-  mealLabel: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.darkText,
-  },
-  mealTime: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#10b981',
-    minWidth: 46,
-    textAlign: 'right',
-  },
-});
 
 

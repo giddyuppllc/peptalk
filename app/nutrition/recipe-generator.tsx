@@ -215,7 +215,6 @@ export default function RecipeGeneratorScreen() {
    */
   const routeParams = useLocalSearchParams<{ asTemplate?: string }>();
   const asTemplate = routeParams.asTemplate === '1';
-  const canUse = hasFeature('recipe_generator');
 
   const handleLogRecipe = useCallback((recipe: GeneratedRecipe) => {
     const toDateKey = (d: Date) => {

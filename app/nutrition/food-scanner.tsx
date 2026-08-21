@@ -210,7 +210,7 @@ export default function FoodScannerScreen() {
         setPhoto(`data:image/jpeg;base64,${pic.base64}`);
         analyzeFoodPhoto(pic.base64);
       }
-    } catch (e) {
+    } catch {
       Alert.alert('Error', 'Failed to take photo. Please try again.');
     }
   };
@@ -256,7 +256,7 @@ export default function FoodScannerScreen() {
       }
       setPhoto(`data:image/jpeg;base64,${asset.base64}`);
       analyzeFoodPhoto(asset.base64);
-    } catch (e) {
+    } catch {
       Alert.alert('Error', 'Could not open your photo library. Please try again.');
     }
   };
@@ -297,7 +297,7 @@ export default function FoodScannerScreen() {
       const data: ScanResult = await res.json();
       if (!mountedRef.current) return;
       setResult(data);
-    } catch (e) {
+    } catch {
       if (mountedRef.current) {
         Alert.alert('Error', 'Network error. Please try again.');
       }

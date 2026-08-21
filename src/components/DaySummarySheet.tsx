@@ -19,7 +19,6 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useDaySummary } from '../hooks/useDaySummary';
 import { useTheme } from '../hooks/useTheme';
-import { useSectionAccent } from '../hooks/useSectionAccent';
 import { getPeptideById } from '../data/peptides';
 import { useHealthProfileStore } from '../store/useHealthProfileStore';
 import { computeCyclePhase, PHASE_LABELS } from '../services/cycleService';
@@ -38,7 +37,6 @@ function formatDate(dateKey: string): string {
 
 export function DaySummarySheet({ visible, dateKey, onClose }: DaySummarySheetProps) {
   const t = useTheme();
-  const accent = useSectionAccent();
   const router = useRouter();
   const summary = useDaySummary(dateKey);
   const healthProfile = useHealthProfileStore((s) => s.profile);

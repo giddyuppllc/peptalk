@@ -16,7 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Spacing, FontSizes } from '../../src/constants/theme';
-import { useAuthStore } from '../../src/store/useAuthStore';
 import { REPORT_REASON_LABELS } from '../../src/types/community';
 
 interface ReportRow {
@@ -45,7 +44,6 @@ interface TopicRow {
 export default function CommunityAdminQueue() {
   const t = useTheme();
   const router = useRouter();
-  const userEmail = useAuthStore((s) => s.user?.email)?.toLowerCase();
 
   const [tab, setTab] = useState<'reports' | 'topics'>('reports');
   const [reports, setReports] = useState<ReportRow[]>([]);

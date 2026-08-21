@@ -40,7 +40,6 @@ function ringTargetForExerciseMinutes(): number {
 }
 
 export default function ActivityScreen() {
-  const t = useV3Theme();
   const router = useRouter();
   const today = todayKey();
   const stepsReading = useBiometricsStore((s) => s.getReading(today, 'steps'));

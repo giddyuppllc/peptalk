@@ -322,7 +322,6 @@ export const useCycleStore = create<CycleState & CycleActions>()(
 
       // ── Contraception history ──────────────────────────────────────────
       setCurrentContraception: (method, startDate) => {
-        const now = new Date().toISOString();
         const today = todayKey();
         const start = startDate ?? today;
         const history = [...get().contraceptionHistory];

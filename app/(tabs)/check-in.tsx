@@ -201,7 +201,6 @@ export default function CheckInScreen() {
     return toDateKey(new Date());
   }, [params.date]);
 
-  const isToday = dateKey === toDateKey(new Date());
   const existingEntry = getCheckInByDate(dateKey);
 
   // ── Existing rating state ─────────────────────────────────────────────────
@@ -413,7 +412,7 @@ export default function CheckInScreen() {
           `No recent health data found in ${getHealthSourceLabel()}. You can enter your metrics manually.`,
         );
       }
-    } catch (error) {
+    } catch {
       Alert.alert(
         'Sync Failed',
         'Unable to fetch health data. Please try again later.',
@@ -550,39 +549,12 @@ export default function CheckInScreen() {
   };
 
   // ── Derived data ──────────────────────────────────────────────────────────
-  const streak = getStreak();
-  const recentEntries = entries.slice(0, 7);
 
-  const trendData = useMemo(() => {
-    const recent = entries.slice(0, 14).reverse(); // oldest first for sparkline
-    return {
-      mood: recent.map(e => e.mood),
-      energy: recent.map(e => e.energy),
-      sleep: recent.map(e => e.sleepQuality),
-      stress: recent.map(e => e.stress),
-      recovery: recent.map(e => e.recovery),
-      appetite: recent.map(e => e.appetite),
-    };
-  }, [entries]);
 
-  const weightData = useMemo(() => {
-    return entries
-      .slice(0, 30)
-      .filter(e => e.weightLbs != null)
-      .reverse()
-      .map(e => e.weightLbs!);
-  }, [entries]);
 
-  const emotionFreq = useMemo(() => {
-    const freq = getEmotionFrequency(14);
-    return Object.entries(freq)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 5);
-  }, [entries]);
 
   // ── Step-by-step flow ─────────────────────────────────────────────────────
   const ACCENT = '#E89672'; // Home peach — matches FAB "Daily Log" color
-  const ACCENT_LIGHT = '#F0CFB1';
 
   const STEPS = [
     { key: 'mood', title: 'How are you feeling?', subtitle: 'Rate your overall mood right now' },

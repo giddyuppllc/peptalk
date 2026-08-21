@@ -15,7 +15,6 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { ScrollView, View, Text, TextInput, TouchableOpacity, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { Alert } from '../../src/lib/alert';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { V3DetailShell, GlassCard } from '../../src/components/v3';
 import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 import { tapLight, tapMedium } from '../../src/utils/haptics';
@@ -94,7 +93,6 @@ interface PairSummary {
 
 export default function StackBuilderScreen() {
   const t = useV3Theme();
-  const router = useRouter();
   const logDose = useDoseLogStore((s) => s.logDose);
 
   const currentStack = useStackStore((s) => s.currentStack);

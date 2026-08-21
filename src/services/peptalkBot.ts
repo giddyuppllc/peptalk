@@ -344,11 +344,6 @@ function checkContraindications(
 
   const flags: SafetyFlag[] = [];
   const conditions = profile.medical.conditions.map((c) => c.toLowerCase());
-  const meds = profile.medical.medications.map((m) => m.toLowerCase());
-  const allergies = [
-    ...profile.medical.allergies.map((a) => a.toLowerCase()),
-    ...profile.nutrition.foodAllergies.map((a) => a.toLowerCase()),
-  ];
 
   // Check pregnancy/breastfeeding
   if (profile.medical.pregnantOrNursing) {
@@ -1679,7 +1674,6 @@ function respondWorkoutSuggest(message: string, context: BotContext): string {
 }
 
 function respondMealSuggest(message: string, context: BotContext): string {
-  const enhanced = context as EnhancedBotContext | undefined;
   const parts: string[] = [];
   const lower = message.toLowerCase();
 

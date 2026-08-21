@@ -292,7 +292,7 @@ function MealScanScreen() {
       const initial: Record<string, boolean> = {};
       all.forEach((f) => { initial[f.id] = true; });
       setSelected(initial);
-    } catch (err) {
+    } catch {
       if (mountedRef.current) {
         Alert.alert('Capture failed', 'Could not capture or analyze the photo.');
       }
@@ -310,7 +310,7 @@ function MealScanScreen() {
       if (!mountedRef.current) return;
       if (!photo?.uri) return;
       await analyzePhoto(photo.uri);
-    } catch (err) {
+    } catch {
       if (mountedRef.current) {
         Alert.alert('Capture failed', 'Could not capture the photo.');
       }
@@ -343,7 +343,7 @@ function MealScanScreen() {
       if (result.canceled || !result.assets?.[0]) return;
       if (!mountedRef.current) return;
       await analyzePhoto(result.assets[0].uri);
-    } catch (err) {
+    } catch {
       if (mountedRef.current) {
         Alert.alert('Couldn\'t open library', 'Could not open your photo library. Please try again.');
       }
