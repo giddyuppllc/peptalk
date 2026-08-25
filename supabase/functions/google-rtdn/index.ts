@@ -31,6 +31,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { jwtVerify, createRemoteJWKSet } from 'https://esm.sh/jose@5.9.6';
+import { reportError } from '../_shared/sentry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -363,6 +364,7 @@ Deno.serve(async (req) => {
 
     return new Response('ok', { status: 200 });
   } catch (err) {
+    reportError('google-rtdn', err);
     console.error('[google-rtdn] handler threw:', err);
     // Reserve 200 for genuinely non-retriable failures. The only throws that
     // reach here are envelope/payload parse errors (req.json / JSON.parse on

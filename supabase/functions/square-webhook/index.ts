@@ -15,6 +15,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { timingSafeEqual, parseRef, planForProduct } from '../_shared/square.ts';
+import { withErrorReporting } from '../_shared/sentry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -127,7 +128,10 @@ async function onSubscription(sub: any): Promise<Response> {
   return ok();
 }
 
-Deno.serve(async (req) => {
+// Wrapped: this handler had no outer try/catch, so an unexpected throw
+// returned an opaque runtime error to Square, which then retries a webhook
+// that will fail again — with nothing recorded anywhere.
+Deno.serve(withErrorReporting('square-webhook', async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
   const rawBody = await req.text();
   const signature = req.headers.get('x-square-hmacsha256-signature') ?? '';
@@ -245,4 +249,4 @@ Deno.serve(async (req) => {
 
   console.log(`[square-webhook] granted ${ref.tier} (web) to ${ref.userId}`);
   return ok();
-});
+}));

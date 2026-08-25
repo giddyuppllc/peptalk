@@ -16,6 +16,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { SQUARE_PLANS } from '../_shared/square.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -154,6 +155,10 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, subscriptionId, tier: plan.tier });
   } catch (e) {
+    // console.error alone put this in a log nobody reads. A card payment
+    // failing on the live PWA produced "failed to call the edge function" on
+    // the client and left no way to see which step threw.
+    reportError('square-subscribe', e);
     console.error('[square-subscribe] error', e);
     return json({ error: 'Subscription error' }, 500);
   }

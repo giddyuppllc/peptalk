@@ -33,6 +33,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { compactVerify, importX509, decodeProtectedHeader } from 'https://esm.sh/jose@5.9.6';
 import { X509Certificate } from 'https://esm.sh/@peculiar/x509@1.9.7';
+import { reportError } from '../_shared/sentry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -340,6 +341,7 @@ Deno.serve(async (req) => {
 
     return new Response('ok', { status: 200 });
   } catch (err) {
+    reportError('apple-notifications', err);
     console.error('[apple-notifications] handler threw:', err);
     return new Response('Internal error', { status: 500 });
   }
