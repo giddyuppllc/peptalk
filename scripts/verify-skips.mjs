@@ -24,6 +24,8 @@
  * VERIFY_STRICT=1 to turn skips into a failure once the secrets exist.
  */
 
+import { execFileSync } from 'node:child_process';
+
 const CHECKS = [
   {
     env: 'SUPABASE_ACCESS_TOKEN',
@@ -31,6 +33,33 @@ const CHECKS = [
     covers:
       'whether the edge functions the client calls are actually DEPLOYED. ' +
       'Without it the check only proves they exist in the repo.',
+    /**
+     * The env var is not the only way this check can run.
+     * verify-edge-functions.ts does not read SUPABASE_ACCESS_TOKEN — it shells
+     * out to `supabase functions list` and uses whatever auth the CLI has,
+     * which includes a token stored by `supabase login`. So after a CLI login
+     * the remote half runs fine while this reporter, keying off the env var
+     * alone, still announced it as skipped.
+     *
+     * A reporter that under-claims coverage is safer than one that over-claims,
+     * but it is still wrong, and "which checks actually ran" is the one thing
+     * this file exists to answer truthfully. So probe the same way the real
+     * check does. Failure of any kind counts as "cannot run" — the
+     * conservative direction.
+     */
+    canRunAnyway: () => {
+      try {
+        execFileSync('npx', ['supabase', 'projects', 'list'], {
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'ignore'],
+          shell: process.platform === 'win32',
+          timeout: 60_000,
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    },
   },
   {
     env: 'SQUARE_ACCESS_TOKEN',
@@ -42,7 +71,12 @@ const CHECKS = [
   },
 ];
 
-const missing = CHECKS.filter(c => !process.env[c.env]);
+// A check counts as skipped only when the env var is absent AND it has no
+// other way to run. Without the second clause this file reports gaps that do
+// not exist — see canRunAnyway above.
+const missing = CHECKS.filter(
+  (c) => !process.env[c.env] && !(c.canRunAnyway ? c.canRunAnyway() : false),
+);
 const strict = process.env.VERIFY_STRICT === '1';
 
 console.log('\n━━━ Checks that did not run ━━━\n');
