@@ -625,6 +625,14 @@ export default function ProfileScreen() {
   const router = useRouter();
   const isAdmin = useIsAdmin();
 
+  // Cycle tracking is menstrual-cycle tracking, so the row is offered only to
+  // female profiles. Onboarding makes Sex a required field to leave step 1
+  // (canContinue checks profile.gender), so a null here means onboarding was
+  // never completed — and useTheme already resolves that case to the male
+  // theme. Treating null as "not female" keeps the two consistent rather than
+  // showing a flower-iconed period tracker to an unknown profile.
+  const profileGender = useOnboardingStore((st) => st.profile.gender);
+
   const handleDelete = () => {
     Alert.alert(
       'Delete My Data',
@@ -777,8 +785,12 @@ export default function ProfileScreen() {
               <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
               <ProfileRow icon="flask-outline" label="Lab Results" onPress={() => router.push('/health-report/labs' as any)} color={t.text} />
               <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
-              <ProfileRow icon="flower-outline" label="Cycle tracking" onPress={() => router.push('/cycle' as any)} color={t.text} />
-              <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+              {profileGender === 'Female' && (
+                <>
+                  <ProfileRow icon="flower-outline" label="Cycle tracking" onPress={() => router.push('/cycle' as any)} color={t.text} />
+                  <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+                </>
+              )}
               <ProfileRow icon="basket-outline" label="My Pantry" onPress={() => router.push('/pantry' as any)} color={t.text} />
               <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
               <ProfileRow icon="diamond-outline" label="Subscription" onPress={() => router.push('/subscription')} color={t.text} />

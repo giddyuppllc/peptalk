@@ -38,6 +38,7 @@ import {
   computeCyclePrediction,
   computeCycleStats,
 } from '../../src/services/cyclePredictor';
+import { withFemaleOnly } from '../../src/components/withFemaleOnly';
 
 function todayKey(): string {
   const d = new Date();
@@ -61,7 +62,7 @@ const PHASE_COLORS = {
   luteal:     '#E8C9BD',
 };
 
-export default function CycleDashboard() {
+function CycleDashboard() {
   const router = useRouter();
   const t = useTheme();
 
@@ -747,3 +748,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 });
+
+// Menstrual-cycle tracking: female profiles only. Guarded at the destination
+// so Aimee navigation and deep links cannot bypass it.
+export default withFemaleOnly(CycleDashboard);

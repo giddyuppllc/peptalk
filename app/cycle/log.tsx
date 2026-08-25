@@ -32,6 +32,7 @@ import {
   type MoodTag,
   type DischargeType,
 } from '../../src/types/cycle';
+import { withFemaleOnly } from '../../src/components/withFemaleOnly';
 
 function todayKey(): string {
   const d = new Date();
@@ -41,7 +42,7 @@ function todayKey(): string {
 const FLOW_OPTIONS: FlowIntensity[] = ['spotting', 'light', 'medium', 'heavy'];
 const DISCHARGE_OPTIONS: DischargeType[] = ['none', 'dry', 'sticky', 'creamy', 'watery', 'egg_white'];
 
-export default function CycleLogScreen() {
+function CycleLogScreen() {
   const router = useRouter();
   const t = useTheme();
   const params = useLocalSearchParams<{ date?: string }>();
@@ -490,3 +491,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
 });
+
+// Menstrual-cycle tracking: female profiles only. Guarded at the destination
+// so Aimee navigation and deep links cannot bypass it.
+export default withFemaleOnly(CycleLogScreen);

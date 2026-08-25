@@ -26,6 +26,7 @@ import {
   predictionModeFor,
   type ContraceptionMethod,
 } from '../../src/types/cycle';
+import { withFemaleOnly } from '../../src/components/withFemaleOnly';
 
 type Step = 'method' | 'period_start' | 'lengths' | 'done';
 
@@ -34,7 +35,7 @@ function todayKey(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export default function CycleSetupScreen() {
+function CycleSetupScreen() {
   const router = useRouter();
   const t = useTheme();
   const setCurrentContraception = useCycleStore((s) => s.setCurrentContraception);
@@ -397,3 +398,7 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 });
+
+// Menstrual-cycle tracking: female profiles only. Guarded at the destination
+// so Aimee navigation and deep links cannot bypass it.
+export default withFemaleOnly(CycleSetupScreen);

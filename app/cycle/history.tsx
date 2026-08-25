@@ -21,6 +21,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { Spacing, FontSizes } from '../../src/constants/theme';
 import { useCycleStore } from '../../src/store/useCycleStore';
 import { computeCycleStats } from '../../src/services/cyclePredictor';
+import { withFemaleOnly } from '../../src/components/withFemaleOnly';
 
 function shortDate(iso: string): string {
   const d = new Date(iso + 'T12:00:00Z');
@@ -34,7 +35,7 @@ function daysBetween(a: string, b: string): number {
   );
 }
 
-export default function CycleHistoryScreen() {
+function CycleHistoryScreen() {
   const router = useRouter();
   const t = useTheme();
   // Compute stats via useMemo on the store's stable `periods` array.
@@ -260,3 +261,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
 });
+
+// Menstrual-cycle tracking: female profiles only. Guarded at the destination
+// so Aimee navigation and deep links cannot bypass it.
+export default withFemaleOnly(CycleHistoryScreen);
