@@ -961,7 +961,11 @@ const SCREEN_TO_PATH: Record<string, string> = {
   // Aimee reports
   'aimee-reports': '/aimee/reports',
   // Community v2
-  'community-leaderboard': '/community/leaderboard',
+  // 'community-leaderboard' removed 2026-08-24: /community/leaderboard has no
+  // UI entry point anywhere in the app — verify:routes records it as
+  // deliberately unlaunched — yet this map let Aimee navigate users straight
+  // into it. A screen with no way in and no way back to it is not somewhere to
+  // send people. Restore this line when the leaderboard actually launches.
   'community-milestones': '/community/milestones',
   // Profile drills
   'profile-appearance': '/profile/appearance',

@@ -32,7 +32,7 @@ import { useMealStore } from '../../src/store/useMealStore';
 import type { MealType } from '../../src/types/fitness';
 import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
 import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
-import { todayLocalISO } from '../../src/utils/dateUtil';
+import { todayLocalISO, parseDateParam } from '../../src/utils/dateUtil';
 
 const today = () => todayLocalISO();
 
@@ -128,7 +128,13 @@ function MealScanScreen() {
   const router = useRouter();
   const t = useTheme();
   const accent = useSectionAccent();
-  const { mealType: paramMealType } = useLocalSearchParams<{ mealType?: MealType }>();
+  const { mealType: paramMealType, date: dateParam } = useLocalSearchParams<{
+    mealType?: MealType;
+    date?: string;
+  }>();
+  // Back-dated logging: the calendar day sheet -> /nutrition?date=… -> here.
+  // Without this the meal saved against today no matter which day was tapped.
+  const logDate = parseDateParam(dateParam) ?? today();
   const addMeal = useMealStore((state) => state.addMeal);
 
   const cameraRef = useRef<CameraView>(null);
@@ -381,7 +387,7 @@ function MealScanScreen() {
 
     addMeal({
       id: `meal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      date: today(),
+      date: logDate,
       mealType,
       foods,
       notes: 'Logged via meal scan',

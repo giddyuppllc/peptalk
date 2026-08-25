@@ -139,7 +139,11 @@ export function DaySummarySheet({ visible, dateKey, onClose }: DaySummarySheetPr
                   <Text style={[styles.quickAddText, { color: t.text }]}>Dose</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => navigateAndClose(`/(tabs)/workouts${dateParam}`)}
+                  // No back-dated workout entry exists: /workouts is a launcher for LIVE
+                  // sessions (player-v2 records as you go) and there is no manual
+                  // 'log a past workout' screen. Passing ?date= here only looked
+                  // like back-dating — the param was read by nobody.
+                  onPress={() => navigateAndClose('/(tabs)/workouts')}
                   style={[styles.quickAddBtn, { borderColor: t.cardBorder }]}
                   accessibilityRole="button"
                   accessibilityLabel="Log a workout"

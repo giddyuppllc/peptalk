@@ -13,7 +13,7 @@
 import React, { useMemo } from 'react';
 import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
 import { Alert } from '../../src/lib/alert';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
   V3DetailShell,
@@ -39,6 +39,8 @@ import {
   type AppetiteState,
 } from '../../src/store/useAppetiteLogStore';
 
+import { parseDateParam, isToday, formatDateKeyLong } from '../../src/utils/dateUtil';
+
 const CUP_OZ = 8;
 
 function todayKey(): string {
@@ -51,13 +53,19 @@ function todayKey(): string {
 export default function NutritionScreen() {
   const t = useV3Theme();
   const router = useRouter();
-  const today = todayKey();
+  // The calendar day sheet links here as /nutrition?date=YYYY-MM-DD to log
+  // against a past day. This screen used to ignore search params entirely,
+  // so that tap silently showed — and logged against — today.
+  const { date: dateParam } = useLocalSearchParams<{ date?: string }>();
+  const activeDate = parseDateParam(dateParam) ?? todayKey();
+  const viewingToday = isToday(activeDate);
+  const dateSuffix = viewingToday ? '' : `?date=${activeDate}`;
   const targets = useMealStore((s) => s.targets);
-  // Select primitives only — `getDailyTotals(today)` and `getByDate(today)`
+  // Select primitives only — `getDailyTotals(activeDate)` and `getByDate(activeDate)`
   // returned a fresh object/array on every call, which made Zustand's
   // useSyncExternalStore see a new reference each render → infinite loop.
   const meals = useMealStore((s) => s.meals);
-  const waterOz = useMealStore((s) => s.getWater(today));
+  const waterOz = useMealStore((s) => s.getWater(activeDate));
   const logWater = useMealStore((s) => s.logWater);
   const getDailyTotals = useMealStore((s) => s.getDailyTotals);
   const removeMeal = useMealStore((s) => s.removeMeal);
@@ -66,25 +74,25 @@ export default function NutritionScreen() {
   // Zustand's reference check would loop, the same bug the comment above
   // describes for getDailyTotals.
   const todaysMeals = useMemo(
-    () => meals.filter((m) => m.date === today),
-    [meals, today],
+    () => meals.filter((m) => m.date === activeDate),
+    [meals, activeDate],
   );
   // meals is a
   const totals = useMemo(
-    () => getDailyTotals(today),
+    () => getDailyTotals(activeDate),
     // `meals` is a deliberate recompute trigger: the getter above reads it
     // from the store instead of closing over it, so dropping it would leave
     // this stale when the underlying data changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [getDailyTotals, today, meals],
+    [getDailyTotals, activeDate, meals],
   );
   const tier = useSubscriptionStore((s) => s.tier);
   const isPro = tier !== 'free';
   const logAppetite = useAppetiteLogStore((s) => s.logAppetite);
   const appetiteEntries = useAppetiteLogStore((s) => s.entries);
   const recentAppetite = useMemo(
-    () => appetiteEntries.filter((e) => e.loggedAt.slice(0, 10) === today),
-    [appetiteEntries, today],
+    () => appetiteEntries.filter((e) => e.loggedAt.slice(0, 10) === activeDate),
+    [appetiteEntries, activeDate],
   );
 
   const proteinDeficit = useMemo(() => {
@@ -109,7 +117,7 @@ export default function NutritionScreen() {
       return;
     }
     // Pro path uses the existing photo meal-scan flow.
-    router.push('/nutrition/meal-scan' as never);
+    router.push((`/nutrition/meal-scan${dateSuffix}`) as never);
   };
 
   const handleAppetite = (state: AppetiteState) => {
@@ -427,9 +435,9 @@ export default function NutritionScreen() {
                     tapLight();
                     if (i < cups) {
                       // Tap a filled cup to remove
-                      logWater(today, -CUP_OZ);
+                      logWater(activeDate, -CUP_OZ);
                     } else {
-                      logWater(today, CUP_OZ);
+                      logWater(activeDate, CUP_OZ);
                     }
                   }}
                   hitSlop={6}
@@ -510,7 +518,7 @@ export default function NutritionScreen() {
               }}
             >
               {recentAppetite.length} entr
-              {recentAppetite.length === 1 ? 'y' : 'ies'} logged today.
+              {recentAppetite.length === 1 ? 'y' : 'ies'} logged activeDate.
             </Text>
           ) : null}
         </GlassCard>
@@ -718,6 +726,7 @@ export default function NutritionScreen() {
             has always implemented ("if provided, adds to an existing meal
             entry") and which nothing ever sent. This is the door. */}
         <TodaysMealsSection
+          heading={viewingToday ? 'Today’s food' : formatDateKeyLong(activeDate)}
           meals={todaysMeals}
           onOpenMeal={(meal) =>
             router.push(
@@ -796,11 +805,14 @@ function TodaysMealsSection({
   onOpenMeal,
   onDeleteMeal,
   t,
+  heading,
 }: {
   meals: MealEntry[];
   onOpenMeal: (meal: MealEntry) => void;
   onDeleteMeal: (meal: MealEntry) => void;
   t: ReturnType<typeof useV3Theme>;
+  /** Names the day being viewed, so back-dated logging is not labelled Today. */
+  heading: string;
 }) {
   const groups = useMemo(() => groupMealsByType(meals), [meals]);
 
@@ -816,7 +828,7 @@ function TodaysMealsSection({
             },
           ]}
         >
-          Today&apos;s food
+          {heading}
         </Text>
         {meals.length > 0 ? (
           <Text
@@ -837,7 +849,7 @@ function TodaysMealsSection({
             { color: t.colors.textSecondary as string, fontFamily: t.typography.body },
           ]}
         >
-          Nothing logged yet today. Anything you add shows up here, and you can
+          Nothing logged yet activeDate. Anything you add shows up here, and you can
           tap it later to add more or fix it.
         </Text>
       ) : (
