@@ -330,7 +330,12 @@ export const AIMEE_TOOLS: GrokTool[] = [
         '"labs", "labs-entry", "body-composition", "body-composition-entry",',
         '"pantry", "pantry-add", "pantry-scan",',
         '"aimee-reports",',
-        '"community-leaderboard", "community-milestones",',
+        // "community-leaderboard" is intentionally absent while the screen has
+        // no UI entry point — it is also absent from SCREEN_TO_PATH below.
+        // These two lists MUST stay in lockstep: a name advertised here but
+        // missing from the map makes the model request a screen that returns
+        // { error: 'unknown screen' }. Restore both together when it launches.
+        '"community-milestones",',
         '"profile-appearance", "profile-community-prefs", "settings-notifications", "subscription".',
       ].join(' '),
       parameters: {
