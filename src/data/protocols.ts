@@ -92,9 +92,50 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
 
   // ─── GROWTH HORMONE AXIS ────────────────────────────────────────────────
   {
-    id: 'proto-cjc1295-ipa',
+    // CJC-1295 WITH DAC — the product `cjc-1295` actually refers to in
+    // peptides.ts ("CJC-1295 (with DAC)"). Until this row existed the only
+    // cjc-1295 protocol was the no-DAC Ipamorelin combo, so this product had
+    // no protocol of its own and inherited nightly 100–300 mcg dosing.
+    //
+    // Dosing per clinical review (2026-08-21): "1 mg – 2 mg … given every 4-6
+    // days due to DAC extending the half life." The DAC moiety binds serum
+    // albumin and pushes the half-life to roughly a week, which is why this is
+    // dosed in milligrams every few days rather than micrograms nightly.
+    id: 'proto-cjc1295-dac',
     peptideId: 'cjc-1295',
-    name: 'CJC-1295 + Ipamorelin Combo Protocol',
+    name: 'CJC-1295 (with DAC) Protocol',
+    typicalDose: { min: 1, max: 2, unit: 'mg' },
+    route: 'subcutaneous',
+    frequency: 'custom',
+    frequencyLabel: 'Every 4-6 days',
+    // Mirrors the 8–16 week window used by the other GH-axis protocols in this
+    // file; the review supplied dose and interval, not a cycle length.
+    durationWeeks: { min: 8, max: 16 },
+    timing: 'Any time of day — the DAC half-life means timing matters far less than for no-DAC GHRH analogs',
+    storageNotes: 'Refrigerate at 2-8°C. Do not freeze reconstituted.',
+    reconstitutionNotes: 'Use BAC water. Typical: 2ml per vial.',
+    importantNotes: [
+      'WITH DAC — do not confuse with CJC-1295 (No DAC), which is dosed 100-300mcg nightly',
+      'Dosed every 4-6 days: the DAC moiety binds albumin and extends the half-life to roughly a week',
+      'Produces a sustained GH/IGF-1 elevation ("bleed") rather than a nightly pulse',
+      'Milligram dosing is correct for this product — a microgram dose is the no-DAC protocol',
+    ],
+    contraindications: ['active cancer', 'pregnancy', 'breastfeeding', 'pituitary tumors'],
+    cautionConditions: ['diabetes', 'history of cancer', 'carpal tunnel syndrome'],
+    source: 'clinical review',
+  },
+  {
+    id: 'proto-cjc1295-ipa',
+    // Keyed to the BLEND, not to `cjc-1295`.
+    //
+    // `cjc-1295` in peptides.ts is "CJC-1295 (with DAC)" — a different product
+    // with a ~week-long half-life. This row carries no-DAC combo dosing
+    // (100–300 mcg nightly), so while it was keyed to `cjc-1295` every
+    // with-DAC user was shown no-DAC dosing, and doseSafety derived a ceiling
+    // of 3 x 300 mcg = 900 mcg — flagging a CORRECT 1 mg with-DAC dose as
+    // unsafe. See proto-cjc1295-dac below.
+    peptideId: 'cjc-1295-ipamorelin',
+    name: 'CJC-1295 (No DAC) + Ipamorelin Combo Protocol',
     typicalDose: { min: 100, max: 300, unit: 'mcg' },
     dosingMode: 'weight_based',
     dosePerKg: { min: 1, max: 3, unit: 'mcg' },
