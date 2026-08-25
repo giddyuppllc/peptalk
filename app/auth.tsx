@@ -32,7 +32,6 @@ export default function AuthScreen() {
   const login = useAuthStore((s) => s.login);
   const signup = useAuthStore((s) => s.signup);
   const isLoading = useAuthStore((s) => s.isLoading);
-  const completeOnboarding = useOnboardingStore((s) => s.completeOnboarding);
 
   const handleLogin = async () => {
     const normalizedEmail = email.trim().toLowerCase();
@@ -47,8 +46,25 @@ export default function AuthScreen() {
     setError('');
     try {
       await login(normalizedEmail, password);
-      completeOnboarding();
-      router.replace('/(tabs)');
+      // Signing in is not the same as having been onboarded, and this used to
+      // conflate them: login unconditionally marked onboarding complete.
+      //
+      // Onboarding answers are stored ONLY on the device — the store has no
+      // syncFromServer, it is absent from the boot sync list, and nothing
+      // writes gender or goals to the profiles table. So a reinstall or a new
+      // phone arrives with an empty profile, and completing onboarding here
+      // meant the user was never asked again: no sex, no goals, no body
+      // metrics, permanently.
+      //
+      // Respect completion, never grant it. Anyone whose answers are missing
+      // goes through the questions; onboarding sees the existing session and
+      // skips its account step.
+      const ob = useOnboardingStore.getState();
+      if (ob.isComplete && ob.profile.gender) {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/onboarding');
+      }
     } catch (err: any) {
       setError(err?.message ?? 'Invalid email or password');
     }
@@ -77,8 +93,19 @@ export default function AuthScreen() {
         );
         return;
       }
-      completeOnboarding();
-      router.replace('/(tabs)');
+      // Do NOT completeOnboarding() here.
+      //
+      // This tab creates a real account, and it used to mark onboarding done
+      // and drop the user straight into the app having asked nothing: no sex,
+      // no age, no goals, no weight or height. Because onboarding was flagged
+      // complete they were never asked again, permanently. Downstream that
+      // meant the male theme for everyone, macros that never calculated, dose
+      // calculators without inputs, and — since the gender guard — women not
+      // seeing Cycle tracking, because their gender was null.
+      //
+      // Send them through the same questions the other signup path asks.
+      // Onboarding detects the existing session and skips its account step.
+      router.replace('/onboarding');
     } catch (err: any) {
       setError(err?.message ?? 'Something went wrong. Try again.');
     }

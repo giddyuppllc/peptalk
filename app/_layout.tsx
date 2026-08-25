@@ -60,6 +60,7 @@ import { usePantryStore } from '../src/store/usePantryStore';
 import { useCycleStore } from '../src/store/useCycleStore';
 import { useIntegrationsStore } from '../src/store/useIntegrationsStore';
 import { useLabResultsStore } from '../src/store/useLabResultsStore';
+import { useSideEffectStore } from '../src/store/useSideEffectStore';
 import { subscribeToReconnect } from '../src/hooks/useNetworkStatus';
 import { initTelemetry, installGlobalErrorHandler, installLifecycleBreadcrumbs, markLifecycle, captureException } from '../src/services/telemetry';
 import { useTheme } from '../src/hooks/useTheme';
@@ -702,6 +703,10 @@ function RootLayout() {
       ['cycle',      () => useCycleStore.getState().syncFromServer()],
       ['integrations', () => useIntegrationsStore.getState().syncFromServer()],
       ['lab results', () => useLabResultsStore.getState().syncFromServer()],
+      // side_effect_entries were written to the server on every log and never
+      // read back — the store's syncFromServer existed with no caller, so a
+      // reinstall silently lost every recorded side effect.
+      ['side effects', () => useSideEffectStore.getState().syncFromServer()],
     ];
     // 2026-05-18 cold-boot audit: gate boot syncs on a fresh session.
     // Previously they fired unconditionally — if the user had a stale

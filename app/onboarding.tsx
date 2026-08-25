@@ -220,6 +220,11 @@ export default function OnboardingScreen() {
     // optional and are flagged "Set up later in Profile."
     if (step === 2) return weightValid && heightValid;
     if (step === 3) {
+      // Arriving here already signed in means the account was created on the
+      // /auth Sign Up tab and this step is collecting the profile answers
+      // only. Asking for credentials again would be unanswerable. The medical
+      // disclaimer is still required — that consent is not about the account.
+      if (isAuthenticated) return acceptedTerms;
       return (
         accountFirstName.trim().length > 0 &&
         accountLastName.trim().length > 0 &&
@@ -229,7 +234,7 @@ export default function OnboardingScreen() {
       );
     }
     return true;
-  }, [step, profile.gender, selectedAge, profile.healthGoals.length, weightValid, heightValid, accountFirstName, accountLastName, emailOk, passwordCheck.valid, acceptedTerms]);
+  }, [step, isAuthenticated, profile.gender, selectedAge, profile.healthGoals.length, weightValid, heightValid, accountFirstName, accountLastName, emailOk, passwordCheck.valid, acceptedTerms]);
 
   // "Skip & explore" was removed: every user must complete the onboarding
   // questions and create a (free) account — no guest/escape-hatch entry into
@@ -309,12 +314,18 @@ export default function OnboardingScreen() {
         // we surface a "check your email" alert + route to the login
         // screen instead of routing into tabs (the user can't actually
         // use the app until they confirm + log in).
-        const result = await signup(
-          accountFirstName.trim(),
-          accountLastName.trim(),
-          accountEmail,
-          accountPassword,
-        );
+        // A user who reached onboarding from the /auth Sign Up tab already
+        // has an account and a session. Calling signup() again would fail
+        // with "user already registered" and strand them on this screen with
+        // their answers unsaved.
+        const result = isAuthenticated
+          ? { requiresEmailConfirmation: false }
+          : await signup(
+              accountFirstName.trim(),
+              accountLastName.trim(),
+              accountEmail,
+              accountPassword,
+            );
         // Don't grant a paid tier locally — the IAP receipt validator
         // (Apple/Google webhook → validate-purchase edge fn → profile
         // subscription_tier) owns that. Default everyone to free here.
@@ -795,9 +806,17 @@ export default function OnboardingScreen() {
             keyboardShouldPersistTaps="handled"
             renderItem={() => (
               <View>
-                <Text style={s.stepTitle}>Create Account</Text>
+                <Text style={s.stepTitle}>
+                  {isAuthenticated ? 'Finish Setup' : 'Create Account'}
+                </Text>
                 <Text style={s.stepSub}>Almost there!</Text>
 
+                {/* Credentials are asked for ONLY when there is no session
+                    yet. Someone who signed up on the /auth Sign Up tab already
+                    gave these; re-asking would be unanswerable and blocks them
+                    from ever finishing their profile. */}
+                {!isAuthenticated && (
+                <>
                 <View style={{ flexDirection: 'row', gap: 12 }}>
                   <TextInput style={[s.input, { flex: 1 }]} placeholder="First name" placeholderTextColor="#9CA3AF" value={accountFirstName} onChangeText={setAccountFirstName} />
                   <TextInput style={[s.input, { flex: 1 }]} placeholder="Last name" placeholderTextColor="#9CA3AF" value={accountLastName} onChangeText={setAccountLastName} />
@@ -839,6 +858,8 @@ export default function OnboardingScreen() {
                 )}
 
                 {!!accountError && <Text style={s.errorText}>{accountError}</Text>}
+                </>
+                )}
 
                 {/* §11.2 — Referral claim. Optional. */}
                 <Text style={[s.label, { marginTop: 20 }]}>Did someone refer you?</Text>
@@ -1018,7 +1039,9 @@ export default function OnboardingScreen() {
                 disabled={!canContinue || isLoggingIn}
                 activeOpacity={0.85}
               >
-                <Text style={s.footerNextText}>{isLoggingIn ? 'Creating…' : 'Create Account'}</Text>
+                <Text style={s.footerNextText}>
+                  {isLoggingIn ? 'Creating…' : isAuthenticated ? 'Finish' : 'Create Account'}
+                </Text>
                 <Ionicons name={isLoggingIn ? 'hourglass' : 'checkmark'} size={18} color="#fff" />
               </TouchableOpacity>
             </View>
