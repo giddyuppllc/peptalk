@@ -13,7 +13,7 @@ import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/th
 import { useTheme } from '../../src/hooks/useTheme';
 import { EXERCISES, searchExercises, getExerciseInstructions } from '../../src/data/exercises';
 import { ExerciseVideo } from '../../src/components/ExerciseVideo';
-import { hasExerciseVideo } from '../../src/services/videoService';
+import { hasExerciseVideo, getExerciseVideoSlug } from '../../src/services/videoService';
 import { PaywallGate } from '../../src/hooks/useFeatureGate';
 import type { Exercise, MuscleGroup, Equipment } from '../../src/types/fitness';
 
@@ -193,6 +193,7 @@ function ExerciseDetailModal({
   onClose: () => void;
 }) {
   const t = useTheme();
+  const router = useRouter();
   if (!exercise) return null;
 
   // Lazy-resolve Grok-generated coaching content (description / steps /
@@ -233,6 +234,26 @@ function ExerciseDetailModal({
             {hasExerciseVideo(exercise.id) ? (
               <View style={styles.videoContainer}>
                 <ExerciseVideo exerciseId={exercise.id} />
+                {/* The only route to the full-screen player. app/workouts/
+                    library/[slug].tsx is the sole consumer of FullScreenVideo,
+                    and nothing navigated to it — so the immersive player was
+                    built, Pro-gated and unreachable, while every demo could
+                    only be watched in this small inline frame. */}
+                {(() => {
+                  const slug = getExerciseVideoSlug(exercise.id);
+                  if (!slug) return null;
+                  return (
+                    <TouchableOpacity
+                      style={styles.expandBtn}
+                      onPress={() => router.push(`/workouts/library/${slug}` as never)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Watch ${exercise.name} full screen`}
+                    >
+                      <Ionicons name="expand-outline" size={14} color="#fff" />
+                      <Text style={styles.expandText}>Full screen</Text>
+                    </TouchableOpacity>
+                  );
+                })()}
               </View>
             ) : (
               <LinearGradient
@@ -800,6 +821,19 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
+  expandBtn: {
+    position: 'absolute',
+    right: 8,
+    bottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  expandText: { color: '#fff', fontSize: 11, fontWeight: '600' },
   formHero: {
     aspectRatio: 16 / 9,
     borderRadius: BorderRadius.md,
