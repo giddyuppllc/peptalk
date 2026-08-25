@@ -16,6 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useOnboardingStore } from '../src/store/useOnboardingStore';
 import { useHealthProfileStore } from '../src/store/useHealthProfileStore';
+import { attestAge } from '../src/services/profileService';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
 import {
@@ -70,6 +71,14 @@ const COMMUNITY_PRESETS: {
 // and Android 16 lets displays >= 600dp rotate regardless of screenOrientation.
 
 // ─── Options ────────────────────────────────────────────────────────────────
+
+/**
+ * Minimum age to use PepTalk. Named rather than inlined so the gate that
+ * BLOCKS signup and the value recorded as proof of that gate are the same
+ * number — if they drift, the stored attestation stops describing what was
+ * actually enforced.
+ */
+const MIN_AGE = 18;
 
 const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
   { value: 'Male', label: 'Male', icon: 'man-outline' },
@@ -214,7 +223,7 @@ export default function OnboardingScreen() {
   const canContinue = useMemo(() => {
     if (step === 0) return true; // Welcome — always can continue
     // Step 1: gender + age + at least 1 goal (3 of 5 required questions).
-    if (step === 1) return Boolean(profile.gender && selectedAge >= 18 && profile.healthGoals.length > 0);
+    if (step === 1) return Boolean(profile.gender && selectedAge >= MIN_AGE && profile.healthGoals.length > 0);
     // Step 2: weight + height now required (the remaining 2 of 5). All
     // other Step 2 inputs (activity, workout days, cycle, notes) stay
     // optional and are flagged "Set up later in Profile."
@@ -376,6 +385,14 @@ export default function OnboardingScreen() {
         // §11.4 — apply the community public-tracking preset chosen at
         // intake. User can fine-tune per-category later in Profile.
         applyCommunityPreset(communityPreset);
+
+        // Record server-side that this account passed the age gate. Until now
+        // the answer lived only on the device, so the gate could be shown in
+        // code but never demonstrated for a given account — which is exactly
+        // what an age-rated, UGC-carrying app has to be able to evidence.
+        // Fire-and-forget: a failed write must not block a completed signup,
+        // and telemetry captures it inside the service.
+        void attestAge(ageToRange(selectedAge), MIN_AGE);
 
         completeOnboarding();
         trackOnboardingComplete(0);

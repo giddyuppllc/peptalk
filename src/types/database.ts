@@ -14,6 +14,24 @@ export interface Database {
           avatar_url: string | null;
           gender: string | null;
           age_range: string | null;
+          // Age-gate proof (migration 20260825120000). age_range records the
+          // bucket attested at signup; these two record when, and what minimum
+          // the app enforced at the time.
+          age_attested_at: string | null;
+          age_gate_min: number | null;
+          // Customer contact/identity details (migration 20260825130000).
+          // Newly collected PII — must be reflected in Apple App Privacy and
+          // Google Data safety before the next submission.
+          first_name: string | null;
+          last_name: string | null;
+          phone: string | null;
+          date_of_birth: string | null;
+          address_line1: string | null;
+          address_line2: string | null;
+          city: string | null;
+          region: string | null;
+          postal_code: string | null;
+          country: string | null;
           goals: string[];
           interests: string[];
           subscription_tier: 'free' | 'plus' | 'pro';

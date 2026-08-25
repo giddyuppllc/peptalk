@@ -781,6 +781,8 @@ export default function ProfileScreen() {
             <View style={[profileStyles.card, { backgroundColor: t.card, borderColor: t.cardBorder }]}>
               <ProfileRow icon="person-outline" label="Edit Profile" onPress={() => router.push('/onboarding?edit=true' as any)} color={t.text} />
               <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+              <ProfileRow icon="id-card-outline" label="Personal Details" onPress={() => router.push('/profile/personal' as any)} color={t.text} />
+              <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
               <ProfileRow icon="body-outline" label="Health Profile" onPress={() => router.push('/health-profile')} color={t.text} />
               <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
               <ProfileRow icon="flask-outline" label="Lab Results" onPress={() => router.push('/health-report/labs' as any)} color={t.text} />
