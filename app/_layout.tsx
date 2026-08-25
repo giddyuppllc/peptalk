@@ -388,6 +388,7 @@ function RootLayout() {
           cancelWeeklyReport,
           scheduleMealSafetyChecks,
           cancelRemindersByTag,
+          cancelDailyCheckInReminder,
         } = await import('../src/services/notificationService');
         const token = await registerForPushNotifications();
         if (!token) return; // user denied, or notifications unavailable
@@ -403,6 +404,12 @@ function RootLayout() {
         const prefs = useNotificationStore.getState().preferences;
         if (prefs.dailyCheckInReminder && prefs.enabled) {
           await scheduleDailyCheckInReminder(prefs.checkInReminderTime);
+        } else {
+          // Must cancel, not just skip. The reminder repeats daily under a
+          // fixed identifier, so a previously-scheduled push keeps firing for
+          // a user who has since turned it off. Same shape as the weekly
+          // report below.
+          await cancelDailyCheckInReminder();
         }
         // §9.3 — Aimee weekly report. Schedule a Sunday 9 AM local push
         // when notifications + weeklyReportEnabled are on; cancel cleanly

@@ -232,6 +232,29 @@ export async function registerForPushNotifications(): Promise<string | null> {
  *  prefixed ids). Audit fix (Wave 76.8). */
 export const DAILY_CHECKIN_REMINDER_ID = 'checkin-daily';
 
+/**
+ * Cancel the daily check-in reminder.
+ *
+ * This did not exist, and nothing cancelled the reminder anywhere: boot
+ * scheduled it when the preference was on and did nothing when it was off,
+ * and the settings toggle only wrote the preference. Because the reminder is
+ * scheduled under a FIXED identifier that repeats daily, a user who turned it
+ * off kept getting a 9 AM push every day, indefinitely, with no way to stop it
+ * short of revoking notifications for the whole app.
+ *
+ * The weekly report immediately below the same boot block already had this
+ * shape (schedule when on, cancel when off) — the check-in reminder simply
+ * never got its other half.
+ */
+export async function cancelDailyCheckInReminder(): Promise<void> {
+  if (!isAvailable()) return;
+  try {
+    await Notifications.cancelScheduledNotificationAsync(DAILY_CHECKIN_REMINDER_ID);
+  } catch {
+    /* nothing scheduled — already in the desired state */
+  }
+}
+
 export async function scheduleDailyCheckInReminder(time: string): Promise<string> {
   if (!isAvailable()) return '';
 

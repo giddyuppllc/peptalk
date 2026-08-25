@@ -29,6 +29,8 @@ import {
   scheduleWorkoutReminder,
   scheduleMealReminder,
   cancelRemindersByTag,
+  scheduleDailyCheckInReminder,
+  cancelDailyCheckInReminder,
 } from '../../src/services/notificationService';
 
 const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -148,6 +150,29 @@ export default function NotificationSettingsScreen() {
   // (re)schedule the per-day workout pings when turned on, sweep the
   // `workout-*` identifiers when turned off. Consistent with the dose
   // toggle above and the profile-tab workout toggle.
+  // Persist the check-in flag AND make it take effect immediately, matching
+  // the dose/workout/meal toggles. Previously this screen only wrote the
+  // preference: the reminder was scheduled at app boot and never cancelled
+  // anywhere, so turning it off left a daily 9 AM push firing forever, and
+  // changing the time did nothing until the next cold start.
+  const handleToggleCheckIn = async (value: boolean) => {
+    setDailyCheckInReminder(value);
+    if (value && prefs.enabled) {
+      await scheduleDailyCheckInReminder(prefs.checkInReminderTime);
+    } else {
+      await cancelDailyCheckInReminder();
+    }
+  };
+
+  // Re-schedule on a time change. scheduleDailyCheckInReminder cancels its own
+  // fixed identifier first, so this is idempotent.
+  const handleCheckInTime = async (time: string) => {
+    setCheckInReminderTime(time);
+    if (prefs.dailyCheckInReminder && prefs.enabled) {
+      await scheduleDailyCheckInReminder(time);
+    }
+  };
+
   const handleToggleWorkout = async (value: boolean) => {
     setWorkoutReminderEnabled(value);
     if (value && prefs.enabled) {
@@ -222,7 +247,7 @@ export default function NotificationSettingsScreen() {
                 </View>
                 <Switch
                   value={prefs.dailyCheckInReminder}
-                  onValueChange={setDailyCheckInReminder}
+                  onValueChange={handleToggleCheckIn}
                   trackColor={{ true: t.primary + '88', false: t.cardBorder }}
                   thumbColor={prefs.dailyCheckInReminder ? t.primary : '#fff'}
                 />
@@ -231,7 +256,7 @@ export default function NotificationSettingsScreen() {
                 <TimeRow
                   label="Time of day"
                   value={prefs.checkInReminderTime}
-                  onCommit={setCheckInReminderTime}
+                  onCommit={handleCheckInTime}
                 />
               )}
             </GlassCard>
