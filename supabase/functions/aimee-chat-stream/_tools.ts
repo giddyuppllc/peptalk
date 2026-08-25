@@ -329,7 +329,7 @@ export const AIMEE_TOOLS: GrokTool[] = [
         '"activity", "activity-performance",',
         '"labs", "labs-entry", "body-composition", "body-composition-entry",',
         '"pantry", "pantry-add", "pantry-scan",',
-        '"aimee-reports",',
+        '"aimee-reports", "plan", "insights",',
         // "community-leaderboard" is intentionally absent while the screen has
         // no UI entry point — it is also absent from SCREEN_TO_PATH below.
         // These two lists MUST stay in lockstep: a name advertised here but
@@ -965,6 +965,13 @@ const SCREEN_TO_PATH: Record<string, string> = {
   'pantry-scan': '/pantry/scan',
   // Aimee reports
   'aimee-reports': '/aimee/reports',
+  // /plan and /insights: both screens exist and are reachable from Profile,
+  // and the CLIENT allowlist was extended specifically so Aimee could send
+  // users to them — but this map had no key for either, so navigate_to_screen
+  // could never emit them. Her plan answers degraded to prose directions
+  // ("Profile → My Plan") for a screen she was already allowed to open.
+  plan: '/plan',
+  insights: '/insights',
   // Community v2
   // 'community-leaderboard' removed 2026-08-24: /community/leaderboard has no
   // UI entry point anywhere in the app — verify:routes records it as
