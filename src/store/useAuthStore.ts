@@ -274,6 +274,17 @@ export const useAuthStore = create<AuthStore>()(
 
           set({ user: appUser, isAuthenticated: true, isLoading: false });
           trackSignupCompleted();
+
+          // Welcome email. Fire-and-forget: a mail failure must never turn a
+          // successful signup into an error, and the function is idempotent —
+          // it claims the send against profiles.welcome_email_sent_at before
+          // dispatching, so a retry or a second client cannot double-send.
+          // The address comes from the verified session server-side, never
+          // from anything this client passes.
+          void db.functions
+            .invoke('send-welcome-email')
+            .catch(() => {});
+
           return { requiresEmailConfirmation: false } as const;
         } catch (error: any) {
           if (__DEV__) console.error('[useAuthStore] Signup failed:', error);

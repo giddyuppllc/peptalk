@@ -388,6 +388,19 @@ function TierCard({
           // paid the moment we land.
           setShowSquare(false);
           const label = purchasedTier === 'pro' ? 'Pro' : 'Plus';
+          // Web goes through square-subscribe and syncFromServer, not
+          // validatePurchase, so it needs its own notification call.
+          void import('../src/services/notificationService')
+            .then((n) =>
+              n.fireImmediateNudge?.({
+                id: `purchase-${plan?.productId ?? label}`,
+                title: 'Subscription active',
+                body: `PepTalk ${label} is active.`,
+                route: '/subscription',
+                cooldownMs: 60 * 60 * 1000,
+              }),
+            )
+            .catch(() => {});
           Alert.alert(
             'Thank you for your purchase',
             // Deliberately claims ONLY what is certainly true. There is no

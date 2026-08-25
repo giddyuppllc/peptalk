@@ -507,7 +507,8 @@
     "share_anonymized_data",
     "subscription_tier",
     "updated_at",
-    "username"
+    "username",
+    "welcome_email_sent_at"
   ],
   "protocols": [
     "caution_conditions",

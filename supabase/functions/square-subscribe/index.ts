@@ -17,6 +17,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { SQUARE_PLANS } from '../_shared/square.ts';
 import { reportError } from '../_shared/sentry.ts';
+import { sendEmail, wrap } from '../_shared/email.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -175,6 +176,34 @@ Deno.serve(async (req) => {
       { onConflict: 'user_id,product_id' },
     );
     if (subErr) console.error('[square-subscribe] grant upsert failed', subErr);
+
+    // Purchase confirmation. Fire-and-forget on purpose: the money has already
+    // moved and the entitlement is already granted, so a mail failure must not
+    // turn a successful payment into an error response. sendEmail never throws
+    // and no-ops when the provider key is unset.
+    const planLabel = plan.tier === 'pro' ? 'PepTalk Pro' : 'PepTalk+';
+    if (user.email) {
+      void sendEmail({
+        to: user.email,
+        subject: `Your ${planLabel} subscription is active`,
+        text:
+          `Your ${planLabel} subscription is active.
+
+` +
+          `It renews monthly. You can change or cancel it any time from ` +
+          `Profile > Subscription in the app.
+
+` +
+          `PepTalk is for educational purposes only and does not provide ` +
+          `medical advice. Consult your healthcare provider before making ` +
+          `health decisions.`,
+        html: wrap(
+          `Your ${planLabel} subscription is active`,
+          `<p style="margin:0 0 12px;font-size:15px;line-height:1.55;">It renews monthly.</p>
+           <p style="margin:0;font-size:15px;line-height:1.55;">You can change or cancel it any time from <strong>Profile &rsaquo; Subscription</strong> in the app.</p>`,
+        ),
+      });
+    }
 
     return json({ ok: true, subscriptionId, tier: plan.tier });
   } catch (e) {

@@ -308,6 +308,28 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
           // A successful paid upgrade is a high-delight moment — good time
           // to ask for a review. The helper enforces its own cooldown.
           maybeAskForReview('upgrade_succeeded').catch(() => {});
+          // Confirm the purchase on the device too. fireImmediateNudge existed
+          // with no callers anywhere; this is the moment it was written for —
+          // entitlement granted, server-confirmed. It enforces its own cooldown
+          // so a retry cannot double-notify.
+          void (async () => {
+            try {
+              const notif = await import('../services/notificationService');
+              await notif.fireImmediateNudge?.({
+                id: `purchase-${productId}`,
+                title: 'Subscription active',
+                body:
+                  resolvedTier === 'pro'
+                    ? 'PepTalk Pro is active. Everything is unlocked.'
+                    : 'PepTalk+ is active.',
+                route: '/subscription',
+                cooldownMs: 60 * 60 * 1000,
+              });
+            } catch {
+              // Notifications unavailable (web, denied permission) — the
+              // in-app confirmation already told them.
+            }
+          })();
           return true;
         } catch (err) {
           if (__DEV__) console.warn('[useSubscriptionStore] validatePurchase threw:', err);
