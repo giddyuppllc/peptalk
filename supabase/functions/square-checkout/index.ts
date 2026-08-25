@@ -30,10 +30,28 @@ const SQUARE_BASE =
 // can be unit-tested and stay in one place across the Square edge functions.
 const PLAN = SQUARE_PLANS;
 
+// CORS — this is a browser-facing fallback checkout path. Same omission as
+// square-subscribe: without an OPTIONS answer the preflight fails and the POST
+// is never sent.
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 const json = (b: unknown, status = 200) =>
-  new Response(JSON.stringify(b), { status, headers: { 'Content-Type': 'application/json' } });
+  new Response(JSON.stringify(b), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  });
+
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
   try {
     // Authenticate the buyer from the Supabase JWT (same pattern as validate-purchase).

@@ -32,8 +32,25 @@ const SQUARE_BASE =
 // function. Behaviour is identical to the previous inline map.
 const PLAN = SQUARE_PLANS;
 
+// CORS. This function is called from the PWA in a browser, and it had NO cors
+// headers and no OPTIONS handler — so the preflight that the browser sends
+// before any POST carrying Content-Type and Authorization got no answer, the
+// POST was never sent, and supabase.functions.invoke surfaced
+// "Failed to send a request to the Edge Function". Web checkout could never
+// have worked from a browser. aimee-chat-stream, which the web app calls
+// successfully, has had this since it shipped.
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 const json = (b: unknown, status = 200) =>
-  new Response(JSON.stringify(b), { status, headers: { 'Content-Type': 'application/json' } });
+  new Response(JSON.stringify(b), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  });
 
 async function sq(pathname: string, method: string, body?: unknown) {
   const res = await fetch(`${SQUARE_BASE}${pathname}`, {
@@ -50,6 +67,12 @@ async function sq(pathname: string, method: string, body?: unknown) {
 }
 
 Deno.serve(async (req) => {
+  // Answer the preflight before anything else, including auth — a browser
+  // sends OPTIONS with no Authorization header by design.
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
   try {
     const authHeader = req.headers.get('Authorization') ?? '';
