@@ -1482,6 +1482,8 @@ export default function MyStacksScreen() {
   const router = useRouter();
   const { savedStacks, loadStack, deleteStack } = useStackStore();
   const protocols = useDoseLogStore((s) => s.protocols);
+  const deactivateProtocol = useDoseLogStore((s) => s.deactivateProtocol);
+  const deleteProtocol = useDoseLogStore((s) => s.deleteProtocol);
   const activeProtocols = useMemo(() => protocols.filter((p) => p.isActive), [protocols]);
   const [selectedGoal, setSelectedGoal] = useState<GoalType | null>(null);
   // Default to "today" — the Phase 4 redesign leads with active-cycle
@@ -1819,7 +1821,49 @@ export default function MyStacksScreen() {
           </Text>
           {activeProtocols.length > 0 ? (
             activeProtocols.map((proto) => (
-              <View key={proto.id} style={[styles.protocolRow, { borderBottomColor: t.cardBorder }]}>
+              <TouchableOpacity
+                key={proto.id}
+                style={[styles.protocolRow, { borderBottomColor: t.cardBorder }]}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Manage protocol ${proto.peptideId}`}
+                accessibilityHint="Opens options to end or delete this protocol"
+                onPress={() => {
+                  // deactivateProtocol and deleteProtocol have both existed in
+                  // the store with ZERO callers, so a protocol could be started
+                  // and never stopped. It stayed 'active' forever, kept firing
+                  // dose reminders, and — now that protocols sync — would have
+                  // told Aimee the user was still running it indefinitely.
+                  Alert.alert(
+                    getPeptideById(proto.peptideId)?.name ?? proto.peptideId,
+                    `Started ${proto.startDate} · ${proto.dose} ${proto.unit} ${proto.frequency}`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'End protocol',
+                        onPress: () => deactivateProtocol(proto.id),
+                      },
+                      {
+                        text: 'Delete',
+                        style: 'destructive',
+                        onPress: () =>
+                          Alert.alert(
+                            'Delete this protocol?',
+                            'It will be removed from your history. Doses you already logged are kept.',
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              {
+                                text: 'Delete',
+                                style: 'destructive',
+                                onPress: () => deleteProtocol(proto.id),
+                              },
+                            ],
+                          ),
+                      },
+                    ],
+                  );
+                }}
+              >
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.protocolName, { color: t.text }]}>{proto.peptideId}</Text>
                   <Text style={[styles.protocolInfo, { color: t.textSecondary }]}>
@@ -1829,7 +1873,8 @@ export default function MyStacksScreen() {
                 <Text style={[styles.protocolDate, { color: t.textMuted }]}>
                   {proto.startDate}
                 </Text>
-              </View>
+                <Ionicons name="ellipsis-horizontal" size={16} color={t.textMuted} style={{ marginLeft: 8 }} />
+              </TouchableOpacity>
             ))
           ) : (
             <Text style={[styles.emptyHint, { color: t.textMuted }]}>

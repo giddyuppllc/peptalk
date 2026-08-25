@@ -188,7 +188,7 @@ const SeverityPicker: React.FC<{
 
 export default function CheckInScreen() {
   const t = useTheme();
-  const { saveCheckIn, getCheckInByDate, getStreak } = useCheckinStore();
+  const { saveCheckIn, getCheckInByDate, getStreak, removeCheckIn } = useCheckinStore();
   const { getActiveProtocols } = useDoseLogStore();
 
   // Accept optional ?date=YYYY-MM-DD search param (e.g. from calendar)
@@ -934,6 +934,38 @@ export default function CheckInScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
+      {/* Delete — only when an entry already exists for this date.
+          useCheckinStore.removeCheckIn has existed (and correctly deletes
+          server-side too) with zero callers, so a mistyped weight or a
+          check-in logged on the wrong day could be edited but never removed. */}
+      {existingEntry && isLastStep && (
+        <TouchableOpacity
+          onPress={() => {
+            Alert.alert(
+              'Delete this check-in?',
+              'The entry for this day will be removed from your history and your streak.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: () => {
+                    removeCheckIn(existingEntry.id);
+                    router.back();
+                  },
+                },
+              ],
+            );
+          }}
+          style={styles.deleteCheckInBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Delete this check-in"
+        >
+          <Ionicons name="trash-outline" size={15} color="#D9534F" />
+          <Text style={styles.deleteCheckInText}>Delete this check-in</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Bottom nav: Back / Next */}
       <View style={[styles.stepBottomBar, { backgroundColor: t.bg, borderTopColor: t.cardBorder }]}>
         {!isFirstStep ? (
@@ -1105,6 +1137,14 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans-Medium',
     marginTop: 6,
   },
+  deleteCheckInBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+  },
+  deleteCheckInText: { color: '#D9534F', fontSize: 13, fontWeight: '600' },
   stepBottomBar: {
     flexDirection: 'row',
     gap: 12,
