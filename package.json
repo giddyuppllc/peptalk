@@ -49,7 +49,8 @@
     "verify:synccolumns": "node scripts/verify-sync-columns.mjs",
     "verify:skips": "node scripts/verify-skips.mjs",
     "apply:review": "tsx scripts/apply-clinical-review.ts",
-    "verify:easignore": "node scripts/verify-easignore.mjs"
+    "verify:easignore": "node scripts/verify-easignore.mjs",
+    "preflight": "node scripts/preflight.mjs"
   },
   "expo": {
     "install": {
