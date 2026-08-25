@@ -595,6 +595,7 @@
   ],
   "subscription_events": [
     "created_at",
+    "environment",
     "event_type",
     "expires_at",
     "external_event_id",
@@ -606,6 +607,7 @@
   ],
   "subscriptions": [
     "created_at",
+    "environment",
     "expires_at",
     "id",
     "is_active",

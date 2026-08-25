@@ -18,6 +18,9 @@ import { join } from 'node:path';
 
 const INDEX = 'dist/index.html';
 const MARKER = '<!-- pwa:injected -->';
+const MARKER_END = '<!-- /pwa:injected -->';
+const BODY_MARKER = '<!-- pwa:body -->';
+const BODY_MARKER_END = '<!-- /pwa:body -->';
 
 // Expo exports the Ionicons glyph font under dist/assets/node_modules/… and
 // Vercel STRIPS any node_modules path from static output, so the font 404s and
@@ -47,9 +50,43 @@ if (!existsSync(INDEX)) {
 
 let html = readFileSync(INDEX, 'utf8');
 
+// Re-running must REPLACE what is already there, not skip.
+//
+// This used to `process.exit(0)` on finding the marker. That silently shipped
+// whatever block was injected the FIRST time: edit the SW registration here,
+// re-run, watch it report success, and ship a dist/ that never contained the
+// change. Stripping and re-injecting makes the output always match THIS source.
+// Deliberately index-based rather than a RegExp. The first attempt built the
+// pattern with a template literal — and `\s` inside a template literal is an
+// escape that collapses to a bare "s" before RegExp ever sees it, so the
+// pattern silently matched nothing and this reported "no end marker" on a
+// file that had them. Plain string slicing has no escaping layer to get wrong.
+function stripRegion(source, open, close) {
+  let out = source;
+  for (;;) {
+    const i = out.indexOf(open);
+    if (i === -1) return out;
+    const j = out.indexOf(close, i);
+    if (j === -1) return null; // unterminated — caller decides
+    let k = i;
+    while (k > 0 && out.charCodeAt(k - 1) <= 32) k--; // absorb leading whitespace
+    out = out.slice(0, k) + out.slice(j + close.length);
+  }
+}
+
 if (html.includes(MARKER)) {
-  console.log('[inject-pwa] already injected — skipping.');
-  process.exit(0);
+  const before = html.length;
+  const stripped = stripRegion(
+    stripRegion(html, MARKER, MARKER_END) ?? '',
+    BODY_MARKER,
+    BODY_MARKER_END,
+  );
+  if (!stripped || stripped.includes(MARKER) || stripped.includes(BODY_MARKER)) {
+    console.error('[inject-pwa] old injection has no end marker — re-export rather than re-inject.');
+    process.exit(1);
+  }
+  html = stripped;
+  console.log(`[inject-pwa] replaced previous injection (${before - html.length} bytes)`);
 }
 
 const HEAD_TAGS = `${MARKER}
@@ -59,7 +96,8 @@ const HEAD_TAGS = `${MARKER}
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="PepTalk" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />`;
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    ${MARKER_END}`;
 
 const hasIconFont = relocateIconFont();
 
@@ -77,8 +115,40 @@ try {
 const SW_SCRIPT = `<script>
 if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function (e) {
+    navigator.serviceWorker.register('/sw.js').then(function (reg) {
+      // ── Forced update ──────────────────────────────────────────────────
+      // sw.js already calls skipWaiting() + clients.claim(), so a NEW visit
+      // gets new assets. That was never enough: an INSTALLED PWA is opened
+      // once and left running for days, and nothing here asked whether a new
+      // version existed or reloaded when one took over. A fix could ship and
+      // simply never reach a user who does not cold-start the app.
+      //
+      // Check on load, when the app is brought back to the foreground, and
+      // hourly while it sits open.
+      var check = function () { reg.update().catch(function () {}); };
+      check();
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') check();
+      });
+      setInterval(check, 60 * 60 * 1000);
+    }).catch(function (e) {
       console.warn('[pwa] service worker registration failed:', e);
+    });
+
+    // When a new worker takes control, the page is still running the OLD
+    // bundle — claim() swaps the controller, not the loaded JS. Reload once
+    // so the user actually gets the new version. Guarded against the reload
+    // loop this classically causes.
+    // On a FIRST install there was no controller, and clients.claim() fires
+    // controllerchange anyway — reloading there would flash the page for every
+    // brand-new visitor for no benefit, since they already have the newest
+    // bundle. Only reload when an OLD worker is being replaced.
+    var hadController = !!navigator.serviceWorker.controller;
+    var reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!hadController || reloading) return;
+      reloading = true;
+      window.location.reload();
     });
   });
 }
@@ -91,10 +161,17 @@ html = html.replace(
 );
 
 // 2) Inject head tags right before </head>.
-html = html.replace('</head>', `  ${HEAD_TAGS}\n  </head>`);
+// No leading indent here on purpose. stripRegion() absorbs the whitespace in
+// front of the region it removes, so the whitespace already sitting before
+// </head> is what separates the tags. Adding two more spaces made every
+// re-injection indent one level deeper than the last.
+html = html.replace('</head>', `${HEAD_TAGS}\n  </head>`);
 
 // 3) Register the service worker + icon font right before </body>.
-html = html.replace('</body>', `  ${ICON_FONT_SCRIPT}\n  ${SW_SCRIPT}\n</body>`);
+html = html.replace(
+  '</body>',
+  `${BODY_MARKER}\n  ${ICON_FONT_SCRIPT}\n  ${SW_SCRIPT}\n  ${BODY_MARKER_END}\n</body>`,
+);
 
 // 4) Stamp the commit this bundle was built from.
 //
@@ -111,10 +188,14 @@ try {
   // Not a git checkout (CI tarball, etc.) — leave it 'unknown' rather than fail
   // the build; verify:build treats unknown as "cannot confirm", not "fresh".
 }
-html = html.replace(
-  '</head>',
-  `  <meta name="peptalk-build-commit" content="${buildSha}" />\n  </head>`,
-);
+// Replace an existing stamp rather than appending another. This tag is
+// injected outside the marker region, so a plain append stacked one more copy
+// on every re-injection — and verify:build reads this tag to decide whether
+// the deployed bundle is fresh, so duplicates are not merely cosmetic.
+const BUILD_TAG = `<meta name="peptalk-build-commit" content="${buildSha}" />`;
+const buildTagRe = /\s*<meta name="peptalk-build-commit"[^>]*>/g;
+html = html.replace(buildTagRe, '');
+html = html.replace('</head>', `  ${BUILD_TAG}\n  </head>`);
 
 writeFileSync(INDEX, html);
 console.log('[inject-pwa] stamped manifest + PWA meta + service worker into', INDEX);
