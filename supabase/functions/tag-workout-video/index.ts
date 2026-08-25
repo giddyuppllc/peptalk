@@ -34,6 +34,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { signStreamToken, streamThumbnailUrl } from '../_shared/streamSign.ts';
+import { withErrorReporting } from '../_shared/sentry.ts';
 
 // 2026-05-19 vision pivot: the Whisper path returned 0 useful predictions
 // across 293 videos. These are silent exercise demos with no narration —
@@ -66,7 +67,9 @@ const jsonResp = (body: unknown, status = 200): Response =>
     headers: { 'Content-Type': 'application/json', ...corsHeaders },
   });
 
-Deno.serve(async (req) => {
+// Wrapped: this handler had no top-level catch, so an unexpected throw
+// surfaced as an opaque runtime error with nothing recorded anywhere.
+Deno.serve(withErrorReporting('tag-workout-video', async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
   if (req.method !== 'POST') return jsonResp({ error: 'Method not allowed' }, 405);
 
@@ -225,4 +228,4 @@ Identify the exercise in the attached video frame for video ${slug}.`;
       detail: err instanceof Error ? err.message : String(err),
     }, 500);
   }
-});
+}));

@@ -18,6 +18,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { withErrorReporting } from '../_shared/sentry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -57,7 +58,9 @@ const KINDS = new Set(['dose', 'cycle', 'prov', 'uncited', 'edit', 'safety', 'in
 // 'reviewed' is what the uncited checkboxes store; the rest are conflict picks.
 const VERDICTS = new Set(['table', 'protocol', 'ladder', 'other', 'reviewed']);
 
-Deno.serve(async (req) => {
+// Wrapped: this handler had no top-level catch, so an unexpected throw
+// surfaced as an opaque runtime error with nothing recorded anywhere.
+Deno.serve(withErrorReporting('clinical-review', async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   // A missing secret must fail closed — otherwise every empty token would pass.
@@ -150,4 +153,4 @@ Deno.serve(async (req) => {
   } catch (e) {
     return json({ error: String(e?.message ?? e) }, 500);
   }
-});
+}));
