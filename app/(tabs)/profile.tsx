@@ -853,6 +853,8 @@ export default function ProfileScreen() {
             <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
             <ProfileRow icon="snow-outline" label="Food safety windows" onPress={() => router.push('/settings/food-safety' as any)} color={t.text} />
             <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
+            <ProfileRow icon="alert-circle-outline" label="Allergies & intolerances" onPress={() => router.push('/settings/allergies' as any)} color={t.text} />
+            <View style={[profileStyles.divider, { backgroundColor: t.cardBorder }]} />
             <ProfileRow
               icon="notifications-outline"
               label={notificationsAvailable() ? 'Notifications' : 'Notifications · Off'}

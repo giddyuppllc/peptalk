@@ -1655,6 +1655,10 @@ function RootLayout() {
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
           <Stack.Screen
+            name="settings/allergies"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
             name="settings/privacy"
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
