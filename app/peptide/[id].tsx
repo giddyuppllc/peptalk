@@ -6,6 +6,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { getPeptideById } from '../../src/data/peptides';
 import { useStackStore } from '../../src/store/useStackStore';
+import { useAuthStore } from '../../src/store/useAuthStore';
 import { GlassCard } from '../../src/components/GlassCard';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
 import { ProtocolPlanCard } from '../../src/components/ProtocolPlanCard';
@@ -100,8 +101,11 @@ export default function PeptideDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { currentStack, addToStack } = useStackStore();
+  const toggleFavoritePeptide = useAuthStore((s) => s.toggleFavoritePeptide);
+  const favoritePeptides = useAuthStore((s) => s.user?.favoritePeptides);
 
   const peptide = getPeptideById(id ?? '');
+  const isFavorite = !!peptide && (favoritePeptides ?? []).includes(peptide.id);
 
   // ── Data lookups (memoized — these scan large in-memory tables and were
   //    blocking the JS thread on every render, causing the MOTSC freeze).
@@ -205,6 +209,24 @@ export default function PeptideDetailScreen() {
             accessibilityLabel="Back to peptide library"
           >
             <Ionicons name="chevron-back" size={26} color="#2D2D2D" />
+          </TouchableOpacity>
+
+          {/* Favourite. useAuthStore.toggleFavoritePeptide had zero callers
+              while Profile displayed user.favoritePeptides.length — a counter
+              that could never move off 0 because nothing could add to it. */}
+          <TouchableOpacity
+            onPress={() => toggleFavoritePeptide(peptide.id)}
+            style={styles.backBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isFavorite }}
+            accessibilityLabel={isFavorite ? `Remove ${peptide.name} from favourites` : `Add ${peptide.name} to favourites`}
+          >
+            <Ionicons
+              name={isFavorite ? 'heart' : 'heart-outline'}
+              size={24}
+              color={isFavorite ? '#E89672' : '#2D2D2D'}
+            />
           </TouchableOpacity>
         </View>
 
