@@ -624,6 +624,20 @@ export const useDoseLogStore = create<DoseLogStore>()(
             // both forms.
             notif.cancelDoseRemindersFor?.(proto.peptideId)?.catch?.(() => {});
             // §16 — cycle-complete push routes to the cycle report.
+            //
+            // Generate the report BEFORE firing the push. generateCycleReportFor
+            // had no callers anywhere, so the notification routed the user to a
+            // report that had never been created — the loop was open at the far
+            // end. Order matters: the push can be tapped the instant it lands.
+            //
+            // Failure is swallowed on purpose. A report that cannot be built
+            // (no dose history, for instance) must not stop the protocol from
+            // deactivating or the reminders from being cancelled.
+            try {
+              const { useAimeeReportsStore } = require('./useAimeeReportsStore');
+              useAimeeReportsStore.getState().generateCycleReportFor?.(proto.id);
+            } catch {}
+
             const peptide = getPeptideById(proto.peptideId);
             notif.fireCycleCompleteNudge?.({
               peptideName: peptide?.name ?? proto.peptideId,

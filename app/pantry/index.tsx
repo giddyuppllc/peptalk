@@ -65,8 +65,27 @@ export default function PantryScreen() {
   const v3 = useV3Theme();
   const items = usePantryStore((s) => s.items);
   const removeItem = usePantryStore((s) => s.removeItem);
+  const getExpiringItems = usePantryStore((s) => s.getExpiringItems);
   const clearAll = usePantryStore((s) => s.clearAll);
   const [query, setQuery] = useState('');
+
+  // Within a week, expired first. Recomputed from `items` so adding, editing
+  // or removing an item updates the banner immediately.
+  const expiringSoon = useMemo(() => {
+    // `items` is a real dependency even though it is not referenced below:
+    // getExpiringItems reads the store directly, and zustand actions are
+    // stable references, so without this the banner would never update when
+    // an item is added, edited or removed. The linter cannot see that.
+    void items;
+    return getExpiringItems(7)
+      .slice()
+      .sort((a, b) => (a.expiryDate ?? '').localeCompare(b.expiryDate ?? ''));
+  }, [getExpiringItems, items]);
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const expiredCount = expiringSoon.filter(
+    (i) => i.expiryDate && i.expiryDate < todayKey,
+  ).length;
+  const expiryAccent = resolveExpiryColor(expiredCount > 0 ? 'danger' : 'caution', v3);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return items;
@@ -179,6 +198,34 @@ export default function PantryScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        {/* Expiring soon.
+            The empty state promises "alerts before anything goes bad", and
+            nothing delivered one: getExpiringItems had no callers, and the
+            meal-safety reminder is a fixed daily ping at the nutrition tab
+            that knows nothing about pantry expiry. Per-item labels existed but
+            only once you scrolled to the item — which is not an alert.
+            Expired items lead, because those are the ones that matter. */}
+        {expiringSoon.length > 0 && (
+          <View style={styles.section}>
+            <View style={[styles.expiryBanner, { borderColor: expiryAccent }]}>
+              <View style={[styles.expiryIcon, { backgroundColor: expiryAccent }]}>
+                <Ionicons name="alert" size={17} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.expiryTitle, { color: t.text }]}>
+                  {expiredCount > 0
+                    ? `${expiredCount} item${expiredCount === 1 ? '' : 's'} past its date`
+                    : `${expiringSoon.length} item${expiringSoon.length === 1 ? '' : 's'} expiring soon`}
+                </Text>
+                <Text style={[styles.expiryBody, { color: t.textSecondary }]} numberOfLines={2}>
+                  {expiringSoon.slice(0, 3).map((i) => i.name).join(', ')}
+                  {expiringSoon.length > 3 ? ` +${expiringSoon.length - 3} more` : ''}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {items.length > 0 && (
           <View style={styles.section}>
             <TouchableOpacity
@@ -425,6 +472,22 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
+  expiryBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+  },
+  expiryIcon: {
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  expiryTitle: { fontSize: 14.5, fontWeight: '700' },
+  expiryBody: { fontSize: 12.5, marginTop: 2 },
   aiSuggestBanner: {
     flexDirection: 'row',
     alignItems: 'center',
