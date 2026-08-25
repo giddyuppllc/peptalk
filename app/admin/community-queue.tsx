@@ -31,6 +31,22 @@ interface ReportRow {
   comment_snapshot?: { id: string; body: string; user_id: string; is_deleted: boolean } | null;
 }
 
+/**
+ * A pending report against a live-chat message.
+ *
+ * community_live_message_reports had a writer and no reader anywhere in the
+ * repo — reports accumulated where no human could see them while the live room
+ * told users "moderators review every report".
+ */
+interface LiveReportRow {
+  id: string;
+  message_id: string;
+  reason: string;
+  status: string;
+  created_at: string;
+  message_snapshot?: { id: string; body: string; user_id: string; is_deleted: boolean; event_id: string } | null;
+}
+
 interface TopicRow {
   id: string;
   slug: string;
@@ -45,9 +61,10 @@ export default function CommunityAdminQueue() {
   const t = useTheme();
   const router = useRouter();
 
-  const [tab, setTab] = useState<'reports' | 'topics'>('reports');
+  const [tab, setTab] = useState<'reports' | 'topics' | 'live'>('reports');
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [topics, setTopics] = useState<TopicRow[]>([]);
+  const [liveReports, setLiveReports] = useState<LiveReportRow[]>([]);
   const [loading, setLoading] = useState(true);
   // Distinguish a genuinely-clear queue ("No pending reports") from a
   // fetch failure — safety-relevant, since a silent failure hid pending
@@ -78,19 +95,32 @@ export default function CommunityAdminQueue() {
         .eq('status', 'pending_review')
         .order('created_at', { ascending: false });
 
-      if (reportsError || topicsError) {
+      const { data: liveRows, error: liveError } = await (supabase as any)
+        .from('community_live_message_reports')
+        .select(`
+          id, message_id, reason, status, created_at,
+          message_snapshot:community_live_messages!community_live_message_reports_message_id_fkey ( id, body, user_id, is_deleted, event_id )
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (reportsError || topicsError || liveError) {
         setError(true);
         setReports([]);
         setTopics([]);
+        setLiveReports([]);
       } else {
         setReports(reportRows ?? []);
         setTopics(topicRows ?? []);
+        setLiveReports(liveRows ?? []);
       }
     } catch (err) {
       if (__DEV__) console.warn('[admin/community-queue]', err);
       setError(true);
       setReports([]);
       setTopics([]);
+      setLiveReports([]);
     } finally {
       setLoading(false);
     }
@@ -131,7 +161,7 @@ export default function CommunityAdminQueue() {
 
       {/* Tab switcher */}
       <View style={styles.tabs}>
-        {(['reports', 'topics'] as const).map((k) => (
+        {(['reports', 'topics', 'live'] as const).map((k) => (
           <TouchableOpacity
             key={k}
             onPress={() => setTab(k)}
@@ -148,7 +178,11 @@ export default function CommunityAdminQueue() {
                 { color: tab === k ? t.primary : t.textSecondary, fontWeight: tab === k ? '700' : '500' },
               ]}
             >
-              {k === 'reports' ? `Reports (${reports.length})` : `Topics (${topics.length})`}
+              {k === 'reports'
+                ? `Reports (${reports.length})`
+                : k === 'topics'
+                  ? `Topics (${topics.length})`
+                  : `Live (${liveReports.length})`}
             </Text>
           </TouchableOpacity>
         ))}
@@ -237,7 +271,8 @@ export default function CommunityAdminQueue() {
               );
             })
           )
-        ) : topics.length === 0 ? (
+        ) : tab === 'topics' ? (
+          topics.length === 0 ? (
           <Text style={[styles.empty, { color: t.textSecondary }]}>No pending topic suggestions.</Text>
         ) : (
           topics.map((tp) => (
@@ -263,6 +298,53 @@ export default function CommunityAdminQueue() {
               </View>
             </GlassCard>
           ))
+          )
+        ) : liveReports.length === 0 ? (
+          <Text style={[styles.empty, { color: t.textSecondary }]}>No pending live-chat reports.</Text>
+        ) : (
+          liveReports.map((r) => {
+            const msg = r.message_snapshot ?? null;
+            return (
+              <GlassCard key={r.id} style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <View style={[styles.reasonBadge, { backgroundColor: t.primary + '22' }]}>
+                    <Text style={[styles.reasonText, { color: t.primary }]}>{r.reason}</Text>
+                  </View>
+                  <Text style={[styles.timestamp, { color: t.textSecondary }]}>
+                    {new Date(r.created_at).toLocaleString()}
+                  </Text>
+                </View>
+
+                <View style={[styles.targetBox, { borderColor: t.cardBorder }]}>
+                  <Text style={[styles.targetKind, { color: t.textSecondary }]}>
+                    live message · {msg?.is_deleted ? 'already removed' : 'still visible'}
+                  </Text>
+                  <Text style={[styles.targetText, { color: t.text }]} numberOfLines={6}>
+                    {msg?.body ?? '(message no longer available)'}
+                  </Text>
+                </View>
+
+                <View style={styles.actionRow}>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, { borderColor: t.cardBorder }]}
+                    onPress={() => moderate('dismiss_live', { reportId: r.id })}
+                    accessibilityRole="button"
+                    accessibilityLabel="Dismiss this live-chat report"
+                  >
+                    <Text style={[styles.actionText, { color: t.text }]}>Dismiss</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, { backgroundColor: '#D43A3A' }]}
+                    onPress={() => moderate('delete_live', { reportId: r.id })}
+                    accessibilityRole="button"
+                    accessibilityLabel="Remove this live-chat message"
+                  >
+                    <Text style={[styles.actionText, { color: '#fff' }]}>Remove message</Text>
+                  </TouchableOpacity>
+                </View>
+              </GlassCard>
+            );
+          })
         )}
       </ScrollView>
     </SafeAreaView>

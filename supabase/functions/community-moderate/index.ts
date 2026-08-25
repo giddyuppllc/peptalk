@@ -77,6 +77,56 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    // ── Live-chat reports ────────────────────────────────────────────────
+    // community_live_message_reports had a writer (community-live-report-
+    // message) and no reader anywhere in the repo. Reports piled up where
+    // nobody could see them while the live room told users "moderators review
+    // every report" — a claim an App Store reviewer can check, and a promise
+    // we were not keeping. These two actions give that table a reader.
+    if (action === 'dismiss_live') {
+      const reportId = String(body?.reportId ?? '');
+      if (!reportId) return json({ error: 'reportId required' }, 400);
+      const { error } = await admin
+        .from('community_live_message_reports')
+        .update({ status: 'dismissed', resolved_at: nowIso, resolved_by: user.id })
+        .eq('id', reportId);
+      if (error) throw error;
+      return json({ ok: true });
+    }
+
+    if (action === 'delete_live') {
+      const reportId = String(body?.reportId ?? '');
+      if (!reportId) return json({ error: 'reportId required' }, 400);
+
+      const { data: report } = await admin
+        .from('community_live_message_reports')
+        .select('message_id')
+        .eq('id', reportId)
+        .maybeSingle();
+      if (!report) return json({ error: 'Report not found' }, 404);
+
+      // Soft-delete, matching what the in-room host delete does. Realtime is
+      // subscribed to UPDATEs on this table, so every client watching the
+      // event sees the message disappear immediately rather than on reload.
+      if (report.message_id) {
+        const { error: delErr } = await admin
+          .from('community_live_messages')
+          .update({ is_deleted: true })
+          .eq('id', report.message_id);
+        if (delErr) throw delErr;
+      }
+
+      // Resolve every report against that message, not just the one actioned —
+      // otherwise a message reported by five people leaves four rows pending
+      // forever and the queue never drains.
+      const { error } = await admin
+        .from('community_live_message_reports')
+        .update({ status: 'actioned', resolved_at: nowIso, resolved_by: user.id })
+        .eq('message_id', report.message_id);
+      if (error) throw error;
+      return json({ ok: true });
+    }
+
     if (action === 'delete') {
       const reportId = String(body?.reportId ?? '');
       if (!reportId) return json({ error: 'reportId required' }, 400);
