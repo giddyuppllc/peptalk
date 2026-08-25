@@ -51,7 +51,14 @@ describe('CJC-1295 protocol keying', () => {
 
   it('still guards the nightly blend at microgram scale', () => {
     expect(checkDoseSafety('cjc-1295-ipamorelin', 200, 'mcg').safe).toBe(true);
-    // 1mg is ~3.3x the 300mcg blend max — correct for with-DAC, wrong here.
-    expect(checkDoseSafety('cjc-1295-ipamorelin', 1, 'mg').safe).toBe(false);
+    // NOTE: this assertion originally expected 1mg to be flagged, because the
+    // guard read protocols.ts (100-300 mcg → 3x ceiling of 900 mcg). Since the
+    // guard moved to canonicalDosing the blend resolves via the reconstitution
+    // ladder — Edward's own worked dose, 333-667 mcg — so the ceiling is 2001
+    // mcg and 1mg is 1.5x max, not 3.3x. That is the documented precedence
+    // working, not a regression: the ladder is the only self-verifying source.
+    expect(checkDoseSafety('cjc-1295-ipamorelin', 1, 'mg').safe).toBe(true);
+    // A genuinely excessive blend dose is still caught.
+    expect(checkDoseSafety('cjc-1295-ipamorelin', 5, 'mg').safe).toBe(false);
   });
 });

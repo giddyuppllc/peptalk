@@ -7,6 +7,7 @@
  */
 
 import { PROTOCOL_TEMPLATES } from '../data/protocols';
+import { getCanonicalDose } from '../data/canonicalDosing';
 import { PEPTIDES } from '../data/peptides';
 import { findPeptideByQuery } from '../lib/peptideSearch';
 
@@ -49,6 +50,28 @@ function getTypicalRangeMcg(
     findPeptideByQuery(PEPTIDES, q) ??
     PEPTIDES.find((p) => p.name.toLowerCase().includes(q));
 
+  // Canonical dosing first. The guard used to compute its ceiling from
+  // protocols.ts — the ONLY one of the three dosing sources that cites
+  // nothing — while the self-verifying reconstitution ladder was ignored.
+  // getCanonicalDose applies the documented precedence (ladder > master
+  // table > protocols) so the guard is derived from the best-attributed
+  // figure available for that compound.
+  if (peptide) {
+    const canonical = getCanonicalDose(peptide.id);
+    if (canonical) {
+      const fmt = (mcg: number) =>
+        mcg >= 1000 ? `${+(mcg / 1000).toFixed(2)} mg` : `${+mcg.toFixed(0)} mcg`;
+      return {
+        minMcg: canonical.minMcg,
+        maxMcg: canonical.maxMcg,
+        display: `${fmt(canonical.minMcg)}–${fmt(canonical.maxMcg)}`,
+      };
+    }
+  }
+
+  // Fallback: no canonical entry (compound absent from all three stores under
+  // this id). Keep the original protocol-substring behaviour so an unknown
+  // query still resolves rather than silently going unguarded.
   const matchingProtocols = peptide
     ? PROTOCOL_TEMPLATES.filter((t) => t.peptideId === peptide.id)
     : PROTOCOL_TEMPLATES.filter(
