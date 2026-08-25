@@ -365,6 +365,10 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       logout: async () => {
+        // Captured before signOut clears it. The chat store keys its deletion
+        // tombstones by account so they survive this user's own sign-out
+        // without ever applying to the next user's session.
+        const outgoingUserId = get().user?.id ?? null;
         // Cancel every scheduled OS notification BEFORE signOut so
         // User A's dose / check-in / workout reminders don't fire
         // on the device after User B signs in. (Notifications carry
@@ -468,7 +472,7 @@ export const useAuthStore = create<AuthStore>()(
         // Use the hard-reset variant — `clearChat` only drops the
         // active thread and leaves pendingSyncs intact, which would
         // replay user A's queued messages under user B's auth.
-        safeClear('chat', () => require('./useChatStore').useChatStore.getState().resetForLogout?.());
+        safeClear('chat', () => require('./useChatStore').useChatStore.getState().resetForLogout?.(outgoingUserId));
         safeClear('achievement', () => require('./useAchievementStore').useAchievementStore.getState().clearAll?.());
         safeClear('pantry', () => require('./usePantryStore').usePantryStore.getState().clearAll?.());
         safeClear('cycle', () => require('./useCycleStore').useCycleStore.getState().clearAll?.());

@@ -27,9 +27,11 @@ import { useChatStore } from '../useChatStore';
 const mockSyncRecord = jest.fn().mockResolvedValue(true);
 const mockDeleteRecordsBy = jest.fn().mockResolvedValue(true);
 const mockFetchUserRecords = jest.fn().mockResolvedValue([]);
+const mockGetCurrentUserId = jest.fn().mockResolvedValue('user-a');
 
 jest.mock('../../services/syncService', () => ({
   syncRecord: (...a: unknown[]) => mockSyncRecord(...a),
+  getCurrentUserId: (...a: unknown[]) => mockGetCurrentUserId(...a),
   deleteRecord: jest.fn().mockResolvedValue(undefined),
   deleteRecordsBy: (...a: unknown[]) => mockDeleteRecordsBy(...a),
   fetchUserRecords: (...a: unknown[]) => mockFetchUserRecords(...a),
@@ -57,6 +59,8 @@ function reset() {
     pendingSyncs: [],
     pendingDeletions: [],
     deletedChatIds: [],
+    archivedDeletions: {},
+    tombstoneOwnerId: null,
     isTyping: false,
   });
 }
@@ -65,6 +69,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockDeleteRecordsBy.mockResolvedValue(true);
   mockFetchUserRecords.mockResolvedValue([]);
+  mockGetCurrentUserId.mockResolvedValue('user-a');
   reset();
 });
 
@@ -237,5 +242,81 @@ describe('sustainability', () => {
     useChatStore.getState().deleteChat(id);
     expect(useChatStore.getState().deletedChatIds.length).toBeLessThanOrEqual(500);
     expect(useChatStore.getState().deletedChatIds).toContain(id);
+  });
+});
+
+describe('a deletion survives its own owner signing out', () => {
+  it('does not resurrect after sign-out and sign-in, even if the server delete never landed', async () => {
+    // The exact case this design exists for. Offline delete: the server still
+    // holds the rows, so only a surviving tombstone can suppress them.
+    mockDeleteRecordsBy.mockResolvedValue(false);
+    useChatStore.setState({
+      tombstoneOwnerId: 'user-a',
+      chats: [{
+        id: 'chat-secret', title: 'Private',
+        createdAt: '2026-08-01T09:00:00.000Z', lastMessageAt: '2026-08-01T09:00:00.000Z',
+        messages: [{ id: 'm1', role: 'user', content: 'delete me', timestamp: '2026-08-01T09:00:00.000Z' }],
+      }],
+      activeChatId: 'chat-secret',
+    });
+
+    useChatStore.getState().deleteChat('chat-secret');
+    await Promise.resolve();
+
+    useChatStore.getState().resetForLogout('user-a');
+    expect(useChatStore.getState().deletedChatIds).toEqual([]); // cleared from the active session
+
+    // …and back in as the same person.
+    mockGetCurrentUserId.mockResolvedValue('user-a');
+    mockFetchUserRecords.mockResolvedValue([
+      row('m1', 'chat-secret', 'user', 'delete me', '2026-08-01T09:00:00.000Z'),
+    ]);
+    await useChatStore.getState().syncFromServer();
+
+    expect(useChatStore.getState().chats.some((c) => c.id === 'chat-secret')).toBe(false);
+  });
+
+  it('never applies one account deletions to a different account', async () => {
+    useChatStore.setState({
+      tombstoneOwnerId: 'user-a',
+      deletedChatIds: ['chat-secret'],
+    });
+    useChatStore.getState().resetForLogout('user-a');
+
+    // A different person signs in on the same device.
+    mockGetCurrentUserId.mockResolvedValue('user-b');
+    mockFetchUserRecords.mockResolvedValue([
+      row('m9', 'chat-secret', 'user', 'user B own chat, same id', '2026-08-02T09:00:00.000Z'),
+    ]);
+    await useChatStore.getState().syncFromServer();
+
+    // B's own conversation is NOT suppressed by A's tombstone.
+    expect(useChatStore.getState().chats.some((c) => c.id === 'chat-secret')).toBe(true);
+    expect(useChatStore.getState().deletedChatIds).not.toContain('chat-secret');
+  });
+
+  it('retains no message content in the archive, only opaque ids', () => {
+    useChatStore.setState({
+      tombstoneOwnerId: 'user-a',
+      deletedChatIds: ['chat-secret'],
+      chats: [{
+        id: 'chat-secret', title: 'Private',
+        createdAt: 'x', lastMessageAt: 'x',
+        messages: [{ id: 'm1', role: 'user', content: 'SENSITIVE', timestamp: 'x' }],
+      }],
+    });
+    useChatStore.getState().resetForLogout('user-a');
+    const dump = JSON.stringify(useChatStore.getState().archivedDeletions);
+    expect(dump).toContain('chat-secret');
+    expect(dump).not.toContain('SENSITIVE');
+    expect(dump).not.toContain('Private');
+  });
+
+  it('bounds how many accounts it retains', () => {
+    for (let i = 0; i < 8; i++) {
+      useChatStore.setState({ tombstoneOwnerId: `u${i}`, deletedChatIds: [`c${i}`] });
+      useChatStore.getState().resetForLogout(`u${i}`);
+    }
+    expect(Object.keys(useChatStore.getState().archivedDeletions).length).toBeLessThanOrEqual(5);
   });
 });

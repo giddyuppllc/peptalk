@@ -6,6 +6,7 @@ import {
   syncRecord,
   deleteRecordsBy,
   fetchUserRecords,
+  getCurrentUserId,
 } from '../services/syncService';
 
 /**
@@ -134,6 +135,10 @@ interface PendingDeletionEntry {
  */
 const MAX_TOMBSTONES = 500;
 
+/** Accounts whose tombstones are retained while signed out. Bounded so a
+ *  shared device cannot accumulate state for unlimited accounts. */
+const MAX_ARCHIVED_ACCOUNTS = 5;
+
 /** Most recent conversations kept when restoring. Bounds both the query and
  *  the amount of history rehydrated into memory on a cold boot. */
 const RESTORE_CHAT_LIMIT = 50;
@@ -152,6 +157,22 @@ interface ChatStore {
   /** Chat ids deleted locally. A restore must never re-create these, even if
    *  the server delete has not landed yet. */
   deletedChatIds: string[];
+  /**
+   * Tombstones and unconfirmed deletions belonging to accounts that are not
+   * currently signed in, keyed by user id.
+   *
+   * Sign-out cannot simply discard this state. If it does, a chat deleted
+   * offline — where the server delete has not landed yet — comes back the next
+   * time that user signs in, because the restore reads the server and no
+   * tombstone survives to suppress it. Keying by account gets both properties
+   * at once: one user's deletions never apply to another's session, and a
+   * user's own deletions survive their own sign-out.
+   *
+   * Only opaque chat ids are retained — never message content.
+   */
+  archivedDeletions: Record<string, { tombstones: string[]; pending: PendingDeletionEntry[] }>;
+  /** Which account the active tombstone list belongs to. */
+  tombstoneOwnerId: string | null;
   /** Merge server-held history into the local store. Safe to call repeatedly. */
   syncFromServer: () => Promise<void>;
   /**
@@ -189,7 +210,7 @@ interface ChatStore {
    * user A would be replayed on user B's auth after re-login on the
    * same device. P0 cross-user data leak. 2026-05-17 fix.
    */
-  resetForLogout: () => void;
+  resetForLogout: (ownerUserId?: string | null) => void;
 
   /**
    * Retry any previously-failed message syncs. Call on app boot and after
@@ -243,6 +264,8 @@ export const useChatStore = create<ChatStore>()(
       pendingSyncs: [],
       pendingDeletions: [],
       deletedChatIds: [],
+      archivedDeletions: {},
+      tombstoneOwnerId: null,
       hasHydrated: false,
 
       newChat: () => {
@@ -490,7 +513,7 @@ export const useChatStore = create<ChatStore>()(
         get().deleteChat(activeChatId);
       },
 
-      resetForLogout: () => {
+      resetForLogout: (ownerUserId) => {
         // Wipe EVERYTHING — every chat thread, every queued sync, the
         // active id, the messages mirror. Critical for shared-device
         // privacy: without this, user A's pendingSyncs would be sent
@@ -501,15 +524,45 @@ export const useChatStore = create<ChatStore>()(
           activeChatId: fresh.id,
           messages: fresh.messages,
           pendingSyncs: [],
-          // Cleared for the same shared-device reason as pendingSyncs: these
-          // describe user A's conversations and must not survive into user B's
-          // session. The trade-off is deliberate and narrow — a deletion made
-          // offline and never confirmed, followed by a sign-out before the
-          // device reconnects, can reappear when that user signs back in.
-          // Privacy on a shared device outweighs that edge.
-          pendingDeletions: [],
-          deletedChatIds: [],
           isTyping: false,
+        });
+
+        // Deletions are ARCHIVED under the outgoing account, not discarded.
+        //
+        // Discarding them is the intuitive move — it is what every other store
+        // here does on logout — but it quietly breaks deletion: a chat deleted
+        // while offline still exists on the server, and with no surviving
+        // tombstone the next sign-in reads it straight back. Keying the state
+        // by account keeps both guarantees: it never applies to a different
+        // user's session, and it is waiting when its owner returns.
+        set((state) => {
+          const owner = ownerUserId ?? state.tombstoneOwnerId;
+          if (!owner || (state.deletedChatIds.length === 0 && state.pendingDeletions.length === 0)) {
+            return { deletedChatIds: [], pendingDeletions: [], tombstoneOwnerId: null };
+          }
+          const prior = state.archivedDeletions[owner];
+          const archivedDeletions = {
+            ...state.archivedDeletions,
+            [owner]: {
+              tombstones: Array.from(
+                new Set([...(prior?.tombstones ?? []), ...state.deletedChatIds]),
+              ).slice(-MAX_TOMBSTONES),
+              pending: [...(prior?.pending ?? []), ...state.pendingDeletions],
+            },
+          };
+          // Bound how many accounts are retained on a shared device.
+          const keys = Object.keys(archivedDeletions);
+          if (keys.length > MAX_ARCHIVED_ACCOUNTS) {
+            for (const k of keys.slice(0, keys.length - MAX_ARCHIVED_ACCOUNTS)) {
+              delete archivedDeletions[k];
+            }
+          }
+          return {
+            archivedDeletions,
+            deletedChatIds: [],
+            pendingDeletions: [],
+            tombstoneOwnerId: null,
+          };
         });
       },
 
@@ -607,6 +660,27 @@ export const useChatStore = create<ChatStore>()(
           content: string;
           created_at: string | null;
         };
+
+        // Adopt this account's archived tombstones before reading anything.
+        // Without this the restore below would happily rebuild a conversation
+        // the user deleted before their last sign-out.
+        const uid = await getCurrentUserId();
+        if (uid) {
+          const st = get();
+          if (st.tombstoneOwnerId !== uid) {
+            const archived = st.archivedDeletions[uid];
+            const rest = { ...st.archivedDeletions };
+            delete rest[uid];
+            set({
+              tombstoneOwnerId: uid,
+              deletedChatIds: Array.from(
+                new Set([...st.deletedChatIds, ...(archived?.tombstones ?? [])]),
+              ).slice(-MAX_TOMBSTONES),
+              pendingDeletions: [...st.pendingDeletions, ...(archived?.pending ?? [])],
+              archivedDeletions: rest,
+            });
+          }
+        }
 
         let rows: Row[] = [];
         try {
@@ -707,6 +781,8 @@ export const useChatStore = create<ChatStore>()(
         // whole mechanism exists to prevent.
         pendingDeletions: state.pendingDeletions,
         deletedChatIds: state.deletedChatIds,
+        archivedDeletions: state.archivedDeletions,
+        tombstoneOwnerId: state.tombstoneOwnerId,
       }),
       migrate: (persisted: any, version) => {
         // v1 → v2: wrap legacy flat messages[] into a single Chat

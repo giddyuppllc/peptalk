@@ -65,6 +65,16 @@ type TableName =
 // Generic helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * The signed-in user's id, or null. Exported because callers that keep
+ * per-account local state (chat tombstones) need to know WHICH account the
+ * state belongs to — otherwise it either leaks across accounts on a shared
+ * device, or has to be thrown away on sign-out and stops protecting anything.
+ */
+export async function getCurrentUserId(): Promise<string | null> {
+  return getUserId();
+}
+
 async function getUserId(): Promise<string | null> {
   const { data: { session } } = await db.auth.getSession();
   return session?.user?.id ?? null;
