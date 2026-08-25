@@ -69,6 +69,19 @@ const TILES: Tile[] = [
     icon: 'pulse-outline',
     href: '/doses/side-effects',
   },
+  // app/body-map.tsx had no inbound navigation from anywhere in the app, so
+  // the whole injection-site subsystem was dead: useBodyMapStore's
+  // getInjectionsByRegion / getLastInjectionForRegion / getRecentInjections /
+  // removeInjection had zero callers and the injection_sites table
+  // round-tripped through sync to a screen nobody could open. Rotation matters
+  // for anyone injecting regularly, so it belongs on the dosing hub.
+  {
+    key: 'body-map',
+    title: 'Injection Sites',
+    subtitle: 'Rotate sites · tap the body map',
+    icon: 'body-outline',
+    href: '/body-map',
+  },
 ];
 
 export default function DosesHubScreen() {

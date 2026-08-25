@@ -44,6 +44,12 @@ const ALLOWED: RegExp[] = [
   /^\/?activity(\/[\w-]+)*(\?.*)?$/,
   /^\/?labs(\/[\w-]+)*(\?.*)?$/,
   /^\/?body-composition(\/[\w-]+)*(\?.*)?$/,
+  // /body-map — the aimee-chat prompt has offered this route all along
+  // (aimee-chat/_prompt.ts), but the allowlist is deny-by-default and had no
+  // pattern for it, so the streaming path refused every attempt while the
+  // legacy path let it through. Two navigation paths, two different answers
+  // for the same destination. The screen is now reachable from the dosing hub.
+  /^\/?body-map(\?.*)?$/,
   /^\/?pantry(\/[\w-]+)*(\?.*)?$/,
   /^\/?aimee(\/[\w-]+)*(\?.*)?$/,
   /^\/?community(\/[\w-]+)*(\?.*)?$/,

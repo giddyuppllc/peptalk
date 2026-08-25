@@ -39,6 +39,12 @@ const MENU_ITEMS: MenuItem[] = [
   { label: 'Check-in',  icon: 'checkmark-circle-outline', href: '/(tabs)/check-in' },
   { label: 'Calendar',  icon: 'calendar-outline',        href: '/(tabs)/calendar' },
   { label: 'Community', icon: 'people-outline',          href: '/community' },
+  // app/(tabs)/train.tsx — the unified Workouts + Nutrition landing — had
+  // exactly one inbound route in the whole app: the post-workout redirect in
+  // player-v2. The tab bar is hidden by design (the home cards are the nav) and
+  // no card pointed at it, so a screen built as a landing page could only be
+  // reached by finishing a workout first.
+  { label: 'Train',     icon: 'barbell-outline',         href: '/(tabs)/train' },
 ];
 
 export function ProfileShortcutFab() {
