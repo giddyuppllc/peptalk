@@ -155,6 +155,7 @@ function TierCard({
   highlighted?: boolean;
   livePrice?: string;
 }) {
+  const router = useRouter();
   const [purchasing, setPurchasing] = React.useState(false);
   const [showSquare, setShowSquare] = React.useState(false); // web: Square card modal
   const plan = info.pricing;
@@ -376,7 +377,29 @@ function TierCard({
         planName={info.name}
         priceLabel={`${displayPrice}${plan?.period ?? ''}`}
         onClose={() => setShowSquare(false)}
-        onSuccess={() => setShowSquare(false)}
+        onSuccess={(purchasedTier) => {
+          // A completed payment used to only close the card modal. The buyer
+          // was left sitting on the paywall with no acknowledgement, no
+          // receipt on screen, and no way to tell whether the charge had gone
+          // through — after the money had already moved.
+          //
+          // SquareCardForm has already awaited syncFromServer(), so the store
+          // holds the new tier by the time this runs and the app renders as
+          // paid the moment we land.
+          setShowSquare(false);
+          const label = purchasedTier === 'pro' ? 'Pro' : 'Plus';
+          Alert.alert(
+            'Thank you for your purchase',
+            // Deliberately claims ONLY what is certainly true. There is no
+            // transactional email service in this project, and whether Square
+            // emails its own subscription invoice is not something this code
+            // can guarantee — promising a receipt that may never arrive is the
+            // same class of bug as the moderation claim and the reminder that
+            // could not be turned off.
+            `Your PepTalk ${label} subscription is active.`,
+            [{ text: 'Continue', onPress: () => router.replace('/(tabs)' as never) }],
+          );
+        }}
       />
     ) : null}
     </>

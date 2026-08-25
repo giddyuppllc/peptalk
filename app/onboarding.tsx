@@ -411,7 +411,23 @@ export default function OnboardingScreen() {
           );
           return;
         }
+
+        // Honour the plan the user just chose.
+        //
+        // `selectedPlan` was pure decoration: it was declared, used once to
+        // highlight the selected card, and read nowhere else. Someone could
+        // pick "PepTalk Pro $49.99/mo", tap Create Account, and land on the
+        // home screen as a FREE user with no purchase attempted and nothing
+        // explaining why. That is a revenue hole and it reads as broken to an
+        // App Review tester following the same path.
+        //
+        // Push rather than replace, so Back returns to the app instead of
+        // trapping someone who changed their mind — the paywall's own back
+        // button calls router.back().
         router.replace('/(tabs)');
+        if (selectedPlan !== 'free') {
+          router.push('/subscription' as never);
+        }
       } catch (err: any) {
         // Surface the real error rather than swallowing it into a
         // generic message — silent catches hid the login-vs-signup bug
