@@ -707,6 +707,9 @@ function RootLayout() {
       // read back — the store's syncFromServer existed with no caller, so a
       // reinstall silently lost every recorded side effect.
       ['side effects', () => useSideEffectStore.getState().syncFromServer()],
+      // Chat history: safe to restore now that deleteChat propagates to the
+      // server and tombstones suppress anything deleted locally.
+      ['chat history', () => useChatStore.getState().syncFromServer()],
     ];
     // 2026-05-18 cold-boot audit: gate boot syncs on a fresh session.
     // Previously they fired unconditionally — if the user had a stale

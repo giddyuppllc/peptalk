@@ -2,7 +2,11 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { ChatMessage } from '../types';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord } from '../services/syncService';
+import {
+  syncRecord,
+  deleteRecordsBy,
+  fetchUserRecords,
+} from '../services/syncService';
 
 /**
  * Debounced setItem wrapper around secureStorage. The chat store
@@ -109,6 +113,33 @@ interface PendingSyncEntry {
   attempts: number;
 }
 
+/**
+ * A deletion the user performed locally that the server has not yet confirmed.
+ *
+ * Without this queue a delete performed offline is simply lost, and the next
+ * boot's syncFromServer reads the rows straight back — the user deletes a
+ * conversation, reopens the app, and it is there again. `kind` distinguishes a
+ * whole conversation (every row sharing a chat_id) from a single message.
+ */
+interface PendingDeletionEntry {
+  kind: 'chat' | 'message';
+  id: string;
+  attempts: number;
+}
+
+/**
+ * Cap on retained tombstones. A tombstone is normally dropped the moment the
+ * server confirms the delete, so this list stays near-empty; the cap is a
+ * backstop so a permanently offline device cannot grow it without bound.
+ */
+const MAX_TOMBSTONES = 500;
+
+/** Most recent conversations kept when restoring. Bounds both the query and
+ *  the amount of history rehydrated into memory on a cold boot. */
+const RESTORE_CHAT_LIMIT = 50;
+/** Rows pulled per restore. Chat history is the fastest-growing table here. */
+const RESTORE_MESSAGE_LIMIT = 2000;
+
 interface ChatStore {
   chats: Chat[];
   activeChatId: string | null;
@@ -116,6 +147,13 @@ interface ChatStore {
   isTyping: boolean;
   /** Messages whose cloud sync failed. Flushed on boot + after every new message. */
   pendingSyncs: PendingSyncEntry[];
+  /** Deletions awaiting server confirmation. Retried by flushPendingSyncs. */
+  pendingDeletions: PendingDeletionEntry[];
+  /** Chat ids deleted locally. A restore must never re-create these, even if
+   *  the server delete has not landed yet. */
+  deletedChatIds: string[];
+  /** Merge server-held history into the local store. Safe to call repeatedly. */
+  syncFromServer: () => Promise<void>;
   /**
    * True once async storage rehydration completes. Callers that depend
    * on `pendingSyncs` (the boot flush in `_layout.tsx`) must wait on
@@ -203,6 +241,8 @@ export const useChatStore = create<ChatStore>()(
       messages: [],
       isTyping: false,
       pendingSyncs: [],
+      pendingDeletions: [],
+      deletedChatIds: [],
       hasHydrated: false,
 
       newChat: () => {
@@ -231,6 +271,28 @@ export const useChatStore = create<ChatStore>()(
       },
 
       deleteChat: (id) => {
+        // Deleting a conversation has to reach the server, or the restore
+        // added alongside this would read it straight back on the next boot.
+        // The tombstone is recorded FIRST and independently of whether the
+        // network call succeeds: a delete performed offline must still be
+        // honoured locally forever, and the queued retry closes the loop on
+        // the server when connectivity returns.
+        set((state) => ({
+          deletedChatIds: [...state.deletedChatIds, id].slice(-MAX_TOMBSTONES),
+          pendingDeletions: [
+            ...state.pendingDeletions.filter((d) => !(d.kind === 'chat' && d.id === id)),
+            { kind: 'chat' as const, id, attempts: 0 },
+          ],
+        }));
+        void deleteRecordsBy('chat_messages', 'chat_id', id).then((ok) => {
+          if (!ok) return; // stays queued for flushPendingSyncs
+          set((state) => ({
+            pendingDeletions: state.pendingDeletions.filter(
+              (d) => !(d.kind === 'chat' && d.id === id),
+            ),
+          }));
+        });
+
         set((state) => {
           const remaining = state.chats.filter((c) => c.id !== id);
           // If we just deleted the last chat, spawn a fresh empty one
@@ -377,6 +439,26 @@ export const useChatStore = create<ChatStore>()(
       },
 
       removeMessage: (id) => {
+        // Same contract as deleteChat: a message removed locally must not come
+        // back when history is restored. Queued on failure rather than lost.
+        set((state) => ({
+          pendingDeletions: [
+            ...state.pendingDeletions.filter((d) => !(d.kind === 'message' && d.id === id)),
+            { kind: 'message' as const, id, attempts: 0 },
+          ],
+        }));
+        // deleteRecordsBy, not deleteRecord: the latter returns void and
+        // swallows the error, so the queue entry would be cleared on a failed
+        // delete exactly as if it had succeeded.
+        void deleteRecordsBy('chat_messages', 'id', id).then((ok) => {
+          if (!ok) return; // stays queued for flushPendingSyncs
+          set((state) => ({
+            pendingDeletions: state.pendingDeletions.filter(
+              (d) => !(d.kind === 'message' && d.id === id),
+            ),
+          }));
+        });
+
         set((state) => {
           let foundChatId: string | null = null;
           const nextChats = state.chats.map((c) => {
@@ -419,6 +501,14 @@ export const useChatStore = create<ChatStore>()(
           activeChatId: fresh.id,
           messages: fresh.messages,
           pendingSyncs: [],
+          // Cleared for the same shared-device reason as pendingSyncs: these
+          // describe user A's conversations and must not survive into user B's
+          // session. The trade-off is deliberate and narrow — a deletion made
+          // offline and never confirmed, followed by a sign-out before the
+          // device reconnects, can reappear when that user signs back in.
+          // Privacy on a shared device outweighs that edge.
+          pendingDeletions: [],
+          deletedChatIds: [],
           isTyping: false,
         });
       },
@@ -443,6 +533,29 @@ export const useChatStore = create<ChatStore>()(
         } catch {
           // NetInfo unavailable (Expo Go / web / jest) — fall through and
           // let syncRecord fail naturally if the network really is down.
+        }
+
+        // Retry unconfirmed deletions BEFORE replaying writes. Order matters:
+        // if a message write and its own deletion are both queued, replaying
+        // the write first would re-insert a row the user already deleted.
+        const delQueue = get().pendingDeletions;
+        if (delQueue.length > 0) {
+          const stillDeleting: PendingDeletionEntry[] = [];
+          for (const d of delQueue) {
+            const ok =
+              d.kind === 'chat'
+                ? await deleteRecordsBy('chat_messages', 'chat_id', d.id)
+                : await deleteRecordsBy('chat_messages', 'id', d.id);
+            if (ok) continue;
+            const attempts = d.attempts + 1;
+            // Deliberately NOT dropped at MAX_SYNC_ATTEMPTS the way writes are.
+            // Abandoning a write loses one message; abandoning a delete leaves
+            // data on the server the user asked to remove. The tombstone keeps
+            // it invisible locally either way, and the retry costs one request
+            // per boot.
+            stillDeleting.push({ ...d, attempts });
+          }
+          set({ pendingDeletions: stillDeleting });
         }
 
         // Look up the message bodies from the local chat store. If the
@@ -482,6 +595,100 @@ export const useChatStore = create<ChatStore>()(
 
         set({ pendingSyncs: stillFailing });
       },
+
+      syncFromServer: async () => {
+        // Chat history is the fastest-growing table in the app, so this reads a
+        // bounded window (newest first) rather than the whole history, and
+        // keeps a bounded number of conversations in memory.
+        type Row = {
+          id: string;
+          chat_id: string | null;
+          role: ChatMessage['role'];
+          content: string;
+          created_at: string | null;
+        };
+
+        let rows: Row[] = [];
+        try {
+          rows = await fetchUserRecords<Row>('chat_messages', {
+            orderBy: 'created_at',
+            ascending: false,
+            limit: RESTORE_MESSAGE_LIMIT,
+          });
+        } catch (e) {
+          if (__DEV__) console.warn('[useChatStore] syncFromServer failed:', e);
+          return;
+        }
+        if (rows.length === 0) return;
+
+        const state = get();
+        const tombstoned = new Set(state.deletedChatIds);
+        const localById = new Map(state.chats.map((c) => [c.id, c]));
+
+        // Group server rows into conversations, dropping anything the user
+        // deleted here. This is the belt-and-braces half of the delete: even if
+        // the server delete never succeeds, a deleted conversation can never
+        // reappear on this device.
+        const grouped = new Map<string, ChatMessage[]>();
+        for (const r of rows) {
+          const chatId = r.chat_id;
+          if (!chatId || tombstoned.has(chatId) || !r.id) continue;
+          const msg: ChatMessage = {
+            id: r.id,
+            role: r.role,
+            content: r.content ?? '',
+            timestamp: r.created_at ?? new Date().toISOString(),
+          };
+          const bucket = grouped.get(chatId);
+          if (bucket) bucket.push(msg);
+          else grouped.set(chatId, [msg]);
+        }
+        if (grouped.size === 0) return;
+
+        const restored: Chat[] = [];
+        for (const [chatId, serverMsgs] of grouped) {
+          const local = localById.get(chatId);
+          // Merge by message id, local first so anything the server has not
+          // seen yet (queued writes, in-flight streams) survives the merge.
+          const byId = new Map<string, ChatMessage>();
+          for (const m of local?.messages ?? []) byId.set(m.id, m);
+          for (const m of serverMsgs) if (!byId.has(m.id)) byId.set(m.id, m);
+          const messages = Array.from(byId.values()).sort((a, b) =>
+            a.timestamp < b.timestamp ? -1 : 1,
+          );
+          const lastMessageAt = messages[messages.length - 1]?.timestamp ?? new Date().toISOString();
+          restored.push({
+            id: chatId,
+            // A title the user typed is theirs — never overwrite it with a
+            // derived one. Only a conversation with no local copy gets its
+            // title reconstructed, using the same helper the app already uses
+            // for new chats and for the legacy migration.
+            title: local && local.title !== 'New Chat' ? local.title : deriveTitle(messages),
+            createdAt: local?.createdAt ?? messages[0]?.timestamp ?? lastMessageAt,
+            lastMessageAt,
+            messages,
+          });
+          localById.delete(chatId);
+        }
+
+        // Local-only conversations (never synced, or created offline) are kept.
+        for (const leftover of localById.values()) {
+          if (!tombstoned.has(leftover.id)) restored.push(leftover);
+        }
+
+        const chats = restored
+          .sort((a, b) => (a.lastMessageAt < b.lastMessageAt ? 1 : -1))
+          .slice(0, RESTORE_CHAT_LIMIT);
+        if (chats.length === 0) return;
+
+        // Keep the user where they were. Only move if the active chat is gone.
+        const activeChatId =
+          state.activeChatId && chats.some((c) => c.id === state.activeChatId)
+            ? state.activeChatId
+            : chats[0].id;
+
+        set({ chats, activeChatId, messages: activeMessages(chats, activeChatId) });
+      },
     }),
     {
       name: 'peptalk-chat',
@@ -494,6 +701,12 @@ export const useChatStore = create<ChatStore>()(
         chats: state.chats,
         activeChatId: state.activeChatId,
         pendingSyncs: state.pendingSyncs,
+        // Both MUST persist. A tombstone that does not survive a restart is
+        // not a tombstone — the next boot's syncFromServer would read the
+        // deleted conversation straight back, which is the exact failure this
+        // whole mechanism exists to prevent.
+        pendingDeletions: state.pendingDeletions,
+        deletedChatIds: state.deletedChatIds,
       }),
       migrate: (persisted: any, version) => {
         // v1 → v2: wrap legacy flat messages[] into a single Chat

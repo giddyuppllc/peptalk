@@ -126,6 +126,50 @@ export async function insertRecord(
 /**
  * Delete a record from Supabase.
  */
+/**
+ * Delete every row where `column` = `value`, scoped to the signed-in user.
+ *
+ * deleteRecord() deletes a single row by primary key and returns void — it
+ * swallows the outcome. Neither is usable for deleting a conversation:
+ *
+ *   - a chat is a SET of chat_messages rows sharing a chat_id, not one row;
+ *   - the caller has to know whether the delete actually landed. A delete that
+ *     silently failed offline, paired with a restore that re-reads the server,
+ *     resurrects the conversation the user just deleted. Returning the outcome
+ *     is what lets the caller keep a tombstone and retry.
+ *
+ * The user_id predicate is not decoration — it means a caller cannot delete
+ * another user's rows even if it passes an attacker-supplied value, and it
+ * matches the RLS policy rather than relying on it alone.
+ *
+ * Returns true only when the delete was accepted by the server.
+ */
+export async function deleteRecordsBy(
+  table: TableName,
+  column: string,
+  value: string,
+): Promise<boolean> {
+  const userId = await getUserId();
+  if (!userId) return false;
+
+  try {
+    const { error } = await db
+      .from(table)
+      .delete()
+      .eq(column, value)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.warn(`[sync] ${table} delete by ${column} failed:`, error.message);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    if (__DEV__) console.warn(`[sync] ${table} delete by ${column} threw:`, e);
+    return false;
+  }
+}
+
 export async function deleteRecord(
   table: TableName,
   recordId: string
