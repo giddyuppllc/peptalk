@@ -255,10 +255,20 @@ export function useTheme(): ThemeColors {
       // 0.62 to match the light-theme legibility pass.
       textMuted: 'rgba(241,236,228,0.62)',
 
-      glass: 'rgba(38,40,44,0.78)',
-      glassBorder: 'rgba(241,236,228,0.08)',
-      glassElevated: 'rgba(46,48,52,0.92)',
-      glassElevatedBorder: 'rgba(241,236,228,0.12)',
+      // Glass pass, male side only (Edward, 2026-08-25: "slight touch more
+      // glassier / sheen, gentle"). This branch is reached only when the v3
+      // variant is dark, which is the MALE variant — the female/light theme
+      // returns `base` above and is untouched.
+      //
+      // Two moves, both small: drop the fill opacity so what sits behind a
+      // card actually shows through (that is what reads as "glass" rather than
+      // "grey panel"), and lift the hairline rim so it catches light. Kept
+      // modest because these fills sit under body copy and every point of
+      // transparency costs contrast.
+      glass: 'rgba(38,40,44,0.70)',
+      glassBorder: 'rgba(241,236,228,0.14)',
+      glassElevated: 'rgba(46,48,52,0.86)',
+      glassElevatedBorder: 'rgba(241,236,228,0.20)',
       glassAccent: 'rgba(201,136,90,0.12)',
       glassAccentBorder: 'rgba(201,136,90,0.25)',
 
