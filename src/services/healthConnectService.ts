@@ -59,6 +59,22 @@ const READ_PERMISSIONS = [
   { accessType: 'read', recordType: 'BodyFat' },
 ] as const;
 
+// The write permissions PepTalk requests. These mirror the
+// `android.permission.health.WRITE_*` entries declared in app.json.
+//
+// Only Weight is written. HealthKit additionally mirrors check-ins and
+// symptom logs as Mindful Sessions, but Health Connect has NO mindfulness
+// record type (the full record list in react-native-health-connect 3.5.0 is
+// Steps/Weight/BodyFat/SleepSession/HeartRate/Nutrition/… with no
+// mindfulness or mood equivalent), so that half has no Android counterpart.
+// Do not "fake" it with an unrelated record type — writing a bogus record
+// into someone's health store is worse than not writing at all.
+const WRITE_PERMISSIONS = [
+  { accessType: 'write', recordType: 'Weight' },
+] as const;
+
+const ALL_PERMISSIONS = [...READ_PERMISSIONS, ...WRITE_PERMISSIONS] as const;
+
 // ---------------------------------------------------------------------------
 // Initialization (idempotent)
 // ---------------------------------------------------------------------------
@@ -118,16 +134,12 @@ export function isHealthConnectAvailable(): boolean {
 // ---------------------------------------------------------------------------
 
 /**
- * Request read-only Health Connect permissions for the metrics PepTalk uses.
+ * Request the Health Connect permissions PepTalk uses.
  *
- * Requested data types:
- *  - Steps
- *  - Sleep Session
- *  - Heart Rate
- *  - Active Calories Burned
- *  - Total Calories Burned
- *  - Weight
- *  - Body Fat
+ * Read: Steps, Sleep Session, Heart Rate, Active Calories Burned, Weight,
+ * Body Fat.
+ * Write: Weight (mirrors a logged check-in weight back to Health Connect,
+ * the Android counterpart of the HealthKit write-back).
  *
  * @returns `true` if permissions were granted (or previously granted),
  *          `false` if the module is unavailable or the user denied access.
@@ -139,16 +151,29 @@ export async function requestHealthConnectPermissions(): Promise<boolean> {
     const ready = await ensureInitialized();
     if (!ready) return false;
 
-    // If we already hold the permissions (granted in a previous session or
-    // via the OS settings) skip the prompt and report success.
+    // If we already hold EVERY permission we need (granted in a previous
+    // session or via OS settings) skip the prompt and report success.
+    //
+    // This used to short-circuit on `existing.length > 0` — any single
+    // granted permission counted as "all good". That silently starved the
+    // write permission: every user who had already granted the reads would
+    // return true here and never be asked for Weight-write, so the
+    // write-back would fail forever with no prompt and no error.
+    const covers = (held: readonly any[]) =>
+      ALL_PERMISSIONS.every((want) =>
+        held.some(
+          (h) => h?.recordType === want.recordType && h?.accessType === want.accessType,
+        ),
+      );
+
     try {
       const existing = await HCModule.getGrantedPermissions();
-      if (existing && existing.length > 0) return true;
+      if (Array.isArray(existing) && covers(existing)) return true;
     } catch {
       // Non-fatal — fall through to the request below.
     }
 
-    const granted = await HCModule.requestPermission(READ_PERMISSIONS as any);
+    const granted = await HCModule.requestPermission(ALL_PERMISSIONS as any);
     return Array.isArray(granted) && granted.length > 0;
   } catch (error) {
     if (__DEV__) console.warn('[HealthConnect] Permission request failed:', error);
@@ -438,5 +463,55 @@ export async function fetchCycleData(): Promise<CycleData | null> {
   } catch (error) {
     if (__DEV__) console.warn('[HealthConnect] Failed to fetch cycle data:', error);
     return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Write-back
+// ---------------------------------------------------------------------------
+
+/**
+ * Write a body-weight measurement to Health Connect.
+ *
+ * The Android counterpart of `saveWeightToHealthKit`. Health Connect's `Mass`
+ * accepts pounds directly, so — like the iOS writer — the value is stored in
+ * the app-wide weight unit with no lossy conversion.
+ *
+ * Until this existed the facade's `writeWeightToHealth` was a hard
+ * `if (!isIOS) return false`: the check-in screen called it on Android, got
+ * `false`, and nothing was written — while the published privacy policy said
+ * Android behaved the same as HealthKit.
+ *
+ * @param weightLbs Weight in pounds. Must be a positive, finite number.
+ * @param date      When the measurement was taken. Defaults to now.
+ * @returns `true` when Health Connect accepted the record.
+ */
+export async function saveWeightToHealthConnect(
+  weightLbs: number,
+  date: Date = new Date(),
+): Promise<boolean> {
+  if (!HCModule) return false;
+  if (!(typeof weightLbs === 'number' && Number.isFinite(weightLbs) && weightLbs > 0)) {
+    return false;
+  }
+
+  try {
+    const ready = await ensureInitialized();
+    if (!ready) return false;
+
+    const ids = await HCModule.insertRecords([
+      {
+        recordType: 'Weight',
+        time: date.toISOString(),
+        weight: { value: weightLbs, unit: 'pounds' },
+      },
+    ] as any);
+
+    // insertRecords resolves with the inserted record ids. An empty array
+    // means nothing landed — treat that as failure rather than success.
+    return Array.isArray(ids) && ids.length > 0;
+  } catch (error) {
+    if (__DEV__) console.warn('[HealthConnect] Failed to write weight:', error);
+    return false;
   }
 }

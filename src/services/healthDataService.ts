@@ -43,6 +43,8 @@ import {
   fetchLatestHeartRate as hcHeartRate,
   fetchLastNightSleep as hcSleep,
   syncHealthDataToCheckIn as hcSync,
+  // Phase 4 — write-back (Android)
+  saveWeightToHealthConnect as hcSaveWeight,
 } from './healthConnectService';
 
 // ---------------------------------------------------------------------------
@@ -202,13 +204,23 @@ export async function writeWeightToHealth(
   weightLbs: number,
   date?: Date,
 ): Promise<boolean> {
-  if (!isIOS) return false;
-  return hkSaveWeight(weightLbs, date);
+  // Both platforms write weight: HealthKit on iOS, Health Connect on Android.
+  // This was `if (!isIOS) return false` — the check-in screen called it on
+  // Android, silently got false, and nothing was ever written.
+  return isIOS ? hkSaveWeight(weightLbs, date) : hcSaveWeight(weightLbs, date);
 }
 
 /**
  * Record that the user completed a daily check-in in the platform health
  * store (iOS: a Mindful Session — a reflective wellbeing moment).
+ *
+ * iOS ONLY, and deliberately so: Health Connect has no mindfulness or mood
+ * record type (react-native-health-connect 3.5.0 exposes Steps, Weight,
+ * BodyFat, SleepSession, HeartRate, Nutrition, cycle records and friends —
+ * nothing that represents a reflective check-in). Writing this into some
+ * unrelated record type to claim parity would put a false entry in the
+ * user's health store, so Android returns false. This is a platform limit,
+ * not an unimplemented TODO.
  */
 export async function writeCheckInToHealth(date?: Date): Promise<boolean> {
   if (!isIOS) return false;
