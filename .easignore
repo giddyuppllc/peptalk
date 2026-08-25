@@ -27,6 +27,26 @@ supabase/
 # Screenshots / design mockups at root
 emulator-*.png
 
+# Native projects — MUST be excluded.
+#
+# .easignore REPLACES .gitignore for the EAS upload. android/ and ios/ are
+# gitignored (they are prebuild output), but they were not listed here, so they
+# were uploaded — and EAS skips `expo prebuild` when native directories are
+# present. Builds were made from whatever prebuild output happened to be on
+# this machine.
+#
+# That silently dropped health.WRITE_WEIGHT from build 40: it was added to
+# app.json on 2026-08-24, while the uploaded AndroidManifest.xml had been
+# generated on 2026-08-08 and was never regenerated. targetSdk 36 and the
+# Health Connect crash fix survived only because gradle.properties and
+# MainActivity.kt had been patched on this machine too.
+#
+# The failure mode is the dangerous one: app.json is edited, the build succeeds,
+# and the change is simply absent. Excluding these makes EAS regenerate them
+# from app.json and the config plugins on every build.
+/android
+/ios
+
 # Dist / build artifacts (rebuilt on server)
 dist/
 web-build/
