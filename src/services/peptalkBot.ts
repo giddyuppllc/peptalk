@@ -2044,12 +2044,12 @@ function getActions(intent: BotIntent, peptides: Peptide[], context: BotContext)
             { label: `View ${p.name}`, route: `/peptide/${p.id}`, icon: 'flask-outline' },
             { label: 'Check Interactions', route: '/doses/stack-builder', icon: 'git-merge-outline' },
           ]
-        : [{ label: 'Browse Library', route: '/(tabs)/index', icon: 'library-outline' }];
+        : [{ label: 'Browse Library', route: '/doses/library', icon: 'library-outline' }];
     case 'mechanism':
       return p
         ? [
             { label: `Full Profile`, route: `/peptide/${p.id}`, icon: 'flask-outline' },
-            { label: 'Compare Peptides', route: '/(tabs)/index', icon: 'swap-horizontal-outline' },
+            { label: 'Compare Peptides', route: '/doses/library', icon: 'swap-horizontal-outline' },
           ]
         : [];
     case 'dosing_protocol':
@@ -2065,7 +2065,7 @@ function getActions(intent: BotIntent, peptides: Peptide[], context: BotContext)
       ];
     case 'category_explore':
       return [
-        { label: 'Browse Library', route: '/(tabs)/index', icon: 'library-outline' },
+        { label: 'Browse Library', route: '/doses/library', icon: 'library-outline' },
         ...(p ? [{ label: `View ${p.name}`, route: `/peptide/${p.id}`, icon: 'flask-outline' } as BotAction] : []),
       ];
     case 'side_effects':
@@ -2121,7 +2121,7 @@ function getActions(intent: BotIntent, peptides: Peptide[], context: BotContext)
       ];
     default:
       return [
-        { label: 'Browse Peptides', route: '/(tabs)/index', icon: 'flask-outline' },
+        { label: 'Browse Peptides', route: '/doses/library', icon: 'flask-outline' },
         { label: 'Learn Hub', route: '/learn', icon: 'book-outline' },
       ];
   }
