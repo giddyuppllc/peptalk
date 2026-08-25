@@ -20,6 +20,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
+import { HealthPermissionExplainer } from '../../src/components/HealthPermissionExplainer';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 import { useIntegrationsStore } from '../../src/store/useIntegrationsStore';
 import { ADAPTERS } from '../../src/services/integrations/manager';
@@ -104,6 +105,20 @@ export default function IntegrationsSettingsScreen() {
   const refreshStatuses = useIntegrationsStore((s) => s.refreshStatuses);
 
   const [connecting, setConnecting] = useState<BiomarkerSource | null>(null);
+  const [explainerVisible, setExplainerVisible] = useState(false);
+
+  /** Runs only after the user taps Continue on the explainer. */
+  const requestAppleHealth = async () => {
+    setExplainerVisible(false);
+    setConnecting('apple_health');
+    try {
+      await connectSource('apple_health', DEFAULT_SCOPES.apple_health);
+      // No success/failure dialog on purpose: iOS hides read-authorization
+      // status, so any result we reported would be a guess presented as fact.
+    } finally {
+      setConnecting(null);
+    }
+  };
 
   useEffect(() => {
     refreshStatuses().catch(() => {});
@@ -117,10 +132,20 @@ export default function IntegrationsSettingsScreen() {
       router.push('/settings/inbody-entry' as never);
       return;
     }
+    // App Review 5.1.1(iv), rejected four times: the control that leads to the
+    // iOS permission sheet must not say "Connect" (Apple named Continue/Next),
+    // the explanation must be escapable, and there must be a route to Settings.
+    // Show the explainer first and let it drive the request.
+    if (source === 'apple_health') {
+      setExplainerVisible(true);
+      return;
+    }
     setConnecting(source);
     try {
       const ok = await connectSource(source, DEFAULT_SCOPES[source]);
-      if (!ok && source !== 'apple_health') {
+      // apple_health returns early above (it goes through the explainer), so
+      // every source reaching here can honestly report a failure.
+      if (!ok) {
         Alert.alert(
           'Could not connect',
           'Something went wrong — try again in a moment.',
@@ -356,6 +381,12 @@ export default function IntegrationsSettingsScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <HealthPermissionExplainer
+        visible={explainerVisible}
+        onContinue={requestAppleHealth}
+        onNotNow={() => setExplainerVisible(false)}
+      />
     </SafeAreaView>
   );
 }
