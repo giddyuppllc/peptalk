@@ -27,6 +27,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { refreshAchievements } from '../../src/services/achievements';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
@@ -562,6 +563,8 @@ export default function WorkoutPlayerV2Screen() {
 
   const handleFinishFromCelebration = () => {
     finishWorkout(undefined, undefined, undefined, template?.name);
+    // Finishing a session can earn first-workout / workouts-10.
+    refreshAchievements();
     if (template) useWorkoutTemplateStore.getState().markUsed(template.id);
     if (!templateId && programId && activeProgram) advanceDay();
     router.replace('/(tabs)/train' as never);

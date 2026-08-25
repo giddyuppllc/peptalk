@@ -12,6 +12,7 @@ import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useMealStore } from '../../src/store/useMealStore';
 import { getPeptideById } from '../../src/data/peptides';
 import { trackCheckInSaved } from '../../src/services/analyticsEvents';
+import { refreshAchievements } from '../../src/services/achievements';
 import {
   isHealthDataAvailable,
   requestHealthPermissions,
@@ -490,6 +491,11 @@ export default function CheckInScreen() {
     });
 
     trackCheckInSaved(entry.date, Boolean(entry.notes));
+    // Badges are checked here rather than inside the store so the celebration
+    // lands on the action that earned it. Nothing called checkAndAward at all
+    // before this, so no badge could ever be awarded and the CelebrationModal
+    // mounted in _layout had a permanently empty queue.
+    refreshAchievements();
     notifySuccess();
 
     // Write-back to Apple Health (iOS) — backs the NSHealthUpdateUsageDescription
