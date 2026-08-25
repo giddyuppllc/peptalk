@@ -14,6 +14,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -220,6 +221,7 @@ Rules for the JSON:
 
     return json({ program });
   } catch (err) {
+    reportError('aimee-workout', err);
     console.error('[aimee-workout] unhandled error:', err);
     return json({ error: 'Internal server error' }, 500);
   }

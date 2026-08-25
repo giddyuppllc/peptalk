@@ -31,6 +31,7 @@ import {
   GetObjectCommand,
 } from 'npm:@aws-sdk/client-s3@3.658.1';
 import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner@3.658.1';
+import { reportError } from '../_shared/sentry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -170,6 +171,7 @@ Deno.serve(async (req) => {
       status: result?.status?.state ?? 'queued',
     });
   } catch (err) {
+    reportError('migrate-video-to-stream', err);
     console.error('[migrate-video-to-stream] error:', err);
     return jsonResp({ error: 'Internal error' }, 500);
   }

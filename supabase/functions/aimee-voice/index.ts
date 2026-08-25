@@ -26,6 +26,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 // 2026-05-20 fix: don't fall back to OPENAI_API_KEY — on this project
 // that env var holds the Grok/xAI key (OPENAI_BASE_URL points to
@@ -88,6 +89,7 @@ async function checkRateLimit(
     }
     return { allowed: true, limit };
   } catch (err) {
+    reportError('aimee-voice', err);
     console.error(`[${functionName}] rate-limit check failed; failing closed:`, err);
     return { allowed: false, limit, retryAfter: 60, failedClosed: true };
   }

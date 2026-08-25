@@ -9,6 +9,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -162,6 +163,7 @@ Generate exactly ${days} days. Keep meals realistic and varied. Snacks should be
 
     return json({ plan: parsed.plan ?? [] });
   } catch (err) {
+    reportError('aimee-plan', err);
     console.error('[aimee-plan] unhandled error:', err);
     return json({ error: 'Internal server error' }, 500);
   }

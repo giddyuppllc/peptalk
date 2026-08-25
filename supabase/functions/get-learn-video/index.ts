@@ -27,6 +27,7 @@ import {
 } from 'npm:@aws-sdk/client-s3@3.658.1';
 import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner@3.658.1';
 import manifest from './manifest.json' with { type: 'json' };
+import { reportError } from '../_shared/sentry.ts';
 
 interface ManifestEntry {
   slug: string;
@@ -159,6 +160,7 @@ Deno.serve(async (req: Request) => {
       expiresInSec: SIGN_TTL_SEC,
     });
   } catch (err) {
+    reportError('get-learn-video', err);
     console.error('[get-learn-video] sign failed:', err);
     return json({ error: 'Failed to sign URL' }, 500);
   }

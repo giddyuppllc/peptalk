@@ -13,6 +13,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { SQUARE_PLANS } from '../_shared/square.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -95,6 +96,7 @@ Deno.serve(async (req) => {
     if (!url) return json({ error: 'No checkout URL from Square' }, 502);
     return json({ url });
   } catch (e) {
+    reportError('square-checkout', e);
     console.error('[square-checkout] error', e);
     return json({ error: 'Checkout error' }, 500);
   }

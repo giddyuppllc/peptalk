@@ -14,6 +14,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 // 2026-05-17 vision routing fix: see food-scan for full rationale.
 // Grok-4.3 doesn't accept image inputs; OpenAI gpt-4o-mini does and
@@ -243,6 +244,7 @@ Deno.serve(async (req) => {
         : [],
     });
   } catch (err) {
+    reportError('lab-scan', err);
     console.error('[lab-scan] Error:', err);
     return jsonResp({ error: 'Internal server error' }, 500);
   }

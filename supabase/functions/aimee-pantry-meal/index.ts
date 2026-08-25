@@ -12,6 +12,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -248,6 +249,7 @@ Deno.serve(async (req) => {
     try {
       parsed = JSON.parse(cleaned);
     } catch (_err) {
+      reportError('aimee-pantry-meal', _err);
       console.error('[aimee-pantry-meal] AI returned malformed JSON:', content);
       return json({ error: 'AI returned malformed JSON. Please try again.' }, 502);
     }

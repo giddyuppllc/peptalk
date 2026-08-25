@@ -27,6 +27,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -144,6 +145,7 @@ Deno.serve(async (req) => {
         }, 429);
       }
     } catch (rlErr) {
+      reportError('aimee-lab-interpret', rlErr);
       console.error('[aimee-lab-interpret] rate-limit check failed; failing closed:', rlErr);
       return jsonResp({ error: 'Rate-limit check unavailable.' }, 429);
     }

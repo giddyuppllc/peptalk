@@ -13,6 +13,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildAimeeSystemPrompt, SAFETY_TRAILER, type AimeeServerContext } from './_prompt.ts';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 // Default to Grok — matches the other edge functions. If secrets aren't set
@@ -283,6 +284,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
+    reportError('aimee-chat', error);
     console.error('[aimee-chat] Error:', error);
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,

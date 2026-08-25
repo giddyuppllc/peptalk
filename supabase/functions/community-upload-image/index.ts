@@ -55,6 +55,7 @@ import {
   PutObjectCommand,
 } from 'npm:@aws-sdk/client-s3@3.658.1';
 import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner@3.658.1';
+import { reportError } from '../_shared/sentry.ts';
 
 const ALLOWED_TYPES = new Set([
   'image/jpeg',
@@ -181,6 +182,7 @@ Deno.serve(async (req: Request) => {
       expiresInSec: SIGN_TTL_SEC,
     });
   } catch (err) {
+    reportError('community-upload-image', err);
     console.error('[community-upload-image] sign failed:', err);
     return json({ error: 'Failed to sign upload URL' }, 500);
   }

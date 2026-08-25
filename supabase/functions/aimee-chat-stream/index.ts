@@ -54,6 +54,7 @@ import {
 import { AIMEE_TOOLS, executeTool } from './_tools.ts';
 import { checkCostCap, denialMessage, recordSpend } from './_cost.ts';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -281,6 +282,7 @@ Deno.serve(async (req) => {
                   localDate: clientLocalDate,
                 });
               } catch (e) {
+                reportError('aimee-chat-stream', e);
                 console.error(`[aimee-chat-stream] tool ${tc.name} failed:`, e);
                 result = { error: 'tool execution failed' };
               }

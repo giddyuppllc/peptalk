@@ -11,6 +11,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 // 2026-05-17 vision routing fix: Grok-4.3 (the current default OPENAI_MODEL
 // on this project) does not accept image inputs. Routing vision endpoints
@@ -287,6 +288,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
+    reportError('food-scan', error);
     console.error('[food-scan] Error:', error);
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,

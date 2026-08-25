@@ -9,6 +9,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { reportError } from '../_shared/sentry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -122,6 +123,7 @@ Deno.serve(async (req) => {
 
     return json({ posts: maskAnonymous(data ?? [], user.id) });
   } catch (err) {
+    reportError('community-search', err);
     console.error('[community-search]', err);
     return json({ error: 'Internal error' }, 500);
   }

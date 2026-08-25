@@ -18,6 +18,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 // 2026-05-20 vision routing fix: Grok-4.x does not accept image inputs
 // (food-scan caught this 2026-05-17, this fn was missed). Route to
@@ -113,6 +114,7 @@ async function checkRateLimit(
     }
     return { allowed: true, limit: dailyLimit };
   } catch (err) {
+    reportError('aimee-pantry-scan', err);
     console.error(`[${endpoint}] rate-limit check failed; failing closed:`, err);
     return { allowed: false, limit: dailyLimit, retryAfter: 60, failedClosed: true };
   }
