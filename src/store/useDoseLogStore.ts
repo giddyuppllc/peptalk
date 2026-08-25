@@ -14,6 +14,35 @@ import { STORE_LIMITS, capNewestFirst } from '../utils/storeLimits';
 const uid = () =>
   `dose-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
+/**
+ * Mirror a protocol into public.active_protocols.
+ *
+ * Only the columns that exist are sent. `notes` and `templateId` have no
+ * column, and PostgREST rejects the WHOLE row on an unknown key — that is
+ * exactly how dose sync silently broke once before (an earlier version wrote
+ * `dose_mcg` instead of `amount` and every dose stayed local-only). Adding a
+ * field here without adding the column would fail the same way, silently.
+ *
+ * Fire-and-forget by design: the local store is the source of truth for the
+ * user's own device, and a network failure must never block logging.
+ */
+function syncProtocol(p: ActiveProtocol): void {
+  const peptide = getPeptideById(p.peptideId);
+  void syncRecord('active_protocols', {
+    id: p.id,
+    peptide_id: p.peptideId,
+    peptide_name: peptide?.name ?? p.peptideId,
+    dose_amount: p.dose,
+    dose_unit: p.unit,
+    route: p.route,
+    frequency: p.frequency,
+    start_date: p.startDate,
+    end_date: p.endDate ?? null,
+    is_active: p.isActive,
+    created_at: p.createdAt,
+  });
+}
+
 const toDateKey = (date: Date) => {
   const y = date.getFullYear();
   const m = `${date.getMonth() + 1}`.padStart(2, '0');
@@ -536,6 +565,13 @@ export const useDoseLogStore = create<DoseLogStore>()(
           protocols: [protocol, ...state.protocols],
         }));
 
+        // Push to active_protocols. This table is what aimee-chat-stream reads
+        // to know what the user is currently running (_tools.ts,
+        // get_user_metrics) — it was read from day one and written by nothing,
+        // so Aimee has never seen a single protocol. Fire-and-forget: a sync
+        // failure must not stop the protocol being created locally.
+        syncProtocol(protocol);
+
         // Auto-schedule a dose-time reminder. Fire-and-forget so a
         // notifications failure doesn't block the protocol from being
         // created. Defaults to 08:00 — Aimee can offer to change it
@@ -573,6 +609,9 @@ export const useDoseLogStore = create<DoseLogStore>()(
             p.id === id ? { ...p, isActive: false } : p,
           ),
         }));
+        // Mirror the deactivation, otherwise Aimee keeps citing a finished
+        // protocol as current.
+        if (proto) syncProtocol({ ...proto, isActive: false });
         if (proto) {
           try {
 
@@ -599,6 +638,7 @@ export const useDoseLogStore = create<DoseLogStore>()(
         set((state) => ({
           protocols: state.protocols.filter((p) => p.id !== id),
         }));
+        deleteRecord('active_protocols', id);
         if (proto) {
           try {
 
@@ -708,6 +748,45 @@ export const useDoseLogStore = create<DoseLogStore>()(
             STORE_LIMITS.DOSES,
           ),
         });
+
+        // Protocols ride the same pull. Without this a reinstall or device
+        // switch restores every dose but no protocol, so adherence has nothing
+        // to measure against and Aimee is back to not knowing what the user
+        // runs — the exact hole this sync was added to close.
+        type ProtoRow = {
+          id: string;
+          peptide_id: string | null;
+          dose_amount: number | null;
+          dose_unit: string | null;
+          route: string | null;
+          frequency: string | null;
+          start_date: string | null;
+          end_date: string | null;
+          is_active: boolean | null;
+          created_at: string | null;
+        };
+        const mergedProtocols = await hydrateFromServer<ProtoRow, ActiveProtocol>(
+          'active_protocols',
+          get().protocols,
+          (r) => ({
+            id: r.id,
+            peptideId: r.peptide_id ?? '',
+            dose: r.dose_amount ?? 0,
+            unit: (r.dose_unit as DoseUnit) ?? 'mcg',
+            route: (r.route as AdministrationRoute) ?? 'subcutaneous',
+            frequency: (r.frequency as ActiveProtocol['frequency']) ?? 'daily',
+            startDate: r.start_date ?? today(),
+            endDate: r.end_date ?? undefined,
+            // A null is_active would otherwise read as "not running" and hide a
+            // live protocol; the column defaults TRUE, so treat null as active.
+            isActive: r.is_active !== false,
+            createdAt: r.created_at ?? new Date().toISOString(),
+          }),
+          { orderBy: 'created_at', ascending: false, limit: 200 },
+        );
+        // Drop rows whose peptide id did not survive — a protocol with no
+        // peptide cannot be rendered or dosed against.
+        set({ protocols: mergedProtocols.filter((p) => p.peptideId) });
       },
     }),
     {

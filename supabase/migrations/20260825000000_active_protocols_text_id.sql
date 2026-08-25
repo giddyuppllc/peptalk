@@ -1,0 +1,41 @@
+-- ============================================================================
+-- active_protocols.id: UUID → TEXT
+--
+-- WHY
+-- Migration 20260628000000_client_text_ids widened `id` to TEXT on twelve
+-- tables because the client always supplies its own string id. active_protocols
+-- was not in that list, so it kept `id UUID PRIMARY KEY DEFAULT
+-- gen_random_uuid()`.
+--
+-- useDoseLogStore mints protocol ids as `proto-active-<timestamp>`. That string
+-- cannot cast to UUID, so a protocol could never have been written here even if
+-- something had tried — and nothing ever did. The table is read by
+-- aimee-chat-stream (_tools.ts, get_user_metrics) to tell Aimee what the user is
+-- currently running, and it has been returning nothing since the schema landed.
+-- Aimee has never known a single user's active protocol.
+--
+-- Verified against the live project before writing this:
+--   active_protocols.id    = uuid   ← the outlier
+--   dose_logs.id           = text
+--   injection_sites.id     = text
+--   lab_results.id         = text
+--   side_effect_entries.id = text
+--
+-- SAFETY
+-- The table holds 0 rows on the live project, so `USING id::text` casts nothing.
+-- RLS is enabled with four own-rows policies (auth.uid() = user_id) for SELECT,
+-- INSERT, UPDATE and DELETE — unchanged by this migration.
+--
+-- The default is dropped because the client, not the database, owns the id.
+-- Leaving gen_random_uuid() in place would silently mint a second id for any
+-- insert that omitted one, and the upsert-on-conflict path would then never
+-- match the client's row.
+--
+-- ── Rollback ────────────────────────────────────────────────────────────────
+-- Only safe while the table is empty (string ids will not cast back):
+--   ALTER TABLE public.active_protocols ALTER COLUMN id TYPE UUID USING id::uuid;
+--   ALTER TABLE public.active_protocols ALTER COLUMN id SET DEFAULT gen_random_uuid();
+-- ============================================================================
+
+ALTER TABLE public.active_protocols ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE public.active_protocols ALTER COLUMN id TYPE TEXT USING id::text;

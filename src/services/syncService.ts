@@ -39,6 +39,12 @@ const db = supabase as any;
 type TableName =
   | 'check_ins'
   | 'dose_logs'
+  // active_protocols was read by aimee-chat-stream from the day it shipped and
+  // written by nothing, so Aimee's "what is this user running" context was
+  // permanently empty. Its id column was also still UUID while every other
+  // client-owned table had been widened to TEXT — see migration
+  // 20260825000000_active_protocols_text_id.
+  | 'active_protocols'
   | 'meal_entries'
   | 'workout_logs'
   | 'chat_messages'
