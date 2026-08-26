@@ -11,7 +11,8 @@
  * granting $50 on one platform, so the test reads BOTH files rather than
  * trusting that whoever edits one remembers the other.
  *
- * Prices here are placeholders pending Edward; see the server file.
+ * One pack at $4.99 — Edward's call. See the server file for the reasoning
+ * on the credit value.
  */
 
 /** A consumable purchase that tops up AI spend. */
@@ -26,40 +27,22 @@ export interface CreditPack {
 }
 
 export const CREDIT_PACK_IDS = {
-  small: 'peptalk_credits_small',
-  medium: 'peptalk_credits_medium',
-  large: 'peptalk_credits_large',
+  standard: 'peptalk_credits',
 } as const;
 
 export type CreditPackId = (typeof CREDIT_PACK_IDS)[keyof typeof CREDIT_PACK_IDS];
 
 export const CREDIT_PACKS: Record<string, CreditPack> = {
-  peptalk_credits_small: {
-    productId: 'peptalk_credits_small',
+  peptalk_credits: {
+    productId: 'peptalk_credits',
     priceCents: 499,
     creditCents: 300,
-    name: 'AI Credits — Small',
-  },
-  peptalk_credits_medium: {
-    productId: 'peptalk_credits_medium',
-    priceCents: 999,
-    creditCents: 700,
-    name: 'AI Credits — Medium',
-  },
-  peptalk_credits_large: {
-    productId: 'peptalk_credits_large',
-    priceCents: 1999,
-    creditCents: 1500,
-    name: 'AI Credits — Large',
+    name: 'AI Credits',
   },
 };
 
-/** Every credit-pack SKU, in display order (cheapest first). */
-export const ALL_CREDIT_PACK_IDS: string[] = [
-  CREDIT_PACK_IDS.small,
-  CREDIT_PACK_IDS.medium,
-  CREDIT_PACK_IDS.large,
-];
+/** Every credit-pack SKU. One pack — see the edge catalog for why. */
+export const ALL_CREDIT_PACK_IDS: string[] = [CREDIT_PACK_IDS.standard];
 
 /** Unknown → undefined. Never treat an unrecognised SKU as a zero-value pack. */
 export function packForProduct(productId: string): CreditPack | undefined {

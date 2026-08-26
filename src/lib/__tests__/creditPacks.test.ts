@@ -84,7 +84,7 @@ describe('an unknown SKU is a refusal, never a zero grant', () => {
   });
 
   it('converts credit value to microcents exactly', () => {
-    const pack = SERVER_PACKS.peptalk_credits_small;
+    const pack = SERVER_PACKS.peptalk_credits;
     expect(creditsForProduct(pack.productId)).toBe(pack.creditCents * MC_PER_CENT);
   });
 });
@@ -93,20 +93,20 @@ describe('a credit ref can never be read as a subscription grant', () => {
   const userId = '11111111-2222-3333-4444-555555555555';
 
   it('round-trips through its own parser', () => {
-    const ref = buildCreditRef(userId, 'peptalk_credits_medium');
+    const ref = buildCreditRef(userId, 'peptalk_credits');
     const parsed = parseCreditRef(ref);
     expect(parsed).not.toBeNull();
     expect(parsed!.userId).toBe(userId);
-    expect(parsed!.productId).toBe('peptalk_credits_medium');
+    expect(parsed!.productId).toBe('peptalk_credits');
     expect(parsed!.microcents).toBe(
-      SERVER_PACKS.peptalk_credits_medium.creditCents * MC_PER_CENT,
+      SERVER_PACKS.peptalk_credits.creditCents * MC_PER_CENT,
     );
   });
 
   it('is REJECTED by the subscription parser', () => {
     // The whole reason the two ref shapes differ: a paid credit pack must not
     // be able to fall through and grant a subscription tier.
-    expect(parseRef(buildCreditRef(userId, 'peptalk_credits_small'))).toBeNull();
+    expect(parseRef(buildCreditRef(userId, 'peptalk_credits'))).toBeNull();
   });
 
   it('does not accept a subscription ref', () => {

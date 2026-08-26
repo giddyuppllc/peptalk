@@ -14,12 +14,15 @@
  * per-rail copy of that table is how a $5 pack ends up granting $50 on one
  * platform, so there is exactly one table and every rail reads it.
  *
- * ⚠️ PRICES ARE PLACEHOLDERS PENDING EDWARD.
- * `priceCents` and `creditCents` below are structural defaults so the code is
- * testable end to end. They are a BUSINESS decision — margin, positioning and
- * what the stores will approve — and Edward sets them. The store-side products
- * have to be created in App Store Connect and Play Console with matching ids
- * and prices before any of this can be bought; see the launch artifact.
+ * ONE PACK, $4.99.
+ * Edward's call, 2026-08-26: a single pack is all this needs, rather than a
+ * small/medium/large ladder nobody asked for.
+ *
+ * `creditCents` (300 = $3.00 of AI spend) is the remaining number he has not
+ * pinned. At roughly $0.0008 a turn that is about 3,750 turns, and it matches
+ * the AI allowance included in a month of Plus — so a top-up buys about the
+ * same amount of Aimee that the subscription itself does. Change the one line
+ * below if that ratio is wrong; a test fails if the two catalogs disagree.
  *
  * PLATFORM RULE (not stylistic — a review-rejection risk)
  * On iOS and Android, credits MUST be sold through the platform's own purchase
@@ -42,23 +45,11 @@ export interface CreditPack {
 export const MC_PER_CENT = 1_000_000;
 
 export const CREDIT_PACKS: Record<string, CreditPack> = {
-  peptalk_credits_small: {
-    productId: 'peptalk_credits_small',
+  peptalk_credits: {
+    productId: 'peptalk_credits',
     priceCents: 499,
     creditCents: 300,
-    name: 'AI Credits — Small',
-  },
-  peptalk_credits_medium: {
-    productId: 'peptalk_credits_medium',
-    priceCents: 999,
-    creditCents: 700,
-    name: 'AI Credits — Medium',
-  },
-  peptalk_credits_large: {
-    productId: 'peptalk_credits_large',
-    priceCents: 1999,
-    creditCents: 1500,
-    name: 'AI Credits — Large',
+    name: 'AI Credits',
   },
 };
 
