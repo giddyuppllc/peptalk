@@ -20,6 +20,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Spacing, FontSizes } from '../../src/constants/theme';
 import { useCycleStore } from '../../src/store/useCycleStore';
+import { confirmDelete, describeDate } from '../../src/lib/confirmDelete';
 import { computeCycleStats } from '../../src/services/cyclePredictor';
 import { withFemaleOnly } from '../../src/components/withFemaleOnly';
 
@@ -42,6 +43,9 @@ function CycleHistoryScreen() {
   // Calling s.getStats() in the selector returned a fresh object every
   // render which caused an infinite re-render loop on Zustand's === check.
   const periods = useCycleStore((s) => s.periods);
+  // Mis-logged periods shift every prediction that follows them, so a way
+  // to take one back is correctness, not convenience.
+  const deletePeriod = useCycleStore((s) => s.deletePeriod);
   const stats = useMemo(() => computeCycleStats(periods), [periods]);
 
   const sorted = useMemo(
@@ -148,17 +152,34 @@ function CycleHistoryScreen() {
                         </Text>
                       )}
                     </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      {lengthDays != null && (
-                        <Text style={[styles.periodMeta, { color: t.text }]}>
-                          {lengthDays} day{lengthDays === 1 ? '' : 's'}
-                        </Text>
-                      )}
-                      {cycleDays != null && (
-                        <Text style={[styles.periodCycle, { color: t.textSecondary }]}>
-                          {cycleDays}-day cycle
-                        </Text>
-                      )}
+                    <View style={styles.rowTail}>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        {lengthDays != null && (
+                          <Text style={[styles.periodMeta, { color: t.text }]}>
+                            {lengthDays} day{lengthDays === 1 ? '' : 's'}
+                          </Text>
+                        )}
+                        {cycleDays != null && (
+                          <Text style={[styles.periodCycle, { color: t.textSecondary }]}>
+                            {cycleDays}-day cycle
+                          </Text>
+                        )}
+                      </View>
+                      <TouchableOpacity
+                        onPress={() =>
+                          confirmDelete({
+                            subject: `the period starting ${describeDate(p.startDate)}`,
+                            consequence: 'Your averages and next-period estimate will be recalculated without it.',
+                            onConfirm: () => deletePeriod(p.id),
+                          })
+                        }
+                        accessibilityRole="button"
+                        accessibilityLabel={`Delete the period starting ${describeDate(p.startDate)}`}
+                        hitSlop={10}
+                        style={styles.rowDelete}
+                      >
+                        <Ionicons name="trash-outline" size={17} color={t.textSecondary} />
+                      </TouchableOpacity>
                     </View>
                   </View>
                 );
@@ -233,6 +254,8 @@ const styles = StyleSheet.create({
   rangeText: {
     fontSize: 12,
   },
+  rowTail: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  rowDelete: { padding: 6 },
   periodRow: {
     flexDirection: 'row',
     alignItems: 'center',

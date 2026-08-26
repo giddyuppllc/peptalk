@@ -22,11 +22,24 @@ import { V3DetailShell, GlassCard } from '../../src/components/v3';
 import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 import { tapMedium } from '../../src/utils/haptics';
 import { useBodyCompositionStore } from '../../src/store/useBodyCompositionStore';
+import { confirmDelete, describeDate } from '../../src/lib/confirmDelete';
+import type { BodyCompositionScan } from '../../src/store/useBodyCompositionStore';
+
+/**
+ * Scans are stored as a full ISO timestamp, not a plain date, so the shared
+ * describeDate (which expects YYYY-MM-DD) is fed just the date part.
+ */
+function describeScanDate(scannedAt: string): string {
+  return describeDate((scannedAt || '').slice(0, 10));
+}
 
 export default function BodyCompositionScreen() {
   const t = useV3Theme();
   const router = useRouter();
   const scans = useBodyCompositionStore((s) => s.scans);
+  // A duplicated or mistyped scan bends every trend line above it, and until
+  // now there was no way to see an individual scan, let alone remove one.
+  const deleteScan = useBodyCompositionStore((s) => s.deleteScan);
   // 2026-05-17 P0 fix: pulling `deltaWindow(90)` through the selector
   // returned a fresh `{ weightLbDelta, bodyFatDelta, leanMassDelta }`
   // literal on every render — Zustand Object.is saw it as changed and
@@ -174,10 +187,104 @@ export default function BodyCompositionScreen() {
                 .map((s) => s.fatMassLb)
                 .filter((v): v is number => v != null)}
             />
+            <ScanHistory scans={sorted} onDelete={deleteScan} />
           </>
         )}
       </ScrollView>
     </V3DetailShell>
+  );
+}
+
+/**
+ * The individual scans behind the trend lines.
+ *
+ * The screen previously showed only aggregates, so a scan entered twice or
+ * with a fat-free mass typo was invisible -- the user could see the trend was
+ * wrong but had no way to find or fix the reading causing it. Newest first,
+ * because that is the one most likely to have just been mistyped.
+ */
+function ScanHistory({
+  scans,
+  onDelete,
+}: {
+  scans: BodyCompositionScan[];
+  onDelete: (id: string) => void;
+}) {
+  const t = useV3Theme();
+  if (scans.length === 0) return null;
+  const newestFirst = [...scans].reverse();
+  return (
+    <GlassCard style={styles.cardSpacing}>
+      <Text
+        style={{
+          color: t.colors.textPrimary as string,
+          fontFamily: t.typography.body,
+          fontSize: 15,
+          fontWeight: '700',
+          marginBottom: 10,
+        }}
+      >
+        Scan history
+      </Text>
+      {newestFirst.map((sc, i) => (
+        <View
+          key={sc.id}
+          style={[
+            styles.scanRow,
+            i < newestFirst.length - 1 && {
+              borderBottomWidth: StyleSheet.hairlineWidth,
+              borderBottomColor: 'rgba(127,127,127,0.22)',
+            },
+          ]}
+        >
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                color: t.colors.textPrimary as string,
+                fontFamily: t.typography.body,
+                fontSize: 13.5,
+              }}
+            >
+              {describeScanDate(sc.scannedAt)}
+            </Text>
+            <Text
+              style={{
+                color: t.colors.textSecondary as string,
+                fontFamily: t.typography.body,
+                fontSize: 12,
+                marginTop: 2,
+              }}
+            >
+              {[
+                sc.weightLb != null ? `${sc.weightLb} lb` : null,
+                sc.bodyFatPercent != null ? `${sc.bodyFatPercent}% fat` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ') || 'No measurements recorded'}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() =>
+              confirmDelete({
+                subject: `the scan from ${describeScanDate(sc.scannedAt)}`,
+                consequence: 'Your trend lines will be recalculated without it.',
+                onConfirm: () => onDelete(sc.id),
+              })
+            }
+            accessibilityRole="button"
+            accessibilityLabel={`Delete the scan from ${describeScanDate(sc.scannedAt)}`}
+            hitSlop={10}
+            style={styles.scanDelete}
+          >
+            <Ionicons
+              name="trash-outline"
+              size={17}
+              color={t.colors.textSecondary as string}
+            />
+          </Pressable>
+        </View>
+      ))}
+    </GlassCard>
   );
 }
 
@@ -281,6 +388,8 @@ function CompTrend({ values }: { values: number[] }) {
 }
 
 const styles = StyleSheet.create({
+  scanRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 10 },
+  scanDelete: { padding: 6 },
   cardSpacing: { marginTop: 12 },
   entryRow: {
     flexDirection: 'row',
