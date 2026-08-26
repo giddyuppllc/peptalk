@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard } from '../src/components/GlassCard';
 import { GradientButton } from '../src/components/GradientButton';
 import { SquareCardForm } from '../src/components/SquareCardForm';
+import { AimeeUsageMeter } from '../src/components/AimeeUsageMeter';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../src/constants/theme';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
 import { PEPTIDES } from '../src/data/peptides';
@@ -556,6 +557,11 @@ export default function SubscriptionScreen() {
             </Text>
           </View>
         )}
+
+        {/* Current AI usage. Renders nothing on free, and nothing when usage
+            cannot be read — a meter showing 0% because a request failed would
+            say "carry on" at exactly the moment it does not know. */}
+        <AimeeUsageMeter />
 
         {/* Tiers */}
         {TIERS.map((info) => (
