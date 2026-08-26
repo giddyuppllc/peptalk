@@ -59,10 +59,21 @@ import { reportError } from '../_shared/sentry.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
+/**
+ * Message allowance per account, per BILLING MONTH — not per day.
+ *
+ * A daily reset punished the way people actually use this: someone who did not
+ * open the app for three weeks gained nothing from the unused days, and someone
+ * researching hard for one afternoon was cut off while still well inside what
+ * their subscription covers.
+ *
+ * These are the previous daily numbers × 30, so nobody loses allowance in the
+ * change. Free is 0 — the tier gate refuses before any spend.
+ */
 const RATE_LIMITS: Record<string, number> = {
   free: 0,
-  plus: 25,
-  pro: 300,
+  plus: 750,
+  pro: 9000,
 };
 
 const MAX_MESSAGES = 30;
@@ -114,7 +125,9 @@ Deno.serve(async (req) => {
   }
 
   // 4. Dollar-aware cost cap ----------------------------------------------
-  const costCheck = await checkCostCap(supabase, user.id);
+  // Tier decides the monthly allowance, so it must be the SERVER-resolved
+  // tier — never anything the client sent.
+  const costCheck = await checkCostCap(supabase, user.id, tier);
   if (!costCheck.allowed) {
     return jsonError(429, denialMessage(costCheck.reason), { reason: costCheck.reason });
   }
@@ -670,7 +683,10 @@ async function checkRateLimit(
   retryAfter?: number;
   failedClosed?: boolean;
 }> {
-  const today = new Date().toISOString().slice(0, 10);
+  // Monthly bucket. The RPC keys on (user, function, date), so passing the
+  // first of the month makes one row per account per month — no schema or RPC
+  // change needed to move off a daily window.
+  const period = `${new Date().toISOString().slice(0, 7)}-01`;
   try {
     // Atomic bump via SECURITY DEFINER RPC. Earlier this used
     // read-modify-write which could leak one extra call past the
@@ -680,7 +696,7 @@ async function checkRateLimit(
     const { data, error } = await supabase.rpc('bump_ai_usage', {
       p_user_id: userId,
       p_function_name: functionName,
-      p_date: today,
+      p_date: period,
     });
     if (error) throw error;
 
@@ -691,10 +707,11 @@ async function checkRateLimit(
 
     if (newCount > limit) {
       // Already over — fail closed and tell the caller when to retry.
+      // The allowance resets with the billing month, so point the caller at
+      // the first of next month rather than at midnight tonight.
       const now = new Date();
-      const tomorrow = new Date(now);
-      tomorrow.setUTCHours(24, 0, 0, 0);
-      const retryAfter = Math.max(1, Math.round((tomorrow.getTime() - now.getTime()) / 1000));
+      const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+      const retryAfter = Math.max(1, Math.round((nextMonth.getTime() - now.getTime()) / 1000));
       return { allowed: false, limit, count: newCount, retryAfter };
     }
     return { allowed: true, limit, count: newCount };
@@ -718,13 +735,16 @@ async function refundRateLimit(
   functionName: string,
 ): Promise<void> {
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    // MUST match the bucket checkRateLimit bumps. When that moved to a monthly
+    // window this still read today's row — which no longer exists — so every
+    // refund silently found nothing and the credit was never returned.
+    const period = `${new Date().toISOString().slice(0, 7)}-01`;
     const { data, error } = await supabase
       .from('ai_usage_log')
       .select('count')
       .eq('user_id', userId)
       .eq('function_name', functionName)
-      .eq('date', today)
+      .eq('date', period)
       .single();
     if (error || !data) return;
     const next = Math.max(0, ((data as any).count ?? 0) - 1);
@@ -733,7 +753,7 @@ async function refundRateLimit(
       .update({ count: next })
       .eq('user_id', userId)
       .eq('function_name', functionName)
-      .eq('date', today);
+      .eq('date', period);
   } catch (err) {
     console.error(`[${functionName}] rate-limit refund failed (non-fatal):`, err);
   }
