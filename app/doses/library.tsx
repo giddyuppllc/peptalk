@@ -24,6 +24,7 @@ import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 import { tapLight } from '../../src/utils/haptics';
 import { PEPTIDES } from '../../src/data/peptides';
 import { searchPeptides } from '../../src/lib/peptideSearch';
+import { Disclaimer } from '../../src/components/Disclaimer';
 
 export default function PeptideLibraryScreen() {
   const t = useV3Theme();
@@ -148,6 +149,9 @@ export default function PeptideLibraryScreen() {
           </Pressable>
         )}
       />
+          {/* Required medical disclaimer. Uses the app's existing
+          approved wording via the shared component — no new copy. */}
+      <Disclaimer variant="dosing" />
     </V3DetailShell>
   );
 }

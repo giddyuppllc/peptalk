@@ -15,6 +15,7 @@ import { useV3Theme } from '../../../src/theme/V3ThemeProvider';
 import { useAimeeReportsStore } from '../../../src/store/useAimeeReportsStore';
 import { useAimeeRouter } from '../../../src/hooks/useAimeeRouter';
 import { tapLight } from '../../../src/utils/haptics';
+import { Disclaimer } from '../../../src/components/Disclaimer';
 
 export default function ReportDetailScreen() {
   const t = useV3Theme();
@@ -151,6 +152,9 @@ export default function ReportDetailScreen() {
             </GlassCard>
           </Pressable>
         ) : null}
+              {/* Required medical disclaimer. Uses the app's existing
+            approved wording via the shared component — no new copy. */}
+        <Disclaimer variant="default" />
       </ScrollView>
     </V3DetailShell>
   );

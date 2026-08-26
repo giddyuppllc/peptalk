@@ -39,6 +39,7 @@ import {
   computeCycleStats,
 } from '../../src/services/cyclePredictor';
 import { withFemaleOnly } from '../../src/components/withFemaleOnly';
+import { Disclaimer } from '../../src/components/Disclaimer';
 
 function todayKey(): string {
   const d = new Date();
@@ -449,6 +450,9 @@ function CycleDashboard() {
             <Ionicons name="chevron-forward" size={18} color={t.textSecondary} />
           </TouchableOpacity>
         </View>
+              {/* Required medical disclaimer. Uses the app's existing
+            approved wording via the shared component — no new copy. */}
+        <Disclaimer variant="default" />
       </ScrollView>
     </SafeAreaView>
   );

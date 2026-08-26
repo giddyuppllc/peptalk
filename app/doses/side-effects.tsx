@@ -29,6 +29,7 @@ import {
   isHealthDataAvailable,
   writeSymptomToHealth,
 } from '../../src/services/healthDataService';
+import { Disclaimer } from '../../src/components/Disclaimer';
 
 function severityColorFor(
   t: ReturnType<typeof useV3Theme>,
@@ -351,6 +352,9 @@ export default function SideEffectsScreen() {
             </GlassCard>
           ))
         )}
+              {/* Required medical disclaimer. Uses the app's existing
+            approved wording via the shared component — no new copy. */}
+        <Disclaimer variant="safety" />
       </ScrollView>
     </V3DetailShell>
   );

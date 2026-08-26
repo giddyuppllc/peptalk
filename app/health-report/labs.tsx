@@ -34,6 +34,7 @@ import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { supabase } from '../../src/services/supabase';
 import { Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
+import { Disclaimer } from '../../src/components/Disclaimer';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 
@@ -529,6 +530,9 @@ export default function LabsScreen() {
         )}
 
         <View style={{ height: 40 }} />
+              {/* Required medical disclaimer. Uses the app's existing
+            approved wording via the shared component — no new copy. */}
+        <Disclaimer variant="default" />
       </ScrollView>
     </SafeAreaView>
   );

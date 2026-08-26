@@ -26,6 +26,7 @@ import { tapLight, tapMedium } from '../../src/utils/haptics';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { PEPTIDES } from '../../src/data/peptides';
 import { DoseLogEntry, DoseUnit } from '../../src/types';
+import { Disclaimer } from '../../src/components/Disclaimer';
 
 // ---------------------------------------------------------------------------
 // Edit-modal helpers — reuse the calendar's lightweight relative-date chips
@@ -497,6 +498,9 @@ export default function DoseTrackerScreen() {
                   </Text>
                 </Pressable>
               </View>
+                          {/* Required medical disclaimer. Uses the app's existing
+                  approved wording via the shared component — no new copy. */}
+              <Disclaimer variant="dosing" />
             </ScrollView>
           </GlassCard>
         </KeyboardAvoidingView>
