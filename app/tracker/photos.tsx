@@ -25,11 +25,16 @@ export default function ProgressPhotosScreen() {
   const t = useV3Theme();
   const photos = useProgressPhotosStore((s) => s.photos);
   const addPhoto = useProgressPhotosStore((s) => s.addPhoto);
+  // Captions could only ever be set at capture time; a typo or a caption the
+  // user skipped in a hurry was permanent.
+  const updatePhoto = useProgressPhotosStore((s) => s.updatePhoto);
   const removePhoto = useProgressPhotosStore((s) => s.removePhoto);
   const toggleShare = useProgressPhotosStore((s) => s.toggleShare);
 
   const [captionOpen, setCaptionOpen] = useState(false);
   const [pendingUri, setPendingUri] = useState<string | null>(null);
+  /** Non-null while editing an EXISTING photo's caption rather than adding one. */
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
 
   const handlePickFromCamera = async () => {
@@ -104,6 +109,15 @@ export default function ProgressPhotosScreen() {
   };
 
   const handleSavePending = () => {
+    // The same modal now serves two jobs: captioning a brand-new photo, and
+    // correcting the caption on one already saved.
+    if (editingId) {
+      updatePhoto(editingId, { caption: caption.trim() || undefined });
+      setCaptionOpen(false);
+      setEditingId(null);
+      setCaption('');
+      return;
+    }
     if (!pendingUri) return;
     addPhoto({
       uri: pendingUri,
@@ -114,6 +128,13 @@ export default function ProgressPhotosScreen() {
     setCaptionOpen(false);
     setPendingUri(null);
     setCaption('');
+  };
+
+  const handleEditCaption = (id: string, current?: string) => {
+    setEditingId(id);
+    setPendingUri(null);
+    setCaption(current ?? '');
+    setCaptionOpen(true);
   };
 
   const handleDelete = (id: string) => {
@@ -223,7 +244,16 @@ export default function ProgressPhotosScreen() {
                 accessibilityLabel={`Progress photo from ${p.date}${p.caption ? ': ' + p.caption : ''}`}
               />
               <View style={styles.photoMeta}>
-                <View style={{ flex: 1 }}>
+                <Pressable
+                  style={{ flex: 1 }}
+                  onPress={() => handleEditCaption(p.id, p.caption)}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    p.caption
+                      ? `Edit caption: ${p.caption}`
+                      : `Add a caption to the photo from ${p.date}`
+                  }
+                >
                   <Text
                     style={[
                       styles.photoDate,
@@ -247,8 +277,20 @@ export default function ProgressPhotosScreen() {
                     >
                       {p.caption}
                     </Text>
-                  ) : null}
-                </View>
+                  ) : (
+                    <Text
+                      style={[
+                        styles.photoCaption,
+                        {
+                          color: t.colors.textSecondary as string,
+                          fontFamily: t.typography.body,
+                        },
+                      ]}
+                    >
+                      Add a caption
+                    </Text>
+                  )}
+                </Pressable>
                 <Pressable
                   onPress={() => {
                     tapLight();

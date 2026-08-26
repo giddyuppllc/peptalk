@@ -27,6 +27,7 @@ import { GradientButton } from '../../src/components/GradientButton';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 import { useCycleStore } from '../../src/store/useCycleStore';
+import { confirmDelete } from '../../src/lib/confirmDelete';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import {
   CONTRACEPTION_LABELS,
@@ -76,6 +77,9 @@ function CycleDashboard() {
   const periods = useCycleStore((s) => s.periods);
   const contraceptionHistory = useCycleStore((s) => s.contraceptionHistory);
   const dayLogs = useCycleStore((s) => s.dayLogs);
+  // Today's log was editable but never removable — a day logged by mistake
+  // stayed in the symptom and mood history permanently.
+  const deleteDayLog = useCycleStore((s) => s.deleteDayLog);
   const tracking = useHealthProfileStore((s) => s.profile?.cycle);
 
   const currentContraception = useMemo(
@@ -369,12 +373,31 @@ function CycleDashboard() {
                       : 'Flow, symptoms, mood, BBT'}
                   </Text>
                 </View>
-                <View style={[styles.logCTAIcon, { backgroundColor: t.primary }]}>
-                  <Ionicons
-                    name={dayLog ? 'create-outline' : 'add'}
-                    size={18}
-                    color="#fff"
-                  />
+                <View style={styles.logCTAActions}>
+                  {dayLog ? (
+                    <TouchableOpacity
+                      onPress={() =>
+                        confirmDelete({
+                          subject: "today's cycle log",
+                          consequence: 'Its symptoms, mood and any BBT reading will be removed.',
+                          onConfirm: () => deleteDayLog(dayLog.id),
+                        })
+                      }
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete today's cycle log"
+                      hitSlop={10}
+                      style={styles.logCTADelete}
+                    >
+                      <Ionicons name="trash-outline" size={17} color={t.textSecondary} />
+                    </TouchableOpacity>
+                  ) : null}
+                  <View style={[styles.logCTAIcon, { backgroundColor: t.primary }]}>
+                    <Ionicons
+                      name={dayLog ? 'create-outline' : 'add'}
+                      size={18}
+                      color="#fff"
+                    />
+                  </View>
                 </View>
               </View>
             </GlassCard>
@@ -698,6 +721,8 @@ const styles = StyleSheet.create({
   logCTASub: {
     fontSize: 12,
   },
+  logCTAActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  logCTADelete: { padding: 6 },
   logCTAIcon: {
     width: 44,
     height: 44,

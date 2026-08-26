@@ -21,6 +21,7 @@ import { V3DetailShell, GlassCard } from '../../src/components/v3';
 import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 import { tapLight, tapMedium } from '../../src/utils/haptics';
 import { useAimeeReportsStore } from '../../src/store/useAimeeReportsStore';
+import { confirmDelete } from '../../src/lib/confirmDelete';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { useNotificationStore } from '../../src/store/useNotificationStore';
 import {
@@ -36,6 +37,8 @@ export default function ReportsListScreen() {
   const refreshWeekly = useAimeeReportsStore((s) => s.refreshWeekly);
   const refreshInsights = useAimeeReportsStore((s) => s.refreshInsights);
   const rewriteReportBody = useAimeeReportsStore((s) => s.rewriteReportBody);
+  // Reports accumulate weekly and there was no way to clear one out.
+  const removeReport = useAimeeReportsStore((s) => s.removeReport);
   const tier = useSubscriptionStore((s) => s.tier);
   const isPro = tier !== 'free';
   const weeklyReportPref = useNotificationStore((s) => s.preferences.weeklyReportEnabled);
@@ -353,6 +356,24 @@ export default function ReportsListScreen() {
                       {r.periodStart} → {r.periodEnd}
                     </Text>
                   </View>
+                  <Pressable
+                    onPress={() =>
+                      confirmDelete({
+                        subject: `the ${r.kind} report "${r.headline}"`,
+                        onConfirm: () => removeReport(r.id),
+                      })
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete the ${r.kind} report ${r.headline}`}
+                    hitSlop={10}
+                    style={styles.rowDelete}
+                  >
+                    <Ionicons
+                      name="trash-outline"
+                      size={17}
+                      color={t.colors.textSecondary as string}
+                    />
+                  </Pressable>
                   <Ionicons
                     name="chevron-forward"
                     size={18}
@@ -370,6 +391,7 @@ export default function ReportsListScreen() {
 
 const styles = StyleSheet.create({
   cardSpacing: { marginTop: 12 },
+  rowDelete: { padding: 6 },
   generateRow: {
     flexDirection: 'row',
     alignItems: 'center',

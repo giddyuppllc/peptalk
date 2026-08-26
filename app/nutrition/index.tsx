@@ -38,6 +38,7 @@ import {
   APPETITE_OPTIONS,
   type AppetiteState,
 } from '../../src/store/useAppetiteLogStore';
+import { confirmDelete } from '../../src/lib/confirmDelete';
 
 import { parseDateParam, isToday, formatDateKeyLong } from '../../src/utils/dateUtil';
 
@@ -89,6 +90,8 @@ export default function NutritionScreen() {
   const tier = useSubscriptionStore((s) => s.tier);
   const isPro = tier !== 'free';
   const logAppetite = useAppetiteLogStore((s) => s.logAppetite);
+  // A mis-tapped appetite chip logged instantly with no way to take it back.
+  const removeAppetite = useAppetiteLogStore((s) => s.removeAppetite);
   const appetiteEntries = useAppetiteLogStore((s) => s.entries);
   const recentAppetite = useMemo(
     () => appetiteEntries.filter((e) => e.loggedAt.slice(0, 10) === activeDate),
@@ -509,17 +512,43 @@ export default function NutritionScreen() {
             ))}
           </View>
           {recentAppetite.length > 0 ? (
-            <Text
-              style={{
-                marginTop: 10,
-                color: t.colors.textSecondary as string,
-                fontFamily: t.typography.body,
-                fontSize: 11,
-              }}
-            >
-              {recentAppetite.length} entr
-              {recentAppetite.length === 1 ? 'y' : 'ies'} logged activeDate.
-            </Text>
+            <View style={styles.appetiteLogged}>
+              {recentAppetite.map((e) => {
+                const opt = APPETITE_OPTIONS.find((o) => o.state === e.state);
+                const time = e.loggedAt.slice(11, 16);
+                return (
+                  <Pressable
+                    key={e.id}
+                    onPress={() =>
+                      confirmDelete({
+                        subject: `the ${(opt?.label ?? e.state).toLowerCase()} appetite entry logged at ${time}`,
+                        confirmLabel: 'Remove',
+                        onConfirm: () => removeAppetite(e.id),
+                      })
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${opt?.label ?? e.state} appetite logged at ${time}`}
+                    style={[styles.appetiteLoggedChip, { borderColor: t.colors.cardBorder as string }]}
+                  >
+                    <Text style={styles.appetiteLoggedEmoji}>{opt?.emoji ?? ''}</Text>
+                    <Text
+                      style={{
+                        color: t.colors.textSecondary as string,
+                        fontFamily: t.typography.body,
+                        fontSize: 11,
+                      }}
+                    >
+                      {time}
+                    </Text>
+                    <Ionicons
+                      name="close"
+                      size={12}
+                      color={t.colors.textSecondary as string}
+                    />
+                  </Pressable>
+                );
+              })}
+            </View>
           ) : null}
         </GlassCard>
 
@@ -1018,6 +1047,13 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 14,
   },
+  appetiteLogged: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
+  appetiteLoggedChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderWidth: StyleSheet.hairlineWidth, borderRadius: 999,
+    paddingVertical: 4, paddingHorizontal: 8,
+  },
+  appetiteLoggedEmoji: { fontSize: 12 },
   appetiteRow: {
     flexDirection: 'row',
     gap: 8,

@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions, Animated, ScrollView, Modal } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions, Animated, ScrollView, Modal, TextInput, Pressable } from 'react-native';
 import { Alert } from '../lib/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
@@ -57,6 +57,11 @@ export const ChatHistoryDrawer: React.FC<Props> = ({ visible, onClose }) => {
   const newChat = useChatStore((s) => s.newChat);
   const switchChat = useChatStore((s) => s.switchChat);
   const deleteChat = useChatStore((s) => s.deleteChat);
+  // Threads were auto-titled from the first message and could never be
+  // corrected, so a chat opened with a typo kept that title forever.
+  const renameChat = useChatStore((s) => s.renameChat);
+  const [renaming, setRenaming] = useState<Chat | null>(null);
+  const [draftTitle, setDraftTitle] = useState('');
 
   useEffect(() => {
     if (visible) {
@@ -105,6 +110,13 @@ export const ChatHistoryDrawer: React.FC<Props> = ({ visible, onClose }) => {
       undefined,
       [
         {
+          text: 'Rename',
+          onPress: () => {
+            setDraftTitle(chat.title);
+            setRenaming(chat);
+          },
+        },
+        {
           text: 'Delete',
           style: 'destructive',
           onPress: () => deleteChat(chat.id),
@@ -115,12 +127,25 @@ export const ChatHistoryDrawer: React.FC<Props> = ({ visible, onClose }) => {
     );
   };
 
+  /**
+   * Commit a rename. A blank title is treated as cancel rather than saved —
+   * an empty row in the drawer would be unclickable and unfixable.
+   */
+  const commitRename = () => {
+    const next = draftTitle.trim();
+    if (renaming && next.length > 0 && next !== renaming.title) {
+      renameChat(renaming.id, next);
+    }
+    setRenaming(null);
+  };
+
   // Sort by most recent first
   const sortedChats = [...chats].sort((a, b) => {
     return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
   });
 
   return (
+    <>
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
       <View style={StyleSheet.absoluteFillObject} accessibilityViewIsModal={true}>
@@ -239,10 +264,87 @@ export const ChatHistoryDrawer: React.FC<Props> = ({ visible, onClose }) => {
         </Animated.View>
       </View>
     </Modal>
+
+    {/* Rename. A dedicated modal rather than Alert.prompt, which exists only
+        on iOS — on Android and web that call is a silent no-op, so the menu
+        item would appear to do nothing at all. */}
+    <Modal
+      visible={renaming !== null}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setRenaming(null)}
+    >
+      <Pressable style={styles.renameBackdrop} onPress={() => setRenaming(null)}>
+        <Pressable
+          style={[styles.renameCard, { backgroundColor: t.card, borderColor: t.cardBorder }]}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <Text style={[styles.renameTitle, { color: t.text }]}>Rename chat</Text>
+          <TextInput
+            value={draftTitle}
+            onChangeText={setDraftTitle}
+            placeholder="Chat name"
+            placeholderTextColor={t.textSecondary}
+            autoFocus
+            selectTextOnFocus
+            maxLength={60}
+            returnKeyType="done"
+            onSubmitEditing={commitRename}
+            style={[styles.renameInput, { color: t.text, borderColor: t.cardBorder }]}
+            accessibilityLabel="Chat name"
+          />
+          <View style={styles.renameActions}>
+            <TouchableOpacity onPress={() => setRenaming(null)} accessibilityRole="button">
+              <Text style={[styles.renameAction, { color: t.textSecondary }]}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={commitRename}
+              disabled={draftTitle.trim().length === 0}
+              accessibilityRole="button"
+            >
+              <Text
+                style={[
+                  styles.renameAction,
+                  { color: draftTitle.trim().length === 0 ? t.textSecondary : t.primary },
+                ]}
+              >
+                Save
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
+  renameBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  renameCard: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 18,
+    gap: 14,
+  },
+  renameTitle: { fontSize: 15, fontWeight: '700' },
+  renameInput: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+  },
+  renameActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 22 },
+  renameAction: { fontSize: 15, fontWeight: '600' },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.45)',

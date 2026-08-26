@@ -23,6 +23,8 @@ import {
   SIDE_EFFECT_TAGS,
   type SideEffectSeverity,
 } from '../../src/store/useSideEffectStore';
+import { confirmDelete } from '../../src/lib/confirmDelete';
+import { Alert } from '../../src/lib/alert';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { PEPTIDES } from '../../src/data/peptides';
 import {
@@ -47,6 +49,9 @@ export default function SideEffectsScreen() {
   const entries = useSideEffectStore((s) => s.entries);
   const logSideEffect = useSideEffectStore((s) => s.logSideEffect);
   const removeSideEffect = useSideEffectStore((s) => s.removeSideEffect);
+  // Severity was fixed at logging time and could never be corrected, so a
+  // mis-tapped 5 stayed a 5 in the history the safety copy reads from.
+  const updateSideEffect = useSideEffectStore((s) => s.updateSideEffect);
   const recentDose = useDoseLogStore((s) => s.doses[0]);
 
   const [symptom, setSymptom] = useState('');
@@ -300,14 +305,30 @@ export default function SideEffectsScreen() {
           entries.map((e) => (
             <GlassCard key={e.id} style={styles.entryCard}>
               <View style={styles.entryRow}>
-                <View
+                <Pressable
+                  onPress={() => {
+                    tapMedium();
+                    Alert.alert(
+                      'Change severity',
+                      `${e.symptom} — currently ${e.severity} of 5.`,
+                      [
+                        ...([1, 2, 3, 4, 5] as SideEffectSeverity[]).map((n) => ({
+                          text: String(n),
+                          onPress: () => updateSideEffect(e.id, { severity: n }),
+                        })),
+                        { text: 'Cancel', style: 'cancel' as const },
+                      ],
+                    );
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Change severity of ${e.symptom}, currently ${e.severity} of 5`}
                   style={[
                     styles.sevPill,
                     { backgroundColor: severityColorFor(t, e.severity) },
                   ]}
                 >
                   <Text style={styles.sevPillText}>{e.severity}</Text>
-                </View>
+                </Pressable>
                 <View style={{ flex: 1 }}>
                   <Text
                     style={[
@@ -336,7 +357,12 @@ export default function SideEffectsScreen() {
                 <Pressable
                   onPress={() => {
                     tapMedium();
-                    removeSideEffect(e.id);
+                    // Was an immediate delete with no confirmation — one stray
+                    // tap removed a clinical record with no way back.
+                    confirmDelete({
+                      subject: `the ${e.symptom} entry`,
+                      onConfirm: () => removeSideEffect(e.id),
+                    });
                   }}
                   hitSlop={10}
                   accessibilityRole="button"
