@@ -12,8 +12,10 @@
  * request failed says "carry on" at exactly the moment it does not know — the
  * opposite of the truth. Absence is honest; a wrong number is not.
  *
- * Renders nothing on free either. Free has no Aimee access, so a 0-of-0 meter
- * would be noise, and the paywall above it already makes the offer.
+ * Free IS shown — it has three prompts a month, and the whole point of a
+ * taster is that the person can see it running out and decide before it does.
+ * Free is metered in messages rather than cents, because a percentage of a few
+ * cents tells that user nothing.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -52,11 +54,21 @@ export function AimeeUsageMeter() {
     );
   }
 
-  // Unknown, or a tier with no allowance to report against.
-  if (!usage || usage.tier === 'free' || usage.allowanceCents <= 0) return null;
+  if (!usage) return null;
 
-  const over = usage.atLimit;
-  const warn = !over && usage.percentUsed >= USAGE_WARN_THRESHOLD;
+  // Free is metered in MESSAGES, not cents. Three prompts a month expressed as
+  // a percentage of a few cents would be noise; the count is the fact that
+  // matters, and it has to be visible BEFORE the last one is spent.
+  const meteredOnMessages = usage.tier === 'free' && usage.messageLimit > 0;
+
+  // Nothing to report against on either axis.
+  if (!meteredOnMessages && usage.allowanceCents <= 0) return null;
+
+  const pct = meteredOnMessages
+    ? Math.min(100, Math.round((usage.messagesUsed / usage.messageLimit) * 100))
+    : usage.percentUsed;
+  const over = meteredOnMessages ? usage.messagesRemaining <= 0 : usage.atLimit;
+  const warn = !over && pct >= USAGE_WARN_THRESHOLD;
   const barColor = over ? '#C2564B' : warn ? '#B4802A' : t.primary;
 
   return (
@@ -64,11 +76,17 @@ export function AimeeUsageMeter() {
       style={[styles.card, { borderColor: t.cardBorder, backgroundColor: t.card }]}
       accessibilityRole="progressbar"
       accessibilityLabel={usageSummary(usage)}
-      accessibilityValue={{ min: 0, max: 100, now: usage.percentUsed }}
+      accessibilityValue={{ min: 0, max: 100, now: pct }}
     >
       <View style={styles.headRow}>
-        <Text style={[styles.title, { color: t.text }]}>AI allowance</Text>
-        <Text style={[styles.pct, { color: barColor }]}>{usage.percentUsed}%</Text>
+        <Text style={[styles.title, { color: t.text }]}>
+          {meteredOnMessages ? 'Free Aimee messages' : 'AI allowance'}
+        </Text>
+        <Text style={[styles.pct, { color: barColor }]}>
+          {meteredOnMessages
+            ? `${usage.messagesUsed}/${usage.messageLimit}`
+            : `${pct}%`}
+        </Text>
       </View>
 
       <View style={[styles.track, { backgroundColor: t.cardBorder }]}>
@@ -77,7 +95,7 @@ export function AimeeUsageMeter() {
             styles.fill,
             // Always at least a sliver once anything has been used, so "barely
             // started" is visibly different from "not started".
-            { width: `${usage.percentUsed > 0 ? Math.max(2, usage.percentUsed) : 0}%`, backgroundColor: barColor },
+            { width: `${pct > 0 ? Math.max(2, pct) : 0}%`, backgroundColor: barColor },
           ]}
         />
       </View>

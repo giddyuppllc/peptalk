@@ -33,6 +33,17 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 };
 
+/**
+ * Mirrors RATE_LIMITS in aimee-chat-stream/index.ts. Kept in sync by
+ * src/lib/__tests__/aimeeFreeTier.test.ts — a meter that disagrees with the
+ * gate is worse than no meter, because people plan around it.
+ */
+const MESSAGE_LIMITS: Record<string, number> = {
+  free: 3,
+  plus: 750,
+  pro: 9000,
+};
+
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), {
     status,
@@ -80,6 +91,22 @@ Deno.serve(async (req) => {
       return json({ error: 'usage_unavailable' }, 503);
     }
 
+    // Message count for the same monthly bucket the chat gate uses.
+    // Deliberately a SELECT, never the bump_ai_usage RPC: that RPC INCREMENTS,
+    // so metering through it would spend one of the user's messages every time
+    // they merely looked at the meter. The tier cap lives in the chat function,
+    // so it is mirrored here — kept honest by a test that reads both files.
+    const period = `${new Date().toISOString().slice(0, 7)}-01`;
+    const { data: usageRow } = await admin
+      .from('ai_usage_log')
+      .select('count')
+      .eq('user_id', user.id)
+      .eq('function_name', 'aimee-chat-stream')
+      .eq('date', period)
+      .maybeSingle();
+    const messagesUsed = usageRow?.count ?? 0;
+    const messageLimit = MESSAGE_LIMITS[tier] ?? 0;
+
     const allowanceMC = cost.allowanceMC ?? 0;
     const spentMC = cost.userSpendMC ?? 0;
     const pct = allowanceMC > 0 ? Math.min(100, (spentMC / allowanceMC) * 100) : 0;
@@ -96,8 +123,16 @@ Deno.serve(async (req) => {
       allowanceCents: Math.round(allowanceMC / 1_000_000),
       spentCents: Math.round(spentMC / 1_000_000),
       percentUsed: Math.round(pct),
-      atLimit: cost.reason === 'user_cap_hit',
+      atLimit: cost.reason === 'user_cap_hit' || (messageLimit > 0 && messagesUsed >= messageLimit),
       resetsAt,
+      /**
+       * Free is metered in MESSAGES, not cents — three prompts a month. A
+       * percentage of a few cents means nothing to that user; "1 of 3 left"
+       * does. Paid tiers report both and the client shows the cents meter.
+       */
+      messageLimit,
+      messagesUsed,
+      messagesRemaining: Math.max(0, messageLimit - messagesUsed),
     });
   } catch (err) {
     reportError('aimee-usage', err);

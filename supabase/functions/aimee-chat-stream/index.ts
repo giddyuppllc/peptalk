@@ -71,9 +71,20 @@ const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
  * change. Free is 0 — the tier gate refuses before any spend.
  */
 const RATE_LIMITS: Record<string, number> = {
-  free: 0,
+  // Free gets a real taste — three prompts a month, answers only. Enough to
+  // see what Aimee is, not enough to use her as the product. Tools are
+  // withheld on this tier (see TOOLS_MIN_TIER) so nothing is written to the
+  // account by an unpaid conversation.
+  free: 3,
   plus: 750,
   pro: 9000,
+};
+
+/** Tiers that may use Aimee's write/navigate tools. Free is answers-only. */
+const TIER_CAN_USE_TOOLS: Record<string, boolean> = {
+  free: false,
+  plus: true,
+  pro: true,
 };
 
 const MAX_MESSAGES = 30;
@@ -121,8 +132,10 @@ Deno.serve(async (req) => {
   });
   const messageLimit = RATE_LIMITS[tier] ?? 0;
   if (messageLimit === 0) {
+    // An unknown tier, not free — free has its own small allowance above.
     return jsonError(403, 'AI chat requires PepTalk+ or Pro subscription', { upgrade: true });
   }
+  const canUseTools = TIER_CAN_USE_TOOLS[tier] === true;
 
   // 4. Dollar-aware cost cap ----------------------------------------------
   // Tier decides the monthly allowance, so it must be the SERVER-resolved
@@ -170,7 +183,21 @@ Deno.serve(async (req) => {
 
   // 6. Build the server-side system prompt --------------------------------
   const safeContext: AimeeServerContext = sanitizeContext(clientContext, tier);
-  const systemPrompt = buildAimeeSystemPrompt(safeContext);
+  let systemPrompt = buildAimeeSystemPrompt(safeContext);
+  if (!canUseTools) {
+    // The model is offered no tools on this tier. Without being told, it still
+    // SAYS it will log the dose or open the screen — the user gets a promise
+    // and no action, which is the failure pattern this codebase keeps hitting.
+    // Telling it up front turns a broken promise into an honest one.
+    systemPrompt += `
+
+IMPORTANT - this user is on the free plan. You can ANSWER questions but you
+cannot take any action: you cannot log doses, check-ins, meals or workouts,
+cannot change protocols, and cannot navigate the app for them. Never say you
+have done, or will do, any of those things. If they ask for one, explain
+briefly that logging and in-app actions are part of PepTalk+ and Pro, and
+answer the underlying question if you can.`;
+  }
 
   // 6b. Per-message rate limit — consume the credit only AFTER auth, tier,
   //     cost-cap, and body validation pass, so a rejected request never
@@ -186,11 +213,20 @@ Deno.serve(async (req) => {
         { retryAfter: rateLimit.retryAfter },
       );
     }
-    return jsonError(
-      429,
-      `Daily message limit reached (${rateLimit.limit}/day)${tier === 'plus' ? '. Upgrade to Pro for more.' : '. Resets tomorrow.'}`,
-      { upgrade: tier === 'plus', retryAfter: rateLimit.retryAfter },
-    );
+    // Wording follows the window. This said "Daily … Resets tomorrow" after the
+    // allowance became monthly — a limit message that misstates when access
+    // returns is worse than a bare refusal, because the user waits for a reset
+    // that will not come.
+    const limitMsg =
+      tier === 'free'
+        ? `You've used your ${rateLimit.limit} free Aimee messages this month. Upgrade to PepTalk+ or Pro to keep going.`
+        : tier === 'plus'
+          ? `Monthly message limit reached (${rateLimit.limit}). Upgrade to Pro for more.`
+          : `Monthly message limit reached (${rateLimit.limit}). It resets at the start of next month.`;
+    return jsonError(429, limitMsg, {
+      upgrade: tier === 'free' || tier === 'plus',
+      retryAfter: rateLimit.retryAfter,
+    });
   }
 
   // 7. Set up streaming response -----------------------------------------
@@ -247,6 +283,7 @@ Deno.serve(async (req) => {
             { role: 'user' as const, content: SAFETY_TRAILER },
           ];
           const collected = await streamRound({
+            canUseTools,
             system: systemPrompt,
             messages: messagesForRound,
             send,
@@ -451,6 +488,8 @@ async function streamRound(args: {
   system: string;
   messages: GrokMessage[];
   send: (obj: Record<string, unknown>) => void;
+  /** Free tier is answers-only — no tools are offered to the model at all. */
+  canUseTools: boolean;
 }): Promise<StreamRoundResult> {
   // Accumulate tool calls by index (OpenAI streams args as deltas).
   const toolBuf: Map<number, { id: string; name: string; jsonStr: string; started: boolean }> = new Map();
@@ -460,7 +499,10 @@ async function streamRound(args: {
   for await (const ev of streamGrok({
     system: args.system,
     messages: args.messages,
-    tools: AIMEE_TOOLS,
+    // Withheld entirely rather than filtered after the fact: a model that is
+    // never offered a tool cannot call one, so an unpaid conversation cannot
+    // log a dose, change a protocol, or navigate the app.
+    tools: args.canUseTools ? AIMEE_TOOLS : [],
     maxTokens: 1024,
     temperature: 0.7,
   })) {

@@ -51,7 +51,12 @@ function monthlyCentsForTier(tier: string): number {
   if (tier === 'plus') {
     return Number(Deno.env.get('AIMEE_MONTHLY_CENTS_PLUS') ?? 300);
   }
-  // Free has no Aimee access at all — the tier gate rejects before this runs.
+  // Free now gets three prompts a month (answers only). The message count is
+  // the real gate; this is just a backstop so one pathological huge-context
+  // prompt cannot cost more than the taster is worth.
+  if (tier === 'free') {
+    return Number(Deno.env.get('AIMEE_MONTHLY_CENTS_FREE') ?? 25);
+  }
   return 0;
 }
 

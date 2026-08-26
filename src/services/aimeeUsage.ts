@@ -19,7 +19,7 @@ import { captureException } from './telemetry';
 
 export interface AimeeUsage {
   tier: 'free' | 'plus' | 'pro' | string;
-  /** Monthly allowance in cents. 0 for free, which has no Aimee access. */
+  /** Monthly allowance in cents. Free is metered in messages instead. */
   allowanceCents: number;
   spentCents: number;
   /** 0–100, already clamped server-side. */
@@ -28,6 +28,10 @@ export interface AimeeUsage {
   atLimit: boolean;
   /** ISO timestamp when the allowance resets. */
   resetsAt: string;
+  /** Messages allowed this month for the tier. Free is metered on this. */
+  messageLimit: number;
+  messagesUsed: number;
+  messagesRemaining: number;
 }
 
 /** Show a heads-up from here on. Early enough to act, late enough to not nag. */
@@ -57,6 +61,10 @@ export async function fetchAimeeUsage(): Promise<AimeeUsage | null> {
       percentUsed: Math.max(0, Math.min(100, Math.round(u.percentUsed))),
       atLimit: u.atLimit === true,
       resetsAt: u.resetsAt ?? '',
+      messageLimit: typeof u.messageLimit === 'number' ? u.messageLimit : 0,
+      messagesUsed: typeof u.messagesUsed === 'number' ? u.messagesUsed : 0,
+      messagesRemaining:
+        typeof u.messagesRemaining === 'number' ? u.messagesRemaining : 0,
     };
   } catch (err) {
     captureException(err, { source: 'aimeeUsage.fetch' });
@@ -81,7 +89,19 @@ export function formatResetDate(iso: string): string {
  */
 export function usageSummary(u: AimeeUsage): string {
   const resets = formatResetDate(u.resetsAt);
-  if (u.tier === 'free') return 'Aimee is available on PepTalk+ and Pro.';
+  // Free is metered in messages, not cents. Three prompts a month is small
+  // enough that a percentage would be meaningless — the count is the fact
+  // the user needs, and it must be exact before they lose the last one.
+  if (u.tier === 'free') {
+    if (u.messageLimit <= 0) return 'Aimee is available on PepTalk+ and Pro.';
+    if (u.messagesRemaining <= 0) {
+      return resets
+        ? `You've used your ${u.messageLimit} free Aimee messages. More on ${resets}, or upgrade any time.`
+        : `You've used your ${u.messageLimit} free Aimee messages.`;
+    }
+    const noun = u.messagesRemaining === 1 ? 'message' : 'messages';
+    return `${u.messagesRemaining} of ${u.messageLimit} free Aimee ${noun} left this month.`;
+  }
   if (u.atLimit) {
     return resets
       ? `You've used this month's AI allowance. It resets ${resets}.`
