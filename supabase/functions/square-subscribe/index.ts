@@ -92,14 +92,42 @@ Deno.serve(async (req) => {
     if (!plan) return json({ error: 'Unknown product' }, 400);
     if (!cardToken) return json({ error: 'Missing card token' }, 400);
 
-    const planVariationId = Deno.env.get(plan.planEnv) ?? '';
-    if (!SQUARE_ACCESS_TOKEN || !SQUARE_LOCATION_ID || !planVariationId) {
+    const standardVariationId = Deno.env.get(plan.planEnv) ?? '';
+    if (!SQUARE_ACCESS_TOKEN || !SQUARE_LOCATION_ID || !standardVariationId) {
       return json({ error: 'Square subscriptions not configured (token/location/plan).' }, 503);
     }
 
+    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+    // ── Launch promotion: 2 weeks free, then the normal monthly price ──────
+    //
+    // A SEPARATE Square plan variation carries the trial phase, rather than a
+    // trial being added to the standard plan. That keeps the promo reversible:
+    // clearing SQUARE_LAUNCH_TRIAL_UNTIL ends it immediately, and every
+    // subscription already created keeps whatever terms it was sold on.
+    //
+    // Time-boxed by an explicit end date because "the first month of launch"
+    // is a window, not a permanent feature — a promo with no end date is how
+    // a launch offer quietly becomes the price.
+    const trialUntilRaw = Deno.env.get('SQUARE_LAUNCH_TRIAL_UNTIL') ?? '';
+    const trialUntil = trialUntilRaw ? Date.parse(trialUntilRaw) : NaN;
+    const promoWindowOpen = Number.isFinite(trialUntil) && Date.now() < trialUntil;
+    const trialVariationId = Deno.env.get(`${plan.planEnv}_TRIAL`) ?? '';
+
+    // Only ever a FIRST subscription. Without this, cancelling and
+    // re-subscribing would hand out another free fortnight every time.
+    let eligibleForTrial = false;
+    if (promoWindowOpen && trialVariationId) {
+      const { count } = await admin
+        .from('subscriptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      eligibleForTrial = (count ?? 0) === 0;
+    }
+    const planVariationId = eligibleForTrial ? trialVariationId : standardVariationId;
+
     // Guard against double-charging: refuse if the user already has an active web
     // subscription (they'd otherwise get a second Square subscription + charge).
-    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const { data: existing } = await admin
       .from('subscriptions')
       .select('tier')
@@ -182,6 +210,13 @@ Deno.serve(async (req) => {
     // turn a successful payment into an error response. sendEmail never throws
     // and no-ops when the provider key is unset.
     const planLabel = plan.tier === 'pro' ? 'PepTalk Pro' : 'PepTalk+';
+    // When a trial applies, say WHEN billing starts. "Active" is true either
+    // way, but a free fortnight that silently becomes a $49.99 charge is the
+    // kind of surprise that produces chargebacks and one-star reviews.
+    const priceLine = eligibleForTrial
+      ? `Your first two weeks are free. After that it renews monthly at ` +
+        `$${(plan.amountCents / 100).toFixed(2)}.`
+      : `It renews monthly.`;
     if (user.email) {
       void sendEmail({
         to: user.email,
@@ -190,7 +225,7 @@ Deno.serve(async (req) => {
           `Your ${planLabel} subscription is active.
 
 ` +
-          `It renews monthly. You can change or cancel it any time from ` +
+          `${priceLine} You can change or cancel it any time from ` +
           `Profile > Subscription in the app.
 
 ` +
@@ -199,13 +234,13 @@ Deno.serve(async (req) => {
           `health decisions.`,
         html: wrap(
           `Your ${planLabel} subscription is active`,
-          `<p style="margin:0 0 12px;font-size:15px;line-height:1.55;">It renews monthly.</p>
+          `<p style="margin:0 0 12px;font-size:15px;line-height:1.55;">${priceLine}</p>
            <p style="margin:0;font-size:15px;line-height:1.55;">You can change or cancel it any time from <strong>Profile &rsaquo; Subscription</strong> in the app.</p>`,
         ),
       });
     }
 
-    return json({ ok: true, subscriptionId, tier: plan.tier });
+    return json({ ok: true, subscriptionId, tier: plan.tier, trial: eligibleForTrial });
   } catch (e) {
     // console.error alone put this in a log nobody reads. A card payment
     // failing on the live PWA produced "failed to call the edge function" on
