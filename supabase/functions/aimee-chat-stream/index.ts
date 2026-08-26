@@ -406,6 +406,19 @@ answer the underlying question if you can.`;
           priorSpendMC: costCheck.userSpendMC,
         });
 
+        // Auto-refill, if the user opted in. Only worth considering once they
+        // are actually spending credits — inside the plan allowance there is
+        // nothing to top up.
+        //
+        // Fire-and-forget on purpose: this can charge a card, and a payment
+        // network round trip must never sit between the user and their reply.
+        // Every decision (opted in? below threshold? under the monthly cap?)
+        // is re-made server-side inside that function, so calling it
+        // speculatively is safe — the worst case is a fast no-op.
+        if (costCheck.usingCredits === true) {
+          void maybeAutoRefill(user.id);
+        }
+
         const userMessageContent = lastUserMessageText(messages);
         if (userMessageContent) {
           // Persist the assistant turn even when Aimee only emitted
@@ -718,6 +731,33 @@ function cryptoRandomId(): string {
 }
 
 // ─── Per-message rate limit ───────────────────────────────────────────────
+
+/**
+ * Ask credit-autorefill to consider topping this user up.
+ *
+ * WEB ONLY by construction: that function charges through Square and nothing
+ * else, so an iOS or Android user simply has no card for it to find. Apple and
+ * Google require the user to confirm every consumable purchase, and charging a
+ * card we hold to unlock in-app content on those platforms would be a
+ * guideline violation — which is why the decision lives there and not here.
+ *
+ * Never throws and never awaited by the caller. A refill that fails must not
+ * affect the reply the user is reading.
+ */
+async function maybeAutoRefill(userId: string): Promise<void> {
+  const secret = Deno.env.get('INTERNAL_FUNCTION_SECRET') ?? '';
+  const base = Deno.env.get('SUPABASE_URL') ?? '';
+  if (!secret || !base) return;
+  try {
+    await fetch(`${base}/functions/v1/credit-autorefill`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-secret': secret },
+      body: JSON.stringify({ userId }),
+    });
+  } catch (e) {
+    console.error('[aimee-chat-stream] auto-refill call failed:', e);
+  }
+}
 
 async function checkRateLimit(
   supabase: any,

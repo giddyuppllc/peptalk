@@ -34,6 +34,7 @@ import {
   Pressable,
   ActivityIndicator,
   Platform,
+  Switch,
 } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { Alert } from '../lib/alert';
@@ -45,6 +46,13 @@ import {
 } from '../services/creditPurchase';
 import { fetchAimeeUsage } from '../services/aimeeUsage';
 import { formatCents } from '../lib/creditPacks';
+import {
+  fetchAutoRefill,
+  setAutoRefill,
+  isAutoRefillSupported,
+  autoRefillSummary,
+  type AutoRefillState,
+} from '../services/autoRefill';
 import {
   rememberCreditPurchase,
   readPendingCreditPurchase,
@@ -70,6 +78,10 @@ export function CreditPackShelf() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [balanceCents, setBalanceCents] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<Confirm>({ state: 'idle' });
+  // Web only — Apple and Google require the user to confirm every consumable
+  // purchase, so there is nothing to toggle on native.
+  const [autoRefill, setAutoRefillState] = useState<AutoRefillState | null>(null);
+  const [autoBusy, setAutoBusy] = useState(false);
   const cancelled = useRef(false);
 
   const refreshBalance = useCallback(async () => {
@@ -123,6 +135,10 @@ export function CreditPackShelf() {
       if (cancelled.current) return;
       setPacks(available);
       setLoading(false);
+      if (isAutoRefillSupported()) {
+        const ar = await fetchAutoRefill();
+        if (!cancelled.current) setAutoRefillState(ar);
+      }
       // Only on web, and only when we actually came back from checkout.
       if (Platform.OS === 'web' && isCheckoutReturn() && readPendingCreditPurchase()) {
         void awaitGrant();
@@ -250,6 +266,42 @@ export function CreditPackShelf() {
           );
         })}
       </View>
+
+      {autoRefill && packs[0] ? (
+        <View style={[styles.autoRow, { borderTopColor: t.cardBorder }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.autoTitle, { color: t.text }]}>Auto-refill</Text>
+            <Text style={[styles.autoSub, { color: t.textSecondary }]}>
+              {autoRefillSummary(autoRefill, packs[0].displayPrice)}
+            </Text>
+          </View>
+          <Switch
+            value={autoRefill.enabled}
+            disabled={autoBusy}
+            onValueChange={async (next) => {
+              setAutoBusy(true);
+              const updated = await setAutoRefill(next);
+              // Render what the SERVER ended up at, never what we asked for —
+              // this switch authorises charging a card.
+              if (updated) setAutoRefillState(updated);
+              else {
+                Alert.alert(
+                  'Could not change that',
+                  'Auto-refill was left as it was. Please try again.',
+                );
+              }
+              setAutoBusy(false);
+            }}
+            accessibilityLabel="Automatically buy more AI credit when you run low"
+          />
+        </View>
+      ) : null}
+
+      {!isAutoRefillSupported() && balanceCents !== null && balanceCents <= 50 ? (
+        <Text style={[styles.lowNote, { color: t.textSecondary }]}>
+          Running low. Tap a pack above to top up.
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -276,6 +328,13 @@ const styles = StyleSheet.create({
   bannerText: { fontSize: 12.5, lineHeight: 17, flex: 1 },
   blurb: { fontSize: 12.5, lineHeight: 17 },
   row: { flexDirection: 'row', gap: 8 },
+  autoRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 12, marginTop: 2,
+  },
+  autoTitle: { fontSize: 13.5, fontWeight: '700' },
+  autoSub: { fontSize: 12, lineHeight: 16.5, marginTop: 2 },
+  lowNote: { fontSize: 12, lineHeight: 16.5, marginTop: 2 },
   pack: {
     flex: 1,
     borderWidth: StyleSheet.hairlineWidth,
