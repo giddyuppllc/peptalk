@@ -152,10 +152,7 @@
       "entitlements": {
         "com.apple.developer.healthkit": true,
         "com.apple.developer.healthkit.access": []
-      },
-      "associatedDomains": [
-        "applinks:peptalk.bio"
-      ]
+      }
     },
     "android": {
       "adaptiveIcon": {

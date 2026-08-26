@@ -1,7 +1,23 @@
 # Deep links — the two files that must be hosted on peptalk.bio
 
-The app side is done (`app.json`): Android declares a verified App Link intent
-filter for `https://peptalk.bio`, and iOS declares `applinks:peptalk.bio`.
+Android declares a verified App Link intent filter for `https://peptalk.bio`.
+
+**iOS is NOT declared yet, on purpose.** Adding `associatedDomains` failed the
+build:
+
+    Provisioning profile "...AppStore..." doesn't support the
+    Associated Domains capability
+
+The capability has to be enabled on the App ID in the Apple Developer portal
+first (Certificates, Identifiers & Profiles → Identifiers → the bundle id →
+tick **Associated Domains**), after which EAS regenerates the profile on the
+next build. Only then re-add to `app.json`:
+
+```json
+"ios": { "associatedDomains": ["applinks:peptalk.bio"] }
+```
+
+Doing it in the other order breaks every iOS build, which is how it was found.
 
 **Both are inert until these two files are served from the apex domain.** That
 is the whole mechanism — the OS fetches them to confirm the domain and the app
