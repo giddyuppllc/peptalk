@@ -27,6 +27,7 @@ import { captureException, captureMessage } from './telemetry';
 // ALL_PRODUCT_IDS so getProducts() never asks the store about a SKU that
 // doesn't exist (iOS fails the whole batch if a single id is unknown).
 import { PRODUCT_IDS, ALL_PRODUCT_IDS, PRODUCT_TO_TIER } from '../lib/products';
+import { ALL_CREDIT_PACK_IDS, isCreditPack } from '../lib/creditPacks';
 import type { ProductId } from '../lib/products';
 
 export { PRODUCT_IDS, PRODUCT_TO_TIER };
@@ -111,9 +112,14 @@ export function waitForPendingValidations(timeoutMs = 8_000): Promise<void> {
  *  clear the pending queue eventually. */
 async function finishTransactionWithRetry(purchase: any, attempts = 3): Promise<void> {
   let lastErr: unknown = null;
+  // Credit packs are CONSUMABLES and must be finished as such. This flag was
+  // hardcoded false, which is correct for subscriptions and silently wrong for
+  // a consumable: on Android it acknowledges instead of consuming, so the SKU
+  // stays "already owned" and the user can never buy that pack a second time.
+  const consumable = isCreditPack(purchase?.productId ?? purchase?.id ?? '');
   for (let i = 0; i < attempts; i++) {
     try {
-      await IAP.finishTransaction({ purchase, isConsumable: false });
+      await IAP.finishTransaction({ purchase, isConsumable: consumable });
       return;
     } catch (err) {
       lastErr = err;
@@ -323,6 +329,85 @@ export async function getProducts(): Promise<IAPProduct[]> {
     if (__DEV__) console.warn('[iapService] getProducts failed:', err);
     return [];
   }
+}
+
+/**
+ * Fetch credit packs from the store.
+ *
+ * `type: 'inapp'` — consumables, NOT 'subs'. Asking the subscription endpoint
+ * for a one-time SKU returns nothing, which would render an empty shelf that
+ * looks like a network problem rather than an unconfigured one.
+ *
+ * Returns [] when the store has no such products, which is the correct state
+ * until the SKUs exist in App Store Connect and Play Console. The UI shows
+ * nothing rather than a buy button that cannot complete.
+ */
+export async function getCreditPackProducts(): Promise<IAPProduct[]> {
+  if (!isAvailable()) return [];
+  try {
+    const products = await IAP.fetchProducts({ skus: ALL_CREDIT_PACK_IDS, type: 'inapp' });
+    return (products ?? []).map((p: any) => ({
+      productId: p.id ?? p.productId,
+      title: p.title ?? p.displayName ?? p.id,
+      description: p.description ?? '',
+      price: p.displayPrice ?? `${p.currency ?? ''} ${p.price ?? ''}`.trim(),
+      localizedPrice: p.displayPrice ?? '',
+      currency: p.currency ?? 'USD',
+      subscriptionPeriod: undefined,
+    }));
+  } catch (err) {
+    if (__DEV__) console.warn('[iapService] getCreditPackProducts failed:', err);
+    return [];
+  }
+}
+
+/**
+ * Buy a credit pack (consumable).
+ *
+ * Separate from purchaseProduct because the store call differs in ways that
+ * matter: type is 'inapp', and an Android consumable takes a plain `skus`
+ * request with NO subscriptionOffers — passing an offer token for a one-time
+ * product is rejected by Play Billing.
+ *
+ * The transaction then flows through the SAME purchaseUpdatedListener as
+ * subscriptions, so validation, Sentry reporting and the finish-retry loop are
+ * shared; only `isConsumable` differs, and that is derived from the SKU.
+ */
+export async function purchaseCreditPack(
+  productId: string,
+  options?: { appAccountToken?: string | null },
+): Promise<void> {
+  if (!isAvailable()) {
+    throw new Error('In-App Purchases not available on this platform.');
+  }
+  if (!initialized) {
+    throw new Error('IAP not initialized. Call initIAP() first.');
+  }
+  if (!isCreditPack(productId)) {
+    // Never hand an arbitrary SKU to the consumable path.
+    throw new Error(`Not a credit pack: ${productId}`);
+  }
+
+  const rawToken = options?.appAccountToken ?? null;
+  const appAccountToken = rawToken && UUID_RE.test(rawToken) ? rawToken : undefined;
+
+  if (Platform.OS === 'ios') {
+    await IAP.requestPurchase({
+      request: { ios: { sku: productId, ...(appAccountToken ? { appAccountToken } : {}) } },
+      type: 'inapp',
+    } as any);
+    return;
+  }
+
+  await IAP.requestPurchase({
+    request: {
+      android: {
+        skus: [productId],
+        ...(appAccountToken ? { obfuscatedAccountIdAndroid: appAccountToken } : {}),
+      },
+    },
+    type: 'inapp',
+  } as any);
 }
 
 // ---------------------------------------------------------------------------

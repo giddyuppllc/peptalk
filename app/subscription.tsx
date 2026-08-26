@@ -13,6 +13,7 @@ import { GlassCard } from '../src/components/GlassCard';
 import { GradientButton } from '../src/components/GradientButton';
 import { SquareCardForm } from '../src/components/SquareCardForm';
 import { AimeeUsageMeter } from '../src/components/AimeeUsageMeter';
+import { CreditPackShelf } from '../src/components/CreditPackShelf';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../src/constants/theme';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
 import { PEPTIDES } from '../src/data/peptides';
@@ -562,6 +563,8 @@ export default function SubscriptionScreen() {
             cannot be read — a meter showing 0% because a request failed would
             say "carry on" at exactly the moment it does not know. */}
         <AimeeUsageMeter />
+        {/* Renders nothing until credit-pack SKUs exist in the stores. */}
+        <CreditPackShelf />
 
         {/* Tiers */}
         {TIERS.map((info) => (

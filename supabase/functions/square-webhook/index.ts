@@ -15,6 +15,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { timingSafeEqual, parseRef, planForProduct } from '../_shared/square.ts';
+import { parseCreditRef } from '../_shared/credits.ts';
 import { withErrorReporting } from '../_shared/sentry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
@@ -186,6 +187,44 @@ Deno.serve(withErrorReporting('square-webhook', async (req) => {
   }
 
   if (!paid) return ok();
+
+  // Credit packs, before the subscription parse.
+  //
+  // A credit ref is "<userId>:credits:<sku>", which parseRef rejects (it
+  // requires segment 2 to be exactly 'plus' or 'pro'). Handling it here means
+  // a paid credit pack can never fall through to the subscription grant --
+  // and the shapes are deliberately distinct so a malformed one fails closed
+  // rather than granting the wrong thing.
+  const creditRef = parseCreditRef(referenceId);
+  if (creditRef) {
+    const creditAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    // The Square payment/order id is the idempotency key. Square retries until
+    // it gets a 2xx, so this WILL arrive more than once; grant_ai_credits is
+    // keyed on (source, external_id) and a replay moves no balance.
+    const externalId = String(
+      obj?.payment?.id ?? obj?.order_updated?.order_id ?? obj?.order?.id ?? referenceId,
+    );
+    const { data, error } = await creditAdmin.rpc('grant_ai_credits', {
+      p_user_id: creditRef.userId,
+      p_source: 'square',
+      p_external_id: externalId,
+      p_product_id: creditRef.productId,
+      p_microcents: creditRef.microcents,
+      p_price_cents: Number.isFinite(paidCents as number) ? paidCents : null,
+    });
+    if (error) {
+      console.error('[square-webhook] CRITICAL grant_ai_credits failed:', error);
+      // 500 so Square retries -- dropping a paid grant is the worse outcome.
+      return new Response('db error', { status: 500 });
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    console.log(
+      `[square-webhook] credits ${creditRef.productId} for ${creditRef.userId} ` +
+        `(duplicate=${row?.was_duplicate === true})`,
+    );
+    return ok();
+  }
+
   const ref = parseRef(referenceId);
   if (!ref) {
     console.error('[square-webhook] no/invalid reference_id on paid event', type, referenceId);

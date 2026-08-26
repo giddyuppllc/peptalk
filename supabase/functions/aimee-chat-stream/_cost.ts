@@ -88,6 +88,35 @@ export interface CostCheckResult {
   allowanceMC?: number;
   /** Microcents spent beyond the allowance. Zero unless the cap was hit. */
   overageMC?: number;
+  /** Purchased credit balance, microcents. */
+  creditBalanceMC?: number;
+  /** True when this call is being funded by purchased credits, not the plan. */
+  usingCredits?: boolean;
+}
+
+/**
+ * Purchased credit balance for a user, in microcents.
+ *
+ * Returns null — NOT zero — when the balance cannot be read. Zero means "you
+ * have no credits" and would deny someone who paid; null means "unknown" and
+ * lets the caller fail closed for the right reason.
+ */
+export async function readCreditBalance(
+  supabase: any,
+  userId: string,
+): Promise<number | null> {
+  try {
+    const { data, error } = await supabase
+      .from('ai_credit_balance')
+      .select('balance_microcents')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) return null;
+    // No row is a legitimate zero: the user has simply never bought a pack.
+    return Number(data?.balance_microcents ?? 0);
+  } catch {
+    return null;
+  }
 }
 
 /** First day of the current UTC month, as YYYY-MM-DD. */
@@ -144,6 +173,28 @@ export async function checkCostCap(
     }
 
     if (allowanceMC > 0 && userSpend >= allowanceMC) {
+      // The plan's allowance is gone. Before refusing, check whether the user
+      // BOUGHT more. Credit packs that the gate does not consult would be the
+      // purest version of this codebase's recurring failure: money taken for
+      // something that never takes effect.
+      const creditBalance = await readCreditBalance(supabase, userId);
+      if (creditBalance === null) {
+        // Cannot read the balance, so cannot know whether they are entitled.
+        // Fail closed rather than either denying a paying customer or handing
+        // out unbounded spend.
+        return { allowed: false, reason: 'ledger_unreachable' };
+      }
+      if (creditBalance > 0) {
+        return {
+          allowed: true,
+          userSpendMC: userSpend,
+          globalSpendMC: globalSpend,
+          allowanceMC,
+          overageMC: userSpend - allowanceMC,
+          creditBalanceMC: creditBalance,
+          usingCredits: true,
+        };
+      }
       return {
         allowed: false,
         reason: 'user_cap_hit',
@@ -151,6 +202,7 @@ export async function checkCostCap(
         globalSpendMC: globalSpend,
         allowanceMC,
         overageMC: userSpend - allowanceMC,
+        creditBalanceMC: 0,
       };
     }
 
@@ -196,8 +248,41 @@ export async function recordSpend(
   supabase: any,
   userId: string,
   microcents: number,
+  /**
+   * The allowance state as of the PRE-CALL check. Supplying it lets this
+   * function work out how much of this turn falls beyond the plan and must
+   * therefore be drawn from purchased credits. Omit it and no credits are
+   * consumed — which is correct for callers that have no allowance concept,
+   * and wrong for the chat path, so the chat path passes it.
+   */
+  opts?: { allowanceMC?: number; priorSpendMC?: number },
 ): Promise<void> {
   if (microcents <= 0) return;
+
+  // Draw down purchased credits for the portion of this turn that exceeds the
+  // plan allowance. Computed as the difference between the overage AFTER this
+  // turn and the overage BEFORE it, so a turn that straddles the boundary only
+  // charges credits for the part that actually crossed it.
+  const allowanceMC = opts?.allowanceMC ?? 0;
+  const priorSpendMC = opts?.priorSpendMC ?? 0;
+  if (allowanceMC > 0) {
+    const overBefore = Math.max(0, priorSpendMC - allowanceMC);
+    const overAfter = Math.max(0, priorSpendMC + microcents - allowanceMC);
+    const fromCredits = overAfter - overBefore;
+    if (fromCredits > 0) {
+      try {
+        await supabase.rpc('consume_ai_credits', {
+          p_user_id: userId,
+          p_microcents: fromCredits,
+        });
+      } catch (e) {
+        // Logged, not thrown: the spend ledger below is the record that gates
+        // the next call, so a failed draw-down cannot let spend run away — it
+        // only delays the balance catching up.
+        console.error('[aimee-cost] credit draw-down failed:', e);
+      }
+    }
+  }
   const today = new Date().toISOString().slice(0, 10);
   for (const id of [userId, GLOBAL_SPEND_SENTINEL_USER_ID]) {
     try {

@@ -398,7 +398,13 @@ answer the underlying question if you can.`;
 
         // 8. Persist conversation + record spend ----------------------------
         const costMC = tokensToMicrocents(totalUsage);
-        await recordSpend(supabase, user.id, costMC);
+        // Allowance state from the pre-call check, so any part of this turn
+        // beyond the plan is drawn from purchased credits rather than being
+        // silently absorbed.
+        await recordSpend(supabase, user.id, costMC, {
+          allowanceMC: costCheck.allowanceMC,
+          priorSpendMC: costCheck.userSpendMC,
+        });
 
         const userMessageContent = lastUserMessageText(messages);
         if (userMessageContent) {

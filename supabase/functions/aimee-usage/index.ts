@@ -18,7 +18,7 @@
  * Read-only. Records nothing, charges nothing, and changes no state.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { checkCostCap } from '../aimee-chat-stream/_cost.ts';
+import { checkCostCap, readCreditBalance } from '../aimee-chat-stream/_cost.ts';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
 
@@ -107,6 +107,12 @@ Deno.serve(async (req) => {
     const messagesUsed = usageRow?.count ?? 0;
     const messageLimit = MESSAGE_LIMITS[tier] ?? 0;
 
+    // Purchased credits, shown alongside the plan allowance. A user who bought
+    // a pack needs to see it land, and needs to see it draw down -- credits
+    // that are invisible are indistinguishable from credits that were never
+    // granted.
+    const creditMC = await readCreditBalance(admin, user.id);
+
     const allowanceMC = cost.allowanceMC ?? 0;
     const spentMC = cost.userSpendMC ?? 0;
     const pct = allowanceMC > 0 ? Math.min(100, (spentMC / allowanceMC) * 100) : 0;
@@ -133,6 +139,12 @@ Deno.serve(async (req) => {
       messageLimit,
       messagesUsed,
       messagesRemaining: Math.max(0, messageLimit - messagesUsed),
+      /**
+       * Purchased credit balance in cents, or null when it could not be read.
+       * Null rather than 0 on purpose: "you have none" and "we could not tell"
+       * must not look the same to someone who just paid.
+       */
+      creditBalanceCents: creditMC === null ? null : Math.round(creditMC / 1_000_000),
     });
   } catch (err) {
     reportError('aimee-usage', err);

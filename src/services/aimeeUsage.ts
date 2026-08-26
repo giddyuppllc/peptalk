@@ -32,6 +32,8 @@ export interface AimeeUsage {
   messageLimit: number;
   messagesUsed: number;
   messagesRemaining: number;
+  /** Purchased credit, in cents. null when it could not be read. */
+  creditBalanceCents: number | null;
 }
 
 /** Show a heads-up from here on. Early enough to act, late enough to not nag. */
@@ -65,6 +67,8 @@ export async function fetchAimeeUsage(): Promise<AimeeUsage | null> {
       messagesUsed: typeof u.messagesUsed === 'number' ? u.messagesUsed : 0,
       messagesRemaining:
         typeof u.messagesRemaining === 'number' ? u.messagesRemaining : 0,
+      creditBalanceCents:
+        typeof u.creditBalanceCents === 'number' ? u.creditBalanceCents : null,
     };
   } catch (err) {
     captureException(err, { source: 'aimeeUsage.fetch' });

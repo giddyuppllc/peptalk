@@ -13,6 +13,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { SQUARE_PLANS } from '../_shared/square.ts';
+import { buildCreditRef, isCreditPack, packForProduct } from '../_shared/credits.ts';
 import { reportError } from '../_shared/sentry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
@@ -66,8 +67,13 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const productId = String(body?.productId ?? '');
-    const plan = PLAN[productId];
-    if (!plan) return json({ error: 'Unknown product' }, 400);
+    // A credit pack is a one-time purchase, not a subscription. Same payment
+    // link mechanism, different reference shape and a different grant path in
+    // the webhook -- see _shared/credits.ts for why the two ref formats are
+    // deliberately not interchangeable.
+    const creditPack = isCreditPack(productId) ? packForProduct(productId) : undefined;
+    const plan = creditPack ? undefined : PLAN[productId];
+    if (!plan && !creditPack) return json({ error: 'Unknown product' }, 400);
 
     if (!SQUARE_ACCESS_TOKEN || !SQUARE_LOCATION_ID) {
       // Keys not set yet — fail clearly instead of hitting Square with empty auth.
@@ -77,7 +83,12 @@ Deno.serve(async (req) => {
     // reference_id ties the resulting Square order/payment back to the PepTalk
     // user so square-webhook can grant entitlement. (Square echoes reference_id
     // on order.updated / payment.updated events.)
-    const referenceId = `${user.id}:${plan.tier}:${productId}`;
+    const referenceId = creditPack
+      ? buildCreditRef(user.id, productId)
+      : `${user.id}:${plan!.tier}:${productId}`;
+    const lineName = creditPack ? creditPack.name : plan!.name;
+    const lineCents = creditPack ? creditPack.priceCents : plan!.amountCents;
+    const noteLabel = creditPack ? 'credits' : plan!.tier;
 
     const res = await fetch(`${SQUARE_BASE}/v2/online-checkout/payment-links`, {
       method: 'POST',
@@ -92,8 +103,8 @@ Deno.serve(async (req) => {
         // subscription plan (Deno.env.get(plan.planEnv)) via the Subscriptions
         // API. This payment-link scaffold takes the first payment + returns.
         quick_pay: {
-          name: plan.name,
-          price_money: { amount: plan.amountCents, currency: 'USD' },
+          name: lineName,
+          price_money: { amount: lineCents, currency: 'USD' },
           location_id: SQUARE_LOCATION_ID,
         },
         checkout_options: {
@@ -101,7 +112,7 @@ Deno.serve(async (req) => {
           ask_for_shipping_address: false,
         },
         order: { reference_id: referenceId },
-        payment_note: `PepTalk ${plan.tier} web · user ${user.id}`,
+        payment_note: `PepTalk ${noteLabel} web · user ${user.id}`,
       }),
     });
 
