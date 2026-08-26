@@ -217,11 +217,26 @@ if (rows) {
   for (const p of ['ios', 'android']) {
     const r = byPlatform[p];
     if (!r || Number(r.n) === 0) {
-      bad(
-        `ZERO ${p} subscription events have ever arrived`,
+      // Zero is NOT automatically a failure, and treating it as one produced a
+      // false alarm the day the Pub/Sub subscription was actually fixed.
+      //
+      // google-rtdn acks a Play test notification with 200 and deliberately
+      // writes nothing (index.ts: `if (payload.testNotification) return ok`).
+      // So a correctly wired pipe still reports zero rows until a REAL
+      // purchase happens. The transport is proved by Pub/Sub's own ack_200
+      // metric, not by this table.
+      //
+      // Reported as a warning with the ambiguity stated, rather than a
+      // confident failure this check cannot actually distinguish.
+      wrn(
+        `no ${p} subscription events recorded yet`,
         p === 'android'
-          ? 'Play has a Pub/Sub topic but nothing is delivering from it — purchases are invisible to the server'
-          : 'App Store Server Notifications are not reaching apple-notifications',
+          ? 'Either nothing has been purchased on Android yet, or delivery is broken. ' +
+            'A Play TEST notification acks 200 without writing a row, so it cannot ' +
+            'settle this — confirm ack_200 on the Pub/Sub subscription, then look ' +
+            'for a row after the next real purchase.'
+          : 'Either nothing has been purchased on iOS yet, or App Store Server ' +
+            'Notifications are not reaching apple-notifications.',
       );
     } else {
       ok(`${p}: ${r.n} events, most recent ${r.last}`);
