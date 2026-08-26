@@ -11,8 +11,15 @@
  *
  * The read record types mirror the `android.permission.health.READ_*`
  * entries declared in app.json:
- *   Steps, SleepSession, HeartRate, ActiveCaloriesBurned,
- *   TotalCaloriesBurned, Weight, BodyFat.
+ *   Steps, SleepSession, HeartRate, HeartRateVariabilityRmssd,
+ *   ActiveCaloriesBurned, Weight, BodyFat.
+ *
+ * NOT TotalCaloriesBurned. This comment used to list it and the permission
+ * array never did — the app reads calories burned through ACTIVITY, not the
+ * total including basal metabolic rate. Google's Health apps policy requires a
+ * justified use for every health permission, so an unused one is a liability,
+ * not a spare. It appears in Play's permission list only because production is
+ * still an old bundle; it is absent from builds 40, 41 and 42.
  */
 
 import { Platform } from 'react-native';
