@@ -51,6 +51,44 @@ interface ValidateBody {
   receipt: string; // transactionReceipt (iOS) or purchaseToken (Android)
 }
 
+/**
+ * Record where a validation attempt got to.
+ *
+ * Never throws and never blocks the response. This exists so that a failure on
+ * the money path leaves evidence -- previously a customer could pay, get
+ * nothing, and be completely invisible to us afterwards. Logging must not
+ * become a new way for the money path to fail, so every error here is
+ * swallowed after being reported.
+ */
+async function logStage(
+  admin: any,
+  args: {
+    userId?: string | null;
+    platform: string;
+    productId: string;
+    stage: string;
+    externalId?: string | null;
+    purchaseToken?: string | null;
+    acknowledged?: boolean | null;
+    error?: string | null;
+  },
+): Promise<void> {
+  try {
+    await admin.rpc('log_purchase_validation', {
+      p_user_id: args.userId ?? null,
+      p_platform: args.platform,
+      p_product_id: args.productId,
+      p_stage: args.stage,
+      p_external_id: args.externalId ?? null,
+      p_purchase_token: args.purchaseToken ?? null,
+      p_acknowledged: args.acknowledged ?? null,
+      p_error: args.error ?? null,
+    });
+  } catch (e) {
+    console.error('[validate-purchase] logStage failed:', e);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -104,6 +142,19 @@ Deno.serve(async (req) => {
     let expiresAt: string | null = null;
     let originalTransactionId: string | null = null;
 
+    // Evidence FIRST. If everything after this line fails -- a timeout, a cold
+    // start, a database outage -- this row still names the user and the
+    // product, which is the difference between a findable problem and an
+    // invisible one.
+    const logClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    await logStage(logClient, {
+      userId: user.id,
+      platform: body.platform,
+      productId: body.productId,
+      stage: 'received',
+      purchaseToken: body.platform === 'android' ? body.receipt : null,
+    });
+
     if (body.platform === 'ios') {
       const result = await verifyAppleReceiptV2(body.receipt, body.productId);
       validated = result.valid;
@@ -117,8 +168,32 @@ Deno.serve(async (req) => {
     }
 
     if (!validated) {
+      // The store said no. No money is owed, but record it: a spike here is
+      // how a broken verifier or a bad service-account key announces itself.
+      await logStage(logClient, {
+        userId: user.id,
+        platform: body.platform,
+        productId: body.productId,
+        stage: 'verify_failed',
+        externalId: originalTransactionId,
+        error: 'store rejected the receipt',
+      });
       return json({ error: 'Receipt could not be verified' }, 400);
     }
+
+    // Verified. On Android the acknowledgement has ALREADY happened inside
+    // verifyGoogleReceipt, before any database work -- so from here on the
+    // customer's money is safe from the 3-day auto-refund even if everything
+    // below fails. What is NOT safe is their entitlement, which is exactly
+    // what the reconciliation sweep looks for.
+    await logStage(logClient, {
+      userId: user.id,
+      platform: body.platform,
+      productId: body.productId,
+      stage: 'verified',
+      externalId: originalTransactionId,
+      acknowledged: body.platform === 'android' ? true : null,
+    });
 
     // ── Cross-user dedup ──
     // Reject if the same Apple original_transaction_id (or Google orderId
@@ -143,6 +218,17 @@ Deno.serve(async (req) => {
           originalTransactionId,
           dupErr,
         );
+        // Verified but not granted: the customer has paid and has nothing.
+        // This is the row the reconciliation sweep looks for.
+        await logStage(logClient, {
+          userId: user.id,
+          platform: body.platform,
+          productId: body.productId,
+          stage: 'grant_failed',
+          externalId: originalTransactionId,
+          error: 'dedup lookup failed',
+        });
+        reportError('validate-purchase', new Error('PAID BUT NOT GRANTED: dedup lookup failed'));
         return json({ error: 'Could not validate receipt; please try again' }, 503);
       }
       if (existing) {
@@ -215,6 +301,17 @@ Deno.serve(async (req) => {
           `[validate-purchase] CRITICAL: could not free original_transaction_id from superseded row for user ${user.id}:`,
           freeErr,
         );
+        // Verified but not granted: the customer has paid and has nothing.
+        // This is the row the reconciliation sweep looks for.
+        await logStage(logClient, {
+          userId: user.id,
+          platform: body.platform,
+          productId: body.productId,
+          stage: 'grant_failed',
+          externalId: originalTransactionId,
+          error: 'subscriptions upsert failed',
+        });
+        reportError('validate-purchase', new Error('PAID BUT NOT GRANTED: subscriptions upsert failed'));
         return json({ error: 'Could not record subscription' }, 500);
       }
     }
@@ -230,6 +327,17 @@ Deno.serve(async (req) => {
       );
       // Fail the validation so the client doesn't think it succeeded —
       // it can retry, and user isn't charged twice (receipt replay is idempotent).
+      // Verified but not granted: the customer has paid and has nothing.
+      // This is the row the reconciliation sweep looks for.
+      await logStage(logClient, {
+        userId: user.id,
+        platform: body.platform,
+        productId: body.productId,
+        stage: 'grant_failed',
+        externalId: originalTransactionId,
+        error: 'subscriptions upsert failed',
+      });
+      reportError('validate-purchase', new Error('PAID BUT NOT GRANTED: subscriptions upsert failed'));
       return json({ error: 'Could not record subscription' }, 500);
     }
 
@@ -295,6 +403,13 @@ Deno.serve(async (req) => {
         }
       });
 
+    await logStage(logClient, {
+      userId: user.id,
+      platform: body.platform,
+      productId: body.productId,
+      stage: 'granted',
+      externalId: originalTransactionId,
+    });
     return json({ success: true, tier, expiresAt });
   } catch (err) {
     reportError('validate-purchase', err);
