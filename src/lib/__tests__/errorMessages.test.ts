@@ -2,6 +2,7 @@ import {
   classifyAuthError,
   describeAuthError,
   extractMessage,
+  toUserMessage,
 } from '../errorMessages';
 
 /**
@@ -90,5 +91,43 @@ describe('malformed errors do not crash the screen', () => {
   it('accepts a bare string', () => {
     expect(extractMessage('Failed to fetch')).toBe('Failed to fetch');
     expect(classifyAuthError('Failed to fetch')).toBe('offline');
+  });
+});
+
+describe('toUserMessage — the 15 non-auth Alert bodies', () => {
+  const FALLBACK = 'Could not upload image.';
+
+  it('replaces a dead network with something actionable', () => {
+    const msg = toUserMessage(new Error('Failed to fetch'), FALLBACK);
+    expect(msg).not.toBe(FALLBACK);
+    expect(msg).not.toContain('fetch');
+    expect(msg.toLowerCase()).toContain('connection');
+  });
+
+  it('replaces a 5xx, which is not the user\'s problem', () => {
+    const msg = toUserMessage(Object.assign(new Error('boom'), { status: 503 }), FALLBACK);
+    expect(msg).not.toBe(FALLBACK);
+    expect(msg.toLowerCase()).toContain('trouble');
+  });
+
+  it('replaces a rate limit', () => {
+    const msg = toUserMessage(Object.assign(new Error('slow down'), { status: 429 }), FALLBACK);
+    expect(msg.toLowerCase()).toContain('too many');
+  });
+
+  it('KEEPS the caller\'s fallback for anything else', () => {
+    // The caller's copy is context-specific ("Could not upload image") and is
+    // almost always better than anything a generic helper could invent. Only
+    // the cases we can genuinely improve on get rewritten.
+    expect(toUserMessage(new Error('some weird server thing'), FALLBACK)).toBe(FALLBACK);
+    expect(toUserMessage(null, FALLBACK)).toBe(FALLBACK);
+    expect(toUserMessage(undefined, FALLBACK)).toBe(FALLBACK);
+    expect(toUserMessage({}, FALLBACK)).toBe(FALLBACK);
+  });
+
+  it('never leaks the raw message, whatever the input', () => {
+    for (const raw of ['Failed to fetch', 'Load failed', 'Network request failed']) {
+      expect(toUserMessage(new Error(raw), FALLBACK)).not.toContain(raw);
+    }
   });
 });

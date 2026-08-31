@@ -7,6 +7,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { toUserMessage } from '../../../src/lib/errorMessages';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Switch, Image, ActivityIndicator } from 'react-native';
 import { Alert } from '../../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -49,7 +50,7 @@ export default function ComposePostScreen() {
         setImageUrls((prev) => [...prev, result.publicUrl]);
       }
     } catch (err: any) {
-      Alert.alert('Upload failed', err?.message ?? 'Could not upload image.');
+      Alert.alert('Upload failed', toUserMessage(err, 'Could not upload image.'));
     } finally {
       setUploadingImage(false);
     }

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { toUserMessage } from '../../src/lib/errorMessages';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -391,7 +392,7 @@ export default function HealthReportScreen() {
         await handleShareText();
       }
     } catch (err: any) {
-      Alert.alert('Export failed', err?.message ?? 'Could not generate PDF. Try again.');
+      Alert.alert('Export failed', toUserMessage(err, 'Could not generate PDF. Try again.'));
     } finally {
       setExporting(false);
     }

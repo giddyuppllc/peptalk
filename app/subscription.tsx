@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { toUserMessage } from '../src/lib/errorMessages';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Linking, Platform } from 'react-native';
 import { Alert } from '../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -604,7 +605,7 @@ export default function SubscriptionScreen() {
               );
             } catch (err: any) {
               trackRestoreFailed(err?.message ?? 'unknown');
-              Alert.alert('Restore Failed', err?.message ?? 'Could not restore purchases. Please try again.');
+              Alert.alert('Restore Failed', toUserMessage(err, 'Could not restore purchases. Please try again.'));
             } finally {
               setRestoring(false);
             }

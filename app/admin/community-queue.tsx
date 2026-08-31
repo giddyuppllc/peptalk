@@ -8,6 +8,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { toUserMessage } from '../../src/lib/errorMessages';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -143,7 +144,7 @@ export default function CommunityAdminQueue() {
       if (data?.error) throw new Error(data.error);
       await refresh();
     } catch (err: any) {
-      Alert.alert('Action failed', err?.message ?? 'Unknown error');
+      Alert.alert('Action failed', toUserMessage(err, 'Could not complete that action. Try again.'));
     }
   };
 

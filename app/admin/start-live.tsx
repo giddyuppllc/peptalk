@@ -10,6 +10,7 @@
  */
 
 import React, { useState } from 'react';
+import { toUserMessage } from '../../src/lib/errorMessages';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -74,7 +75,7 @@ export default function StartLiveScreen() {
       }
       router.replace(`/community/live/${payload.eventId}` as any);
     } catch (err: any) {
-      Alert.alert('Could not start', err?.message ?? 'Try again.');
+      Alert.alert('Could not start', toUserMessage(err, 'Try again.'));
     } finally {
       setSubmitting(false);
     }
