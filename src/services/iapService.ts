@@ -144,6 +144,43 @@ export interface InitIAPCallbacks {
 // initialized everywhere it matters.
 let callbacks: InitIAPCallbacks | null = null;
 
+/**
+ * In-flight init, so concurrent callers share one attempt rather than racing
+ * three connections open.
+ */
+let initInFlight: Promise<void> | null = null;
+
+/**
+ * Re-establish the store connection if a previous attempt failed.
+ *
+ * Sentry PEPTALK-1: `initConnection` failed for ten users and every one of them
+ * was unique — the signature of a first-launch race with the store service, not
+ * a broken account. The old code caught once and left `initialized` false for
+ * the entire app lifetime, so:
+ *
+ *   - every later purchase threw "IAP not initialized", surfaced as "We
+ *     couldn't reach the App Store" — indistinguishable from a dead button;
+ *   - `restorePurchases()` silently returned 0, so a user who HAD paid could
+ *     not recover their entitlement either.
+ *
+ * One failure at the wrong moment took the paywall out permanently. Retrying
+ * lazily at the point of use costs nothing when the connection is already up.
+ */
+export async function ensureIAPConnection(): Promise<boolean> {
+  if (!isAvailable()) return false;
+  if (initialized) return true;
+  if (!callbacks) return false; // initIAP has never run; nothing to attach to
+  if (initInFlight) {
+    await initInFlight;
+    return initialized;
+  }
+  initInFlight = attachConnection().finally(() => {
+    initInFlight = null;
+  });
+  await initInFlight;
+  return initialized;
+}
+
 export async function initIAP(
   onPurchaseOrCallbacks:
     | InitIAPCallbacks['onPurchase']
@@ -155,9 +192,19 @@ export async function initIAP(
       ? { onPurchase: onPurchaseOrCallbacks }
       : onPurchaseOrCallbacks;
 
+  await attachConnection();
+}
+
+/** Opens the store connection and attaches the listeners. Safe to re-run. */
+async function attachConnection(): Promise<void> {
   try {
     await IAP.initConnection();
     initialized = true;
+
+    // Re-running must not stack listeners: a second purchaseUpdatedListener
+    // would validate and finish every transaction twice.
+    purchaseListener?.remove();
+    errorListener?.remove();
 
     // Listen for successful purchases (including pending + restored)
     purchaseListener = IAP.purchaseUpdatedListener(async (purchase: any) => {
@@ -346,6 +393,22 @@ export async function getProducts(): Promise<IAPProduct[]> {
  */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * The store already has an active purchase for this product.
+ *
+ * Typed rather than a string match so the UI can offer to restore instead of
+ * showing a failure. StoreKit and Play both refuse the second charge; the
+ * question is only whether the user is told something useful.
+ */
+export class AlreadyOwnedError extends Error {
+  readonly productId: string;
+  constructor(productId: string) {
+    super(`Already subscribed to ${productId}.`);
+    this.name = 'AlreadyOwnedError';
+    this.productId = productId;
+  }
+}
+
 export async function purchaseProduct(
   productId: ProductId,
   options?: {
@@ -359,8 +422,33 @@ export async function purchaseProduct(
   if (!isAvailable()) {
     throw new Error('In-App Purchases not available on this platform.');
   }
-  if (!initialized) {
-    throw new Error('IAP not initialized. Call initIAP() first.');
+  // Retry rather than give up. A failed connection at boot used to be
+  // permanent for the session — see ensureIAPConnection.
+  if (!(await ensureIAPConnection())) {
+    throw new Error('Still connecting to the App Store. Try again in a moment.');
+  }
+
+  // Already owned? Restore instead of buying it again.
+  //
+  // Sentry PEPTALK-5: "Duplicate purchase update skipped for
+  // peptalk_pro_monthly. Use restorePurchases or getAvailablePurchases to
+  // recover." The only guard before this was the LOCAL tier in the
+  // subscription screen — so anyone whose entitlement existed at Apple but had
+  // not made it into the local store (a reinstall, a new device, a failed
+  // validation) was taken straight to a purchase sheet for something they
+  // already pay for. The store then refuses the charge, correctly, and the
+  // user sees an error instead of the subscription they own.
+  //
+  // Non-fatal on failure: if the ownership check itself breaks, fall through to
+  // the normal purchase path rather than blocking a legitimate sale.
+  try {
+    const owned: any[] = await IAP.getAvailablePurchases();
+    if (Array.isArray(owned) && owned.some((p) => p?.productId === productId)) {
+      throw new AlreadyOwnedError(productId);
+    }
+  } catch (err) {
+    if (err instanceof AlreadyOwnedError) throw err;
+    if (__DEV__) console.warn('[iapService] ownership pre-check failed, continuing:', err);
   }
 
   const rawToken = options?.appAccountToken ?? null;
@@ -441,7 +529,13 @@ export async function purchaseProduct(
  * purchases" honestly.
  */
 export async function restorePurchases(): Promise<number> {
-  if (!isAvailable() || !initialized || !callbacks) return 0;
+  if (!isAvailable() || !callbacks) return 0;
+  // Without this, a boot-time connection failure made restore report "No
+  // previous purchases found" to someone who had definitely purchased — the
+  // worst possible answer, because it is indistinguishable from the truth.
+  if (!(await ensureIAPConnection())) {
+    throw new Error('Still connecting to the App Store. Try again in a moment.');
+  }
   // Capture into a local so TS narrows the nullability across the await
   // boundary inside the loop.
   const cb = callbacks;
