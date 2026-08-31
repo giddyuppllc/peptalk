@@ -1,5 +1,4 @@
 import { getSegmentByProfile } from '../constants/segments';
-import { useAuthStore } from '../store/useAuthStore';
 import { useOnboardingStore } from '../store/useOnboardingStore';
 import { sanitizeForAnalytics } from './privacyGuard';
 
@@ -22,6 +21,12 @@ const buildBasePayload = (): Pick<
   AnalyticsEventPayload,
   'userId' | 'segmentId'
 > => {
+  // Lazy-required, not imported at module scope, to break the cycle
+  //   useAuthStore → useSubscriptionStore → analyticsEvents → useAuthStore
+  // which Metro warned about on every launch ("can result in uninitialized
+  // values"). Only the id is wanted, and only when an event is actually built,
+  // so there is no reason for this module to exist in the store's import graph.
+  const { useAuthStore } = require('../store/useAuthStore') as typeof import('../store/useAuthStore');
   const { user } = useAuthStore.getState();
   const { profile } = useOnboardingStore.getState();
   const segment = getSegmentByProfile(profile.gender, profile.ageRange);

@@ -14,7 +14,9 @@ import { supabase, sessionPersistenceHealthy } from '../services/supabase';
 import { useSubscriptionStore } from './useSubscriptionStore';
 import { useOnboardingStore } from './useOnboardingStore';
 import { authRedirectUrl } from '../lib/authRedirect';
-import { isAdminEmail } from '../hooks/useIsAdmin';
+// From lib/, not hooks/ — importing it from the hook pulls this store back
+// in and recreates the require cycle. See src/lib/adminEmails.ts.
+import { isAdminEmail } from '../lib/adminEmails';
 import {
   trackSignupStarted,
   trackSignupCompleted,
