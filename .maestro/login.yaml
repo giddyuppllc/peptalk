@@ -57,12 +57,55 @@ tags:
 - tapOn: "Enter password"
 - inputText: ${PASSWORD}
 
-# Dismiss the keyboard by tapping the screen's own heading.
+# Dismiss the keyboard.
+#
+# iOS: tapping the screen's own heading works, and `hideKeyboard` does not —
+# see the note at the top of this file.
+#
+# Android: tapping the heading does NOT dismiss it, and the keyboard then covers
+# the submit button. Maestro still reports the tap COMPLETED, because it finds
+# the element and taps its coordinates — the keyboard just intercepts. The
+# symptom is a login that silently never runs: no auth telemetry, no error, the
+# form still filled in. `hideKeyboard` does work on Android.
 - tapOn: "Welcome back"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      # NOT `hideKeyboard`: on Android that sends a BACK key, which navigates
+      # off the auth screen entirely — verified, the app landed back on the
+      # welcome screen and the next tap then failed to find its target. The IME
+      # action key closes the keyboard without moving anywhere.
+      - pressKey: Enter
 
-- tapOn:
-    text: "Log In"
-    index: 0
+# Tap the submit button — and the selector differs per platform, empirically.
+#
+# "Log In" appears TWICE on this screen: the mode tab and the submit button.
+# Everything tidier than this was tried against a running Android build and
+# FAILED, each time reporting the tap as COMPLETED while submitting nothing —
+# no auth telemetry, form still filled:
+#
+#   text "Log In" index 0   → the submit button on iOS, the TAB on Android
+#   accessibilityLabel "Log in"  → matches "Log in tab" too and picks the tab
+#   "^Log in$" anchored           → still did not reach the button
+#
+# What actually works is index 1 on Android, verified by the app reaching the
+# post-login AI-consent modal. Keep both branches; do not "simplify" this to one
+# selector without re-running it on BOTH platforms.
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          text: "Log In"
+          index: 0
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn:
+          text: "Log In"
+          index: 1
 
 # The password field going away IS the pass condition — it means we left the
 # auth screen rather than being bounced back to it.
