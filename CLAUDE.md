@@ -101,9 +101,14 @@ Migrations and edge functions do **not** ship with the app.
 
 - All 55 edge functions in `supabase/functions/` are deployed. Five more are
   deployed with **no source in this repo** — see `DB_HANDOFF.md`.
-- The migration ledger disagrees with the database: 21 files are unrecorded
-  while their objects exist. **Do not run `supabase db push`** — it would try to
-  replay them. Repair the ledger instead.
+- The migration ledger was repaired on 2026-08-31 and now records all 57 files,
+  so **`supabase db push` is safe again**. Verifying the objects before repairing
+  is what turned up `20260804000010_community_owner_update_guard.sql`, which had
+  never been applied — a live hole letting a user self-approve their own
+  pending-image post. Repairing the ledger blind would have sealed it shut
+  permanently. See `DB_HANDOFF.md` §7.
+- 13 ledger rows still have no file (changes applied straight to the database),
+  so the schema cannot be rebuilt from this repo alone.
 - `DEPLOY_RUNBOOK.md` stops at June and is stale on this point.
 
 ## Docs here go stale, loudly

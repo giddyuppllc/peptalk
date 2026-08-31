@@ -24,7 +24,7 @@ on 29 Aug for the same symptom.
 
 ---
 
-## 2. Do NOT run `supabase db push` before reading this
+## 2. ~~Do NOT run `supabase db push`~~ — RESOLVED 2026-08-31, read this
 
 The migration ledger and the database disagree, and the ledger is the one that
 is wrong.
@@ -133,3 +133,54 @@ RLS is on with no policies, so `anon` and `authenticated` can do nothing; only
 the service-role key writes. That is deliberate — these are email addresses
 collected from the public internet and nothing client-side should read them
 back.
+
+---
+
+## 7. Migration ledger — repaired 2026-08-31, and what it turned up
+
+The ledger had 49 rows against 57 migration files: **21 files unrecorded**. The
+standing advice was "never run `supabase db push`", because a push would try to
+replay 21 migrations whose objects already existed.
+
+Rather than repair the ledger blind, every object those 21 files create was
+checked against the live schema first — 3 tables, 5 columns, 6 functions.
+
+**Twenty were genuinely applied. One was not.**
+
+`20260804000010_community_owner_update_guard.sql` had never reached production.
+It is the fix for audit finding M2: the "soft-delete your own post" RLS UPDATE
+policy is `USING auth.uid() = user_id` with no column restriction, so through
+raw PostgREST an owner could update **any** column of their own row —
+
+- `moderation_status` → self-approve a pending-image post before AI vision
+  moderation runs, which defeats the pre-publication moderation Apple requires
+  of user-generated content,
+- `is_deleted` true→false → un-delete a post auto-moderation had removed,
+- `reaction_count` / `comment_count` → vanity inflation.
+
+Confirmed open (no guard triggers, both policies column-unrestricted), then
+applied, then verified by simulating the attack as the `authenticated` role
+inside a rolled-back transaction: all three writes were pinned to their old
+values.
+
+**Had the ledger simply been "repaired" to unblock pushes, that migration would
+have been marked applied and the hole would have been sealed shut, permanently
+unapplied and invisible.** Verify objects before repairing a ledger.
+
+The ledger now records all 57 files, so **`supabase db push` is safe again**.
+
+### Known gap: 13 orphan ledger rows
+
+Thirteen ledger rows have no corresponding file:
+
+```
+20260618005110  20260627171239  20260629002013  20260629002031  20260629061223
+20260629205812  20260629205827  20260629205856  20260629205904  20260629205912
+20260629205922  20260629205934  20260629231240
+```
+
+These are changes applied directly to the database — via Studio, or a
+`db diff` that was never saved. They do not block `db push`. They do mean the
+schema **cannot be rebuilt from this repo alone**, so a from-scratch restore or a
+new environment would come up subtly different. Worth dumping the live schema and
+reconciling before anyone needs a second environment.
