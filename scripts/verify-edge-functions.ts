@@ -145,8 +145,21 @@ try {
   deployed = new Set(list.filter((f) => f.status === 'ACTIVE').map((f) => f.slug));
   const inactive = list.filter((f) => f.status !== 'ACTIVE');
   for (const f of inactive) fail(`deployed function "${f.slug}" is ${f.status}, not ACTIVE`);
-} catch {
-  info('skipped the remote check — no SUPABASE_ACCESS_TOKEN / CLI not authenticated');
+} catch (err) {
+  // Distinguish "no credentials, nothing to do" from "we had credentials and
+  // the check broke". Collapsing both into a friendly skip is precisely how
+  // this check stayed dead: it parsed the CLI's payload wrongly, threw, and
+  // reported it as a missing token — for months, in a message that read like a
+  // deliberate choice. If a token is present, a failure here is a failure.
+  if (process.env.SUPABASE_ACCESS_TOKEN) {
+    fail(
+      `the remote check FAILED despite SUPABASE_ACCESS_TOKEN being set: ` +
+        `${err instanceof Error ? err.message : String(err)}. ` +
+        `This is not a skip — deployment state was NOT verified.`,
+    );
+  } else {
+    info('skipped the remote check — SUPABASE_ACCESS_TOKEN not set (local call-graph only)');
+  }
 }
 
 if (deployed) {
