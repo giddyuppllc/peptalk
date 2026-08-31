@@ -1,0 +1,101 @@
+# PepTalk — the HealthKit pre-prompt has exactly one control.
+#
+# Guideline 5.1.1(iv), rejected FOUR consecutive times. Apple's rule: one
+# informational screen may precede the system permission sheet, and it must have
+# no dismiss control of any kind, a neutral forward label, and it must lead
+# straight to the system sheet — never to Settings.
+#
+# The fix that failed three times read the rejection backwards: it recorded the
+# defects as "there was no way to back out, and there was no route to Settings"
+# and helpfully added both.
+#
+# This flow asserts the ABSENCE of things, which is the only assertion that
+# would have caught that — the rejected version rendered perfectly.
+#
+#   maestro --device <udid> test .maestro/healthkit-explainer.yaml
+#
+# Assumes a signed-in app. Stops at the explainer: it does NOT tap Continue,
+# because the next thing is the real iOS permission sheet, which is a system
+# alert Maestro should not be driving.
+#
+# ── THIS FLOW REQUIRES A REAL DEVICE. IT CANNOT PASS ON A SIMULATOR. ────────
+#
+# react-native-health IS linked into the simulator build (initHealthKit, the
+# AppleHealthKit class and HealthKit.framework are all present in the binary).
+# The blocker is one step further in: the Simulator reports no HealthKit data
+# layer, so `AppleHealthKit.isAvailable()` resolves false, `healthKitAdapter
+# .available()` returns false, and the integrations screen files Apple Health
+# under COMING SOON with no button — correctly, by design, so users never get a
+# dead "Connect".
+#
+# The consequence: there is NO route to the explainer on a simulator, so a
+# simulator run of this flow fails at "Set up Apple Health" and that failure
+# means nothing. Do not treat a red run here as a 5.1.1(iv) regression, and do
+# not treat a green run of the OTHER flows as 5.1.1(iv) coverage.
+#
+# What DOES cover it without a device:
+#   npx jest src/components/__tests__/healthPermissionExplainer.test.ts
+# Five tests asserting the component's control SET rather than its rendering —
+# which is the only shape of test that would have caught the version rejected
+# three times, because that version rendered perfectly.
+appId: com.peptalkapp.peptalk
+tags:
+  - smoke
+  - release-blocker
+---
+- launchApp
+
+- runFlow:
+    when:
+      visible: "AI-powered features"
+    commands:
+      - tapOn:
+          text: "Not now"
+          index: 0
+
+- extendedWaitUntil:
+    visible: "Open navigation menu"
+    timeout: 20000
+- tapOn: "Open navigation menu"
+
+# Integrations sits in the ACCOUNT group, near the bottom of the sheet.
+#
+# `scrollUntilVisible` does NOT work here: its scroll gesture does not drive the
+# sheet's inner ScrollView, so it times out reporting the row invisible while
+# the row is plainly on screen and tappable. Explicit swipes inside the sheet
+# do work. Do not "simplify" this back to scrollUntilVisible.
+- swipe:
+    start: "50%, 80%"
+    end: "50%, 25%"
+- swipe:
+    start: "50%, 80%"
+    end: "50%, 25%"
+- assertVisible: "Apple Health & Integrations"
+- tapOn: "Apple Health & Integrations"
+
+# Apple Health's card says "Set up", not "Connect" — deliberately. "Connect" is
+# fault (b) in the rejection.
+- extendedWaitUntil:
+    visible: "Set up Apple Health"
+    timeout: 15000
+- tapOn: "Set up Apple Health"
+
+- extendedWaitUntil:
+    visible: "Continue to the Apple Health permission screen"
+    timeout: 15000
+- takeScreenshot: healthkit-explainer
+
+# The three faults Apple named, asserted as absent.
+- assertNotVisible: "Not Now"      # (c) no escape hatch
+- assertNotVisible: "Not now"
+- assertNotVisible: "Cancel"
+- assertNotVisible: "Close"
+- assertNotVisible: "Maybe later"
+- assertNotVisible: "Open Settings" # (a) no route to Settings
+- assertNotVisible: "Go to Settings"
+- assertNotVisible: "Settings"
+- assertNotVisible: "Connect"       # (b) no "Connect" label
+
+# There is no back-gesture assertion here and there cannot be a useful one:
+# the modal sets onRequestClose to a no-op, which Maestro cannot observe. The
+# unit test on the component's control set covers that.

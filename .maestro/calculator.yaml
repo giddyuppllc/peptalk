@@ -1,0 +1,77 @@
+# PepTalk — the dose calculator is reachable, all the way to the calculator.
+#
+# App Review 2.3: the reviewer could not find the dose calculator named in our
+# own App Store description. `navigation.yaml` proves the menu entry exists and
+# that tapping it closes the sheet. That is not the same as proving the
+# calculator renders — between the tap and the calculator sits a full-screen
+# legal gate with a checkbox and a Continue button that stays disabled until
+# the checkbox is ticked. A reviewer who stops there sees no calculator.
+#
+# So this flow walks the whole path a reviewer walks, gate included.
+#
+#   maestro --device <udid> test .maestro/calculator.yaml
+#
+# Assumes a signed-in app (run login.yaml first).
+appId: com.peptalkapp.peptalk
+tags:
+  - smoke
+  - release-blocker
+---
+- launchApp
+
+- runFlow:
+    when:
+      visible: "Use AI features?"
+    commands:
+      - tapOn: "Not now"
+- runFlow:
+    when:
+      visible: "AI-powered features"
+    commands:
+      - tapOn:
+          text: "Not now"
+          index: 0
+
+- extendedWaitUntil:
+    visible: "Open navigation menu"
+    timeout: 20000
+- tapOn: "Open navigation menu"
+- tapOn: "Dose Calculator"
+
+# The gate — shown ONCE per install, then remembered. A reviewer on a fresh
+# install meets it; a second run of this flow does not. Conditional for that
+# reason, not out of caution.
+#
+# Continue stays disabled until the checkbox is ticked, so tapping it first
+# silently does nothing and the failure surfaces further down as something
+# unrelated. Tick, then continue.
+- runFlow:
+    when:
+      visible: "Research & Education Only"
+    commands:
+      - tapOn: "I understand and agree"
+      - tapOn: "Continue"
+      - extendedWaitUntil:
+          notVisible: "Research & Education Only"
+          timeout: 15000
+
+# The calculator itself.
+#
+# Only assert on selectors verified to match against a running build. Several
+# strings that are plainly on screen — "Choose a peptide", "MG IN VIAL" — do NOT
+# match, because they sit inside pressables whose accessibilityLabel replaces
+# the children's text in the tree. Same trap as the PT button in
+# navigation.yaml. Adding a "surely this one works" assertion here is how this
+# flow turns into a red test that nobody trusts.
+- assertVisible: "Diluent volume"
+
+# Deliberately NOT asserted here: "Log today's dose to Tracker". That CTA is
+# gated on `peptideId && result` (calculator.tsx ~1039), so it does not exist
+# until a peptide has been picked and the math resolves. An earlier version of
+# this flow asserted it and failed — the assertion was wrong, not the app.
+#
+# This flow's claim is reachability, which is what 2.3 was about: a reviewer
+# can get from a cold start to a rendered calculator. Whether the calculator
+# computes correctly is a different question, and it is covered by unit tests
+# over `src/lib/dosing.ts` rather than by driving a simulator.
+- takeScreenshot: calculator-reached
