@@ -69,6 +69,47 @@ describe('boot route guard', () => {
     });
   });
 
+
+  describe('the dead end that reads as "logged in, sent back to login"', () => {
+    // App Review 2.1(a), 29 Aug, build 1.10.0 (75).
+    //
+    // The guard is not the bug — the sweep above proves it cannot loop. The bug
+    // is a caller putting the app into a state the guard then correctly pins.
+    // `isComplete: true` with `isAuthenticated: false` is exactly that state:
+    // legitimate mid-signup, and a trap if anything sets it while the user has
+    // no session and no route forward.
+    //
+    // onboarding.tsx used to call completeOnboarding() BEFORE checking whether
+    // signup returned a session. On an email-confirmation signup that left the
+    // user onboarded-but-signed-out, parked on /auth, where logging in failed
+    // with "email not confirmed" as small inline text.
+    it('pins an onboarded-but-signed-out visitor on /auth with no way out', () => {
+      const stuck = state({ isComplete: true, isAuthenticated: false, inAuth: true });
+      expect(decideRoute(stuck)).toBeNull();
+      // and from anywhere else it sends them straight back
+      expect(
+        decideRoute({ ...stuck, inAuth: false }),
+      ).toBe('/auth');
+    });
+
+    it('lets them through the moment a session exists', () => {
+      expect(
+        decideRoute(state({ isComplete: true, isAuthenticated: true, inAuth: false })),
+      ).toBeNull();
+    });
+
+    it('never bounces mid-rehydrate, whatever the persisted flags say', () => {
+      // The persist layer re-derives isAuthenticated from `user`, so the app can
+      // render signed-in and be corrected a moment later. Bouncing during that
+      // window is the visible "I was in, then thrown out".
+      for (const isAuthenticated of [true, false])
+        for (const isComplete of [true, false])
+          expect(
+            decideRoute(state({ authHydrated: false, isAuthenticated, isComplete })),
+          ).toBe(isComplete ? null : '/onboarding');
+    });
+  });
+
   it('never returns a redirect that would re-trigger itself', () => {
     // Exhaustive sweep of the state space: whatever the guard returns, landing
     // on that route must produce null, or the app redirect-loops on boot.

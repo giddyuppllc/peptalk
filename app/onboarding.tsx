@@ -12,7 +12,7 @@ import { View, Text, TouchableOpacity, TextInput, Switch, StyleSheet, FlatList, 
 import { Alert } from '../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useOnboardingStore } from '../src/store/useOnboardingStore';
 import { useHealthProfileStore } from '../src/store/useHealthProfileStore';
@@ -116,15 +116,22 @@ export default function OnboardingScreen() {
 
   const [step, setStep] = useState(isEditMode ? 1 : 0);
 
-  // Auto-route logged-in users after the welcome animation plays
-  React.useEffect(() => {
-    if (step === 0 && isAuthenticated && isComplete && !isEditMode) {
+  // Auto-route logged-in users after the welcome animation plays.
+  //
+  // Bound to focus, not just to mount. This screen stays mounted underneath
+  // /auth when the user taps "Already have an account? Sign In", and an
+  // unfocused screen firing router.replace() yanks them out of the form they
+  // are typing into 1.8s later. useFocusEffect tears the timer down on blur, so
+  // it can only ever fire while this screen is the one on top.
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!(step === 0 && isAuthenticated && isComplete && !isEditMode)) return;
       const timer = setTimeout(() => {
         router.replace('/(tabs)');
       }, 1800); // Let the animation play for 1.8s then auto-route
       return () => clearTimeout(timer);
-    }
-  }, [step, isAuthenticated, isComplete, isEditMode, router]);
+    }, [step, isAuthenticated, isComplete, isEditMode, router]),
+  );
 
   // Age (exact)
   const [selectedAge, setSelectedAge] = useState(0);
@@ -366,9 +373,18 @@ export default function OnboardingScreen() {
         // intake. User can fine-tune per-category later in Profile.
         applyCommunityPreset(communityPreset);
 
-        completeOnboarding();
-        trackOnboardingComplete(0);
-
+        // Deliberately AFTER the confirmation check below.
+        //
+        // Calling it first leaves the app in `isComplete: true,
+        // isAuthenticated: false`, which routeGuard reads as "onboarded but
+        // signed out" and pins the user on /auth with no way forward — they
+        // have no session, and re-logging-in fails with "email not confirmed"
+        // rendered as small inline text. That is indistinguishable from
+        // "I logged in and it sent me back to the login page".
+        //
+        // Supabase currently has mailer_autoconfirm ON, so this branch does not
+        // fire today. It is one dashboard toggle away from firing for every new
+        // account, which is precisely how this bit before.
         if (result.requiresEmailConfirmation) {
           // Email-confirmation flow. The auth.users row exists + the
           // confirmation email is on its way, but the user has no session
@@ -383,6 +399,11 @@ export default function OnboardingScreen() {
           );
           return;
         }
+
+        // Only now: a session exists, so `isComplete` and `isAuthenticated`
+        // become true together and the guard has no window in which to bounce.
+        completeOnboarding();
+        trackOnboardingComplete(0);
         router.replace('/(tabs)');
       } catch (err: any) {
         // Surface the real error rather than swallowing it into a

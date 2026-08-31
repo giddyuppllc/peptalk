@@ -11,8 +11,24 @@ import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import type { Database } from '../types/database';
+import { captureException } from './telemetry';
 
 const isWeb = Platform.OS === 'web';
+
+/**
+ * Whether the last session write actually reached the keychain.
+ *
+ * Starts true because "no write attempted yet" is not a failure. Only a
+ * verified-failed commit flips it false; the next good write flips it back.
+ * Read it with `sessionPersistenceHealthy()` — the app uses it to warn the user
+ * that they will be signed out, rather than letting that happen unexplained.
+ */
+let sessionPersistOk = true;
+
+/** False when the last auth-session write to secure storage did not stick. */
+export function sessionPersistenceHealthy(): boolean {
+  return sessionPersistOk;
+}
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -112,6 +128,28 @@ const secureStoreAdapter = {
         }
         // 2. COMMIT — single atomic pointer write flips the live generation.
         await SecureStore.setItemAsync(key + PTR_SUFFIX, `${newGen}:${count}`);
+
+        // 2b. Read the pointer back before declaring success.
+        //
+        // supabase-js treats setItem as fire-and-forget: it never inspects the
+        // result, so a failed write leaves the session in memory only. The app
+        // looks signed in until the next getSession(), which reads null and
+        // signs the user out — the "logged in, then bounced to the login page"
+        // report, and it only reproduces on a clean install because that is the
+        // one run where there is no earlier generation to fall back to.
+        //
+        // A keychain write can fail for reasons this process cannot see: the
+        // device still locked on first launch, a provisioning/entitlement
+        // mismatch, or an Android value over the ~2048-byte limit. Verifying the
+        // commit is the only way to know it happened.
+        const committed = parsePtr(await SecureStore.getItemAsync(key + PTR_SUFFIX));
+        if (!committed || committed.gen !== newGen || committed.count !== count) {
+          throw new Error(
+            `SecureStore commit did not stick (wrote gen ${newGen}/${count}, read back ` +
+              `${committed ? `${committed.gen}/${committed.count}` : 'nothing'})`,
+          );
+        }
+
         // 3. GC the previous generation + any legacy single-key value.
         if (old) {
           for (let i = 0; i < old.count; i++) {
@@ -119,7 +157,15 @@ const secureStoreAdapter = {
           }
         }
         await SecureStore.deleteItemAsync(key).catch(() => {});
-      } catch {}
+        sessionPersistOk = true;
+      } catch (err) {
+        // Still swallowed — throwing here would break supabase-js, which does
+        // not expect its storage adapter to reject. But it is no longer silent:
+        // the flag lets the app tell the user their session will not survive,
+        // instead of appearing to work and then logging them out.
+        sessionPersistOk = false;
+        captureException(err, { source: 'securestore.write', extra: { key, bytes: value.length } });
+      }
     }),
   removeItem: (key: string): Promise<void> =>
     withWriteLock(key, async () => {

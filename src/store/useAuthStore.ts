@@ -10,7 +10,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { Alert } from '../lib/alert';
 import { User } from '../types';
 import { secureStorage } from '../services/secureStorage';
-import { supabase } from '../services/supabase';
+import { supabase, sessionPersistenceHealthy } from '../services/supabase';
 import { useSubscriptionStore } from './useSubscriptionStore';
 import { useOnboardingStore } from './useOnboardingStore';
 import { authRedirectUrl } from '../lib/authRedirect';
@@ -311,6 +311,24 @@ export const useAuthStore = create<AuthStore>()(
             // user/isAuthenticated so the app doesn't render as "logged in"
             // while every authed call returns 401. P0 ghost-session fix
             // from 2026-05-18 cold-boot audit.
+            //
+            // This is also the exact line that produces "I logged in and got
+            // sent back to the login page", so it reports WHY it fired. The
+            // distinction that matters: a user we were holding in memory being
+            // cleared is a very different event from a cold start that simply
+            // had nobody signed in, and only the first is a bug. If secure
+            // storage failed to commit, that is the cause and this says so —
+            // previously both cases were silent and indistinguishable.
+            const hadUser = Boolean(get().user);
+            if (hadUser) {
+              captureException(
+                new Error('Session cleared: getSession() returned no user for a signed-in account'),
+                {
+                  source: 'auth.session_lost',
+                  extra: { sessionPersistenceHealthy: sessionPersistenceHealthy() },
+                },
+              );
+            }
             set({ user: null, isAuthenticated: false, hasHydrated: true });
             return;
           }
