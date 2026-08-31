@@ -55,7 +55,11 @@ tags:
 
 - extendedWaitUntil:
     visible: "Open navigation menu"
-    timeout: 20000
+    # 60s, not 20s. An Android debug build re-fetches its JS bundle from Metro
+    # after a force-stop and regularly needs longer than 20 seconds to first
+    # render. The flow then fails on a screen that was seconds away — same
+    # portability trap as the login flow's first assertion.
+    timeout: 60000
 - tapOn: "Open navigation menu"
 
 # Integrations sits in the ACCOUNT group, near the bottom of the sheet.

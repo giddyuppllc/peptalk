@@ -81,6 +81,19 @@ export function PeptideDisclaimerModal() {
             style={styles.checkRow}
             onPress={() => setChecked(!checked)}
             activeOpacity={0.75}
+            // This row had NO accessibility props at all, and it is a required
+            // consent control. Consequences, verified on an Android build:
+            //   - VoiceOver/TalkBack never announced it as a checkbox, and never
+            //     announced whether it was ticked — on a legal acceptance gate.
+            //   - Android composed the label from the children as
+            //     ", I understand and agree" (empty checkbox View, then the text).
+            //   - The inner <Text> was separately exposed and NOT clickable, so a
+            //     tap aimed at the label hit dead space. The box stayed unticked,
+            //     Continue did nothing, and the modal never closed — which is
+            //     exactly how a user with a screen reader would experience it.
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked }}
+            accessibilityLabel="I understand and agree"
           >
             <View
               style={[
@@ -101,6 +114,16 @@ export function PeptideDisclaimerModal() {
             disabled={!checked}
             onPress={() => setAccepted(true)}
             activeOpacity={0.85}
+            // Same omission as the checkbox above. Without a role and label,
+            // Android exposes TWO nodes for this button — a clickable one and
+            // the inner <Text>, which is not clickable — and a tap aimed at the
+            // word "Continue" lands on the dead one. Verified on an Android
+            // build: box ticked, Continue tapped, no JS error, modal still up.
+            // The user is simply stuck on a legal gate with no way past it, and
+            // the Dose Calculator behind it is a feature we advertise.
+            accessibilityRole="button"
+            accessibilityLabel="Continue"
+            accessibilityState={{ disabled: !checked }}
           >
             <LinearGradient
               colors={checked ? ['#E89672', '#F2D8D5'] : ['#D1D5DB', '#D1D5DB']}
