@@ -132,10 +132,12 @@ export default function IntegrationsSettingsScreen() {
       router.push('/settings/inbody-entry' as never);
       return;
     }
-    // App Review 5.1.1(iv), rejected four times: the control that leads to the
-    // iOS permission sheet must not say "Connect" (Apple named Continue/Next),
-    // the explanation must be escapable, and there must be a route to Settings.
-    // Show the explainer first and let it drive the request.
+    // App Review 5.1.1(iv), rejected four times. Apple's three faults were:
+    // a Settings redirect before the system prompt, a "Connect" label on the
+    // control that leads to it, and a "Not Now" escape. An earlier fix recorded
+    // the last two inverted and ADDED an escape and a Settings link — see the
+    // note in HealthPermissionExplainer. Show the explainer, which offers
+    // Continue and nothing else, and let it drive the request.
     if (source === 'apple_health') {
       setExplainerVisible(true);
       return;
@@ -300,9 +302,17 @@ export default function IntegrationsSettingsScreen() {
                         onPress={() => handleConnect(adapter.source)}
                         style={[styles.connectBtn, { backgroundColor: t.primary }]}
                         accessibilityRole="button"
-                        accessibilityLabel={`Connect ${BIOMARKER_SOURCE_LABELS[adapter.source]}`}
+                        accessibilityLabel={`${adapter.source === 'apple_health' ? 'Set up' : 'Connect'} ${BIOMARKER_SOURCE_LABELS[adapter.source]}`}
                       >
-                        <Text style={styles.connectText}>Connect</Text>
+                        {/* Apple Health opens the explainer rather than the
+                            permission sheet, so this button is not "the control
+                            that leads to the system prompt" — but Apple tapped a
+                            button reading "Connect" and cited the label, so this
+                            one does not say it either. Continue lives on the
+                            explainer, where Apple expects to find it. */}
+                        <Text style={styles.connectText}>
+                          {adapter.source === 'apple_health' ? 'Set up' : 'Connect'}
+                        </Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -382,10 +392,11 @@ export default function IntegrationsSettingsScreen() {
         </View>
       </ScrollView>
 
+      {/* Continue is the only control — see the note in the component. There is
+          deliberately no dismiss handler to pass. */}
       <HealthPermissionExplainer
         visible={explainerVisible}
         onContinue={requestAppleHealth}
-        onNotNow={() => setExplainerVisible(false)}
       />
     </SafeAreaView>
   );
