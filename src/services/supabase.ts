@@ -8,6 +8,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { withTimeout, TimeoutError } from '../lib/withTimeout';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import type { Database } from '../types/database';
@@ -401,6 +402,65 @@ function makeNoopClient() {
   } as unknown as ReturnType<typeof createClient<Database>>;
 }
 
-export const supabase = buildClient();
+/**
+ * Every edge-function call gets a deadline.
+ *
+ * There are 25 `functions.invoke` call sites and, before this, not one of them
+ * had a timeout — nor does supabase-js set a default. A half-connected network
+ * (hotel wifi, a captive portal, a Meta in-app browser) leaves the request
+ * neither resolving nor rejecting, so the screen that awaited it just sits
+ * there. That is the same defect that made sign-in look like the App Review
+ * 2.1(a) bug, and it applies to the food scanner, lab OCR, workout generation,
+ * Aimee, community actions and — worst — Square checkout, where a user has no
+ * way to tell whether they were charged.
+ *
+ * Patched once on the client rather than at 25 call sites: it covers every
+ * existing caller, and more importantly it covers the ones not written yet.
+ *
+ * The shape is preserved. supabase-js resolves `{ data, error }` and callers
+ * branch on `error`, so a timeout is returned the same way rather than thrown —
+ * every existing error path keeps working untouched.
+ */
+export const FUNCTION_TIMEOUT_MS = 60_000;
+
+function withInvokeTimeout<T>(client: T): T {
+  // `SupabaseClient.functions` is a GETTER that returns a NEW FunctionsClient on
+  // every access (see node_modules/@supabase/supabase-js/src/SupabaseClient.ts).
+  // Assigning to `client.functions.invoke` therefore mutates a throwaway object
+  // and every real call site gets a fresh, unpatched instance — the patch looks
+  // present in the source and does nothing at runtime.
+  //
+  // Patch the PROTOTYPE instead: every instance the getter mints shares it.
+  const probe = (client as { functions?: object }).functions;
+  if (!probe) return client;
+  const proto = Object.getPrototypeOf(probe) as {
+    invoke?: (...args: unknown[]) => Promise<unknown>;
+    __peptalkTimeoutPatched?: boolean;
+  };
+  const original = proto?.invoke;
+  if (typeof original !== 'function' || proto.__peptalkTimeoutPatched) return client;
+
+  proto.invoke = async function patchedInvoke(this: unknown, ...args: unknown[]) {
+    const name = typeof args[0] === 'string' ? args[0] : 'edge function';
+    try {
+      return await withTimeout(
+        original.apply(this, args) as Promise<unknown>,
+        FUNCTION_TIMEOUT_MS,
+        name,
+      );
+    } catch (err) {
+      if (err instanceof TimeoutError) {
+        // Same shape supabase-js resolves, so callers that branch on `error`
+        // need no change. 504 is what a gateway timeout looks like on the wire.
+        return { data: null, error: { message: err.message, name: 'TimeoutError', status: 504 } };
+      }
+      throw err;
+    }
+  };
+  proto.__peptalkTimeoutPatched = true;
+  return client;
+}
+
+export const supabase = withInvokeTimeout(buildClient());
 
 export default supabase;
