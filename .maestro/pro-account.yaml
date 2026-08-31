@@ -1,8 +1,17 @@
 # PepTalk — capture the PRO account screens.
 #
-# In any non-production build (EXPO_PUBLIC_ENV != 'production') useSubscriptionStore
-# auto-grants Pro to every signed-in user, so a dev/sim build is the easiest way
-# to capture clean "Pro account" marketing/QA shots. Assumes a session already
+# A LOCAL DEV BUILD (__DEV__, i.e. Metro) auto-grants Pro to every signed-in
+# user, so it is the easiest way to capture clean "Pro account" marketing/QA
+# shots. This used to be true of TestFlight and any preview build too, keyed off
+# EXPO_PUBLIC_ENV — which meant a store-distributable binary gave Pro away and
+# left Subscribe a no-op. It is now pinned to __DEV__.
+#
+# Consequence for this flow: run it against Metro. A TestFlight or store build
+# will show the account's REAL tier, and these shots will not be Pro.
+#
+# Corollary worth remembering: because the bypass is live under Metro, a local
+# build can never tell you what tier an account actually holds on the server.
+# Assumes a session already
 # exists (Supabase session persists in the Keychain across launches); if not,
 # run login.yaml first with -e EMAIL=... -e PASSWORD=...
 #

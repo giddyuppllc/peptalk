@@ -8,6 +8,7 @@
  */
 
 import { Platform } from 'react-native';
+import { BETA_PRODUCT_ID } from '../lib/entitlement';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
@@ -24,22 +25,59 @@ import { trackUpgradeSucceeded, trackUpgradeFailed } from '../services/analytics
 import { maybeAskForReview } from '../services/reviewPrompt';
 
 /**
- * Beta-tester access — TWO triggers:
+ * Beta-tester access.
  *
- *   1. EXPO_PUBLIC_ENV !== 'production'  (preview / development builds)
- *      Every signed-in user is auto-granted Pro on TestFlight builds, no
- *      email allowlist required. Production builds keep the normal IAP
- *      flow.
+ * `isDevBuildBypass()` below auto-grants Pro to any signed-in user, and it is
+ * restricted to `__DEV__` — a Metro/debug build on a developer's own machine.
  *
- *   2. Server-side BETA_TESTER_EMAILS Supabase secret
- *      Mirror used by the AI / food-scan / lab-scan edge functions to
- *      authorize the actual server calls. Set with:
- *         supabase secrets set BETA_TESTER_EMAILS="email1,email2,..."
+ * It used to key off `EXPO_PUBLIC_ENV !== 'production'` instead, which was a
+ * hole big enough to give the paid tier away:
  *
- * Hardcoded client-side allowlist removed deliberately — it was a
- * deploy-required maintenance burden and the preview-build bypass
- * already covers TestFlight. Production builds need a real subscription.
+ *   - eas.json's `preview` profile sets EXPO_PUBLIC_ENV=preview AND
+ *     `distribution: "store"`. That is a store-distributable binary with the
+ *     bypass switched on. Ship it to TestFlight, promote it, and every reviewer
+ *     and every customer holds Pro for nothing — and the Subscribe button is a
+ *     no-op, because they already own it. That is a plausible cause of the
+ *     Build-47 "unresponsive Subscribe button" 2.1(a) rejection.
+ *   - The grant is WRITTEN to persisted state as
+ *     `{tier:'pro', isActive:true, expiresAt:null}`. `expiresAt: null` means it
+ *     never expires. So it outlived the build that created it: anyone who ran a
+ *     preview build once and then updated to the production App Store build
+ *     kept Pro permanently, because the env check no longer fires but the
+ *     persisted grant is still sitting there. `purgeStaleBetaGrant()` cleans
+ *     that up on launch.
+ *
+ * Web was never affected — both call sites excluded `Platform.OS === 'web'`, so
+ * the Square-monetized PWA always ran the real flow. Android WAS affected.
+ *
+ * The server-side BETA_TESTER_EMAILS Supabase secret is unchanged and remains
+ * how real testers are authorized for AI / food-scan / lab-scan:
+ *     supabase secrets set BETA_TESTER_EMAILS="email1,email2,..."
+ * TestFlight testers no longer get client-side Pro for free. That is the point.
  */
+
+/**
+ * The ONLY switch that may hand out a paid tier without a purchase.
+ *
+ * `__DEV__` is false in every release binary — TestFlight, App Store, Play —
+ * so this cannot reach a customer. Do not widen it to an env var: an env var is
+ * a build-config value, and build configs get copied.
+ *
+ * Web is excluded as well, belt and braces: the PWA is the real Square-monetized
+ * surface and must always run the live subscription flow.
+ */
+export function isDevBuildBypass(): boolean {
+  return __DEV__ === true && Platform.OS !== 'web';
+}
+
+/**
+ * Marker written by the dev bypass, so a stale grant can be identified later.
+ * Re-exported from entitlement.ts rather than redeclared — `getSubscriptionStatus`
+ * there reports this productId as 'active' with no expiry, which is precisely
+ * why a leftover grant is indistinguishable from a real subscription and has to
+ * be purged by product id rather than by looking at tier/expiry.
+ */
+export const BETA_GRANT_PRODUCT_ID = BETA_PRODUCT_ID;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -150,17 +188,13 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
       hasHydrated: false,
 
       hasFeature: (feature) => {
-        // Preview / development builds: every signed-in user gets full
-        // feature access. Means TestFlight + dev builds don't gate AI
-        // or paid features behind paywalls regardless of tester email.
-        // Production builds (EXPO_PUBLIC_ENV='production') skip this
-        // bypass and gate by tier as normal.
+        // Local dev builds only (__DEV__): every signed-in user gets full
+        // feature access so developers are not paywalled on their own machine.
+        // Every release binary — TestFlight, App Store, Play — skips this and
+        // gates by tier as normal. See isDevBuildBypass() above for why this is
+        // no longer keyed off EXPO_PUBLIC_ENV.
         try {
-          const appEnv = (process.env.EXPO_PUBLIC_ENV ?? 'production').toLowerCase();
-          // Native TestFlight/dev only — NEVER on web. The web PWA is the real,
-          // Square-monetized surface, so the tester bypass must not ship in that
-          // bundle (a dev-env web build would otherwise unlock Pro for everyone).
-          if (appEnv !== 'production' && Platform.OS !== 'web') {
+          if (isDevBuildBypass()) {
             const { useAuthStore } = require('./useAuthStore');
             if (useAuthStore.getState().isAuthenticated) return true;
           }
@@ -368,17 +402,11 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
               return;
             }
 
-            // Preview / development build bypass: any signed-in user is
-            // auto-granted Pro on TestFlight + dev builds. Production
-            // builds skip this and run the normal subscription flow.
-            const appEnv = (process.env.EXPO_PUBLIC_ENV ?? 'production').toLowerCase();
-            // Native TestFlight/dev only — exclude web so the PWA always runs the
-            // real subscription flow (a dev-env web build otherwise grants Pro to all).
-            const isNonProductionBuild = appEnv !== 'production' && Platform.OS !== 'web';
-            if (isNonProductionBuild) {
+            // Local dev builds only. See isDevBuildBypass().
+            if (isDevBuildBypass()) {
               set({
                 tier: 'pro',
-                productId: 'beta_tester_grant',
+                productId: BETA_GRANT_PRODUCT_ID,
                 expiresAt: null,
                 isActive: true,
                 lastSyncedAt: Date.now(),
@@ -602,7 +630,28 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
         // pendingPurchase is intentionally NOT persisted — a stale "waiting
         // for approval" across app restarts would be worse than losing it.
       }),
-      onRehydrateStorage: () => () => {
+      onRehydrateStorage: () => (state) => {
+        // Purge a dev/preview beta grant before anything reads the tier.
+        //
+        // Closing the bypass is not enough on its own. The grant was WRITTEN to
+        // persisted state as {tier:'pro', isActive:true, expiresAt:null}, and a
+        // null expiry never expires — so anyone who ran a preview or TestFlight
+        // build once carries permanent free Pro into the production build, where
+        // the bypass no longer fires but the persisted grant still satisfies
+        // computeFeatureAccess. Their next refreshSubscription() would correct
+        // it, but only if it runs and succeeds; offline, or before the first
+        // sync lands, they are Pro.
+        //
+        // So: in any build that is not the dev bypass, a grant carrying the
+        // marker product id is discarded on load and the real subscription is
+        // re-read from the server.
+        if (state?.productId === BETA_GRANT_PRODUCT_ID && !isDevBuildBypass()) {
+          state.tier = 'free';
+          state.productId = null;
+          state.expiresAt = null;
+          state.isActive = false;
+          state.lastSyncedAt = 0;
+        }
         // Flag the store as hydrated so the splash gate (and any paywall
         // checks that run on first frame) can wait until the persisted
         // tier has been read back from secureStorage. Otherwise cold-
