@@ -83,7 +83,7 @@ tags:
 - extendedWaitUntil:
     visible: "Continue to the Apple Health permission screen"
     timeout: 15000
-- takeScreenshot: healthkit-explainer
+- takeScreenshot: .maestro/screenshots/healthkit-explainer
 
 # The three faults Apple named, asserted as absent.
 - assertNotVisible: "Not Now"      # (c) no escape hatch

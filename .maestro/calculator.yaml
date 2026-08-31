@@ -74,4 +74,4 @@ tags:
 # can get from a cold start to a rendered calculator. Whether the calculator
 # computes correctly is a different question, and it is covered by unit tests
 # over `src/lib/dosing.ts` rather than by driving a simulator.
-- takeScreenshot: calculator-reached
+- takeScreenshot: .maestro/screenshots/calculator-reached

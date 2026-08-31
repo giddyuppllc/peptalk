@@ -31,7 +31,7 @@ tags:
     visible:
       text: "PRO|PepTalk Pro Active|Pro Status"
     timeout: 15000
-- takeScreenshot: pro-profile
+- takeScreenshot: .maestro/screenshots/pro-profile
 
 # 3) Open the Plans screen via the "Pro Status" settings row. The RN list rows
 #    don't expose accessibility text, so tap by coordinate (row sits ~78% down).
@@ -41,10 +41,10 @@ tags:
     visible:
       text: "Choose Your Plan|Plans|Free|Pro"
     timeout: 15000
-- takeScreenshot: pro-plans-top
+- takeScreenshot: .maestro/screenshots/pro-plans-top
 
 # 4) Scroll through the plan cards (Pro shows as the current plan).
 - scroll
-- takeScreenshot: pro-plans-mid
+- takeScreenshot: .maestro/screenshots/pro-plans-mid
 - scroll
-- takeScreenshot: pro-plans-bottom
+- takeScreenshot: .maestro/screenshots/pro-plans-bottom

@@ -61,4 +61,4 @@ tags:
 - extendedWaitUntil:
     notVisible: "Go to"
     timeout: 10000
-- takeScreenshot: nav-to-calculator
+- takeScreenshot: .maestro/screenshots/nav-to-calculator

@@ -44,4 +44,4 @@ tags:
     visible: "Integrations"
     timeout: 15000
 - assertVisible: "Apple Health"
-- takeScreenshot: healthkit-screen
+- takeScreenshot: .maestro/screenshots/healthkit-screen

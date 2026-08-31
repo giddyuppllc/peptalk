@@ -21,7 +21,7 @@ tags:
 - extendedWaitUntil:
     visible: "Build my 30-day plan|Generate Workout|TRAINING GOAL"
     timeout: 15000
-- takeScreenshot: wkt-generate-before
+- takeScreenshot: .maestro/screenshots/wkt-generate-before
 # The CTA is "Build my 30-day plan" near the bottom. In a DEV build the LogBox
 # warning toast overlaps the very bottom edge, so tap by a coordinate that
 # lands on the button ABOVE the toast (≈87% height) rather than by text.
@@ -34,4 +34,4 @@ tags:
     timeout: 50000
 - waitForAnimationToEnd:
     timeout: 3000
-- takeScreenshot: wkt-generate-result
+- takeScreenshot: .maestro/screenshots/wkt-generate-result

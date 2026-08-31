@@ -69,4 +69,4 @@ tags:
 - assertNotVisible: "Enter a valid email and password."
 - assertNotVisible: "Email not confirmed"
 - assertNotVisible: "Something went wrong"
-- takeScreenshot: login-success
+- takeScreenshot: .maestro/screenshots/login-success

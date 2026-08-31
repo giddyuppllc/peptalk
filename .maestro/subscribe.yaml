@@ -45,4 +45,4 @@ tags:
 - extendedWaitUntil:
     visible: "Choose Your Plan|Plans|Subscribe|Upgrade|Start|Free|Pro|Have a discount code"
     timeout: 15000
-- takeScreenshot: paywall
+- takeScreenshot: .maestro/screenshots/paywall
