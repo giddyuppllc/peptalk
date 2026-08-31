@@ -32,6 +32,7 @@ import { V3ThemeProvider, useV3Theme } from '../src/theme/V3ThemeProvider';
 import { OfflineBanner } from '../src/components/OfflineBanner';
 import { HomeFab } from '../src/components/HomeFab';
 import { GlobalAimeeFab } from '../src/components/GlobalAimeeFab';
+import { AppNavSheet } from '../src/components/AppNavSheet';
 import { CelebrationModal } from '../src/components/CelebrationModal';
 import { WorkoutRewardModal } from '../src/components/WorkoutRewardModal';
 import { AiConsentModal } from '../src/components/AiConsentModal';
@@ -1701,10 +1702,11 @@ function RootLayout() {
             options={{ headerShown: false, animation: 'slide_from_right' }}
           />
         </Stack>
-        {/* Profile shortcut overlay lives in the (tabs) layout — mounting
-            it here too caused the FAB to render twice on tab screens. The
-            (tabs) mount is the canonical one; non-tab routes don't get the
-            FAB by design. */}
+        {/* Navigation sheet — mounted here rather than in (tabs) so it exists
+            on every screen. The tab bar is hidden by design, so this is the
+            app's only visible way around; App Review 2.3 was a reviewer unable
+            to find the dose calculator because nothing pointed at it. */}
+        <AppNavSheet />
         {/* Home button — mounted globally so it appears on EVERY screen
             (including non-tab drill-ins), hidden by HomeFab's own
             pathname allowlist on home / auth / focus surfaces. Wave 76.45. */}

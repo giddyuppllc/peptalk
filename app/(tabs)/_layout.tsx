@@ -6,7 +6,6 @@ import { selectionTick } from '../../src/utils/haptics';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { AimeeSparkIcon } from '../../src/components/AimeeSparkIcon';
-import { ProfileShortcutFab } from '../../src/components/ProfileShortcutFab';
 
 type TabIconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -116,9 +115,9 @@ export default function TabsLayout() {
       <Tabs.Screen name="workouts" options={{ href: null }} />
       <Tabs.Screen name="community" options={{ href: null }} />
     </Tabs>
-    {/* Top-right shortcut menu — hidden on Home; gives one-tap access to
-        Profile, Calendar, Check-in, Community from any other tab. */}
-    <ProfileShortcutFab />
+    {/* Navigation now lives in AppNavSheet, mounted once at the root so it
+        reaches non-tab routes too — /doses, /labs, /learn had no menu at all
+        while this mount existed only inside the tab group. */}
     </View>
   );
 }
