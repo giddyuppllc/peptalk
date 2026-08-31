@@ -373,64 +373,6 @@ function RootLayout() {
       }
     })();
 
-    // First-run notification permission + daily check-in reminder.
-    // Tester feedback: users want a morning nudge so the habit forms even
-    // on days they're not actively dosing. Default-on in preferences,
-    // so we just need to register + schedule once permissions are granted.
-    // This runs every boot but registerForPushNotifications is idempotent —
-    // OS short-circuits if permission already granted.
-    (async () => {
-      try {
-        const {
-          registerForPushNotifications,
-          scheduleDailyCheckInReminder,
-          scheduleWeeklyReport,
-          cancelWeeklyReport,
-          scheduleMealSafetyChecks,
-          cancelRemindersByTag,
-        } = await import('../src/services/notificationService');
-        const token = await registerForPushNotifications();
-        if (!token) return; // user denied, or notifications unavailable
-        // Wait for the notification store to rehydrate before scheduling.
-        // Otherwise the in-memory default `dailyCheckInReminder=true`
-        // schedules a reminder the user previously disabled — they get
-        // a spurious 9 AM push and we never cancelled it.
-        let waited = 0;
-        while (!useNotificationStore.getState().hasHydrated && waited < 5000) {
-          await new Promise((resolve) => setTimeout(resolve, 50));
-          waited += 50;
-        }
-        const prefs = useNotificationStore.getState().preferences;
-        if (prefs.dailyCheckInReminder && prefs.enabled) {
-          await scheduleDailyCheckInReminder(prefs.checkInReminderTime);
-        }
-        // §9.3 — Aimee weekly report. Schedule a Sunday 9 AM local push
-        // when notifications + weeklyReportEnabled are on; cancel cleanly
-        // when either is off so a previously-scheduled Sunday push doesn't
-        // keep firing for a user who turned the feature off.
-        if (prefs.enabled && prefs.weeklyReportEnabled) {
-          await scheduleWeeklyReport();
-        } else {
-          await cancelWeeklyReport();
-        }
-        // Food-safety reminder — daily local notification that points at
-        // the nutrition tab so the user can check which preps are stale.
-        // Default-on safety feature, not paywall-gated.
-        if (prefs.enabled && prefs.mealSafetyReminders) {
-          const [hh, mm] = (prefs.mealSafetyReminderTime ?? '09:00')
-            .split(':')
-            .map((s) => Number(s));
-          await scheduleMealSafetyChecks(
-            Number.isFinite(hh) ? hh : 9,
-            Number.isFinite(mm) ? mm : 0,
-          );
-        } else {
-          await cancelRemindersByTag('meal-safety-');
-        }
-      } catch (err) {
-        if (__DEV__) console.warn('[boot] notification registration failed:', err);
-      }
-    })();
 
     // §9.3 — refresh the weekly report on every cold boot when the last
     // refresh is older than 6 days. This way the report the user lands
@@ -938,6 +880,71 @@ function RootLayout() {
       try { notificationSub?.remove(); } catch {}
     };
   }, [router]);
+
+  // Notification permission + the reminders it enables.
+  //
+  // ITS OWN EFFECT, KEYED ON isAuthenticated, and that matters. This used to
+  // live inside the big [router] boot effect, which runs ONCE at mount — when
+  // isAuthenticated is still false, before the session has been restored.
+  //
+  // So it asked for notification permission before the user had done anything.
+  // Verified on Android Chrome: a first-time visitor got "localhost wants to
+  // send you notifications" while still looking at the "Not installed yet?
+  // Install PepTalk" gate — asked to accept push for an app they had not
+  // installed, signed into, or even seen.
+  //
+  // That is not only bad manners. Chrome's quieter-permissions heuristics
+  // demote origins that request on page load and get refused, so the likely
+  // outcome is losing the permission for everyone, permanently. On native it
+  // is the same shape as the context-free prompts App Review made us
+  // neutralise in ab4bad5.
+  //
+  // Gating it on sign-in costs nothing: everything scheduled below reads
+  // per-user preferences that cannot apply to a signed-out visitor.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    (async () => {
+      try {
+        const {
+          registerForPushNotifications,
+          scheduleDailyCheckInReminder,
+          scheduleWeeklyReport,
+          cancelWeeklyReport,
+          scheduleMealSafetyChecks,
+          cancelRemindersByTag,
+        } = await import('../src/services/notificationService');
+        const token = await registerForPushNotifications();
+        if (!token) return; // user denied, or notifications unavailable
+        let waited = 0;
+        while (!useNotificationStore.getState().hasHydrated && waited < 5000) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          waited += 50;
+        }
+        const prefs = useNotificationStore.getState().preferences;
+        if (prefs.dailyCheckInReminder && prefs.enabled) {
+          await scheduleDailyCheckInReminder(prefs.checkInReminderTime);
+        }
+        if (prefs.enabled && prefs.weeklyReportEnabled) {
+          await scheduleWeeklyReport();
+        } else {
+          await cancelWeeklyReport();
+        }
+        if (prefs.enabled && prefs.mealSafetyReminders) {
+          const [hh, mm] = (prefs.mealSafetyReminderTime ?? '09:00')
+            .split(':')
+            .map((s) => Number(s));
+          await scheduleMealSafetyChecks(
+            Number.isFinite(hh) ? hh : 9,
+            Number.isFinite(mm) ? mm : 0,
+          );
+        } else {
+          await cancelRemindersByTag('meal-safety-');
+        }
+      } catch (err) {
+        if (__DEV__) console.warn('[boot] notification registration failed:', err);
+      }
+    })();
+  }, [isAuthenticated]);
 
   // Auth deep-link handler — peptalk://auth/callback?code=... lands here
   // when a user taps the email-confirmation link (or password-reset link)
