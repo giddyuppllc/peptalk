@@ -241,10 +241,23 @@ const webStorageAdapter = {
     try {
       if (canUseLocalStorage()) {
         window.localStorage.setItem(key, value);
+        sessionPersistOk = true;
         return;
       }
     } catch {
       // Ignore and keep the session in memory for this tab.
+    }
+    // Falling back to memory is the correct behaviour — the session still works
+    // for this tab — but it does mean the user is signed out on reload. That
+    // used to happen with nothing recorded anywhere. Reported once per session
+    // because private-mode and blocked-storage browsers would otherwise emit
+    // this on every token refresh.
+    if (sessionPersistOk) {
+      sessionPersistOk = false;
+      captureException(
+        new Error('Web session storage unavailable — session held in memory, will not survive a reload'),
+        { source: 'webstorage.write', extra: { key } },
+      );
     }
     memoryStore.set(key, value);
   },

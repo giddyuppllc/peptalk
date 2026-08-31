@@ -1,19 +1,34 @@
 # PepTalk — CRITICAL login smoke test.
 #
-# This is the exact path Apple's reviewer got stuck on in v1.9.8 build 47
-# ("cannot continue after login"). If this flow ever fails, do NOT submit.
+# This is the exact path Apple's reviewer got stuck on in 1.9.8 (47) and again
+# in 1.10.0 (75) — "redirected back to the login page after logging in". If this
+# flow fails, do NOT submit.
 #
-#   maestro test .maestro/login.yaml \
+#   maestro --device <udid> test .maestro/login.yaml \
 #     -e EMAIL=reviewer@peptalk.bio -e PASSWORD=<reviewer-password>
 #
 # Creds are passed as env vars so they never live in git.
 #
-# NOTE: clearState wipes app storage but NOT the Supabase session (stored in
-# the iOS Keychain), so a previously-signed-in build boots straight to the
-# tabs. The login steps are therefore CONDITIONAL — they run only when the
-# auth screen is actually present (a fresh device / CI), and are skipped when
-# a session persists. Either way the flow asserts the user lands IN the app
-# (the 2.1a "can't get past login" guarantee).
+# ── Selectors that matter, learned the hard way ───────────────────────────
+# `visible: "Sign In"` NEVER MATCHED. The affordance renders as
+# "Already have an account? Sign In", so the conditional below silently
+# SKIPPED the entire login and the flow then passed on a device that happened
+# to hold a session — a release-blocker test that never tested the thing it
+# blocks on. It needs the regex.
+#
+# Likewise `tapOn: "Password"` hits the field LABEL, not the input; the text
+# then goes wherever focus already was and the app shows its own "Enter a valid
+# email and password". Target the placeholder, "Enter password".
+#
+# `hideKeyboard` is unsupported by this app's inputs — tap static text instead.
+#
+# ── Run it on an ERASED simulator ─────────────────────────────────────────
+# `clearState` wipes app storage but NOT the Keychain, so a previously
+# signed-in build boots straight to the tabs and proves nothing. The scenario
+# Apple hits is a first install:
+#
+#   xcrun simctl erase <udid> && xcrun simctl boot <udid>
+#   xcrun simctl install <udid> <path-to-.app>
 appId: com.peptalkapp.peptalk
 tags:
   - smoke
@@ -22,29 +37,36 @@ tags:
 - launchApp:
     clearState: true
 
-# Conditional login — only when the auth/onboarding "Sign In" affordance shows.
-- runFlow:
-    when:
-      visible: "Sign In"
-    commands:
-      - tapOn: "Sign In"
-      - assertVisible: "Email address"
-      - tapOn: "Email address"
-      - inputText: ${EMAIL}
-      - tapOn: "Password"
-      - inputText: ${PASSWORD}
-      - hideKeyboard
-      - tapOn:
-          text: "Log in"
-          index: 0
-      - extendedWaitUntil:
-          notVisible: "Email address"
-          timeout: 20000
-
-# PASS = we are in the app (home/tabs), with no auth error banner.
 - extendedWaitUntil:
-    visible: "Hi, reviewer|Welcome|Home|Profile"
+    visible: ".*Sign In.*"
     timeout: 20000
+
+- tapOn: ".*Sign In.*"
+
+- extendedWaitUntil:
+    visible: "Email address"
+    timeout: 20000
+- tapOn: "Email address"
+- inputText: ${EMAIL}
+
+- tapOn: "Enter password"
+- inputText: ${PASSWORD}
+
+# Dismiss the keyboard by tapping the screen's own heading.
+- tapOn: "Welcome back"
+
+- tapOn:
+    text: "Log In"
+    index: 0
+
+# The password field going away IS the pass condition — it means we left the
+# auth screen rather than being bounced back to it.
+- extendedWaitUntil:
+    notVisible: "Enter password"
+    timeout: 30000
+
 - assertNotVisible: "Invalid email or password"
+- assertNotVisible: "Enter a valid email and password."
+- assertNotVisible: "Email not confirmed"
 - assertNotVisible: "Something went wrong"
 - takeScreenshot: login-success

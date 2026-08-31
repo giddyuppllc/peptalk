@@ -1,0 +1,64 @@
+# PepTalk — the navigation sheet is reachable and the calculator is in it.
+#
+# App Review 2.3: the reviewer could not find the dose calculator named in our
+# own App Store description. The tab bar is hidden by design, so the PT button
+# and its sheet are the only visible way around the app — if this flow fails,
+# a reviewer is back to guessing.
+#
+#   maestro --device <udid> test .maestro/navigation.yaml
+#
+# Assumes a signed-in app (run login.yaml first).
+#
+# NOTE: tap the PT button by its accessibilityLabel, not its "PT" text. The
+# label is set on the touchable, which is what VoiceOver announces and what
+# Maestro matches — the child Text is not separately exposed.
+appId: com.peptalkapp.peptalk
+tags:
+  - smoke
+---
+- launchApp
+
+# First-run gates sit on top of Home and correctly block everything beneath.
+# A reviewer meets these too, so clearing them is part of the real path.
+- runFlow:
+    when:
+      visible: "Use AI features?"
+    commands:
+      - tapOn: "Not now"
+- runFlow:
+    when:
+      visible: "AI-powered features"
+    commands:
+      - tapOn:
+          text: "Not now"
+          index: 0
+
+# The button exists on Home — the screen a new user actually starts on, and
+# the one the old shortcut menu deliberately hid itself on.
+- extendedWaitUntil:
+    visible: "Open navigation menu"
+    timeout: 20000
+- tapOn: "Open navigation menu"
+
+- extendedWaitUntil:
+    visible: "Go to"
+    timeout: 10000
+
+# Doses first, calculator at the top of it.
+- assertVisible: "Dose Calculator"
+- assertVisible: "Stack Builder"
+- assertVisible: "Daily Check-in"
+
+# The X closes the sheet WITHOUT navigating — you stay exactly where you were.
+# That is the whole reason this is a sheet and not a route.
+- tapOn: "Close navigation menu"
+- assertNotVisible: "Go to"
+- assertVisible: "Hi, .*"
+
+# And the calculator is one tap from the sheet.
+- tapOn: "Open navigation menu"
+- tapOn: "Dose Calculator"
+- extendedWaitUntil:
+    notVisible: "Go to"
+    timeout: 10000
+- takeScreenshot: nav-to-calculator
