@@ -102,3 +102,34 @@ still the thing that decides whether that path is ever taken.
 `app_internal_function_secret` used by the pg_net triggers. Confirm they are set
 in production — several are needed for community/reaction push to work at all,
 and their absence is silent.
+
+---
+
+## 6. Create the website's `waitlist_signups` table
+
+The marketing site (`giddyuppllc/Peptalk.biowebcontainer`) shares this Supabase
+project and now needs one table it does not own.
+
+**Why it is urgent rather than tidy-up:** both email forms on peptalk.bio used
+to show "You're on the list! We'll email you at launch" without storing
+anything. Every address given to us since the site launched is gone, and those
+people are waiting for an email. The forms now write for real — but until this
+table exists they return 503 and tell the visitor signups are unavailable.
+
+Paste `db/waitlist_signups.sql` from the website repo into the Supabase SQL
+editor and run it. It is idempotent.
+
+Then confirm the Vercel project for the website has `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` set — the admin dashboard already needs both, so
+they are probably there. Without them the route also answers 503.
+
+Check it worked:
+
+```sql
+select count(*), max(created_at) from public.waitlist_signups;
+```
+
+RLS is on with no policies, so `anon` and `authenticated` can do nothing; only
+the service-role key writes. That is deliberate — these are email addresses
+collected from the public internet and nothing client-side should read them
+back.
