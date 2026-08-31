@@ -1,5 +1,5 @@
 /**
- * Turn an auth failure into something a user can act on.
+ * Turn a failure into something a user can act on.
  *
  * Motivation — Sentry PEPTALK-3: `NetworkError` on app.peptalk.bio/onboarding,
  * 53 events across 5 users. Ten attempts each. Both `app/onboarding.tsx` and
@@ -134,4 +134,28 @@ export function describeAuthError(err: unknown): DescribedAuthError {
     message: MESSAGES[kind],
     retryable: RETRYABLE.has(kind),
   };
+}
+
+/**
+ * The general-purpose version, for the ~15 non-auth call sites that render
+ * `err?.message` into an Alert body.
+ *
+ * Those are less severe than the auth screens were, because their Alert TITLE
+ * already carries the context ("Upload failed", "Restore Failed") — but the body
+ * still reads "Failed to fetch" the moment the network drops, which tells the
+ * user nothing and invites the same retry loop that produced PEPTALK-3.
+ *
+ * The contract is deliberately conservative: only the cases we can genuinely
+ * improve on are rewritten — a dead network, a 5xx, a rate limit. Everything
+ * else falls through to the caller's own contextual fallback, which is usually
+ * better than anything a generic helper could invent.
+ *
+ *     Alert.alert('Upload failed', toUserMessage(err, 'Could not upload image.'));
+ */
+export function toUserMessage(err: unknown, fallback: string): string {
+  const kind = classifyAuthError(err);
+  if (kind === 'offline' || kind === 'server' || kind === 'rate_limited') {
+    return MESSAGES[kind];
+  }
+  return fallback;
 }

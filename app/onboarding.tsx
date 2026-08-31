@@ -8,7 +8,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { describeAuthError } from '../src/lib/authErrors';
+import { describeAuthError } from '../src/lib/errorMessages';
 import { captureException } from '../src/services/telemetry';
 import { View, Text, TouchableOpacity, TextInput, Switch, StyleSheet, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { Alert } from '../src/lib/alert';

@@ -23,7 +23,7 @@
     "build-gap": "tsx scripts/build-gap.ts",
     "backlog:dosing": "tsx scripts/gen-dosing-backlog.ts > DOSING_DATA_BACKLOG.md",
     "verify:build": "tsx scripts/verify-build.ts",
-    "verify:all": "npm run verify:data && npm run verify:functions && npm run verify:square && npm run verify:csp && npm run verify:aimee && npm run verify:routes && npm run verify:videos && npm run verify:calc && npm run verify:sanitize && npm run verify:cycle && npm run verify:adherence && npm run verify:labparsers && npm run verify:mealmath && npm run verify:dosecalc && npm run verify:inbody && npm run verify:deadzones && npm run verify:peptiderefs && npm run verify:navparams && npm run verify:aimeescreens && npm run verify:synccolumns && npm run verify:deadcomponents && npm run verify:deadfiles && npm run verify:dosingconsistency && npm run verify:doseprovenance && npm run verify:doseformat && npm run verify:scannercontrols && npm run verify:skips && npm run verify:iosstrings && npm run verify:entitlements",
+    "verify:all": "npm run verify:data && npm run verify:functions && npm run verify:square && npm run verify:csp && npm run verify:aimee && npm run verify:routes && npm run verify:videos && npm run verify:calc && npm run verify:sanitize && npm run verify:cycle && npm run verify:adherence && npm run verify:labparsers && npm run verify:mealmath && npm run verify:dosecalc && npm run verify:inbody && npm run verify:deadzones && npm run verify:peptiderefs && npm run verify:navparams && npm run verify:aimeescreens && npm run verify:synccolumns && npm run verify:deadcomponents && npm run verify:deadfiles && npm run verify:dosingconsistency && npm run verify:doseprovenance && npm run verify:doseformat && npm run verify:scannercontrols && npm run verify:skips && npm run verify:iosstrings && npm run verify:entitlements && npm run verify:version",
     "verify:deploy": "bash scripts/verify-deploy.sh",
     "lint": "expo lint",
     "export:web": "expo export --platform web && node scripts/inject-pwa.mjs",
@@ -50,7 +50,8 @@
     "verify:skips": "node scripts/verify-skips.mjs",
     "apply:review": "tsx scripts/apply-clinical-review.ts",
     "verify:iosstrings": "node scripts/verify-ios-android-strings.mjs",
-    "verify:entitlements": "node scripts/verify-build-profiles.mjs"
+    "verify:entitlements": "node scripts/verify-build-profiles.mjs",
+    "verify:version": "node scripts/verify-version.mjs"
   },
   "expo": {
     "install": {

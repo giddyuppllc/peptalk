@@ -2,7 +2,7 @@ import {
   classifyAuthError,
   describeAuthError,
   extractMessage,
-} from '../authErrors';
+} from '../errorMessages';
 
 /**
  * Sentry PEPTALK-3: 53 NetworkError events across 5 users on
