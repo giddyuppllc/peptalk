@@ -83,7 +83,12 @@ const TIERS: TierInfo[] = [
       'Food Scanner — snap a plate, get every food + macros',
       'Voice Log — say what you ate, get the macros logged',
       'Unlimited meal & food logging + full micronutrient tracking',
-      'Apple Watch + Google Fit sync (HRV, VO2, weight trends)',
+      // App Review 2.3.10 — no Android product names in the iOS binary. The
+      // feature is real on both platforms; only the name of the other one
+      // has to go.
+      Platform.OS === 'ios'
+        ? 'Apple Watch + Apple Health sync (HRV, VO2, weight trends)'
+        : 'Apple Watch + Health Connect sync (HRV, VO2, weight trends)',
       'Live community group chat — ask the team during events',
       'First in line for new features as they ship',
       'Everything in Free, ad-free',

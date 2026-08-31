@@ -116,7 +116,9 @@ export default function SleepTrackerScreen() {
                       },
                     ]}
                   >
-                    HealthKit, Health Connect, Oura, Whoop, or Garmin.
+                    {Platform.OS === 'ios'
+                      ? 'Apple Health, Oura, Whoop, or Garmin.'
+                      : 'Health Connect, Oura, Whoop, or Garmin.'}
                   </Text>
                 </View>
                 <Ionicons

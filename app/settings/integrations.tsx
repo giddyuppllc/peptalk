@@ -209,7 +209,7 @@ export default function IntegrationsSettingsScreen() {
             One connection covers many devices
           </Text>
           <Text style={[styles.body, { color: t.textSecondary }]}>
-            Apple Health and Health Connect aggregate data from dozens of devices — Apple Watch,
+            {Platform.OS === 'ios' ? 'Apple Health aggregates' : 'Apple Health and Health Connect aggregate'} data from dozens of devices — Apple Watch,
             Oura, most scales, most CGMs, and blood pressure monitors all write to them. Start
             there; we add direct integrations as they become available.
           </Text>

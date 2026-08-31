@@ -19,6 +19,7 @@
 // even though every call site is __DEV__-gated. Lazy `require()`
 // inside getClient() makes the import unreachable in prod and
 // drops the SDK from the release bundle entirely.
+import { Platform } from 'react-native';
 import { ChatMessage, EnhancedBotContext } from '../types';
 import { ensureAiConsent } from '../utils/ensureAiConsent';
 import { sanitizeForLLM } from './privacyGuard';
@@ -540,7 +541,7 @@ SLEEP DATA:
 THIRD-PARTY SLEEP TRACKERS:
 - If users mention Oura Ring, Whoop, Eight Sleep, Fitbit — explain that their data flows through Apple Health
 - Most third-party trackers sync automatically to the phone's health platform
-- Our app reads from HealthKit (iOS) or Health Connect (Android) which aggregates all sources
+- Our app reads from ${Platform.OS === 'ios' ? 'Apple Health' : 'Health Connect'}, which aggregates all sources
 
 LAB WORK & BLOODWORK:
 - You can explain what markers mean: testosterone, estrogen, thyroid (TSH, T3, T4), cortisol, insulin, A1C, lipid panels, CBC, CMP, vitamin D, B12, iron, liver enzymes, kidney function

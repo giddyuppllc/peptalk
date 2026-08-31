@@ -1,4 +1,4 @@
-# App Store Review Notes — PepTalk v1.9.x
+# App Store Review Notes — PepTalk
 
 Paste the **App Review Notes** section verbatim into App Store Connect →
 App Review Information → Notes when submitting. The other sections are
@@ -22,6 +22,32 @@ https://peptalk.bio/privacy).
   (A pre-entitled account makes the Subscribe buttons no-op, which reads as an
   "unresponsive button" — the 2.1a finding.)
 
+### How to get around the app (please read first)
+PepTalk has **no bottom tab bar** — this is deliberate, not a fault. Navigation
+is the four large cards on the Home screen. Everything below is reachable from
+there in two taps:
+
+| To reach | Tap |
+|---|---|
+| **Dose calculator** | Home → **Doses** → **Calculator** |
+| Reconstitution calculator | Home → **Doses** → **Calculator** (same screen, "Reconstitute" mode) |
+| Stack Builder | Home → **Doses** → **Stack Builder** |
+| Dose log | Home → **Doses** → **Dose Tracker** |
+| Peptide library | Home → **Doses** → **Library** |
+| Apple Health | Home → **Profile** → **Apple Health & Integrations** |
+| Subscriptions | Home → **Profile** → **Subscription** |
+
+On first opening **Doses** you will see a one-time safety disclaimer with a
+checkbox — tick it and tap **Continue** to reach the tiles above. It appears
+once per install.
+
+### Dose calculator — Guideline 2.3
+The calculator referenced in our App Store description is at
+**Home → Doses → Calculator**. It takes vial strength, reconstitution volume
+and target dose, and returns the syringe draw in units and millilitres, plus
+doses per vial. There is a second entry for reconstitution planning on the same
+screen.
+
 ### Subscriptions (StoreKit / IAP) — Guideline 2.1(b)
 - The two auto-renewing subscriptions BELOW must be added to this app version's
   In-App Purchases section, with an App Review screenshot, and **submitted
@@ -39,10 +65,17 @@ https://peptalk.bio/privacy).
 
 ### HealthKit / Apple Health (Guideline 2.5.1)
 - PepTalk's Apple Health integration is at **Profile → Apple Health &
-  Integrations**. Tap **Connect** on the "Apple Health" card to grant access;
-  the screen explains that PepTalk reads steps, heart rate, HRV, VO₂ max,
-  sleep, weight, body composition, and cycle data, and writes check-ins,
-  weight, and symptom logs back to Apple Health.
+  Integrations**. Tap **Set up** on the "Apple Health" card. A single
+  explanation screen appears describing exactly what is read and written, with
+  one button — **Continue** — which takes you straight to the iOS permission
+  sheet. There is no other control on that screen and no route to Settings: per
+  5.1.1(iv) the only way onward is the system prompt, where you may allow or
+  deny each category.
+- PepTalk reads steps, heart rate, HRV, VO₂ max, sleep, weight and body
+  composition, and writes check-ins and weight back to Apple Health.
+- Note: iOS does not report read-authorization status to apps, so PepTalk never
+  claims the connection succeeded or failed — it simply shows whatever data it
+  can subsequently read.
 - Synced metrics surface on the Activity, Sleep, and Weight trackers and in the
   daily summary. HealthKit data is encrypted on-device and never sold.
 
