@@ -6,6 +6,7 @@
  */
 
 import { create } from 'zustand';
+import { withTimeout, AUTH_TIMEOUT_MS } from '../lib/withTimeout';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { Alert } from '../lib/alert';
 import { User } from '../types';
@@ -116,10 +117,17 @@ export const useAuthStore = create<AuthStore>()(
         // Use the normalized email so trailing whitespace / caps don't
         // produce a client-validates-but-server-rejects mismatch.
         try {
-          const { data, error } = await db.auth.signInWithPassword({
-            email: _email,
-            password,
-          });
+          // Bounded: supabase-js sets no fetch timeout, so on a half-connected
+          // network this call neither resolves nor rejects and the user sits on
+          // the login screen with no feedback at all — the literal 2.1(a)
+          // report. A rejection the UI can explain beats a promise that hangs.
+          // The explicit type parameter is needed because `db` is `any`
+          // (line 30), which would otherwise infer T as `unknown`.
+          const { data, error } = await withTimeout<{ data: any; error: any }>(
+            db.auth.signInWithPassword({ email: _email, password }),
+            AUTH_TIMEOUT_MS,
+            'Sign in',
+          );
 
           if (error) {
             set({ isLoading: false });
@@ -193,7 +201,11 @@ export const useAuthStore = create<AuthStore>()(
         try {
           const fullName = `${firstName} ${lastName}`.trim();
           const normalizedEmail = email.trim().toLowerCase();
-          const { data, error } = await db.auth.signUp({
+          // Bounded for the same reason as sign-in: an unbounded call on a
+          // half-connected network leaves the user on the form with no
+          // feedback and no way to tell that anything went wrong.
+          const { data, error } = await withTimeout<{ data: any; error: any }>(
+            db.auth.signUp({
             email: normalizedEmail,
             password,
             options: {
@@ -208,7 +220,10 @@ export const useAuthStore = create<AuthStore>()(
               //   Auth → URL Configuration → Redirect URLs.
               emailRedirectTo: authRedirectUrl(),
             },
-          });
+            }),
+            AUTH_TIMEOUT_MS,
+            'Sign up',
+          );
 
           if (error) {
             set({ isLoading: false });

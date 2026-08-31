@@ -39,7 +39,12 @@ tags:
 
 - extendedWaitUntil:
     visible: ".*Sign In.*"
-    timeout: 20000
+    # 60s, not 20s: an Android debug build fetches its JS bundle from Metro on
+    # first launch after clearState, and that regularly exceeds 20 seconds. The
+    # flow failed on Android purely on this timeout while the screen it wanted
+    # was seconds away — the text is identical on both platforms
+    # ("Already have an account? Sign In"), confirmed via uiautomator dump.
+    timeout: 60000
 
 - tapOn: ".*Sign In.*"
 
