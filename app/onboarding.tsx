@@ -8,6 +8,8 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { describeAuthError } from '../src/lib/authErrors';
+import { captureException } from '../src/services/telemetry';
 import { View, Text, TouchableOpacity, TextInput, Switch, StyleSheet, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { Alert } from '../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -406,11 +408,16 @@ export default function OnboardingScreen() {
         trackOnboardingComplete(0);
         router.replace('/(tabs)');
       } catch (err: any) {
-        // Surface the real error rather than swallowing it into a
-        // generic message — silent catches hid the login-vs-signup bug
-        // for weeks. Falls back to a friendly default if the error
-        // arrived without a message.
-        setAccountError(err?.message ?? 'Could not create account. Try again.');
+        // The error must not be swallowed — silent catches hid the
+        // login-vs-signup bug for weeks. But the RAW message is for telemetry,
+        // not for the user: rendering it is what showed people "Failed to
+        // fetch" and had them retry ten times each (Sentry PEPTALK-3).
+        const described = describeAuthError(err);
+        setAccountError(described.message);
+        captureException(err, {
+          source: 'onboarding.signup',
+          extra: { kind: described.kind, raw: described.raw },
+        });
       }
     }
   };

@@ -54,7 +54,32 @@ if (!/export function isDevBuildBypass\(\): boolean \{\s*return __DEV__ === true
       }
     }
   };
-  for (const dir of ['src', 'app']) walk(join(ROOT, dir));
+  let scanned = 0;
+  const countingWalk = (dir) => {
+    for (const name of readdirSync(dir)) {
+      if (name === 'node_modules' || name.startsWith('.')) continue;
+      const full = join(dir, name);
+      if (statSync(full).isDirectory()) countingWalk(full);
+      else if (/\.(ts|tsx)$/.test(name)) scanned++;
+    }
+  };
+  for (const dir of ['src', 'app']) {
+    walk(join(ROOT, dir));
+    countingWalk(join(ROOT, dir));
+  }
+
+  // Positive control. Without this, a renamed directory or a broken walk makes
+  // this scanner report "no offenders" having read nothing at all — success for
+  // work it did not do, which is the most dangerous result a guard can produce.
+  const MIN_FILES = 200;
+  if (scanned < MIN_FILES) {
+    console.error(
+      `\nSELF-CHECK FAILED: only ${scanned} source file(s) scanned, expected at ` +
+        `least ${MIN_FILES}. The walk is broken or the source layout moved, so ` +
+        `this check proves nothing. Fix the walk rather than lowering MIN_FILES.`,
+    );
+    process.exit(1);
+  }
 
   if (offenders.length) {
     failures.push(

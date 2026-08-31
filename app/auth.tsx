@@ -4,6 +4,8 @@
  */
 
 import React, { useState } from 'react';
+import { describeAuthError } from '../src/lib/authErrors';
+import { captureException } from '../src/services/telemetry';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Switch, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { Alert } from '../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -50,7 +52,14 @@ export default function AuthScreen() {
       completeOnboarding();
       router.replace('/(tabs)');
     } catch (err: any) {
-      setError(err?.message ?? 'Invalid email or password');
+      // Show something actionable; keep the real message for Sentry. Rendering
+      // err.message directly is what left users staring at "Failed to fetch".
+      const described = describeAuthError(err);
+      setError(described.message);
+      captureException(err, {
+        source: 'auth.login',
+        extra: { kind: described.kind, raw: described.raw },
+      });
     }
   };
 
@@ -80,7 +89,12 @@ export default function AuthScreen() {
       completeOnboarding();
       router.replace('/(tabs)');
     } catch (err: any) {
-      setError(err?.message ?? 'Something went wrong. Try again.');
+      const described = describeAuthError(err);
+      setError(described.message);
+      captureException(err, {
+        source: 'auth.signup',
+        extra: { kind: described.kind, raw: described.raw },
+      });
     }
   };
 
