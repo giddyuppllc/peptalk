@@ -1,5 +1,10 @@
 # PepTalk — Production Deploy Runbook
 
+> ⚠️ **Stale as of 2026-08-31.** This runbook stops at the June migrations;
+> 21 later ones exist and the ledger disagrees with the live schema. Read
+> `DB_HANDOFF.md` before running anything here — in particular do NOT run
+> `supabase db push`.
+
 Generated 2026-06-29 after the full audit + e2e systems review. Run these **in order**
 from the machine where the Supabase + EAS CLIs are logged in. Everything in the repo
 (`origin/master`) is already committed — `git pull` first, then work this list top to bottom.

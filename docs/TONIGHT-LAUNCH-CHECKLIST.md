@@ -1,5 +1,9 @@
 # PepTalk v1.9.8 Launch Checklist — Tonight
 
+> ⚠️ **Stale as of 2026-08-31.** Written for v1.9.8 / build 22. Current App
+> Review state and the submission checklist live in `docs/APP_REVIEW_REPLY.md`
+> and `docs/app-store-review-notes.md`.
+
 Code is done. Edge functions deployed. Build 22 is processing.
 Everything below is dashboard work that only you can do.
 
