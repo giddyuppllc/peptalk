@@ -46,6 +46,34 @@ Deliberately NOT applied. Which version is correct is a judgement about live
 cost-capping, and getting it wrong changes what users are charged for AI. Diff
 them and decide.
 
+## aimee-chat-stream is BEHIND production — do not deploy it blind
+
+`aimee-chat-stream/index.deployed.ts` and `_cost.deployed.ts` are the DEPLOYED
+copies, saved here for comparison and deliberately not applied.
+
+    index.ts   repo 738 lines · deployed 848
+    _cost.ts   repo 145 lines · deployed 321
+
+**Deploying `aimee-chat-stream` from this repo would revert production by ~286
+lines** and delete `readCreditBalance` and `overageState` from `_cost.ts` — which
+the deployed `aimee-usage` imports. Diff and reconcile first.
+
+The other files in that function — `_grok.ts`, `_prompt.ts`, `_tools.ts`,
+`_shared/effectiveTier.ts` — are byte-identical to production. The drift is
+confined to those two files, and matches the shape of the credit/overage feature
+that was never committed.
+
+## Catching this next time
+
+    SUPABASE_ACCESS_TOKEN=… npm run check:drift            # every function
+    SUPABASE_ACCESS_TOKEN=… npm run check:drift aimee-chat-stream
+
+`scripts/check-deployed-drift.mjs` reads the ORIGINAL source back out of each
+deployed bundle and compares it to the repo. Every other check here compares the
+repo against itself; this is the only one that asks whether the repo still
+matches what is running. It is not in `verify:all` — it downloads a bundle per
+function and needs a token.
+
 ## The question still unanswered
 
 How code reaches production without ever being committed. Until that is known,

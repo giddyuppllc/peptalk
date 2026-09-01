@@ -52,7 +52,8 @@
     "verify:iosstrings": "node scripts/verify-ios-android-strings.mjs",
     "verify:entitlements": "node scripts/verify-build-profiles.mjs",
     "verify:version": "node scripts/verify-version.mjs",
-    "verify:errorcopy": "node scripts/verify-error-copy.mjs"
+    "verify:errorcopy": "node scripts/verify-error-copy.mjs",
+    "check:drift": "node scripts/check-deployed-drift.mjs"
   },
   "expo": {
     "install": {

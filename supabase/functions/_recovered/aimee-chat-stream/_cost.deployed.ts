@@ -1,12 +1,12 @@
-// The DEPLOYED aimee-chat-stream/_cost.ts, recovered 2026-09-01.
+// DEPLOYED source, recovered 2026-09-01. NOT applied to the repo.
 //
-// It differs from supabase/functions/aimee-chat-stream/_cost.ts in the repo
-// by 338 lines — the deployed file is 242 lines, the repo's is 85. The repo
-// copy appears to be STALE; production has moved on.
+// The repo's copy of this file is BEHIND production. Recovered from the deployed
+// bundle's source maps (method validated byte-identical against
+// _shared/effectiveTier.ts).
 //
-// NOT overwritten, deliberately: which one is correct is a judgement about
-// live cost-capping behaviour, and getting it wrong changes what users are
-// charged for AI. Diff them and decide.
+// Diff this against supabase/functions/aimee-chat-stream/_cost.ts and decide which is
+// correct before deploying aimee-chat-stream — deploying the repo copy would
+// REVERT production.
 
 /**
  * Cost control for Aimee — a MONTHLY allowance sized to what the account pays.

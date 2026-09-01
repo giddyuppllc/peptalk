@@ -1,13 +1,3 @@
-// RECOVERED ORIGINAL SOURCE — extracted 2026-09-01 from the deployed bundle.
-//
-// This is NOT a reconstruction. Supabase's deployed ESZIP embeds source maps
-// carrying `sourcesContent` — the original TypeScript, types and comments
-// intact. The extraction was validated against a control: `_shared/effectiveTier.ts`,
-// which the repo already had, came back BYTE-IDENTICAL.
-//
-// It went missing because it was deployed from a working copy and never
-// committed. See supabase/functions/_recovered/README.md.
-
 /**
  * credits (shared) — the AI credit-pack catalog, PURE and dependency-free.
  *
