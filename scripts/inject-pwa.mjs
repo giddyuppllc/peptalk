@@ -77,8 +77,43 @@ try {
 const SW_SCRIPT = `<script>
 if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function (e) {
+    navigator.serviceWorker.register('/sw.js').then(function (reg) {
+      // Ask the browser to re-check for a new worker.
+      //
+      // Registering alone is not enough for an INSTALLED PWA. In standalone
+      // mode the app often stays resident for days without a full navigation,
+      // and the browser only re-fetches sw.js on navigation or an explicit
+      // update() call. Without this, someone with PepTalk on their home screen
+      // could sit on an old build indefinitely after we ship a fix.
+      var last = 0;
+      function checkForUpdate() {
+        // Throttle: at most once every 15 minutes. update() is a network
+        // request, and a resumed app can fire visibilitychange repeatedly.
+        var now = Date.now();
+        if (now - last < 15 * 60 * 1000) return;
+        last = now;
+        reg.update().catch(function () {});
+      }
+      checkForUpdate();
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') checkForUpdate();
+      });
+    }).catch(function (e) {
       console.warn('[pwa] service worker registration failed:', e);
+    });
+
+    // When a NEW worker takes over, reload once so the open page stops running
+    // the old JS bundle. sw.js calls skipWaiting() + clients.claim(), so the new
+    // worker controls this page immediately — but the already-parsed JavaScript
+    // in it does not change until a reload.
+    //
+    // The guard matters: without it, claim() on first install would reload a
+    // page that is already current, and on a flaky network that becomes a loop.
+    var __reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (__reloading) return;
+      __reloading = true;
+      window.location.reload();
     });
   });
 }
@@ -117,5 +152,27 @@ html = html.replace(
 );
 
 writeFileSync(INDEX, html);
+
+// Stamp the service worker too, and this is not cosmetic.
+//
+// A browser installs a new service worker ONLY when the bytes of sw.js change.
+// This file is static and was byte-identical on every deploy, so after a push
+// the browser fetched it, saw no difference, and never ran install/activate —
+// meaning the activate handler that purges old caches never ran either, and a
+// CACHE version bump would have had no effect at all.
+//
+// Navigations are network-first, so users did still get fresh JS on a reload.
+// But an installed PWA that stays resident had no mechanism to notice a new
+// build. Stamping the commit makes every deploy a genuine update.
+const SW_PATH = 'dist/sw.js';
+try {
+  const sw = readFileSync(SW_PATH, 'utf8');
+  const stamped = `// build: ${buildSha}\n` + sw.replace(/^\/\/ build: .*\n/, '');
+  writeFileSync(SW_PATH, stamped);
+  console.log(`[inject-pwa] stamped sw.js with build ${buildSha.slice(0, 7)}`);
+} catch (err) {
+  console.warn('[inject-pwa] could not stamp sw.js:', err.message);
+}
+
 console.log('[inject-pwa] stamped manifest + PWA meta + service worker into', INDEX);
 console.log(`[inject-pwa] build commit: ${buildSha.slice(0, 7)}`);
