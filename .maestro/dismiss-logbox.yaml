@@ -1,0 +1,45 @@
+# Dismiss React Native's LogBox banner on Android before touching anything.
+#
+# "Open debugger to view warnings." is a NATIVE OVERLAY WINDOW, not part of the
+# React tree, and it SWALLOWS TOUCHES well beyond the area it visibly covers.
+#
+# This cost hours. On Android the peptide disclaimer looked like a hard product
+# bug: the checkbox ticked, Continue reported enabled and clickable at sensible
+# bounds, taps landed on its exact centre — via Maestro AND raw `adb input tap` —
+# and onPress never fired, with no JS error. Instrumenting both handlers showed
+# the sibling checkbox firing every time and Continue never firing. Dismissing
+# this banner fixed it instantly.
+#
+# The banner's visible bounds overlapped the button by THIRTEEN PIXELS at the
+# very bottom edge, nowhere near the tap point — so "does it overlap?" was not
+# the right question. It is a separate window; it captures in its own layer.
+#
+# DEBUG BUILDS ONLY. There is no LogBox in a release build, so this is a
+# harness concern, not a product one. Do not "fix" the app for it.
+#
+# `.maestro/pro-account.yaml` already noted this banner covers the tab bar. That
+# note was right and was worth reading sooner.
+appId: com.peptalkapp.peptalk
+---
+# Let the app finish its first render before anything is inspected.
+#
+# An Android debug build fetches its JS bundle from Metro on launch and is
+# visibly slower than iOS. Without this, a flow's `when: visible:` conditionals
+# run against a screen that has not drawn yet: they see nothing, SKIP, and the
+# flow then fails on an assertion for a modal that appeared a second later. That
+# reads as a product bug and is not one.
+#
+# `waitForAnimationToEnd` is the settle primitive. Do NOT fake a sleep with an
+# `extendedWaitUntil` on a string that never appears — that TIMES OUT, and a
+# timed-out wait fails the whole flow.
+- waitForAnimationToEnd:
+    timeout: 12000
+
+- runFlow:
+    when:
+      platform: Android
+      visible: "Open debugger to view warnings."
+    commands:
+      # The banner's dismiss X, at its right edge.
+      - tapOn:
+          point: "94%,86%"

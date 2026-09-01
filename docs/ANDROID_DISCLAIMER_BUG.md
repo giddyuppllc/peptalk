@@ -1,76 +1,74 @@
-# Open defect: the peptide disclaimer cannot be dismissed on Android
+# RESOLVED — and it was never a product bug
 
-**Status: unresolved. Found 2026-08-31. Blocks the Dose Calculator on Android.**
+**Filed 2026-08-31 as "the peptide disclaimer cannot be dismissed on Android".
+Resolved the same day. The app was fine. The test environment was not.**
 
-## What happens
+Keeping this because the misdiagnosis is more useful than the fix.
 
-On Android, `/doses` and `/doses/calculator` open behind `PeptideDisclaimerModal`
-("Research & Education Only"). Ticking **I understand and agree** and tapping
-**Continue** does nothing. The modal stays up. There is no way past it, so the
-Dose Calculator — a feature named in our own store listing — is unreachable.
+## What it looked like
 
-Works correctly on iOS. `.maestro/calculator.yaml` passes there and fails here.
+On an Android debug build, `/doses/calculator` opens behind the
+"Research & Education Only" gate. Ticking the box and tapping **Continue** did
+nothing. The modal stayed up, so the Dose Calculator — a feature named in our
+store listing — was unreachable. iOS was fine.
 
-## What has been established
+Every measurement said the app was broken:
 
-- The checkbox genuinely ticks: the a11y tree shows
-  `class="android.widget.CheckBox" checked="true"`.
-- Continue is a real, enabled, clickable node:
-  `class="android.widget.Button" enabled="true" clickable="true"`.
-- The tap lands. Reproduced with Maestro **and** with a raw
-  `adb shell input tap` at the button's centre, inside its reported bounds.
-- **`onPress` never runs.** Decisive test: tap Continue, force-stop the app,
-  relaunch, navigate back to the calculator — the disclaimer reappears. If
-  `setAccepted(true)` had run, `acceptedPeptideDisclaimer` would have persisted
-  and it would not.
-- No JS error of any kind in logcat at the moment of the tap.
-- The store action is correct: `setAcceptedPeptideDisclaimer` does
-  `set({ acceptedPeptideDisclaimer })`, and the field is in `partialize`, so it
-  persists.
+- the checkbox genuinely ticked (`checked="true"` in the a11y tree);
+- Continue was a real `android.widget.Button`, `enabled="true"`,
+  `clickable="true"`, at sensible bounds;
+- taps landed on its exact centre — via Maestro **and** raw `adb input tap`;
+- no JS error of any kind;
+- instrumenting both handlers showed the sibling checkbox firing every single
+  time and Continue never firing;
+- and `onPress` provably never ran: tap Continue, restart, revisit — the
+  disclaimer came back, so `setAccepted` had never persisted.
 
-## What was tried and did NOT fix it
+## The actual cause
 
-- **Accessibility props on the checkbox and the Continue button.** These were
-  genuinely missing and are now added — see below — but they did not fix the
-  dismissal.
-- **Keeping the Modal mounted so `visible={!accepted}` can animate closed**
-  instead of the component early-returning `null` the instant `accepted` flips.
-  This was a plausible read of the file's own note about an "Android RN Modal
-  z-order edge case", and it is a real hazard, but it changed nothing here and
-  it alters iOS behaviour too, so it was reverted rather than left in on spec.
+React Native's **LogBox banner** — "Open debugger to view warnings." — is a
+**native overlay window**, not part of the React tree, and it **swallows touches
+well beyond the area it visibly covers**. Dismissing it made Continue work
+instantly.
 
-## What was kept, because it is worth keeping regardless
+Its visible bounds overlapped the button by **thirteen pixels** at the very
+bottom edge, nowhere near the tap point. "Does it overlap?" was the wrong
+question: it is a separate window and captures in its own layer.
 
-The checkbox and Continue button had **no accessibility props at all** — no
-role, no label, no state — on a required legal consent gate:
+**Debug builds only.** There is no LogBox in a release build. Nothing shipped to
+a user was ever affected.
 
-- TalkBack never announced the checkbox as a checkbox, and never announced
-  whether it was ticked.
+`.maestro/pro-account.yaml` already carried a note that this banner is a native
+overlay covering the tab bar. That note was correct and would have saved hours.
+
+## Three fixes were attempted on the wrong diagnosis
+
+All reverted, because a behavioural change on a hunch is how the HealthKit
+rejection shipped twice:
+
+1. `pointerEvents="none"` on the decorative `LinearGradient` — plausible, wrong.
+2. Removing `disabled={!checked}` and guarding inside `onPress` — changed
+   behaviour, fixed nothing.
+3. Keeping the `<Modal>` mounted so `visible={!accepted}` could animate closed
+   instead of the component early-returning `null`. This one is a real Android
+   hazard and matches the file's own note about a "Modal z-order edge case", but
+   it changed nothing here and altered iOS too.
+
+## What was kept
+
+The accessibility props, because they were genuinely missing and are worth
+having on their own merits. On a required legal consent gate:
+
+- TalkBack never announced the checkbox as a checkbox, nor whether it was ticked;
 - Android composed its label from the children as `", I understand and agree"`,
-  leading comma included.
-- The inner `<Text>` was exposed separately and was not clickable, so a tap
-  aimed at the visible label hit dead space.
+  leading comma included;
+- the inner `<Text>` was exposed separately and was not clickable.
 
-Now `accessibilityRole="checkbox"` / `accessibilityState={{ checked }}` and
-`accessibilityRole="button"` / `accessibilityState={{ disabled: !checked }}`.
-Verified in the Android a11y tree. A blind user could not previously tell
-whether they had accepted a legal disclaimer.
+Now `accessibilityRole` / `accessibilityLabel` / `accessibilityState` on both
+controls, verified in the Android a11y tree.
 
-## Where to look next
+## What the harness now does
 
-`onPress` not firing while the node is enabled and the tap is inside its bounds
-points at touch handling rather than at logic. Worth checking, roughly in order:
-
-1. Whether something transparent overlays the button — the RN `<Modal>` backdrop,
-   `LinearGradient`, or a parent with `pointerEvents` set unhelpfully.
-2. Whether `TouchableOpacity` inside `<Modal>` on this RN version needs the
-   gesture handler's touchable instead, which is a known Android/RN pairing.
-3. Whether the ScrollView above the row is capturing the gesture.
-4. Reproducing in a release build — this was seen on a debug build with the
-   LogBox banner present, though the banner sits below the button.
-
-Reproduce with:
-
-```
-maestro --device emulator-5554 test .maestro/calculator.yaml
-```
+`.maestro/dismiss-logbox.yaml` waits for the app to settle and dismisses the
+banner on Android, and every UI-driving flow runs it straight after `launchApp`.
+Do not "fix" the app for this. Fix the harness.

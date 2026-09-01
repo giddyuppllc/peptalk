@@ -22,6 +22,7 @@ tags:
 ---
 - launchApp:
     clearState: true
+- runFlow: dismiss-logbox.yaml
 - runFlow:
     when:
       visible: "Sign In"

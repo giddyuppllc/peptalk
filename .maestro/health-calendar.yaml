@@ -9,6 +9,7 @@ tags:
   - smoke
 ---
 - launchApp
+- runFlow: dismiss-logbox.yaml
 - tapOn:
     text: "Cancel"
     optional: true

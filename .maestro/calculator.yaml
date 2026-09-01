@@ -18,6 +18,7 @@ tags:
   - release-blocker
 ---
 - launchApp
+- runFlow: dismiss-logbox.yaml
 
 - runFlow:
     when:

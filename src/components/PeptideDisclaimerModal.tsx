@@ -114,13 +114,10 @@ export function PeptideDisclaimerModal() {
             disabled={!checked}
             onPress={() => setAccepted(true)}
             activeOpacity={0.85}
-            // Same omission as the checkbox above. Without a role and label,
-            // Android exposes TWO nodes for this button — a clickable one and
-            // the inner <Text>, which is not clickable — and a tap aimed at the
-            // word "Continue" lands on the dead one. Verified on an Android
-            // build: box ticked, Continue tapped, no JS error, modal still up.
-            // The user is simply stuck on a legal gate with no way past it, and
-            // the Dose Calculator behind it is a feature we advertise.
+            // Same omission as the checkbox above: without a role and label,
+            // Android exposed two nodes for this button — a clickable one and
+            // the inner <Text>, which is not — so screen-reader users and
+            // automation both had a worse time than they needed to.
             accessibilityRole="button"
             accessibilityLabel="Continue"
             accessibilityState={{ disabled: !checked }}

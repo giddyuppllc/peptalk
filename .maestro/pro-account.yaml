@@ -26,6 +26,7 @@ tags:
   - screenshots
 ---
 - launchApp
+- runFlow: dismiss-logbox.yaml
 
 # Dev build loads JS from Metro on launch — wait for the home screen to settle.
 - extendedWaitUntil:
