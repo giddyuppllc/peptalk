@@ -1,4 +1,12 @@
-# The repo is 934 lines behind production
+# Edge-function drift
+
+> **Update 2026-09-01 — the Sentry gap is closed.** All 49 Sentry-only functions
+> now match production. Drifted files: **57 → 8**, and every one that remains is
+> a real feature difference needing a human diff, listed under §2 and §3 below.
+> The original measurement follows, unedited, because the shape of it is the
+> point.
+
+# The repo was 934 lines behind production
 
 Measured 2026-09-01 with `npm run check:drift`, which reads the original source
 back out of each deployed bundle's source maps and compares it to this repo.
@@ -14,7 +22,7 @@ validation and every Square payment path.
 
 ## It is three distinct changes, not random rot
 
-### 1. Sentry error reporting — 49 functions
+### 1. Sentry error reporting — 49 functions · FIXED 2026-09-01
 
 Each differs by two or three lines, and they are always the same two:
 
@@ -29,7 +37,13 @@ import { reportError } from '../_shared/sentry.ts';
 written, deployed across the estate, and never committed.
 
 **If edge-function failures have looked invisible, this is why**: redeploying any
-of those 49 from the repo silently removes its error reporting.
+of those 49 from the repo silently removed its error reporting.
+
+Now committed, taken from the deployed source verbatim so the repo matches byte
+for byte. It came in two forms — 46 functions use a try/catch with
+`reportError(...)`, and three whose handlers had no top-level catch are wrapped
+in `withErrorReporting(...)` instead. The applier refused to touch a file unless
+every added line was one of those forms and nothing unrelated was removed.
 
 ### 2. Payments and purchase validation — the serious one
 

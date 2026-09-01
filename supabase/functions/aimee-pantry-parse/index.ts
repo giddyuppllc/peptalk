@@ -13,6 +13,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
+import { withErrorReporting } from '../_shared/sentry.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -65,7 +66,9 @@ Rules:
 - "nutrition" carries per-serving macros for the custom-meal builder. Include it only when you can estimate confidently from typical generic values for the item. Omit the field for unbranded mystery items — the client falls back to a food-database lookup. \`servingLabel\` is a plain-English description of one unit of \`unit\` (e.g. "1 large egg", "100 g", "1 cup").
 - Output JSON only. No prose, no code fences.`;
 
-Deno.serve(async (req) => {
+// Wrapped: this handler had no top-level catch, so an unexpected throw
+// surfaced as an opaque runtime error with nothing recorded anywhere.
+Deno.serve(withErrorReporting('aimee-pantry-parse', async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -170,7 +173,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     return json({ error: String(err) }, 500);
   }
-});
+}));
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
