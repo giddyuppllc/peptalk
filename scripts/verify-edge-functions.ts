@@ -190,9 +190,11 @@ if (deployed) {
 
     if (recovered) {
       warn(
-        `"${name}" is deployed with no source in ${FUNCTIONS_DIR}/, but a recovered ` +
-          `copy exists at ${FUNCTIONS_DIR}/_recovered/${name}/index.ts. It is transpiled, ` +
-          `not original — read it, restore the types, move it into place, then deploy.`,
+        `"${name}" is deployed with no source in ${FUNCTIONS_DIR}/, but the ORIGINAL ` +
+          `source is recovered at ${FUNCTIONS_DIR}/_recovered/${name}/index.ts ` +
+          `(extracted from the deployed bundle's source maps; method validated ` +
+          `byte-identical against _shared/effectiveTier.ts). To adopt: confirm it ` +
+          `matches what is running, move it to ${FUNCTIONS_DIR}/${name}/, then deploy.`,
       );
     } else {
       fail(`"${name}" is deployed but has no source in ${FUNCTIONS_DIR}/ — nobody can maintain or redeploy it`);
