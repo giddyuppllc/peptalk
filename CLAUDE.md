@@ -169,3 +169,49 @@ appears twice on the auth screen and the submit button is index 0 on iOS and
 index 1 on Android. Prefer an `accessibilityLabel`, and if you add a primary CTA
 give it one — the pattern here is icon + text inside a gradient, which composes
 a label including the decoration and defeats matching on the visible words.
+
+## Deploying the PWA
+
+```bash
+npm run deploy:web        # export → verify:build → vercel deploy --prod
+curl -s https://app.peptalk.bio | grep build-commit   # a green deploy is not a served build
+```
+
+`verify:build` is a real gate and `deploy:web` chains with `&&`. It refuses a
+build carrying Square sandbox, and (since 90fc3c1) one carrying the production
+SDK and app id with the SANDBOX location — the combination that would tokenize
+cards against the wrong location while every other signal looked right. There is
+an `ALLOW_SANDBOX_PAYMENTS=1` escape hatch; using it ships a PWA that cannot take
+a payment.
+
+### The build needs env that lives nowhere else
+
+`EXPO_PUBLIC_SQUARE_ENV`, `_APPLICATION_ID`, `_LOCATION_ID` and
+`EXPO_PUBLIC_SENTRY_DSN` are inlined at BUILD time — the Vercel project holds no
+environment variables, because a static export has nothing to read at runtime.
+They are in `.env` (gitignored). All four are public by design and already ship
+in the client bundle.
+
+They had to be recovered from the live bundle on 2026-08-31 because they existed
+in no repo and no Vercel project, and the then-live build was stamped with a
+commit present in **no branch**. Keep `.env` intact, or a build silently falls
+back to sandbox.
+
+**`.env` must end with a newline.** Without it the last variable is dropped, and
+the symptom is a build that looks fine while shipping the sandbox Application ID.
+
+### Auto-update, and why sw.js is stamped
+
+A browser installs a new service worker only when the BYTES of sw.js change.
+`public/sw.js` is static, so every deploy served an identical file, the browser
+never ran install/activate, and the cache-purge in `activate` never ran. An
+installed PWA in standalone mode can stay resident for days without a full
+navigation, so it had no way to notice a new build at all.
+
+`inject-pwa` now stamps the build commit into `dist/sw.js`; the registration
+calls `reg.update()` on load and on visibilitychange (throttled to 15 minutes);
+and `controllerchange` reloads the page ONCE, guarded, so an open tab stops
+running the old bundle.
+
+Verified across two real deploys: the served `sw.js` first line went from
+`// build: 1d99768…` to `// build: 90fc3c1…`.
