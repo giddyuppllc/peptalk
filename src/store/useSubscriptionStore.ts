@@ -97,12 +97,6 @@ interface SubscriptionState {
   expiresAt: string | null;
   isActive: boolean;
   /**
-   * Supabase user ids we've seen match a beta-tester email. Once a user id
-   * lands here, they keep Pro access even if they later change their email,
-   * so testers can reshuffle work / personal addresses without losing access.
-   */
-  betaUserIds: string[];
-  /**
    * Purchase the store reported as pending (Android parental consent,
    * iOS "Ask to Buy", SCA challenges). Entitlement is NOT granted while
    * this is set — the UI shows a "waiting for approval" state.
@@ -182,7 +176,6 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
       productId: null,
       expiresAt: null,
       isActive: true,
-      betaUserIds: [],
       pendingPurchase: null,
       lastSyncedAt: 0,
       hasHydrated: false,
@@ -625,10 +618,17 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
         productId: state.productId,
         expiresAt: state.expiresAt,
         isActive: state.isActive,
-        betaUserIds: state.betaUserIds,
         lastSyncedAt: state.lastSyncedAt,
         // pendingPurchase is intentionally NOT persisted — a stale "waiting
         // for approval" across app restarts would be worse than losing it.
+        //
+        // `betaUserIds` was removed 2026-08-31. It was declared, initialised to
+        // [] and persisted on every write, but NOTHING ever read it and nothing
+        // ever added to it — dead state being written to secure storage
+        // forever. Its doc comment described behaviour (ids kept so testers can
+        // change email without losing Pro) that was never implemented. If that
+        // behaviour is wanted, build it deliberately; do not resurrect an empty
+        // array and assume it works.
       }),
       onRehydrateStorage: () => (state) => {
         // Purge a dev/preview beta grant before anything reads the tier.

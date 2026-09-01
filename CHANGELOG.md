@@ -1,5 +1,12 @@
 # PepTalk — branch `fix/jamie-feedback-round-1` changelog
 
+> ⚠️ **Historical. Stopped 2026-05-17.**
+>
+> This is a changelog for a single branch (`fix/jamie-feedback-round-1`), not for
+> the app, and it has not been touched since. It is kept as a record of that
+> audit. For what is true now, read `CLAUDE.md`; for App Review state,
+> `docs/APP_REVIEW_REPLY.md`; for database state, `DB_HANDOFF.md`.
+
 2026-05-17. Audit + hardening pass across security, correctness,
 performance, accessibility, and IAP. Scope: **118 files changed,
 +7,834 / -4,301 LOC.** Test infrastructure went from 0 → **8 verify
