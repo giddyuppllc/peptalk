@@ -1,4 +1,6 @@
-# Dismiss React Native's LogBox banner on Android before touching anything.
+# Get the app to a clean, interactive Home screen before a flow asserts anything.
+#
+# Two things get in the way, and both are timing-dependent:
 #
 # "Open debugger to view warnings." is a NATIVE OVERLAY WINDOW, not part of the
 # React tree, and it SWALLOWS TOUCHES well beyond the area it visibly covers.
@@ -43,3 +45,23 @@ appId: com.peptalkapp.peptalk
       # The banner's dismiss X, at its right edge.
       - tapOn:
           point: "94%,86%"
+
+# The AI-consent modal covers the Home greeting.
+#
+# It only renders for a signed-in user, so it is a sign of health — but a flow
+# that asserts "Hi, ..." while it is up reports a false failure, and one that
+# checks for it too early SKIPS and then fails later on a modal that appeared a
+# second afterwards. Both happened. Clearing it here, after the settle above,
+# removes the race from every flow at once.
+- runFlow:
+    when:
+      visible: "AI-powered features"
+    commands:
+      - tapOn:
+          text: "Not now"
+          index: 0
+- runFlow:
+    when:
+      visible: "Use AI features?"
+    commands:
+      - tapOn: "Not now"

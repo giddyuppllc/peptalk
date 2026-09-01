@@ -10,6 +10,7 @@
  */
 
 import { COMMON_FOODS, type BuiltinFood } from '../data/commonFoods';
+import { fetchWithTimeout } from '../lib/withTimeout';
 import { searchRestaurantFoods, type RestaurantFood } from '../data/restaurantFoods';
 import { useMealStore, type CachedFood } from '../store/useMealStore';
 
@@ -324,7 +325,7 @@ async function fetchProductImage(query: string): Promise<string | undefined> {
   // 1. Try Open Food Facts (free, unlimited)
   try {
     const offUrl = `${OFF_BASE}/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=1&fields=image_small_url,image_front_small_url`;
-    const offRes = await fetch(offUrl);
+    const offRes = await fetchWithTimeout(offUrl);
     if (offRes.ok) {
       const offData = await offRes.json();
       const p = offData.products?.[0];
@@ -336,7 +337,7 @@ async function fetchProductImage(query: string): Promise<string | undefined> {
   // 2. Try UPC Item DB (free, 100/day — good for grocery store products)
   try {
     const upcUrl = `https://api.upcitemdb.com/prod/trial/search?s=${encodeURIComponent(query)}&match_mode=0&type=product`;
-    const upcRes = await fetch(upcUrl);
+    const upcRes = await fetchWithTimeout(upcUrl);
     if (upcRes.ok) {
       const upcData = await upcRes.json();
       const item = upcData.items?.[0];
@@ -350,7 +351,7 @@ async function fetchProductImage(query: string): Promise<string | undefined> {
 async function searchOpenFoodFacts(query: string, limit = 25): Promise<UnifiedFood[]> {
   try {
     const url = `${OFF_BASE}/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=${limit}&fields=code,product_name,brands,serving_size,nutriments,image_small_url,categories_tags`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) return [];
     const data = await res.json();
 
@@ -426,7 +427,7 @@ async function searchNutritionix(query: string, limit = 10): Promise<UnifiedFood
 
   try {
     const url = `${NUTRITIONIX_BASE}/search/instant?query=${encodeURIComponent(query)}`;
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       headers: {
         'x-app-id': NUTRITIONIX_APP_ID,
         'x-app-key': NUTRITIONIX_API_KEY,
@@ -669,7 +670,7 @@ export async function lookupBarcode(barcode: string): Promise<UnifiedFood | null
   // Try Open Food Facts first (best barcode coverage)
   try {
     const url = `${OFF_BASE}/api/v0/product/${barcode}.json`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (res.ok) {
       const data = await res.json();
       if (data.status === 1 && data.product) {

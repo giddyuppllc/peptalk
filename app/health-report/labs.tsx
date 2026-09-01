@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import { fetchWithTimeout } from '../../src/lib/withTimeout';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -231,7 +232,7 @@ export default function LabsScreen() {
         Alert.alert('Sign in required', 'Please sign in to use lab parsing.');
         return;
       }
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/lab-scan`, {
+      const res = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/lab-scan`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,

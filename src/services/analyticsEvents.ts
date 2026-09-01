@@ -1,4 +1,5 @@
 import { getSegmentByProfile } from '../constants/segments';
+import { fetchWithTimeout } from '../lib/withTimeout';
 import { useOnboardingStore } from '../store/useOnboardingStore';
 import { sanitizeForAnalytics } from './privacyGuard';
 
@@ -57,7 +58,7 @@ export const sendAnalyticsEvent = async (
   }
 
   try {
-    await fetch(endpoint, {
+    await fetchWithTimeout(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

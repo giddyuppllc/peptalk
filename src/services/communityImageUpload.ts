@@ -25,6 +25,7 @@
  */
 
 import { Platform } from 'react-native';
+import { fetchWithTimeout } from '../lib/withTimeout';
 
 const ALLOWED_TYPES = new Set([
   'image/jpeg',
@@ -83,6 +84,9 @@ function inferMime(asset: UploadAsset): string {
  * `blob.size` is reliable.
  */
 async function resolveSize(asset: UploadAsset): Promise<{ size: number; blob: Blob }> {
+  // Deliberately raw `fetch`: asset.uri is a local file:// (or content://)
+  // URI, not a network request. There is nothing to time out, and a 60s abort
+  // on a large image read would be a bug, not a safeguard.
   const res = await fetch(asset.uri);
   if (!res.ok && Platform.OS !== 'ios') {
     // Some Android emulators 404 on file://; let the caller handle.
@@ -136,7 +140,7 @@ export async function uploadCommunityImage(
   }
 
   // 3. PUT bytes directly to R2.
-  const putRes = await fetch(signed.uploadUrl, {
+  const putRes = await fetchWithTimeout(signed.uploadUrl, {
     method: 'PUT',
     headers: {
       'Content-Type': contentType,

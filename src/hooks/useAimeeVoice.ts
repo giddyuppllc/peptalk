@@ -17,6 +17,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { fetchWithTimeout } from '../lib/withTimeout';
 import { Linking } from 'react-native';
 import { Alert } from '../lib/alert';
 import { Audio } from 'expo-av';
@@ -167,7 +168,7 @@ export function useAimeeVoice(): UseAimeeVoiceResult {
       const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
       const SUPABASE_ANON = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
       setStatus('transcribing');
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/aimee-voice`, {
+      const res = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/aimee-voice`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`,

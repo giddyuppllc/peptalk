@@ -7,7 +7,7 @@ tags:
   - smoke
 ---
 - launchApp
-- runFlow: dismiss-logbox.yaml
+- runFlow: prepare-app.yaml
 - tapOn:
     text: "Cancel"
     optional: true
@@ -24,10 +24,31 @@ tags:
     timeout: 15000
 - takeScreenshot: .maestro/screenshots/wkt-generate-before
 # The CTA is "Build my 30-day plan" near the bottom. In a DEV build the LogBox
-# warning toast overlaps the very bottom edge, so tap by a coordinate that
-# lands on the button ABOVE the toast (≈87% height) rather than by text.
-- tapOn:
-    point: "50%, 87%"
+# Tap the button BY TEXT, not by a percentage coordinate.
+#
+# This used to be `point: "50%, 87%"`, chosen to clear the dev warning toast at
+# the bottom edge. Percentage taps do not survive layout change: on the current
+# build 87% of the screen height lands on the descriptive paragraph BELOW the
+# button, so the plan was never requested and the flow failed on the plan
+# assertion — looking exactly like a generation failure when nothing had been
+# generated because nothing had been pressed.
+#
+# The overlay problem it was working around is now handled properly by
+# prepare-app.yaml, which clears the LogBox banner on Android.
+- tapOn: "Build my 30-day plan"
+
+# Answer the AI consent prompt, which appears AT THE POINT OF USE.
+#
+# prepare-app.yaml clears the launch-time consent modal, but this is a second,
+# separate prompt raised when a feature actually needs an AI provider — which is
+# correct behaviour and exactly what App Review wants to see. Generation blocks
+# until it is answered, so a flow that ignores it sits on "Building…" forever
+# and then fails as though generation were broken.
+- runFlow:
+    when:
+      visible: "Use AI features?"
+    commands:
+      - tapOn: "Agree & Continue"
 # AI call (if aimee-workout is deployed) or instant deterministic fallback —
 # wait for the 30-Day Plan screen with its day rows.
 - extendedWaitUntil:

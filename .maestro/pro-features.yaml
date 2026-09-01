@@ -15,7 +15,7 @@ tags:
   - screenshots
 ---
 - launchApp
-- runFlow: dismiss-logbox.yaml
+- runFlow: prepare-app.yaml
 # Clear any leftover "Open in PepTalk?" scheme prompt from a prior run.
 - tapOn:
     text: "Cancel"

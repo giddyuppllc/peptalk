@@ -25,6 +25,7 @@
  */
 
 import { supabase } from './supabase';
+import { fetchWithTimeout } from '../lib/withTimeout';
 import { resolveExerciseId } from '../data/workoutVideos';
 
 /**
@@ -496,7 +497,7 @@ export async function fetchExerciseVideoUrl(
   // rejection, or throws on a network-level failure so the caller can
   // retry once.
   const attempt = async () => {
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${session.access_token}`,

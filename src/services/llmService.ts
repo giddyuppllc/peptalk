@@ -20,6 +20,7 @@
 // inside getClient() makes the import unreachable in prod and
 // drops the SDK from the release bundle entirely.
 import { Platform } from 'react-native';
+import { fetchWithTimeout } from '../lib/withTimeout';
 import { ChatMessage, EnhancedBotContext } from '../types';
 import { ensureAiConsent } from '../utils/ensureAiConsent';
 import { sanitizeForLLM } from './privacyGuard';
@@ -704,7 +705,7 @@ export async function generateAIResponse(
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token) {
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/aimee-chat`, {
+        const res = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/aimee-chat`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -827,7 +828,7 @@ export async function generateRecipe(params: {
           }
         }
 
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/aimee-recipe`, {
+        const res = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/aimee-recipe`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${session.access_token}`,
@@ -1093,6 +1094,10 @@ export async function* generateAIResponseStream(
 
   let res: Response;
   try {
+    // Deliberately raw `fetch`, NOT fetchWithTimeout: this is an SSE response
+    // that stays open for the length of Aimee's reply. A 60s abort would cut
+    // off a long answer mid-sentence. If this needs bounding, bound the time to
+    // FIRST BYTE, not the whole body.
     res = await fetch(`${SUPABASE_URL}/functions/v1/aimee-chat-stream`, {
       method: 'POST',
       headers: {
@@ -1257,7 +1262,7 @@ export async function resolveAimeeAction(args: {
   if (!session?.access_token) return { ok: false, error: 'Not authenticated' };
 
   try {
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `${SUPABASE_URL}/functions/v1/aimee-action-confirm`,
       {
         method: 'POST',

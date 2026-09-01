@@ -17,7 +17,7 @@ tags:
   - smoke
 ---
 - launchApp
-- runFlow: dismiss-logbox.yaml
+- runFlow: prepare-app.yaml
 
 # First-run gates sit on top of Home and correctly block everything beneath.
 # A reviewer meets these too, so clearing them is part of the real path.

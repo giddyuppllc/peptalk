@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useState, useRef } from 'react';
+import { fetchWithTimeout } from '../../src/lib/withTimeout';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Image, Linking, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -276,7 +277,7 @@ export default function FoodScannerScreen() {
         return;
       }
 
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/food-scan`, {
+      const res = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/food-scan`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
