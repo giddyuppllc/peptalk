@@ -41,6 +41,7 @@ import {
   PutObjectCommand,
 } from 'npm:@aws-sdk/client-s3@3.658.1';
 import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner@3.658.1';
+import { reportError } from '../_shared/sentry.ts';
 
 const OPENAI_API_KEY =
   Deno.env.get('OPENAI_TRANSCRIBE_API_KEY') ??
@@ -188,6 +189,7 @@ Deno.serve(async (req) => {
         'Captions generated. Now update get-workout-video/manifest.json with `captionUrl` for this slug + redeploy that function.',
     });
   } catch (err) {
+    reportError('transcribe-workout-video', err);
     console.error('[transcribe-workout-video]', err);
     return jsonResp({ error: 'Internal error' }, 500);
   }

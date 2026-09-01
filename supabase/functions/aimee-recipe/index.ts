@@ -9,6 +9,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -155,6 +156,7 @@ Return ONLY valid JSON, no other text.`;
 
     return json({ recipes: parsed.recipes ?? [] });
   } catch (err) {
+    reportError('aimee-recipe', err);
     console.error('[aimee-recipe] unhandled error:', err);
     return json({ error: 'Internal server error' }, 500);
   }

@@ -22,6 +22,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { reportError } from '../_shared/sentry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -220,6 +221,7 @@ Deno.serve(async (req) => {
 
     return jsonResp({ ok: true, delivered, failed, kind: eventKind });
   } catch (err) {
+    reportError('crm-event-fanout', err);
     console.error('[crm-event-fanout]', err);
     return jsonResp({ error: 'Internal error' }, 500);
   }

@@ -22,6 +22,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
+import { reportError } from '../_shared/sentry.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -88,6 +89,7 @@ async function checkRateLimit(
     }
     return { allowed: true, limit };
   } catch (err) {
+    reportError('aimee-report-rewrite', err);
     console.error(`[${functionName}] rate-limit check failed; failing closed:`, err);
     return { allowed: false, limit, retryAfter: 60 };
   }

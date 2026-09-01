@@ -29,6 +29,7 @@ import {
 } from 'npm:@aws-sdk/client-s3@3.658.1';
 import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner@3.658.1';
 import manifest from './manifest.json' with { type: 'json' };
+import { reportError } from '../_shared/sentry.ts';
 
 // Slug → objectKey allowlist built once at cold start. We refuse to sign
 // any key that isn't in this map, even for authenticated Pro users —
@@ -203,6 +204,7 @@ Deno.serve(async (req: Request) => {
       expiresInSec: SIGN_TTL_SEC,
     });
   } catch (err) {
+    reportError('get-workout-video', err);
     console.error('[get-workout-video] sign failed:', err);
     return json({ error: 'Failed to sign URL' }, 500);
   }

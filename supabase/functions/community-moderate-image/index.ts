@@ -36,6 +36,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { reportError } from '../_shared/sentry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -357,6 +358,7 @@ Deno.serve(async (req) => {
       .eq('id', targetId);
     return jsonResp({ ok: true, flagged: false });
   } catch (err) {
+    reportError('community-moderate-image', err);
     console.error('[community-moderate-image]', err);
     return jsonResp({ error: 'Internal error' }, 500);
   }

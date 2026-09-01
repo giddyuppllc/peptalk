@@ -33,6 +33,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { reportError } from '../_shared/sentry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -151,6 +152,7 @@ Deno.serve(async (req) => {
 
     return jsonResp({ ok: true, saved: rows.length });
   } catch (err) {
+    reportError('save-workout-overrides', err);
     console.error('[save-workout-overrides] error:', err);
     // Detail is logged server-side; don't echo internal error text to the client.
     return jsonResp({ error: 'Internal error' }, 500);
