@@ -1,5 +1,20 @@
 # PepTalk — Subscribe button is present + responsive (Guideline 2.1a).
 #
+# ── Needs a store that can actually sell. ─────────────────────────────────
+#
+# This proves the Subscribe button is present and responsive (Guideline 2.1a).
+# It needs real products from a real billing service:
+#   - iOS simulator: StoreKit returns products, so this runs.
+#   - Android emulator with a `google_apis` image: there is NO Play Store and no
+#     Play Billing, so `initConnection` fails with
+#     "Failed to initialize billing connection", no products load, and the
+#     paywall has nothing to show. The flow fails on the plan assertion.
+#
+# That failure is the emulator, not the app — and it is the same
+# initialisation error as Sentry PEPTALK-1, now handled gracefully instead of
+# crashing. To exercise this on Android you need a `google_apis_playstore`
+# image and a signed-in Google account with a licence-tested build.
+#
 # The original 2.1a finding was an "unresponsive Subscribe button" — which
 # happens when (a) the reviewer account is pre-entitled (so tapping no-ops), or
 # (b) the IAP products aren't attached to the version (StoreKit has nothing to

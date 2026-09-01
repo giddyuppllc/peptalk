@@ -131,3 +131,41 @@ HealthKit rejection got recorded inverted and shipped twice.
 - The desktop gate (`src/components/DesktopGate.tsx`) means a desktop browser
   only ever exercises the gate page — CSP and web behaviour must be verified on
   a phone or an installed PWA.
+
+## Running the E2E flows
+
+`.maestro/` holds 19 flows. They are NOT in CI — they are manual, and they only
+tell the truth if you know which platform each one belongs to.
+
+```bash
+# iOS — erase first for anything auth-related; clearState does NOT wipe the Keychain
+xcrun simctl erase <udid> && xcrun simctl boot <udid>
+maestro --device <udid> test .maestro/login.yaml -e EMAIL=… -e PASSWORD=…
+
+# Android — needs the SDK, an emulator, and Metro reachable
+adb reverse tcp:8081 tcp:8081
+maestro --device emulator-5554 test .maestro/navigation.yaml
+```
+
+**Every UI flow runs `prepare-app.yaml` first.** It settles the app and clears
+two things that otherwise produce false failures: React Native's LogBox banner —
+a NATIVE overlay window on Android that swallows touches well beyond its visible
+area — and the launch-time AI-consent modal. A day was lost to the first one
+looking exactly like a product bug. Do not remove that preamble.
+
+**Preconditions, because a red run usually means one of these, not a defect:**
+
+| Flow | Needs |
+|---|---|
+| `login.yaml` | an ERASED device — `clearState` leaves the iOS Keychain intact, so it boots signed in and proves nothing |
+| most others | an already signed-in app; run `login.yaml` first |
+| `healthkit-visible` | **iOS only** — Apple Health does not exist on Android |
+| `healthkit-explainer` | **a real device** — the Simulator reports no HealthKit data layer, so Apple Health renders under "Coming soon" with no entry point |
+| `subscribe` | a store that can sell — an Android `google_apis` image has no Play Billing |
+| `workout-generate-test` | answers a SECOND, point-of-use AI consent prompt |
+
+**Selectors are platform-specific more often than you would like.** "Log In"
+appears twice on the auth screen and the submit button is index 0 on iOS and
+index 1 on Android. Prefer an `accessibilityLabel`, and if you add a primary CTA
+give it one — the pattern here is icon + text inside a gradient, which composes
+a label including the decoration and defeats matching on the visible words.

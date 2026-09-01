@@ -1,5 +1,16 @@
 # PepTalk — Apple Health is clearly identified in the UI (Guideline 2.5.1).
 #
+# ── iOS ONLY. A red result on Android means nothing. ───────────────────────
+#
+# This asserts that APPLE HEALTH is clearly identified in the UI (Guideline
+# 2.5.1). Apple Health does not exist on Android — that platform uses Health
+# Connect, and `healthConnectAdapter` is a different surface with different
+# copy, deliberately (see verify:iosstrings and Guideline 2.3.10, which is about
+# NOT mentioning the other platform's brand).
+#
+# Running it against Android fails at "Integrations" and tells you nothing about
+# either platform. Run it on the iOS simulator.
+#
 # Proves the HealthKit screen is reachable + labeled, so 2.5.1 can't be
 # re-flagged. Also serves as the navigation reference for the App Review notes
 # ("Apple Health is at Profile → Apple Health & Integrations").
