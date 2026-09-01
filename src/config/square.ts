@@ -15,9 +15,22 @@ export const SQUARE_APPLICATION_ID =
   process.env.EXPO_PUBLIC_SQUARE_APPLICATION_ID ??
   'sandbox-sq0idb-VpIJkyUJzr1uA6YQ_SHQGQ';
 
-/** Public Location ID — used by the Web Payments SDK to tokenize the card. */
+/**
+ * Public Location ID — used by the Web Payments SDK to tokenize the card.
+ *
+ * The fallback is the SANDBOX location, and it is named as such deliberately.
+ *
+ * It used to be a bare `?? 'LBHKG5HYE2VAY'` with no indication of which
+ * environment it belonged to, while production is 'LD9YGE0PA47SE'. A build that
+ * set EXPO_PUBLIC_SQUARE_ENV and the application id but missed THIS variable
+ * would therefore ship the production SDK and the production app id pointed at
+ * a location that is not the production one — a payment misrouted silently,
+ * with every other signal looking correct. verify:build checks the SDK and the
+ * app id; it did not check this.
+ */
+const SANDBOX_LOCATION_ID = 'LBHKG5HYE2VAY';
 export const SQUARE_LOCATION_ID =
-  process.env.EXPO_PUBLIC_SQUARE_LOCATION_ID ?? 'LBHKG5HYE2VAY';
+  process.env.EXPO_PUBLIC_SQUARE_LOCATION_ID ?? SANDBOX_LOCATION_ID;
 
 /** Web Payments SDK script (sandbox vs production). */
 export const SQUARE_SDK_URL =
