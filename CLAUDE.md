@@ -107,8 +107,11 @@ Migrations and edge functions do **not** ship with the app.
   never been applied — a live hole letting a user self-approve their own
   pending-image post. Repairing the ledger blind would have sealed it shut
   permanently. See `DB_HANDOFF.md` §7.
-- 13 ledger rows still have no file (changes applied straight to the database),
-  so the schema cannot be rebuilt from this repo alone.
+- The ledger and the repo agree exactly (57 rows, 57 files) as of 2026-09-01.
+  The 13 rows that once looked orphaned were the SAME migrations under
+  CLI-generated timestamps — matched by `name`, duplicates removed. The schema
+  IS reproducible from this repo; an earlier note here said otherwise and was
+  wrong.
 - `DEPLOY_RUNBOOK.md` stops at June and is stale on this point.
 
 ## Docs here go stale, loudly

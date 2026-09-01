@@ -169,18 +169,32 @@ unapplied and invisible.** Verify objects before repairing a ledger.
 
 The ledger now records all 57 files, so **`supabase db push` is safe again**.
 
-### Known gap: 13 orphan ledger rows
+### The 13 "orphan" rows — RESOLVED 2026-09-01, and I had them wrong
 
-Thirteen ledger rows have no corresponding file:
+I previously recorded these as changes applied straight to the database, and
+concluded the schema **could not be rebuilt from this repo alone**. That was
+wrong, and it is worth correcting because it would have driven real decisions.
+
+Reading their `name` column settles it: **all 13 are migrations that ARE in the
+repo**, recorded under a different, auto-generated timestamp —
 
 ```
-20260618005110  20260627171239  20260629002013  20260629002031  20260629061223
-20260629205812  20260629205827  20260629205856  20260629205904  20260629205912
-20260629205922  20260629205934  20260629231240
+20260618005110 workout_video_overrides  = 20260526000000_workout_video_overrides.sql
+20260627171239 hide_pending_images      = 20260627000000_hide_pending_images.sql
+20260629002013 fix_admin_set_user_tier  = 20260624010000_fix_admin_set_user_tier.sql
+…13 of 13 matched by name
 ```
 
-These are changes applied directly to the database — via Studio, or a
-`db diff` that was never saved. They do not block `db push`. They do mean the
-schema **cannot be rebuilt from this repo alone**, so a from-scratch restore or a
-new environment would come up subtly different. Worth dumping the live schema and
-reconciling before anyone needs a second environment.
+They came from a `supabase db push` run against a working copy whose files
+carried CLI-generated timestamps, after which the files were re-created with
+tidier ones. So the repo has always held the full schema.
+
+Because of that, my ledger repair had recorded each of those migrations twice.
+The duplicates are deleted; every canonical row was confirmed present first.
+
+**The ledger and the repo now agree exactly: 57 rows, 57 files, no unrecorded
+files and no orphan rows.** `supabase migration list` is clean and
+`supabase db push` is safe.
+
+The lesson worth keeping: a version mismatch is not evidence of missing source.
+Check the `name` column before concluding anything is lost.
