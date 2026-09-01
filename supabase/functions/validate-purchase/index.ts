@@ -16,6 +16,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { compactVerify, importX509, decodeProtectedHeader } from 'https://esm.sh/jose@5.9.6';
 import { X509Certificate } from 'https://esm.sh/@peculiar/x509@1.9.7';
+import { reportError } from '../_shared/sentry.ts';
+import { isCreditPack, packForProduct } from '../_shared/credits.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -49,6 +51,44 @@ interface ValidateBody {
   receipt: string; // transactionReceipt (iOS) or purchaseToken (Android)
 }
 
+/**
+ * Record where a validation attempt got to.
+ *
+ * Never throws and never blocks the response. This exists so that a failure on
+ * the money path leaves evidence -- previously a customer could pay, get
+ * nothing, and be completely invisible to us afterwards. Logging must not
+ * become a new way for the money path to fail, so every error here is
+ * swallowed after being reported.
+ */
+async function logStage(
+  admin: any,
+  args: {
+    userId?: string | null;
+    platform: string;
+    productId: string;
+    stage: string;
+    externalId?: string | null;
+    purchaseToken?: string | null;
+    acknowledged?: boolean | null;
+    error?: string | null;
+  },
+): Promise<void> {
+  try {
+    await admin.rpc('log_purchase_validation', {
+      p_user_id: args.userId ?? null,
+      p_platform: args.platform,
+      p_product_id: args.productId,
+      p_stage: args.stage,
+      p_external_id: args.externalId ?? null,
+      p_purchase_token: args.purchaseToken ?? null,
+      p_acknowledged: args.acknowledged ?? null,
+      p_error: args.error ?? null,
+    });
+  } catch (e) {
+    console.error('[validate-purchase] logStage failed:', e);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -74,6 +114,16 @@ Deno.serve(async (req) => {
       return json({ error: 'Missing required fields' }, 400);
     }
 
+    // ── Credit packs (consumables) branch off before the tier lookup ──
+    //
+    // They are not subscriptions: no tier, no expiry, and a user may buy the
+    // same SKU many times. Handled entirely by handleCreditPack, which returns
+    // early -- the subscription machinery below would reject them as unknown
+    // products, and any of it that did run would be wrong for a consumable.
+    if (isCreditPack(body.productId)) {
+      return await handleCreditPack(user.id, body);
+    }
+
     const tier = PRODUCT_TO_TIER[body.productId];
     if (!tier) {
       return json({ error: `Unknown product: ${body.productId}` }, 400);
@@ -92,6 +142,19 @@ Deno.serve(async (req) => {
     let expiresAt: string | null = null;
     let originalTransactionId: string | null = null;
 
+    // Evidence FIRST. If everything after this line fails -- a timeout, a cold
+    // start, a database outage -- this row still names the user and the
+    // product, which is the difference between a findable problem and an
+    // invisible one.
+    const logClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    await logStage(logClient, {
+      userId: user.id,
+      platform: body.platform,
+      productId: body.productId,
+      stage: 'received',
+      purchaseToken: body.platform === 'android' ? body.receipt : null,
+    });
+
     if (body.platform === 'ios') {
       const result = await verifyAppleReceiptV2(body.receipt, body.productId);
       validated = result.valid;
@@ -105,8 +168,32 @@ Deno.serve(async (req) => {
     }
 
     if (!validated) {
+      // The store said no. No money is owed, but record it: a spike here is
+      // how a broken verifier or a bad service-account key announces itself.
+      await logStage(logClient, {
+        userId: user.id,
+        platform: body.platform,
+        productId: body.productId,
+        stage: 'verify_failed',
+        externalId: originalTransactionId,
+        error: 'store rejected the receipt',
+      });
       return json({ error: 'Receipt could not be verified' }, 400);
     }
+
+    // Verified. On Android the acknowledgement has ALREADY happened inside
+    // verifyGoogleReceipt, before any database work -- so from here on the
+    // customer's money is safe from the 3-day auto-refund even if everything
+    // below fails. What is NOT safe is their entitlement, which is exactly
+    // what the reconciliation sweep looks for.
+    await logStage(logClient, {
+      userId: user.id,
+      platform: body.platform,
+      productId: body.productId,
+      stage: 'verified',
+      externalId: originalTransactionId,
+      acknowledged: body.platform === 'android' ? true : null,
+    });
 
     // ── Cross-user dedup ──
     // Reject if the same Apple original_transaction_id (or Google orderId
@@ -131,6 +218,17 @@ Deno.serve(async (req) => {
           originalTransactionId,
           dupErr,
         );
+        // Verified but not granted: the customer has paid and has nothing.
+        // This is the row the reconciliation sweep looks for.
+        await logStage(logClient, {
+          userId: user.id,
+          platform: body.platform,
+          productId: body.productId,
+          stage: 'grant_failed',
+          externalId: originalTransactionId,
+          error: 'dedup lookup failed',
+        });
+        reportError('validate-purchase', new Error('PAID BUT NOT GRANTED: dedup lookup failed'));
         return json({ error: 'Could not validate receipt; please try again' }, 503);
       }
       if (existing) {
@@ -203,6 +301,17 @@ Deno.serve(async (req) => {
           `[validate-purchase] CRITICAL: could not free original_transaction_id from superseded row for user ${user.id}:`,
           freeErr,
         );
+        // Verified but not granted: the customer has paid and has nothing.
+        // This is the row the reconciliation sweep looks for.
+        await logStage(logClient, {
+          userId: user.id,
+          platform: body.platform,
+          productId: body.productId,
+          stage: 'grant_failed',
+          externalId: originalTransactionId,
+          error: 'subscriptions upsert failed',
+        });
+        reportError('validate-purchase', new Error('PAID BUT NOT GRANTED: subscriptions upsert failed'));
         return json({ error: 'Could not record subscription' }, 500);
       }
     }
@@ -218,6 +327,17 @@ Deno.serve(async (req) => {
       );
       // Fail the validation so the client doesn't think it succeeded —
       // it can retry, and user isn't charged twice (receipt replay is idempotent).
+      // Verified but not granted: the customer has paid and has nothing.
+      // This is the row the reconciliation sweep looks for.
+      await logStage(logClient, {
+        userId: user.id,
+        platform: body.platform,
+        productId: body.productId,
+        stage: 'grant_failed',
+        externalId: originalTransactionId,
+        error: 'subscriptions upsert failed',
+      });
+      reportError('validate-purchase', new Error('PAID BUT NOT GRANTED: subscriptions upsert failed'));
       return json({ error: 'Could not record subscription' }, 500);
     }
 
@@ -283,8 +403,16 @@ Deno.serve(async (req) => {
         }
       });
 
+    await logStage(logClient, {
+      userId: user.id,
+      platform: body.platform,
+      productId: body.productId,
+      stage: 'granted',
+      externalId: originalTransactionId,
+    });
     return json({ success: true, tier, expiresAt });
   } catch (err) {
+    reportError('validate-purchase', err);
     console.error('[validate-purchase] Unhandled error:', err);
     return json({ error: 'Internal server error' }, 500);
   }
@@ -325,6 +453,139 @@ async function verifyAppleReceiptV2(
   } catch (err) {
     console.error('[validate-purchase] StoreKit 2 JWS verification failed:', (err as any)?.message ?? err);
     return { valid: false, expiresAt: null, originalTransactionId: null };
+  }
+}
+
+/**
+ * Verify a CONSUMABLE (credit-pack) purchase on Apple.
+ *
+ * Consumables differ from subscriptions in exactly the way that matters here:
+ * there is no expiry, so `expiresDate > now` -- the liveness test the
+ * subscription verifier uses -- would reject every valid one. What is checked
+ * instead is that the transaction is authentic (same certificate-chain
+ * verification, unchanged), is for OUR bundle, names the SKU the client
+ * claims, and has not been refunded.
+ *
+ * `transactionId` (not `originalTransactionId`) is the idempotency key: each
+ * consumable purchase is its own transaction, and a user may legitimately buy
+ * the same pack repeatedly. Keying on originalTransactionId would silently
+ * drop every repeat purchase as a duplicate.
+ */
+async function verifyAppleConsumable(
+  receipt: string,
+  expectedProductId: string,
+): Promise<{ valid: boolean; transactionId: string | null }> {
+  try {
+    const tx: any = await verifyAppleJWS(receipt);
+    if (tx?.bundleId && tx.bundleId !== BUNDLE_ID) {
+      console.warn('[validate-purchase] consumable bundleId mismatch:', tx.bundleId);
+      return { valid: false, transactionId: null };
+    }
+    if (tx?.productId !== expectedProductId) {
+      console.warn(
+        '[validate-purchase] consumable productId mismatch: got',
+        tx?.productId,
+        'expected',
+        expectedProductId,
+      );
+      return { valid: false, transactionId: null };
+    }
+    // Refunded or revoked purchases must not grant credits.
+    if (Number(tx?.revocationDate ?? 0) > 0) {
+      console.warn('[validate-purchase] consumable was revoked/refunded');
+      return { valid: false, transactionId: null };
+    }
+    const transactionId = tx?.transactionId != null ? String(tx.transactionId) : null;
+    if (!transactionId) {
+      // Without a transaction id there is no idempotency key, and a retry
+      // would grant a second time. Refuse rather than risk double-granting.
+      console.error('[validate-purchase] consumable has no transactionId');
+      return { valid: false, transactionId: null };
+    }
+    return { valid: true, transactionId };
+  } catch (err) {
+    console.error('[validate-purchase] consumable JWS verification failed:', (err as any)?.message ?? err);
+    return { valid: false, transactionId: null };
+  }
+}
+
+/**
+ * Verify a CONSUMABLE (credit-pack) purchase on Google Play.
+ *
+ * A DIFFERENT ENDPOINT from subscriptions: `purchases/products/...` rather
+ * than `purchases/subscriptions/...`. Calling the subscription endpoint with a
+ * one-time product token returns 404, which would read as "invalid purchase"
+ * for a customer who genuinely paid.
+ *
+ * purchaseState: 0 = Purchased, 1 = Canceled, 2 = Pending. Only 0 grants --
+ * Pending means a deferred payment method has not settled yet, and granting on
+ * it hands out credits for money that may never arrive.
+ */
+async function verifyGoogleConsumable(
+  productId: string,
+  purchaseToken: string,
+): Promise<{ valid: boolean; transactionId: string | null }> {
+  if (!GOOGLE_SERVICE_ACCOUNT_JSON) {
+    console.error('[validate-purchase] GOOGLE_SERVICE_ACCOUNT_JSON not set');
+    return { valid: false, transactionId: null };
+  }
+  try {
+    const accessToken = await getGoogleAccessToken();
+    if (!accessToken) return { valid: false, transactionId: null };
+
+    const url =
+      `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/` +
+      `${ANDROID_PACKAGE_NAME}/purchases/products/${productId}/tokens/` +
+      `${encodeURIComponent(purchaseToken)}`;
+
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+    if (!res.ok) {
+      console.error('[validate-purchase] Google product API error:', res.status, await res.text());
+      return { valid: false, transactionId: null };
+    }
+    const data = await res.json();
+    if (data.purchaseState !== 0) {
+      console.warn('[validate-purchase] consumable purchaseState not Purchased:', data.purchaseState);
+      return { valid: false, transactionId: null };
+    }
+    // The purchase token is unique per purchase and is what Google itself
+    // dedupes on, so it is the safest idempotency key. orderId is used when
+    // present because it is the identifier that appears on the payout report.
+    const transactionId =
+      typeof data.orderId === 'string' && data.orderId ? data.orderId : purchaseToken;
+
+    // Acknowledge within 3 days or Play auto-refunds. Non-fatal: the customer
+    // has paid, so a failed acknowledge must not withhold their credits.
+    if (data.acknowledgementState === 0) {
+      await acknowledgeGoogleProduct(productId, purchaseToken, accessToken).catch((err) => {
+        console.warn('[validate-purchase] Google product acknowledge failed (non-fatal):', err);
+      });
+    }
+    return { valid: true, transactionId };
+  } catch (err) {
+    console.error('[validate-purchase] Google consumable verify threw:', err);
+    return { valid: false, transactionId: null };
+  }
+}
+
+/** products.acknowledge -- the one-time-purchase counterpart of the
+ *  subscription acknowledge below. Different URL; same 3-day deadline. */
+async function acknowledgeGoogleProduct(
+  productId: string,
+  purchaseToken: string,
+  accessToken: string,
+): Promise<void> {
+  const url =
+    `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/` +
+    `${ANDROID_PACKAGE_NAME}/purchases/products/${productId}/tokens/` +
+    `${encodeURIComponent(purchaseToken)}:acknowledge`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  if (!res.ok) {
+    throw new Error(`acknowledge product ${res.status}: ${await res.text()}`);
   }
 }
 
@@ -629,6 +890,91 @@ function base64UrlEncode(bytes: Uint8Array): string {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Verify and grant a credit-pack (consumable) purchase.
+ *
+ * The grant itself is idempotent in the DATABASE -- `grant_ai_credits` keys on
+ * (source, external_id) with a unique constraint -- which matters because
+ * clients retry. StoreKit in particular re-delivers unfinished transactions on
+ * every app launch, so this endpoint WILL be called repeatedly with the same
+ * transaction, and it has to be safe rather than merely unlikely to collide.
+ *
+ * A duplicate is reported as success. The client's job on success is to finish
+ * / consume the transaction; returning an error for a replay would leave that
+ * transaction unfinished forever and re-deliver it on every launch.
+ */
+async function handleCreditPack(
+  userId: string,
+  body: ValidateBody,
+): Promise<Response> {
+  const pack = packForProduct(body.productId);
+  if (!pack) {
+    // Unreachable via isCreditPack, but never grant on an unknown SKU.
+    return json({ error: `Unknown credit pack: ${body.productId}` }, 400);
+  }
+
+  const result =
+    body.platform === 'ios'
+      ? await verifyAppleConsumable(body.receipt, body.productId)
+      : await verifyGoogleConsumable(body.productId, body.receipt);
+
+  if (!result.valid || !result.transactionId) {
+    return json({ error: 'Purchase could not be verified' }, 400);
+  }
+
+  const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  const source = body.platform === 'ios' ? 'apple' : 'google';
+
+  // Cross-user replay: the same store transaction must never fund two
+  // accounts. The unique constraint stops a second GRANT, but it would
+  // silently attribute the replay to whoever called first, so this is checked
+  // explicitly and refused loudly.
+  const { data: priorGrant } = await admin
+    .from('ai_credit_grants')
+    .select('user_id')
+    .eq('source', source)
+    .eq('external_id', result.transactionId)
+    .maybeSingle();
+  if (priorGrant && priorGrant.user_id !== userId) {
+    console.error(
+      `[validate-purchase] credit transaction ${result.transactionId} already bound to another user`,
+    );
+    return json({ error: 'This purchase is already linked to another account' }, 409);
+  }
+
+  const { data, error } = await admin.rpc('grant_ai_credits', {
+    p_user_id: userId,
+    p_source: source,
+    p_external_id: result.transactionId,
+    p_product_id: body.productId,
+    p_microcents: pack.creditCents * 1_000_000,
+    p_price_cents: pack.priceCents,
+  });
+
+  if (error) {
+    console.error('[validate-purchase] CRITICAL grant_ai_credits failed:', error);
+    reportError('validate-purchase', error);
+    // 500 so the client retries: the customer has paid and the grant is
+    // idempotent, so retrying is safe and dropping it is not.
+    return json({ error: 'Could not apply credits, please retry' }, 500);
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  const balanceMC = Number(row?.balance_microcents ?? 0);
+  const wasDuplicate = row?.was_duplicate === true;
+  if (wasDuplicate) {
+    console.log(`[validate-purchase] replay of credit tx ${result.transactionId} — no double grant`);
+  }
+
+  return json({
+    success: true,
+    productId: body.productId,
+    creditsAddedCents: wasDuplicate ? 0 : pack.creditCents,
+    balanceCents: Math.round(balanceMC / 1_000_000),
+    duplicate: wasDuplicate,
+  });
+}
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

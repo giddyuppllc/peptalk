@@ -1,3 +1,9 @@
+// DEPLOYED source of supabase/functions/square-webhook/index.ts, recovered 2026-09-01. NOT applied.
+//
+// The repo and production have BOTH changed here — each has lines the other
+// lacks — so this cannot be adopted mechanically. Diff against the repo copy
+// and decide. See docs/EDGE-FUNCTION-DRIFT.md.
+
 /**
  * square-webhook — receives Square events for PepTalk WEB subscriptions and
  * grants entitlement by writing a `platform:'web'` row into `subscriptions`

@@ -33,6 +33,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { compactVerify, importX509, decodeProtectedHeader } from 'https://esm.sh/jose@5.9.6';
 import { X509Certificate } from 'https://esm.sh/@peculiar/x509@1.9.7';
+import { reportError } from '../_shared/sentry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -102,6 +103,28 @@ Deno.serve(async (req) => {
       return new Response('Bundle mismatch', { status: 400 });
     }
 
+    // 3b. Which environment produced this?
+    //
+    //     Apple delivers BOTH Sandbox and Production notifications to the SAME
+    //     production URL — there is no separate sandbox endpoint to configure.
+    //     The signature is valid and the bundle id matches in both cases, so
+    //     without this field a sandbox purchase is indistinguishable from a
+    //     real one and grants a real entitlement.
+    //
+    //     We deliberately do NOT reject Sandbox: App Review performs its
+    //     purchases in sandbox against the production build, and refusing them
+    //     would fail review. What we do is RECORD it, so sandbox activity is
+    //     visible in the audit log and never silently counted as revenue.
+    //     Whether a sandbox entitlement should confer real access is a policy
+    //     decision, not something to change quietly here.
+    const environment: string | null =
+      txInfo?.environment ?? data.environment ?? null;
+    if (environment && environment !== 'Production') {
+      console.warn(
+        `[apple-notifications] ${environment} notification accepted (type=${notificationType}); recorded as non-production.`,
+      );
+    }
+
     // 4. Find the user by originalTransactionId / appAccountToken if present.
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const productId: string | undefined = txInfo?.productId;
@@ -159,6 +182,7 @@ Deno.serve(async (req) => {
         external_event_id: notificationUUID,
         raw_payload: { outer, txInfo, renewalInfo, notificationType, subtype },
         expires_at: expiresAt,
+        environment,
       },
       { onConflict: 'platform,external_event_id', ignoreDuplicates: true },
     );
@@ -251,6 +275,7 @@ Deno.serve(async (req) => {
               // family-share fallback) can still resolve the row.
               original_transaction_id: originalTxId ?? null,
               last_validated_at: new Date().toISOString(),
+              environment,
             },
             { onConflict: 'user_id,product_id' },
           );
@@ -316,6 +341,7 @@ Deno.serve(async (req) => {
 
     return new Response('ok', { status: 200 });
   } catch (err) {
+    reportError('apple-notifications', err);
     console.error('[apple-notifications] handler threw:', err);
     return new Response('Internal error', { status: 500 });
   }
