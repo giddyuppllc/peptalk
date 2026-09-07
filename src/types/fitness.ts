@@ -467,20 +467,29 @@ const PRO_FEATURES: string[] = [
   'aimee_meal_plans',
   // AI — premium features
   'recipe_generator',
-  // Workouts — programs + custom
-  'workout_programs',
-  'exercise_library',
+  // Workouts — the paid part is Jamie's video library, which get-workout-video
+  // enforces server-side (403 "Workout videos require PepTalk Pro"). Browsing
+  // the built-in programs and the exercise list stays free: 'workout_programs'
+  // and 'exercise_library' were listed here but gated nowhere, so they were
+  // sold as Pro while every free user already had them.
+  'workout_videos',
   'custom_workout_generator',
   'generated_workout_tracker',
   // Reports
   'health_reports',
   'pdf_export',
-  'research_feed_premium',
+  // 'research_feed_premium' removed 2026-09-07: it was sold in the paywall
+  // as "Premium Research Feed" and had no screen, no data source and no
+  // function anywhere. Same reason Wave 76.44 cut aimee_health_scheduler
+  // and data_export. Add it back when it actually ships.
   // Perks
-  'nutrition_planning',
-  'grocery_from_plans',
   'early_access',
-  'meal_plan',
+  // 'nutrition_planning', 'grocery_from_plans' and 'meal_plan' removed
+  // 2026-09-07. The grocery list is the user's own manually-entered data
+  // (app/nutrition/grocery.tsx says so explicitly) and plan viewing is free —
+  // the generation behind it is what costs, and that is already gated by
+  // 'custom_workout_generator'. Selling them as Pro promised nothing.
+
   // Wave 76.44: cut aimee_health_scheduler + data_export — both were
   // listed but never implemented. Removed from copy + UI gates so the
   // App Store reviewer doesn't bounce us for "advertised feature not

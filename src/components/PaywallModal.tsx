@@ -211,13 +211,13 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
     name: 'Custom Workout Generator',
     description: 'AI builds personalized workouts from Jamie\u2019s 451-exercise library based on your goal, level, and equipment.',
   },
+  workout_videos: {
+    name: "Jamie's Workout Videos",
+    description: 'Full demonstration video library for every exercise, streamed in the app.',
+  },
   generated_workout_tracker: {
     name: 'Generated Workout Tracker',
     description: 'Live-track generated workouts with sets, reps, RPE, rest timers, and analytics.',
-  },
-  research_feed_premium: {
-    name: 'Premium Research Feed',
-    description: 'Unlock curated peptide research and deep-dive insights beyond the free preview.',
   },
   early_access: {
     name: 'Early Access',

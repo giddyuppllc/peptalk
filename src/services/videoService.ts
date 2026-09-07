@@ -463,14 +463,25 @@ export function getVideoCoverageStats() {
  * get-workout-video edge function so the URL is signed (the bucket is
  * private and Pro-gated).
  *
- * Returns `{ videoUrl, captionUrl }` on success, null when no video
- * mapping exists, or null when the edge function rejected the request
- * (auth, tier, network). Callers should treat null as "no video — show
- * placeholder."
+ * Returns `{ videoUrl, captionUrl }` on success, or an object whose
+ * `videoUrl` is null carrying a `reason`. Null means no video mapping exists.
+ *
+ * The reason matters: get-workout-video answers 403 "Workout videos require
+ * PepTalk Pro" for a free user, and this used to flatten that to the same null
+ * a network failure produced. The player therefore showed "Failed to load
+ * video" to someone who simply had not bought Pro yet — a sales pitch rendered
+ * as a bug. `videoUrl` is still falsy on every failure, so existing callers
+ * keep working unchanged; new ones can read `reason`.
  */
+export type VideoFetchFailure = 'not_pro' | 'not_signed_in' | 'not_found' | 'network';
+
 export async function fetchExerciseVideoUrl(
   exerciseId: string,
-): Promise<{ videoUrl: string; captionUrl: string | null } | null> {
+): Promise<
+  | { videoUrl: string; captionUrl: string | null; reason?: undefined }
+  | { videoUrl: null; captionUrl: null; reason: VideoFetchFailure }
+  | null
+> {
   const slug = getExerciseVideoSlug(exerciseId);
   if (!slug) return null;
 
@@ -486,9 +497,11 @@ export async function fetchExerciseVideoUrl(
     const result = await supabase.auth.getSession();
     session = result.data?.session;
   } catch {
-    return null;
+    return { videoUrl: null, captionUrl: null, reason: 'not_signed_in' };
   }
-  if (!session?.access_token) return null;
+  if (!session?.access_token) {
+    return { videoUrl: null, captionUrl: null, reason: 'not_signed_in' };
+  }
 
   const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-workout-video`;
 
@@ -507,7 +520,11 @@ export async function fetchExerciseVideoUrl(
     });
     if (!res.ok) {
       if (__DEV__) console.warn('[videoService] sign failed', res.status, await res.text().catch(() => ''));
-      return null;
+      // 403 is the tier gate, not a fault. Keep it distinguishable so the
+      // player can offer Pro instead of claiming the video is broken.
+      const reason: VideoFetchFailure =
+        res.status === 403 ? 'not_pro' : res.status === 404 ? 'not_found' : 'network';
+      return { videoUrl: null, captionUrl: null, reason };
     }
     const json = (await res.json()) as {
       url?: string;

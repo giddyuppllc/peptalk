@@ -43,7 +43,9 @@ export function ExerciseVideo({ exerciseId, compact = false }: ExerciseVideoProp
   const hasVideo = hasExerciseVideo(exerciseId);
   const thumbnailUrl = getExerciseThumbnailUrl(exerciseId);
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle');
+  const [status, setStatus] = useState<
+    'idle' | 'loading' | 'playing' | 'error' | 'not_pro'
+  >('idle');
 
   // Same placeholder as native: an explicit "coming soon" rather than a blank
   // gap, which testers read as "videos don't load".
@@ -64,7 +66,8 @@ export function ExerciseVideo({ exerciseId, compact = false }: ExerciseVideoProp
     try {
       const r = await fetchExerciseVideoUrl(exerciseId);
       if (!r?.videoUrl) {
-        setStatus('error');
+        // 403 = Pro content, not a fault. See ExerciseVideo.tsx.
+        setStatus(r?.reason === 'not_pro' ? 'not_pro' : 'error');
         return;
       }
       setResolvedUrl(r.videoUrl);
@@ -101,10 +104,12 @@ export function ExerciseVideo({ exerciseId, compact = false }: ExerciseVideoProp
         )}
       </View>
 
+      {status === 'not_pro' && (
+        <Text style={styles.errorText}>Workout videos are included with PepTalk Pro.</Text>
+      )}
+
       {status === 'error' && (
-        <Text style={styles.errorText}>
-          Couldn&apos;t load this video. Workout videos require PepTalk Pro.
-        </Text>
+        <Text style={styles.errorText}>Couldn&apos;t load this video.</Text>
       )}
     </GlassCard>
   );

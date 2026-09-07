@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { GlassCard } from './GlassCard';
 import { Colors, FontSizes, BorderRadius } from '../constants/theme';
 import {
@@ -38,7 +39,10 @@ export function ExerciseVideo({ exerciseId, compact = false }: ExerciseVideoProp
   const thumbnailUrl = getExerciseThumbnailUrl(exerciseId);
   const videoRef = useRef<Video>(null);
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle');
+  const [status, setStatus] = useState<
+    'idle' | 'loading' | 'playing' | 'error' | 'not_pro'
+  >('idle');
+  const router = useRouter();
 
   // No video registered for this exercise — render a small "coming
   // soon" placeholder rather than nothing. Returning null left the
@@ -72,7 +76,10 @@ export function ExerciseVideo({ exerciseId, compact = false }: ExerciseVideoProp
       if (!resolvedUrl) {
         const r = await fetchExerciseVideoUrl(exerciseId);
         if (!r?.videoUrl) {
-          setStatus('error');
+          /* A 403 here means "this is Pro content", not "something broke".
+             Showing the same red error for both told a free user the app was
+             faulty at the exact moment we should have been selling to them. */
+          setStatus(r?.reason === 'not_pro' ? 'not_pro' : 'error');
           return;
         }
         setResolvedUrl(r.videoUrl);
@@ -122,6 +129,21 @@ export function ExerciseVideo({ exerciseId, compact = false }: ExerciseVideoProp
           </View>
         )}
 
+        {status === 'not_pro' && (
+          <TouchableOpacity
+            style={styles.playOverlay}
+            activeOpacity={0.85}
+            onPress={() => router.push('/subscription' as never)}
+          >
+            {thumbnailUrl && (
+              <Image source={{ uri: thumbnailUrl }} style={styles.thumbnail} resizeMode="cover" />
+            )}
+            <Ionicons name="lock-closed" size={26} color={Colors.pepTeal} />
+            <Text style={styles.upsellTitle}>Included with PepTalk Pro</Text>
+            <Text style={styles.upsellBody}>Tap to see what Pro includes</Text>
+          </TouchableOpacity>
+        )}
+
         {status === 'error' && (
           <View style={styles.playOverlay}>
             <Ionicons name="alert-circle-outline" size={28} color={Colors.error} />
@@ -157,6 +179,8 @@ const styles = StyleSheet.create({
   placeholderText: { fontSize: FontSizes.md, color: Colors.darkText, fontWeight: '600' },
   subText: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary },
   errorText: { marginTop: 6, fontSize: FontSizes.sm, color: Colors.error },
+  upsellTitle: { marginTop: 8, fontSize: FontSizes.md, fontWeight: '600', color: '#fff' },
+  upsellBody: { marginTop: 2, fontSize: FontSizes.sm, color: 'rgba(255,255,255,0.75)' },
 });
 
 export default ExerciseVideo;
