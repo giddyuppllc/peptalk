@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { toUserMessage } from '../../src/lib/errorMessages';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -127,7 +128,7 @@ function MealPlanScreen() {
       }
       setPlan(data.plan);
     } catch (err: any) {
-      Alert.alert('Generation failed', err?.message ?? 'Could not generate meal plan.');
+      Alert.alert('Generation failed', toUserMessage(err, 'Could not generate meal plan.'));
     } finally {
       setGenerating(false);
     }

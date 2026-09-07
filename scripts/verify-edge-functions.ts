@@ -35,6 +35,7 @@ const fail = (msg: string) => {
 };
 const ok = (msg: string) => console.log(`  ✅ ${msg}`);
 const info = (msg: string) => console.log(`  ℹ️  ${msg}`);
+const warn = (msg: string) => console.log(`  ⚠️  ${msg}`);
 
 // ─── 1. Functions in the repo ────────────────────────────────────────────────
 
@@ -88,6 +89,10 @@ const walk = (dir: string): void => {
       continue;
     }
     if (s.isDirectory()) {
+      // Test doubles are not client code. A unit test may legitimately stand up
+      // a fake client whose `invoke('hangs')` names no real function — that is
+      // the point of the fake. Scanning it produced a false "guaranteed 404".
+      if (entry === '__tests__' || entry === '__mocks__') continue;
       walk(p);
       continue;
     }
@@ -120,16 +125,41 @@ let deployed: Set<string> | null = null;
 try {
   const raw = execFileSync(
     'npx',
-    ['supabase', 'functions', 'list', '--project-ref', PROJECT_REF],
+    ['supabase', 'functions', 'list', '--project-ref', PROJECT_REF, '--output', 'json'],
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], shell: process.platform === 'win32' },
   );
-  const parsed = JSON.parse(raw) as { functions?: { slug: string; status: string }[] };
-  if (!parsed.functions) throw new Error('unexpected payload');
-  deployed = new Set(parsed.functions.filter((f) => f.status === 'ACTIVE').map((f) => f.slug));
-  const inactive = parsed.functions.filter((f) => f.status !== 'ACTIVE');
+  // The CLI returns a BARE ARRAY, not { functions: [...] }.
+  //
+  // This read `parsed.functions`, got undefined, threw "unexpected payload",
+  // and the catch below reported it as "no SUPABASE_ACCESS_TOKEN" — so the
+  // remote half never ran, with or without a token, and said so in a way that
+  // looked like a deliberate skip. Check 2 in this file's own header is
+  // "a deployed function with no source in the repo". Five such orphans were
+  // live in production and had to be found by hand; this is the check that was
+  // meant to catch them.
+  const parsedRaw = JSON.parse(raw) as
+    | { slug: string; status: string }[]
+    | { functions?: { slug: string; status: string }[] };
+  const list = Array.isArray(parsedRaw) ? parsedRaw : parsedRaw.functions;
+  if (!Array.isArray(list)) throw new Error('unexpected payload');
+  deployed = new Set(list.filter((f) => f.status === 'ACTIVE').map((f) => f.slug));
+  const inactive = list.filter((f) => f.status !== 'ACTIVE');
   for (const f of inactive) fail(`deployed function "${f.slug}" is ${f.status}, not ACTIVE`);
-} catch {
-  info('skipped the remote check — no SUPABASE_ACCESS_TOKEN / CLI not authenticated');
+} catch (err) {
+  // Distinguish "no credentials, nothing to do" from "we had credentials and
+  // the check broke". Collapsing both into a friendly skip is precisely how
+  // this check stayed dead: it parsed the CLI's payload wrongly, threw, and
+  // reported it as a missing token — for months, in a message that read like a
+  // deliberate choice. If a token is present, a failure here is a failure.
+  if (process.env.SUPABASE_ACCESS_TOKEN) {
+    fail(
+      `the remote check FAILED despite SUPABASE_ACCESS_TOKEN being set: ` +
+        `${err instanceof Error ? err.message : String(err)}. ` +
+        `This is not a skip — deployment state was NOT verified.`,
+    );
+  } else {
+    info('skipped the remote check — SUPABASE_ACCESS_TOKEN not set (local call-graph only)');
+  }
 }
 
 if (deployed) {
@@ -142,7 +172,31 @@ if (deployed) {
     }
   }
   for (const name of deployed) {
-    if (!onDisk.includes(name)) {
+    if (onDisk.includes(name)) continue;
+
+    // A recovered source is a real, meaningful difference: the code can be
+    // read, reviewed and rebuilt, which was the whole complaint. It is still
+    // not adopted — it lives outside the deploy path because it is a
+    // TRANSPILED reconstruction pulled out of the deployed bundle, and pushing
+    // one of those over a working credits function would be worse than leaving
+    // it alone. So: warn, do not fail. Failing forever on a state nobody can
+    // clear in one step just teaches people to ignore the gate.
+    let recovered = false;
+    try {
+      recovered = statSync(join(FUNCTIONS_DIR, '_recovered', name, 'index.ts')).isFile();
+    } catch {
+      recovered = false;
+    }
+
+    if (recovered) {
+      warn(
+        `"${name}" is deployed with no source in ${FUNCTIONS_DIR}/, but the ORIGINAL ` +
+          `source is recovered at ${FUNCTIONS_DIR}/_recovered/${name}/index.ts ` +
+          `(extracted from the deployed bundle's source maps; method validated ` +
+          `byte-identical against _shared/effectiveTier.ts). To adopt: confirm it ` +
+          `matches what is running, move it to ${FUNCTIONS_DIR}/${name}/, then deploy.`,
+      );
+    } else {
       fail(`"${name}" is deployed but has no source in ${FUNCTIONS_DIR}/ — nobody can maintain or redeploy it`);
     }
   }

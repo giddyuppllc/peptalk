@@ -15,6 +15,7 @@
  */
 
 import React, { useState } from 'react';
+import { toUserMessage } from '../lib/errorMessages';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Alert } from '../lib/alert';
 import { Ionicons } from '@expo/vector-icons';
@@ -186,7 +187,7 @@ export function ActivateProtocolButton({
                 `${peptideName} is now on your calendar. You\'ll get reminders at 9 AM for each dose, plus alerts when your vial reaches ${VIAL_LIFE_DAYS} days and when the cycle ends.`,
               );
             } catch (err: any) {
-              Alert.alert('Could not activate', err?.message ?? 'Unknown error');
+              Alert.alert('Could not activate', toUserMessage(err, 'Could not activate this protocol. Try again.'));
             } finally {
               setActivating(false);
             }

@@ -31,7 +31,11 @@
  * nothing and it catches the exact shape that has already shipped twice.
  */
 import { readFileSync } from 'fs';
-import { globSync } from 'glob';
+// node:fs, not the `glob` package. The installed glob is v7, which is CommonJS
+// and exports no named `globSync` — that arrived in v9 — so this import threw
+// on load and took verify:all down with it at step 16 of 28. Node's built-in
+// has the same signature and no dependency at all.
+import { globSync } from 'node:fs';
 
 const IDENT = String.raw`[A-Za-z_$][\w$.?]*`;
 const files = globSync('{app,src}/**/*.tsx').sort();

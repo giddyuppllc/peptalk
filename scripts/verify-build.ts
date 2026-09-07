@@ -173,6 +173,18 @@ console.log('\n— payments environment —\n');
     const sandboxAppId = /sandbox-sq0idb-/.test(js);
     const prodSdk = /(?<!sandbox\.)web\.squarecdn\.com/.test(js);
 
+    // A production build must also carry the production LOCATION. The SDK and
+    // the application id were checked; this was not — so a build missing only
+    // EXPO_PUBLIC_SQUARE_LOCATION_ID would pass every check here while
+    // tokenizing cards against the sandbox location.
+    const sandboxLocation = js.includes('LBHKG5HYE2VAY');
+    if (prodSdk && !sandboxSdk && !sandboxAppId && sandboxLocation) {
+      fail(
+        'this build uses the production Square SDK and app id but the SANDBOX ' +
+          'location id (LBHKG5HYE2VAY) — set EXPO_PUBLIC_SQUARE_LOCATION_ID',
+      );
+    }
+
     if (sandboxSdk || sandboxAppId) {
       // Escape hatch. Without it this gate holds every unrelated fix hostage
       // to the Square configuration — a security header or a crash fix could

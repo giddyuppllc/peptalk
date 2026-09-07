@@ -1,5 +1,9 @@
 # Handoff — PepTalk Apple HealthKit "Connect does nothing" (TestFlight)
 
+> ⚠️ **Superseded 2026-08-31.** The 5.1.1(iv) flow was rebuilt — see the note
+> at the top of `src/components/HealthPermissionExplainer.tsx`. The previous
+> fix had the rejection recorded inverted and added two of the three faults.
+
 _Last updated: 2026-07-22. Repo: `giddyuppllc/peptalk`, branch `master`, tip `e8d0fab`, version `1.9.9`._
 
 ## The problem

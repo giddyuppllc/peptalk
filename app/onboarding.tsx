@@ -8,11 +8,13 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { describeAuthError } from '../src/lib/errorMessages';
+import { captureException } from '../src/services/telemetry';
 import { View, Text, TouchableOpacity, TextInput, Switch, StyleSheet, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { Alert } from '../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useOnboardingStore } from '../src/store/useOnboardingStore';
 import { useHealthProfileStore } from '../src/store/useHealthProfileStore';
@@ -101,7 +103,7 @@ const PLANS: { tier: 'free' | 'plus' | 'pro'; name: string; price: string; badge
   },
   {
     tier: 'plus', name: 'PepTalk+', price: '$9.99/mo', badge: 'POPULAR',
-    features: ['Unlimited Stack Builder + interaction analysis', 'Aimee chat (20/day) on dosing & timing', 'Food Scanner + voice meal log', 'Apple Watch + Google Fit sync'],
+    features: ['Unlimited Stack Builder + interaction analysis', 'Aimee chat (20/day) on dosing & timing', 'Food Scanner + voice meal log', Platform.OS === 'ios' ? 'Apple Watch + Apple Health sync' : 'Apple Watch + Health Connect sync'],
   },
   {
     tier: 'pro', name: 'PepTalk Pro', price: '$49.99/mo', badge: 'BEST VALUE',
@@ -125,15 +127,22 @@ export default function OnboardingScreen() {
 
   const [step, setStep] = useState(isEditMode ? 1 : 0);
 
-  // Auto-route logged-in users after the welcome animation plays
-  React.useEffect(() => {
-    if (step === 0 && isAuthenticated && isComplete && !isEditMode) {
+  // Auto-route logged-in users after the welcome animation plays.
+  //
+  // Bound to focus, not just to mount. This screen stays mounted underneath
+  // /auth when the user taps "Already have an account? Sign In", and an
+  // unfocused screen firing router.replace() yanks them out of the form they
+  // are typing into 1.8s later. useFocusEffect tears the timer down on blur, so
+  // it can only ever fire while this screen is the one on top.
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!(step === 0 && isAuthenticated && isComplete && !isEditMode)) return;
       const timer = setTimeout(() => {
         router.replace('/(tabs)');
       }, 1800); // Let the animation play for 1.8s then auto-route
       return () => clearTimeout(timer);
-    }
-  }, [step, isAuthenticated, isComplete, isEditMode, router]);
+    }, [step, isAuthenticated, isComplete, isEditMode, router]),
+  );
 
   // Age (exact)
   const [selectedAge, setSelectedAge] = useState(0);
@@ -394,9 +403,19 @@ export default function OnboardingScreen() {
         // and telemetry captures it inside the service.
         void attestAge(ageToRange(selectedAge), MIN_AGE);
 
-        completeOnboarding();
-        trackOnboardingComplete(0);
-
+        // completeOnboarding() is deliberately AFTER the confirmation check
+        // below.
+        //
+        // Calling it first leaves the app in `isComplete: true,
+        // isAuthenticated: false`, which routeGuard reads as "onboarded but
+        // signed out" and pins the user on /auth with no way forward — they
+        // have no session, and re-logging-in fails with "email not confirmed"
+        // rendered as small inline text. That is indistinguishable from
+        // "I logged in and it sent me back to the login page".
+        //
+        // Supabase currently has mailer_autoconfirm ON, so this branch does not
+        // fire today. It is one dashboard toggle away from firing for every new
+        // account, which is precisely how this bit before.
         if (result.requiresEmailConfirmation) {
           // Email-confirmation flow. The auth.users row exists + the
           // confirmation email is on its way, but the user has no session
@@ -424,16 +443,26 @@ export default function OnboardingScreen() {
         // Push rather than replace, so Back returns to the app instead of
         // trapping someone who changed their mind — the paywall's own back
         // button calls router.back().
+        //
+        // Only now: a session exists, so `isComplete` and `isAuthenticated`
+        // become true together and the guard has no window in which to bounce.
+        completeOnboarding();
+        trackOnboardingComplete(0);
         router.replace('/(tabs)');
         if (selectedPlan !== 'free') {
           router.push('/subscription' as never);
         }
       } catch (err: any) {
-        // Surface the real error rather than swallowing it into a
-        // generic message — silent catches hid the login-vs-signup bug
-        // for weeks. Falls back to a friendly default if the error
-        // arrived without a message.
-        setAccountError(err?.message ?? 'Could not create account. Try again.');
+        // The error must not be swallowed — silent catches hid the
+        // login-vs-signup bug for weeks. But the RAW message is for telemetry,
+        // not for the user: rendering it is what showed people "Failed to
+        // fetch" and had them retry ten times each (Sentry PEPTALK-3).
+        const described = describeAuthError(err);
+        setAccountError(described.message);
+        captureException(err, {
+          source: 'onboarding.signup',
+          extra: { kind: described.kind, raw: described.raw },
+        });
       }
     }
   };

@@ -8,11 +8,28 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { withTimeout, TimeoutError } from '../lib/withTimeout';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import type { Database } from '../types/database';
+import { captureException } from './telemetry';
 
 const isWeb = Platform.OS === 'web';
+
+/**
+ * Whether the last session write actually reached the keychain.
+ *
+ * Starts true because "no write attempted yet" is not a failure. Only a
+ * verified-failed commit flips it false; the next good write flips it back.
+ * Read it with `sessionPersistenceHealthy()` — the app uses it to warn the user
+ * that they will be signed out, rather than letting that happen unexplained.
+ */
+let sessionPersistOk = true;
+
+/** False when the last auth-session write to secure storage did not stick. */
+export function sessionPersistenceHealthy(): boolean {
+  return sessionPersistOk;
+}
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -112,6 +129,28 @@ const secureStoreAdapter = {
         }
         // 2. COMMIT — single atomic pointer write flips the live generation.
         await SecureStore.setItemAsync(key + PTR_SUFFIX, `${newGen}:${count}`);
+
+        // 2b. Read the pointer back before declaring success.
+        //
+        // supabase-js treats setItem as fire-and-forget: it never inspects the
+        // result, so a failed write leaves the session in memory only. The app
+        // looks signed in until the next getSession(), which reads null and
+        // signs the user out — the "logged in, then bounced to the login page"
+        // report, and it only reproduces on a clean install because that is the
+        // one run where there is no earlier generation to fall back to.
+        //
+        // A keychain write can fail for reasons this process cannot see: the
+        // device still locked on first launch, a provisioning/entitlement
+        // mismatch, or an Android value over the ~2048-byte limit. Verifying the
+        // commit is the only way to know it happened.
+        const committed = parsePtr(await SecureStore.getItemAsync(key + PTR_SUFFIX));
+        if (!committed || committed.gen !== newGen || committed.count !== count) {
+          throw new Error(
+            `SecureStore commit did not stick (wrote gen ${newGen}/${count}, read back ` +
+              `${committed ? `${committed.gen}/${committed.count}` : 'nothing'})`,
+          );
+        }
+
         // 3. GC the previous generation + any legacy single-key value.
         if (old) {
           for (let i = 0; i < old.count; i++) {
@@ -119,7 +158,15 @@ const secureStoreAdapter = {
           }
         }
         await SecureStore.deleteItemAsync(key).catch(() => {});
-      } catch {}
+        sessionPersistOk = true;
+      } catch (err) {
+        // Still swallowed — throwing here would break supabase-js, which does
+        // not expect its storage adapter to reject. But it is no longer silent:
+        // the flag lets the app tell the user their session will not survive,
+        // instead of appearing to work and then logging them out.
+        sessionPersistOk = false;
+        captureException(err, { source: 'securestore.write', extra: { key, bytes: value.length } });
+      }
     }),
   removeItem: (key: string): Promise<void> =>
     withWriteLock(key, async () => {
@@ -195,10 +242,23 @@ const webStorageAdapter = {
     try {
       if (canUseLocalStorage()) {
         window.localStorage.setItem(key, value);
+        sessionPersistOk = true;
         return;
       }
     } catch {
       // Ignore and keep the session in memory for this tab.
+    }
+    // Falling back to memory is the correct behaviour — the session still works
+    // for this tab — but it does mean the user is signed out on reload. That
+    // used to happen with nothing recorded anywhere. Reported once per session
+    // because private-mode and blocked-storage browsers would otherwise emit
+    // this on every token refresh.
+    if (sessionPersistOk) {
+      sessionPersistOk = false;
+      captureException(
+        new Error('Web session storage unavailable — session held in memory, will not survive a reload'),
+        { source: 'webstorage.write', extra: { key } },
+      );
     }
     memoryStore.set(key, value);
   },
@@ -342,6 +402,65 @@ function makeNoopClient() {
   } as unknown as ReturnType<typeof createClient<Database>>;
 }
 
-export const supabase = buildClient();
+/**
+ * Every edge-function call gets a deadline.
+ *
+ * There are 25 `functions.invoke` call sites and, before this, not one of them
+ * had a timeout — nor does supabase-js set a default. A half-connected network
+ * (hotel wifi, a captive portal, a Meta in-app browser) leaves the request
+ * neither resolving nor rejecting, so the screen that awaited it just sits
+ * there. That is the same defect that made sign-in look like the App Review
+ * 2.1(a) bug, and it applies to the food scanner, lab OCR, workout generation,
+ * Aimee, community actions and — worst — Square checkout, where a user has no
+ * way to tell whether they were charged.
+ *
+ * Patched once on the client rather than at 25 call sites: it covers every
+ * existing caller, and more importantly it covers the ones not written yet.
+ *
+ * The shape is preserved. supabase-js resolves `{ data, error }` and callers
+ * branch on `error`, so a timeout is returned the same way rather than thrown —
+ * every existing error path keeps working untouched.
+ */
+export const FUNCTION_TIMEOUT_MS = 60_000;
+
+function withInvokeTimeout<T>(client: T): T {
+  // `SupabaseClient.functions` is a GETTER that returns a NEW FunctionsClient on
+  // every access (see node_modules/@supabase/supabase-js/src/SupabaseClient.ts).
+  // Assigning to `client.functions.invoke` therefore mutates a throwaway object
+  // and every real call site gets a fresh, unpatched instance — the patch looks
+  // present in the source and does nothing at runtime.
+  //
+  // Patch the PROTOTYPE instead: every instance the getter mints shares it.
+  const probe = (client as { functions?: object }).functions;
+  if (!probe) return client;
+  const proto = Object.getPrototypeOf(probe) as {
+    invoke?: (...args: unknown[]) => Promise<unknown>;
+    __peptalkTimeoutPatched?: boolean;
+  };
+  const original = proto?.invoke;
+  if (typeof original !== 'function' || proto.__peptalkTimeoutPatched) return client;
+
+  proto.invoke = async function patchedInvoke(this: unknown, ...args: unknown[]) {
+    const name = typeof args[0] === 'string' ? args[0] : 'edge function';
+    try {
+      return await withTimeout(
+        original.apply(this, args) as Promise<unknown>,
+        FUNCTION_TIMEOUT_MS,
+        name,
+      );
+    } catch (err) {
+      if (err instanceof TimeoutError) {
+        // Same shape supabase-js resolves, so callers that branch on `error`
+        // need no change. 504 is what a gateway timeout looks like on the wire.
+        return { data: null, error: { message: err.message, name: 'TimeoutError', status: 504 } };
+      }
+      throw err;
+    }
+  };
+  proto.__peptalkTimeoutPatched = true;
+  return client;
+}
+
+export const supabase = withInvokeTimeout(buildClient());
 
 export default supabase;

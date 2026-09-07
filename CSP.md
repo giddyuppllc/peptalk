@@ -89,3 +89,44 @@ Those run only on a phone (or an installed PWA, which the gate lets through via
 
 Report-only cannot break anything, which is the entire point of shipping it this
 way first.
+
+---
+
+## 2026-08-31 — folding in what the reports actually said
+
+Step 3 of the plan above ("collect violations") happened: a `report-uri` to
+Sentry was added, and real phones reported. Origins added to the report-only
+policy as a result:
+
+| Directive | Origin | Why |
+|---|---|---|
+| `style-src`, `img-src` | `web.squarecdn.com` | the Web Payments SDK's own CSS and images — the untested card-iframe path this doc predicted |
+| `font-src` | `cash-f.squarecdn.com`, `square-fonts-production-f.squarecdn.com` | Square ships its fonts from separate hosts to the SDK |
+| `font-src` | `d1g145x70srn7h.cloudfront.net` | Square's font CDN |
+| `frame-src` | `api.squareup.com` | the SDK's payment frame |
+| `frame-src`, `form-action` | `methodurl.vcas.visa.com` | **3-D Secure step-up.** Visa posts the challenge into a frame; without `form-action` the card authentication itself fails, not just a cosmetic asset |
+| `img-src` | `images.openfoodfacts.net` | food photos. `connect-src` already allowed `world.openfoodfacts.net`; the images come from a different host, which a grep of the source would never have revealed |
+
+### `connect.facebook.net` was reported and is deliberately NOT allowed
+
+88 violations across 43 users, and it is the one origin here that must stay
+blocked. **PepTalk has no Meta pixel.** Grepping both this repo and
+`Peptalk.biowebcontainer` finds no `fbq`, no `fbevents`, no
+`connect.facebook.net`, and the live marketing HTML does not load it.
+
+That pattern — many users, one script, no source — is an in-app browser
+injecting it. Anyone arriving from a Facebook or Instagram link browses in
+Meta's webview, which inserts Meta's own script into the page.
+
+Allowlisting it would mean permitting a third-party tracker we do not control on
+a surface that handles HealthKit data, dose logs and lab scans. Meta's own
+Business Tools terms prohibit receiving health information, and health providers
+have been litigated over precisely this. The report is the policy working.
+
+### Still to do before enforcing
+
+- Drop `sandbox.web.squarecdn.com` and `pci-connect.squareupsandbox.com` once
+  the production Square flip is confirmed. Sandbox hosts in a production policy
+  are a standing invitation to test against the wrong environment.
+- The phone pass in the section above, then rename the header.
+

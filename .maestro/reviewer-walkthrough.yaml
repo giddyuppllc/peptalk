@@ -6,10 +6,10 @@ appId: com.peptalkapp.peptalk
 ---
 - launchApp
 # 5.1.2 — capture the AI consent modal, then dismiss via the Agree button position
-- takeScreenshot: 10-ai-consent
+- takeScreenshot: .maestro/screenshots/10-ai-consent
 - tapOn:
     point: "50%, 69%"
-- takeScreenshot: 11-after-consent
+- takeScreenshot: .maestro/screenshots/11-after-consent
 
 # 3.1.2(c) — subscription paywall via deep link: price + EULA + Privacy + Restore
 - openLink: peptalk://subscription
@@ -18,14 +18,14 @@ appId: com.peptalkapp.peptalk
       text: "Subscribe|Restore|Plans|Plus|Pro|Terms"
     timeout: 10000
     optional: true
-- takeScreenshot: 12-subscription-top
+- takeScreenshot: .maestro/screenshots/12-subscription-top
 - scrollUntilVisible:
     element:
       text: "Terms of Use.*EULA|Privacy Policy|Restore"
     direction: DOWN
     timeout: 15000
     optional: true
-- takeScreenshot: 13-subscription-legal
+- takeScreenshot: .maestro/screenshots/13-subscription-legal
 
 # 2.5.1 — integrations via deep link: read-only Health text + Connect
 - openLink: peptalk://settings/integrations
@@ -34,11 +34,11 @@ appId: com.peptalkapp.peptalk
       text: "Apple Health|Integrations|Connect"
     timeout: 10000
     optional: true
-- takeScreenshot: 14-integrations
+- takeScreenshot: .maestro/screenshots/14-integrations
 - scrollUntilVisible:
     element:
       text: "does not write|reads steps"
     direction: DOWN
     timeout: 12000
     optional: true
-- takeScreenshot: 15-integrations-readonly
+- takeScreenshot: .maestro/screenshots/15-integrations-readonly

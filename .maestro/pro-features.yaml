@@ -15,6 +15,7 @@ tags:
   - screenshots
 ---
 - launchApp
+- runFlow: prepare-app.yaml
 # Clear any leftover "Open in PepTalk?" scheme prompt from a prior run.
 - tapOn:
     text: "Cancel"
@@ -34,7 +35,7 @@ tags:
     optional: true
 - waitForAnimationToEnd:
     timeout: 4000
-- takeScreenshot: feat-aimee-chat
+- takeScreenshot: .maestro/screenshots/feat-aimee-chat
 
 # --- Workout generator (Pro: AI-generated targeted workouts) ---
 - openLink:
@@ -44,7 +45,7 @@ tags:
     optional: true
 - waitForAnimationToEnd:
     timeout: 4000
-- takeScreenshot: feat-workout-generate
+- takeScreenshot: .maestro/screenshots/feat-workout-generate
 
 # --- Recipe generator (Pro: 10/day) ---
 - openLink:
@@ -54,7 +55,7 @@ tags:
     optional: true
 - waitForAnimationToEnd:
     timeout: 4000
-- takeScreenshot: feat-recipe-generator
+- takeScreenshot: .maestro/screenshots/feat-recipe-generator
 
 # --- 7-day meal plan (Pro: 5/day) ---
 - openLink:
@@ -64,7 +65,7 @@ tags:
     optional: true
 - waitForAnimationToEnd:
     timeout: 4000
-- takeScreenshot: feat-meal-plan
+- takeScreenshot: .maestro/screenshots/feat-meal-plan
 
 # --- Voice log / talk-to-Aimee (Pro: 60/day) ---
 - openLink:
@@ -74,7 +75,7 @@ tags:
     optional: true
 - waitForAnimationToEnd:
     timeout: 4000
-- takeScreenshot: feat-voice-log
+- takeScreenshot: .maestro/screenshots/feat-voice-log
 
 # --- Food scanner (Pro: 20 scans/day) ---
 - openLink:
@@ -84,7 +85,7 @@ tags:
     optional: true
 - waitForAnimationToEnd:
     timeout: 4000
-- takeScreenshot: feat-food-scanner
+- takeScreenshot: .maestro/screenshots/feat-food-scanner
 
 # --- Meal scan ---
 - openLink:
@@ -94,7 +95,7 @@ tags:
     optional: true
 - waitForAnimationToEnd:
     timeout: 4000
-- takeScreenshot: feat-meal-scan
+- takeScreenshot: .maestro/screenshots/feat-meal-scan
 
 # --- Pantry scan ---
 - openLink:
@@ -104,7 +105,7 @@ tags:
     optional: true
 - waitForAnimationToEnd:
     timeout: 4000
-- takeScreenshot: feat-pantry-scan
+- takeScreenshot: .maestro/screenshots/feat-pantry-scan
 
 # --- Lab results / lab scan (Pro: 20/day) ---
 - openLink:
@@ -114,7 +115,7 @@ tags:
     optional: true
 - waitForAnimationToEnd:
     timeout: 4000
-- takeScreenshot: feat-lab-entry
+- takeScreenshot: .maestro/screenshots/feat-lab-entry
 
 # --- Custom meal from pantry (Pro: pantry -> meal suggestions) ---
 - openLink:
@@ -124,4 +125,4 @@ tags:
     optional: true
 - waitForAnimationToEnd:
     timeout: 4000
-- takeScreenshot: feat-custom-meal-from-pantry
+- takeScreenshot: .maestro/screenshots/feat-custom-meal-from-pantry

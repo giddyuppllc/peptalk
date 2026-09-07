@@ -24,7 +24,10 @@
  * to wire it, delete it, or record why it waits.
  */
 import { readFileSync } from 'fs';
-import { globSync } from 'glob';
+// node:fs, not the `glob` package. The installed glob is v7, which is CommonJS
+// and exports no named `globSync` — that arrived in v9 — so this import threw on
+// load. Node's built-in has the same signature and no dependency at all.
+import { globSync } from 'node:fs';
 import { basename } from 'path';
 
 const slash = (s) => s.split(String.fromCharCode(92)).join('/');

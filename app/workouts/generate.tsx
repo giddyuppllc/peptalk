@@ -326,6 +326,15 @@ export default function GenerateWorkoutScreen() {
           disabled={generating}
           activeOpacity={0.85}
           style={styles.generateBtnWrap}
+          // Without an explicit label the platform composes one from the
+          // children — a sparkles icon and the text — so screen readers announce
+          // the decoration too, and anything matching on the visible words fails.
+          // Same omission as the consent gate in PeptideDisclaimerModal; primary
+          // CTAs in this codebase tend to be icon + text inside a gradient and
+          // tend to be missing this.
+          accessibilityRole="button"
+          accessibilityLabel={generating ? 'Building your plan' : 'Build my 30-day plan'}
+          accessibilityState={{ disabled: generating, busy: generating }}
         >
           <LinearGradient
             colors={[accent.deep, accent.darker ?? accent.deep]}

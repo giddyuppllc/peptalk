@@ -116,21 +116,31 @@ const SW_SCRIPT = `<script>
 if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('/sw.js').then(function (reg) {
-      // ── Forced update ──────────────────────────────────────────────────
-      // sw.js already calls skipWaiting() + clients.claim(), so a NEW visit
-      // gets new assets. That was never enough: an INSTALLED PWA is opened
-      // once and left running for days, and nothing here asked whether a new
-      // version existed or reloaded when one took over. A fix could ship and
-      // simply never reach a user who does not cold-start the app.
+      // Ask the browser to re-check for a new worker.
       //
-      // Check on load, when the app is brought back to the foreground, and
-      // hourly while it sits open.
-      var check = function () { reg.update().catch(function () {}); };
-      check();
+      // Registering alone is not enough for an INSTALLED PWA. In standalone
+      // mode the app often stays resident for days without a full navigation,
+      // and the browser only re-fetches sw.js on navigation or an explicit
+      // update() call. Without this, someone with PepTalk on their home screen
+      // could sit on an old build indefinitely after we ship a fix.
+      var last = 0;
+      function checkForUpdate() {
+        // Throttle: at most once every 15 minutes. update() is a network
+        // request, and a resumed app can fire visibilitychange repeatedly.
+        var now = Date.now();
+        if (now - last < 15 * 60 * 1000) return;
+        last = now;
+        reg.update().catch(function () {});
+      }
+      checkForUpdate();
       document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'visible') check();
+        if (document.visibilityState === 'visible') checkForUpdate();
       });
-      setInterval(check, 60 * 60 * 1000);
+      // Also poll while the app simply sits open. visibilitychange never fires
+      // for a PWA left in the foreground all day, so without this a resident
+      // app still misses a shipped fix. The throttle above makes the extra
+      // wake-ups free.
+      setInterval(checkForUpdate, 60 * 60 * 1000);
     }).catch(function (e) {
       console.warn('[pwa] service worker registration failed:', e);
     });
@@ -198,5 +208,27 @@ html = html.replace(buildTagRe, '');
 html = html.replace('</head>', `  ${BUILD_TAG}\n  </head>`);
 
 writeFileSync(INDEX, html);
+
+// Stamp the service worker too, and this is not cosmetic.
+//
+// A browser installs a new service worker ONLY when the bytes of sw.js change.
+// This file is static and was byte-identical on every deploy, so after a push
+// the browser fetched it, saw no difference, and never ran install/activate —
+// meaning the activate handler that purges old caches never ran either, and a
+// CACHE version bump would have had no effect at all.
+//
+// Navigations are network-first, so users did still get fresh JS on a reload.
+// But an installed PWA that stays resident had no mechanism to notice a new
+// build. Stamping the commit makes every deploy a genuine update.
+const SW_PATH = 'dist/sw.js';
+try {
+  const sw = readFileSync(SW_PATH, 'utf8');
+  const stamped = `// build: ${buildSha}\n` + sw.replace(/^\/\/ build: .*\n/, '');
+  writeFileSync(SW_PATH, stamped);
+  console.log(`[inject-pwa] stamped sw.js with build ${buildSha.slice(0, 7)}`);
+} catch (err) {
+  console.warn('[inject-pwa] could not stamp sw.js:', err.message);
+}
+
 console.log('[inject-pwa] stamped manifest + PWA meta + service worker into', INDEX);
 console.log(`[inject-pwa] build commit: ${buildSha.slice(0, 7)}`);

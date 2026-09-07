@@ -26,7 +26,10 @@
  * `node scripts/_vacuous.mjs`, which mutates each one and checks the exit code.
  */
 import { readFileSync } from 'fs';
-import { globSync } from 'glob';
+// node:fs, not the `glob` package. The installed glob is v7, which is CommonJS
+// and exports no named `globSync` — that arrived in v9 — so this import threw on
+// load. Node's built-in has the same signature and no dependency at all.
+import { globSync } from 'node:fs';
 
 const slash = (s) => s.split(String.fromCharCode(92)).join('/');
 

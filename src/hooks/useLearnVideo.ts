@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { fetchWithTimeout } from '../lib/withTimeout';
 import { supabase } from '../services/supabase';
 
 interface LearnVideoData {
@@ -56,7 +57,7 @@ export function useLearnVideo(slug: string | null): UseLearnVideoResult {
       }
       const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
       const SUPABASE_ANON = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/get-learn-video`, {
+      const res = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/get-learn-video`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`,

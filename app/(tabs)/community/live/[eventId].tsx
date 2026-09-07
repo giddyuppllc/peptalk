@@ -14,6 +14,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
+import { toUserMessage } from '../../../../src/lib/errorMessages';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { Alert } from '../../../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -113,7 +114,7 @@ export default function LiveEventChatScreen() {
         body: { eventId, body },
       });
       if (error) {
-        Alert.alert('Could not send', error.message ?? 'Please try again.');
+        Alert.alert('Could not send', toUserMessage(error, 'Please try again.'));
         return;
       }
       const payload = data as { error?: string; messageId?: string; createdAt?: string };
@@ -215,13 +216,13 @@ export default function LiveEventChatScreen() {
               body: { messageId },
             });
             if (error) {
-              Alert.alert('Could not delete', error.message ?? 'Try again.');
+              Alert.alert('Could not delete', toUserMessage(error, 'Try again.'));
               return;
             }
             const payload = data as { error?: string };
             if (payload?.error) Alert.alert('Could not delete', payload.error);
           } catch (err: any) {
-            Alert.alert('Could not delete', err?.message ?? 'Try again.');
+            Alert.alert('Could not delete', toUserMessage(err, 'Try again.'));
           }
         },
       },
@@ -240,7 +241,7 @@ export default function LiveEventChatScreen() {
         body: { messageId: editingId, body: editingDraft.trim() },
       });
       if (error) {
-        Alert.alert('Could not edit', error.message ?? 'Try again.');
+        Alert.alert('Could not edit', toUserMessage(error, 'Try again.'));
         return;
       }
       const payload = data as { error?: string };
@@ -249,7 +250,7 @@ export default function LiveEventChatScreen() {
         return;
       }
     } catch (err: any) {
-      Alert.alert('Could not edit', err?.message ?? 'Try again.');
+      Alert.alert('Could not edit', toUserMessage(err, 'Try again.'));
     } finally {
       setEditingId(null);
       setEditingDraft('');
@@ -269,12 +270,12 @@ export default function LiveEventChatScreen() {
               body: { eventId },
             });
             if (error) {
-              Alert.alert('Could not end', error.message ?? 'Try again.');
+              Alert.alert('Could not end', toUserMessage(error, 'Try again.'));
               return;
             }
             router.back();
           } catch (err: any) {
-            Alert.alert('Could not end', err?.message ?? 'Try again.');
+            Alert.alert('Could not end', toUserMessage(err, 'Try again.'));
           }
         },
       },

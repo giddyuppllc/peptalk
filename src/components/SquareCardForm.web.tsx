@@ -5,6 +5,7 @@
  * SquareCardForm.tsx (this file is never bundled on iOS/Android).
  */
 import { useEffect, useRef, useState } from 'react';
+import { toUserMessage } from '../lib/errorMessages';
 import {
   ActivityIndicator,
   Modal,
@@ -72,7 +73,7 @@ export function SquareCardForm({ productId, planName, priceLabel, onClose, onSuc
         setLoading(false);
       } catch (e: any) {
         if (!cancelled) {
-          setError(e?.message ?? 'Could not load the card form.');
+          setError(toUserMessage(e, 'Could not load the card form.'));
           setLoading(false);
         }
       }
@@ -96,7 +97,7 @@ export function SquareCardForm({ productId, planName, priceLabel, onClose, onSuc
       await useSubscriptionStore.getState().syncFromServer();
       onSuccess(tier);
     } catch (e: any) {
-      setError(e?.message ?? 'Subscription could not be completed.');
+      setError(toUserMessage(e, 'Subscription could not be completed.'));
     } finally {
       setSubmitting(false);
     }

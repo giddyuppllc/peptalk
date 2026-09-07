@@ -1,5 +1,19 @@
 # PepTalk — Simulator test handoff (App Review resubmission)
 
+> ⚠️ **Superseded 2026-08-31.**
+>
+> Written for the iPad rejection and commit `a47217c`. Two things in it are now
+> actively misleading:
+>
+> - **HealthKit cannot be verified on a simulator at all.** The Simulator reports
+>   no HealthKit data layer, so `healthKitAdapter.available()` is false and Apple
+>   Health is filed under "Coming soon" with no entry point. See the header of
+>   `.maestro/healthkit-explainer.yaml`. It needs a real device.
+> - The Maestro flows have moved on considerably, including a LogBox overlay
+>   workaround that is required on Android — see `.maestro/dismiss-logbox.yaml`.
+>
+> Current simulator setup and the flows that actually run are in `CLAUDE.md`.
+
 **Goal:** verify the fixes in the current build on the **iOS Simulator** (you have a Mac + Simulator, no physical iPad) before we resubmit to App Review. The last rejection happened on an **iPad Air**, so the iPad Simulator reproduces that device class.
 
 **What we're specifically verifying:**

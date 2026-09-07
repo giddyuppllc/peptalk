@@ -151,6 +151,69 @@ if (stillOrphaned.length > 0) {
   }
 }
 
+// ── The nav sheet is the app's only visible navigation ────────────────────
+// The tab bar is hidden by design, so src/lib/navMap.ts IS the menu. Two ways
+// it can rot, both of which App Review has already found for us once:
+//
+//   1. A nav entry pointing at a route that no longer exists — a dead menu row,
+//      which is worse than no row at all.
+//   2. A whole section of the app with no entry — how /calculators ended up
+//      unreachable by any human while this script still called it "reachable",
+//      because Aimee's allowlist happened to contain the string.
+//
+// The second check is deliberately at SECTION level, not per screen. Requiring
+// a menu row for all ~130 routes would make the menu useless; requiring that
+// every top-level area has at least one door is the property that matters.
+const navSrc = readFileSync('src/lib/navMap.ts', 'utf8');
+const navHrefs = [...navSrc.matchAll(/href:\s*'([^']+)'/g)].map((m) => m[1]);
+
+const navProblems: string[] = [];
+for (const href of navHrefs) {
+  const r = href.replace(/^\//, '').replace('(tabs)/', '');
+  const candidates = [
+    `app/${r}.tsx`,
+    `app/${r}/index.tsx`,
+    `app/(tabs)/${r}.tsx`,
+    `app/(tabs)/${r}/index.tsx`,
+  ];
+  const exists = candidates.some((c) => {
+    try { return statSync(c).isFile(); } catch { return false; }
+  });
+  if (!exists) navProblems.push(`nav entry "${href}" resolves to no route`);
+}
+
+const SECTION_EXEMPT = new Set([
+  'admin',        // operator-only, reached from Profile when the flag is on
+  'peptide',      // detail pages, reached from the library
+  'plan', 'pantry', 'cycle', 'body-map', 'resources', 'insights',
+  'privacy', 'terms', 'onboarding', 'auth', 'subscription', 'health-profile',
+  'aimee',        // the Aimee tab is the surface; /aimee/* are its sub-reports
+  'profile',      // app/profile/* are sub-pages opened from the Profile tab
+]);
+// `(tabs)` is a route group expo-router strips from URLs, so a nav entry of
+// '/(tabs)/community' is the door to app/community/. Compare on the stripped
+// form or every tab section looks doorless.
+const navSections = new Set(
+  navHrefs.map((h) => h.replace('/(tabs)/', '/').replace(/^\//, '').split('/')[0]),
+);
+const sections = readdirSync('app', { withFileTypes: true })
+  .filter((d) => d.isDirectory() && !d.name.startsWith('(') && !d.name.startsWith('+'))
+  .map((d) => d.name)
+  .filter((n) => !SECTION_EXEMPT.has(n));
+for (const sec of sections) {
+  if (!navSections.has(sec)) {
+    navProblems.push(`app/${sec}/ has no entry in the navigation sheet`);
+  }
+}
+
+if (navProblems.length > 0) {
+  console.error(`\n  ${navProblems.length} navigation problem(s):`);
+  for (const p of navProblems) console.error(`     ${p}`);
+  console.error('\n  Fix src/lib/navMap.ts, or add the section to SECTION_EXEMPT with a reason.\n');
+  process.exit(1);
+}
+console.log(`  ✅ all ${navHrefs.length} nav entries resolve; every section has a door`);
+
 if (unreachable.length === 0) {
   console.log('\n  ✅ no NEW unreachable screens\n');
   process.exit(0);

@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { toUserMessage } from '../src/lib/errorMessages';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Linking, Platform } from 'react-native';
 import { Alert } from '../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,6 +25,7 @@ import {
   restorePurchases,
   waitForPendingValidations,
   presentCodeRedemption,
+  AlreadyOwnedError,
   type ProductId,
 } from '../src/services/iapService';
 import {
@@ -85,7 +87,12 @@ const TIERS: TierInfo[] = [
       'Food Scanner — snap a plate, get every food + macros',
       'Voice Log — say what you ate, get the macros logged',
       'Unlimited meal & food logging + full micronutrient tracking',
-      'Apple Watch + Google Fit sync (HRV, VO2, weight trends)',
+      // App Review 2.3.10 — no Android product names in the iOS binary. The
+      // feature is real on both platforms; only the name of the other one
+      // has to go.
+      Platform.OS === 'ios'
+        ? 'Apple Watch + Apple Health sync (HRV, VO2, weight trends)'
+        : 'Apple Watch + Health Connect sync (HRV, VO2, weight trends)',
       'Live community group chat — ask the team during events',
       'First in line for new features as they ship',
       'Everything in Free, ad-free',
@@ -256,6 +263,30 @@ function TierCard({
       // the upgrade_succeeded event on actual server-side validation.
       await purchaseProduct(plan.productId, { appAccountToken, appleOfferCode });
     } catch (err: any) {
+      // Already subscribed at the store, just not reflected locally — a
+      // reinstall, a new device, or a validation that never landed. Restoring
+      // is what the user actually wants; charging them twice is what the store
+      // would refuse anyway. Sentry PEPTALK-5.
+      if (err instanceof AlreadyOwnedError) {
+        try {
+          const n = await restorePurchases();
+          await waitForPendingValidations(10_000);
+          await useSubscriptionStore.getState().syncFromServer();
+          Alert.alert(
+            'You already have this',
+            n > 0
+              ? 'Your subscription is active again — nothing was charged.'
+              : "Your subscription is active at the App Store. If it still doesn't show, tap Restore Purchases.",
+          );
+        } catch {
+          Alert.alert(
+            'You already have this',
+            'This subscription is already active on your Apple ID. Tap Restore Purchases to bring it back.',
+          );
+        }
+        return;
+      }
+
       const msg = err?.message ?? 'Purchase could not be completed.';
       const lower = msg.toLowerCase();
       const cancelled = lower.includes('cancelled') || lower.includes('canceled');
@@ -275,19 +306,24 @@ function TierCard({
         // Waiting for Review — saw a raw error string on the paywall.
         // Normalise the separators and match once rather than chasing literals.
         const norm = lower.replace(/[^a-z0-9]+/g, ' ');
-        const unavailable = [
+        // "Still connecting" is deliberately NOT in this list. It is the
+        // retryable case now that the connection re-establishes itself, and
+        // telling the user the store is unreachable would be wrong.
+        const connecting = norm.includes('still connecting');
+        const unavailable = !connecting && [
           'unavailable',
           'not available',
           'invalid product',
-          'not initialized',
           'feature not supported',
           'not supported',
         ].some((needle) => norm.includes(needle));
         Alert.alert(
-          unavailable ? 'Subscriptions unavailable' : 'Purchase Failed',
-          unavailable
-            ? "We couldn't reach the App Store for this subscription. Please try again in a moment."
-            : msg,
+          connecting ? 'Still connecting' : unavailable ? 'Subscriptions unavailable' : 'Purchase Failed',
+          connecting
+            ? 'We are still connecting to the App Store. Tap Subscribe again in a moment.'
+            : unavailable
+              ? "We couldn't reach the App Store for this subscription. Please try again in a moment."
+              : msg,
         );
       }
     } finally {
@@ -613,7 +649,7 @@ export default function SubscriptionScreen() {
               );
             } catch (err: any) {
               trackRestoreFailed(err?.message ?? 'unknown');
-              Alert.alert('Restore Failed', err?.message ?? 'Could not restore purchases. Please try again.');
+              Alert.alert('Restore Failed', toUserMessage(err, 'Could not restore purchases. Please try again.'));
             } finally {
               setRestoring(false);
             }

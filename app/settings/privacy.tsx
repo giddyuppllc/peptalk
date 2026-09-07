@@ -8,6 +8,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { toUserMessage } from '../../src/lib/errorMessages';
 import { View, Text, TouchableOpacity, ScrollView, Switch, StyleSheet, ActivityIndicator } from 'react-native';
 import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -71,7 +72,7 @@ export default function PrivacySettingsScreen() {
     } catch (err: any) {
       // Revert on failure
       setShareAnonData(!next);
-      Alert.alert('Save failed', err?.message ?? 'Could not update. Try again.');
+      Alert.alert('Save failed', toUserMessage(err, 'Could not update. Try again.'));
     } finally {
       setSaving(false);
     }

@@ -1,19 +1,34 @@
 # PepTalk — CRITICAL login smoke test.
 #
-# This is the exact path Apple's reviewer got stuck on in v1.9.8 build 47
-# ("cannot continue after login"). If this flow ever fails, do NOT submit.
+# This is the exact path Apple's reviewer got stuck on in 1.9.8 (47) and again
+# in 1.10.0 (75) — "redirected back to the login page after logging in". If this
+# flow fails, do NOT submit.
 #
-#   maestro test .maestro/login.yaml \
+#   maestro --device <udid> test .maestro/login.yaml \
 #     -e EMAIL=reviewer@peptalk.bio -e PASSWORD=<reviewer-password>
 #
 # Creds are passed as env vars so they never live in git.
 #
-# NOTE: clearState wipes app storage but NOT the Supabase session (stored in
-# the iOS Keychain), so a previously-signed-in build boots straight to the
-# tabs. The login steps are therefore CONDITIONAL — they run only when the
-# auth screen is actually present (a fresh device / CI), and are skipped when
-# a session persists. Either way the flow asserts the user lands IN the app
-# (the 2.1a "can't get past login" guarantee).
+# ── Selectors that matter, learned the hard way ───────────────────────────
+# `visible: "Sign In"` NEVER MATCHED. The affordance renders as
+# "Already have an account? Sign In", so the conditional below silently
+# SKIPPED the entire login and the flow then passed on a device that happened
+# to hold a session — a release-blocker test that never tested the thing it
+# blocks on. It needs the regex.
+#
+# Likewise `tapOn: "Password"` hits the field LABEL, not the input; the text
+# then goes wherever focus already was and the app shows its own "Enter a valid
+# email and password". Target the placeholder, "Enter password".
+#
+# `hideKeyboard` is unsupported by this app's inputs — tap static text instead.
+#
+# ── Run it on an ERASED simulator ─────────────────────────────────────────
+# `clearState` wipes app storage but NOT the Keychain, so a previously
+# signed-in build boots straight to the tabs and proves nothing. The scenario
+# Apple hits is a first install:
+#
+#   xcrun simctl erase <udid> && xcrun simctl boot <udid>
+#   xcrun simctl install <udid> <path-to-.app>
 appId: com.peptalkapp.peptalk
 tags:
   - smoke
@@ -22,29 +37,84 @@ tags:
 - launchApp:
     clearState: true
 
-# Conditional login — only when the auth/onboarding "Sign In" affordance shows.
+- extendedWaitUntil:
+    visible: ".*Sign In.*"
+    # 60s, not 20s: an Android debug build fetches its JS bundle from Metro on
+    # first launch after clearState, and that regularly exceeds 20 seconds. The
+    # flow failed on Android purely on this timeout while the screen it wanted
+    # was seconds away — the text is identical on both platforms
+    # ("Already have an account? Sign In"), confirmed via uiautomator dump.
+    timeout: 60000
+
+- tapOn: ".*Sign In.*"
+
+- extendedWaitUntil:
+    visible: "Email address"
+    timeout: 20000
+- tapOn: "Email address"
+- inputText: ${EMAIL}
+
+- tapOn: "Enter password"
+- inputText: ${PASSWORD}
+
+# Dismiss the keyboard.
+#
+# iOS: tapping the screen's own heading works, and `hideKeyboard` does not —
+# see the note at the top of this file.
+#
+# Android: tapping the heading does NOT dismiss it, and the keyboard then covers
+# the submit button. Maestro still reports the tap COMPLETED, because it finds
+# the element and taps its coordinates — the keyboard just intercepts. The
+# symptom is a login that silently never runs: no auth telemetry, no error, the
+# form still filled in. `hideKeyboard` does work on Android.
+- tapOn: "Welcome back"
 - runFlow:
     when:
-      visible: "Sign In"
+      platform: Android
     commands:
-      - tapOn: "Sign In"
-      - assertVisible: "Email address"
-      - tapOn: "Email address"
-      - inputText: ${EMAIL}
-      - tapOn: "Password"
-      - inputText: ${PASSWORD}
-      - hideKeyboard
-      - tapOn:
-          text: "Log in"
-          index: 0
-      - extendedWaitUntil:
-          notVisible: "Email address"
-          timeout: 20000
+      # NOT `hideKeyboard`: on Android that sends a BACK key, which navigates
+      # off the auth screen entirely — verified, the app landed back on the
+      # welcome screen and the next tap then failed to find its target. The IME
+      # action key closes the keyboard without moving anywhere.
+      - pressKey: Enter
 
-# PASS = we are in the app (home/tabs), with no auth error banner.
+# Tap the submit button — and the selector differs per platform, empirically.
+#
+# "Log In" appears TWICE on this screen: the mode tab and the submit button.
+# Everything tidier than this was tried against a running Android build and
+# FAILED, each time reporting the tap as COMPLETED while submitting nothing —
+# no auth telemetry, form still filled:
+#
+#   text "Log In" index 0   → the submit button on iOS, the TAB on Android
+#   accessibilityLabel "Log in"  → matches "Log in tab" too and picks the tab
+#   "^Log in$" anchored           → still did not reach the button
+#
+# What actually works is index 1 on Android, verified by the app reaching the
+# post-login AI-consent modal. Keep both branches; do not "simplify" this to one
+# selector without re-running it on BOTH platforms.
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          text: "Log In"
+          index: 0
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn:
+          text: "Log In"
+          index: 1
+
+# The password field going away IS the pass condition — it means we left the
+# auth screen rather than being bounced back to it.
 - extendedWaitUntil:
-    visible: "Hi, reviewer|Welcome|Home|Profile"
-    timeout: 20000
+    notVisible: "Enter password"
+    timeout: 30000
+
 - assertNotVisible: "Invalid email or password"
+- assertNotVisible: "Enter a valid email and password."
+- assertNotVisible: "Email not confirmed"
 - assertNotVisible: "Something went wrong"
-- takeScreenshot: login-success
+- takeScreenshot: .maestro/screenshots/login-success

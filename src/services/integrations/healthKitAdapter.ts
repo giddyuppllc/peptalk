@@ -210,20 +210,31 @@ if (Platform.OS === 'ios' && AppleHealthKit) {
  *
  * 5-second hard timeout so a hung HealthKit callback (rare but observed
  * on flaky connections and rapid sequential calls) can't freeze the UI.
+ *
+ * ── Why this is tri-state ─────────────────────────────────────────────────
+ * It used to return a boolean, and everything that was not a definite success
+ * became "Access revoked — reconnect in iOS Settings". A timeout is not a
+ * revocation. App Review 2.1(a) hit exactly this: a reviewer who HAD granted
+ * access was told it was revoked and sent to a Settings page with no Health
+ * toggle on it. Claiming revocation is a strong statement and needs a definite
+ * signal; 'unknown' is the honest answer for a slow or hung read.
  */
-async function verifyLiveAuth(): Promise<boolean> {
-  if (!AppleHealthKit) return false;
+type LiveAuth = 'live' | 'denied' | 'unknown';
+
+async function verifyLiveAuth(): Promise<LiveAuth> {
+  if (!AppleHealthKit) return 'unknown';
   return new Promise((resolve) => {
     let settled = false;
-    const finish = (ok: boolean) => {
+    const finish = (result: LiveAuth) => {
       if (settled) return;
       settled = true;
-      resolve(ok);
+      resolve(result);
     };
 
     const timer = setTimeout(() => {
       log('live-auth check timed out after 5s');
-      finish(false);
+      // Not a denial — we simply did not get an answer.
+      finish('unknown');
     }, 5000);
 
     // Pull the last 24h of steps — cheap read, fails fast if unauthorized.
@@ -235,16 +246,18 @@ async function verifyLiveAuth(): Promise<boolean> {
       AppleHealthKit.getDailyStepCountSamples(options, (err: Error | null) => {
         clearTimeout(timer);
         if (err) {
+          // A real error from HealthKit is the one signal that justifies
+          // saying access is gone.
           log('live-auth check failed:', err.message);
           authorized = false;
-          return finish(false);
+          return finish('denied');
         }
-        finish(true);
+        finish('live');
       });
     } catch (err) {
       clearTimeout(timer);
       log('live-auth check threw:', err);
-      finish(false);
+      finish('unknown');
     }
   });
 }
@@ -391,8 +404,11 @@ export const healthKitAdapter: BiomarkerAdapter = {
     // report "not connected" before connect() has been called this session.
     await ensureHealthKitRehydrated();
     // Double-check against HealthKit — user may have revoked in iOS Settings.
+    // Same rule as status(): only a definite 'denied' un-authorises. A read
+    // that timed out tells us nothing, and treating it as a denial is what
+    // produced the false "access revoked" banner.
     if (!authorized) return false;
-    return verifyLiveAuth();
+    return (await verifyLiveAuth()) !== 'denied';
   },
 
   async connect(scopes: BiomarkerScope[]) {
@@ -454,17 +470,28 @@ export const healthKitAdapter: BiomarkerAdapter = {
     // Re-hydrate so the card reflects a persisted connection after relaunch.
     await ensureHealthKitRehydrated();
     // Re-verify against HealthKit so revoked-in-Settings shows correctly.
-    const live = authorized ? await verifyLiveAuth() : false;
+    const live: LiveAuth = authorized ? await verifyLiveAuth() : 'denied';
+
+    // 'unknown' keeps the connection shown as connected. The alternative —
+    // demoting to "revoked" on a slow read — is what told a reviewer with
+    // working access to go and fix it in Settings, where there was nothing to
+    // fix. If access really is gone, the next check with a definite answer
+    // says so.
+    const connected = live !== 'denied';
+
     return {
-      connected: live,
+      connected,
       lastSyncedAt,
-      message: live
-        ? 'Connected to Apple Health'
-        : Platform.OS === 'ios'
-        ? authorized
-          ? 'Access revoked — reconnect in iOS Settings → Privacy → Health'
-          : 'Not connected'
-        : 'iOS only',
+      message:
+        live === 'live'
+          ? 'Connected to Apple Health'
+          : Platform.OS !== 'ios'
+            ? 'iOS only'
+            : live === 'unknown'
+              ? 'Connected to Apple Health'
+              : authorized
+                ? 'Access revoked — reconnect in iOS Settings → Privacy → Health'
+                : 'Not connected',
     };
   },
 

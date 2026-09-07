@@ -82,16 +82,21 @@ const SLEEP_PATTERNS: { id: SleepPattern; label: string }[] = [
   { id: 'shift_work', label: 'Shift Worker' },
 ];
 
-const DEVICES: { id: ConnectedDevice; label: string }[] = [
+// App Review 2.3.10 — the iOS binary must not name Android products. Google Fit
+// and Samsung Health are Android-only surfaces, so they are not offered there.
+// Filtered rather than deleted: they are real options on Android.
+const ALL_DEVICES: { id: ConnectedDevice; label: string; androidOnly?: boolean }[] = [
   { id: 'apple_watch', label: 'Apple Watch' },
   { id: 'apple_health', label: 'Apple Health' },
-  { id: 'google_fit', label: 'Google Fit' },
+  { id: 'google_fit', label: 'Google Fit', androidOnly: true },
   { id: 'fitbit', label: 'Fitbit' },
   { id: 'whoop', label: 'WHOOP' },
   { id: 'oura', label: 'Oura Ring' },
   { id: 'garmin', label: 'Garmin' },
-  { id: 'samsung_health', label: 'Samsung Health' },
+  { id: 'samsung_health', label: 'Samsung Health', androidOnly: true },
 ];
+
+const DEVICES = ALL_DEVICES.filter((d) => !(d.androidOnly && Platform.OS === 'ios'));
 
 const COMMON_CONDITIONS = [
   'Diabetes (Type 1)', 'Diabetes (Type 2)', 'Hypertension',
