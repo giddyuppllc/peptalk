@@ -58,7 +58,9 @@
     "verify:easignore": "node scripts/verify-easignore.mjs",
     "preflight": "node scripts/preflight.mjs",
     "verify:cors": "node scripts/verify-cors.mjs",
-    "verify:navtargets": "node scripts/verify-navtargets.mjs"
+    "verify:navtargets": "node scripts/verify-navtargets.mjs",
+    "check:drift:cli": "node scripts/check-drift-cli.mjs",
+    "check:drift:cli:self-test": "node scripts/check-drift-cli.mjs --self-test"
   },
   "expo": {
     "install": {
