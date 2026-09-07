@@ -66,11 +66,17 @@ const ANDROID_ONLY_PATHS = [
 ];
 
 function sourceFiles() {
-  const out = execSync(
-    "git ls-files 'app/*' 'src/*' | grep -E '\\.(ts|tsx)$'",
-    { cwd: ROOT, encoding: 'utf8' },
-  );
-  return out.split('\n').filter(Boolean);
+  // Was: execSync("git ls-files 'app/*' 'src/*' | grep -E ...").
+  //
+  // Single-quoted globs and a grep pipeline are a POSIX shell assumption. On
+  // Windows cmd that dies with "'tsx)$'' is not recognized", and because this
+  // check sits inside verify:all it took the whole run down before the checks
+  // after it could report. Filter in JS so it behaves the same everywhere.
+  const out = execSync('git ls-files app src', { cwd: ROOT, encoding: 'utf8' });
+  return out
+    .split('\n')
+    .map((f) => f.trim())
+    .filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'));
 }
 
 const failures = [];

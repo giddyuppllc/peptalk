@@ -37,7 +37,15 @@ const files = [];
 const walk = (d) => {
   for (const e of fs.readdirSync(d, { withFileTypes: true })) {
     const p = path.join(d, e.name);
-    if (e.isDirectory()) { if (e.name !== 'node_modules') walk(p); continue; }
+    // Skip tests. invokeTimeout.test.ts invokes a mock called 'hangs' that
+    // never settles, and scanning it made the check report
+    // "hangs — invoked by the client, but no such edge function" on every run.
+    // A check that cries wolf is one people learn to scroll past.
+    if (e.isDirectory()) {
+      if (e.name !== 'node_modules' && e.name !== '__tests__') walk(p);
+      continue;
+    }
+    if (/\.(test|spec)\.[jt]sx?$/.test(e.name)) continue;
     if (/\.tsx?$/.test(e.name)) files.push(p);
   }
 };

@@ -18,8 +18,13 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
+// `new URL('..', import.meta.url).pathname` returns `/C:/Users/...` on Windows,
+// and joining that yields `C:\C:\Users\...`. fileURLToPath is the portable
+// form. These scripts were written on macOS and had never been run here, so
+// verify:all died on them rather than reporting anything.
+const ROOT = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
 const failures = [];
 
 // ── 1. The bypass stays pinned to __DEV__ ──────────────────────────────────

@@ -29,10 +29,12 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const REF = 'zniucpbeepxysvkshpir';
 const TOKEN = process.env.SUPABASE_ACCESS_TOKEN;
-const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
+// See verify-build-profiles.mjs: .pathname gives `/C:/...` on Windows.
+const ROOT = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
 
 if (!TOKEN) {
   console.error('✗ SUPABASE_ACCESS_TOKEN is required — this check compares against production.');

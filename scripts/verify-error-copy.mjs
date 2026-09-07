@@ -17,8 +17,10 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
+// See verify-build-profiles.mjs: .pathname gives `/C:/...` on Windows.
+const ROOT = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
 
 // A user-facing sink taking a raw `.message` off an error.
 const SINK = /(Alert\.alert|setError|setAccountError|setMessage|toast)\s*\([^)]*\b(?:err|error|e)\??\.message\b/;
