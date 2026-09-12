@@ -29,6 +29,7 @@
  * INTERNAL ONLY. It grants paid tiers, so it is not reachable from a client.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { parseGoogleServiceAccount } from '../_shared/googleServiceAccount.ts';
 import { reportError } from '../_shared/sentry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
@@ -57,9 +58,16 @@ const b64url = (bytes: Uint8Array) =>
 
 /** Service-account access token for the Play Developer API. */
 async function googleToken(): Promise<string | null> {
-  if (!GOOGLE_SERVICE_ACCOUNT_JSON) return null;
+  // Shape check, not a presence check. The secret was once the literal three
+  // characters "{…}" — truthy, so `if (!GOOGLE_SERVICE_ACCOUNT_JSON)` passed
+  // it straight through to a parse failure that read as transient.
+  const parsedSa = parseGoogleServiceAccount(GOOGLE_SERVICE_ACCOUNT_JSON);
+  if (!parsedSa.ok) {
+    console.error('[reconcile-purchases] FATAL: %s', parsedSa.reason);
+    return null;
+  }
   try {
-    const sa = JSON.parse(GOOGLE_SERVICE_ACCOUNT_JSON);
+    const sa = parsedSa.creds;
     const now = Math.floor(Date.now() / 1000);
     const header = b64url(new TextEncoder().encode(JSON.stringify({ alg: 'RS256', typ: 'JWT' })));
     const claim = b64url(

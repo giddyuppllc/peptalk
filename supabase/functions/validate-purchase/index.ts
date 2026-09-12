@@ -14,6 +14,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { parseGoogleServiceAccount } from '../_shared/googleServiceAccount.ts';
 import { compactVerify, importX509, decodeProtectedHeader } from 'https://esm.sh/jose@5.9.6';
 import { X509Certificate } from 'https://esm.sh/@peculiar/x509@1.9.7';
 import { reportError } from '../_shared/sentry.ts';
@@ -825,7 +826,15 @@ async function acknowledgeGoogleSubscription(
  */
 async function getGoogleAccessToken(): Promise<string | null> {
   try {
-    const creds = JSON.parse(GOOGLE_SERVICE_ACCOUNT_JSON);
+    // Shape check, not a presence check. The secret was once the literal
+    // three characters "{…}", which is truthy, parsed as nothing useful, and
+    // failed here looking like a transient error for four months.
+    const sa = parseGoogleServiceAccount(GOOGLE_SERVICE_ACCOUNT_JSON);
+    if (!sa.ok) {
+      console.error('[validate-purchase] FATAL: %s', sa.reason);
+      return null;
+    }
+    const creds = sa.creds;
 
     const now = Math.floor(Date.now() / 1000);
     const payload = {
