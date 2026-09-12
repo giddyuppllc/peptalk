@@ -23,7 +23,15 @@ const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1'
 // MODEL = 'grok-4-1-fast-reasoning'); 'grok-4.3' was an invalid placeholder
 // that made every chat throw. Set the GROK_MODEL/OPENAI_MODEL secret to the
 // live id at deploy.
-const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL') ?? 'grok-4-1-fast-reasoning';
+// Model ids on x.ai churn, in both directions: an earlier note here recorded
+// 'grok-4.3' as an invalid placeholder, and as of 2026-09-12 it is
+// 'grok-4-1-fast-reasoning' that no longer exists while 'grok-4.3' does.
+//
+// The stale id did not fail loudly. x.ai answered 200 and silently served
+// grok-4.3 instead, so the model we thought we had configured had not been
+// running for some time and nothing surfaced it. Treat a working chat as no
+// evidence the configured id is real — check it against GET /v1/models.
+const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL') ?? 'grok-4.3';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
