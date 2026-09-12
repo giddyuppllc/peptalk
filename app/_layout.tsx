@@ -26,8 +26,6 @@ import { Newsreader_600SemiBold } from '@expo-google-fonts/newsreader/600SemiBol
 import { Newsreader_700Bold } from '@expo-google-fonts/newsreader/700Bold';
 import { GluestackUIProvider } from '@gluestack-ui/themed';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
-import DesktopGate from '../src/components/DesktopGate';
-import MobileBrowserGate from '../src/components/MobileBrowserGate';
 import { V3ThemeProvider, useV3Theme } from '../src/theme/V3ThemeProvider';
 import { OfflineBanner } from '../src/components/OfflineBanner';
 import { HomeFab } from '../src/components/HomeFab';
@@ -167,28 +165,27 @@ function RootLayout() {
   // Wait for the navigator (<Stack>) to mount before attempting navigation
   const [navReady, setNavReady] = useState(false);
 
-  // ── Desktop gate ──────────────────────────────────────────────────────────
-  // PepTalk is a phone app; on a desktop/laptop browser the mobile UI stretches
-  // and looks broken. Detect large + mouse-driven screens (phones/tablets are
-  // touch/coarse-pointer → allowed) and show a "open on your phone" screen.
-  // PepTalk only runs as the INSTALLED app (standalone). A browser tab (mobile or
-  // desktop) that isn't the installed app is gated, never runs the app in-browser.
-  const [webGate, setWebGate] = useState<'none' | 'desktop' | 'mobile'>('none');
-  useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-    // TEMP QA unlock: ?preview=app runs the real app in any browser for co-driving.
-    // Remove once QA is done — the app is installed-only.
-    try {
-      if (new URLSearchParams(window.location.search).get('preview') === 'app') return;
-    } catch {}
-    // Launched from the installed Home-screen icon → standalone → run the app.
-    const standalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true;
-    if (standalone) return;
-    const isDesktop = window.matchMedia('(min-width: 1024px) and (hover: hover) and (pointer: fine)').matches;
-    setWebGate(isDesktop ? 'desktop' : 'mobile');
-  }, []);
+  // ── Browser access ────────────────────────────────────────────────────────
+  // REMOVED 2026-09-12: an installed-PWA-only gate (c467080) that replaced the
+  // whole app with an "install PepTalk" screen for every browser visitor.
+  //
+  // It ran here, before routing, so it had no route exemptions and nothing
+  // could get past it:
+  //   - the only control on it was "Install" — no sign-in, no continue;
+  //   - authRedirectUrl() resolves to https://app.peptalk.bio/, so email
+  //     verification and password-reset links dead-ended on it and an account
+  //     could not be recovered;
+  //   - SQUARE_RETURN_URL points at /subscription, so a payer came back to it;
+  //   - a shared or texted link opens a tab, so even installed users hit it.
+  //
+  // Access control is not this gate's job and never was. `routeGuard.ts` is the
+  // single decision on where a visitor may be, and the server gates the paid
+  // surfaces — the AI edge functions return 403 for an unentitled user, so a
+  // locally-forged tier buys no compute. Requiring an account and enforcing
+  // tiers both survive this removal; only the install wall is gone.
+  //
+  // A desktop browser now runs the app rather than a placeholder, which also
+  // means web CSP and web behaviour are finally exercisable outside a phone.
 
   // ── Splash animation ──────────────────────────────────────────────────────
   const [splashVisible, setSplashVisible] = useState(true);
@@ -1161,22 +1158,6 @@ function RootLayout() {
     router,
     segments,
   ]);
-
-  // Not the installed app → gate instead of running the app in a browser tab.
-  if (webGate === 'desktop') {
-    return (
-      <SafeAreaProvider>
-        <DesktopGate />
-      </SafeAreaProvider>
-    );
-  }
-  if (webGate === 'mobile') {
-    return (
-      <SafeAreaProvider>
-        <MobileBrowserGate />
-      </SafeAreaProvider>
-    );
-  }
 
   return (
     <ErrorBoundary>
