@@ -25,6 +25,14 @@ module.exports = {
   //
   // 'dist2' is the alternate export target used because dist/ is held by a
   // stray file handle on this machine.
+  //
+  // '<rootDir>/.claude/' holds Claude Code git worktrees: full checkouts of
+  // other branches, tests and node_modules included. Same failure as the
+  // Stryker sandbox: from the main checkout jest discovered them and failed
+  // suites belonging to a different branch, resolved against a different
+  // node_modules (observed 2026-09-15: 9 failing suites, all under
+  // .claude/worktrees/, while every test in this tree passed). Anchored for
+  // the same reason — a jest run INSIDE a worktree still sees its own tests.
   testPathIgnorePatterns: [
     '/node_modules/',
     '/dist/',
@@ -32,6 +40,7 @@ module.exports = {
     '/ios/',
     '/android/',
     '<rootDir>/.stryker-tmp/',
+    '<rootDir>/.claude/',
   ],
   // The Square helpers live under supabase/functions/_shared and are plain TS;
   // include that path so their transform (via babel-preset-expo) applies.
