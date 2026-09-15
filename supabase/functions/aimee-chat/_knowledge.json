@@ -576,7 +576,7 @@
     {
       "peptideId": "ss-31",
       "name": "SS-31 (Elamipretide) Protocol",
-      "dose": "5-40 mg",
+      "dose": "2-5 mg",
       "route": "subcutaneous",
       "freq": "Once daily",
       "cycle": "4-12 weeks",

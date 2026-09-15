@@ -351,7 +351,12 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     peptideId: 'ss-31',
     compound: 'SS-31',
     inCatalog: true,
-    dosingRange: '2mg-5mg sometimes 10mg',
+    // NOT verbatim since 2026-09-15. The source page read "2mg-5mg sometimes
+    // 10mg"; Jamie Esposito's written correction (13–14 Sep 2026, via Edward's
+    // work order 2026-09-15) is 2–5 mg daily, 2 mg beginner / 5 mg advanced,
+    // so the "sometimes 10mg" upper figure no longer renders beside a 5 mg
+    // Advanced pill on the same screen. Provenance: proto-ss31 in protocols.ts.
+    dosingRange: '2mg-5mg',
     cycleLength: '4-8 Weeks Max of 12 weeks',
     frequencyDaily: '1x Daily AM',
     frequencyWeekly: '5 On 2 Off or Daily',

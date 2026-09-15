@@ -492,7 +492,39 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     id: 'proto-ss31',
     peptideId: 'ss-31',
     name: 'SS-31 (Elamipretide) Protocol',
-    typicalDose: { min: 5, max: 40, unit: 'mg' },
+    // CORRECTED 2026-09-15 (Jamie Esposito): 2–5 mg daily; 2 mg beginner,
+    // 5 mg advanced. Was 5–40 mg, which the thirds split in
+    // src/lib/protocolDoseMath rendered as "Beginner 5 mg – 16.55 mg /
+    // Advanced 28.1 mg – 40 mg" and a cycle total of 140 mg–3360 mg.
+    // Beginner/advanced are authored in doseBands rather than derived, because
+    // a split of 2–5 gives 2–2.99 / 3.98–5, not the 2 and 5 she stated.
+    typicalDose: { min: 2, max: 5, unit: 'mg' },
+    doseBands: {
+      beginner: { min: 2, max: 2 },
+      advanced: { min: 5, max: 5 },
+    },
+    doseProvenance: [
+      {
+        value: '2–5 mg daily; 2 mg beginner, 5 mg advanced',
+        source: 'Written correction to the SS-31 dosing screens (Quick dose reference, Cycle plan)',
+        approver: 'Jamie Esposito (text, 13–14 Sep 2026, via Edward work order 2026-09-15)',
+        date: '2026-09-15',
+        replaced: 'typicalDose 5–40 mg (uncited); beginner/advanced derived by thirds split',
+        fields: [
+          'src/data/protocols.ts proto-ss31 typicalDose + doseBands',
+          "src/data/peptideDosingTable.ts ss-31 dosingRange (was '2mg-5mg sometimes 10mg')",
+          'supabase/functions/aimee-chat/_knowledge.json proto SS-31 dose',
+          'supabase/ss31-dose-correction-2026-09-15.sql (public.protocols, NOT applied)',
+        ],
+        approved: {
+          typicalDose: { min: 2, max: 5, unit: 'mg' },
+          doseBands: {
+            beginner: { min: 2, max: 2 },
+            advanced: { min: 5, max: 5 },
+          },
+        },
+      },
+    ],
     route: 'subcutaneous',
     frequency: 'daily',
     frequencyLabel: 'Once daily',
