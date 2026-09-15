@@ -238,6 +238,9 @@ Deno.serve(async (req) => {
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();
+      // Log the provider status + body server-side (never the key) so an
+      // x.ai outage, quota or bad-model response is visible in function logs.
+      console.error('[aimee-pantry-meal] AI call failed:', aiRes.status, errText.slice(0, 500));
       return json({ error: `AI call failed: ${errText}` }, 502);
     }
 
