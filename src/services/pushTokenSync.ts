@@ -14,8 +14,43 @@
 
 import { Platform } from 'react-native';
 import { registerForPushNotifications, notificationsAvailable } from './notificationService';
+import { captureException } from './telemetry';
 
 let lastSyncedToken: string | null = null;
+
+/**
+ * Remove an Expo push token from text bound for telemetry.
+ *
+ * A push token is a delivery address for this device: anyone holding it can
+ * send it notifications. PostgREST error text can echo a conflicting value
+ * back (a unique violation's detail names the key), so the message is
+ * scrubbed both of the exact token and of anything token-shaped.
+ */
+export function redactPushToken(text: string, token: string | null): string {
+  let out = text;
+  if (token) out = out.split(token).join('[push-token]');
+  return out.replace(/Expo(?:nent)?PushToken\[[^\]]*\]/g, '[push-token]');
+}
+
+/**
+ * Report a failed token save in every build, not only under __DEV__.
+ *
+ * From 2026-05-17 every save was refused by the database (the ON CONFLICT
+ * target had no matching unique constraint) and the only trace was a dev-only
+ * console.warn, so production had no signal at all for four months. Only the
+ * error code and a redacted message leave the device: never the token, and
+ * never the error's `details`, which can quote row values.
+ */
+export function reportSaveFailure(stage: 'upsert' | 'sync', err: unknown, token: string | null): void {
+  const e = (err ?? {}) as { message?: unknown; code?: unknown };
+  const rawMessage =
+    err instanceof Error ? err.message : typeof e.message === 'string' ? e.message : String(err);
+  captureException(new Error(`push token ${stage} failed: ${redactPushToken(rawMessage, token)}`), {
+    source: 'pushTokenSync',
+    stage,
+    code: typeof e.code === 'string' ? e.code : undefined,
+  });
+}
 
 /**
  * Register an Expo push token + upsert into push_tokens for the current
@@ -27,10 +62,11 @@ let lastSyncedToken: string | null = null;
 export async function syncPushToken(): Promise<string | null> {
   if (!notificationsAvailable()) return null;
 
+  let token: string | null = null;
   try {
     // 'ifGranted': this runs at sign-in and on every foreground. It must never
     // raise the OS prompt; it only syncs a token the user already allowed.
-    const token = await registerForPushNotifications('ifGranted');
+    token = await registerForPushNotifications('ifGranted');
     if (!token) return null;
 
     // Skip the round-trip if we already synced this exact token in
@@ -48,13 +84,12 @@ export async function syncPushToken(): Promise<string | null> {
     const platform = Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : null;
     if (!platform) return token;
 
-    // Upsert keyed on the token alone. The 2026-05-17 migration
-    // changed UNIQUE (user_id, expo_push_token) → UNIQUE
-    // (expo_push_token) so a shared device that previously sent
-    // pushes to user A correctly reassigns to user B on the next
-    // sync. Without this, user A's row sat in the table forever
-    // and the apple-notifications fanout kept routing to this
-    // device under user A's id.
+    // Upsert keyed on the token alone. This needs UNIQUE (expo_push_token)
+    // in the database, or Postgres refuses the ON CONFLICT target outright.
+    // The 2026-05-17 migration meant to add it never ran (its version
+    // collided in the ledger); 20260915120000_push_tokens_token_unique.sql
+    // replaces it. `npm run verify:onconflict` checks every onConflict target
+    // against the migrations, and `check:onconflict:live` against production.
     const { error } = await (supabase as any)
       .from('push_tokens')
       .upsert(
@@ -68,14 +103,14 @@ export async function syncPushToken(): Promise<string | null> {
       );
 
     if (error) {
-      if (__DEV__) console.warn('[push-token-sync] upsert failed:', error);
+      reportSaveFailure('upsert', error, token);
       return token;
     }
 
     lastSyncedToken = token;
     return token;
   } catch (err) {
-    if (__DEV__) console.warn('[push-token-sync] failed:', err);
+    reportSaveFailure('sync', err, token);
     return null;
   }
 }
@@ -87,11 +122,11 @@ export async function syncPushToken(): Promise<string | null> {
  * Removes ONLY the current user's row (RLS scopes deletes to
  * `auth.uid() = user_id`). The cross-user case — user A killed the
  * app without logging out, user B logs in — is handled by the
- * `UNIQUE (expo_push_token)` constraint added in migration
- * `20260517000000_push_tokens_device_unique.sql`: when user B's
- * syncPushToken upserts with onConflict='expo_push_token', user A's
- * row gets atomically overwritten with user B's row. No stale rows
- * leak.
+ * `UNIQUE (expo_push_token)` constraint in migration
+ * `20260915120000_push_tokens_token_unique.sql` (not yet applied as of
+ * 2026-09-15). Note that under RLS that upsert cannot take over a row owned
+ * by user A: ON CONFLICT DO UPDATE checks the UPDATE policy against the
+ * existing row and raises instead. See that migration's header.
  */
 export async function clearPushToken(): Promise<void> {
   try {
