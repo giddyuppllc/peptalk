@@ -28,7 +28,9 @@ export async function syncPushToken(): Promise<string | null> {
   if (!notificationsAvailable()) return null;
 
   try {
-    const token = await registerForPushNotifications();
+    // 'ifGranted': this runs at sign-in and on every foreground. It must never
+    // raise the OS prompt; it only syncs a token the user already allowed.
+    const token = await registerForPushNotifications('ifGranted');
     if (!token) return null;
 
     // Skip the round-trip if we already synced this exact token in
@@ -102,10 +104,14 @@ export async function clearPushToken(): Promise<void> {
 
     // Re-read the device's current Expo token if we don't have one
     // cached — covers the cold-boot-then-logout edge case.
+    //
+    // 'ifGranted': this runs DURING LOGOUT. It used to request permission,
+    // so a user who had never answered the notification prompt was shown it
+    // as they signed out. Without permission there is no token to clear.
     let tokenToClear = lastSyncedToken;
     if (!tokenToClear) {
       try {
-        tokenToClear = await registerForPushNotifications();
+        tokenToClear = await registerForPushNotifications('ifGranted');
       } catch {
         // Permission denied / no device — skip silently.
       }

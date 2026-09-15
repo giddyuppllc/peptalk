@@ -919,8 +919,12 @@ function RootLayout() {
           cancelRemindersByTag,
           cancelDailyCheckInReminder,
         } = await import('../src/services/notificationService');
-        const token = await registerForPushNotifications();
-        if (!token) return; // user denied, or notifications unavailable
+        // 'ifGranted': never raise the OS prompt at sign-in. Signing in says
+        // nothing about notifications, and this ran before the user had seen
+        // any screen that mentions them. The prompt is shown from
+        // Settings → Notifications (app/settings/notifications.tsx).
+        const token = await registerForPushNotifications('ifGranted');
+        if (!token) return; // not allowed (yet), or notifications unavailable
         let waited = 0;
         while (!useNotificationStore.getState().hasHydrated && waited < 5000) {
           await new Promise((resolve) => setTimeout(resolve, 50));

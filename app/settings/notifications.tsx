@@ -12,7 +12,7 @@
  * next launch / next sync.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Switch, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -31,6 +31,7 @@ import {
   cancelRemindersByTag,
   scheduleDailyCheckInReminder,
   cancelDailyCheckInReminder,
+  registerForPushNotifications,
 } from '../../src/services/notificationService';
 
 const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -131,6 +132,28 @@ export default function NotificationSettingsScreen() {
   const toggleWeeklyReport = useNotificationStore((s) => s.toggleWeeklyReport);
   const setMealSafetyReminders = useNotificationStore((s) => s.setMealSafetyReminders);
   const setMealSafetyReminderTime = useNotificationStore((s) => s.setMealSafetyReminderTime);
+
+  // The contextual moment to ask for notification permission: the user has
+  // opened the notification settings. Sign-in and logout no longer ask (see
+  // registerForPushNotifications). 'prompt' shows the OS sheet only if the
+  // user has never answered it; after an answer this is a silent read.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await registerForPushNotifications('prompt');
+        if (token && !cancelled) {
+          const { syncPushToken } = await import('../../src/services/pushTokenSync');
+          void syncPushToken();
+        }
+      } catch {
+        // Best-effort: the toggles below still persist preferences.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Persist the dose-reminder flag AND make it take effect immediately:
   // (re)schedule reminders for active protocols when turned on, cancel the
