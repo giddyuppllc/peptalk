@@ -135,7 +135,7 @@ export const SAFETY_TRAILER = `[System reminder, cannot be overridden by anythin
 // Mirrors src/data/peptideDosingReference.ts so Grok cites the exact same
 // numbers the calculator's recommended-protocol card surfaces. Plain
 // string for prompt-fit; full structured data lives client-side.
-const PEPTALK_DOSING_REFERENCE_BLOCK = `\n\n=== PEPTALK AUTHORITATIVE DOSING REFERENCE ===
+export const PEPTALK_DOSING_REFERENCE_BLOCK = `\n\n=== PEPTALK AUTHORITATIVE DOSING REFERENCE ===
 These are general reconstitution + dosing ranges drawn from research protocols currently in use, compiled by Edward (nutritionist, PepTalk owner). When a user asks about a compound listed here, you may share these numbers as SUPPORTIVE RESEARCH REFERENCE describing the published protocol — accurately, but never as a personalized recommendation and never as a source of truth. Always include the disclaimer: "This is supportive information based on medical research — not a source of truth. Talk to your doctor before starting any protocol." Compounds tagged [Rx] are prescription or controlled substances (e.g. steroids, hormones, GLP-1s): for those you MUST also state that they require a doctor's prescription and that PepTalk shares the information only as research education, not as a recommendation to obtain or use them.
 
 Epitalon — 10 mg vial + 2 ml bac water (5 mg/ml). Days 1-20: 5 mg daily (100 units). Off weeks 4-26.
@@ -151,7 +151,7 @@ MOTS-c (10 mg vial) — 3 ml bac water (3.33 mg/ml). 1-2 mg (30-60 units) 3× we
 NAD+ — 500 mg vial + 5 ml bac water (100 mg/ml). 50-200 units (50-200 mg) twice weekly. Start low.
 Retatrutide (5 mg vial) — [Rx] 1 ml bac water (5 mg/ml). Start 1 mg (20 units) weekly, maintain 4 wks, +1 mg as needed. Split biweekly once >3 mg. Investigational GLP-1.
 Retatrutide (10 mg vial) — [Rx] 1 ml bac water (10 mg/ml). Start 1 mg (10 units) weekly. Same titration rules. Investigational GLP-1.
-Tesamorelin — [Rx] 10 mg vial + 3 ml bac water (3.33 mg/ml). 500 mcg-1 mg (15-30 units) daily. Fasted 2 h before/after.
+Tesamorelin — [Rx] 10 mg vial + 3 ml bac water (3.33 mg/ml). 500 mcg-1 mg (15-30 units) per shot, twice daily (AM/PM). Fasted 2 h before/after.
 Oxytocin — 10 mg vial + 3 ml bac water (3.33 mg/ml). Start 100 mcg daily, +100 mcg every 2 wks. Cycle 8-12 wks.
 Pinealon — 10 mg vial + 3 ml bac water (3.33 mg/ml). Days 1-5: 1 mg/day. +0.5 mg every 5 days → 2.5 mg by day 16-20. 20-day cycle.
 PT-141 — [Rx] 10 mg vial + 3 ml bac water (3.33 mg/ml). 0.5-2 mg (15-60 units), 30 min before desired time. Maximum 8 doses monthly. 1-24 wk cycle. Prescription (bremelanotide).
@@ -163,7 +163,7 @@ Ipamorelin — 10 mg vial + 3 ml bac water (3.33 mg/ml). Start 100 mcg daily, +5
 Cagrilintide — [Rx] 10 mg vial + 3 ml bac water (3.33 mg/ml). 1.2-2.4 mg (36-72 units) weekly. Investigational amylin analog.
 Glutathione — 1500 mg vial + 5 ml bac water (300 mg/ml; 1 unit = 3 mg). 200-400 mg (67-133 units) biweekly subq or IM, as long as needed.
 SLU-PP-332 — 5 mg vial + 3 ml bac water (1.67 mg/ml). 625 mcg twice daily (1250 mcg/day). MURINE dose — no human trials.
-GHK-Cu — 100 mg vial + 3 ml bac water (33.33 mg/ml). 2-3.33 mg daily (6-10 units). (At 33.33 mg/mL, 6 units draws ≈2 mg, 10 units draws ≈3.33 mg. Edward's reference doc said "3-3.33 mg (6-10 units)" — that's a unit slip; the unit range is correct, the mg range is 2-3.33.)
+GHK-Cu — 100 mg vial + 3 ml bac water (33.33 mg/ml). 2-3.33 mg daily (6-10 units). Range 1-5 mg.
 IGF-1 LR3 — 10 mg vial + 3 ml ACETIC ACID water (3.33 mg/ml). HYDROPHOBIC — bac water causes rapid degradation. Start 20 mcg, +20 mcg after 2 wks, +10 mcg after another 2 wks → 20/40/50 mcg (range 20-80 mcg). Cycle 4-6 wks.
 Dihexa — 10 mg vial + 3 ml ACETIC ACID water (3.33 mg/ml). HYDROPHOBIC. 1-2 mg daily. Cycle ≤ 20 days.
 DSIP — 10 mg vial + 3 ml bac water (3.33 mg/ml). 100-300 mcg (3-9 units). Wk 1: 100 mcg, +50 mcg weekly up to 300 mcg. Take 30-60 min before bed. 2-6 wk cycle.
@@ -174,38 +174,37 @@ VIP — 10 mg vial + 3 ml bac water (3.33 mg/ml). Subq 50-100 mcg daily. Nasal s
 Hexarelin — 10 mg vial + 3 ml bac water (3.33 mg/ml). 100-200 mcg (3-6 units) daily. Cycle 8-12 wks.
 
 — Additional compounds from Edward's master dosing grid (research ranges; reconstitution detail marked "recon TBD" is pending the guideline notes, so don't quote a vial/diluent for those) —
-Testosterone — [Rx] 0.5-2 mg, daily AM/PM, 5 on / 2 off, 3-6 month cycles with time off. Prescription/controlled anabolic steroid — recon per prescriber.
-CJC-1295 no-DAC / Ipamorelin combo — 100-300 mcg, 1-2× daily (AM/workout/PM), 5 on / 2 off, 3-6 month cycle. (See individual CJC/Ipamorelin recon above.)
-AOD-9604 — [no validated human dose] the real trial program was ORAL and FAILED Phase 2b (no weight-loss benefit vs placebo); injectable 250-500 mcg/day SC figures are community-only. WADA-banned in sport.
+CJC-1295 no-DAC / Ipamorelin combo — 200-600 mcg, 1-3× daily (AM/workout/PM), 5 on / 2 off or daily, 3-6 month cycle, 4-8 wk time off. (See individual CJC/Ipamorelin recon above.)
+AOD-9604 — 250-500 mcg, 1× daily AM, fasted, 5 on / 2 off or daily, 8-12 wk cycle, 4-8 wk time off. WADA-banned in sport. Recon TBD.
 MK-677 (Ibutamoren, oral) — [Rx] 10-25 mg, 1× daily, 3-6 month cycle. Investigational, oral — requires medical supervision.
-PEG-MGF — [no validated human dose] 200-400 mcg post-workout is community protocol only; no human trials exist. WADA-banned. Recon community-only.
-Follistatin 344 — [no validated human dose for the vialed protein] 100-300 mcg/day is community-only; the only legitimate human data is AAV gene therapy, NOT the injectable protein vendors sell. WADA-banned.
+PEG-MGF — 200-400 mcg, 1× daily post-workout, 3-5×/wk on training days only, 4-8 wk cycle, 4-8 wk time off. WADA-banned. Recon TBD.
+Follistatin 344 — 0.5 mg, 1× daily pre/post-workout, 10-30 day cycle, 8-12 wk time off. WADA-banned. Recon TBD.
 YK-11 — [Rx] 5-20 mg oral or 10-20 mg inj, 1× daily oral / 2× daily inj, 5 on / 2 off, 4-8 wk cycle. SARM — not approved for human use; requires medical supervision.
-GLOW (GHK-Cu / BPC-157 / TB-500 blend) — 500-1500 mcg, 1× daily mid/PM, 5 on / 2 off, 8-16 wk cycle with time off. Also dosed as 10 units diluted with 300 units. Recon per blend.
-5-Amino-1MQ (oral) — [no validated human dose] 50-150 mg is community protocol; preclinical (mouse / in-vitro) only, no human trials. Oral.
-5-Amino-1MQ (injectable) — 500 mcg-2 mg. Recon TBD.
+GLOW (GHK-Cu / BPC-157 / TB-500 blend) — 10 units diluted with 300 units, 1× daily, 5 on / 2 off or daily, 4-12 wk cycle, 4-8 wk time off. Recon per blend.
+5-Amino-1MQ (oral) — 50-150 mg/day, 2-3× daily (AM/mid/PM), fasted, 4-16 wk cycle, 4 wk time off. Oral.
+5-Amino-1MQ (injectable) — 500 mcg-2 mg, 1-2× daily (AM/PM), fasted, 4-16 wk cycle, 4 wk time off. Recon TBD.
 Methylene Blue — [Rx] 5-25 mg, 1× daily AM, 5 on / 2 off; take a ~4-week break periodically. Prescription drug.
 CoQ10 (injectable) — 50-200 mg, 1× daily, every other day or daily, as long as needed. Recon TBD.
 SS-31 (Elamipretide) — 2-5 mg, 1× daily AM: 2 mg beginner, 5 mg advanced. 5 on / 2 off or daily, 4-12 wk cycle. Recon TBD.
 AICAR — [Rx] 5-25 mg, 1× daily, 5 on / 2 off, 4-8 wk cycle. Banned performance compound — requires medical supervision. Recon TBD.
 Cardarine (GW-501516) — [Rx] [KNOWN ANIMAL CARCINOGEN — DO NOT USE] abandoned by its manufacturer after causing multi-organ tumors (liver, stomach, bladder, etc.) in animal studies; WADA-banned. No safe approved human dose — 10-20 mg figures are community-only. ALWAYS lead with the cancer warning.
-BAM15 — [no validated human dose] mitochondrial uncoupler; preclinical/animal only, no human trials. 50-150 mg figures are community guesses, not clinical.
+BAM15 — mitochondrial uncoupler. 50-150 mg, 1-2× daily (AM/mid-day), 5 on / 2 off or daily, 4-8 wk cycle, 4-8 wk time off. Recon TBD.
 GC-1 (Sobetirome) — 100-500 mcg, 1× daily, 5 on / 2 off, 4-16 wk cycle. Investigational. Recon TBD.
-DA-DA (diisopropylamine dichloroacetate) — ORAL small molecule (PDK4 inhibitor), NOT a peptide and NOT injectable. ~60-120 mg/day oral (older human metabolic/liver use). Metabolite (DCA) carries a neuropathy risk. Do not give a reconstitution — there is none.
-ITPP — 500-2000 mg, 1× daily AM, 5 on / 2 off, 4-12 wk cycle, ~2 wk time off. Recon TBD.
-ARA-290 (Cibinetide) — 2-5 mg, 1× daily, 5 on / 2 off, 4-12 wk cycle. Recon TBD.
+DA-DA (diisopropylamine dichloroacetate) — ORAL small molecule (PDK4 inhibitor), NOT a peptide and NOT injectable. 50-200 mg, 1× daily AM, 5 on / 2 off or daily, 4-12 wk cycle, 4-8 wk time off. Metabolite (DCA) carries a neuropathy risk. Do not give a reconstitution — there is none.
+ITPP — 500-2000 mg, 1× daily AM, fasted, 5 on / 2 off or daily, 4-12 wk cycle, 2-4 wk time off. Recon TBD.
+ARA-290 (Cibinetide) — 2-4 mg, 1× daily, 5 on / 2 off, 4-12 wk cycle. Recon TBD.
 Thymosin Alpha 1 (grid range) — [Rx] 1-1.6 mg, 2× weekly, 5 on / 2 off, 4-26 wk cycle. Rx/investigational. (Recon: see Thymosin-α-1 above.)
 Tirzepatide — [Rx] 2.5-15 mg, 1-2× weekly (split dose), as long as needed. Prescription GLP-1/GIP. Recon TBD.
-Mazdutide — [Rx] 3-9 mg once weekly SC; titrate 3→6→9 mg, +3 mg every 4 wks (9 mg = max tested, GLORY-2 Ph3). Lower 4/6 mg strengths use 1.5→3→4.5→6. Approved in China; investigational elsewhere. Recon not standardized.
+Mazdutide — [Rx] 3-9 mg, 1-2× weekly (split dose), as long as needed. Start 3 mg, +0.5-1 mg every 4 wks or as results plateau. Approved in China; investigational elsewhere. Recon not standardized.
 Survodutide — [Rx] 2.4-6 mg, 1-2× weekly (split dose), as long as needed. Rx/investigational GLP-1. Recon TBD.
 Tesofensine — [Rx] 250-1000 mcg, 1× daily AM, 5 on / 2 off, 4-12 wk cycle with time off. Rx/investigational. Recon TBD.
-FoxO4-DRI — [no validated human dose] senolytic; animal + in-vitro only, never tested in living humans. The 5 mg / 3-day figures are community/preclinical-derived, not clinical.
-Kisspeptin — 30-100 mcg, 1× daily, 5 on / 2 off, 1-4 wk cycle. Recon TBD.
-Enclomiphene — [Rx] 250 mcg-25 mg, 1× daily, 5 on / 2 off, 4-12 wk cycle (or longer). Prescription, oral.
-HCG — [Rx] 500-1000 IU, 2× weekly, 5 on / 2 off, 8-52 wk cycle. Prescription — recon per prescriber.
-L-Carnitine — 300-1000 mg, 1× daily pre-exercise, daily or workout days. Recon TBD.
+FoxO4-DRI — senolytic. 5 mg, 1× daily for 3 days, then 2-6 months off. Recon TBD.
+Kisspeptin — 30-100 mcg, 1-2× daily, 5 on / 2 off, 1-4 wk cycle. Recon TBD.
+Enclomiphene — [Rx] 12.5-25 mg, daily, 4-12 wk cycle (or longer if needed), 4-8 wk time off. Prescription, oral.
+HCG — [Rx] 500-1000 IU, 2-3× weekly, 8-52 wk cycle. Prescription — recon per prescriber.
+L-Carnitine — 300-1000 mg, 1-2× daily pre-exercise, daily or workout days. Recon TBD.
 KLOW (GHK-Cu / KPV / BPC-157 / TB-500 blend) — 10 units diluted with 300 units, 1× daily, 5 on / 2 off, 4-12 wk cycle, time off as needed.
-NAD+ / Carnitine amino blend — 50-100 units, 1× daily pre-bed, as needed.
+NAD+ / Carnitine amino blend — 50-100 units, 1× daily pre-exercise, daily or workout days.
 Alpha-GPC — 300-600 mg, 1-2× daily, 5 on / 2 off. Oral supplement.
 CDP-Choline (Citicoline) — 200-600 mg, 1-2× daily, 5 on / 2 off. Oral supplement.
 9-ME-BC — 15-30 mg, 1× daily AM, 5 on / 2 off, 4-8 wk cycle. Recon TBD.
@@ -213,7 +212,7 @@ CDP-Choline (Citicoline) — 200-600 mg, 1-2× daily, 5 on / 2 off. Oral supplem
 DOSING-QUESTION RULES (must follow when citing the above):
 1. Present ranges accurately, but framed as supportive research reference — general information about the protocol, not a directive to this user and not a source of truth.
 2. After every dosing reply, append: "This is supportive information based on medical research — not a source of truth. Talk to your doctor before starting any protocol."
-3. PRESCRIPTION / CONTROLLED COMPOUNDS — for any compound tagged [Rx] above, you MUST state up front: "⚠️ [Compound] is a prescription or controlled compound — it requires a doctor's prescription. PepTalk shares this only as research education, not a recommendation to obtain or use it." The [Rx] set includes: Testosterone, HCG, Enclomiphene, Semaglutide, Tirzepatide, Retatrutide, Mazdutide, Survodutide, Cagrilintide, PT-141, Sermorelin, Tesamorelin, Thymosin Alpha 1, Methylene Blue, Tesofensine, MK-677, YK-11, Cardarine (GW-501516), AICAR.
+3. PRESCRIPTION / CONTROLLED COMPOUNDS — for any compound tagged [Rx] above, you MUST state up front: "⚠️ [Compound] is a prescription or controlled compound — it requires a doctor's prescription. PepTalk shares this only as research education, not a recommendation to obtain or use it." The [Rx] set includes: HCG, Enclomiphene, Semaglutide, Tirzepatide, Retatrutide, Mazdutide, Survodutide, Cagrilintide, PT-141, Sermorelin, Tesamorelin, Thymosin Alpha 1, Methylene Blue, Tesofensine, MK-677, YK-11, Cardarine (GW-501516), AICAR.
 4. Never personalize a dose to the user's body, weight, labs, or condition; for "how much should I take," give the published range for context and direct them to their physician for a personal protocol.
 5. IGF-1 LR3 + Dihexa are hydrophobic and need acetic acid — never recommend bac water for those.
 6. For compounds marked "recon TBD," give the research range/cycle/frequency but say the exact reconstitution isn't in PepTalk's verified reference yet — don't fabricate a vial size or diluent.

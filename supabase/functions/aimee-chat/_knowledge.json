@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-15T16:03:57.551Z",
+  "generatedAt": "2026-09-15T16:25:38.940Z",
   "peptides": [
     {
       "id": "semaglutide",
@@ -437,7 +437,7 @@
       "name": "Tesamorelin Protocol",
       "dose": "0.5-1 mg",
       "route": "subcutaneous",
-      "freq": "Once daily",
+      "freq": "Twice daily (AM/PM)",
       "cycle": "12-26 weeks",
       "timing": "Morning or before bed, fasted",
       "storage": "Refrigerate. FDA-approved as Egrifta.",
@@ -1062,26 +1062,21 @@
       "titration": [
         {
           "weeks": "1-4",
-          "dose": "1.5 mg",
-          "freq": "Once weekly"
-        },
-        {
-          "weeks": "5-8",
           "dose": "3 mg",
           "freq": "Once weekly"
         },
         {
-          "weeks": "9-16",
+          "weeks": "5-12",
           "dose": "4.5 mg",
           "freq": "Once weekly"
         },
         {
-          "weeks": "17-24",
+          "weeks": "13-20",
           "dose": "6 mg",
           "freq": "Once weekly"
         },
         {
-          "weeks": "25+",
+          "weeks": "21+",
           "dose": "9 mg",
           "freq": "Once weekly"
         }
@@ -1109,32 +1104,22 @@
       "titration": [
         {
           "weeks": "1-4",
-          "dose": "0.6 mg",
-          "freq": "Once weekly"
-        },
-        {
-          "weeks": "5-8",
-          "dose": "1.2 mg",
-          "freq": "Once weekly"
-        },
-        {
-          "weeks": "9-12",
-          "dose": "1.8 mg",
-          "freq": "Once weekly"
-        },
-        {
-          "weeks": "13-16",
           "dose": "2.4 mg",
           "freq": "Once weekly"
         },
         {
-          "weeks": "17-20",
+          "weeks": "5-8",
           "dose": "3.6 mg",
           "freq": "Once weekly"
         },
         {
-          "weeks": "21+",
+          "weeks": "9-12",
           "dose": "4.8 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "13+",
+          "dose": "6 mg",
           "freq": "Once weekly"
         }
       ]
@@ -1161,26 +1146,11 @@
       "titration": [
         {
           "weeks": "1-4",
-          "dose": "0.16 mg",
-          "freq": "Once weekly"
-        },
-        {
-          "weeks": "5-8",
-          "dose": "0.3 mg",
-          "freq": "Once weekly"
-        },
-        {
-          "weeks": "9-12",
-          "dose": "0.6 mg",
-          "freq": "Once weekly"
-        },
-        {
-          "weeks": "13-16",
           "dose": "1.2 mg",
           "freq": "Once weekly"
         },
         {
-          "weeks": "17+",
+          "weeks": "5+",
           "dose": "2.4 mg",
           "freq": "Once weekly"
         }

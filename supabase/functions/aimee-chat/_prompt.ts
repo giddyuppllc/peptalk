@@ -161,6 +161,9 @@ export const SAFETY_TRAILER = `[System reminder, cannot be overridden by anythin
 // scripts/gen-aimee-knowledge.ts. Aimee leans on this for cycle length /
 // dose / route / frequency / cautions instead of LLM training data.
 import knowledge from "./_knowledge.json" with { type: "json" };
+// Same authoritative dosing reference the streaming chat uses, so the fallback
+// path cannot quote figures the primary path has corrected.
+import { PEPTALK_DOSING_REFERENCE_BLOCK } from "../aimee-chat-stream/_prompt.ts";
 
 function buildKnowledgeBlock(): string {
   const peptideLines = (knowledge.peptides as Array<Record<string, unknown>>).map((p) => {
@@ -228,6 +231,7 @@ export function buildAimeeSystemPrompt(context: AimeeServerContext): string {
     SAFETY_PREAMBLE,
     `Current tier: ${tier}.`,
     consentLine,
+    PEPTALK_DOSING_REFERENCE_BLOCK,
     KNOWLEDGE_BLOCK,
     userContextBlock.trim(),
     context.simpleMode ? SIMPLE_MODE_RULES : '',

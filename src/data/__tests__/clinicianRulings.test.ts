@@ -24,22 +24,6 @@ const EPS = 0.001;
 const dosed = CLINICIAN_RULINGS.filter((r) => r.dose && r.dose.unit !== 'IU');
 const within = (v: number, lo: number, hi: number) => v >= lo - EPS && v <= hi + EPS;
 
-/**
- * Titration ramps that START below her minimum. She ruled a dose range, not a
- * ramp, so these are not rewritten by guesswork — they are listed for her to
- * rule on, and this test fails if the list and the data drift apart in either
- * direction.
- */
-const RAMPS_BELOW_MINIMUM_AWAITING_JAMIE = new Set([
-  'proto-cagrilintide-subq@0.16mg',
-  'proto-cagrilintide-subq@0.3mg',
-  'proto-cagrilintide-subq@0.6mg',
-  'proto-mazdutide-subq@1.5mg',
-  'proto-survodutide-subq@0.6mg',
-  'proto-survodutide-subq@1.2mg',
-  'proto-survodutide-subq@1.8mg',
-]);
-
 describe('clinician rulings are what every store says', () => {
   it('actually examines the rulings (positive control)', () => {
     expect(dosed.length).toBeGreaterThanOrEqual(30);
@@ -71,17 +55,27 @@ describe('clinician rulings are what every store says', () => {
     }
   });
 
-  it('titration ramps below her minimum are exactly the listed open questions', () => {
-    const found = new Set<string>();
+  // Her range is the ramp's bounds: a titration starts at her minimum.
+  it('titration ramps start at or above her minimum', () => {
+    const below: string[] = [];
     for (const r of dosed) {
       const want = rulingDoseMcg(r.dose!);
       for (const p of PROTOCOL_TEMPLATES.filter((x) => x.peptideId === r.peptideId)) {
         for (const s of p.titrationSchedule ?? []) {
-          if (toMcg(s.dose, s.unit) < want.minMcg - EPS) found.add(`${p.id}@${s.dose}${s.unit}`);
+          if (toMcg(s.dose, s.unit) < want.minMcg - EPS) below.push(`${p.id}@${s.dose}${s.unit}`);
         }
       }
     }
-    expect([...found].sort()).toEqual([...RAMPS_BELOW_MINIMUM_AWAITING_JAMIE].sort());
+    expect(below).toEqual([]);
+  });
+
+  // A weight-scaled range escapes her range (TB-500 at 80 kg was 2–5.6 mg).
+  it('no ruled compound is dosed per kilogram', () => {
+    const perKg = dosed
+      .flatMap((r) => PROTOCOL_TEMPLATES.filter((p) => p.peptideId === r.peptideId))
+      .filter((p) => p.dosingMode === 'weight_based' || p.dosePerKg)
+      .map((p) => p.id);
+    expect(perKg).toEqual([]);
   });
 
   it.each(dosed.map((r) => [r.peptideId, r]))('%s: reconstitution ladder steps sit inside her range', (_id, r) => {
@@ -126,7 +120,7 @@ describe('clinician rulings are what every store says', () => {
     ['MOTS-c (40 mg vial)', '1-2 mg (7.5-15 units) 3× weekly', ['200 mcg']],
     ['MOTS-c (10 mg vial)', '1-2 mg (30-60 units) 3× weekly', ['200 mcg']],
     ['NAD+ — 500 mg vial', '50-200 units (50-200 mg)', ['20-100']],
-    ['Tesamorelin — [Rx] 10 mg vial', '500 mcg-1 mg', ['2 mg/day']],
+    ['Tesamorelin — [Rx] 10 mg vial', '500 mcg-1 mg (15-30 units) per shot, twice daily', ['2 mg/day']],
     ['PT-141 — [Rx] 10 mg vial', '0.5-2 mg', ['0.5-1.5 mg']],
     ['Selank — 10 mg vial', '200-500 mcg', ['300-500 mcg']],
     ['Cagrilintide — [Rx] 10 mg vial', '1.2-2.4 mg', ['0.6-4.5']],
@@ -150,5 +144,18 @@ describe('clinician rulings are what every store says', () => {
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain(expected);
     for (const f of forbidden) expect(lines[0]).not.toContain(f);
+  });
+
+  // Commit 30820db (June) rewrote lines of Edward's grid in Aimee's prompt with
+  // caveats nobody supplied — "[no validated human dose]", "FAILED Phase 2b",
+  // "community guesses" — and ab74eeb invented a Testosterone row out of the
+  // Tesamorelin row. Those lines restate the grid (peptideDosingTable.ts) now.
+  it("Aimee's grid block carries no invented caveats or rows", () => {
+    const text = prompt.join('\n');
+    expect(text).not.toContain('[no validated human dose');
+    expect(text).not.toMatch(/^Testosterone —/m);
+    expect(text).not.toContain('Testosterone, HCG');
+    expect(text).not.toContain('FAILED Phase 2b');
+    expect(text).not.toContain('figures are community guesses');
   });
 });
