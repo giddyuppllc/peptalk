@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PEPTIDES } from '../data/peptides';
+import { EXERCISES } from '../data/exercises';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, FontSizes, BorderRadius, Gradients } from '../constants/theme';
@@ -209,7 +210,10 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
   },
   custom_workout_generator: {
     name: 'Custom Workout Generator',
-    description: 'AI builds personalized workouts from Jamie\u2019s 451-exercise library based on your goal, level, and equipment.',
+    // Count derived from the library the generator actually draws from
+    // (workoutGenerator -> filterExercises -> EXERCISES). It was typed as 451
+    // while the library held 384.
+    description: `AI builds personalized workouts from Jamie\u2019s ${EXERCISES.length}-exercise library based on your goal, level, and equipment.`,
   },
   workout_videos: {
     name: "Jamie's Workout Videos",
