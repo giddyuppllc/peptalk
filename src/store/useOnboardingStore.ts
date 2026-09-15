@@ -56,6 +56,17 @@ interface OnboardingStore {
   setDataShareConsent: (consent: boolean) => void;
   completeOnboarding: () => void;
   reset: () => void;
+
+  /**
+   * Server restore progress for the signed-in user (see
+   * src/services/onboardingRestore.ts). Session-only — never persisted, so a
+   * stored value can never stand in for a restore that did not run.
+   */
+  restore: { userId: string | null; status: 'idle' | 'pending' | 'settled' };
+  setRestoreStatus: (userId: string | null, status: 'idle' | 'pending' | 'settled') => void;
+  /** First unanswered step found by the restore, for the onboarding screen to open at. */
+  resumeStep: { userId: string; step: 1 | 2 | 3 } | null;
+  setResumeStep: (resume: { userId: string; step: 1 | 2 | 3 } | null) => void;
 }
 
 const emptyProfile: OnboardingProfile = {
@@ -137,7 +148,12 @@ export const useOnboardingStore = create<OnboardingStore>()(
         set((state) => ({ profile: { ...state.profile, dataShareConsent } })),
 
       completeOnboarding: () => set({ isComplete: true }),
-      reset: () => set({ profile: emptyProfile, isComplete: false }),
+      reset: () => set({ profile: emptyProfile, isComplete: false, resumeStep: null }),
+
+      restore: { userId: null, status: 'idle' },
+      setRestoreStatus: (userId, status) => set({ restore: { userId, status } }),
+      resumeStep: null,
+      setResumeStep: (resumeStep) => set({ resumeStep }),
     }),
     {
       name: 'peptalk-onboarding',

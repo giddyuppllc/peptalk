@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { PasswordToggle } from '../src/components/PasswordToggle';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useOnboardingStore } from '../src/store/useOnboardingStore';
+import { restoreOnboardingFromServer } from '../src/services/onboardingRestore';
 import { isValidEmail, validatePassword } from '../src/utils/validation';
 import { authRedirectUrl } from '../src/lib/authRedirect';
 
@@ -33,7 +34,11 @@ export default function AuthScreen() {
 
   const login = useAuthStore((s) => s.login);
   const signup = useAuthStore((s) => s.signup);
-  const isLoading = useAuthStore((s) => s.isLoading);
+  const authLoading = useAuthStore((s) => s.isLoading);
+  // Signed in, answers still being restored: keep the button busy so a second
+  // tap cannot start another sign-in on top of the first.
+  const [restoring, setRestoring] = useState(false);
+  const isLoading = authLoading || restoring;
 
   const handleLogin = async () => {
     const normalizedEmail = email.trim().toLowerCase();
@@ -51,16 +56,23 @@ export default function AuthScreen() {
       // Signing in is not the same as having been onboarded, and this used to
       // conflate them: login unconditionally marked onboarding complete.
       //
-      // Onboarding answers are stored ONLY on the device — the store has no
-      // syncFromServer, it is absent from the boot sync list, and nothing
-      // writes gender or goals to the profiles table. So a reinstall or a new
-      // phone arrives with an empty profile, and completing onboarding here
-      // meant the user was never asked again: no sex, no goals, no body
-      // metrics, permanently.
+      // Onboarding answers used to be stored ONLY on the device, so a
+      // reinstall or a new phone arrived with an empty profile, and completing
+      // onboarding here meant the user was never asked again: no sex, no
+      // goals, no body metrics, permanently.
       //
-      // Respect completion, never grant it. Anyone whose answers are missing
-      // goes through the questions; onboarding sees the existing session and
-      // skips its account step.
+      // Respect completion, never grant it. The restore below brings back the
+      // answers the server holds, and marks onboarding complete only on the
+      // server's record that it was finished — never for signing in. It is
+      // bounded and never throws; a failed fetch changes nothing. Anyone whose
+      // answers are still missing goes through the questions; onboarding sees
+      // the existing session and skips its account step.
+      setRestoring(true);
+      try {
+        await restoreOnboardingFromServer();
+      } finally {
+        setRestoring(false);
+      }
       const ob = useOnboardingStore.getState();
       if (ob.isComplete && ob.profile.gender) {
         router.replace('/(tabs)');

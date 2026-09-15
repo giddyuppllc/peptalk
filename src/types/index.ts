@@ -191,6 +191,24 @@ export interface OnboardingProfile {
   dataShareConsent: boolean;
 }
 
+/**
+ * Onboarding answers as recorded server-side, inside
+ * `health_profiles.profile.onboarding`, so a new device or a reinstall can
+ * restore them. See src/lib/onboardingRestore.ts.
+ */
+export interface OnboardingSnapshot {
+  version: 1;
+  gender: Gender | null;
+  ageRange: AgeRange | null;
+  healthGoals: GoalType[];
+  /**
+   * When onboarding's final step succeeded on some device. That step cannot be
+   * finished without accepting the medical disclaimer, which is stored nowhere
+   * else, so this is the only record that it was. Null means never completed.
+   */
+  completedAt: string | null;
+}
+
 export interface DashboardSegment {
   id: SegmentId;
   gender: Gender;
@@ -769,6 +787,9 @@ export interface HealthProfile {
   goalNotes?: string;
   /** What the user said they wished PepTalk had — feedback we read. */
   featureWish?: string;
+
+  /** Onboarding answers, mirrored here so another device can restore them. */
+  onboarding?: OnboardingSnapshot;
 
   // Peptide experience
   peptideExperience: 'none' | 'beginner' | 'intermediate' | 'experienced';
