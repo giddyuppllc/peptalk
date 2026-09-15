@@ -397,10 +397,39 @@ if (args.has('--self-test')) {
   process.exit(0);
 }
 
-const targets = collectTargets();
-if (targets.length < 10) {
-  console.log(`✗ verify:onconflict found only ${targets.length} onConflict targets — the scan is broken, not clean`);
+/**
+ * Corpus guards. A scanner that finds nothing prints the same success line as
+ * a clean codebase (see verify-scanner-controls.mjs), so every input this
+ * check discovers must be implausibly small before it may pass.
+ */
+const MIN_TARGETS = 10; // 23 upsert targets on 2026-09-15
+const MIN_MIGRATIONS = 20; // 67 files
+const MIN_TABLES = 20; // tables with a PK or unique constraint
+
+function selfCheckFailed(msg) {
+  console.error(`\n✗ SELF-CHECK FAILED — ${msg}\n  The scan is broken, not clean.`);
   process.exit(1);
+}
+
+/**
+ * Positive control: a target known to be correct must be FOUND and must PASS.
+ * validate-purchase upserts subscriptions ON CONFLICT (user_id, product_id),
+ * backed by the subscription_dedup migration. If the scanner stops finding it,
+ * or stops matching it, its silence about everything else means nothing.
+ */
+const CONTROL = { file: 'supabase/functions/validate-purchase/index.ts', table: 'subscriptions', cols: 'product_id,user_id' };
+function positiveControl(targets, map) {
+  const t = targets.find(
+    (x) => x.file === CONTROL.file && x.tables?.includes(CONTROL.table) && key(x.cols) === CONTROL.cols,
+  );
+  if (!t) selfCheckFailed(`control target ${CONTROL.table}(${CONTROL.cols}) in ${CONTROL.file} was not found`);
+  const { problems } = check([{ ...t, tables: [CONTROL.table] }], map);
+  if (problems.length) selfCheckFailed(`control target did not match a known constraint: ${problems[0]}`);
+}
+
+const targets = collectTargets();
+if (targets.length < MIN_TARGETS) {
+  selfCheckFailed(`found only ${targets.length} onConflict targets (expected >= ${MIN_TARGETS})`);
 }
 
 let map;
@@ -416,9 +445,19 @@ if (args.has('--live')) {
     process.exit(0);
   }
 } else {
-  map = buildUniqueMap(readMigrations());
+  const migrations = readMigrations();
+  if (migrations.length < MIN_MIGRATIONS) {
+    selfCheckFailed(`found only ${migrations.length} migration files (expected >= ${MIN_MIGRATIONS})`);
+  }
+  map = buildUniqueMap(migrations);
   label = 'supabase/migrations';
 }
+
+const tablesWithKeys = [...map.values()].filter((c) => c.size > 0).length;
+if (tablesWithKeys < MIN_TABLES) {
+  selfCheckFailed(`${label} yielded unique constraints for only ${tablesWithKeys} tables (expected >= ${MIN_TABLES})`);
+}
+positiveControl(targets, map);
 
 const { problems, pairs } = check(targets, map);
 if (problems.length) {

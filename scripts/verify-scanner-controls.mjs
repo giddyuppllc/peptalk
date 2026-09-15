@@ -43,7 +43,7 @@ const ALLOWED = new Map([
     'scripts/verify-scanner-mutation.mjs',
     'Matches only because it CONTAINS the string "globSync(" inside the ' +
       'mutation regexes it applies to other scanners. It discovers no corpus ' +
-      'of its own — it reads a fixed list of four targets and reports ' +
+      'of its own — it reads a fixed list of five targets and reports ' +
       'INCONCLUSIVE rather than success when a mutation fails to apply.',
   ],
 ]);

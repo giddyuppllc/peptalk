@@ -39,6 +39,12 @@ const TARGETS = [
     file: 'scripts/verify-nav-params.mjs',
     break: (s) => s.replace(/globSync\((['"`])/g, 'globSync($1__no_such_dir__/'),
   },
+  {
+    file: 'scripts/verify-onconflict.mjs',
+    // Break the source-file extension filter: the walk succeeds over the real
+    // tree and yields no onConflict targets, as a wrong cwd would.
+    break: (s) => s.split('/\\.(ts|tsx|js|mjs)$/').join('/\\.__no_such_ext__$/'),
+  },
 ];
 
 const rows = [];
