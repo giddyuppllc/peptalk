@@ -13,7 +13,7 @@ import {
   reconstitutionNote,
   tableAgreesWithProtocol,
 } from '../lib/syringeUnits';
-import { normalizeDoseRange } from '../lib/doseUnits';
+import { normalizeDoseRange, roundDoseFiguresInText } from '../lib/doseUnits';
 
 /**
  * Surfaces the master dosing-reference TABLE row for a peptide:
@@ -75,7 +75,8 @@ export function DosingReferenceTableCard({ peptideId }: { peptideId: string }) {
   })();
 
   const rows: { label: string; value?: string; icon: string }[] = [
-    { label: 'Dosing range', value: entry.dosingRange, icon: 'flask-outline' },
+    // Display-rounded ("0.25mg" -> "250mcg"); the stored string is untouched.
+    { label: 'Dosing range', value: roundDoseFiguresInText(entry.dosingRange), icon: 'flask-outline' },
     { label: 'On the syringe', value: syringe ?? undefined, icon: 'medical-outline' },
     { label: 'Cycle length', value: entry.cycleLength, icon: 'time-outline' },
     { label: 'Frequency (daily)', value: entry.frequencyDaily, icon: 'today-outline' },

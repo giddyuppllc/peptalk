@@ -28,6 +28,8 @@ import { GOAL_OPTIONS } from '../../src/constants/goals';
 import { GOAL_PEPTIDE_MATRIX, recommendPeptidesForGoal } from '../../src/data/goalPeptideMatrix';
 import { getPeptideById } from '../../src/data/peptides';
 import { getProtocolsByPeptide } from '../../src/data/protocols';
+import { planStarterDose } from '../../src/lib/protocolDoseMath';
+import { formatDoseAmount } from '../../src/lib/doseUnits';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import type { GoalType, ActivityLevel } from '../../src/types';
 import { parseDecimalOrNull } from '../../src/lib/decimalInput';
@@ -103,16 +105,15 @@ export default function PlanCycleScreen() {
     }
 
     const template = protocols[0];
-    // Use titration starter dose if a ladder exists, otherwise use the
-    // mid-point of typicalDose so the user isn't started at the max.
-    const starterDose = template.titrationSchedule?.[0]
-      ? template.titrationSchedule[0].dose
-      : Math.round((template.typicalDose.min + template.typicalDose.max) / 2);
-    const starterUnit = template.titrationSchedule?.[0]?.unit ?? template.typicalDose.unit;
+    // Titration starter dose if a ladder exists, otherwise the mid-point of
+    // typicalDose so the user isn't started at the max. See planStarterDose:
+    // whole-unit rounding used to put CJC-1295, tesamorelin and somatropin ON
+    // the max. The prompt prints the same number that gets stored.
+    const { dose: starterDose, unit: starterUnit } = planStarterDose(template);
 
     Alert.alert(
       `Start ${peptideName} cycle?`,
-      `Protocol: ${template.name}\nStarting dose: ${starterDose} ${starterUnit}\nFrequency: ${template.frequencyLabel}\nDuration: ${template.durationWeeks.min}–${template.durationWeeks.max} weeks\n\nThis is informational, not medical advice. Discuss with your provider before starting.`,
+      `Protocol: ${template.name}\nStarting dose: ${formatDoseAmount(starterDose, starterUnit)}\nFrequency: ${template.frequencyLabel}\nDuration: ${template.durationWeeks.min}–${template.durationWeeks.max} weeks\n\nThis is informational, not medical advice. Discuss with your provider before starting.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
