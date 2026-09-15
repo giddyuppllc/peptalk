@@ -1,418 +1,257 @@
 /**
- * Community leaderboard — Master Refactor Plan v3.1 §12.1.
+ * Community leaderboard — real, opt-in, server-derived.
  *
- * Friendly-competition surface. Three categories:
- *   - Streaks
- *   - Adherence %
- *   - Body-comp deltas (milestone-only labels — raw numbers stay private)
+ * Data: get_community_leaderboard / get_community_shoutouts /
+ * get_my_leaderboard_metrics (migration 20260915200000). Only users who turned
+ * on profiles.leaderboard_opt_in appear; blocked pairs are excluded both ways.
+ * Nothing here is mock data — an empty board renders as an empty state.
  *
- * The user's own card is computed locally from their stores. Cross-user
- * ranking ships once the server aggregation lands; until then this
- * surface shows the user where they stand against their own history +
- * a sample target band so the leaderboard is informative on day one.
+ * Anyone signed in can view the board. Appearing on it is the opt-in, which is
+ * offered here, in onboarding, and in Profile → Public sharing.
  *
- * Gated by useCommunityPrefsStore.publicTracking — when off, the screen
- * surfaces an opt-in CTA instead of the leaderboard rows.
+ * Reached from: the community feed header + strip, the nav sheet (navMap.ts),
+ * Profile → Public sharing, and Aimee's `community-leaderboard` screen.
+ *
+ * All copy lives in src/constants/leaderboardCopy.ts.
  */
 
-import React, { useMemo, useState } from 'react';
-import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ScrollView, View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { V3DetailShell, GlassCard, Chip } from '../../src/components/v3';
+import { V3DetailShell, GlassCard } from '../../src/components/v3';
 import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 import { tapLight } from '../../src/utils/haptics';
-import { useCommunityPrefsStore } from '../../src/store/useCommunityPrefsStore';
-import { useDoseLogStore } from '../../src/store/useDoseLogStore';
-import { useWorkoutStore } from '../../src/store/useWorkoutStore';
-import { useBodyCompositionStore } from '../../src/store/useBodyCompositionStore';
+import { Alert } from '../../src/lib/alert';
+import { useLeaderboardStore } from '../../src/store/useLeaderboardStore';
+import { LEADERBOARD_METRICS, type LeaderboardMetric } from '../../src/lib/leaderboardMetrics';
+import { LEADERBOARD_COPY, METRIC_COPY, formatMetricValue } from '../../src/constants/leaderboardCopy';
+import {
+  LeaderboardRowView,
+  ShoutoutRowView,
+  leaderboardName,
+} from '../../src/components/community/LeaderboardParts';
 
-type Category = 'streak' | 'adherence' | 'body_comp';
-
-const CATEGORIES: { key: Category; label: string; sharePref: keyof ReturnType<typeof useCommunityPrefsStore.getState>['shareCategories'] }[] = [
-  { key: 'streak', label: 'Streaks', sharePref: 'streak' },
-  { key: 'adherence', label: 'Adherence', sharePref: 'adherence' },
-  { key: 'body_comp', label: 'Body comp', sharePref: 'bodyCompDeltas' },
-];
+const SHOUTOUT_PREVIEW = 5;
 
 export default function LeaderboardScreen() {
   const t = useV3Theme();
   const router = useRouter();
-  const publicTracking = useCommunityPrefsStore((s) => s.publicTracking);
-  const shareCategories = useCommunityPrefsStore((s) => s.shareCategories);
+  const [metric, setMetric] = useState<LeaderboardMetric>('checkin_streak');
 
-  const [category, setCategory] = useState<Category>('streak');
+  const optIn = useLeaderboardStore((s) => s.optIn);
+  const savingOptIn = useLeaderboardStore((s) => s.savingOptIn);
+  const board = useLeaderboardStore((s) => s.boards[metric]);
+  const shoutouts = useLeaderboardStore((s) => s.shoutouts);
+  const myMetrics = useLeaderboardStore((s) => s.myMetrics);
+  const loadOptIn = useLeaderboardStore((s) => s.loadOptIn);
+  const setOptIn = useLeaderboardStore((s) => s.setOptIn);
+  const loadBoard = useLeaderboardStore((s) => s.loadBoard);
+  const loadShoutouts = useLeaderboardStore((s) => s.loadShoutouts);
+  const loadMyMetrics = useLeaderboardStore((s) => s.loadMyMetrics);
+  const hideUser = useLeaderboardStore((s) => s.hideUser);
 
-  const workoutStreak = useWorkoutStore((s) => s.getStreak());
-  const doseStreak = useDoseStreak();
-  const adherence = useDoseAdherence(14);
-  // 2026-05-18 P0 fix: deltaWindow(90) returns a fresh
-  // { weightLbDelta, bodyFatDelta, leanMassDelta } literal on every
-  // call, so calling it inside the selector breaks Object.is and
-  // loops the component infinitely (same bug class as DosesHub +
-  // HomeScreen). Pull the accessor + scans ref, compute in useMemo.
-  const scans = useBodyCompositionStore((s) => s.scans);
-  const deltaWindow = useBodyCompositionStore((s) => s.deltaWindow);
-  const bodyCompDelta = useMemo(
-    () => deltaWindow(90),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [deltaWindow, scans],
-  );
+  useEffect(() => {
+    void loadOptIn();
+    void loadMyMetrics();
+    void loadShoutouts();
+  }, [loadOptIn, loadMyMetrics, loadShoutouts]);
 
-  const myStat = useMemo(() => {
-    if (category === 'streak') {
-      return {
-        value: `${Math.max(workoutStreak, doseStreak)} days`,
-        label: 'Best streak this month',
-      };
-    }
-    if (category === 'adherence') {
-      return {
-        value: `${Math.round(adherence * 100)}%`,
-        label: '14-day dose adherence',
-      };
-    }
-    const delta = bodyCompDelta.leanMassDelta ?? bodyCompDelta.weightLbDelta;
-    return {
-      value:
-        delta != null
-          ? `${delta >= 0 ? '+' : ''}${delta.toFixed(1)} lb`
-          : '—',
-      label: '90-day lean / weight delta',
-    };
-  }, [category, workoutStreak, doseStreak, adherence, bodyCompDelta]);
+  useEffect(() => {
+    void loadBoard(metric);
+  }, [loadBoard, metric]);
 
-  const currentPref = CATEGORIES.find((c) => c.key === category)!.sharePref;
-  const sharingThisCategory =
-    publicTracking && shareCategories[currentPref];
+  const toggleOptIn = async (next: boolean) => {
+    tapLight();
+    const ok = await setOptIn(next);
+    if (!ok) Alert.alert(LEADERBOARD_COPY.settingsTitle, LEADERBOARD_COPY.settingsSaveFailed);
+  };
+
+  const confirmHide = (userId: string, name: string) => {
+    Alert.alert(LEADERBOARD_COPY.hideTitle, `${name}\n\n${LEADERBOARD_COPY.hideBody}`, [
+      { text: LEADERBOARD_COPY.hideCancel, style: 'cancel' },
+      {
+        text: LEADERBOARD_COPY.hideConfirm,
+        style: 'destructive',
+        onPress: async () => {
+          const res = await hideUser(userId);
+          if (!res.ok) Alert.alert(LEADERBOARD_COPY.hideTitle, LEADERBOARD_COPY.hideFailed);
+        },
+      },
+    ]);
+  };
+
+  const headline = { color: t.colors.textPrimary as string, fontFamily: t.isDark ? t.typography.headlineMale : t.typography.headlineFemale };
+  const body = { color: t.colors.textSecondary as string, fontFamily: t.typography.body };
+  const positive = t.colors.semanticPositive as string;
 
   return (
     <V3DetailShell
-      title="Leaderboard"
-      observation={
-        publicTracking
-          ? `You are sharing ${
-              Object.values(shareCategories).filter(Boolean).length
-            } categor${
-              Object.values(shareCategories).filter(Boolean).length === 1
-                ? 'y'
-                : 'ies'
-            }.`
-          : 'Public sharing is off. Opt in to participate.'
-      }
+      title={LEADERBOARD_COPY.screenTitle}
+      observation={optIn ? LEADERBOARD_COPY.observationJoined : LEADERBOARD_COPY.observationNotJoined}
       intent="open_chat"
     >
       <ScrollView contentContainerStyle={{ paddingBottom: 80 }}>
-        {/* Category tabs */}
+        {/* Opt-in */}
+        <GlassCard style={styles.cardSpacing}>
+          {optIn === null ? (
+            <ActivityIndicator color={t.colors.textSecondary as string} />
+          ) : optIn ? (
+            <View style={styles.optRow}>
+              <Ionicons name="checkmark-circle" size={20} color={positive} />
+              <Text style={[styles.optTitle, headline, { flex: 1 }]}>{LEADERBOARD_COPY.joinedTitle}</Text>
+              <Pressable
+                onPress={() => void toggleOptIn(false)}
+                disabled={savingOptIn}
+                accessibilityRole="button"
+                accessibilityLabel={LEADERBOARD_COPY.leaveButton}
+                style={[styles.pill, { borderColor: t.colors.divider as string, opacity: savingOptIn ? 0.5 : 1 }]}
+              >
+                <Text style={{ color: t.colors.textPrimary as string, fontFamily: t.typography.bodyBold, fontSize: 12 }}>
+                  {LEADERBOARD_COPY.leaveButton}
+                </Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View>
+              <Text style={[styles.optTitle, headline]}>{LEADERBOARD_COPY.joinTitle}</Text>
+              <Text style={[styles.optBody, body]}>{LEADERBOARD_COPY.joinBody}</Text>
+              <Pressable
+                onPress={() => void toggleOptIn(true)}
+                disabled={savingOptIn}
+                accessibilityRole="button"
+                accessibilityLabel={LEADERBOARD_COPY.joinTitle}
+                style={[styles.pill, styles.joinPill, { borderColor: positive, backgroundColor: `${positive}22`, opacity: savingOptIn ? 0.5 : 1 }]}
+              >
+                <Text style={{ color: t.colors.textPrimary as string, fontFamily: t.typography.bodyBold, fontSize: 13 }}>
+                  {LEADERBOARD_COPY.joinButton}
+                </Text>
+              </Pressable>
+            </View>
+          )}
+        </GlassCard>
+
+        {/* Metric picker */}
         <View style={styles.tabRow}>
-          {CATEGORIES.map((c) => (
-            <Chip
-              key={c.key}
-              label={c.label}
-              primary={category === c.key}
-              onPress={() => {
-                tapLight();
-                setCategory(c.key);
-              }}
-            />
-          ))}
+          {LEADERBOARD_METRICS.map((m) => {
+            const active = m === metric;
+            return (
+              <Pressable
+                key={m}
+                onPress={() => {
+                  tapLight();
+                  setMetric(m);
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                style={[
+                  styles.pill,
+                  {
+                    borderColor: active ? positive : (t.colors.divider as string),
+                    backgroundColor: active ? `${positive}22` : 'transparent',
+                  },
+                ]}
+              >
+                <Text style={{ color: t.colors.textPrimary as string, fontFamily: active ? t.typography.bodyBold : t.typography.bodyMedium, fontSize: 12 }}>
+                  {METRIC_COPY[m].label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
-        {/* Opt-in gate or stats card */}
-        {!publicTracking ? (
+        {/* Your numbers */}
+        <GlassCard style={styles.cardSpacing}>
+          <Text style={[styles.label, { color: t.colors.textSecondary as string, fontFamily: t.typography.label }]}>
+            {LEADERBOARD_COPY.yourNumbers.toUpperCase()}
+          </Text>
+          <Text style={[styles.statValue, { color: t.colors.textPrimary as string, fontFamily: t.isDark ? t.typography.numeralsMale : t.typography.numeralsFemale }]}>
+            {formatMetricValue(metric, myMetrics ? myMetrics[metric] : null)}
+          </Text>
+          <Text style={[styles.hint, body]}>
+            {METRIC_COPY[metric].label} · {METRIC_COPY[metric].hint}
+          </Text>
+        </GlassCard>
+
+        {/* The board */}
+        <GlassCard style={styles.cardSpacing}>
+          {board.status === 'loading' && board.rows.length === 0 ? (
+            <ActivityIndicator color={t.colors.textSecondary as string} />
+          ) : board.status === 'error' && board.rows.length === 0 ? (
+            <Pressable onPress={() => void loadBoard(metric)} accessibilityRole="button" accessibilityLabel={LEADERBOARD_COPY.retry}>
+              <Text style={[styles.center, headline, { fontSize: 15 }]}>{LEADERBOARD_COPY.loadFailed}</Text>
+              <Text style={[styles.center, body, { marginTop: 4, fontSize: 12 }]}>{LEADERBOARD_COPY.retry}</Text>
+            </Pressable>
+          ) : board.rows.length === 0 ? (
+            <Text style={[styles.center, body, { fontSize: 13 }]}>{LEADERBOARD_COPY.boardEmpty}</Text>
+          ) : (
+            board.rows.map((row) => (
+              <LeaderboardRowView
+                key={row.userId}
+                row={row}
+                valueLabel={formatMetricValue(metric, row.value)}
+                onLongPress={() => confirmHide(row.userId, leaderboardName(row))}
+              />
+            ))
+          )}
+        </GlassCard>
+
+        {/* Shout-outs */}
+        <GlassCard style={styles.cardSpacing}>
+          <Text style={[styles.optTitle, headline]}>{LEADERBOARD_COPY.shoutoutsTitle}</Text>
+          {shoutouts.status === 'loading' && shoutouts.rows.length === 0 ? (
+            <ActivityIndicator style={{ marginTop: 10 }} color={t.colors.textSecondary as string} />
+          ) : shoutouts.status === 'error' && shoutouts.rows.length === 0 ? (
+            <Pressable onPress={() => void loadShoutouts()} accessibilityRole="button" accessibilityLabel={LEADERBOARD_COPY.retry}>
+              <Text style={[body, { marginTop: 8, fontSize: 13 }]}>{LEADERBOARD_COPY.retry}</Text>
+            </Pressable>
+          ) : shoutouts.rows.length === 0 ? (
+            <Text style={[body, { marginTop: 8, fontSize: 13 }]}>{LEADERBOARD_COPY.shoutoutsEmpty}</Text>
+          ) : (
+            shoutouts.rows.slice(0, SHOUTOUT_PREVIEW).map((row) => (
+              <ShoutoutRowView
+                key={`${row.userId}-${row.kind}-${row.threshold}-${row.achievedOn}`}
+                row={row}
+                onLongPress={() => confirmHide(row.userId, leaderboardName(row))}
+              />
+            ))
+          )}
           <Pressable
             onPress={() => {
               tapLight();
-              router.push('/profile/community-prefs' as never);
+              router.push('/community/milestones' as never);
             }}
             accessibilityRole="button"
-            accessibilityLabel="Open public sharing settings to opt in"
+            accessibilityLabel={LEADERBOARD_COPY.allMilestones}
+            style={styles.linkRow}
           >
-            <GlassCard style={styles.cardSpacing}>
-              <Text
-                style={[
-                  styles.optInTitle,
-                  {
-                    color: t.colors.textPrimary as string,
-                    fontFamily: t.isDark
-                      ? t.typography.headlineMale
-                      : t.typography.headlineFemale,
-                  },
-                ]}
-              >
-                Opt in to participate
-              </Text>
-              <Text
-                style={[
-                  styles.optInBody,
-                  {
-                    color: t.colors.textSecondary as string,
-                    fontFamily: t.typography.body,
-                  },
-                ]}
-              >
-                Public tracking is off. Turn it on in Profile to compare
-                streaks, adherence, and body-comp deltas with the
-                community. You can opt back out any time.
-              </Text>
-              <View style={styles.optInCta}>
-                <Ionicons
-                  name="arrow-forward"
-                  size={14}
-                  color={t.colors.textSecondary as string}
-                />
-                <Text
-                  style={{
-                    marginLeft: 6,
-                    color: t.colors.textSecondary as string,
-                    fontFamily: t.typography.bodyBold,
-                    fontSize: 12,
-                  }}
-                >
-                  Open sharing settings
-                </Text>
-              </View>
-            </GlassCard>
+            <Text style={{ color: t.colors.textSecondary as string, fontFamily: t.typography.bodyBold, fontSize: 12 }}>
+              {LEADERBOARD_COPY.allMilestones}
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color={t.colors.textSecondary as string} />
           </Pressable>
-        ) : !sharingThisCategory ? (
-          <GlassCard style={styles.cardSpacing}>
-            <Text
-              style={{
-                color: t.colors.textSecondary as string,
-                fontFamily: t.typography.body,
-                fontSize: 13,
-                textAlign: 'center',
-              }}
-            >
-              You are not sharing this category. Tap into Profile →
-              Sharing to switch it on.
-            </Text>
-          </GlassCard>
-        ) : (
-          <GlassCard style={styles.cardSpacing}>
-            <Text
-              style={[
-                styles.statLabel,
-                {
-                  color: t.colors.textSecondary as string,
-                  fontFamily: t.typography.label,
-                },
-              ]}
-            >
-              {myStat.label.toUpperCase()}
-            </Text>
-            <Text
-              style={[
-                styles.statValue,
-                {
-                  color: t.colors.textPrimary as string,
-                  fontFamily: t.isDark
-                    ? t.typography.numeralsMale
-                    : t.typography.numeralsFemale,
-                },
-              ]}
-            >
-              {myStat.value}
-            </Text>
-            <Text
-              style={[
-                styles.statBand,
-                {
-                  color: t.colors.textSecondary as string,
-                  fontFamily: t.typography.body,
-                },
-              ]}
-            >
-              {bandLabelFor(category, myStat.value)}
-            </Text>
-          </GlassCard>
-        )}
-
-        {/* Milestones drill-in — opted-in users can react / encourage
-            (§12.1). Sits above the roster card so it's reachable even
-            when the user is opted-in but the chosen leaderboard
-            category isn't shared. */}
-        <Pressable
-          onPress={() => {
-            tapLight();
-            router.push('/community/milestones' as never);
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Open your milestones to react and encourage"
-        >
-          <GlassCard style={styles.cardSpacing}>
-            <View style={styles.rosterRow}>
-              <Ionicons
-                name="ribbon-outline"
-                size={20}
-                color={t.colors.textSecondary as string}
-              />
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={[
-                    styles.rosterTitle,
-                    {
-                      color: t.colors.textPrimary as string,
-                      fontFamily: t.isDark
-                        ? t.typography.headlineMale
-                        : t.typography.headlineFemale,
-                    },
-                  ]}
-                >
-                  Your milestones
-                </Text>
-                <Text
-                  style={[
-                    styles.rosterBody,
-                    {
-                      color: t.colors.textSecondary as string,
-                      fontFamily: t.typography.body,
-                    },
-                  ]}
-                >
-                  Streaks, cycles, PRs, lean-mass gains. Tap to react.
-                </Text>
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={16}
-                color={t.colors.textSecondary as string}
-              />
-            </View>
-          </GlassCard>
-        </Pressable>
-
-        {/* Community status — read-only roadmap copy until server
-            aggregation lands. */}
-        <GlassCard style={styles.cardSpacing}>
-          <Text
-            style={[
-              styles.rosterTitle,
-              {
-                color: t.colors.textPrimary as string,
-                fontFamily: t.isDark
-                  ? t.typography.headlineMale
-                  : t.typography.headlineFemale,
-              },
-            ]}
-          >
-            Community roster
-          </Text>
-          <Text
-            style={[
-              styles.rosterBody,
-              {
-                color: t.colors.textSecondary as string,
-                fontFamily: t.typography.body,
-              },
-            ]}
-          >
-            Cross-user ranking is rolling out in waves. Your opt-in is
-            recorded — as soon as your cohort has enough opted-in peers
-            to ensure privacy on the rankings, your row appears here.
-          </Text>
         </GlassCard>
       </ScrollView>
     </V3DetailShell>
   );
 }
 
-function useDoseStreak(): number {
-  return useDoseLogStore((s) => {
-    let streak = 0;
-    const today = new Date();
-    for (let i = 0; i < 365; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const has = s.doses.some((x) => x.date === key);
-      if (has) streak++;
-      else if (i > 0) break;
-    }
-    return streak;
-  });
-}
-
-function useDoseAdherence(days: number): number {
-  return useDoseLogStore((s) => {
-    const activeProtos = s.protocols.filter((p) => p.isActive);
-    if (activeProtos.length === 0) return 0;
-    let plannedDays = 0;
-    let actualDoses = 0;
-    const today = new Date();
-    for (let i = 0; i < days; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      plannedDays++;
-      if (s.doses.some((x) => x.date === key)) actualDoses++;
-    }
-    return plannedDays === 0 ? 0 : Math.min(1, actualDoses / plannedDays);
-  });
-}
-
-function bandLabelFor(category: Category, value: string): string {
-  if (category === 'streak') {
-    const days = parseInt(value, 10);
-    if (days >= 30) return 'Top band — 30+ days.';
-    if (days >= 14) return 'Strong — 2 weeks plus.';
-    if (days >= 7) return 'Solid — a week in.';
-    return 'Building.';
-  }
-  if (category === 'adherence') {
-    const pct = parseInt(value, 10);
-    if (pct >= 90) return 'Top band — 90%+.';
-    if (pct >= 75) return 'Strong — three-quarter hit rate.';
-    if (pct >= 50) return 'Mid — room to push.';
-    return 'Below 50% — reminders help.';
-  }
-  return 'Trend tracked privately. Milestones shared.';
-}
-
 const styles = StyleSheet.create({
   cardSpacing: { marginTop: 12 },
-  tabRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 4,
-    marginBottom: 6,
+  optRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  optTitle: { fontSize: 16 },
+  optBody: { marginTop: 6, fontSize: 13, lineHeight: 19 },
+  pill: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1,
   },
-  optInTitle: {
-    fontSize: 18,
-  },
-  optInBody: {
-    marginTop: 8,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  optInCta: {
-    marginTop: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statLabel: {
-    fontSize: 9,
-    letterSpacing: 1.4,
-  },
-  statValue: {
-    fontSize: 38,
-    marginTop: 6,
-  },
-  statBand: {
-    fontSize: 12,
-    marginTop: 6,
-  },
-  rosterTitle: {
-    fontSize: 16,
-  },
-  rosterBody: {
-    marginTop: 6,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  rosterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
+  joinPill: { alignSelf: 'flex-start', marginTop: 12 },
+  tabRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
+  label: { fontSize: 9, letterSpacing: 1.4 },
+  statValue: { fontSize: 34, marginTop: 6 },
+  hint: { fontSize: 12, marginTop: 4 },
+  center: { textAlign: 'center' },
+  linkRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 4 },
 });

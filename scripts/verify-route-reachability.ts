@@ -41,10 +41,6 @@ const ALLOWED = new Map<string, string>([
   ['admin/video-tagger', 'admin-only, opened deliberately by URL'],
   ['admin/community-queue', 'admin-only, opened deliberately by URL'],
   ['admin/start-live', 'admin-only, opened deliberately by URL'],
-  [
-    'community/leaderboard',
-    'Phase 2 — LeaderboardStrip still uses mock data; milestones.tsx says server fan-out "rolls out with the leaderboard". Deliberately unlaunched, not orphaned.',
-  ],
 ]);
 
 function walk(dir: string, out: string[] = []): string[] {
