@@ -46,14 +46,6 @@ const OPEN_FINDINGS_AWAITING_JAMIE = new Map<string, string>([
     'dose-exceeds-vial|thymalin|proto-thymalin-im',
     'typicalDose 5–20 mg IM; the only known vial is 10 mg, so the top dose is two vials per injection.',
   ],
-  [
-    'sources-disjoint-10x|nad-plus|table~ladder',
-    'Master table "200mcg-600mcg" vs ladder 60 mg — ~100x, almost certainly mcg written for mg.',
-  ],
-  [
-    'sources-disjoint-10x|nad-plus|table~proto-nad-plus',
-    'Master table "200mcg-600mcg" vs protocol 50–200 mg — same table row, same slip.',
-  ],
 ]);
 
 const ss31 = () => getProtocolsByPeptide('ss-31')[0];

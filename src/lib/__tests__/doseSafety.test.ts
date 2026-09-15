@@ -60,20 +60,23 @@ describe('checkDoseSafety — unit-confusion detection', () => {
   });
 
   it('matches the peptide case-insensitively', () => {
-    // 8000 mcg is the discriminating dose: it exceeds 3x semaglutide's own
-    // maximum, but sits UNDER the flat 10,000 mcg ceiling used for compounds
-    // with no known range. So it is flagged only if the name actually resolves.
+    // 2000 mcg is the discriminating dose: it exceeds 3x BPC-157's maximum
+    // (Jamie's ruling, 500 mcg), but sits UNDER the flat 10,000 mcg ceiling used
+    // for compounds with no known range. So it is flagged only if the name
+    // actually resolves. (This used semaglutide at 8000 mcg until her 12 mg
+    // ruling put 3x semaglutide above the flat ceiling, where no dose can tell
+    // the two paths apart.)
     //
     // My first attempt at this test used 250 mg and passed while killing no
     // mutant — at that dose both the known and unknown paths flag it, so
     // breaking the lookup changed nothing. A test that cannot distinguish the
     // two paths does not test the lookup.
-    expect(checkDoseSafety('semaglutide', 8000, 'mcg').safe).toBe(false);
-    expect(checkDoseSafety('Semaglutide', 8000, 'mcg').safe).toBe(false);
-    expect(checkDoseSafety('SEMAGLUTIDE', 8000, 'mcg').safe).toBe(false);
+    expect(checkDoseSafety('bpc-157', 2000, 'mcg').safe).toBe(false);
+    expect(checkDoseSafety('Bpc-157', 2000, 'mcg').safe).toBe(false);
+    expect(checkDoseSafety('BPC-157', 2000, 'mcg').safe).toBe(false);
     // Control: an unknown compound at the same dose is NOT flagged, which is
     // what makes the three assertions above meaningful.
-    expect(checkDoseSafety('zzz-not-real', 8000, 'mcg').safe).toBe(true);
+    expect(checkDoseSafety('zzz-not-real', 2000, 'mcg').safe).toBe(true);
   });
 
   it('is unit-aware, not just magnitude-aware', () => {

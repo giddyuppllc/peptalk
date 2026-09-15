@@ -60,13 +60,8 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     contraindications: ['active cancer', 'pregnancy', 'breastfeeding'],
     cautionConditions: ['autoimmune disease', 'blood clotting disorders'],
     source: 'published research',
-    // Loading-then-maintenance pattern.
-    titrationSchedule: [
-      { weekStart: 1, weekEnd: 4, dose: 5, unit: 'mg', frequency: 'biw', frequencyLabel: '2× / week',
-        note: 'Loading phase — saturates tissue stores. Some users extend to 6 weeks.' },
-      { weekStart: 5, dose: 5, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly',
-        note: 'Maintenance. Some protocols drop to once every 2 weeks for long cycles.' },
-    ],
+    // A 5 mg loading/maintenance titration lived here — five times Jamie
+    // Esposito's ruled maximum of 1 mg (330 mcg – 1 mg). Removed 2026-09-15.
   },
   {
     id: 'proto-ghkcu-subq',
@@ -207,7 +202,8 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     id: 'proto-semaglutide',
     peptideId: 'semaglutide',
     name: 'Semaglutide Titration Protocol',
-    typicalDose: { min: 250, max: 2500, unit: 'mcg' },
+    // Jamie Esposito's review ruling: 250 mcg – 12 mg (see clinicianRulings.ts).
+    typicalDose: { min: 250, max: 12000, unit: 'mcg' },
     route: 'subcutaneous',
     frequency: 'weekly',
     frequencyLabel: 'Once weekly',
@@ -552,12 +548,14 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     // value, and the cause of TestFlight tester report
     // "MOTSC → blank screen, app freezes" because downstream syringe
     // math couldn't fit a 7.5 mg target into a 10 mg / 2 ml vial.
-    typicalDose: { min: 200, max: 1000, unit: 'mcg' },
+    // Jamie Esposito's review ruling (clinicianRulings.ts): 1 mg – 2 mg 3 times
+    // weekly, AM on an empty stomach, prior to workout; 6–10 weeks.
+    typicalDose: { min: 1000, max: 2000, unit: 'mcg' },
     route: 'subcutaneous',
-    frequency: 'daily',
-    frequencyLabel: 'daily (titrate weekly)',
+    frequency: 'tiw',
+    frequencyLabel: '3x weekly',
     durationWeeks: { min: 6, max: 10 },
-    timing: 'Morning or pre-exercise',
+    timing: 'AM on an empty stomach, prior to workout',
     storageNotes: 'Store at 2-8°C after reconstitution.',
     importantNotes: [
       'Mitochondrial-derived peptide — exercise mimetic',
@@ -580,7 +578,7 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     route: 'subcutaneous',
     frequency: 'daily',
     frequencyLabel: 'Once daily (SubQ) or orally',
-    durationWeeks: { min: 4, max: 8 },
+    durationWeeks: { min: 4, max: 12 },
     timing: 'Morning',
     storageNotes: 'Store reconstituted at 2-8°C.',
     importantNotes: [
@@ -1147,7 +1145,7 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     route: 'subcutaneous',
     frequency: 'tiw',
     frequencyLabel: '3x weekly (Mon / Wed / Fri)',
-    durationWeeks: { min: 6, max: 8 },
+    durationWeeks: { min: 6, max: 10 },
     timing: 'Fasted, before exercise',
     storageNotes: 'Store at 2-8°C after reconstitution.',
     reconstitutionNotes: 'On a 10mg vial with 3ml BAC water (3.33 mg/mL), 1mg = 30 units and 2mg = 60 units.',
@@ -1155,7 +1153,6 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
       'Dose fasted, then train — refuel with protein and carbohydrate afterwards',
       'Fixed Monday / Wednesday / Friday schedule rather than daily dosing',
       'Run the cycle twice a year (bi-annually)',
-      'Higher per-dose amount than the daily titration protocol — these are alternatives, do not run both at once',
     ],
     contraindications: ['pregnancy'],
     cautionConditions: ['diabetes', 'hypoglycemia risk'],
@@ -1215,11 +1212,11 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     route: 'subcutaneous',
     frequency: 'custom',
     frequencyLabel: 'Every 3-4 days',
-    durationWeeks: { min: 2, max: 4 },
+    durationWeeks: { min: 4, max: 12 },
     storageNotes: 'Reconstituted at 2-8°C, use within 21 days.',
     reconstitutionNotes: 'On a 10mg vial with 3ml BAC water (3.33 mg/mL), 1mg is approximately 30 units.',
     importantNotes: [
-      '1mg every 3-4 days for a short 2-4 week course',
+      '1mg every 3-4 days for a 4-12 week course',
       'For acute injuries specifically',
       'TB-500 acts systemically — injection site does not matter',
       'Commonly stacked with BPC-157',

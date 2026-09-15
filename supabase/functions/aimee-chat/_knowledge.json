@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-01T03:17:06.031Z",
+  "generatedAt": "2026-09-15T16:03:57.551Z",
   "peptides": [
     {
       "id": "semaglutide",
@@ -22,7 +22,40 @@
       "name": "Retatrutide",
       "category": "Metabolic",
       "halfLife": "~6 days",
-      "storage": "-20°C"
+      "storage": "-20°C",
+      "use": "Significant weight loss, Body recomposition"
+    },
+    {
+      "id": "cagrilintide",
+      "name": "Cagrilintide",
+      "category": "Metabolic",
+      "halfLife": "~7 days",
+      "storage": "2-8°C",
+      "use": "Weight loss, Appetite regulation"
+    },
+    {
+      "id": "mazdutide",
+      "name": "Mazdutide",
+      "category": "Metabolic",
+      "halfLife": "~5-7 days",
+      "storage": "-20°C",
+      "use": "Weight loss, Glycemic control"
+    },
+    {
+      "id": "survodutide",
+      "name": "Survodutide",
+      "category": "Metabolic",
+      "halfLife": "~5-6 days",
+      "storage": "-20°C",
+      "use": "Weight loss, NASH / liver fat reduction"
+    },
+    {
+      "id": "aod-9604",
+      "name": "AOD-9604",
+      "category": "Metabolic",
+      "halfLife": "~30 minutes",
+      "storage": "-20°C",
+      "use": "Targeted fat loss, Lipolysis enhancement"
     },
     {
       "id": "bpc-157",
@@ -42,7 +75,7 @@
     },
     {
       "id": "cjc-1295",
-      "name": "CJC-1295",
+      "name": "CJC-1295 (with DAC)",
       "category": "Growth Hormone",
       "halfLife": "~6-8 days (with DAC)",
       "storage": "-20°C",
@@ -65,6 +98,49 @@
       "use": "Visceral fat reduction, Body fat redistribution"
     },
     {
+      "id": "sermorelin",
+      "name": "Sermorelin",
+      "category": "Growth Hormone",
+      "halfLife": "~10-20 minutes",
+      "storage": "-20°C",
+      "use": "Growth hormone stimulation, Anti-aging"
+    },
+    {
+      "id": "ghrp-2",
+      "name": "GHRP-2",
+      "category": "Growth Hormone",
+      "halfLife": "~25-30 minutes",
+      "storage": "-20°C"
+    },
+    {
+      "id": "ghrp-6",
+      "name": "GHRP-6",
+      "category": "Growth Hormone",
+      "halfLife": "~15-30 minutes",
+      "storage": "-20°C"
+    },
+    {
+      "id": "hexarelin",
+      "name": "Hexarelin",
+      "category": "Growth Hormone",
+      "halfLife": "~60 minutes",
+      "storage": "-20°C"
+    },
+    {
+      "id": "hgh-fragment-176-191",
+      "name": "HGH Fragment 176-191",
+      "category": "Growth Hormone",
+      "halfLife": "~15-20 minutes",
+      "storage": "-20°C"
+    },
+    {
+      "id": "igf-1-lr3",
+      "name": "IGF-1 LR3",
+      "category": "Growth Hormone",
+      "halfLife": "~20-30 hours",
+      "storage": "-20°C"
+    },
+    {
       "id": "semax",
       "name": "Semax",
       "category": "Nootropic",
@@ -81,11 +157,26 @@
       "use": "Anxiety reduction, Cognitive enhancement"
     },
     {
+      "id": "cerebrolysin",
+      "name": "Cerebrolysin",
+      "category": "Nootropic",
+      "halfLife": "~minutes for individual peptides; cumulative effects persist",
+      "storage": "2-8°C"
+    },
+    {
       "id": "thymosin-alpha-1",
       "name": "Thymosin Alpha-1",
       "category": "Immune",
       "halfLife": "~2 hours",
       "storage": "2-8°C"
+    },
+    {
+      "id": "thymalin",
+      "name": "Thymalin",
+      "category": "Immune",
+      "halfLife": "~minutes",
+      "storage": "-20°C",
+      "use": "Immune reconstitution, Thymic function restoration"
     },
     {
       "id": "ll-37",
@@ -94,14 +185,6 @@
       "halfLife": "~minutes to hours (tissue-dependent)",
       "storage": "-20°C",
       "use": "Antimicrobial defense, Immune modulation"
-    },
-    {
-      "id": "kpv",
-      "name": "KPV",
-      "category": "Anti-inflammatory",
-      "halfLife": "~minutes",
-      "storage": "-20°C",
-      "use": "Gut inflammation reduction, Skin inflammation"
     },
     {
       "id": "mots-c",
@@ -144,6 +227,35 @@
       "use": "Deep sleep promotion, Stress modulation"
     },
     {
+      "id": "kisspeptin-10",
+      "name": "Kisspeptin-10",
+      "category": "Reproductive",
+      "halfLife": "~4 minutes",
+      "storage": "-20°C"
+    },
+    {
+      "id": "hcg",
+      "name": "hCG",
+      "category": "Reproductive",
+      "halfLife": "~24-36 hours",
+      "storage": "2-8°C"
+    },
+    {
+      "id": "hmg",
+      "name": "HMG",
+      "category": "Reproductive",
+      "halfLife": "~24 hours (FSH component); ~12 hours (LH component)",
+      "storage": "2-8°C"
+    },
+    {
+      "id": "pt-141",
+      "name": "PT-141",
+      "category": "Sexual Health",
+      "halfLife": "~2-4 hours",
+      "storage": "-20°C",
+      "use": "Sexual function enhancement, Libido improvement"
+    },
+    {
       "id": "ghk-cu",
       "name": "GHK-Cu",
       "category": "Cosmetic",
@@ -157,6 +269,51 @@
       "category": "Cosmetic",
       "halfLife": "Topical (not systemically relevant)",
       "storage": "2-8°C"
+    },
+    {
+      "id": "melanotan-2",
+      "name": "Melanotan-2",
+      "category": "Tanning",
+      "halfLife": "~1-2 hours",
+      "storage": "-20°C",
+      "use": "Tanning and melanogenesis, Sexual function"
+    },
+    {
+      "id": "oxytocin",
+      "name": "Oxytocin",
+      "category": "Neuropeptide",
+      "halfLife": "~3-5 minutes (plasma)",
+      "storage": "-20°C"
+    },
+    {
+      "id": "glutathione",
+      "name": "Glutathione",
+      "category": "Anti-inflammatory",
+      "halfLife": "~minutes (rapidly consumed by enzymatic reactions)",
+      "storage": "-20°C"
+    },
+    {
+      "id": "somatropin",
+      "name": "Somatropin",
+      "category": "Growth Hormone",
+      "halfLife": "~2-4 hours (SC injection)",
+      "storage": "2-8°C"
+    },
+    {
+      "id": "cjc-1295-ipamorelin",
+      "name": "CJC-1295 (No DAC) / Ipamorelin Blend",
+      "category": "Growth Hormone",
+      "halfLife": "~30 minutes (Mod GRF 1-29) / ~2 hours (Ipamorelin)",
+      "storage": "2-8°C reconstituted",
+      "use": "Growth hormone support, Recovery"
+    },
+    {
+      "id": "kpv-inj",
+      "name": "KPV (Injectable)",
+      "category": "Anti-inflammatory",
+      "halfLife": "~minutes (plasma)",
+      "storage": "2-8°C reconstituted",
+      "use": "Inflammation, Immune modulation"
     }
   ],
   "protocols": [
@@ -182,7 +339,7 @@
     {
       "peptideId": "tb-500",
       "name": "TB-500 Loading + Maintenance Protocol",
-      "dose": "2000-5000 mcg",
+      "dose": "330-1000 mcg",
       "route": "subcutaneous",
       "freq": "2x/week (loading) → 1x/week (maintenance)",
       "cycle": "4-12 weeks",
@@ -196,24 +353,12 @@
         "active cancer",
         "pregnancy",
         "breastfeeding"
-      ],
-      "titration": [
-        {
-          "weeks": "1-4",
-          "dose": "5 mg",
-          "freq": "2× / week"
-        },
-        {
-          "weeks": "5+",
-          "dose": "5 mg",
-          "freq": "Once weekly"
-        }
       ]
     },
     {
       "peptideId": "ghk-cu",
       "name": "GHK-Cu SubQ Protocol",
-      "dose": "200-600 mcg",
+      "dose": "1000-5000 mcg",
       "route": "subcutaneous",
       "freq": "Once daily",
       "cycle": "4-12 weeks",
@@ -230,7 +375,27 @@
     },
     {
       "peptideId": "cjc-1295",
-      "name": "CJC-1295 + Ipamorelin Combo Protocol",
+      "name": "CJC-1295 (with DAC) Protocol",
+      "dose": "1-2 mg",
+      "route": "subcutaneous",
+      "freq": "Every 4-6 days",
+      "cycle": "8-16 weeks",
+      "timing": "Any time of day — the DAC half-life means timing matters far less than for no-D…",
+      "storage": "Refrigerate at 2-8°C. Do not freeze reconstituted.",
+      "notes": [
+        "WITH DAC — do not confuse with CJC-1295 (No DAC), which is dosed 100-300mcg nightly",
+        "Dosed every 4-6 days: the DAC moiety binds albumin and extends the half-life to roughly a week"
+      ],
+      "contraindications": [
+        "active cancer",
+        "pregnancy",
+        "breastfeeding",
+        "pituitary tumors"
+      ]
+    },
+    {
+      "peptideId": "cjc-1295-ipamorelin",
+      "name": "CJC-1295 (No DAC) + Ipamorelin Combo Protocol",
       "dose": "100-300 mcg",
       "route": "subcutaneous",
       "freq": "Once daily before bed",
@@ -251,7 +416,7 @@
     {
       "peptideId": "ipamorelin",
       "name": "Ipamorelin Standalone Protocol",
-      "dose": "200-300 mcg",
+      "dose": "100-500 mcg",
       "route": "subcutaneous",
       "freq": "2-3x daily",
       "cycle": "8-12 weeks",
@@ -270,7 +435,7 @@
     {
       "peptideId": "tesamorelin",
       "name": "Tesamorelin Protocol",
-      "dose": "1-2 mg",
+      "dose": "0.5-1 mg",
       "route": "subcutaneous",
       "freq": "Once daily",
       "cycle": "12-26 weeks",
@@ -290,7 +455,7 @@
     {
       "peptideId": "semaglutide",
       "name": "Semaglutide Titration Protocol",
-      "dose": "250-2500 mcg",
+      "dose": "250-12000 mcg",
       "route": "subcutaneous",
       "freq": "Once weekly",
       "cycle": "16-52 weeks",
@@ -593,11 +758,11 @@
     {
       "peptideId": "mots-c",
       "name": "MOTS-c Protocol",
-      "dose": "5-10 mg",
+      "dose": "1000-2000 mcg",
       "route": "subcutaneous",
-      "freq": "3-5x/week",
-      "cycle": "4-12 weeks",
-      "timing": "Morning or pre-exercise",
+      "freq": "3x weekly",
+      "cycle": "6-10 weeks",
+      "timing": "AM on an empty stomach, prior to workout",
       "storage": "Store at 2-8°C after reconstitution.",
       "notes": [
         "Mitochondrial-derived peptide — exercise mimetic",
@@ -608,12 +773,12 @@
       ]
     },
     {
-      "peptideId": "kpv",
+      "peptideId": "kpv-inj",
       "name": "KPV Anti-Inflammatory Protocol",
       "dose": "200-500 mcg",
       "route": "subcutaneous",
       "freq": "Once daily (SubQ) or orally",
-      "cycle": "4-8 weeks",
+      "cycle": "4-12 weeks",
       "timing": "Morning",
       "storage": "Store reconstituted at 2-8°C.",
       "notes": [
@@ -621,6 +786,576 @@
         "Potent NF-kB inhibitor — master inflammation switch"
       ],
       "contraindications": [
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "sermorelin",
+      "name": "Sermorelin Standard Protocol",
+      "dose": "100-500 mcg",
+      "route": "subcutaneous",
+      "freq": "Once daily, evening",
+      "cycle": "12-24 weeks",
+      "timing": "Before bed on an empty stomach (>= 2h after last meal)",
+      "storage": "Lyophilized at -20°C. Reconstituted at 2-8°C, use within 14-21 days.",
+      "notes": [
+        "GHRH analog — restores natural pulsatile GH release, unlike exogenous hGH",
+        "Take on empty stomach; food (especially carbs) blunts the GH pulse"
+      ],
+      "contraindications": [
+        "active malignancy",
+        "pregnancy",
+        "breastfeeding",
+        "severe pituitary disease"
+      ]
+    },
+    {
+      "peptideId": "ghrp-2",
+      "name": "GHRP-2 Standard Protocol",
+      "dose": "100-300 mcg",
+      "route": "subcutaneous",
+      "freq": "1-3× daily on empty stomach",
+      "cycle": "8-16 weeks",
+      "timing": "Pre-bed; optionally also pre-workout and/or fasted AM",
+      "storage": "Lyophilized at -20°C. Reconstituted at 2-8°C, use within 30 days.",
+      "notes": [
+        "Ghrelin-mimetic — triggers a strong GH pulse from the pituitary",
+        "Best paired with a GHRH analog (sermorelin or CJC-1295) for synergy (~3× pulse vs either alone)"
+      ],
+      "contraindications": [
+        "active cancer",
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "ghrp-6",
+      "name": "GHRP-6 Standard Protocol",
+      "dose": "100-300 mcg",
+      "route": "subcutaneous",
+      "freq": "1-3× daily on empty stomach",
+      "cycle": "8-16 weeks",
+      "timing": "Pre-bed; optionally pre-workout and/or fasted AM",
+      "storage": "Lyophilized at -20°C. Reconstituted at 2-8°C, use within 30 days.",
+      "notes": [
+        "Hexapeptide ghrelin-mimetic — first-generation GHRP",
+        "Significantly stronger appetite stimulation than GHRP-2 or ipamorelin"
+      ],
+      "contraindications": [
+        "active cancer",
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "hexarelin",
+      "name": "Hexarelin Standard Protocol",
+      "dose": "100-200 mcg",
+      "route": "subcutaneous",
+      "freq": "1-2× daily on empty stomach",
+      "cycle": "4-8 weeks",
+      "timing": "Pre-bed and/or AM fasted",
+      "storage": "Lyophilized at -20°C. Reconstituted at 2-8°C, use within 14-21 days.",
+      "notes": [
+        "Most potent GHRP per microgram — desensitizes pituitary faster than GHRP-2/6 or ipamorelin",
+        "Strict cycling: 4-8 weeks ON, then 4 weeks OFF to recover receptor sensitivity"
+      ],
+      "contraindications": [
+        "active cancer",
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "hgh-fragment-176-191",
+      "name": "HGH Fragment 176-191 (Frag) Standard Protocol",
+      "dose": "250-500 mcg",
+      "route": "subcutaneous",
+      "freq": "Once daily (or split AM/PM)",
+      "cycle": "8-16 weeks",
+      "timing": "Fasted — typically AM before cardio",
+      "storage": "Lyophilized at -20°C. Reconstituted at 2-8°C, use within 21-30 days.",
+      "notes": [
+        "Truncated 176-191 fragment of hGH — selective lipolytic effects without affecting IGF-1, blood suga…",
+        "Best taken fasted; insulin blocks the lipolytic action"
+      ],
+      "contraindications": [
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "igf-1-lr3",
+      "name": "IGF-1 LR3 Standard Protocol",
+      "dose": "20-80 mcg",
+      "route": "subcutaneous",
+      "freq": "Once daily, post-workout",
+      "cycle": "4-6 weeks",
+      "timing": "Immediately post-workout into trained muscle (bi-lateral rotation)",
+      "storage": "Lyophilized at -20°C. Reconstituted at 2-8°C, use within 14 days.",
+      "notes": [
+        "Long-acting (~24h half-life) IGF-1 analog — much longer than native IGF-1",
+        "Site-specific muscle effect when injected directly into trained muscle (anabolic signaling)"
+      ],
+      "contraindications": [
+        "active malignancy",
+        "family history of cancer (relative)",
+        "pregnancy",
+        "breastfeeding",
+        "severe hypoglycemia risk"
+      ]
+    },
+    {
+      "peptideId": "aod-9604",
+      "name": "AOD-9604 Fat-Loss Protocol",
+      "dose": "250-500 mcg",
+      "route": "subcutaneous",
+      "freq": "Once daily, fasted AM",
+      "cycle": "8-12 weeks",
+      "timing": "Fasted morning, 30 min before any food",
+      "storage": "Lyophilized at -20°C. Reconstituted at 2-8°C, use within 30 days.",
+      "notes": [
+        "Synthetic hGH 177-191 fragment with lipolytic effect; does NOT raise blood sugar, IGF-1, or growth…",
+        "Take fasted; insulin blunts the lipolytic action"
+      ],
+      "contraindications": [
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "pt-141",
+      "name": "PT-141 (Bremelanotide) On-Demand Protocol",
+      "dose": "500-2000 mcg",
+      "route": "subcutaneous",
+      "freq": "As-needed, ≤ 1 dose per 24h, ≤ 8 doses/month",
+      "cycle": "1-24 weeks",
+      "timing": "~45 min before anticipated activity",
+      "storage": "Lyophilized at -20°C. Reconstituted at 2-8°C, use within 21 days.",
+      "notes": [
+        "FDA-approved as Vyleesi (1.75 mg auto-injector) for HSDD in pre-menopausal women",
+        "Acts centrally on melanocortin-4 receptors — works on libido/arousal pathways, not vasodilation"
+      ],
+      "contraindications": [
+        "uncontrolled hypertension",
+        "cardiovascular disease",
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "melanotan-2",
+      "name": "Melanotan-2 Tan Induction + Maintenance",
+      "dose": "250-500 mcg",
+      "route": "subcutaneous",
+      "freq": "Daily during loading → 1-2×/week maintenance",
+      "cycle": "4-12 weeks",
+      "timing": "Evening to minimize nausea while sleeping",
+      "storage": "Lyophilized at -20°C. Reconstituted at 2-8°C, use within 21-30 days.",
+      "notes": [
+        "Synthetic α-MSH analog — induces melanin synthesis (darker pigmentation)",
+        "Start very low (~100-250 mcg) and titrate up — nausea is the #1 dose-limiting side effect"
+      ],
+      "contraindications": [
+        "active or history of melanoma",
+        "family history of melanoma",
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "hcg",
+      "name": "hCG TRT-Adjunct Protocol",
+      "dose": "250-1500 IU",
+      "route": "subcutaneous",
+      "freq": "2-3× per week",
+      "cycle": "8-52 weeks",
+      "timing": "Any time; consistent schedule preferred",
+      "storage": "Reconstituted at 2-8°C, use within 30 days. Sensitive to heat and light.",
+      "notes": [
+        "LH-mimetic — preserves testicular function and fertility during TRT",
+        "Common TRT-adjunct dose: 250-500 IU 2-3× per week (men)"
+      ],
+      "contraindications": [
+        "prostate cancer",
+        "breast cancer",
+        "pregnancy (unless physician-directed fertility use)",
+        "precocious puberty"
+      ]
+    },
+    {
+      "peptideId": "oxytocin",
+      "name": "Oxytocin Sublingual / Intranasal Protocol",
+      "dose": "10-40 IU",
+      "route": "sublingual",
+      "freq": "As-needed, typically 30-60 min before social/bonding event",
+      "cycle": "1-12 weeks",
+      "timing": "30-60 min before desired effect; effect lasts ~1-2 hours",
+      "storage": "Compounded oxytocin troches/nasal spray at 2-8°C; check pharmacy stability date.",
+      "notes": [
+        "Oral and sublingual oxytocin formulations are research-grade for trust/bonding/social anxiety resea…",
+        "Intranasal route has the most published clinical data (e.g. autism social-cognition trials)"
+      ],
+      "contraindications": [
+        "pregnancy (outside hospital labor settings)",
+        "unstable cardiovascular disease"
+      ]
+    },
+    {
+      "peptideId": "glutathione",
+      "name": "Glutathione SubQ / IV Antioxidant Protocol",
+      "dose": "200-400 mg",
+      "route": "subcutaneous",
+      "freq": "1-3× per week (IV) or daily-EOD (SubQ)",
+      "cycle": "4-12 weeks",
+      "timing": "Any time — empty stomach for IV; SubQ is less sensitive",
+      "storage": "Reconstituted glutathione is light- and oxygen-sensitive; refrigerate, protect…",
+      "notes": [
+        "Master antioxidant — used clinically in IV form for oxidative-stress conditions, hepatic support, a…",
+        "Oral glutathione has poor bioavailability; liposomal or IV/SubQ routes preferred"
+      ],
+      "contraindications": [
+        "active malignancy (chemotherapy contexts — discuss with oncologist)",
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "kisspeptin-10",
+      "name": "Kisspeptin-10 Reproductive Axis Protocol",
+      "dose": "30-100 mcg",
+      "route": "subcutaneous",
+      "freq": "Pulsatile dosing per clinical research; not a standard at-home regimen",
+      "cycle": "1-4 weeks",
+      "timing": "Per physician-directed pulsatile schedule",
+      "storage": "Lyophilized at -20°C. Reconstituted at 2-8°C, use within 14 days.",
+      "notes": [
+        "Endogenous activator of GnRH — published clinical research for ovulation induction, hypogonadism, a…",
+        "Pulsatile dosing pattern matters more than total dose; this is NOT a daily injection peptide"
+      ],
+      "contraindications": [
+        "active hormone-sensitive cancer",
+        "pregnancy (outside fertility protocols)"
+      ]
+    },
+    {
+      "peptideId": "mazdutide",
+      "name": "Mazdutide Weekly Titration Protocol",
+      "dose": "3-9 mg",
+      "route": "subcutaneous",
+      "freq": "Once weekly",
+      "cycle": "24-52 weeks",
+      "timing": "Same day each week, any time",
+      "storage": "Refrigerate (2-8°C) until first use; may be at room temperature for up to 4 wee…",
+      "notes": [
+        "GLP-1 + glucagon dual receptor agonist — Innovent / Eli Lilly co-development, approved in China for…",
+        "Slow titration is mandatory — too-fast escalation causes severe GI symptoms (nausea, vomiting, dehy…"
+      ],
+      "contraindications": [
+        "personal/family history of MTC",
+        "MEN2 syndrome",
+        "pregnancy",
+        "breastfeeding",
+        "severe gastroparesis"
+      ],
+      "titration": [
+        {
+          "weeks": "1-4",
+          "dose": "1.5 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "5-8",
+          "dose": "3 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "9-16",
+          "dose": "4.5 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "17-24",
+          "dose": "6 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "25+",
+          "dose": "9 mg",
+          "freq": "Once weekly"
+        }
+      ]
+    },
+    {
+      "peptideId": "survodutide",
+      "name": "Survodutide Weekly Titration Protocol",
+      "dose": "2.4-6 mg",
+      "route": "subcutaneous",
+      "freq": "Once weekly",
+      "cycle": "24-52 weeks",
+      "timing": "Same day each week",
+      "storage": "Refrigerate (2-8°C); room temperature for up to 4 weeks once started.",
+      "notes": [
+        "GLP-1 + glucagon dual receptor agonist (Boehringer Ingelheim / Zealand) — phase 3 for obesity and M…",
+        "Phase 2 data (NEJM 2023): up to -19% body weight at 46 weeks on 4.8mg"
+      ],
+      "contraindications": [
+        "personal/family history of MTC",
+        "MEN2 syndrome",
+        "pregnancy",
+        "breastfeeding"
+      ],
+      "titration": [
+        {
+          "weeks": "1-4",
+          "dose": "0.6 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "5-8",
+          "dose": "1.2 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "9-12",
+          "dose": "1.8 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "13-16",
+          "dose": "2.4 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "17-20",
+          "dose": "3.6 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "21+",
+          "dose": "4.8 mg",
+          "freq": "Once weekly"
+        }
+      ]
+    },
+    {
+      "peptideId": "cagrilintide",
+      "name": "Cagrilintide Weekly Titration Protocol",
+      "dose": "1.2-2.4 mg",
+      "route": "subcutaneous",
+      "freq": "Once weekly",
+      "cycle": "24-52 weeks",
+      "timing": "Same day each week",
+      "storage": "Refrigerate (2-8°C); room temperature for up to 4 weeks once started.",
+      "notes": [
+        "Long-acting amylin analog — Novo Nordisk, designed for use alongside or instead of GLP-1s",
+        "Phase 2 data: ~-10.8% body weight at 26 weeks at 2.4mg (monotherapy)"
+      ],
+      "contraindications": [
+        "personal/family history of MTC",
+        "MEN2 syndrome",
+        "pregnancy",
+        "breastfeeding"
+      ],
+      "titration": [
+        {
+          "weeks": "1-4",
+          "dose": "0.16 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "5-8",
+          "dose": "0.3 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "9-12",
+          "dose": "0.6 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "13-16",
+          "dose": "1.2 mg",
+          "freq": "Once weekly"
+        },
+        {
+          "weeks": "17+",
+          "dose": "2.4 mg",
+          "freq": "Once weekly"
+        }
+      ]
+    },
+    {
+      "peptideId": "cerebrolysin",
+      "name": "Cerebrolysin Neuroprotective Protocol",
+      "dose": "10-30 mg",
+      "route": "intramuscular",
+      "freq": "5 days on, 2 days off — cycles of 10-20 dosing days",
+      "cycle": "2-4 weeks",
+      "timing": "Morning, before light meal",
+      "storage": "Lyophilised powder at 2-8°C, protected from light. Do not freeze. Reconstituted…",
+      "notes": [
+        "Porcine-derived neurotrophic peptide complex; approved in 50+ countries for stroke, dementia, TBI r…",
+        "60 mg vial + 3 mL bacteriostatic water = 20 mg/mL. A 20 mg dose is 1 mL (100 units on a U-100 syrin…"
+      ],
+      "contraindications": [
+        "epilepsy or seizure disorder",
+        "severe renal insufficiency",
+        "pregnancy",
+        "breastfeeding",
+        "porcine allergy"
+      ]
+    },
+    {
+      "peptideId": "thymalin",
+      "name": "Thymalin Immunorestoration Course",
+      "dose": "5-20 mg",
+      "route": "intramuscular",
+      "freq": "Daily course for 7-10 days, repeated 2-3× per year",
+      "cycle": "1-2 weeks",
+      "timing": "Morning, before meals",
+      "storage": "Lyophilized at 2-8°C protected from light. Reconstituted use within 24 hours.",
+      "notes": [
+        "Khavinson thymus-derived bioregulatory peptide complex; longest clinical track record of any thymic…",
+        "Standard adult course: 5-20 mg IM daily for 7-10 days"
+      ],
+      "contraindications": [
+        "active autoimmune flare",
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "hmg",
+      "name": "hMG Fertility-Induction Protocol",
+      "dose": "75-300 IU",
+      "route": "intramuscular",
+      "freq": "Daily during stimulation phase",
+      "cycle": "1-4 weeks",
+      "timing": "Evening, consistent time",
+      "storage": "Lyophilized at room temperature; reconstituted use immediately or refrigerate u…",
+      "notes": [
+        "FDA-approved as Menopur / Repronex — purified human menopausal gonadotropin with FSH and LH activity",
+        "Female fertility: 75-225 IU daily during stim, adjusted by ultrasound + estradiol monitoring (NOT a…"
+      ],
+      "contraindications": [
+        "pregnancy",
+        "ovarian cysts of unknown origin",
+        "gynecologic cancers",
+        "prostate cancer",
+        "thyroid or adrenal dysfunction (treat first)"
+      ]
+    },
+    {
+      "peptideId": "somatropin",
+      "name": "Somatropin (rhGH) Adult Replacement Protocol",
+      "dose": "0.2-1 mg",
+      "route": "subcutaneous",
+      "freq": "Once daily, evening",
+      "cycle": "12-52 weeks",
+      "timing": "Before bed on empty stomach",
+      "storage": "Refrigerate (2-8°C); some formulations allow room temperature for limited perio…",
+      "notes": [
+        "FDA-approved recombinant human growth hormone for documented adult GH deficiency, pediatric GH defi…",
+        "Adult GHD starting dose: 0.2 mg (≈0.6 IU) per day, titrated by IGF-1 every 4-6 weeks to mid-normal…"
+      ],
+      "contraindications": [
+        "active malignancy",
+        "proliferative diabetic retinopathy",
+        "critical illness",
+        "pregnancy",
+        "closed epiphyses for height-gain indications"
+      ]
+    },
+    {
+      "peptideId": "mots-c",
+      "name": "MOTS-c MWF Fasted Training Protocol",
+      "dose": "1000-2000 mcg",
+      "route": "subcutaneous",
+      "freq": "3x weekly (Mon / Wed / Fri)",
+      "cycle": "6-10 weeks",
+      "timing": "Fasted, before exercise",
+      "storage": "Store at 2-8°C after reconstitution.",
+      "notes": [
+        "Dose fasted, then train — refuel with protein and carbohydrate afterwards",
+        "Fixed Monday / Wednesday / Friday schedule rather than daily dosing"
+      ],
+      "contraindications": [
+        "pregnancy"
+      ]
+    },
+    {
+      "peptideId": "bpc-157",
+      "name": "BPC-157 Acute Injury & Pain Protocol",
+      "dose": "330-330 mcg",
+      "route": "subcutaneous",
+      "freq": "2x daily (0.33mg per injection)",
+      "cycle": "4-8 weeks",
+      "timing": "Morning and evening; near the injury site where practical",
+      "storage": "Reconstituted solution at 2-8°C. Use within 30 days.",
+      "notes": [
+        "0.33mg PER injection, twice daily — approximately 0.66mg total per day",
+        "For injuries and acute pain"
+      ],
+      "contraindications": [
+        "active cancer",
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "bpc-157",
+      "name": "BPC-157 Evening Skin & Recovery Protocol",
+      "dose": "330-330 mcg",
+      "route": "subcutaneous",
+      "freq": "Once daily, evening",
+      "cycle": "4-8 weeks",
+      "timing": "Evening",
+      "storage": "Reconstituted solution at 2-8°C. Use within 30 days.",
+      "notes": [
+        "The lower-intensity option: skin, recovery and inflammation rather than acute injury",
+        "Taken in the evening"
+      ],
+      "contraindications": [
+        "active cancer",
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "tb-500",
+      "name": "TB-500 Acute Injury Protocol",
+      "dose": "1000-1000 mcg",
+      "route": "subcutaneous",
+      "freq": "Every 3-4 days",
+      "cycle": "4-12 weeks",
+      "storage": "Reconstituted at 2-8°C, use within 21 days.",
+      "notes": [
+        "1mg every 3-4 days for a 4-12 week course",
+        "For acute injuries specifically"
+      ],
+      "contraindications": [
+        "active cancer",
+        "pregnancy",
+        "breastfeeding"
+      ]
+    },
+    {
+      "peptideId": "tb-500",
+      "name": "TB-500 Evening Skin, Hair & Recovery Protocol",
+      "dose": "330-330 mcg",
+      "route": "subcutaneous",
+      "freq": "Once daily, evening",
+      "cycle": "4-8 weeks",
+      "timing": "Evening",
+      "storage": "Reconstituted at 2-8°C, use within 21 days.",
+      "notes": [
+        "For skin, hair and overall recovery rather than acute injury",
+        "Taken in the evening"
+      ],
+      "contraindications": [
+        "active cancer",
         "pregnancy",
         "breastfeeding"
       ]
