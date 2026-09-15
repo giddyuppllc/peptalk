@@ -28,6 +28,7 @@ import { useBodyMapStore } from './useBodyMapStore';
 import { useAllergyStore } from './useAllergyStore';
 import { useLabResultsStore } from './useLabResultsStore';
 import { useIntegrationsStore } from './useIntegrationsStore';
+import { useLeaderboardStore } from './useLeaderboardStore';
 
 export function clearDeviceData(): void {
   // The whole wipe is local-only, not just resetProfile: the onboarding reset
@@ -49,5 +50,11 @@ export function clearDeviceData(): void {
     useAllergyStore.getState().clearAll();
     useLabResultsStore.getState().clearAll();
     useIntegrationsStore.getState().clearAll();
+    // Other people's board rows, and an onboarding leaderboard opt-in not yet
+    // written. Left behind, that choice is flushed to the server on the next
+    // authenticated boot, after the user asked for this device to be cleared.
+    // Device-local like the rest: the server's profiles.leaderboard_opt_in is
+    // unchanged (Profile -> Public sharing is where that is turned off).
+    useLeaderboardStore.getState().clearAll();
   });
 }

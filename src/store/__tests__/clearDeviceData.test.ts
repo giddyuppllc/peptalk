@@ -39,6 +39,8 @@ import { usePantryStore } from '../usePantryStore';
 import { useBodyMapStore } from '../useBodyMapStore';
 import { useWorkoutStore } from '../useWorkoutStore';
 import { useAuthStore } from '../useAuthStore';
+import { useLeaderboardStore } from '../useLeaderboardStore';
+import { secureStorage } from '../../services/secureStorage';
 
 type Write = { table: string; op: string; payload: unknown };
 
@@ -406,5 +408,69 @@ describe('the onboarding restore mirror (merged with feat/onboarding-server-rest
     }
     expect(seen).toEqual([true]);
     expect(useOnboardingStore.getState().isComplete).toBe(false);
+  });
+});
+
+describe('the leaderboard opt-in held on the device (merged with feat/leaderboard)', () => {
+  // useLeaderboardStore persists exactly one thing: an onboarding opt-in that
+  // could not be written yet. flushPendingOptIn writes it on the next
+  // authenticated boot. A wipe of the device must take it too.
+  const LEADERBOARD_KEY = 'peptalk-leaderboard-v1';
+
+  function optInUpdates() {
+    return mockWrites.filter(
+      (w) => w.table === 'profiles' && w.op === 'update' && 'leaderboard_opt_in' in (w.payload as object),
+    );
+  }
+
+  /** The last value the persist middleware wrote for the leaderboard store. */
+  function persistedLeaderboard(): { pendingOptIn?: unknown } | null {
+    const calls = (secureStorage.setItem as jest.Mock).mock.calls.filter(([key]) => key === LEADERBOARD_KEY);
+    if (calls.length === 0) return null;
+    return JSON.parse(calls[calls.length - 1][1] as string).state;
+  }
+
+  function holdPendingOptIn() {
+    useLeaderboardStore.setState({ pendingOptIn: true, optIn: null });
+    (secureStorage.setItem as jest.Mock).mockClear();
+    mockWrites.length = 0;
+  }
+
+  it('a held opt-in IS flushed to profiles on an authenticated boot (positive control)', async () => {
+    holdPendingOptIn();
+    await useLeaderboardStore.getState().flushPendingOptIn();
+    expect(optInUpdates()).toHaveLength(1);
+    expect(optInUpdates()[0].payload).toEqual({ leaderboard_opt_in: true });
+    expect(useLeaderboardStore.getState().pendingOptIn).toBeNull();
+  });
+
+  it('Delete My Data clears it, in memory and in storage, and nothing is flushed after', async () => {
+    holdPendingOptIn();
+    clearDeviceData();
+    await settle();
+
+    expect(useLeaderboardStore.getState().pendingOptIn).toBeNull();
+    expect(persistedLeaderboard()).toEqual({ pendingOptIn: null });
+
+    await useLeaderboardStore.getState().flushPendingOptIn();
+    expect(optInUpdates()).toEqual([]);
+    expect(mockWrites).toEqual([]);
+  });
+
+  it('sign-out clears it, in memory and in storage, and nothing is flushed after', async () => {
+    useAuthStore.setState({ user: { id: 'user-a' } as never, isAuthenticated: true });
+    holdPendingOptIn();
+
+    await useAuthStore.getState().logout();
+    await settle();
+
+    expect(useLeaderboardStore.getState().pendingOptIn).toBeNull();
+    expect(persistedLeaderboard()).toEqual({ pendingOptIn: null });
+
+    // A session for someone else on this device must not receive the choice.
+    mockAuth.session = { user: { id: 'user-b', email: 'b@example.com' }, access_token: 'tok-b' };
+    mockWrites.length = 0;
+    await useLeaderboardStore.getState().flushPendingOptIn();
+    expect(optInUpdates()).toEqual([]);
   });
 });
