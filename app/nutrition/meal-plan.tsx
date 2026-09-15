@@ -49,7 +49,12 @@ const MEAL_TYPE_MAP: Record<string, MealType> = {
 
 export default function MealPlanScreenWrapper() {
   return (
-    <PaywallGate feature="meal_plan">
+    // 'aimee_meal_plans', not 'meal_plan'. d9859bc removed 'meal_plan' from
+    // every tier, which locked this screen for Pro subscribers too. The only
+    // action here calls aimee-plan, which refuses anything but Pro (403 "Pro
+    // tier required"), and 'aimee_meal_plans' is the Pro key for exactly that.
+    // verify:featurekeys fails on a gate key no tier grants.
+    <PaywallGate feature="aimee_meal_plans">
       <MealPlanScreen />
     </PaywallGate>
   );
