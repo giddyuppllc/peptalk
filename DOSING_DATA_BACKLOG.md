@@ -50,10 +50,10 @@ missing is a *suggested* starting point: mL of bac water, and dose per draw.
 | **SS-31** | 10 | ? | 2000-5000 mcg | ? | daily |
 | **Kisspeptin-10** | 5 / 10 | ? | 30-100 mcg | ? | custom |
 | **SNAP-8** | 10 | ? | 3-10 mg | ? | twice_daily |
-| **ARA-290** | 10 | ? | ? | ? | ? |
+| **ARA-290** | 10 | ? | 2mg-4mg | ? | 5 On 2 Off or Daily |
 | **Humanin** | 5 / 10 | ? | ? | ? | ? |
-| **FOXO4-DRI** | 10 | ? | ? | ? | ? |
-| **Follistatin-344** | 1 | ? | ? | ? | ? |
+| **FOXO4-DRI** | 10 | ? | 5mg | ? | 3 Days |
+| **Follistatin-344** | 1 | ? | 0.5mg | ? | 1x Daily Pre/Post Workout |
 
 ## C. Need vial size too (10)
 
@@ -64,11 +64,11 @@ missing is a *suggested* starting point: mL of bac water, and dose per draw.
 | **HMG** | ? | ? | 75-300 IU | ? | daily |
 | **Dermorphin** | ? | ? | ? | ? | ? |
 | **PNC-27** | ? | ? | ? | ? | ? |
-| **AICAR** | ? | ? | ? | ? | ? |
+| **AICAR** | ? | ? | 5mg-25mg | ? | 5 On 2 Off or Daily |
 | **Somatropin** | ? | ? | 0.2-1 mg | ? | daily |
 | **Liraglutide** | ? | ? | ? | ? | ? |
-| **PEG-MGF** | ? | ? | ? | ? | ? |
-| **5-Amino-1MQ (Injectable)** | ? | ? | ? | ? | ? |
+| **PEG-MGF** | ? | ? | 200mcg-400mcg | ? | 3-5x Wk Training Days Only |
+| **5-Amino-1MQ (Injectable)** | ? | ? | 0.5mg-2mg | ? | 1-2x Daily AM/PM |
 
 ## D. Oral / ready-to-use — nothing needed (21)
 
