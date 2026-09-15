@@ -116,6 +116,23 @@ describe('every store holding an SS-31 dose agrees', () => {
     expect(rows.length).toBe(1);
     expect(rows[0].dose).toBe('2-5 mg');
   });
+
+  // The streaming chat's system prompt carried its own SS-31 line telling Aimee
+  // "Clinical dose is 40 mg/day SC — the 2-5 mg grid figures are community",
+  // overriding the approved value in every answer. Edward, 2026-09-15: "aimee is
+  // wrong jamie is right".
+  it("Aimee's streaming system prompt states 2-5 mg and never 40 mg", () => {
+    const prompt = fs.readFileSync(
+      path.join(ROOT, 'supabase/functions/aimee-chat-stream/_prompt.ts'),
+      'utf8',
+    );
+    const lines = prompt.split('\n').filter((l) => /ss-?31|elamipretide/i.test(l));
+    expect(lines.length).toBeGreaterThan(0);
+    for (const l of lines) {
+      expect(l).not.toMatch(/\b40\s*mg/i);
+      expect(l).toMatch(/2-5 mg/);
+    }
+  });
 });
 
 // ── The guard itself ────────────────────────────────────────────────────────

@@ -186,7 +186,7 @@ GLOW (GHK-Cu / BPC-157 / TB-500 blend) — 500-1500 mcg, 1× daily mid/PM, 5 on 
 5-Amino-1MQ (injectable) — [no validated human dose] 1-2 mg community protocol; preclinical only. Recon community-only.
 Methylene Blue — [Rx] 5-25 mg, 1× daily AM, 5 on / 2 off; take a ~4-week break periodically. Prescription drug.
 CoQ10 (injectable) — 50-200 mg, 1× daily, every other day or daily, as long as needed. Recon TBD.
-SS-31 (Elamipretide) — FDA-APPROVED 2025 (FORZINITY) for Barth syndrome at 40 mg/day SC; other uses (myopathy, etc.) remain investigational. Clinical dose is 40 mg/day SC — the 2-5 mg grid figures are community.
+SS-31 (Elamipretide) — 2-5 mg, 1× daily AM: 2 mg beginner, 5 mg advanced. 5 on / 2 off or daily, 4-8 wk cycle (max 12 wks). Recon TBD.
 AICAR — [Rx] 5-25 mg, 1× daily, 5 on / 2 off, 4-8 wk cycle. Banned performance compound — requires medical supervision. Recon TBD.
 Cardarine (GW-501516) — [Rx] [KNOWN ANIMAL CARCINOGEN — DO NOT USE] abandoned by its manufacturer after causing multi-organ tumors (liver, stomach, bladder, etc.) in animal studies; WADA-banned. No safe approved human dose — 10-20 mg figures are community-only. ALWAYS lead with the cancer warning.
 BAM15 — [no validated human dose] mitochondrial uncoupler; preclinical/animal only, no human trials. 50-150 mg figures are community guesses, not clinical.

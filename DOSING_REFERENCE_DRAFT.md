@@ -17,7 +17,7 @@
 | HGH Fragment 176-191 (`hgh-fragment-176-191`) | 5 mg | 2 mL | **2.50** | 250-500 mcg | Typical: 2ml BAC water per 5mg vial → 250 mcg per 0.1 ml. |
 | Cerebrolysin (`cerebrolysin`) | ❓ | ❓ | ❓ | 5-30 ml | *(no recon note — needs Edward's spec)* |
 | Thymalin (`thymalin`) | 10 mg | 2 mL | **5.00** | 5-20 mg | Reconstitute with 1-2 ml sterile 0.9% NaCl or procaine per 10 mg vial. |
-| SS-31 (`ss-31`) | ❓ | ❓ | ❓ | 5-40 mg | *(no recon note — needs Edward's spec)* |
+| SS-31 (`ss-31`) | ❓ | ❓ | ❓ | 2-5 mg | *(no recon note — needs Edward's spec)* |
 | Kisspeptin-10 (`kisspeptin-10`) | ❓ | ❓ | ❓ | 30-100 mcg | *(no recon note — needs Edward's spec)* |
 | hCG (`hcg`) | ❓ | ❓ | ❓ | 250-1500 IU | Comes lyophilized as 5,000 or 10,000 IU vials. Typical: 5ml BAC water  |
 | HMG (`hmg`) | ❓ | ❓ | ❓ | 75-300 IU | Typical: 1 ml sterile NaCl per 75 IU vial. |

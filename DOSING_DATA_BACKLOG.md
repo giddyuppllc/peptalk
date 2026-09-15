@@ -47,7 +47,7 @@ missing is a *suggested* starting point: mL of bac water, and dose per draw.
 | **GHRP-6** | 5 / 10 | ? | 100-300 mcg | ? | tiw |
 | **HGH Fragment 176-191** | 5 | ? | 250-500 mcg | ? | daily |
 | **Thymalin** | 10 | ? | 5-20 mg | ? | daily |
-| **SS-31** | 10 | ? | 5-40 mg | ? | daily |
+| **SS-31** | 10 | ? | 2000-5000 mcg | ? | daily |
 | **Kisspeptin-10** | 5 / 10 | ? | 30-100 mcg | ? | custom |
 | **SNAP-8** | 10 | ? | 3-10 mg | ? | twice_daily |
 | **ARA-290** | 10 | ? | ? | ? | ? |
