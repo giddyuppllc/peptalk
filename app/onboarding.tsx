@@ -42,6 +42,13 @@ import {
 } from '../src/types/cycle';
 import { useCycleStore } from '../src/store/useCycleStore';
 import {
+  visibleOnboardingStep,
+  onboardingBackAction,
+  showOnboardingBack,
+  showSignInLink,
+  shouldForwardHome,
+} from '../src/lib/onboardingSteps';
+import {
   useCommunityPrefsStore,
   type CommunityPreset,
 } from '../src/store/useCommunityPrefsStore';
@@ -125,23 +132,25 @@ export default function OnboardingScreen() {
   const isAuthenticated = useAuthStore((st) => st.isAuthenticated);
   const isComplete = useOnboardingStore((st) => st.isComplete);
 
-  const [step, setStep] = useState(isEditMode ? 1 : 0);
+  const [storedStep, setStep] = useState(isEditMode ? 1 : 0);
+  const stepCtx = { isAuthenticated, isEditMode };
+  // A signed-in visitor never sees the Welcome step (2.1(a) login loop — see
+  // src/lib/onboardingSteps.ts). Derived every render, not chosen at mount:
+  // this screen stays mounted beneath /auth while the user signs in.
+  const step = visibleOnboardingStep(storedStep, stepCtx);
+  const forwardHome = shouldForwardHome(storedStep, { ...stepCtx, isComplete });
 
-  // Auto-route logged-in users after the welcome animation plays.
+  // Route signed-in, already-onboarded users home.
   //
   // Bound to focus, not just to mount. This screen stays mounted underneath
   // /auth when the user taps "Already have an account? Sign In", and an
-  // unfocused screen firing router.replace() yanks them out of the form they
-  // are typing into 1.8s later. useFocusEffect tears the timer down on blur, so
-  // it can only ever fire while this screen is the one on top.
+  // unfocused screen firing router.replace() would yank them out of the form
+  // they are typing into. useFocusEffect only runs while this screen is on top.
   useFocusEffect(
     React.useCallback(() => {
-      if (!(step === 0 && isAuthenticated && isComplete && !isEditMode)) return;
-      const timer = setTimeout(() => {
-        router.replace('/(tabs)');
-      }, 1800); // Let the animation play for 1.8s then auto-route
-      return () => clearTimeout(timer);
-    }, [step, isAuthenticated, isComplete, isEditMode, router]),
+      if (!forwardHome) return;
+      router.replace('/(tabs)');
+    }, [forwardHome, router]),
   );
 
   // Age (exact)
@@ -468,10 +477,16 @@ export default function OnboardingScreen() {
   };
 
   const handleBack = () => {
-    if (step === 0) return;
-    if (isEditMode && step === 1) { router.back(); return; }
-    setStep((s) => s - 1);
+    const action = onboardingBackAction(step, stepCtx);
+    if (action.kind === 'exit') { router.back(); return; }
+    if (action.kind === 'step') setStep(action.step);
   };
+  const showBack = showOnboardingBack(step, stepCtx);
+
+  if (forwardHome) {
+    // Leaving for /(tabs) — render nothing rather than a step for one frame.
+    return <SafeAreaView style={s.container} edges={['top', 'bottom']} />;
+  }
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -541,9 +556,11 @@ export default function OnboardingScreen() {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={s.signInLink} onPress={() => router.push('/auth')} activeOpacity={0.7}>
-              <Text style={s.signInLinkText}>Already have an account? <Text style={{ color: HIGHLIGHT, fontWeight: '700' }}>Sign In</Text></Text>
-            </TouchableOpacity>
+            {showSignInLink(stepCtx) && (
+              <TouchableOpacity style={s.signInLink} onPress={() => router.push('/auth')} activeOpacity={0.7}>
+                <Text style={s.signInLinkText}>Already have an account? <Text style={{ color: HIGHLIGHT, fontWeight: '700' }}>Sign In</Text></Text>
+              </TouchableOpacity>
+            )}
 
           </Animated.View>
 
@@ -650,10 +667,15 @@ export default function OnboardingScreen() {
           />
           {/* Fixed footer */}
           <View style={s.footer}>
-            <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
-              <Ionicons name="arrow-back" size={20} color="#6B7280" />
-              <Text style={s.footerBackText}>Back</Text>
-            </TouchableOpacity>
+            {showBack ? (
+              <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
+                <Ionicons name="arrow-back" size={20} color="#6B7280" />
+                <Text style={s.footerBackText}>Back</Text>
+              </TouchableOpacity>
+            ) : (
+              // Keeps Continue right-aligned under space-between.
+              <View />
+            )}
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
                 style={[s.footerNextBtn, !canContinue && { opacity: 0.4 }]}
@@ -835,10 +857,15 @@ export default function OnboardingScreen() {
             )}
           />
           <View style={s.footer}>
-            <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
-              <Ionicons name="arrow-back" size={20} color="#6B7280" />
-              <Text style={s.footerBackText}>Back</Text>
-            </TouchableOpacity>
+            {showBack ? (
+              <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
+                <Ionicons name="arrow-back" size={20} color="#6B7280" />
+                <Text style={s.footerBackText}>Back</Text>
+              </TouchableOpacity>
+            ) : (
+              // Keeps Continue right-aligned under space-between.
+              <View />
+            )}
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
                 style={[s.footerNextBtn, !canContinue && { opacity: 0.4 }]}
@@ -1090,10 +1117,15 @@ export default function OnboardingScreen() {
             )}
           />
           <View style={s.footer}>
-            <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
-              <Ionicons name="arrow-back" size={20} color="#6B7280" />
-              <Text style={s.footerBackText}>Back</Text>
-            </TouchableOpacity>
+            {showBack ? (
+              <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
+                <Ionicons name="arrow-back" size={20} color="#6B7280" />
+                <Text style={s.footerBackText}>Back</Text>
+              </TouchableOpacity>
+            ) : (
+              // Keeps Continue right-aligned under space-between.
+              <View />
+            )}
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
                 style={[s.footerNextBtn, (!canContinue || isLoggingIn) && { opacity: 0.4 }]}
