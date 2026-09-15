@@ -654,17 +654,24 @@ export default function SubscriptionScreen() {
           <Text style={styles.restoreBtnText}>{restoring ? 'Restoring…' : 'Restore Purchases'}</Text>
         </TouchableOpacity>
 
-        {/* Redeem a discount code (Apple Offer Code / Play promo code). Lets
-            partner / cross-site customers apply a discount the OS-blessed way:
-            the redemption sheet applies it to the subscription itself. */}
-        <TouchableOpacity
-          style={styles.restoreBtn}
-          onPress={() => presentCodeRedemption()}
-          accessibilityRole="button"
-          accessibilityLabel="Redeem a discount code"
-        >
-          <Text style={styles.restoreBtnText}>Have a discount code?</Text>
-        </TouchableOpacity>
+        {/* Redeem a discount code (Apple Offer Code). Lets partner /
+            cross-site customers apply a discount the OS-blessed way: the
+            redemption sheet applies it to the subscription itself.
+
+            iOS only. presentCodeRedemption() returns false without doing
+            anything on Android (our codes are Apple offer codes; there is no
+            Play promo code to redeem) and on web, so this rendered as a dead
+            button there. */}
+        {Platform.OS === 'ios' && (
+          <TouchableOpacity
+            style={styles.restoreBtn}
+            onPress={() => presentCodeRedemption()}
+            accessibilityRole="button"
+            accessibilityLabel="Redeem a discount code"
+          >
+            <Text style={styles.restoreBtnText}>Have a discount code?</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Manage Subscription (paid users only). Required by Apple for
             auto-renewing subscriptions — deep-links to the native manage
