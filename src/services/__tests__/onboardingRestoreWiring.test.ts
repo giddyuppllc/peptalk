@@ -150,11 +150,15 @@ describe('write path — the answers reach the server when onboarding completes'
 });
 
 describe('restoreOnboardingFromServer against the real stores', () => {
-  it('a returning user is restored complete, with macro targets computed', async () => {
+  // As the real fetch does: "server wins" lands the row in the health store.
+  const serverWins = () =>
     mockServerFetch.mockImplementation(async () => {
       useHealthProfileStore.setState({ profile: { ...useHealthProfileStore.getState().profile, ...serverRow } as never });
       return { status: 'ok', userId: 'user-a', profile: serverRow };
     });
+
+  it('a returning user is restored complete, with macro targets computed', async () => {
+    serverWins();
     await expect(restoreOnboardingFromServer()).resolves.toBe('complete');
     const ob = useOnboardingStore.getState();
     expect(ob.isComplete).toBe(true);
@@ -166,8 +170,8 @@ describe('restoreOnboardingFromServer against the real stores', () => {
   it('leaves targets the user already set on this device alone', async () => {
     const custom = { ...DEFAULT_TARGETS, calories: 1750 };
     useMealStore.setState({ targets: custom });
-    mockServerFetch.mockResolvedValue({ status: 'ok', userId: 'user-a', profile: serverRow });
-    await restoreOnboardingFromServer();
+    serverWins();
+    await expect(restoreOnboardingFromServer()).resolves.toBe('complete');
     expect(useMealStore.getState().targets).toEqual(custom);
   });
 

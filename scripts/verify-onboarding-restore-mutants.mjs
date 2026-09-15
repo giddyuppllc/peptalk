@@ -92,6 +92,12 @@ const MUTANTS = [
     find: 'if (storedStep !== WELCOME_STEP) return null;', replace: '' },
   { file: 'app/onboarding.tsx', tests: [T_STEPS], why: 'render a step while the restore is out',
     find: 'if (forwardHome || awaitRestore) {', replace: 'if (forwardHome) {' },
+  { file: 'app/onboarding.tsx', tests: [T_GATE], why: 'attest a resumed user as 18-29',
+    find: 'if (attestedRange) void attestAge(attestedRange, MIN_AGE);',
+    replace: 'void attestAge(ageToRange(selectedAge), MIN_AGE);' },
+  { file: 'app/onboarding.tsx', tests: [T_GATE], why: 'loosen the step 1 requirement the restore mirrors',
+    find: 'profile.gender && selectedAge >= MIN_AGE && profile.healthGoals.length > 0',
+    replace: 'profile.gender && selectedAge >= MIN_AGE' },
 
   // ── wiring and callers ──
   { file: SERVICE, tests: [T_GATE, T_WIRING], why: 'let the restore lower or set isComplete outright',
@@ -141,13 +147,18 @@ try {
   for (const m of MUTANTS) {
     if (!originals.has(m.file)) originals.set(m.file, readFileSync(m.file, 'utf8'));
     const original = originals.get(m.file);
-    const hits = original.split(m.find).length - 1;
+    // Multi-line search text is written with \n; a checkout with CRLF endings
+    // would otherwise make it "not found" — reported, but never tested.
+    const eol = original.includes('\r\n') ? '\r\n' : '\n';
+    const find = m.find.split('\n').join(eol);
+    const replace = m.replace.split('\n').join(eol);
+    const hits = original.split(find).length - 1;
     if (hits !== 1) {
       rows.push(['?  INCONCLUSIVE', m.file, `${m.why} — search text found ${hits}x`]);
       bad++;
       continue;
     }
-    writeFileSync(m.file, original.replace(m.find, m.replace));
+    writeFileSync(m.file, original.replace(find, () => replace));
     let run;
     try {
       run = jest(m.tests);

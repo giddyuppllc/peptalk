@@ -223,6 +223,12 @@ describe('planOnboardingRestore', () => {
     expect(planOnboardingRestore(input({ fetch: { status: 'signed-out' } })).onboardingPatch).toBeNull();
   });
 
+  it('no session is reported as signed-out before anything about the fetch', () => {
+    for (const fetch of [{ status: 'error' } as const, ok(null), ok(serverProfile())]) {
+      expect(planOnboardingRestore(input({ currentUserId: null, fetch })).decision).toBe('signed-out');
+    }
+  });
+
   it('a fetch that answered for a different account changes nothing', () => {
     const plan = planOnboardingRestore(input({ fetch: ok(serverProfile(), 'user-b') }));
     expect(plan.decision).toBe('signed-out');

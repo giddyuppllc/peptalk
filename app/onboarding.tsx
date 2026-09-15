@@ -214,9 +214,12 @@ export default function OnboardingScreen() {
   // Once the restore has landed, pre-fill Basics from the health profile the
   // user already has, so continuing does not blank or overwrite it (step 2
   // writes activity level unconditionally). Only empty fields, only once.
+  // A resume point arrives just before the restore reports settled; seeding on
+  // either means a resumed Basics step never renders empty for a frame.
+  const restoreLanded = restoreSettled || (resume != null && resume.userId === currentUserId);
   const seededFromProfile = useRef(false);
   useEffect(() => {
-    if (seededFromProfile.current || !restoreSettled || !isAuthenticated || isEditMode) return;
+    if (seededFromProfile.current || !restoreLanded || !isAuthenticated || isEditMode) return;
     seededFromProfile.current = true;
     const hp = useHealthProfileStore.getState().profile;
     const w = hp?.bodyMetrics?.weightLbs;
@@ -242,7 +245,7 @@ export default function OnboardingScreen() {
       const notes = hp.goalNotes;
       setGoalNotes((cur) => cur || notes);
     }
-  }, [restoreSettled, isAuthenticated, isEditMode]);
+  }, [restoreLanded, isAuthenticated, isEditMode]);
 
   // Open at the restore's resume point: forward only, from an untouched screen.
   useEffect(() => {

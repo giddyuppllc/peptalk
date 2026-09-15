@@ -46,6 +46,7 @@
     "verify:scannercontrols": "node scripts/verify-scanner-controls.mjs",
     "export:review": "tsx scripts/export-clinical-review.ts",
     "verify:vacuous": "node scripts/verify-scanner-mutation.mjs",
+    "verify:restoremutants": "node scripts/verify-onboarding-restore-mutants.mjs",
     "verify:aimeescreens": "node scripts/verify-aimee-screens.mjs",
     "verify:synccolumns": "node scripts/verify-sync-columns.mjs",
     "verify:skips": "node scripts/verify-skips.mjs",
