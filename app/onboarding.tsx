@@ -7,7 +7,7 @@
  * Screen 4: Create Account + Choose Plan
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { describeAuthError } from '../src/lib/errorMessages';
 import { captureException } from '../src/services/telemetry';
 import { View, Text, TouchableOpacity, TextInput, Switch, StyleSheet, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
@@ -21,15 +21,8 @@ import { useHealthProfileStore } from '../src/store/useHealthProfileStore';
 import { attestAge } from '../src/services/profileService';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
-import {
-  computeMacroRecommendation,
-  activityFromOnboarding,
-  ageYearsFromRange,
-  goalFromOnboarding,
-} from '../src/services/macroCalculator';
+import { onboardingMacroTargets, applyMacroTargets } from '../src/services/onboardingRestore';
 import { isValidEmail, validatePassword, PASSWORD_MIN_LENGTH } from '../src/utils/validation';
-import { useMealStore } from '../src/store/useMealStore';
-import { useProgressGoalsStore } from '../src/store/useProgressGoalsStore';
 import { trackOnboardingComplete } from '../src/services/analyticsEvents';
 import { PasswordToggle } from '../src/components/PasswordToggle';
 import { AgeRange, Gender, ActivityLevel } from '../src/types';
@@ -47,7 +40,15 @@ import {
   showOnboardingBack,
   showSignInLink,
   shouldForwardHome,
+  shouldAwaitServerRestore,
+  resumeStepToApply,
 } from '../src/lib/onboardingSteps';
+import {
+  ONBOARDING_RESTORE_TIMEOUT_MS,
+  isOnboardingHeightValid,
+  isOnboardingWeightValid,
+  isStoredHeightValid,
+} from '../src/lib/onboardingRestore';
 import {
   useCommunityPrefsStore,
   type CommunityPreset,
@@ -88,6 +89,13 @@ const COMMUNITY_PRESETS: {
  * actually enforced.
  */
 const MIN_AGE = 18;
+
+/**
+ * How long a fresh screen stays blank waiting on the server restore before it
+ * shows the local answers anyway. Just past the restore's own budget, so the
+ * restore normally settles first; this only bounds a restore that never does.
+ */
+const RESTORE_WAIT_CAP_MS = ONBOARDING_RESTORE_TIMEOUT_MS + 1_500;
 
 const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
   { value: 'Male', label: 'Male', icon: 'man-outline' },
@@ -153,6 +161,30 @@ export default function OnboardingScreen() {
     }, [forwardHome, router]),
   );
 
+  // Server restore (src/services/onboardingRestore.ts). A returning user on a
+  // new device, a reinstall or a fresh web load has their answers on the
+  // server; while that fetch is out, a fresh screen renders nothing rather than
+  // a step it may be about to leave. A restored completion then forwards home
+  // through `forwardHome` above; a partial one opens at the first unanswered
+  // step. Neither happens without a session.
+  const currentUserId = useAuthStore((st) => st.user?.id ?? null);
+  const restoreSettled = useOnboardingStore(
+    (st) => st.restore.status === 'settled' && st.restore.userId === currentUserId,
+  );
+  const resume = useOnboardingStore((st) => st.resumeStep);
+  const [restoreWaitElapsed, setRestoreWaitElapsed] = useState(false);
+  const awaitRestore = shouldAwaitServerRestore(storedStep, {
+    ...stepCtx,
+    isComplete,
+    restoreSettled,
+    waitElapsed: restoreWaitElapsed,
+  });
+  useEffect(() => {
+    if (!awaitRestore) return;
+    const timer = setTimeout(() => setRestoreWaitElapsed(true), RESTORE_WAIT_CAP_MS);
+    return () => clearTimeout(timer);
+  }, [awaitRestore]);
+
   // Age (exact)
   const [selectedAge, setSelectedAge] = useState(0);
 
@@ -179,6 +211,46 @@ export default function OnboardingScreen() {
   const [contraceptionMethod, setContraceptionMethod] = useState<ContraceptionMethod | null>(null);
   const [lastPeriodDate, setLastPeriodDate] = useState('');
 
+  // Once the restore has landed, pre-fill Basics from the health profile the
+  // user already has, so continuing does not blank or overwrite it (step 2
+  // writes activity level unconditionally). Only empty fields, only once.
+  const seededFromProfile = useRef(false);
+  useEffect(() => {
+    if (seededFromProfile.current || !restoreSettled || !isAuthenticated || isEditMode) return;
+    seededFromProfile.current = true;
+    const hp = useHealthProfileStore.getState().profile;
+    const w = hp?.bodyMetrics?.weightLbs;
+    const h = hp?.bodyMetrics?.heightInches;
+    if (typeof w === 'number' && isOnboardingWeightValid(w)) {
+      setWeightLbs((cur) => cur || String(w));
+    }
+    if (typeof h === 'number' && isStoredHeightValid(h)) {
+      const feet = Math.floor(h / 12);
+      const inches = h - feet * 12;
+      setHeightFeet((cur) => cur || String(feet));
+      if (inches > 0) setHeightInches((cur) => cur || String(inches));
+    }
+    const storedActivity = hp?.lifestyle?.activityLevel;
+    if (ACTIVITY_LEVELS.some((al) => al.value === storedActivity)) {
+      setActivityLevel((cur) => (cur === 'moderate' ? (storedActivity as ActivityLevel) : cur));
+    }
+    const days = hp?.lifestyle?.exerciseFrequency;
+    if (typeof days === 'number' && Number.isInteger(days) && days >= 0 && days <= 7) {
+      setWorkoutDaysPerWeek((cur) => cur ?? days);
+    }
+    if (typeof hp?.goalNotes === 'string' && hp.goalNotes.trim()) {
+      const notes = hp.goalNotes;
+      setGoalNotes((cur) => cur || notes);
+    }
+  }, [restoreSettled, isAuthenticated, isEditMode]);
+
+  // Open at the restore's resume point: forward only, from an untouched screen.
+  useEffect(() => {
+    if (!resume || resume.userId !== currentUserId) return;
+    const target = resumeStepToApply(storedStep, resume.step, { isAuthenticated, isEditMode });
+    if (target != null) setStep(target);
+  }, [resume, currentUserId, storedStep, isAuthenticated, isEditMode]);
+
   // Account
   const [accountFirstName, setAccountFirstName] = useState('');
   const [accountLastName, setAccountLastName] = useState('');
@@ -199,8 +271,6 @@ export default function OnboardingScreen() {
   const signup = useAuthStore((s) => s.signup);
   const isLoggingIn = useAuthStore((s) => s.isLoading);
   const setTier = useSubscriptionStore((s) => s.setTier);
-  const setMealTargets = useMealStore((s) => s.setTargets);
-  const setGoalValue = useProgressGoalsStore((s) => s.setGoalValue);
   const {
     profile, setGender, setAgeRange, toggleHealthGoal,
     setAcceptedSafety, completeOnboarding,
@@ -227,16 +297,14 @@ export default function OnboardingScreen() {
   // Everything else (activity, workout days, cycle, goal notes, feature
   // wish, account creation) is reachable but marked "Set up later in
   // Profile" and gated only on Step 3 (account screen itself).
-  const weightValid = useMemo(() => {
-    const w = parseFloat(weightLbs);
-    return !isNaN(w) && w >= 50 && w <= 1000;
-  }, [weightLbs]);
+  // The rules live in src/lib/onboardingRestore.ts because the server restore
+  // must judge "answered" by exactly the same standard as this screen.
+  const weightValid = useMemo(() => isOnboardingWeightValid(parseFloat(weightLbs)), [weightLbs]);
 
-  const heightValid = useMemo(() => {
-    const f = parseInt(heightFeet, 10);
-    const i = parseInt(heightInches, 10);
-    return !isNaN(f) && f >= 3 && f <= 8 && (isNaN(i) || (i >= 0 && i < 12));
-  }, [heightFeet, heightInches]);
+  const heightValid = useMemo(
+    () => isOnboardingHeightValid(parseInt(heightFeet, 10), parseInt(heightInches, 10)),
+    [heightFeet, heightInches],
+  );
 
   const canContinue = useMemo(() => {
     if (step === 0) return true; // Welcome — always can continue
@@ -366,31 +434,10 @@ export default function OnboardingScreen() {
         // whichever screen ran last won — 319 cal and 20 g protein apart for
         // identical inputs. The adapters map onboarding's coarser profile in,
         // preserving each user's activity MULTIPLIER (the two scales share
-        // multipliers under different names).
-        const macros =
-          body.weightLbs && body.heightInches && (profile.gender === 'Male' || profile.gender === 'Female')
-            ? computeMacroRecommendation({
-                weightLbs: body.weightLbs,
-                heightInches: body.heightInches,
-                ageYears: ageYearsFromRange(profile.ageRange),
-                biologicalSex: profile.gender === 'Male' ? 'male' : 'female',
-                activityLevel: activityFromOnboarding(life.activityLevel),
-                goal: goalFromOnboarding(profile.healthGoals),
-              })
-            : null;
-        if (macros) {
-          setMealTargets({
-            calories: macros.calories, proteinGrams: macros.proteinGrams,
-            carbsGrams: macros.carbsGrams, fatGrams: macros.fatGrams,
-            fiberGrams: macros.fiberGrams, waterOz: macros.waterOz,
-          });
-          setGoalValue('cal', macros.calories);
-          setGoalValue('pro', macros.proteinGrams);
-          setGoalValue('carb', macros.carbsGrams);
-          setGoalValue('fat', macros.fatGrams);
-          setGoalValue('fiber', macros.fiberGrams);
-          setGoalValue('water', macros.waterOz);
-        }
+        // multipliers under different names). The call is shared with the
+        // server restore, so a restored completion gets the same targets.
+        const macros = onboardingMacroTargets(profile, body, life);
+        if (macros) applyMacroTargets(macros);
 
         const trimmedFeatureWish = featureWish.trim();
         if (trimmedFeatureWish) persistFeatureWish(trimmedFeatureWish);
@@ -410,7 +457,13 @@ export default function OnboardingScreen() {
         // what an age-rated, UGC-carrying app has to be able to evidence.
         // Fire-and-forget: a failed write must not block a completed signup,
         // and telemetry captures it inside the service.
-        void attestAge(ageToRange(selectedAge), MIN_AGE);
+        //
+        // A user resumed past step 1 by the server restore never typed an age
+        // on this screen (selectedAge is still 0), and ageToRange(0) would
+        // record '18-29' whatever they answered. Their bucket is the one they
+        // gave on the device that passed the gate; attest that instead.
+        const attestedRange = selectedAge >= MIN_AGE ? ageToRange(selectedAge) : profile.ageRange;
+        if (attestedRange) void attestAge(attestedRange, MIN_AGE);
 
         // completeOnboarding() is deliberately AFTER the confirmation check
         // below.
@@ -483,8 +536,9 @@ export default function OnboardingScreen() {
   };
   const showBack = showOnboardingBack(step, stepCtx);
 
-  if (forwardHome) {
-    // Leaving for /(tabs) — render nothing rather than a step for one frame.
+  if (forwardHome || awaitRestore) {
+    // Leaving for /(tabs), or about to learn whether we are — render nothing
+    // rather than a step for one frame.
     return <SafeAreaView style={s.container} edges={['top', 'bottom']} />;
   }
 

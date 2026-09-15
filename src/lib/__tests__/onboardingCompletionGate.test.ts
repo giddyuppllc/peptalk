@@ -55,6 +55,95 @@ describe('app/auth.tsx', () => {
   });
 });
 
+const stripComments = (src: string) =>
+  src
+    .split('\n')
+    .filter((l) => {
+      const t = l.trim();
+      return !t.startsWith('//') && !t.startsWith('*') && !t.startsWith('/*');
+    })
+    .join('\n');
+
+describe('only the final onboarding step calls completeOnboarding()', () => {
+  // Restoring from the server sets isComplete from the server's record inside
+  // src/services/onboardingRestore.ts; nothing else may flip it. The auth deep
+  // link in app/_layout.tsx used to call completeOnboarding() for anyone who
+  // opened a confirmation or password-recovery link.
+  const walk = (dir: string): string[] =>
+    fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) return e.name === '__tests__' || e.name === 'node_modules' ? [] : walk(p);
+      return /\.(ts|tsx)$/.test(e.name) ? [p] : [];
+    });
+  const files = [...walk(path.join(ROOT, 'app')), ...walk(path.join(ROOT, 'src'))];
+
+  it('scans a real corpus', () => {
+    expect(files.length).toBeGreaterThan(100);
+    expect(files.some((f) => f.endsWith(path.join('app', 'onboarding.tsx')))).toBe(true);
+  });
+
+  it('finds exactly one caller: app/onboarding.tsx', () => {
+    const callers = files
+      .filter((f) => /completeOnboarding\(\)/.test(stripComments(fs.readFileSync(f, 'utf8'))))
+      .map((f) => path.relative(ROOT, f).split(path.sep).join('/'));
+    expect(callers).toEqual(['app/onboarding.tsx']);
+  });
+});
+
+describe('sign-in restores from the server before deciding, and still only respects', () => {
+  const layout = stripComments(fs.readFileSync(path.join(ROOT, 'app', '_layout.tsx'), 'utf8'));
+  const service = stripComments(
+    fs.readFileSync(path.join(ROOT, 'src', 'services', 'onboardingRestore.ts'), 'utf8'),
+  );
+
+  it('handleLogin awaits the restore before reading the onboarding store', () => {
+    const login = auth.slice(auth.indexOf('const handleLogin'), auth.indexOf('const handleSignup'));
+    const restore = login.indexOf('await restoreOnboardingFromServer()');
+    const read = login.indexOf('const ob = useOnboardingStore.getState()');
+    expect(restore).toBeGreaterThan(-1);
+    expect(read).toBeGreaterThan(restore);
+  });
+
+  it('the auth deep link restores, then routes on real completion', () => {
+    const i = layout.indexOf("url.startsWith('peptalk://auth')");
+    const handler = layout.slice(i, layout.indexOf('Linking.getInitialURL()', i));
+    expect(handler).toMatch(/await restoreOnboardingFromServer\(\);/);
+    expect(handler).toMatch(/ob\.isComplete && ob\.profile\.gender \? '\/\(tabs\)' : '\/onboarding'/);
+  });
+
+  it('the restore can only raise isComplete, never set it outright', () => {
+    // Every `isComplete:` in the wiring either carries the current value
+    // through unchanged, or ORs the plan's grant onto it. Nothing else.
+    const values = (service.match(/isComplete:\s*[^,}\n]*/g) ?? []).map((m) => m.replace(/^isComplete:\s*/, '').trim());
+    expect(values).toContain('state.isComplete || patch.isComplete');
+    for (const v of values) expect(['state.isComplete', 'state.isComplete || patch.isComplete']).toContain(v);
+  });
+});
+
+describe('the restore judges "answered" exactly as the onboarding screen does', () => {
+  // src/lib/onboardingRestore.ts restores completion only when every required
+  // answer exists. "Required" is this screen's canContinue. If a question is
+  // added or loosened here, this fails until the restore follows.
+  const code = stripComments(onboarding);
+
+  it('step 1 still requires sex, the age gate and a goal', () => {
+    expect(code).toMatch(
+      /if \(step === 1\) return Boolean\(profile\.gender && selectedAge >= MIN_AGE && profile\.healthGoals\.length > 0\);/,
+    );
+  });
+
+  it('step 2 still requires weight and height, by the shared rules', () => {
+    expect(code).toMatch(/if \(step === 2\) return weightValid && heightValid;/);
+    expect(code).toMatch(/const weightValid = useMemo\(\(\) => isOnboardingWeightValid\(parseFloat\(weightLbs\)\), \[weightLbs\]\);/);
+    expect(code).toMatch(/isOnboardingHeightValid\(parseInt\(heightFeet, 10\), parseInt\(heightInches, 10\)\)/);
+  });
+
+  it('step 3 still requires the disclaimer from everyone', () => {
+    expect(code).toMatch(/if \(isAuthenticated\) return acceptedTerms;/);
+    expect(code).toMatch(/emailOk &&\s*passwordCheck\.valid &&\s*acceptedTerms/);
+  });
+});
+
 describe('app/onboarding.tsx handles an already-authenticated user', () => {
   it('does not call signup() when a session already exists', () => {
     expect(onboarding).toMatch(/isAuthenticated\s*\n?\s*\?\s*\{\s*requiresEmailConfirmation:\s*false\s*\}/);

@@ -41,6 +41,10 @@ import { useOnboardingStore } from '../src/store/useOnboardingStore';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
 import { syncHealthProfileFromServer } from '../src/store/useHealthProfileStore';
+import {
+  restoreOnboardingFromServer,
+  clearOnboardingRestore,
+} from '../src/services/onboardingRestore';
 import { configureNotificationHandler } from '../src/services/notificationService';
 import { useNotificationStore } from '../src/store/useNotificationStore';
 import { initIAP, endIAP } from '../src/services/iapService';
@@ -1030,13 +1034,18 @@ function RootLayout() {
 
         // Pull the just-granted session into local state + route.
         await useAuthStore.getState().restoreSession();
-        // A user who authenticated via a confirmation/recovery link has an
-        // account — never force them back through onboarding. (A signup
-        // started from the /auth screen mid-onboarding leaves isComplete
-        // false; without this they'd be bounced to /onboarding by the nav
-        // guard and hit "User already registered" at the account step.)
-        useOnboardingStore.getState().completeOnboarding();
-        if (!cancelled) router.replace('/(tabs)');
+        // This used to call completeOnboarding() here, for everyone who
+        // arrived by a confirmation or password-recovery link — granting
+        // completion for signing in, the exact rule the 2.1(a) fixes forbid,
+        // and leaving a recovered account on a new phone with no answers,
+        // permanently. Its reason ("User already registered" at the account
+        // step) is gone: onboarding now sees the session and skips that step.
+        //
+        // Respect completion instead: restore what the server holds, then go
+        // home only if onboarding really is complete.
+        await restoreOnboardingFromServer();
+        const ob = useOnboardingStore.getState();
+        if (!cancelled) router.replace(ob.isComplete && ob.profile.gender ? '/(tabs)' : '/onboarding');
       } catch (err: any) {
         if (__DEV__) console.warn('[auth-link] handling failed:', err);
         captureException(err, { source: 'auth.deepLink', url });
@@ -1132,6 +1141,20 @@ function RootLayout() {
     }
     wasAuthenticatedRef.current = isAuthenticated;
   }, [isAuthenticated, authHydrated]);
+
+  // Restore onboarding answers from the server for a signed-in user — on app
+  // start with a session, and on every sign-in. The decision and its rules are
+  // src/lib/onboardingRestore.ts: completion is restored only from the
+  // server's record that onboarding was finished, never for having a session.
+  // Shared with handleLogin and the auth deep link, so it runs once per user.
+  useEffect(() => {
+    if (!authHydrated || !hasHydrated) return;
+    if (!isAuthenticated || !currentUserId) {
+      clearOnboardingRestore();
+      return;
+    }
+    void restoreOnboardingFromServer();
+  }, [authHydrated, hasHydrated, isAuthenticated, currentUserId]);
 
   useEffect(() => {
     if (!navReady || !hasHydrated) return;
