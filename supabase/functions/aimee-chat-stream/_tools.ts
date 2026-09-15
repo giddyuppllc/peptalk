@@ -330,12 +330,12 @@ export const AIMEE_TOOLS: GrokTool[] = [
         '"labs", "labs-entry", "body-composition", "body-composition-entry",',
         '"pantry", "pantry-add", "pantry-scan",',
         '"aimee-reports", "plan", "insights",',
-        // "community-leaderboard" is intentionally absent while the screen has
-        // no UI entry point — it is also absent from SCREEN_TO_PATH below.
-        // These two lists MUST stay in lockstep: a name advertised here but
-        // missing from the map makes the model request a screen that returns
-        // { error: 'unknown screen' }. Restore both together when it launches.
-        '"community-milestones",',
+        // These two lists MUST stay in lockstep with SCREEN_TO_PATH below: a
+        // name advertised here but missing from the map makes the model request
+        // a screen that returns { error: 'unknown screen' }. verify:aimeescreens
+        // enforces it. community-leaderboard restored 2026-09-15 with the real
+        // opt-in leaderboard (entry points: feed header + strip, navMap).
+        '"community-leaderboard", "community-milestones",',
         '"profile-appearance", "profile-community-prefs", "settings-notifications", "subscription".',
       ].join(' '),
       parameters: {
@@ -973,11 +973,11 @@ const SCREEN_TO_PATH: Record<string, string> = {
   plan: '/plan',
   insights: '/insights',
   // Community v2
-  // 'community-leaderboard' removed 2026-08-24: /community/leaderboard has no
-  // UI entry point anywhere in the app — verify:routes records it as
-  // deliberately unlaunched — yet this map let Aimee navigate users straight
-  // into it. A screen with no way in and no way back to it is not somewhere to
-  // send people. Restore this line when the leaderboard actually launches.
+  // 'community-leaderboard' was removed 2026-08-24 while the screen had no UI
+  // entry point and ran on mock data. Restored 2026-09-15: the leaderboard is
+  // real (opt-in, server-derived) and reachable from the community feed and the
+  // nav sheet (src/lib/navMap.ts).
+  'community-leaderboard': '/community/leaderboard',
   'community-milestones': '/community/milestones',
   // Profile drills
   'profile-appearance': '/profile/appearance',

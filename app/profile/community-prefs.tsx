@@ -7,8 +7,9 @@
  * lives on the photo upload screen itself.
  */
 
-import React from 'react';
-import { ScrollView, View, Text, Pressable, Switch, StyleSheet } from 'react-native';
+import React, { useEffect } from 'react';
+import { ScrollView, View, Text, Pressable, Switch, StyleSheet, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { V3DetailShell, GlassCard } from '../../src/components/v3';
 import { useV3Theme } from '../../src/theme/V3ThemeProvider';
@@ -17,6 +18,9 @@ import {
   type CommunityPreset,
 } from '../../src/store/useCommunityPrefsStore';
 import { tapLight } from '../../src/utils/haptics';
+import { useLeaderboardStore } from '../../src/store/useLeaderboardStore';
+import { LEADERBOARD_COPY } from '../../src/constants/leaderboardCopy';
+import { Alert } from '../../src/lib/alert';
 
 interface CategoryRow {
   key: keyof ReturnType<typeof useCommunityPrefsStore.getState>['shareCategories'];
@@ -65,6 +69,17 @@ export default function CommunityPrefsScreen() {
   const setMaster = useCommunityPrefsStore((s) => s.setMaster);
   const toggleCategory = useCommunityPrefsStore((s) => s.toggleCategory);
   const applyPreset = useCommunityPrefsStore((s) => s.applyPreset);
+  const router = useRouter();
+
+  // Leaderboard opt-in — server-backed (profiles.leaderboard_opt_in), separate
+  // from the device-local sharing presets below.
+  const leaderboardOptIn = useLeaderboardStore((s) => s.optIn);
+  const savingOptIn = useLeaderboardStore((s) => s.savingOptIn);
+  const loadOptIn = useLeaderboardStore((s) => s.loadOptIn);
+  const setLeaderboardOptIn = useLeaderboardStore((s) => s.setOptIn);
+  useEffect(() => {
+    void loadOptIn();
+  }, [loadOptIn]);
 
   const enabledCount = Object.values(shareCategories).filter(Boolean).length;
   const observation = publicTracking
@@ -78,6 +93,71 @@ export default function CommunityPrefsScreen() {
       intent="profile_appearance"
     >
       <ScrollView contentContainerStyle={{ paddingBottom: 80 }}>
+        {/* Community leaderboard — server-backed opt-in */}
+        <GlassCard style={styles.cardSpacing}>
+          <View style={styles.masterRow}>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={[
+                  styles.masterTitle,
+                  {
+                    color: t.colors.textPrimary as string,
+                    fontFamily: t.isDark
+                      ? t.typography.headlineMale
+                      : t.typography.headlineFemale,
+                  },
+                ]}
+              >
+                {LEADERBOARD_COPY.settingsTitle}
+              </Text>
+              <Text
+                style={[
+                  styles.masterBody,
+                  {
+                    color: t.colors.textSecondary as string,
+                    fontFamily: t.typography.body,
+                  },
+                ]}
+              >
+                {LEADERBOARD_COPY.settingsBody}
+              </Text>
+            </View>
+            {leaderboardOptIn === null || savingOptIn ? (
+              <ActivityIndicator color={t.colors.textSecondary as string} />
+            ) : (
+              <Switch
+                value={leaderboardOptIn}
+                accessibilityLabel={LEADERBOARD_COPY.settingsTitle}
+                onValueChange={async (v) => {
+                  tapLight();
+                  const ok = await setLeaderboardOptIn(v);
+                  if (!ok) Alert.alert(LEADERBOARD_COPY.settingsTitle, LEADERBOARD_COPY.settingsSaveFailed);
+                }}
+              />
+            )}
+          </View>
+          <Pressable
+            onPress={() => {
+              tapLight();
+              router.push('/community/leaderboard' as never);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={LEADERBOARD_COPY.settingsOpenBoard}
+            style={styles.openBoardRow}
+          >
+            <Text
+              style={{
+                color: t.colors.textSecondary as string,
+                fontFamily: t.typography.bodyBold,
+                fontSize: 12,
+              }}
+            >
+              {LEADERBOARD_COPY.settingsOpenBoard}
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color={t.colors.textSecondary as string} />
+          </Pressable>
+        </GlassCard>
+
         {/* Master switch */}
         <GlassCard style={styles.cardSpacing}>
           <View style={styles.masterRow}>
@@ -258,6 +338,12 @@ const styles = StyleSheet.create({
   },
   catLabel: { fontSize: 14 },
   catHint: { fontSize: 11, marginTop: 2 },
+  openBoardRow: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   disclaimerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

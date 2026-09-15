@@ -536,6 +536,8 @@ export const useAuthStore = create<AuthStore>()(
         safeClear('progressGoals', () => require('./useProgressGoalsStore').useProgressGoalsStore.getState().clearAll?.());
         safeClear('featureWaitlist', () => require('./useFeatureWaitlistStore').useFeatureWaitlistStore.getState().clearAll?.());
         safeClear('community', () => require('./useCommunityStore').useCommunityStore.getState().clearAll?.());
+        // Other people's leaderboard rows + this account's unsent opt-in choice.
+        safeClear('leaderboard', () => require('./useLeaderboardStore').useLeaderboardStore.getState().clearAll?.());
         // Reset preferences to default + drop pushToken. Don't fully
         // clear — notification preferences are device-pref-ish — but
         // we don't want User B inheriting User A's reminder schedule.

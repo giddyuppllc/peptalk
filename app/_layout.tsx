@@ -60,6 +60,7 @@ import { useCycleStore } from '../src/store/useCycleStore';
 import { useIntegrationsStore } from '../src/store/useIntegrationsStore';
 import { useLabResultsStore } from '../src/store/useLabResultsStore';
 import { useSideEffectStore } from '../src/store/useSideEffectStore';
+import { useLeaderboardStore } from '../src/store/useLeaderboardStore';
 import { subscribeToReconnect } from '../src/hooks/useNetworkStatus';
 import { initTelemetry, installGlobalErrorHandler, installLifecycleBreadcrumbs, markLifecycle, captureException } from '../src/services/telemetry';
 import { useTheme } from '../src/hooks/useTheme';
@@ -650,6 +651,9 @@ function RootLayout() {
       // Chat history: safe to restore now that deleteChat propagates to the
       // server and tombstones suppress anything deleted locally.
       ['chat history', () => useChatStore.getState().syncFromServer()],
+      // A leaderboard opt-in chosen in onboarding before a session existed
+      // (email-confirmation signup) is written here, once there is one.
+      ['leaderboard opt-in', () => useLeaderboardStore.getState().flushPendingOptIn()],
     ];
     // 2026-05-18 cold-boot audit: gate boot syncs on a fresh session.
     // Previously they fired unconditionally — if the user had a stale
@@ -1123,6 +1127,8 @@ function RootLayout() {
       });
       fetchWorkoutOverrides()?.catch?.(() => {});
       useChatStore.getState().flushPendingSyncs()?.catch?.(() => {});
+      // Onboarding leaderboard opt-in made before this session existed.
+      useLeaderboardStore.getState().flushPendingOptIn()?.catch?.(() => {});
 
       // Register the device's Expo push token so server-side fanout
       // can deliver pushes for community replies / mentions / reactions.
