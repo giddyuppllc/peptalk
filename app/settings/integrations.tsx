@@ -24,6 +24,7 @@ import { HealthPermissionExplainer } from '../../src/components/HealthPermission
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 import { useIntegrationsStore } from '../../src/store/useIntegrationsStore';
 import { ADAPTERS } from '../../src/services/integrations/manager';
+import { listUnderComingSoon } from '../../src/lib/integrationListing';
 import {
   BIOMARKER_SOURCE_LABELS,
   type BiomarkerSource,
@@ -183,7 +184,9 @@ export default function IntegrationsSettingsScreen() {
 
   // Partition adapters into: available + unavailable (scaffolded dark)
   const available = ADAPTERS.filter((a) => a.available());
-  const darkScaffold = ADAPTERS.filter((a) => !a.available() && !(a.source === 'health_connect' && Platform.OS === 'ios'));
+  // Apple Health is never listed as "coming soon" where it cannot exist
+  // (Android, web, iPad) — see src/lib/integrationListing.ts.
+  const darkScaffold = ADAPTERS.filter((a) => listUnderComingSoon(a.source, a.available(), Platform.OS));
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>

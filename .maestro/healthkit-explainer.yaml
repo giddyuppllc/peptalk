@@ -24,9 +24,10 @@
 # AppleHealthKit class and HealthKit.framework are all present in the binary).
 # The blocker is one step further in: the Simulator reports no HealthKit data
 # layer, so `AppleHealthKit.isAvailable()` resolves false, `healthKitAdapter
-# .available()` returns false, and the integrations screen files Apple Health
-# under COMING SOON with no button — correctly, by design, so users never get a
-# dead "Connect".
+# .available()` returns false, and the integrations screen does not list Apple
+# Health at all — correctly, by design, so users never get a dead "Connect".
+# (Until 2026-09-15 it was filed under COMING SOON; src/lib/integrationListing.ts
+# now keeps it out wherever HealthKit data cannot exist.)
 #
 # The consequence: there is NO route to the explainer on a simulator, so a
 # simulator run of this flow fails at "Set up Apple Health" and that failure
