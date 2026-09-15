@@ -39,7 +39,7 @@ export const AIMEE_TOOLS: GrokTool[] = [
     function: {
       name: 'suggest_workout',
       description: [
-        'Surface 1-5 real exercises from the curated 451-exercise PepTalk library that match the user\'s criteria.',
+        'Surface 1-5 real exercises from the curated 384-exercise PepTalk library that match the user\'s criteria.',
         'Call this when the user asks for workout ideas, exercise suggestions, or "build me a [push/pull/leg/etc.] day".',
         'Returns concrete exercise rows with names, muscle groups, equipment level, and difficulty.',
         'Do NOT invent exercises — use this tool whenever the user wants specific moves.',
