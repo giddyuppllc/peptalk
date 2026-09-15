@@ -14,7 +14,7 @@
  * against the real stores (src/store/__tests__/clearDeviceData.test.ts).
  */
 import { useOnboardingStore } from './useOnboardingStore';
-import { useHealthProfileStore } from './useHealthProfileStore';
+import { useHealthProfileStore, withoutProfileSync } from './useHealthProfileStore';
 import { useDoseLogStore } from './useDoseLogStore';
 import { useCheckinStore } from './useCheckinStore';
 import { useJournalStore } from './useJournalStore';
@@ -30,19 +30,24 @@ import { useLabResultsStore } from './useLabResultsStore';
 import { useIntegrationsStore } from './useIntegrationsStore';
 
 export function clearDeviceData(): void {
-  useOnboardingStore.getState().reset();
-  useHealthProfileStore.getState().resetProfile();
-  useDoseLogStore.getState().clearAll();
-  useCheckinStore.getState().clearAll();
-  useJournalStore.getState().clearAll();
-  useMealStore.getState().clearAll();
-  useWorkoutStore.getState().clearAll();
-  useChatStore.getState().resetForLogout(); // no clearAll; wipes all threads + queued syncs
-  useCycleStore.getState().clearAll();
-  usePantryStore.getState().clearAll();
-  useStackStore.getState().clearAll();
-  useBodyMapStore.getState().clearAll();
-  useAllergyStore.getState().clearAll();
-  useLabResultsStore.getState().clearAll();
-  useIntegrationsStore.getState().clearAll();
+  // The whole wipe is local-only, not just resetProfile: the onboarding reset
+  // also feeds an upload (the onboarding restore's mirror of the answers into
+  // health_profiles), and it honours the same suppression.
+  withoutProfileSync(() => {
+    useOnboardingStore.getState().reset();
+    useHealthProfileStore.getState().resetProfile();
+    useDoseLogStore.getState().clearAll();
+    useCheckinStore.getState().clearAll();
+    useJournalStore.getState().clearAll();
+    useMealStore.getState().clearAll();
+    useWorkoutStore.getState().clearAll();
+    useChatStore.getState().resetForLogout(); // no clearAll; wipes all threads + queued syncs
+    useCycleStore.getState().clearAll();
+    usePantryStore.getState().clearAll();
+    useStackStore.getState().clearAll();
+    useBodyMapStore.getState().clearAll();
+    useAllergyStore.getState().clearAll();
+    useLabResultsStore.getState().clearAll();
+    useIntegrationsStore.getState().clearAll();
+  });
 }

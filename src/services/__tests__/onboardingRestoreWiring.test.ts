@@ -11,7 +11,7 @@
  */
 import { restoreOnboardingFromServer, clearOnboardingRestore } from '../onboardingRestore';
 import { useOnboardingStore } from '../../store/useOnboardingStore';
-import { useHealthProfileStore } from '../../store/useHealthProfileStore';
+import { useHealthProfileStore, withoutProfileSync } from '../../store/useHealthProfileStore';
 import { useMealStore, DEFAULT_TARGETS } from '../../store/useMealStore';
 import type { OnboardingProfile } from '../../types';
 
@@ -138,6 +138,22 @@ describe('write path — the answers reach the server when onboarding completes'
     useOnboardingStore.setState({ profile: answered, isComplete: true });
     await flush();
     expect(mockSyncHealthProfile).not.toHaveBeenCalled();
+  });
+
+  it('writes nothing for a device-local change (withoutProfileSync), and resumes after it', async () => {
+    settle();
+    // A change that WOULD mirror (complete + every answer), made local-only.
+    withoutProfileSync(() => useOnboardingStore.setState({ profile: answered, isComplete: true }));
+    await flush();
+    expect(useHealthProfileStore.getState().profile.onboarding).toBeUndefined();
+    expect(mockSyncHealthProfile).not.toHaveBeenCalled();
+
+    // Positive control: the next ordinary edit mirrors, so the silence above
+    // was the suppression and not a harness that cannot see a write.
+    useOnboardingStore.getState().setGender('Male');
+    await flush();
+    expect(useHealthProfileStore.getState().profile.onboarding?.gender).toBe('Male');
+    expect(mockSyncHealthProfile).toHaveBeenCalledTimes(1);
   });
 
   it('never records a completion flag that has no answers behind it', async () => {

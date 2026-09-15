@@ -19,7 +19,14 @@
 // jest.mock calls below are hoisted above these imports by babel-jest.
 import * as syncService from '../../services/syncService';
 import { clearDeviceData } from '../clearDeviceData';
-import { useHealthProfileStore, withoutProfileSync } from '../useHealthProfileStore';
+import {
+  useHealthProfileStore,
+  withoutProfileSync,
+  isProfileSyncSuppressed,
+} from '../useHealthProfileStore';
+// Registers the onboarding restore's write-path subscription (the mirror), as
+// app/_layout.tsx does, so its uploads are inside what these tests watch.
+import '../../services/onboardingRestore';
 import { useOnboardingStore } from '../useOnboardingStore';
 import { useDoseLogStore } from '../useDoseLogStore';
 import { useCheckinStore } from '../useCheckinStore';
@@ -322,5 +329,82 @@ describe('Delete Account (unchanged)', () => {
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
     expect(useHealthProfileStore.getState().profile.biologicalSex).toBe('female');
     expect(useDoseLogStore.getState().doses).toHaveLength(1);
+  });
+});
+
+describe('the onboarding restore mirror (merged with feat/onboarding-server-restore)', () => {
+  // The mirror is a second upload path: a useOnboardingStore subscription that
+  // upserts health_profiles directly, outside the health store's debounced
+  // sync. withoutProfileSync must cover it too.
+  const answered = {
+    gender: 'Female',
+    ageRange: '30-44',
+    healthGoals: ['weight_loss'],
+  } as const;
+
+  function signedInWithSettledRestore() {
+    useAuthStore.setState({ user: { id: 'user-a' } as never, isAuthenticated: true });
+    useOnboardingStore.setState((s) => ({
+      profile: { ...s.profile, ...answered, healthGoals: [...answered.healthGoals] },
+      isComplete: true,
+      restore: { userId: 'user-a', status: 'settled' },
+    }) as never);
+  }
+
+  it('the mirror is live in this harness (positive control): a completed edit upserts', async () => {
+    signedInWithSettledRestore();
+    await settle();
+    expect(profileUpserts().length).toBeGreaterThan(0);
+    const last = profileUpserts().at(-1)!.payload as { profile: { onboarding?: { gender?: string } } };
+    expect(last.profile.onboarding?.gender).toBe('Female');
+  });
+
+  it('Delete My Data with the restore settled writes nothing, through any path', async () => {
+    signedInWithSettledRestore();
+    await settle();
+    mockWrites.length = 0;
+    jest.clearAllMocks();
+
+    clearDeviceData();
+    await settle();
+
+    expect(mockWrites).toEqual([]);
+    expect(syncCalls()).toEqual([]);
+    expectDeviceEmpty();
+  });
+
+  it('every onboarding and health-profile change in Delete My Data is made local-only', () => {
+    const seen: boolean[] = [];
+    const unsubOnboarding = useOnboardingStore.subscribe(() => seen.push(isProfileSyncSuppressed()));
+    const unsubHealth = useHealthProfileStore.subscribe(() => seen.push(isProfileSyncSuppressed()));
+    try {
+      clearDeviceData();
+    } finally {
+      unsubOnboarding();
+      unsubHealth();
+    }
+    expect(seen.length).toBeGreaterThanOrEqual(2);
+    expect(seen.every(Boolean)).toBe(true);
+    expect(isProfileSyncSuppressed()).toBe(false);
+  });
+
+  it('the sign-out wipe resets onboarding local-only while the session is still live', async () => {
+    signedInWithSettledRestore();
+    await settle();
+    const seen: boolean[] = [];
+    const unsub = useOnboardingStore.subscribe((s, p) => {
+      if (s.isComplete !== p.isComplete) seen.push(isProfileSyncSuppressed());
+    });
+    mockAuth.signOutError = { message: 'upstream 503' };
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      await useAuthStore.getState().logout();
+      await settle();
+    } finally {
+      warn.mockRestore();
+      unsub();
+    }
+    expect(seen).toEqual([true]);
+    expect(useOnboardingStore.getState().isComplete).toBe(false);
   });
 });

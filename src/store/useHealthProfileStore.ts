@@ -31,6 +31,16 @@ export function withoutProfileSync<T>(fn: () => T): T {
   }
 }
 
+/**
+ * True while inside withoutProfileSync. For the OTHER uploads of profile data
+ * that do not go through this store's subscription — the onboarding restore's
+ * mirror (src/services/onboardingRestore.ts) upserts health_profiles directly,
+ * and a device wipe must not reach the server through it either.
+ */
+export function isProfileSyncSuppressed(): boolean {
+  return profileSyncSuppressed > 0;
+}
+
 // ---------------------------------------------------------------------------
 // Defaults
 // ---------------------------------------------------------------------------
