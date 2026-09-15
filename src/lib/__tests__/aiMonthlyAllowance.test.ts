@@ -55,9 +55,6 @@ const DAILY_CAP_ALLOWED: Record<string, string> = {
     'Moderation of community images, capped per AUTHOR (50/day) on a feature free users have. Not a paid allowance; a monthly number for it is a decision.',
   'food-search-proxy':
     'Not AI: shared, metered USDA/Spoonacular/CalorieNinjas keys, free feature, 300/day abuse cap. A monthly number for it is a decision.',
-  'food-scan': 'Scanner: moved in its own commit so it can be dropped.',
-  'lab-scan': 'Scanner: moved in its own commit so it can be dropped.',
-  'aimee-pantry-scan': 'Scanner: moved in its own commit so it can be dropped.',
 };
 
 /** Functions that call a model provider but are not user AI features. */
@@ -246,6 +243,10 @@ const CASES: Case[] = [
     providerReply: () => new Response('log two eggs', { status: 200 }),
     recordsSpend: false,
   },
+  // Scanners: moved in their own commit, so these three can be dropped together.
+  { name: 'food-scan', request: () => jsonReq({ imageBase64: 'aGVsbG8=' }), providerReply: completion, recordsSpend: true },
+  { name: 'lab-scan', request: () => jsonReq({ imageBase64: 'aGVsbG8=' }), providerReply: completion, recordsSpend: true },
+  { name: 'aimee-pantry-scan', request: () => jsonReq({ imageBase64: 'aGVsbG8=' }), providerReply: completion, recordsSpend: true },
 ];
 
 async function run(fn: string, c: Case, opts: { userSpendMC: number; globalSpendMC: number; ledgerError?: boolean }) {
