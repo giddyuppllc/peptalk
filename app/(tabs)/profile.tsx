@@ -13,7 +13,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { useOnboardingStore } from '../../src/store/useOnboardingStore';
-import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { useTutorialStore } from '../../src/store/useTutorialStore';
 import { GlassCard } from '../../src/components/GlassCard';
@@ -21,19 +20,7 @@ import { PasswordToggle } from '../../src/components/PasswordToggle';
 // The three schedule* imports went with the dead NotificationSettings block —
 // app/settings/notifications.tsx owns that scheduling now.
 import { notificationsAvailable } from '../../src/services/notificationService';
-import { useDoseLogStore } from '../../src/store/useDoseLogStore';
-import { useCheckinStore } from '../../src/store/useCheckinStore';
-import { useJournalStore } from '../../src/store/useJournalStore';
-import { useMealStore } from '../../src/store/useMealStore';
-import { useWorkoutStore } from '../../src/store/useWorkoutStore';
-import { useChatStore } from '../../src/store/useChatStore';
-import { useCycleStore } from '../../src/store/useCycleStore';
-import { usePantryStore } from '../../src/store/usePantryStore';
-import { useStackStore } from '../../src/store/useStackStore';
-import { useBodyMapStore } from '../../src/store/useBodyMapStore';
-import { useAllergyStore } from '../../src/store/useAllergyStore';
-import { useLabResultsStore } from '../../src/store/useLabResultsStore';
-import { useIntegrationsStore } from '../../src/store/useIntegrationsStore';
+import { clearDeviceData } from '../../src/store/clearDeviceData';
 import {
   Colors,
   FontSizes,
@@ -646,22 +633,8 @@ export default function ProfileScreen() {
             // Local data wipe — clear EVERY user-data store on this device.
             // (Server-side account deletion is handled separately via the
             // delete-user edge function in handleDeleteAccount; this path is
-            // device-local only and must not leave orphaned data behind.)
-            useOnboardingStore.getState().reset();
-            useHealthProfileStore.getState().resetProfile();
-            useDoseLogStore.getState().clearAll();
-            useCheckinStore.getState().clearAll();
-            useJournalStore.getState().clearAll();
-            useMealStore.getState().clearAll();
-            useWorkoutStore.getState().clearAll();
-            useChatStore.getState().resetForLogout(); // no clearAll; wipes all threads + queued syncs
-            useCycleStore.getState().clearAll();
-            usePantryStore.getState().clearAll();
-            useStackStore.getState().clearAll();
-            useBodyMapStore.getState().clearAll();
-            useAllergyStore.getState().clearAll();
-            useLabResultsStore.getState().clearAll();
-            useIntegrationsStore.getState().clearAll();
+            // device-local only and must not write to the server.)
+            clearDeviceData();
             Alert.alert('Done', 'All data has been deleted.');
           },
         },
