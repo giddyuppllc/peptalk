@@ -11,6 +11,8 @@
  * here.
  */
 
+import { applyAiDataConsent } from '../_shared/aimeeConsent.ts';
+
 export interface AimeeServerContext {
   tier?: 'free' | 'plus' | 'pro' | string;
   hasConsent?: boolean;
@@ -204,7 +206,11 @@ When sharing protocol info, format like:
 
 const KNOWLEDGE_BLOCK = buildKnowledgeBlock();
 
-export function buildAimeeSystemPrompt(context: AimeeServerContext): string {
+export function buildAimeeSystemPrompt(rawContext: AimeeServerContext): string {
+  // App Review 5.1.2 — without consent, no health profile, device metrics, labs,
+  // dose history, workouts, nutrition or goals reach the model, whatever the
+  // client sent. See ../_shared/aimeeConsent.ts.
+  const context = applyAiDataConsent(rawContext);
   const tier = context.tier ?? 'free';
   const consentLine = context.hasConsent
     ? 'The user has consented to personalized responses. Use the summary fields below where helpful, but never recommend specific doses for them.'

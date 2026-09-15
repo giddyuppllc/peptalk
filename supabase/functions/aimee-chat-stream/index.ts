@@ -55,6 +55,7 @@ import { AIMEE_TOOLS, executeTool } from './_tools.ts';
 import { checkCostCap, denialMessage, recordSpend } from './_cost.ts';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
+import { toolRequiresAiDataConsent, toolsAllowedForConsent } from '../_shared/aimeeConsent.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -284,6 +285,7 @@ answer the underlying question if you can.`;
           ];
           const collected = await streamRound({
             canUseTools,
+            hasConsent: safeContext.hasConsent === true,
             system: systemPrompt,
             messages: messagesForRound,
             send,
@@ -323,6 +325,10 @@ answer the underlying question if you can.`;
                 error:
                   'Malformed tool arguments — your function.arguments was not valid JSON. Re-emit the tool call with valid JSON.',
               };
+            } else if (safeContext.hasConsent !== true && toolRequiresAiDataConsent(tc.name)) {
+              // Never offered without consent, so a call here is a model
+              // hallucinating the tool. Refuse rather than read health records.
+              result = { error: 'This tool is unavailable: the user has not consented to sharing health data.' };
             } else {
               try {
                 result = await executeTool(tc.name, tc.input, {
@@ -509,6 +515,8 @@ async function streamRound(args: {
   send: (obj: Record<string, unknown>) => void;
   /** Free tier is answers-only — no tools are offered to the model at all. */
   canUseTools: boolean;
+  /** aiDataConsent. Without it, tools that read stored health records are withheld. */
+  hasConsent: boolean;
 }): Promise<StreamRoundResult> {
   // Accumulate tool calls by index (OpenAI streams args as deltas).
   const toolBuf: Map<number, { id: string; name: string; jsonStr: string; started: boolean }> = new Map();
@@ -521,7 +529,10 @@ async function streamRound(args: {
     // Withheld entirely rather than filtered after the fact: a model that is
     // never offered a tool cannot call one, so an unpaid conversation cannot
     // log a dose, change a protocol, or navigate the app.
-    tools: args.canUseTools ? AIMEE_TOOLS : [],
+    //
+    // Without health-data consent (5.1.2), the tools that read the user's
+    // stored health records back to the model are withheld the same way.
+    tools: args.canUseTools ? toolsAllowedForConsent(AIMEE_TOOLS, args.hasConsent) : [],
     maxTokens: 1024,
     temperature: 0.7,
   })) {

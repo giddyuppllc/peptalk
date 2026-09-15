@@ -24,6 +24,7 @@ import { fetchWithTimeout } from '../lib/withTimeout';
 import { ChatMessage, EnhancedBotContext } from '../types';
 import { ensureAiConsent } from '../utils/ensureAiConsent';
 import { sanitizeForLLM } from './privacyGuard';
+import { applyAiDataConsent } from '../lib/aiDataConsent';
 import { supabase } from './supabase';
 import { captureException } from './telemetry';
 
@@ -218,8 +219,17 @@ function localToday(): string {
   return `${d.getFullYear()}-${m}-${day}`;
 }
 
-function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
+export function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
   const { hasConsent } = sanitizeForLLM(context);
+
+  // App Review 5.1.2. Without aiDataConsent, send nothing about the user's body,
+  // health, activity or medication — and do not even read those stores. This
+  // used to build and send every summary regardless, passing hasConsent along
+  // as a flag nothing honoured. The server strips the same fields on its own
+  // (supabase/functions/_shared/aimeeConsent.ts) in case a client does not.
+  if (!hasConsent) {
+    return applyAiDataConsent({ hasConsent: false, simpleMode: context.simpleMode === true });
+  }
 
   const protoNames = (context.activeProtocols ?? [])
     .slice(0, 5)
@@ -396,7 +406,7 @@ function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
     /* ignore */
   }
 
-  return {
+  return applyAiDataConsent({
     hasConsent,
     simpleMode: context.simpleMode === true,
     activeProtocolSummary: protoNames || undefined,
@@ -410,7 +420,7 @@ function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
     bodyTrendSummary,
     selfStatedGoal,
     workoutDaysPerWeek,
-  };
+  });
 }
 
 // ---------------------------------------------------------------------------
