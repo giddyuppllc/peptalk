@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:mutation": "stryker run",
+    "test:leaderboard-sql": "tsx scripts/test-leaderboard-sql.ts",
+    "test:leaderboard-sql:mutation": "bash scripts/mutate-leaderboard-sql.sh",
     "verify:calc": "tsx scripts/verify-calculator-math.ts",
     "verify:sanitize": "tsx scripts/verify-aimee-action-sanitize.ts",
     "verify:cycle": "tsx scripts/verify-cycle-predictor.ts",
