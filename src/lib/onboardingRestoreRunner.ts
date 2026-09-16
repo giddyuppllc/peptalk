@@ -45,7 +45,13 @@ export interface OnboardingRestoreDeps {
   getLocalBody(): BodyAnswers;
   applyOnboardingPatch(patch: NonNullable<RestorePlan['onboardingPatch']>): void;
   setResumeStep(resume: { userId: string; step: OnboardingStep }): void;
-  setRestoreStatus(userId: string, status: RestoreStatus): void;
+  /**
+   * `serverKnown` is what 'settled' cannot say on its own: that this user's
+   * server copy was actually read. A timeout and an error settle exactly like
+   * a success, and the write path that follows must not treat "the restore
+   * stopped" as "the server holds nothing worth keeping".
+   */
+  setRestoreStatus(userId: string, status: RestoreStatus, meta?: { serverKnown?: boolean }): void;
   /** Records the snapshot locally and upserts it. Not awaited by the run. */
   writeSnapshot(snapshot: OnboardingSnapshot): Promise<boolean>;
   now(): string;
@@ -63,6 +69,10 @@ export function createOnboardingRestorer(deps: OnboardingRestoreDeps) {
 
     const run = async (): Promise<RestoreDecision> => {
       deps.setRestoreStatus(userId, 'pending');
+      // Stays false unless this user's server copy was read AND the plan was
+      // applied without throwing. Anything less leaves the server's answers
+      // unknown, and unknown is never a licence to overwrite them.
+      let serverKnown = false;
       try {
         let fetch: ServerProfileFetch;
         try {
@@ -97,12 +107,15 @@ export function createOnboardingRestorer(deps: OnboardingRestoreDeps) {
             deps.report?.(err, 'onboardingRestore.writeSnapshot'),
           );
         }
+        // The row was read, and it was THIS user's row. `fetch.userId` can be
+        // someone else's when an account switched while the fetch was out.
+        serverKnown = fetch.status === 'ok' && fetch.userId === userId;
         return plan.decision;
       } catch (err) {
         deps.report?.(err, 'onboardingRestore.apply');
         return 'fetch-failed';
       } finally {
-        deps.setRestoreStatus(userId, 'settled');
+        deps.setRestoreStatus(userId, 'settled', { serverKnown });
       }
     };
 

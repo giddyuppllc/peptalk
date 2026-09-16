@@ -88,7 +88,7 @@ beforeEach(() => {
     profile: empty,
     isComplete: false,
     hasHydrated: true,
-    restore: { userId: null, status: 'idle' },
+    restore: { userId: null, status: 'idle', serverKnown: false },
     resumeStep: null,
   });
   useHealthProfileStore.getState().resetProfile();
@@ -96,7 +96,10 @@ beforeEach(() => {
 });
 
 describe('write path — the answers reach the server when onboarding completes', () => {
-  const settle = () => useOnboardingStore.getState().setRestoreStatus('user-a', 'settled');
+  // A restore that actually read this user's server copy. `settled` alone is
+  // also what a timeout and an error look like — see the suite below.
+  const settle = () =>
+    useOnboardingStore.getState().setRestoreStatus('user-a', 'settled', { serverKnown: true });
 
   it('mirrors the answers with a completion time and upserts them', async () => {
     settle();
@@ -156,6 +159,27 @@ describe('write path — the answers reach the server when onboarding completes'
     expect(mockSyncHealthProfile).toHaveBeenCalledTimes(1);
   });
 
+  it('writes nothing after a restore that settled WITHOUT reading the server', async () => {
+    // New phone, bad wifi: the fetch times out, so nothing is restored and the
+    // user re-answers onboarding from scratch. Finish used to upload the whole
+    // local record over the server's — replacing their medical history,
+    // medications and allergies with the empties this device has. 'settled' is
+    // written identically by a success and by a timeout; only serverKnown
+    // tells them apart.
+    useOnboardingStore.getState().setRestoreStatus('user-a', 'settled', { serverKnown: false });
+    useOnboardingStore.setState({ profile: answered, isComplete: true });
+    await flush();
+    expect(mockSyncHealthProfile).not.toHaveBeenCalled();
+    expect(useHealthProfileStore.getState().profile.onboarding).toBeUndefined();
+
+    // Positive control: the same edit mirrors once the server copy IS known,
+    // so the silence above is the gate and not an inert harness.
+    settle();
+    useOnboardingStore.getState().setGender('Male');
+    await flush();
+    expect(mockSyncHealthProfile).toHaveBeenCalledTimes(1);
+  });
+
   it('never records a completion flag that has no answers behind it', async () => {
     settle();
     useOnboardingStore.getState().completeOnboarding();
@@ -179,7 +203,7 @@ describe('restoreOnboardingFromServer against the real stores', () => {
     const ob = useOnboardingStore.getState();
     expect(ob.isComplete).toBe(true);
     expect(ob.profile.gender).toBe('Female');
-    expect(ob.restore).toEqual({ userId: 'user-a', status: 'settled' });
+    expect(ob.restore).toEqual({ userId: 'user-a', status: 'settled', serverKnown: true });
     expect(useMealStore.getState().targets).not.toEqual(DEFAULT_TARGETS);
   });
 
@@ -206,13 +230,29 @@ describe('restoreOnboardingFromServer against the real stores', () => {
     expect(useOnboardingStore.getState().isComplete).toBe(false);
   });
 
+  it('a fetch that failed leaves the server copy unknown, not empty', async () => {
+    mockServerFetch.mockResolvedValue({ status: 'error' });
+    await restoreOnboardingFromServer();
+    expect(useOnboardingStore.getState().restore).toEqual({
+      userId: 'user-a',
+      status: 'settled',
+      serverKnown: false,
+    });
+  });
+
+  it("an answer for a DIFFERENT account does not count as knowing this user's copy", async () => {
+    mockServerFetch.mockResolvedValue({ status: 'ok', userId: 'user-b', profile: serverRow });
+    await restoreOnboardingFromServer();
+    expect(useOnboardingStore.getState().restore.serverKnown).toBe(false);
+  });
+
   it('clearOnboardingRestore forgets a settled run and its resume point', () => {
     useOnboardingStore.setState({
-      restore: { userId: 'user-a', status: 'settled' },
+      restore: { userId: 'user-a', status: 'settled', serverKnown: true },
       resumeStep: { userId: 'user-a', step: 2 },
     });
     clearOnboardingRestore();
-    expect(useOnboardingStore.getState().restore).toEqual({ userId: null, status: 'idle' });
+    expect(useOnboardingStore.getState().restore).toEqual({ userId: null, status: 'idle', serverKnown: false });
     expect(useOnboardingStore.getState().resumeStep).toBeNull();
   });
 });

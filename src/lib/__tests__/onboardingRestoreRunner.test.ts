@@ -70,8 +70,12 @@ function world(opts: {
     setResumeStep: (r) => {
       state.resume = r;
     },
-    setRestoreStatus: (userId, status) => {
-      state.statuses.push(`${userId}:${status}`);
+    setRestoreStatus: (userId, status, meta) => {
+      // The whole record, including what 'settled' does NOT say on its own:
+      // whether this user's server copy was actually read.
+      state.statuses.push(
+        `${userId}:${status}` + (status === 'settled' ? `:${meta?.serverKnown === true}` : ''),
+      );
     },
     writeSnapshot: async () => {
       state.writes++;
@@ -99,7 +103,7 @@ describe('createOnboardingRestorer', () => {
     await expect(restore()).resolves.toBe('complete');
     expect(state.isComplete).toBe(true);
     expect(state.profile.gender).toBe('Male');
-    expect(state.statuses).toEqual([`${USER}:pending`, `${USER}:settled`]);
+    expect(state.statuses).toEqual([`${USER}:pending`, `${USER}:settled:true`]);
   });
 
   it('does nothing at all without a session', async () => {
@@ -118,14 +122,15 @@ describe('createOnboardingRestorer', () => {
     await expect(pending).resolves.toBe('fetch-failed');
     expect(state.isComplete).toBe(false);
     expect(state.resume).toBeNull();
-    expect(state.statuses).toEqual([`${USER}:pending`, `${USER}:settled`]);
+    // settled, but the server copy is NOT known — a timeout is not an answer.
+    expect(state.statuses).toEqual([`${USER}:pending`, `${USER}:settled:false`]);
   });
 
   it('a fetch that rejects grants nothing and still settles', async () => {
     const { state, restore } = world({ fetch: () => Promise.reject(new Error('offline')) });
     await expect(restore()).resolves.toBe('fetch-failed');
     expect(state.isComplete).toBe(false);
-    expect(state.statuses.at(-1)).toBe(`${USER}:settled`);
+    expect(state.statuses.at(-1)).toBe(`${USER}:settled:false`);
   });
 
   it('a sign-out while the fetch is out grants nothing', async () => {
@@ -184,6 +189,14 @@ describe('createOnboardingRestorer', () => {
     expect(state.writes).toBe(1);
   });
 
+  it("an answer for another account does not count as knowing this user's copy", async () => {
+    // The fetch came back fine — for somebody else. Nothing about THIS user's
+    // server record was learned, so the mirror must stay shut.
+    const { state, restore } = world({ fetch: okFetch(completeServerProfile, 'user-b') });
+    await restore();
+    expect(state.statuses.at(-1)).toBe(`${USER}:settled:false`);
+  });
+
   it('settles even when applying the plan throws', async () => {
     const statuses: string[] = [];
     const throwing = createOnboardingRestorer({
@@ -196,14 +209,14 @@ describe('createOnboardingRestorer', () => {
       getLocalBody: () => ({}),
       applyOnboardingPatch: () => {},
       setResumeStep: () => {},
-      setRestoreStatus: (u, s) => {
-        statuses.push(`${u}:${s}`);
+      setRestoreStatus: (u, s, meta) => {
+        statuses.push(`${u}:${s}` + (s === 'settled' ? `:${meta?.serverKnown === true}` : ''));
       },
       writeSnapshot: async () => true,
       now: () => '',
     });
     await expect(throwing()).resolves.toBe('fetch-failed');
-    expect(statuses).toEqual([`${USER}:pending`, `${USER}:settled`]);
+    expect(statuses).toEqual([`${USER}:pending`, `${USER}:settled:false`]);
   });
 });
 

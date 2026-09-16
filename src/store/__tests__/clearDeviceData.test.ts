@@ -349,7 +349,9 @@ describe('the onboarding restore mirror (merged with feat/onboarding-server-rest
     useOnboardingStore.setState((s) => ({
       profile: { ...s.profile, ...answered, healthGoals: [...answered.healthGoals] },
       isComplete: true,
-      restore: { userId: 'user-a', status: 'settled' },
+      // serverKnown: the restore actually read this user's server copy. The
+      // mirror requires it — 'settled' alone is also what a timeout looks like.
+      restore: { userId: 'user-a', status: 'settled', serverKnown: true },
     }) as never);
   }
 
@@ -388,6 +390,36 @@ describe('the onboarding restore mirror (merged with feat/onboarding-server-rest
     expect(seen.length).toBeGreaterThanOrEqual(2);
     expect(seen.every(Boolean)).toBe(true);
     expect(isProfileSyncSuppressed()).toBe(false);
+  });
+
+  it('leaves the restore idle, so re-answering onboarding cannot overwrite the server', async () => {
+    // The wipe is device-only, and the user is routed back through onboarding
+    // on the same live session. If the restore stayed 'settled' the mirror
+    // treated those re-typed answers as an ordinary edit and uploaded them
+    // over the server record the wipe was never supposed to touch.
+    signedInWithSettledRestore();
+    await settle();
+
+    clearDeviceData();
+    await settle();
+    expect(useOnboardingStore.getState().restore).toEqual({
+      userId: null,
+      status: 'idle',
+      serverKnown: false,
+    });
+
+    mockWrites.length = 0;
+    jest.clearAllMocks();
+
+    // The user answers onboarding again on the wiped device.
+    useOnboardingStore.setState((s) => ({
+      profile: { ...s.profile, ...answered, healthGoals: [...answered.healthGoals] },
+      isComplete: true,
+    }) as never);
+    await settle();
+
+    expect(profileUpserts()).toHaveLength(0);
+    expect(syncCalls()).toEqual([]);
   });
 
   it('the sign-out wipe resets onboarding local-only while the session is still live', async () => {
