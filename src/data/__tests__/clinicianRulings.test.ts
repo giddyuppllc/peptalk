@@ -128,7 +128,6 @@ describe('clinician rulings are what every store says', () => {
     ['DSIP — 10 mg vial', '100-300 mcg', ['by wk 8']],
     ['Melanotan II — 10 mg vial', '250-500 mcg', ['50-200 mcg']],
     ['Hexarelin — 10 mg vial', '100-200 mcg', ['200-300']],
-    ['5-Amino-1MQ (injectable)', '500 mcg-2 mg', ['no validated human dose']],
     ['Thymosin Alpha 1 (grid range)', '1-1.6 mg', ['0.5-2 mg']],
     ['Tirzepatide — [Rx]', '2.5-15 mg', ['0.5-5 mg']],
     ['Survodutide — [Rx]', '2.4-6 mg', ['0.6-2.7']],
@@ -150,6 +149,28 @@ describe('clinician rulings are what every store says', () => {
   // caveats nobody supplied — "[no validated human dose]", "FAILED Phase 2b",
   // "community guesses" — and ab74eeb invented a Testosterone row out of the
   // Tesamorelin row. Those lines restate the grid (peptideDosingTable.ts) now.
+  /**
+   * 5-Amino-1MQ (injectable) used to be held here, asserting the prompt stated
+   * Jamie's "500 mcg-2 mg". Edward made it safety-information-only on
+   * 2026-09-16, so the prompt line must now state NO figure. Her ruling is
+   * untouched in clinicianRulings.ts and every other store is still held to it
+   * by the tests above — only the line a user can be quoted changed.
+   *
+   * The row is kept, not deleted, because the reason it existed still applies:
+   * the line must stay present (the compound keeps its safety information) and
+   * must not quietly reacquire a number.
+   */
+  it("Aimee's prompt states no figure for 5-Amino-1MQ (injectable)", () => {
+    const lines = prompt.filter((l) => l.startsWith('5-Amino-1MQ (injectable)'));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('SAFETY INFORMATION ONLY');
+    expect(lines[0]).not.toMatch(/\d+(?:[.,]\d+)?\s*(?:mcg|ug|mg|iu|units?|ml)/i);
+    // The ORAL entry is NOT on Edward's list and keeps its figures.
+    const oral = prompt.filter((l) => l.startsWith('5-Amino-1MQ (oral)'));
+    expect(oral).toHaveLength(1);
+    expect(oral[0]).toContain('50-150 mg/day');
+  });
+
   it("Aimee's grid block carries no invented caveats or rows", () => {
     const text = prompt.join('\n');
     expect(text).not.toContain('[no validated human dose');

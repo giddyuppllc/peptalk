@@ -18,6 +18,7 @@ import { useLabResultsStore, LAB_MARKERS } from '../store/useLabResultsStore';
 import { useOnboardingStore } from '../store/useOnboardingStore';
 import { getPeptideById } from '../data/peptides';
 import { PROTOCOL_TEMPLATES } from '../data/protocols';
+import { isSafetyOnly } from '../data/safetyOnlyCompounds';
 import { computeCyclePhase } from './cycleService';
 import { getGoalLabel } from '../constants/goals';
 import type { GoalType } from '../types';
@@ -109,7 +110,9 @@ export function getAimeeNudges(): AimeeNudge[] {
 
       // Titration step bump nudge — surfaces 5 days BEFORE the next step
       // so the user has time to ask "what should I expect at 7.5mg?".
-      const schedule = template?.titrationSchedule;
+      // No titration-bump nudge for a safety-information-only compound
+      // (Edward, 2026-09-16) — the prompt it generates names both doses.
+      const schedule = isSafetyOnly(p.peptideId) ? undefined : template?.titrationSchedule;
       if (schedule) {
         const currentStepIdx = schedule.findIndex(
           (s) =>
