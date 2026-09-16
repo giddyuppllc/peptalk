@@ -189,6 +189,33 @@ describe('createOnboardingRestorer', () => {
     expect(state.writes).toBe(1);
   });
 
+  it('a run whose user has been replaced never stamps the status', async () => {
+    // Two runs overlap — boot, the sign-in effect and handleLogin all call in.
+    // Each `finally` writes its own captured userId, so the LOSER could land
+    // last and leave restore.userId naming an account nobody is signed in as.
+    // The mirror compares that id with the live session, so B would then never
+    // upload an answer, and a mid-onboarding B would sit on a blank screen for
+    // the whole cap waiting for a status that already belonged to A.
+    const tick = () => new Promise((r) => setTimeout(r, 0));
+    const gates: ((f: ServerProfileFetch) => void)[] = [];
+    const { state, restore } = world({ fetch: () => new Promise((r) => gates.push(r)) });
+
+    const a = restore();
+    await tick();
+    state.userId = 'user-b'; // A signs out, B signs in
+    const b = restore();
+    await tick();
+    expect(gates).toHaveLength(2);
+
+    gates[1]({ status: 'ok', userId: 'user-b', profile: completeServerProfile });
+    await b;
+    gates[0]({ status: 'ok', userId: USER, profile: completeServerProfile }); // A's, late
+    await a;
+
+    expect(state.statuses).toEqual([`${USER}:pending`, 'user-b:pending', 'user-b:settled:true']);
+    expect(state.statuses).not.toContain(`${USER}:settled:false`);
+  });
+
   it("an answer for another account does not count as knowing this user's copy", async () => {
     // The fetch came back fine — for somebody else. Nothing about THIS user's
     // server record was learned, so the mirror must stay shut.

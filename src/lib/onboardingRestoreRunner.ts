@@ -115,7 +115,16 @@ export function createOnboardingRestorer(deps: OnboardingRestoreDeps) {
         deps.report?.(err, 'onboardingRestore.apply');
         return 'fetch-failed';
       } finally {
-        deps.setRestoreStatus(userId, 'settled', { serverKnown });
+        // Only the run whose user is still the one on screen may stamp the
+        // status. Runs overlap — boot, the sign-in effect and handleLogin all
+        // call in — and each `finally` writes its own captured userId, so the
+        // loser could land last and leave `restore.userId` naming an account
+        // that is no longer signed in. The mirror compares that id with the
+        // live session, so B then never uploaded a single answer, and a
+        // mid-onboarding B sat on a blank screen for the whole 7.5s cap.
+        if (deps.getCurrentUserId() === userId) {
+          deps.setRestoreStatus(userId, 'settled', { serverKnown });
+        }
       }
     };
 
