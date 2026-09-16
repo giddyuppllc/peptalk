@@ -53,7 +53,6 @@ function load(env: Record<string, string>): { mod: Cost; errors: string[] } {
     errors.push(a.map(String).join(' '));
   });
   (globalThis as any).Deno = { env: { get: (k: string) => env[k] } };
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const mod = require(COST) as Cost;
   spy.mockRestore();
   return { mod, errors };

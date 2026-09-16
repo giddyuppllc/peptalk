@@ -56,7 +56,6 @@ interface Shared {
 function load(): Shared {
   jest.resetModules();
   (globalThis as any).Deno = { env: { get: () => undefined } };
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   return require(SHARED) as Shared;
 }
 

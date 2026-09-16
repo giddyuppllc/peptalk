@@ -116,7 +116,6 @@ interface Cost {
 function loadCost(): Cost {
   jest.resetModules();
   (globalThis as any).Deno = { env: { get: () => undefined } };
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   return require(COST) as Cost;
 }
 
