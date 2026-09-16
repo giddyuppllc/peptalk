@@ -9,7 +9,9 @@ SELECT-only `db query --linked`, and `secrets list` (digests only).
 **Updated 2026-09-16.** The four 09-16 branches are now merged in too —
 `fix/privacy-manifest-and-reporting`, `feat/safety-only-compounds`,
 `fix/profile-restore-races` and `fix/spend-ledger-and-dose-guard`. HEAD is
-**78 commits** ahead of `origin/master` (`3e2561c`), none pushed. On the
+~80 commits ahead of `origin/master` (`3e2561c`), none pushed — count it
+with `git rev-list --count origin/master..HEAD` rather than trusting this
+number, which every commit to this file moves. On the
 merged tree: `tsc` 0 · `lint:ci` 0 · `jest` 0 (**103 suites, 2167 tests**).
 `verify:all` is **46 steps** and needs `PEPTALK_UNRELEASED=1` until §0's tag
 and push are done.
@@ -36,7 +38,8 @@ Do the sections in order. A later section depends on the one before it.
 ## 0. Before anything touches production
 
 - [ ] `git fetch`. `origin/master` was `3e2561c` on 09-15 and is unchanged as
-      of 09-16; the local branch is **78 commits** ahead of it, none pushed.
+      of 09-16; the local branch is ~80 commits ahead of it, none pushed
+      (`git rev-list --count origin/master..HEAD` for the real figure).
       **Decide** where this branch goes: fast-forward `master`, or a PR.
       CLAUDE.md says to work on `master`.
 - [ ] Re-run the net on the exact commit you will ship. Every command must
@@ -71,8 +74,9 @@ Do the sections in order. A later section depends on the one before it.
       the 1.10.0 (75) failure CLAUDE.md records: a rejected binary that
       corresponded to no commit.
 
-      Right now it reports `HEAD is not tagged v1.10.1` and `78 commits on
-      HEAD are on no remote branch`. Clear both before building:
+      Right now it reports `HEAD is not tagged v1.10.1` and `N commits on
+      HEAD are on no remote branch` — it derives N itself, so read it from
+      the check rather than from here. Clear both before building:
       ```bash
       git push origin reconcile/master-2026-09-07
       git tag v1.10.1 && git push origin v1.10.1
