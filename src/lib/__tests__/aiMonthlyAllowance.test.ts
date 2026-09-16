@@ -300,11 +300,37 @@ describe.each(CASES)('$name, run for real', (c) => {
     expect(r.providerCalls).toEqual([]);
   });
 
-  it('fails closed when the spend ledger cannot be read', async () => {
+  it('fails closed when the spend ledger cannot be read — 503, not 429', async () => {
+    // FIXED 2026-09-16. This asserted 429 and so locked the bug in.
+    // `ledger_unreachable` is not a quota: the spend table could not be READ,
+    // so the cap could not be enforced and the call is refused fail-closed.
+    // 429 tells every client the quota is gone until it resets —
+    // src/services/aimeeWorkout.ts:254 maps 429 to `rate_limit` — so a
+    // database blip became "you are out of messages" and backoff would not
+    // retry a call that would succeed a second later. aimee-voice already
+    // answered 503 for its OWN failed-closed bump in the same handler.
     const r = await run(c.name, c, { userSpendMC: 0, globalSpendMC: 0, ledgerError: true });
-    expect(r.status).toBe(429);
+    expect(r.status).toBe(503);
     expect(r.body.reason).toBe('ledger_unreachable');
+    expect(r.body.retryAfter).toBe(60);
     expect(r.providerCalls).toEqual([]);
+  });
+
+  it('a 429 carries retryAfter, so a client knows when the allowance returns', async () => {
+    const r = await run(c.name, c, { userSpendMC: PRO_ALLOWANCE_CENTS * MC, globalSpendMC: 0 });
+    expect(r.status).toBe(429);
+    expect(typeof r.body.retryAfter).toBe('number');
+    expect(r.body.retryAfter).toBeGreaterThan(0);
+    // These cases run as `pro`, which has nothing to upgrade to; the flag must
+    // be present and false rather than absent, since aimeeWorkout.ts keys its
+    // upgrade prompt on `body?.upgrade`.
+    expect(r.body.upgrade).toBe(false);
+  });
+
+  it('the system-wide breaker never offers an upgrade — no plan buys past it', async () => {
+    const r = await run(c.name, c, { userSpendMC: 0, globalSpendMC: SYSTEM_BREAKER_CENTS * MC });
+    expect(r.status).toBe(429);
+    expect(r.body.upgrade).toBe(false);
   });
 
   it('inside the allowance: calls the provider once and meters it monthly, never daily', async () => {
