@@ -181,6 +181,23 @@ const styles = StyleSheet.create({
   },
   bodyScroll: {
     marginBottom: 16,
+    // React Native defaults flexShrink to 0 (the web defaults it to 1). `card`
+    // caps at 86% of the window, but this ScrollView carried only a margin, so
+    // it claimed the full height of five bullets plus the liability box and
+    // gave none of it back. Everything after it then sat below the card's
+    // bottom edge — and everything after it is BOTH the acceptance checkbox and
+    // the Continue button it enables.
+    //
+    // This modal has no dismiss: onRequestClose is an explicit no-op, there is
+    // no touchable backdrop, and Continue is disabled until the box is ticked.
+    // Push those two controls out and the gate is unpassable, on the first
+    // screen a reviewer meets when they follow our own App Review note to the
+    // dose calculator. The a11y comment on the checkbox above already records
+    // this exact ending from the other direction: "The box stayed unticked,
+    // Continue did nothing, and the modal never closed."
+    //
+    // flexShrink, not flex: nothing moves while the copy fits.
+    flexShrink: 1,
   },
   body: {
     fontSize: 14,

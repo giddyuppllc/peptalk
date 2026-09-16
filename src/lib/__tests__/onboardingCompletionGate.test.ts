@@ -174,6 +174,64 @@ describe('the restore judges "answered" exactly as the onboarding screen does', 
   });
 });
 
+describe('completeOnboarding() runs only once a session exists', () => {
+  // THE ORDERING IS THE 2.1(a) BUG, AND UNTIL 2026-09-16 NOTHING PINNED IT.
+  //
+  // app/onboarding.tsx explains at length why completeOnboarding() sits AFTER
+  // the requiresEmailConfirmation check: called first, it leaves the app in
+  // `isComplete: true, isAuthenticated: false` — which routeGuard reads as
+  // "onboarded but signed out" and pins on /auth, where signing in fails with
+  // "email not confirmed". That is indistinguishable from the rejection text
+  // Apple sent twice: sent back to the login page after logging in.
+  //
+  // Mutation-tested: moving the call above the check left every other suite in
+  // this file green. A rule that exists only as a paragraph is a rule the next
+  // merge conflict resolves away, and this one is the most expensive rule here.
+  //
+  // It is also live: the same comment records that Supabase has
+  // mailer_autoconfirm ON, so the branch does not fire today and is one
+  // dashboard toggle from firing for every new account.
+  const code = stripComments(onboarding);
+
+  const confirmAt = code.indexOf('if (result.requiresEmailConfirmation) {');
+  const completeAt = code.indexOf('completeOnboarding();');
+
+  it('both landmarks are still in the file (anti-vacuity)', () => {
+    // Without this, a rename makes indexOf return -1 twice and -1 < -1 is
+    // false — the ordering assertion below would fail loudly rather than pass
+    // silently, but say nothing useful about why.
+    expect(confirmAt).toBeGreaterThan(-1);
+    expect(completeAt).toBeGreaterThan(-1);
+  });
+
+  it('the email-confirmation check comes first', () => {
+    expect(confirmAt).toBeLessThan(completeAt);
+  });
+
+  it('and that branch returns, so completion is never reached without a session', () => {
+    // Ordering alone is not enough: the check has to STOP. Falling through it
+    // would reach completeOnboarding() anyway, with no session.
+    const branch = code.slice(confirmAt, completeAt);
+    expect(branch).toMatch(/\n\s*return;/);
+    // And the only thing it may do on the way out is send them to sign in.
+    expect(branch).toMatch(/router\.replace\('\/auth'\)/);
+  });
+
+  it('the signup path routes home only after completion, never before', () => {
+    // There are two router.replace('/(tabs)') in this file. The first is the
+    // shouldForwardHome effect near the top, which sends an ALREADY-complete
+    // signed-in user home and has nothing to do with this ordering; a bare
+    // indexOf finds that one and makes this assertion meaningless. Search the
+    // signup path only — from the confirmation check to the end of the handler.
+    const handlerEnd = code.indexOf('const handleBack', completeAt);
+    expect(handlerEnd).toBeGreaterThan(completeAt);
+    const signupPath = code.slice(confirmAt, handlerEnd);
+    const home = signupPath.indexOf("router.replace('/(tabs)')");
+    expect(home).toBeGreaterThan(-1);
+    expect(home).toBeGreaterThan(signupPath.indexOf('completeOnboarding();'));
+  });
+});
+
 describe('app/onboarding.tsx handles an already-authenticated user', () => {
   it('does not call signup() when a session already exists', () => {
     expect(onboarding).toMatch(/isAuthenticated\s*\n?\s*\?\s*\{\s*requiresEmailConfirmation:\s*false\s*\}/);

@@ -131,9 +131,18 @@ HealthKit rejection got recorded inverted and shipped twice.
 - Web has no `expo-secure-store`; `webStorageAdapter` uses localStorage and falls
   back to memory. Both adapters now report degraded persistence rather than
   swallowing it.
-- The desktop gate (`src/components/DesktopGate.tsx`) means a desktop browser
-  only ever exercises the gate page — CSP and web behaviour must be verified on
-  a phone or an installed PWA.
+- **There is no desktop gate any more.** This line used to say that
+  `src/components/DesktopGate.tsx` meant a desktop browser only ever exercised
+  the gate page, so CSP and web behaviour had to be verified on a phone or an
+  installed PWA. That component was deleted on 2026-09-12 in `02d7626`, with
+  `MobileBrowserGate`, when the installed-PWA-only wall came out of the root
+  layout — the wall that had been showing every browser visitor an "Install
+  PepTalk" screen and dead-ending password reset, email verification and the
+  Square return on it. Nothing replaced it. A desktop browser now runs the whole
+  app, so web CSP, the Square card iframe, video playback and Aimee streaming
+  are all testable on a desktop browser; `CSP.md` carried the same stale
+  sentence and was corrected with it on 2026-09-16.
+  `src/lib/routeGuard.ts` is the only thing deciding where a visitor may be.
 
 ## Running the E2E flows
 

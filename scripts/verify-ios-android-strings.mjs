@@ -48,8 +48,14 @@ const ALLOWED = new Map([
     'BIOMARKER_SOURCE_LABELS — a data map, not a render path. Consumers gate.'],
   ['src/types/cycle.ts:Health Connect',
     'Same map.'],
-  ['src/components/DesktopGate.tsx:Google Play',
-    'Web-only render path (webGate === "desktop" is set only on Platform.OS === "web").'],
+  // REMOVED 2026-09-16: 'src/components/DesktopGate.tsx:Google Play'. That
+  // component was deleted on 2026-09-12 in 02d7626 along with
+  // MobileBrowserGate, when the installed-PWA-only wall came out of the root
+  // layout. The entry outlived the file by four days, granting a standing
+  // exemption to a path nothing occupies — and, worse, reading as evidence that
+  // the desktop gate is still there. It is not: a desktop browser now runs the
+  // whole app. The stale-entry check below is what stops the next one lasting
+  // as long.
 ]);
 
 /** How far either side of a hit to look for a platform gate. */
@@ -119,6 +125,37 @@ for (const file of sourceFiles()) {
       if (isGated) gated.push(`${file}:${i + 1}  ${term}`);
       else failures.push(`${file}:${i + 1}  ${term}\n      ${rawLines[i].trim().slice(0, 100)}`);
     }
+  }
+}
+
+// ── The allowlist itself has to stay true ────────────────────────────────────
+//
+// An entry here is a claim about a specific occurrence in a specific file. When
+// the file goes, or the string moves, the claim stops being about anything and
+// the exemption just sits there waiting for something to cover. That is not
+// hypothetical: the DesktopGate entry removed above survived the deletion of
+// its own component. Same shape as the stale-EXEMPT check in
+// scripts/verify-ai-consent.mjs.
+//
+// Deliberately a hard failure and not a warning. A warning in a 46-step chain
+// is a line of scrollback.
+for (const [key, reason] of ALLOWED) {
+  const sep = key.lastIndexOf(':');
+  const file = key.slice(0, sep);
+  const term = key.slice(sep + 1);
+  let text;
+  try {
+    text = readFileSync(join(ROOT, file), 'utf8');
+  } catch {
+    failures.push(
+      `ALLOWED lists ${key}, but ${file} does not exist — stale exemption\n      reason on file: ${reason}`,
+    );
+    continue;
+  }
+  if (!text.includes(term)) {
+    failures.push(
+      `ALLOWED lists ${key}, but ${file} no longer contains "${term}" — stale exemption\n      reason on file: ${reason}`,
+    );
   }
 }
 

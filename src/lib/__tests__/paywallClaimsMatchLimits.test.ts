@@ -43,12 +43,25 @@ const read = (f: string) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
 const GATE = 'supabase/functions/aimee-chat-stream/index.ts';
 
-/** Every file that puts an Aimee allowance in front of a user. */
+/**
+ * Every file that puts an Aimee allowance in front of a user.
+ *
+ * `src/config/tourSteps.ts` was missing from this list until 2026-09-16 and it
+ * was carrying BOTH defects this test was written to stop. The free→plus tour
+ * sold 20 messages per day and the plus→pro tour was titled Unlimited over a
+ * body promising no more message caps — on the walkthrough that fires the
+ * moment someone upgrades, so it was the first thing a paying subscriber was
+ * told. Four files were scanned, the fifth was not, and the suite was green.
+ *
+ * A guard list is only as wide as the surfaces on it. If a new screen, tour,
+ * onboarding slide or push body ever quotes an Aimee allowance, add it here.
+ */
 const COPY_FILES = [
   'app/subscription.tsx',
   'app/onboarding.tsx',
   'app/(tabs)/profile.tsx',
   'src/components/PaywallModal.tsx',
+  'src/config/tourSteps.ts',
 ];
 
 /**
@@ -60,20 +73,59 @@ const COPY_FILES = [
  * unlimited, so a line-level "no unlimited near Aimee" rule failed on a
  * true claim. The unit that carries a promise is the string, not the line.
  */
+/**
+ * Block and line comments, blanked rather than deleted so nothing else shifts.
+ *
+ * A comment shows a user nothing, and the files on this list explain at length
+ * what they must not say — tourSteps.ts now records the exact wording it was
+ * corrected away from. Without this, a note about the defect reads as the
+ * defect, and the honest fix fails the test that asked for it.
+ */
+function stripComments(src: string): string {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+    .replace(/^([ \t]*)\/\/.*$/gm, '$1');
+}
+
+/**
+ * Words that make a clause a statement about the Aimee allowance even when the
+ * name itself sits in a neighbouring clause. Deliberately narrow: it must be
+ * about messages or chatting, so "Unlimited tracking" and "Unlimited Stack
+ * Builder" — both true — stay outside it.
+ */
+const ALLOWANCE_VOCAB = /\bmessages?\b|\bmessaging\b|\bchats?\b|\bchatting\b/i;
+
 function aimeeStrings(file: string): string[] {
-  const src = read(file);
+  const src = stripComments(read(file));
   const out: string[] = [];
   // Single- or double-quoted literals, skipping escaped quotes.
   for (const m of src.matchAll(/'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"/g)) {
     const s = m[1] ?? m[2] ?? '';
     if (!s.includes('Aimee')) continue;
     // Even one string can carry two unrelated promises:
-    //   "Unlimited tracking, 750 Aimee messages a month, Food Scanner & more"
-    // Tracking really is unlimited; Aimee is not. Split into clauses and keep
-    // only the ones that speak about Aimee. The lookahead keeps "9,000"
-    // intact — split on a comma that does NOT sit inside a number.
+    //   Unlimited tracking, 750 Aimee messages a month, Food Scanner & more
+    // (app/(tabs)/profile.tsx:387). Tracking really is unlimited; Aimee is not.
+    // So the string is split into clauses. The lookahead keeps 9,000 intact —
+    // split on a comma that does NOT sit inside a number.
+    //
+    // KEEPING ONLY THE CLAUSES CONTAINING "Aimee" WAS THE BUG (2026-09-16).
+    // The promise and the brand name routinely sit in different clauses:
+    //
+    //   Ask Aimee anything — peptide dosing, stacks, workouts, nutrition.
+    //   20 messages per day.
+    //
+    // Only the FIRST clause names Aimee, so the clause carrying "per day" was
+    // dropped and the test passed over the exact claim it exists to forbid.
+    // Mutation-confirmed: reinstating that body left this suite green.
+    //
+    // A clause counts as an Aimee allowance claim if it names Aimee OR speaks
+    // the allowance vocabulary (message / chat / cap). That keeps the profile
+    // string above safe — "Unlimited tracking" names neither — while catching a
+    // message promise wherever in the sentence it lands.
     for (const clause of s.split(/,(?!\d)/)) {
-      if (clause.includes('Aimee')) out.push(clause.trim());
+      if (clause.includes('Aimee') || ALLOWANCE_VOCAB.test(clause)) {
+        out.push(clause.trim());
+      }
     }
   }
   return out;
@@ -130,6 +182,37 @@ describe('paywall claims match the enforced limits', () => {
     expect(named).toBe(true);
   });
 
+  it('every message figure a user is shown is one the gate enforces', () => {
+    // The it.each above asks whether the right number appears ANYWHERE in the
+    // file. That cannot see a WRONG one sitting next to it — mutation-confirmed
+    // on 2026-09-16: changing the tour's "750 messages a month" to "900
+    // messages a month" left this suite green. Here every figure the copy
+    // attaches to the word "messages" must be one of the enforced limits.
+    const allowed = new Set(
+      (['free', 'plus', 'pro'] as const).flatMap((t) => {
+        const n = gateLimit(t);
+        return [String(n), grouped(n)];
+      }),
+    );
+    let figures = 0;
+    for (const file of COPY_FILES) {
+      for (const s of aimeeStrings(file)) {
+        // "750 messages", "9,000 messages", and "750 Aimee messages" — up to
+        // two words may sit between the number and the noun.
+        for (const m of s.matchAll(/\b(\d[\d,]*)\s+(?:\S+\s+){0,2}messages?\b/gi)) {
+          figures++;
+          expect({ file, claim: s.trim(), figure: m[1] }).toEqual({
+            file,
+            claim: s.trim(),
+            figure: allowed.has(m[1]) ? m[1] : `one of ${[...allowed].join(' / ')}`,
+          });
+        }
+      }
+    }
+    // Anti-vacuity: a rename that hid every figure must not read as a pass.
+    expect(figures).toBeGreaterThanOrEqual(4);
+  });
+
   it('every Aimee message figure states the period it applies to', () => {
     // The number is a ceiling. Without a period it reads as "9,000 messages",
     // full stop, which is neither the gate's promise nor a shape the cost cap
@@ -151,6 +234,12 @@ describe('paywall claims match the enforced limits', () => {
         expect(s).not.toContain('/day');
         expect(s.toLowerCase()).not.toContain('per day');
         expect(s.toLowerCase()).not.toContain('no message limit');
+        // "No more message caps" is an unlimited claim that uses none of the
+        // words above, and it is what the plus→pro tour actually shipped. The
+        // list has to cover the claim, not one spelling of it.
+        expect(s.toLowerCase()).not.toContain('no message cap');
+        expect(s.toLowerCase()).not.toContain('no more message cap');
+        expect(s.toLowerCase()).not.toContain('as much as you want');
       }
     }
   });

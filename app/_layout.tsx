@@ -1199,6 +1199,11 @@ function RootLayout() {
     if (!navReady || !hasHydrated) return;
     const inOnboarding = segments[0] === 'onboarding';
     const inAuth = segments[0] === 'auth';
+    // The password-reset landing step. Both routes into it — the native deep
+    // link above (postAuthLinkRoute) and the web PASSWORD_RECOVERY event — send
+    // the user here before onboarding can be complete on a fresh install, and
+    // the guard used to evict them to /onboarding. See routeGuard.ts.
+    const inPasswordRecovery = segments[0] === 'set-password';
 
     // Decision lives in src/lib/routeGuard.ts so it is unit-testable. This
     // used to read `if (isComplete) return;` — completing onboarding once
@@ -1212,6 +1217,7 @@ function RootLayout() {
       isAuthenticated,
       inOnboarding,
       inAuth,
+      inPasswordRecovery,
     });
     if (target) router.replace(target);
   }, [
