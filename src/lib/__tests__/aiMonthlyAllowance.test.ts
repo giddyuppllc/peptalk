@@ -231,8 +231,11 @@ const CASES: Case[] = [
   { name: 'aimee-workout', request: () => jsonReq({}), providerReply: completion, recordsSpend: true },
   { name: 'aimee-pantry-meal', request: () => jsonReq({ pantryItems: [] }), providerReply: completion, recordsSpend: true },
   { name: 'aimee-pantry-parse', request: () => jsonReq({ text: '2 eggs in the fridge' }), providerReply: completion, recordsSpend: true },
-  { name: 'aimee-report-rewrite', request: () => jsonReq({ body: 'You logged 3 doses.' }), providerReply: completion, recordsSpend: true },
-  { name: 'aimee-lab-interpret', request: () => jsonReq({ results: [{ markerId: 'hdl', value: 50, unit: 'mg/dL' }] }), providerReply: completion, recordsSpend: true },
+  // hasConsent: these three refuse outright without health-data consent
+  // (_shared/aiFeatureConsent.ts), so the fixture has to model a current
+  // client or every allowance assertion below would be measuring a 403.
+  { name: 'aimee-report-rewrite', request: () => jsonReq({ body: 'You logged 3 doses.', hasConsent: true }), providerReply: completion, recordsSpend: true },
+  { name: 'aimee-lab-interpret', request: () => jsonReq({ results: [{ markerId: 'hdl', value: 50, unit: 'mg/dL' }], hasConsent: true }), providerReply: completion, recordsSpend: true },
   {
     name: 'aimee-voice',
     request: () => {
@@ -245,7 +248,7 @@ const CASES: Case[] = [
   },
   // Scanners: moved in their own commit, so these three can be dropped together.
   { name: 'food-scan', request: () => jsonReq({ imageBase64: 'aGVsbG8=' }), providerReply: completion, recordsSpend: true },
-  { name: 'lab-scan', request: () => jsonReq({ imageBase64: 'aGVsbG8=' }), providerReply: completion, recordsSpend: true },
+  { name: 'lab-scan', request: () => jsonReq({ imageBase64: 'aGVsbG8=', hasConsent: true }), providerReply: completion, recordsSpend: true },
   { name: 'aimee-pantry-scan', request: () => jsonReq({ imageBase64: 'aGVsbG8=' }), providerReply: completion, recordsSpend: true },
 ];
 
@@ -269,9 +272,14 @@ async function run(fn: string, c: Case, opts: { userSpendMC: number; globalSpend
   const supa = fakeSupabase(opts, log);
   jest.doMock('https://esm.sh/@supabase/supabase-js@2', () => ({ createClient: () => supa }), { virtual: true });
   const providerCalls: string[] = [];
+  // The BODY too, not just the URL: the consent suite below asserts on what
+  // actually reached the provider, which is the only place a leaked health
+  // field would show up.
+  const providerBodies: string[] = [];
   const realFetch = globalThis.fetch;
-  (globalThis as any).fetch = jest.fn(async (url: string) => {
+  (globalThis as any).fetch = jest.fn(async (url: string, init?: any) => {
     providerCalls.push(String(url));
+    providerBodies.push(typeof init?.body === 'string' ? init.body : '');
     return c.providerReply();
   });
   try {
@@ -279,7 +287,7 @@ async function run(fn: string, c: Case, opts: { userSpendMC: number; globalSpend
     if (!handler) throw new Error(`${fn} registered no handler`);
     const res: Response = await (handler as (req: Request) => Promise<Response>)(c.request());
     const body = await res.json().catch(() => ({}));
-    return { status: res.status, body, log, providerCalls };
+    return { status: res.status, body, log, providerCalls, providerBodies };
   } finally {
     (globalThis as any).fetch = realFetch;
   }
@@ -323,6 +331,115 @@ describe.each(CASES)('$name, run for real', (c) => {
       expect(bumps).toHaveLength(1);
       expect(bumps[0][2].p_date).toBe(monthStart);
     }
+  });
+});
+
+/**
+ * The same real handlers, under the same shim, for the OTHER gate: the
+ * health-data consent.
+ *
+ * `profile.aiDataConsent` governs whether the user's body, labs, doses,
+ * allergies and goals may reach the AI provider. Before 2026-09-16 only
+ * aimee-chat and aimee-chat-stream consulted it, and these functions sent the
+ * lot regardless of it — so this is the assertion that was missing, made the
+ * only way that proves anything: run the handler and read what the provider
+ * received.
+ *
+ * `hasConsent` absent is the shape a client build older than this branch
+ * sends, and it must be treated as NO consent, like aimee-chat already does.
+ */
+describe('health-data consent, enforced by the real handlers', () => {
+  const inAllowance = { userSpendMC: 0, globalSpendMC: 0 };
+
+  const REFUSE = [
+    { name: 'aimee-lab-interpret', withConsent: { results: [{ markerId: 'hdl', value: 50, unit: 'mg/dL' }] } },
+    { name: 'aimee-report-rewrite', withConsent: { body: 'You logged 3 doses of BPC-157.' } },
+    { name: 'lab-scan', withConsent: { imageBase64: 'aGVsbG8=' } },
+  ];
+
+  describe.each(REFUSE)('$name', ({ name, withConsent }) => {
+    const c = (body: unknown): Case => ({
+      name,
+      request: () => jsonReq(body),
+      providerReply: completion,
+      recordsSpend: true,
+    });
+
+    it.each([
+      ['absent — a stale client', {}],
+      ['false', { hasConsent: false }],
+      ["the string 'true'", { hasConsent: 'true' }],
+      ['1', { hasConsent: 1 }],
+    ])('refuses with 403 when hasConsent is %s, and never calls the provider', async (_l, flag) => {
+      const r = await run(name, c({ ...withConsent, ...(flag as object) }), inAllowance);
+      expect(r.status).toBe(403);
+      expect(r.body.consent).toBe(true);
+      expect(r.providerCalls).toEqual([]);
+    });
+
+    it('runs normally with hasConsent: true', async () => {
+      const r = await run(name, c({ ...withConsent, hasConsent: true }), inAllowance);
+      expect(r.status).toBe(200);
+      expect(r.providerCalls).toHaveLength(1);
+    });
+  });
+
+  const STRIP = [
+    {
+      name: 'aimee-plan',
+      body: { days: 5, allergens: ['peanuts'], goals: ['fat loss'], dietType: 'keto' },
+      leaks: /peanuts|fat loss|keto/,
+      keeps: /5-day|5 days/i,
+    },
+    {
+      name: 'aimee-recipe',
+      body: { mealType: 'lunch', constraints: ['vegetarian'], allergens: ['shellfish'] },
+      leaks: /shellfish/,
+      keeps: /vegetarian/,
+    },
+    {
+      name: 'aimee-pantry-meal',
+      body: { pantryItems: [{ name: 'rice' }], allergens: ['gluten'], activeStackPeptides: ['tirzepatide'] },
+      leaks: /gluten|tirzepatide/,
+      keeps: /rice/,
+    },
+    {
+      name: 'aimee-workout',
+      body: { goal: 'transformation', daysPerWeek: 4, gender: 'women' },
+      leaks: /\bwomen\b/,
+      keeps: /transformation/,
+    },
+  ];
+
+  describe.each(STRIP)('$name', ({ name, body, leaks, keeps }) => {
+    const c = (b: unknown): Case => ({
+      name,
+      request: () => jsonReq(b),
+      providerReply: completion,
+      recordsSpend: true,
+    });
+
+    it('still runs without consent — the feature is not health-only', async () => {
+      const r = await run(name, c(body), inAllowance);
+      expect(r.status).toBe(200);
+      expect(r.providerCalls).toHaveLength(1);
+    });
+
+    it('sends the health fields to the provider WITH consent', async () => {
+      const r = await run(name, c({ ...body, hasConsent: true }), inAllowance);
+      expect(r.providerBodies.join(' ')).toMatch(leaks);
+    });
+
+    it.each([
+      ['absent — a stale client', {}],
+      ['false', { hasConsent: false }],
+    ])('sends NONE of them when hasConsent is %s', async (_l, flag) => {
+      const r = await run(name, c({ ...body, ...(flag as object) }), inAllowance);
+      const sent = r.providerBodies.join(' ');
+      expect(sent).not.toMatch(leaks);
+      // and the request is not gutted — the non-health half still went.
+      expect(sent).toMatch(keeps);
+    });
   });
 });
 

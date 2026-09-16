@@ -108,7 +108,28 @@ describe('sign-in restores from the server before deciding, and still only respe
     const i = layout.indexOf("url.startsWith('peptalk://auth')");
     const handler = layout.slice(i, layout.indexOf('Linking.getInitialURL()', i));
     expect(handler).toMatch(/await restoreOnboardingFromServer\(\);/);
-    expect(handler).toMatch(/ob\.isComplete && ob\.profile\.gender \? '\/\(tabs\)' : '\/onboarding'/);
+    // The landing decision moved into src/lib/passwordRecovery.postAuthLinkRoute
+    // on 2026-09-16, so a recovery link can reach the set-password step instead
+    // of being routed home like a confirmation. The handler must still feed it
+    // the REAL completion state and nothing else — it may not compute its own.
+    expect(handler).toMatch(
+      /router\.replace\(\s*postAuthLinkRoute\(\{\s*recovery,\s*onboardingComplete: ob\.isComplete,\s*hasGender: !!ob\.profile\.gender,\s*\}\)/,
+    );
+    expect(handler).not.toMatch(/completeOnboarding\(/);
+  });
+
+  it('and that helper still only respects completion — it never grants it', () => {
+    // Asserted here as well as in passwordRecovery.test.ts, because this file
+    // is where "auth may RESPECT completion, never GRANT it" is kept honest,
+    // and the rule now lives one module away.
+    const { postAuthLinkRoute } = require('../passwordRecovery');
+    expect(postAuthLinkRoute({ recovery: false, onboardingComplete: true, hasGender: true })).toBe('/(tabs)');
+    expect(postAuthLinkRoute({ recovery: false, onboardingComplete: true, hasGender: false })).toBe('/onboarding');
+    expect(postAuthLinkRoute({ recovery: false, onboardingComplete: false, hasGender: true })).toBe('/onboarding');
+    expect(postAuthLinkRoute({ recovery: false, onboardingComplete: false, hasGender: false })).toBe('/onboarding');
+    // A recovery link must not become a way into the app either: it goes to
+    // the password step, never to /(tabs), whatever the onboarding state.
+    expect(postAuthLinkRoute({ recovery: true, onboardingComplete: true, hasGender: true })).toBe('/set-password');
   });
 
   it('the restore can only raise isComplete, never set it outright', () => {
