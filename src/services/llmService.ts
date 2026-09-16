@@ -89,12 +89,23 @@ function buildPeptideKnowledgeBase(): string {
   });
 
   // Compact protocol list: peptide | dose range | route | frequency | timing
+  // Safety-information-only compounds (Edward, 2026-09-16) keep their row and
+  // their contraindications, and lose the dose/route/frequency figures. The
+  // row must stay: removing it entirely would leave the model to answer from
+  // general training knowledge, which is how an unsourced number gets quoted.
+  const { isSafetyOnly } = require('../data/safetyOnlyCompounds');
   const protoLines: string[] = [];
   PROTOCOL_TEMPLATES.forEach((t: any) => {
-    const dose = `${t.typicalDose.min}-${t.typicalDose.max} ${t.typicalDose.unit}`;
     const contra = t.contraindications?.length
       ? ` | CONTRA: ${t.contraindications.join(', ')}`
       : '';
+    if (isSafetyOnly(t.peptideId)) {
+      protoLines.push(
+        `- ${t.name}: SAFETY INFORMATION ONLY - state no dose, range, frequency, cycle length or reconstitution for this compound${contra}`
+      );
+      return;
+    }
+    const dose = `${t.typicalDose.min}-${t.typicalDose.max} ${t.typicalDose.unit}`;
     protoLines.push(
       `- ${t.name}: ${dose} ${t.route} ${t.frequencyLabel}${t.timing ? ` (${t.timing})` : ''}${contra}`
     );

@@ -22,7 +22,18 @@ import { KeepItSimpleCard } from '../../src/components/KeepItSimpleCard';
 import { getCategoryColor } from '../../src/constants/categories';
 import { Disclaimer } from '../../src/components/Disclaimer';
 import { trackPeptideView } from '../../src/services/analyticsEvents';
-import { getProtocolsByPeptide } from '../../src/data/protocols';
+// Safety-information-only compounds render NO dose (Edward, 2026-09-16).
+// Reading protocols through the display boundary empties `protocols` for
+// those ids, which collapses the quick-dose pills, cycle plan, activation
+// card, supplies estimator and protocol templates in one place and renders
+// the screen's existing "we intentionally don't suggest a dose" empty state.
+// See src/data/safetyOnlyCompounds.ts.
+import { getProtocolsForDisplay } from '../../src/data/dosingDisplay';
+import { isSafetyOnly } from '../../src/data/safetyOnlyCompounds';
+import {
+  SAFETY_ONLY_WHY_NO_DOSE,
+  SAFETY_ONLY_PRESCRIBER_LINE,
+} from '../../src/constants/safetyOnlyCopy';
 import { getSourcesByPeptide } from '../../src/data/sources';
 import { useSideEffectStore } from '../../src/store/useSideEffectStore';
 import { tallySymptoms, describeTally } from '../../src/lib/sideEffectSummary';
@@ -116,7 +127,7 @@ export default function PeptideDetailScreen() {
   const peptideKey = peptide?.id ?? '';
   const safetyProfile = useMemo(() => peptideKey ? getSafetyProfileByPeptideId(peptideKey) : null, [peptideKey]);
   const clinicalTrials = useMemo(() => peptideKey ? getTrialsByPeptideId(peptideKey) : [], [peptideKey]);
-  const protocols = useMemo(() => peptideKey ? getProtocolsByPeptide(peptideKey) : [], [peptideKey]);
+  const protocols = useMemo(() => peptideKey ? getProtocolsForDisplay(peptideKey) : [], [peptideKey]);
   const curatedSources = useMemo(() => peptideKey ? getSourcesByPeptide(peptideKey) : [], [peptideKey]);
   const relatedStacks = useMemo(() => peptideKey ? getCuratedStacksByPeptideId(peptideKey) : [], [peptideKey]);
   const nutritionGuidance = useMemo(() => peptideKey ? getPeptideNutrition(peptideKey) : null, [peptideKey]);
@@ -905,13 +916,33 @@ export default function PeptideDetailScreen() {
               <Ionicons name="information-circle-outline" size={18} color="#7ABED0" />
               <Text style={styles.sectionTitle}>Dosing reference</Text>
             </View>
-            <Text style={{ fontSize: 14, lineHeight: 20, color: '#2D2D2D' }}>
-              {peptide.name} doesn't have a published human-trial dosing
-              protocol in our catalog. Most of what's known comes from
-              preclinical or limited early-phase research, so we
-              intentionally don't suggest a dose rather than guess at
-              numbers.
-            </Text>
+            {/* This paragraph is only TRUE for a compound with no catalogued
+                protocol. Several safety-information-only compounds (hCG,
+                somatropin, MK-677) do have published human dosing — it is
+                withheld by Edward's 2026-09-16 decision, not absent — so the
+                sentence is not shown for them. Its replacement is
+                SAFETY_ONLY_WHY_NO_DOSE, which is empty until Edward writes it
+                and renders nothing while empty. The two paragraphs below are
+                accurate for both cases and are shown either way. */}
+            {!isSafetyOnly(peptide.id) && (
+              <Text style={{ fontSize: 14, lineHeight: 20, color: '#2D2D2D' }}>
+                {peptide.name} doesn't have a published human-trial dosing
+                protocol in our catalog. Most of what's known comes from
+                preclinical or limited early-phase research, so we
+                intentionally don't suggest a dose rather than guess at
+                numbers.
+              </Text>
+            )}
+            {isSafetyOnly(peptide.id) && SAFETY_ONLY_WHY_NO_DOSE !== '' && (
+              <Text style={{ fontSize: 14, lineHeight: 20, color: '#2D2D2D' }}>
+                {SAFETY_ONLY_WHY_NO_DOSE}
+              </Text>
+            )}
+            {isSafetyOnly(peptide.id) && SAFETY_ONLY_PRESCRIBER_LINE !== '' && (
+              <Text style={{ fontSize: 14, lineHeight: 20, color: '#2D2D2D', marginTop: 10 }}>
+                {SAFETY_ONLY_PRESCRIBER_LINE}
+              </Text>
+            )}
             <Text style={{ fontSize: 14, lineHeight: 20, color: '#2D2D2D', marginTop: 10 }}>
               The research summary and mechanism notes above cover what
               the compound is being studied for. If you're considering
@@ -1323,7 +1354,7 @@ function ActivationCard({
   protocol,
 }: {
   peptide: ReturnType<typeof getPeptideById> & { id: string; name: string };
-  protocol: ReturnType<typeof getProtocolsByPeptide>[number];
+  protocol: ReturnType<typeof getProtocolsForDisplay>[number];
 }) {
   const starter = intensityToDose(protocol, 'mild');
   const doseLabel = formatDoseAmount(starter.value, starter.unit);
@@ -1428,7 +1459,7 @@ function BeginnerAdvancedDoseCard({
   onPick,
 }: {
   peptideId: string;
-  protocol: ReturnType<typeof getProtocolsByPeptide>[number];
+  protocol: ReturnType<typeof getProtocolsForDisplay>[number];
   onPick: (intensity: 'mild' | 'aggressive') => void;
 }) {
   const beginner = intensityToDoseRange(protocol, 'mild');

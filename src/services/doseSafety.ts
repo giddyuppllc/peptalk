@@ -10,6 +10,7 @@ import { PROTOCOL_TEMPLATES } from '../data/protocols';
 import { getCanonicalDose } from '../data/canonicalDosing';
 import { PEPTIDES } from '../data/peptides';
 import { findPeptideByQuery } from '../lib/peptideSearch';
+import { isSafetyOnly } from '../data/safetyOnlyCompounds';
 
 export interface DoseSafetyResult {
   /** true = no issue, false = show confirmation to the user */
@@ -36,7 +37,7 @@ function toMcg(amount: number, unit: string): number {
  */
 function getTypicalRangeMcg(
   peptideIdOrName: string,
-): { minMcg: number; maxMcg: number; display: string } | null {
+): { minMcg: number; maxMcg: number; display: string | null } | null {
   const q = peptideIdOrName.trim().toLowerCase();
   if (!q) return null;
 
@@ -64,7 +65,13 @@ function getTypicalRangeMcg(
       return {
         minMcg: canonical.minMcg,
         maxMcg: canonical.maxMcg,
-        display: `${fmt(canonical.minMcg)}–${fmt(canonical.maxMcg)}`,
+        // `display` is the only part of this result that reaches a user's eyes.
+        // For a safety-information-only compound (Edward, 2026-09-16) it is
+        // withheld — see the note on `checkDoseSafety` below. The NUMBERS are
+        // still returned, so the guard itself is unchanged.
+        display: isSafetyOnly(peptide.id)
+          ? null
+          : `${fmt(canonical.minMcg)}–${fmt(canonical.maxMcg)}`,
       };
     }
   }
@@ -94,7 +101,9 @@ function getTypicalRangeMcg(
 
   const protocolMin = matchingProtocols[0].typicalDose.min;
   const protocolMax = matchingProtocols[matchingProtocols.length - 1].typicalDose.max;
-  const display = `${protocolMin}–${protocolMax} ${unit}`;
+  const display = peptide && isSafetyOnly(peptide.id)
+    ? null
+    : `${protocolMin}–${protocolMax} ${unit}`;
 
   return { minMcg, maxMcg, display };
 }
@@ -108,6 +117,22 @@ function getTypicalRangeMcg(
  *   - >3× the protocol max in a known peptide → unusually high
  *   - <1/10 of the protocol min → unusually low (probably a unit-mismatch typo)
  *   - Amount >10000 mcg with no matching peptide → likely mg/mcg confusion
+ *
+ * SAFETY-INFORMATION-ONLY COMPOUNDS (Edward, 2026-09-16)
+ * The guard is NOT switched off for them, and that is a deliberate choice.
+ * Suppressing it would be the worst of both worlds: the user can still log a
+ * dose of anything — logging is how the app records what actually happened, and
+ * refusing to guard that protects nobody — so a decimal-point error on hCG or
+ * MK-677 would go through silently, precisely on the compounds where PepTalk
+ * has decided it does not want to be casual.
+ *
+ * What changes is the MESSAGE. The stored range is still used to decide
+ * whether to warn; it is no longer printed back. A line reading "more than 3×
+ * the typical maximum (500–1000 IU)" hands the reader the recommended window
+ * inside a warning — it is a dose recommendation with a warning's framing, and
+ * it would put a number on screen for a compound Edward withdrew every number
+ * from. The remaining message names the amount the USER typed, which is their
+ * own input, not our suggestion.
  */
 export function checkDoseSafety(
   peptideIdOrName: string,
@@ -134,7 +159,11 @@ export function checkDoseSafety(
     return {
       safe: false,
       code: 'unusually_high',
-      message: `${amount} ${unit} is more than 3× the typical maximum for ${peptideIdOrName} (${range.display}). Verify the dose and unit before saving.`,
+      // Same sentence, with the recommended window omitted when it is
+      // withheld. Nothing else about the warning changes.
+      message: range.display
+        ? `${amount} ${unit} is more than 3× the typical maximum for ${peptideIdOrName} (${range.display}). Verify the dose and unit before saving.`
+        : `${amount} ${unit} is more than 3× the typical maximum for ${peptideIdOrName}. Verify the dose and unit before saving.`,
     };
   }
 
@@ -142,7 +171,9 @@ export function checkDoseSafety(
     return {
       safe: false,
       code: 'unusually_low',
-      message: `${amount} ${unit} is far below the typical range for ${peptideIdOrName} (${range.display}). This often means the unit is wrong (mg vs mcg). Save anyway?`,
+      message: range.display
+        ? `${amount} ${unit} is far below the typical range for ${peptideIdOrName} (${range.display}). This often means the unit is wrong (mg vs mcg). Save anyway?`
+        : `${amount} ${unit} is far below the typical range for ${peptideIdOrName}. This often means the unit is wrong (mg vs mcg). Save anyway?`,
     };
   }
 

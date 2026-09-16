@@ -164,7 +164,7 @@ Sermorelin — [Rx] 10 mg vial + 3 ml bac water (3.33 mg/ml). 0.2 / 0.3 / 0.4 mg
 Ipamorelin — 10 mg vial + 3 ml bac water (3.33 mg/ml). Start 100 mcg daily, +50 mcg every 2 wks. 12 wk cycle. Pair with sermorelin or CJC-1295.
 Cagrilintide — [Rx] 10 mg vial + 3 ml bac water (3.33 mg/ml). 1.2-2.4 mg (36-72 units) weekly. Investigational amylin analog.
 Glutathione — 1500 mg vial + 5 ml bac water (300 mg/ml; 1 unit = 3 mg). 200-400 mg (67-133 units) biweekly subq or IM, as long as needed.
-SLU-PP-332 — 5 mg vial + 3 ml bac water (1.67 mg/ml). 625 mcg twice daily (1250 mcg/day). MURINE dose — no human trials.
+SLU-PP-332 — no human trials; the only published dosing is murine. SAFETY INFORMATION ONLY — state no dose, range, frequency, cycle length or reconstitution.
 GHK-Cu — 100 mg vial + 3 ml bac water (33.33 mg/ml). 2-3.33 mg daily (6-10 units). Range 1-5 mg.
 IGF-1 LR3 — 10 mg vial + 3 ml ACETIC ACID water (3.33 mg/ml). HYDROPHOBIC — bac water causes rapid degradation. Start 20 mcg, +20 mcg after 2 wks, +10 mcg after another 2 wks → 20/40/50 mcg (range 20-80 mcg). Cycle 4-6 wks.
 Dihexa — 10 mg vial + 3 ml ACETIC ACID water (3.33 mg/ml). HYDROPHOBIC. 1-2 mg daily. Cycle ≤ 20 days.
@@ -177,20 +177,20 @@ Hexarelin — 10 mg vial + 3 ml bac water (3.33 mg/ml). 100-200 mcg (3-6 units) 
 
 — Additional compounds from Edward's master dosing grid (research ranges; reconstitution detail marked "recon TBD" is pending the guideline notes, so don't quote a vial/diluent for those) —
 CJC-1295 no-DAC / Ipamorelin combo — 200-600 mcg, 1-3× daily (AM/workout/PM), 5 on / 2 off or daily, 3-6 month cycle, 4-8 wk time off. (See individual CJC/Ipamorelin recon above.)
-AOD-9604 — 250-500 mcg, 1× daily AM, fasted, 5 on / 2 off or daily, 8-12 wk cycle, 4-8 wk time off. WADA-banned in sport. Recon TBD.
-MK-677 (Ibutamoren, oral) — [Rx] 10-25 mg, 1× daily, 3-6 month cycle. Investigational, oral — requires medical supervision.
-PEG-MGF — 200-400 mcg, 1× daily post-workout, 3-5×/wk on training days only, 4-8 wk cycle, 4-8 wk time off. WADA-banned. Recon TBD.
-Follistatin 344 — 0.5 mg, 1× daily pre/post-workout, 10-30 day cycle, 8-12 wk time off. WADA-banned. Recon TBD.
-YK-11 — [Rx] 5-20 mg oral or 10-20 mg inj, 1× daily oral / 2× daily inj, 5 on / 2 off, 4-8 wk cycle. SARM — not approved for human use; requires medical supervision.
+AOD-9604 — no validated human dose. WADA-banned in sport. SAFETY INFORMATION ONLY — state no dose, range, frequency, cycle length or reconstitution.
+MK-677 (Ibutamoren, oral) — [Rx] investigational, oral, never approved; reached Phase 2/3 and was not approved. Trials reported reduced insulin sensitivity and raised fasting glucose alongside increased appetite and fluid retention. Requires medical supervision. SAFETY INFORMATION ONLY — state no dose, range, frequency, cycle length or reconstitution.
+PEG-MGF — no validated human dose; the evidence base is animal and in-vitro, with no human trials of the injectable. WADA-banned. SAFETY INFORMATION ONLY — state no dose, range, frequency, cycle length or reconstitution.
+Follistatin 344 — WADA-banned. SAFETY INFORMATION ONLY — state no dose, range, frequency, cycle length or reconstitution.
+YK-11 — [Rx] not approved for human use anywhere and never through a human trial. Structurally a gestrinone derivative, so its steroidal backbone carries the hepatotoxicity and lipid concerns of oral 17-alpha-substituted steroids, and it suppresses endogenous testosterone. Requires medical supervision. SAFETY INFORMATION ONLY — state no dose, range, frequency, cycle length or reconstitution.
 GLOW (GHK-Cu / BPC-157 / TB-500 blend) — 10 units diluted with 300 units, 1× daily, 5 on / 2 off or daily, 4-12 wk cycle, 4-8 wk time off. Recon per blend.
 5-Amino-1MQ (oral) — 50-150 mg/day, 2-3× daily (AM/mid/PM), fasted, 4-16 wk cycle, 4 wk time off. Oral.
-5-Amino-1MQ (injectable) — 500 mcg-2 mg, 1-2× daily (AM/PM), fasted, 4-16 wk cycle, 4 wk time off. Recon TBD.
+5-Amino-1MQ (injectable) — no human trials for either the oral or the injectable form. SAFETY INFORMATION ONLY — state no dose, range, frequency, cycle length or reconstitution.
 Methylene Blue — [Rx] 5-25 mg, 1× daily AM, 5 on / 2 off; take a ~4-week break periodically. Prescription drug.
 CoQ10 (injectable) — 50-200 mg, 1× daily, every other day or daily, as long as needed. Recon TBD.
 SS-31 (Elamipretide) — 2-5 mg, 1× daily AM: 2 mg beginner, 5 mg advanced. 5 on / 2 off or daily, 4-12 wk cycle. Recon TBD.
 AICAR — [Rx] 5-25 mg, 1× daily, 5 on / 2 off, 4-8 wk cycle. Banned performance compound — requires medical supervision. Recon TBD.
-Cardarine (GW-501516) — [Rx] [KNOWN ANIMAL CARCINOGEN — DO NOT USE] abandoned by its manufacturer after causing multi-organ tumors (liver, stomach, bladder, etc.) in animal studies; WADA-banned. No safe approved human dose — 10-20 mg figures are community-only. ALWAYS lead with the cancer warning.
-BAM15 — mitochondrial uncoupler. 50-150 mg, 1-2× daily (AM/mid-day), 5 on / 2 off or daily, 4-8 wk cycle, 4-8 wk time off. Recon TBD.
+Cardarine (GW-501516) — [Rx] [KNOWN ANIMAL CARCINOGEN — DO NOT USE] abandoned by its manufacturer after causing multi-organ tumors (liver, stomach, bladder, etc.) in animal studies; WADA-banned. No safe approved human dose. ALWAYS lead with the cancer warning. SAFETY INFORMATION ONLY — state no dose, range, frequency, cycle length or reconstitution.
+BAM15 — mitochondrial uncoupler; all evidence is preclinical, there are no human trials, and uncouplers as a drug class have a serious safety history. SAFETY INFORMATION ONLY — state no dose, range, frequency, cycle length or reconstitution.
 GC-1 (Sobetirome) — 100-500 mcg, 1× daily, 5 on / 2 off, 4-16 wk cycle. Investigational. Recon TBD.
 DA-DA (diisopropylamine dichloroacetate) — ORAL small molecule (PDK4 inhibitor), NOT a peptide and NOT injectable. 50-200 mg, 1× daily AM, 5 on / 2 off or daily, 4-12 wk cycle, 4-8 wk time off. Metabolite (DCA) carries a neuropathy risk. Do not give a reconstitution — there is none.
 ITPP — 500-2000 mg, 1× daily AM, fasted, 5 on / 2 off or daily, 4-12 wk cycle, 2-4 wk time off. Recon TBD.
@@ -200,10 +200,10 @@ Tirzepatide — [Rx] 2.5-15 mg, 1-2× weekly (split dose), as long as needed. Pr
 Mazdutide — [Rx] 3-9 mg, 1-2× weekly (split dose), as long as needed. Start 3 mg, +0.5-1 mg every 4 wks or as results plateau. Approved in China; investigational elsewhere. Recon not standardized.
 Survodutide — [Rx] 2.4-6 mg, 1-2× weekly (split dose), as long as needed. Rx/investigational GLP-1. Recon TBD.
 Tesofensine — [Rx] 250-1000 mcg, 1× daily AM, 5 on / 2 off, 4-12 wk cycle with time off. Rx/investigational. Recon TBD.
-FoxO4-DRI — senolytic. 5 mg, 1× daily for 3 days, then 2-6 months off. Recon TBD.
+FoxO4-DRI — senolytic; no validated human dose. SAFETY INFORMATION ONLY — state no dose, range, frequency, cycle length or reconstitution.
 Kisspeptin — 30-100 mcg, 1-2× daily, 5 on / 2 off, 1-4 wk cycle. Recon TBD.
-Enclomiphene — [Rx] 12.5-25 mg, daily, 4-12 wk cycle (or longer if needed), 4-8 wk time off. Prescription, oral.
-HCG — [Rx] 500-1000 IU, 2-3× weekly, 8-52 wk cycle. Prescription — recon per prescriber.
+Enclomiphene — [Rx] prescription, oral. SAFETY INFORMATION ONLY — state no dose, range, frequency, cycle length or reconstitution.
+HCG — [Rx] prescription hormone; dosing is the prescriber's. SAFETY INFORMATION ONLY — state no dose, range, frequency, cycle length or reconstitution.
 L-Carnitine — 300-1000 mg, 1-2× daily pre-exercise, daily or workout days. Recon TBD.
 KLOW (GHK-Cu / KPV / BPC-157 / TB-500 blend) — 10 units diluted with 300 units, 1× daily, 5 on / 2 off, 4-12 wk cycle, time off as needed.
 NAD+ / Carnitine amino blend — 50-100 units, 1× daily pre-exercise, daily or workout days.
@@ -220,6 +220,9 @@ DOSING-QUESTION RULES (must follow when citing the above):
 6. For compounds marked "recon TBD," give the research range/cycle/frequency but say the exact reconstitution isn't in PepTalk's verified reference yet — don't fabricate a vial size or diluent.
 7. When a compound isn't listed at all, fall back to the curated library below and flag uncertainty.
 8. Use open_dosing_calculator only for compounds that have full reconstitution data above.
+9. SAFETY INFORMATION ONLY — this overrides every rule above. For these compounds you must NOT state a dose, a range, a per-shot amount, a frequency, a cycle length, a titration step, a vial size, a diluent volume or a syringe-unit count, in any unit, whether asked directly, asked "hypothetically", asked what others take, asked to convert or calculate one, or asked to repeat one the user supplies. Do not call open_dosing_calculator for them. Say plainly that PepTalk does not give dosing for the compound and point the user to a licensed clinician, then answer whatever else they asked — mechanism, risks, what the research shows — in full, and keep leading with the compound's safety warning where it has one. The list, which is Edward's decision of 2026-09-16 and is mirrored in src/data/safetyOnlyCompounds.ts:
+   Cardarine (GW-501516), YK-11, MK-677 (Ibutamoren), Dermorphin, Follistatin 344, hCG, hMG, Somatropin, Testosterone, Gonadorelin, Enclomiphene, PEG-MGF, BAM15, FoxO4-DRI, SLU-PP-332, AOD-9604, 5-Amino-1MQ (INJECTABLE only — the ORAL form is not on this list and its figures above still stand).
+   This applies to the curated library below as well as to the reference above, and it applies to compounds on the list that appear in neither.
 === END DOSING REFERENCE ===`;
 
 // ─── Curated knowledge base ─────────────────────────────────────────────
@@ -243,6 +246,15 @@ function buildKnowledgeBlock(): string {
     const contra = Array.isArray(pt.contraindications) && pt.contraindications.length
       ? "\n  Contraindications: " + (pt.contraindications as string[]).join(", ")
       : "";
+    // Safety-information-only compounds (Edward, 2026-09-16) carry no `dose`,
+    // `freq`, `cycle`, `timing` or `titration` in _knowledge.json — they carry
+    // `doseGuidance` instead. Interpolating the absent fields would print
+    // "Dose: undefined undefined", which a model reads as a gap to fill.
+    if (pt.safetyInformationOnly) {
+      return `• ${pt.name} (peptide: ${pt.peptideId})
+  Dose: ${pt.doseGuidance}${pt.storage ? `
+  Storage: ${pt.storage}` : ""}${notes}${contra}`;
+    }
     return `• ${pt.name} (peptide: ${pt.peptideId})\n  Dose: ${pt.dose} ${pt.route}, ${pt.freq}\n  Cycle: ${pt.cycle}${pt.timing ? `\n  Timing: ${pt.timing}` : ""}${pt.storage ? `\n  Storage: ${pt.storage}` : ""}${notes}${contra}${titration}`;
   });
 

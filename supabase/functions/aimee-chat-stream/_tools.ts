@@ -29,6 +29,7 @@
  */
 
 import type { GrokTool } from './_grok.ts';
+import { isSafetyOnly } from '../_shared/safetyOnlyCompounds.ts';
 
 // ─── Tool definitions exposed to Grok ─────────────────────────────────────
 
@@ -901,6 +902,27 @@ export function execScheduleWorkout(
 export function execOpenDosingCalculator(
   input: Record<string, unknown>,
 ): Record<string, unknown> {
+  // Safety-information-only compounds (Edward, 2026-09-16). The dose, vial and
+  // diluent figures on this call come from the MODEL, not from a data file, so
+  // this is the one place the suppression can be enforced rather than asked
+  // for: prompt rule 9 tells Aimee not to make the call, and this refuses it if
+  // she does anyway. Deep-linking the calculator pre-filled with doseMcg would
+  // put a suggested dose on screen by the back door.
+  const requestedId =
+    typeof input.peptideId === 'string'
+      ? input.peptideId
+      : typeof input.peptideName === 'string'
+        ? input.peptideName
+        : '';
+  if (isSafetyOnly(requestedId)) {
+    return {
+      ok: false,
+      error: 'safety_information_only',
+      message:
+        'PepTalk does not provide dosing for this compound. Do not state a dose, range, frequency or reconstitution for it; point the user to a licensed clinician.',
+    };
+  }
+
   const params = new URLSearchParams();
   // v3 calculator at /doses/calculator reads `peptideId`, `doseMcg`,
   // `vialMg`, `waterMl` from query params. Old /calculators/dosing was

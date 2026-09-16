@@ -11,6 +11,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { PEPTIDES } from "../src/data/peptides";
 import { PROTOCOL_TEMPLATES } from "../src/data/protocols";
+import { isSafetyOnly } from "../src/data/safetyOnlyCompounds";
+import { redactDoseBearingNotes } from "../src/data/dosingDisplay";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
@@ -37,25 +39,57 @@ const peptideRows = PEPTIDES
 const trim = (s: string | undefined, n = 140) =>
   s && s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s;
 
-const protocolRows = PROTOCOL_TEMPLATES.map((pt) => ({
-  peptideId: pt.peptideId,
-  name: pt.name,
-  dose: `${pt.typicalDose.min}-${pt.typicalDose.max} ${pt.typicalDose.unit}`,
-  route: pt.route,
-  freq: pt.frequencyLabel ?? pt.frequency,
-  cycle: `${pt.durationWeeks.min}-${pt.durationWeeks.max} weeks`,
-  timing: trim(pt.timing, 80),
-  storage: trim(pt.storageNotes, 80),
-  // First 2 important notes only — Aimee can refer user to full guide for more
-  notes: pt.importantNotes?.slice(0, 2).map((n) => trim(n, 100)),
-  contraindications: pt.contraindications,
-  // Titration: keep as-is (it's already structured + critical for GLP-1s)
-  titration: pt.titrationSchedule?.map((t) => ({
-    weeks: t.weekEnd ? `${t.weekStart}-${t.weekEnd}` : `${t.weekStart}+`,
-    dose: `${t.dose} ${t.unit}`,
-    freq: t.frequencyLabel ?? t.frequency,
-  })),
-}));
+// Safety-information-only compounds (Edward, 2026-09-16) keep their ROW —
+// name, storage, contraindications, and every note that carries no figure —
+// and lose `dose`, `freq`, `cycle`, `timing` and `titration`. The row has to
+// stay for two reasons: the staleness guard in clinicianRulings.test.ts holds
+// this file's protocol count to PROTOCOL_TEMPLATES, and deleting the row would
+// leave Aimee answering about the compound from general training knowledge
+// instead of from a curated entry that tells her to state no dose.
+//
+// `notes` is filtered rather than dropped: hCG's first two notes are
+// "LH-mimetic — preserves testicular function" (safety, kept) and "Common
+// TRT-adjunct dose: 250-500 IU 2-3× per week" (a dose, dropped). The slice to
+// two happens AFTER the filter so a dropped note does not cost a kept one.
+const protocolRows = PROTOCOL_TEMPLATES.map((pt) => {
+  const notes = redactDoseBearingNotes(pt.peptideId, pt.importantNotes)
+    .slice(0, 2)
+    .map((n) => trim(n, 100));
+
+  if (isSafetyOnly(pt.peptideId)) {
+    return {
+      peptideId: pt.peptideId,
+      name: pt.name,
+      safetyInformationOnly: true as const,
+      doseGuidance:
+        "SAFETY INFORMATION ONLY - state no dose, range, frequency, cycle length or reconstitution for this compound. Direct the user to their prescriber.",
+      route: pt.route,
+      storage: trim(pt.storageNotes, 80),
+      notes,
+      contraindications: pt.contraindications,
+    };
+  }
+
+  return {
+    peptideId: pt.peptideId,
+    name: pt.name,
+    dose: `${pt.typicalDose.min}-${pt.typicalDose.max} ${pt.typicalDose.unit}`,
+    route: pt.route,
+    freq: pt.frequencyLabel ?? pt.frequency,
+    cycle: `${pt.durationWeeks.min}-${pt.durationWeeks.max} weeks`,
+    timing: trim(pt.timing, 80),
+    storage: trim(pt.storageNotes, 80),
+    // First 2 important notes only — Aimee can refer user to full guide for more
+    notes,
+    contraindications: pt.contraindications,
+    // Titration: keep as-is (it's already structured + critical for GLP-1s)
+    titration: pt.titrationSchedule?.map((t) => ({
+      weeks: t.weekEnd ? `${t.weekStart}-${t.weekEnd}` : `${t.weekStart}+`,
+      dose: `${t.dose} ${t.unit}`,
+      freq: t.frequencyLabel ?? t.frequency,
+    })),
+  };
+});
 
 const out = {
   generatedAt: new Date().toISOString(),

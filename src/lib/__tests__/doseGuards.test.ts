@@ -107,7 +107,25 @@ describe('the range shown to the user', () => {
   });
 
   it('renders at or above 1000 mcg as mg', () => {
-    expect(rangeOf('MK-677')).toBe('10 mg–25 mg');
+    // Was MK-677 until 2026-09-16, when it became a safety-information-only
+    // compound and stopped printing a range at all (see the test below).
+    // Methylene Blue exercises the same whole-mg branch.
+    expect(rangeOf('Methylene Blue')).toBe('5 mg–25 mg');
+  });
+
+  /**
+   * Safety-information-only compounds (Edward, 2026-09-16): the guard still
+   * FIRES, it just stops naming the recommended window. Both halves matter —
+   * a test that only checked the range was gone would pass just as happily if
+   * the guard had been switched off. See src/data/safetyOnlyCompounds.ts.
+   */
+  it('withholds the range for a safety-information-only compound, but still warns', () => {
+    const result = checkDoseSafety('MK-677', 99999, 'mg');
+    expect(result.safe).toBe(false);
+    expect(result.code).toBe('unusually_high');
+    expect(rangeOf('MK-677')).toBe('');
+    expect(result.message).not.toContain('10 mg');
+    expect(result.message).not.toContain('25 mg');
   });
 
   it('switches units mid-range at the 1000 mcg boundary', () => {

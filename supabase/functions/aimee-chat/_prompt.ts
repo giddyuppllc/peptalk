@@ -184,6 +184,15 @@ function buildKnowledgeBlock(): string {
     const contra = Array.isArray(pt.contraindications) && pt.contraindications.length
       ? "\n  Contraindications: " + (pt.contraindications as string[]).join(", ")
       : "";
+    // Safety-information-only compounds (Edward, 2026-09-16) carry no `dose`,
+    // `freq`, `cycle`, `timing` or `titration` in _knowledge.json — they carry
+    // `doseGuidance` instead. Interpolating the absent fields would print
+    // "Dose: undefined undefined", which a model reads as a gap to fill.
+    if (pt.safetyInformationOnly) {
+      return `• ${pt.name} (peptide: ${pt.peptideId})
+  Dose: ${pt.doseGuidance}${pt.storage ? `
+  Storage: ${pt.storage}` : ""}${notes}${contra}`;
+    }
     return `• ${pt.name} (peptide: ${pt.peptideId})\n  Dose: ${pt.dose} ${pt.route}, ${pt.freq}\n  Cycle: ${pt.cycle}${pt.timing ? `\n  Timing: ${pt.timing}` : ""}${pt.storage ? `\n  Storage: ${pt.storage}` : ""}${notes}${contra}${titration}`;
   });
 

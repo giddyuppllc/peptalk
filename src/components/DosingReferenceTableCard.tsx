@@ -2,12 +2,12 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from './GlassCard';
+import { PEPTIDE_DOSING_TABLE_DISCLAIMER } from '../data/peptideDosingTable';
 import {
-  getDosingTableEntry,
-  PEPTIDE_DOSING_TABLE_DISCLAIMER,
-} from '../data/peptideDosingTable';
-import { getDosingReference } from '../data/peptideDosingReference';
-import { getProtocolsByPeptide } from '../data/protocols';
+  getDosingTableEntryForDisplay,
+  getDosingReferenceForDisplay,
+  getProtocolsForDisplay,
+} from '../data/dosingDisplay';
 import {
   unitRangeForDose,
   reconstitutionNote,
@@ -25,7 +25,10 @@ import { normalizeDoseRange, roundDoseFiguresInText } from '../lib/doseUnits';
  * nothing when the peptide has no table entry.
  */
 export function DosingReferenceTableCard({ peptideId }: { peptideId: string }) {
-  const entry = getDosingTableEntry(peptideId);
+  // Null for a safety-information-only compound (Edward, 2026-09-16), so the
+  // whole card — range, cycle, frequency, time-off, titration prose — does not
+  // render. The stored row is untouched; see src/data/dosingDisplay.ts.
+  const entry = getDosingTableEntryForDisplay(peptideId);
   if (!entry) return null;
 
   /**
@@ -39,8 +42,8 @@ export function DosingReferenceTableCard({ peptideId }: { peptideId: string }) {
    * the reconstitution it assumes. A tick count without the vial it came from
    * is a confident wrong number for anyone who mixed theirs differently.
    */
-  const ref = getDosingReference(peptideId);
-  const protocol = getProtocolsByPeptide(peptideId)[0];
+  const ref = getDosingReferenceForDisplay(peptideId);
+  const protocol = getProtocolsForDisplay(peptideId)[0];
   const syringe = (() => {
     if (!ref?.mgPerMl || !protocol?.typicalDose) return null;
     const dose = normalizeDoseRange(
