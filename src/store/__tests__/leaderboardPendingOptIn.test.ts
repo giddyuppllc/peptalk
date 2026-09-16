@@ -10,7 +10,11 @@
  * RACE: loadOptIn ran on mount and set whatever came back. A toggle made while
  * that read was out was overwritten by it — the switch showed OFF while the
  * user was still publicly ranked.
+ *
+ * jest.mock calls below are hoisted above this import by babel-jest.
  */
+import { useLeaderboardStore } from '../useLeaderboardStore';
+
 const mockSave = jest.fn();
 const mockFetchOptIn = jest.fn();
 const mockFetchEmail = jest.fn();
@@ -34,8 +38,6 @@ jest.mock('../../services/secureStorage', () => ({
     removeItem: jest.fn().mockResolvedValue(undefined),
   },
 }));
-
-import { useLeaderboardStore } from '../useLeaderboardStore';
 
 const store = () => useLeaderboardStore.getState();
 

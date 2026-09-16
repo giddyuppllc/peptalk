@@ -8,7 +8,16 @@
  * user they were off it while they stayed publicly ranked, and the switch then
  * rendered the state the server had refused. Only reading the stored value
  * back distinguishes the two.
+ *
+ * jest.mock calls below are hoisted above these imports by babel-jest.
  */
+import {
+  fetchCurrentAccountEmail,
+  fetchLeaderboardOptIn,
+  normalizeAccountEmail,
+  saveLeaderboardOptIn,
+} from '../leaderboardService';
+
 const mockGetUser = jest.fn();
 const mockMaybeSingleSelect = jest.fn();
 const mockUpdateSelect = jest.fn();
@@ -32,13 +41,6 @@ jest.mock('../supabase', () => ({
 }));
 
 jest.mock('../telemetry', () => ({ captureException: jest.fn() }));
-
-import {
-  fetchCurrentAccountEmail,
-  fetchLeaderboardOptIn,
-  normalizeAccountEmail,
-  saveLeaderboardOptIn,
-} from '../leaderboardService';
 
 beforeEach(() => {
   jest.clearAllMocks();

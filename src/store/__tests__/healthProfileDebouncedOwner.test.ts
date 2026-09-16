@@ -6,7 +6,15 @@
  * always writes for the LIVE session. Without the owner travelling with the
  * payload, syncHealthProfile has nothing to compare and files user A's
  * medical history under user B's user_id.
+ *
+ * jest.mock calls below are hoisted above these imports by babel-jest.
  */
+import {
+  useHealthProfileStore,
+  abandonInflightServerProfile,
+  syncHealthProfileFromServer,
+} from '../useHealthProfileStore';
+
 const mockSyncHealthProfile = jest.fn().mockResolvedValue(true);
 
 jest.mock('../../services/syncService', () => ({
@@ -26,12 +34,6 @@ jest.mock('../../services/secureStorage', () => ({
     removeItem: jest.fn().mockResolvedValue(undefined),
   },
 }));
-
-import {
-  useHealthProfileStore,
-  abandonInflightServerProfile,
-  syncHealthProfileFromServer,
-} from '../useHealthProfileStore';
 
 /** A whole profile row, as the server stores it — "server wins" replaces it all. */
 let serverRow: unknown;

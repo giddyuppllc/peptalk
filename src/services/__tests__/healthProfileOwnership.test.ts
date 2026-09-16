@@ -10,7 +10,10 @@
  * `profile` JSON with A's medical history, medications and allergies.
  *
  * The caller names the owner; a session that has moved on makes this refuse.
+ *
+ * jest.mock calls below are hoisted above this import by babel-jest.
  */
+import { syncHealthProfile } from '../syncService';
 
 const mockGetSession = jest.fn();
 const mockUpsert = jest.fn();
@@ -21,8 +24,6 @@ jest.mock('../supabase', () => ({
     from: () => ({ upsert: (...a: unknown[]) => mockUpsert(...a) }),
   },
 }));
-
-import { syncHealthProfile } from '../syncService';
 
 const profile = { medical: { medications: ['semaglutide'], allergies: ['penicillin'] } };
 
