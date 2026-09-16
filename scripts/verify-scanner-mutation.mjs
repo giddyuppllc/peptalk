@@ -40,6 +40,21 @@ const TARGETS = [
     break: (s) => s.replace(/globSync\((['"`])/g, 'globSync($1__no_such_dir__/'),
   },
   {
+    file: 'scripts/verify-ai-consent.mjs',
+    // The client scan walks app/ and src/ for .ts/.tsx. Break the extension
+    // filter, not the directory: a missing directory THROWS, which proves only
+    // that node crashes. An empty corpus is what a wrong cwd produces.
+    break: (s) => s.split('tsx?$').join('__no_such_ext__$'),
+  },
+  {
+    file: 'scripts/verify-apple-billing-strings.mjs',
+    // Same shape: `git ls-files` succeeds and the extension filter yields
+    // nothing, so the scan reads zero files rather than failing to run.
+    // Both halves of the filter, or the .tsx files alone keep the corpus full.
+    break: (s) =>
+      s.split("f.endsWith('.ts') || f.endsWith('.tsx')").join("f.endsWith('.__no_such_ext__')"),
+  },
+  {
     file: 'scripts/verify-onconflict.mjs',
     // Break the source-file extension filter: the walk succeeds over the real
     // tree and yields no onConflict targets, as a wrong cwd would.

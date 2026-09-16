@@ -98,7 +98,7 @@ const server = parseRegistry(SERVER_REGISTRY);
   if (client.required.sort().join(',') !== server.required.sort().join(',')) {
     fail('registry drift: CONSENT_REQUIRED_FUNCTIONS differ between client and server');
   }
-  if (cKeys.length < 8) fail(`registry holds only ${cKeys.length} functions — expected the full AI surface`);
+  if (cKeys.length < 8) fail(`SELF-CHECK FAILED — registry holds only ${cKeys.length} functions; expected the full AI surface`);
 }
 
 const REGISTRY = server.fields;
@@ -121,7 +121,7 @@ const AMBIENT_HEALTH_FIELDS = new Set(
   Object.values(REGISTRY).flat().filter((f) => !CONTEXT_DEPENDENT.has(f)),
 );
 if (AMBIENT_HEALTH_FIELDS.size < 4) {
-  fail(`only ${AMBIENT_HEALTH_FIELDS.size} unambiguous health field names — the cross-function leak check would be toothless`);
+  fail(`SELF-CHECK FAILED — only ${AMBIENT_HEALTH_FIELDS.size} unambiguous health field names; the cross-function leak check would be toothless`);
 }
 
 // 2. no unregistered AI function
@@ -248,7 +248,7 @@ export function analyseClientSource(rel, rawSrc) {
   }
   // Self-check floor: the scanner reading nothing must not look like a pass.
   if (siteCount < 9) {
-    fail(`only ${siteCount} client call sites found for registered AI functions (floor 9) — the scanner is not reading the code`);
+    fail(`SELF-CHECK FAILED — only ${siteCount} client call sites found for registered AI functions (floor 9); the scanner is not reading the code`);
   } else {
     notes.push(`${siteCount} client call sites inspected`);
   }
@@ -283,7 +283,7 @@ export function analyseServerSource(fn, rawSrc, isRequired) {
     checked++;
     analyseServerSource(fn, fs.readFileSync(abs, 'utf8'), REQUIRED.has(fn)).forEach(fail);
   }
-  if (checked < 7) fail(`only ${checked} edge functions checked (floor 7) — the registry shrank or the scan broke`);
+  if (checked < 7) fail(`SELF-CHECK FAILED — only ${checked} edge functions checked (floor 7); the registry shrank or the scan broke`);
   else notes.push(`${checked} edge functions inspected`);
 }
 
