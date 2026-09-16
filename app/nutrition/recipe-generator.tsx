@@ -47,6 +47,24 @@ const MEAL_TYPE_OPTIONS = [
   { key: 'post_workout', label: 'Post-Workout' },
 ];
 
+/**
+ * The "recipes below are the built-in set, not Aimee's" notice.
+ *
+ * The title is written. The body is not, and inventing user-facing wording is
+ * not this file's job, so the notice does not render until the constant below
+ * holds Edward's sentence. What shipped before was a box with an icon, a
+ * heading and an empty space where the explanation should be — a reviewer
+ * reads that as an unfinished screen, and a user reads it as an error with no
+ * error in it.
+ *
+ * TO FINISH: put the sentence in AI_UNAVAILABLE_BODY. Nothing else changes —
+ * the notice, its styles and its accessibilityRole are all already here, and
+ * a test asserts the title is untouched and that an empty body renders nothing.
+ */
+const AI_UNAVAILABLE_TITLE = 'Aimee unavailable';
+/** Edward's copy goes here. While it is empty the notice is not rendered. */
+const AI_UNAVAILABLE_BODY: string = '';
+
 // ---------------------------------------------------------------------------
 // Generated Recipe Card
 // ---------------------------------------------------------------------------
@@ -527,18 +545,21 @@ export default function RecipeGeneratorScreen() {
         </View>
 
         {/* AI fallback notice — shown when the recipes below are the built-in
-            set, not Aimee's. The title reuses this screen's existing
-            "Aimee unavailable" wording. */}
-        {aiUnavailable && !loading && (
+            set, not Aimee's. Hidden entirely until AI_UNAVAILABLE_BODY has
+            Edward's sentence in it: the box rendered an icon, a heading and
+            nothing else, which reads to a reviewer as a half-finished screen.
+            The title is already written and does not change when the body
+            arrives — only the constant above needs filling in. */}
+        {aiUnavailable && !loading && AI_UNAVAILABLE_BODY.length > 0 && (
           <View
             style={[styles.unavailableNotice, { borderColor: t.cardBorder, backgroundColor: t.card }]}
             accessibilityRole="alert"
           >
             <Ionicons name="cloud-offline-outline" size={18} color={t.textSecondary} />
-            <Text style={[styles.unavailableTitle, { color: t.text }]}>Aimee unavailable</Text>
-            {/* TODO(Edward): body copy for this notice — e.g. that these are
-                built-in recipes and to try again later. Left blank on purpose
-                rather than inventing user-facing wording. */}
+            <Text style={[styles.unavailableTitle, { color: t.text }]}>{AI_UNAVAILABLE_TITLE}</Text>
+            <Text style={[styles.unavailableBody, { color: t.textSecondary }]}>
+              {AI_UNAVAILABLE_BODY}
+            </Text>
           </View>
         )}
 
@@ -646,6 +667,11 @@ const styles = StyleSheet.create({
   unavailableTitle: {
     fontSize: FontSizes.sm,
     fontWeight: '700',
+  },
+  unavailableBody: {
+    fontSize: FontSizes.sm,
+    lineHeight: 18,
+    flexShrink: 1,
   },
 
   // Targets

@@ -125,22 +125,25 @@ export function DosingReferenceTableCard({ peptideId }: { peptideId: string }) {
         </View>
       )}
 
-      {/* Titration strategy — the source table links to a separate
-          "Click For Notes [n]" page. The prose isn't ingested yet, so we
-          show the note reference + a pending hint rather than guessing. */}
-      <View style={styles.titrationBlock}>
-        <View style={styles.rowLabelWrap}>
-          <Ionicons name="trending-up-outline" size={14} color="#6B7280" />
-          <Text style={styles.rowLabel}>Titration strategy</Text>
-        </View>
-        {entry.titrationNote ? (
+      {/* Titration strategy. When there is no note the whole block is hidden,
+          heading included.
+
+          It used to render "Detailed titration notes (ref [n]) coming soon."
+          — a promise, on a dosing surface, with a reference number the reader
+          cannot look up. The master table's Notes [1..63] are all ingested now
+          (peptideDosingTable.ts), but an entry DERIVED from a protocol takes
+          its note from protocol.importantNotes[0], which is often undefined,
+          so this branch is live. Showing nothing is the honest state: the
+          dosing rows above and the disclaimer below are unaffected. */}
+      {entry.titrationNote ? (
+        <View style={styles.titrationBlock}>
+          <View style={styles.rowLabelWrap}>
+            <Ionicons name="trending-up-outline" size={14} color="#6B7280" />
+            <Text style={styles.rowLabel}>Titration strategy</Text>
+          </View>
           <Text style={styles.titrationText}>{entry.titrationNote}</Text>
-        ) : (
-          <Text style={styles.titrationPending}>
-            Detailed titration notes (ref [{entry.titrationNoteRef}]) coming soon.
-          </Text>
-        )}
-      </View>
+        </View>
+      ) : null}
 
       <Text style={styles.disclaimer}>{PEPTIDE_DOSING_TABLE_DISCLAIMER}</Text>
     </GlassCard>
@@ -173,13 +176,6 @@ const styles = StyleSheet.create({
   fastedPillText: { fontSize: 12, fontWeight: '700' },
   titrationBlock: { marginTop: 12 },
   titrationText: { fontSize: 13, lineHeight: 19, color: '#2D2D2D', marginTop: 6 },
-  titrationPending: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#6B7280',
-    fontStyle: 'italic',
-    marginTop: 6,
-  },
   disclaimer: {
     fontSize: 11,
     lineHeight: 16,
