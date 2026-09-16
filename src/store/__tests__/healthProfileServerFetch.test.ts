@@ -9,15 +9,21 @@
  */
 import {
   useHealthProfileStore,
+  abandonInflightServerProfile,
+  healthProfileOwnerId,
   syncHealthProfileFromServer as realSync,
 } from '../useHealthProfileStore';
 
 const mockGetUser = jest.fn();
+const mockGetSession = jest.fn();
 const mockMaybeSingle = jest.fn();
 
 const client = {
   supabase: {
-    auth: { getUser: (...a: unknown[]) => mockGetUser(...a) },
+    auth: {
+      getUser: (...a: unknown[]) => mockGetUser(...a),
+      getSession: (...a: unknown[]) => mockGetSession(...a),
+    },
     from: () => ({
       select: () => ({
         eq: () => ({ maybeSingle: (...a: unknown[]) => mockMaybeSingle(...a) }),
@@ -25,7 +31,12 @@ const client = {
     }),
   },
 };
-const syncHealthProfileFromServer = () => realSync(async () => client);
+const syncHealthProfileFromServer = (userId: string | null = 'user-a') =>
+  realSync(userId, async () => client);
+
+/** Who the local session says is signed in, as the store's live check reads it. */
+const signedInAs = (id: string | null) =>
+  mockGetSession.mockResolvedValue({ data: { session: id ? { user: { id } } : null }, error: null });
 
 jest.mock('../../services/syncService', () => ({
   syncHealthProfile: jest.fn().mockResolvedValue(true),
@@ -50,7 +61,9 @@ const row = { bodyMetrics: { weightLbs: 170 }, onboarding: { version: 1 } };
 beforeEach(() => {
   jest.clearAllMocks();
   useHealthProfileStore.getState().resetProfile();
+  abandonInflightServerProfile();
   mockGetUser.mockResolvedValue({ data: { user: { id: 'user-a' } }, error: null });
+  signedInAs('user-a');
   mockMaybeSingle.mockResolvedValue({ data: { profile: row, current_step: 2 }, error: null });
 });
 
@@ -89,19 +102,93 @@ describe('syncHealthProfileFromServer', () => {
     await expect(syncHealthProfileFromServer()).resolves.toEqual({ status: 'error' });
   });
 
-  it('concurrent callers share one request', async () => {
+  it('concurrent callers FOR THE SAME ACCOUNT share one request', async () => {
     const results = await Promise.all([
-      syncHealthProfileFromServer(),
-      syncHealthProfileFromServer(),
-      syncHealthProfileFromServer(),
+      syncHealthProfileFromServer('user-a'),
+      syncHealthProfileFromServer('user-a'),
+      syncHealthProfileFromServer('user-a'),
     ]);
     expect(mockMaybeSingle).toHaveBeenCalledTimes(1);
     expect(results.every((r) => r.status === 'ok')).toBe(true);
   });
 
+  it('a DIFFERENT account never inherits the in-flight request', async () => {
+    // A's fetch is still out. B asks. Sharing here is what put A's profile in
+    // front of B, so B must get a request of its own.
+    let releaseA!: (v: unknown) => void;
+    mockMaybeSingle.mockReturnValueOnce(new Promise((r) => (releaseA = r)));
+    const a = syncHealthProfileFromServer('user-a');
+
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-b' } }, error: null });
+    signedInAs('user-b');
+    mockMaybeSingle.mockResolvedValue({ data: { profile: { bodyMetrics: { weightLbs: 210 } } }, error: null });
+    const b = await syncHealthProfileFromServer('user-b');
+
+    expect(b).toEqual({ status: 'ok', userId: 'user-b', profile: { bodyMetrics: { weightLbs: 210 } } });
+    releaseA({ data: { profile: row }, error: null });
+    await a;
+    expect(mockMaybeSingle).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not write A's profile into B's store when the session changed mid-fetch", async () => {
+    // The exact sequence: A's fetch hangs, A signs out, B signs in, and A's
+    // answer finally lands. It must reach nothing.
+    let release!: (v: unknown) => void;
+    mockMaybeSingle.mockReturnValueOnce(new Promise((r) => (release = r)));
+    const pending = syncHealthProfileFromServer('user-a');
+
+    const untouched = useHealthProfileStore.getState().profile;
+    signedInAs('user-b'); // A signed out, B signed in
+    release({ data: { profile: row, current_step: 2 }, error: null });
+
+    await expect(pending).resolves.toEqual({ status: 'ok', userId: 'user-a', profile: row });
+    expect(useHealthProfileStore.getState().profile).toBe(untouched);
+    expect(healthProfileOwnerId()).toBeNull();
+  });
+
+  it('a late reply to a timed-out fetch writes nothing once the session moved on', async () => {
+    // withTimeout abandons the request rather than aborting it, so the reply
+    // still arrives. Its lateness is not what makes it safe — this check is.
+    let release!: (v: unknown) => void;
+    mockMaybeSingle.mockReturnValueOnce(new Promise((r) => (release = r)));
+    const pending = syncHealthProfileFromServer('user-a');
+    const untouched = useHealthProfileStore.getState().profile;
+
+    signedInAs(null); // signed out while the request was abandoned
+    release({ data: { profile: row }, error: null });
+    await pending;
+
+    expect(useHealthProfileStore.getState().profile).toBe(untouched);
+  });
+
+  it('records the account a row was read for, so the debounced upsert can name it', async () => {
+    await syncHealthProfileFromServer('user-a');
+    expect(healthProfileOwnerId()).toBe('user-a');
+    useHealthProfileStore.getState().resetProfile();
+    expect(healthProfileOwnerId()).toBeNull();
+  });
+
+  it('a caller that names no account gets nothing applied when the session is unreadable', async () => {
+    mockGetSession.mockRejectedValue(new Error('storage gone'));
+    const untouched = useHealthProfileStore.getState().profile;
+    await syncHealthProfileFromServer(null);
+    expect(useHealthProfileStore.getState().profile).toBe(untouched);
+  });
+
   it('asks again once the previous request has finished', async () => {
     await syncHealthProfileFromServer();
     await syncHealthProfileFromServer();
+    expect(mockMaybeSingle).toHaveBeenCalledTimes(2);
+  });
+
+  it('abandoning the shared request makes the next caller start a new one', async () => {
+    let release!: (v: unknown) => void;
+    mockMaybeSingle.mockReturnValueOnce(new Promise((r) => (release = r)));
+    const first = syncHealthProfileFromServer('user-a');
+    abandonInflightServerProfile(); // sign-out / device wipe
+    const second = syncHealthProfileFromServer('user-a');
+    release({ data: { profile: row }, error: null });
+    await Promise.all([first, second]);
     expect(mockMaybeSingle).toHaveBeenCalledTimes(2);
   });
 });

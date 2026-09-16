@@ -555,9 +555,11 @@ function RootLayout() {
         captureException(err, { source: 'boot.subscription.syncFromServer' });
       });
 
-    // Pull health profile from server (overwrites local on login)
+    // Pull health profile from server (overwrites local on login).
+    // The account is named, and read at call time rather than closed over, so
+    // the fetch can refuse to apply a row the session has moved on from.
     try {
-      syncHealthProfileFromServer()?.catch?.((err: unknown) => {
+      syncHealthProfileFromServer(useAuthStore.getState().user?.id ?? null)?.catch?.((err: unknown) => {
         if (__DEV__) console.warn('[boot] syncHealthProfileFromServer failed:', err);
       });
     } catch (err) {
@@ -1131,7 +1133,7 @@ function RootLayout() {
       // fresh signup or device-switch picks up server state. Previously
       // only ran at boot, leaving signup users with empty health profiles
       // until the next cold launch.
-      syncHealthProfileFromServer()?.catch?.((err: unknown) => {
+      syncHealthProfileFromServer(useAuthStore.getState().user?.id ?? null)?.catch?.((err: unknown) => {
         if (__DEV__) console.warn('[auth] syncHealthProfileFromServer failed:', err);
       });
       fetchWorkoutOverrides()?.catch?.(() => {});
