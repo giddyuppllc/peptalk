@@ -20,8 +20,39 @@ Do the sections in order. A later section depends on the one before it.
 - [ ] Re-run the net on the exact commit you will ship. Every command must
       exit 0:
       `npx tsc --noEmit && npm run lint:ci && npx jest && npm run verify:all`
-      `npm run verify:restoremutants` (34 mutants, about 15 minutes)
-      `npm run test:leaderboard-sql` (needs Docker)
+
+      **`verify:all` grew on 2026-09-16 and now takes ~20 minutes.** It ends
+      with `verify:vacuous`, `check:migrations:self-test`,
+      `test:leaderboard-sql:ci` and `verify:restoremutants` — the last of
+      which is 34 mutants and about 15 of those minutes. They were all
+      outside the chain, which meant the only thing running them was somebody
+      remembering to.
+
+      - `verify:vacuous` used to print its verdict and exit 0 even for a
+        scanner that passes over an empty corpus. It exits non-zero now,
+        INCONCLUSIVE included.
+      - `test:leaderboard-sql:ci` needs Docker. Without it: loud SKIPPED
+        banner and exit 0 locally, exit **1** under `CI`. Set
+        `LEADERBOARD_SQL_OPTIONAL=1` to opt out on purpose — it still prints
+        the banner. **Decide** whether the CI job gets a Docker service or
+        the opt-out; until one of those, CI will fail on this step.
+      - `verify:version` now fails on an untagged or unpushed HEAD (below).
+- [ ] **`verify:version` will fail on this branch until you tag and push.**
+      It only ever compared `app.json` against the latest `v*` tag, and with
+      no tags at all it printed "no release tags to compare against yet" and
+      exited 0 — the state of a fresh clone. It now also requires HEAD to
+      carry `v<expo.version>` and to exist on a remote, which is precisely
+      the 1.10.0 (75) failure CLAUDE.md records: a rejected binary that
+      corresponded to no commit.
+
+      Right now it reports `HEAD is not tagged v1.10.1` and `42 commits on
+      HEAD are on no remote branch`. Clear both before building:
+      ```bash
+      git push origin reconcile/master-2026-09-07
+      git tag v1.10.1 && git push origin v1.10.1
+      ```
+      `PEPTALK_UNRELEASED=1` downgrades it to a loud "NOT SHIPPABLE" notice
+      for in-progress work. Do not build with that set.
 - [ ] `npm run check:drift:cli`. Confirms the deployed edge functions still
       match `origin/master` before section 2 overwrites them
       (see `docs/EDGE-FUNCTION-DRIFT.md`).
@@ -109,6 +140,20 @@ or `_leaderboard_*` function, and authenticated EXECUTE on the 3 `get_*` only.
 
 ### 1c. Close out
 - [ ] `npx supabase migration list --linked`: all 68 local versions show a remote.
+- [ ] `npm run check:migrations` — new on 2026-09-16, and the machine-checked
+      version of the line above. It reads the live ledger (read-only:
+      `supabase migration list --linked`, nothing else) and exits non-zero
+      naming every repo migration with no ledger row.
+
+      It cannot pass without an answer: a missing CLI, an unlinked project or
+      any CLI error is exit 1 with the reason, never a skip. `npm run
+      check:migrations:self-test` runs the parser against fixtures offline and
+      is in `verify:all`.
+
+      It reports orphan ledger rows as a warning, not a blocker, and it will
+      NOT tell you to `db push` — some of the 11 unrecorded files are already
+      applied under a different recorded timestamp (§1a), and pushing them
+      blind is how the ledger got into this state.
 
 ---
 
@@ -144,6 +189,17 @@ npx supabase functions deploy clinical-review --no-verify-jwt   # per its own he
 - `delete-user` now purges R2 images. `R2_ACCESS_KEY_ID`,
   `R2_SECRET_ACCESS_KEY`, `R2_ENDPOINT`, `R2_COMMUNITY_BUCKET` and
   `R2_PUBLIC_BASE` are all set.
+- [ ] **Deploy order for the seven consent-gated functions.** `lab-scan`,
+      `aimee-lab-interpret`, `aimee-report-rewrite`, `aimee-pantry-meal`,
+      `aimee-plan`, `aimee-recipe` and `aimee-workout` now read `hasConsent`
+      off the request body and treat an ABSENT flag as no consent — the same
+      fail-closed shape `aimee-chat` already uses. A client build older than
+      this branch sends no flag.
+
+      So deploying these AHEAD of the app strips health fields (and, for the
+      first three, refuses outright with a 403) for everyone still on the old
+      build. Ship the app first, or in the same window. If you must deploy
+      early, say so — it is a visible behaviour change, not a silent one.
 - [ ] Afterwards, run `npm run check:drift:cli`. It should report no drift.
 
 ---

@@ -92,5 +92,37 @@ for (const [f, verdict, note] of rows) {
   console.log(`  ${verdict.padEnd(22)} ${f}`);
   if (note) console.log(`      ${note}`);
 }
-const bad = rows.filter(([, v]) => v.startsWith('❌')).length;
-console.log(`\n  ${bad} scanner(s) pass vacuously.\n`);
+/**
+ * Exit code, added 2026-09-16.
+ *
+ * This printed its verdict and then exited 0 — including the "❌ PASSES ON
+ * EMPTY" rows. A harness whose whole purpose is to catch a check that passes
+ * without reading anything was itself a check that passed without reporting
+ * anything, so it could sit in a pipeline and never stop one. It was not in
+ * verify:all, which is the only reason that never bit.
+ *
+ * INCONCLUSIVE is a failure too. A mutation that did not apply, a harness
+ * error, or a run killed by a signal all mean this harness learned nothing
+ * about that scanner — and "learned nothing" is the state it exists to refuse
+ * to call a pass.
+ */
+const vacuous = rows.filter(([, v]) => v.startsWith('❌'));
+const unknown = rows.filter(([, v]) => v.startsWith('?') || v === 'MISSING');
+
+console.log(`\n  ${vacuous.length} scanner(s) pass vacuously, ${unknown.length} inconclusive.\n`);
+
+if (rows.length < TARGETS.length) {
+  console.error(`✗ only ${rows.length} of ${TARGETS.length} targets produced a verdict.`);
+  process.exit(1);
+}
+if (vacuous.length || unknown.length) {
+  for (const [f, v] of [...vacuous, ...unknown]) console.error(`  ✗ ${v}  ${f}`);
+  console.error(
+    '\n  A scanner that still exits 0 over an empty corpus is not a check.\n' +
+      '  Make it assert on what it examined (a floor on files/sites read).\n' +
+      '  An INCONCLUSIVE row means this harness proved nothing about that\n' +
+      '  scanner — fix the break, do not accept it.\n',
+  );
+  process.exit(1);
+}
+console.log('✓ every scanner fails over an empty corpus\n');
