@@ -68,7 +68,8 @@
     "check:drift:cli:self-test": "node scripts/check-drift-cli.mjs --self-test",
     "verify:onconflict": "node scripts/verify-onconflict.mjs --self-test && node scripts/verify-onconflict.mjs",
     "check:onconflict:live": "node scripts/verify-onconflict.mjs --live",
-    "verify:privacymanifest": "node scripts/verify-privacy-manifest.mjs --self-test && node scripts/verify-privacy-manifest.mjs"
+    "verify:privacymanifest": "node scripts/verify-privacy-manifest.mjs --self-test && node scripts/verify-privacy-manifest.mjs",
+    "verify:reportmutants": "node scripts/verify-report-mutants.mjs"
   },
   "expo": {
     "install": {
