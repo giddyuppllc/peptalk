@@ -52,6 +52,60 @@ describe('exercise counts on user-facing surfaces are derived, not typed', () =>
 });
 
 /**
+ * The same number also sat in four INTERNAL docstrings — exercises.ts said 436,
+ * workoutPrograms.ts and videoService.ts said 451, app/workouts/new.tsx said
+ * 436, against a real EXERCISES.length. The scan above could not see any of
+ * them: it strips comments, and three of the four live outside app/ and
+ * src/components/. A stale docstring is the number the next person types into
+ * copy, so it is worth the same guard.
+ *
+ * The fix was to DELETE the counts rather than refresh them — a number in a
+ * comment cannot be derived, so it can only go stale again. This asserts they
+ * stay deleted.
+ */
+describe('internal docstrings do not restate the library size', () => {
+  const INTERNAL = [
+    'src/data/exercises.ts',
+    'src/data/workoutPrograms.ts',
+    'src/services/videoService.ts',
+    'app/workouts/new.tsx',
+  ];
+
+  // Comments are NOT stripped — they are the thing under test. Matches
+  // "436-exercise library", "451 exercises", "436 unique entries". Deliberately
+  // does NOT match a bare "N entries": videoService's alias index says "40 of
+  // the 142 entries in EXERCISE_VIDEO_SLUG_MAP", which counts the MAP and is
+  // checked against the map by the alias tests, not a library claim.
+  const LIBRARY_CLAIM = /\b\d{2,4}\+?-exercises?\b|\b\d{2,4}\+? exercises\b|\b\d{2,4}\+? unique entries\b/gi;
+
+  it.each(INTERNAL)('%s names no exercise count', (rel) => {
+    const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    const hits = [...src.matchAll(LIBRARY_CLAIM)];
+    // videoService's auto-regeneration banner ("141 exercises × 292 takes") is
+    // written by scripts/regen-video-service-maps.mjs from the map itself, so
+    // it is rewritten whenever the data changes and cannot drift.
+    const stale = hits
+      .filter((m) => !/^\d+ exercises × \d+ takes/.test(src.slice(m.index ?? 0, (m.index ?? 0) + 40)))
+      .map((m) => m[0]);
+    expect(stale).toEqual([]);
+  });
+
+  it('the matcher still recognises the counts that were there (not a dead regex)', () => {
+    const wasThere = ['436-exercise library', '451-exercise library', '436 unique entries', '97 exercises mapped'];
+    for (const s of wasThere) expect(s).toMatch(new RegExp(LIBRARY_CLAIM.source, 'i'));
+    expect('40 of the 142 entries in EXERCISE_VIDEO_SLUG_MAP').not.toMatch(
+      new RegExp(LIBRARY_CLAIM.source, 'i'),
+    );
+  });
+
+  it('the scan actually read those files', () => {
+    for (const rel of INTERNAL) {
+      expect(fs.readFileSync(path.join(ROOT, rel), 'utf8').length).toBeGreaterThan(500);
+    }
+  });
+});
+
+/**
  * Aimee was told the library held 451 exercises (and, in the dev fallback
  * prompt, 289) while it holds EXERCISES.length. The edge function cannot import
  * src/data without dragging app code into a Deno bundle, so these prompts carry

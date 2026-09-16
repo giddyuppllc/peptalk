@@ -193,7 +193,14 @@ function getExerciseMap(): Map<string, Exercise> {
 }
 
 /**
- * Full exercise list (436 unique entries after Wave 76.7 dedup).
+ * Full exercise list — one entry per row of src/data/jamieExercises.json,
+ * deduplicated in Wave 76.7.
+ *
+ * No count is written here on purpose. This docstring carried one and it was a
+ * cull or two out of date; so were the ones in workoutPrograms.ts and
+ * videoService.ts, and the paywall copy that sold the library to customers.
+ * Read EXERCISES.length. exerciseCountClaims.test.ts pins every count that IS
+ * written down and fails on a new one appearing here.
  *
  * Earlier versions used a Proxy that lazy-built the list on first
  * property access. The trap fired on EVERY .filter / .find / .map /

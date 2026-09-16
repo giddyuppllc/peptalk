@@ -110,11 +110,36 @@ for (const abs of [...walk(path.join(ROOT, 'app')), ...walk(path.join(ROOT, 'src
   }
 }
 
+/**
+ * The paywall modal's copy table. Its keys are the OTHER direction the gate
+ * can drift: a row here whose key no tier grants is a row that only ever
+ * renders over an unsatisfiable gate, which is what produced "Upgrade to
+ * Free". The scanner only ever looked at CALL SITES, so seven such rows sat
+ * green in this check for months.
+ */
+function paywallMetaKeys(): { key: string; line: number }[] {
+  const rel = 'src/components/PaywallModal.tsx';
+  const src = stripComments(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
+  const block = src.match(/const FEATURE_META[^=]*=\s*\{([\s\S]*?)\n\};/);
+  if (!block) {
+    console.error(`✗ ${rel} — FEATURE_META not found; this check would read nothing`);
+    process.exit(1);
+  }
+  const start = src.indexOf(block[1]);
+  return [...block[1].matchAll(/^ {2}([a-z0-9_]+):\s*\{/gm)].map((m) => ({
+    key: m[1],
+    line: lineOf(src, start + (m.index ?? 0)),
+  }));
+}
+
+const metaKeys = paywallMetaKeys();
+const metaUngranted = metaKeys.filter((m) => !granted.has(m.key));
+
 const ungranted = sites.filter((s) => s.key !== null && !granted.has(s.key));
 const dynamicBad = sites.filter((s) => s.key === null && !DYNAMIC_OK[s.file]);
 const literal = sites.filter((s) => s.key !== null);
 
-console.log(`verify:featurekeys — ${sites.length} gate sites (${literal.length} literal), ${granted.size} keys granted across tiers`);
+console.log(`verify:featurekeys — ${sites.length} gate sites (${literal.length} literal), ${metaKeys.length} PaywallModal copy rows, ${granted.size} keys granted across tiers`);
 
 let failed = false;
 if (literal.length < MIN_SITES) {
@@ -125,10 +150,18 @@ for (const s of ungranted) {
   console.error(`✗ ${s.file}:${s.line} ${s.kind} "${s.key}" — no tier grants this key, so the gate blocks everyone`);
   failed = true;
 }
+if (metaKeys.length < 20) {
+  console.error(`✗ SELF-CHECK FAILED — only ${metaKeys.length} FEATURE_META rows parsed (floor 20); the FEATURE_META scan is not reading the table`);
+  failed = true;
+}
+for (const m of metaUngranted) {
+  console.error(`✗ src/components/PaywallModal.tsx:${m.line} FEATURE_META "${m.key}" — no tier grants this key, so this row can only ever render over a gate no purchase opens`);
+  failed = true;
+}
 for (const s of dynamicBad) {
   console.error(`✗ ${s.file}:${s.line} ${s.kind} ${s.raw} — non-literal key; make it literal or add the file to DYNAMIC_OK with a reason`);
   failed = true;
 }
 
 if (failed) process.exit(1);
-console.log('✓ every gated feature key is granted by at least one tier');
+console.log('✓ every gated feature key, and every PaywallModal copy row, is granted by at least one tier');
