@@ -43,21 +43,61 @@
 export const GLOBAL_SPEND_SENTINEL_USER_ID =
   '00000000-0000-0000-0000-000000000000';
 
-/** Per-tier monthly allowance, in cents. */
-function monthlyCentsForTier(tier: string): number {
-  if (tier === 'pro') {
-    return Number(Deno.env.get('AIMEE_MONTHLY_CENTS_PRO') ?? 1200);
+/**
+ * Read a cents figure from the environment, validated ONCE at module load.
+ *
+ * `Number(Deno.env.get(NAME) ?? fallback)` defends against a MISSING secret
+ * and nothing else, and every other shape fails open:
+ *
+ *   ""          Number('') is 0  -> allowance 0 -> the `allowanceMC > 0`
+ *                                   guard is skipped -> no cap at all
+ *   "   "       same, 0
+ *   "$12"       NaN -> every comparison against it is false -> no cap
+ *   "12.00 USD" NaN -> no cap
+ *   "1,000"     NaN on the breaker -> no breaker
+ *   "1200\n"    fine, but only by luck: Number() happens to trim
+ *
+ * This is the same class as GOOGLE_SERVICE_ACCOUNT_JSON being a three-character
+ * documentation placeholder that passed `if (!VALUE)`. Boolean() is not a
+ * check, and neither is Number(). So: require actual digits, reject anything
+ * else loudly, and fall back to the default rather than to "unlimited".
+ *
+ * `zeroDisables` exists for the system breaker only, where 0 is a documented
+ * way to switch it off. An EMPTY string still does not mean zero there — that
+ * is the failure this function exists to stop.
+ */
+function centsFromEnv(name: string, fallback: number, zeroDisables = false): number {
+  const raw = Deno.env.get(name);
+  if (raw === undefined || raw === null) return fallback;
+  const trimmed = String(raw).trim();
+  const n = /^\d+(\.\d+)?$/.test(trimmed) ? Number(trimmed) : NaN;
+  if (!Number.isFinite(n) || n < 0 || (n === 0 && !zeroDisables)) {
+    console.error(
+      `[aimee-cost] ${name} is not a usable cents figure (${JSON.stringify(raw)}). ` +
+        `Falling back to ${fallback}. A spend cap that cannot be parsed is not a spend cap.`,
+    );
+    return fallback;
   }
-  if (tier === 'plus') {
-    return Number(Deno.env.get('AIMEE_MONTHLY_CENTS_PLUS') ?? 300);
-  }
-  // Free now gets three prompts a month (answers only). The message count is
-  // the real gate; this is just a backstop so one pathological huge-context
-  // prompt cannot cost more than the taster is worth.
-  if (tier === 'free') {
-    return Number(Deno.env.get('AIMEE_MONTHLY_CENTS_FREE') ?? 25);
-  }
-  return 0;
+  return n;
+}
+
+/**
+ * Per-tier monthly allowance, in cents. Parsed once — a malformed secret
+ * should log once at cold start, not on every request.
+ *
+ * Free gets three prompts a month (answers only). The message count is the
+ * real gate; this is just a backstop so one pathological huge-context prompt
+ * cannot cost more than the taster is worth.
+ */
+const MONTHLY_CENTS: Record<string, number> = {
+  pro: centsFromEnv('AIMEE_MONTHLY_CENTS_PRO', 1200),
+  plus: centsFromEnv('AIMEE_MONTHLY_CENTS_PLUS', 300),
+  free: centsFromEnv('AIMEE_MONTHLY_CENTS_FREE', 25),
+};
+
+/** Per-tier monthly allowance, in cents. Unknown tier = no allowance. */
+export function monthlyCentsForTier(tier: string): number {
+  return MONTHLY_CENTS[tier] ?? 0;
 }
 
 /**
@@ -72,8 +112,10 @@ function monthlyCentsForTier(tier: string): number {
  * could legitimately spend, or it becomes the same blunt instrument.
  * Set AIMEE_MONTHLY_BUDGET_CENTS=0 to disable it entirely.
  */
-const SYSTEM_MONTHLY_CENTS = Number(
-  Deno.env.get('AIMEE_MONTHLY_BUDGET_CENTS') ?? 100_000, // $1,000
+export const SYSTEM_MONTHLY_CENTS = centsFromEnv(
+  'AIMEE_MONTHLY_BUDGET_CENTS',
+  100_000, // $1,000
+  true, // an explicit "0" disables the breaker; "" does not
 );
 
 const MC_PER_CENT = 1_000_000;
@@ -286,23 +328,25 @@ export async function recordSpend(
   const today = new Date().toISOString().slice(0, 10);
   for (const id of [userId, GLOBAL_SPEND_SENTINEL_USER_ID]) {
     try {
-      const { data: existing } = await supabase
-        .from('aimee_cost_cents')
-        .select('spend_microcents, call_count')
-        .eq('user_id', id)
-        .eq('date', today)
-        .maybeSingle();
-      const nextSpend = (existing?.spend_microcents ?? 0) + microcents;
-      await supabase.from('aimee_cost_cents').upsert(
-        {
-          user_id: id,
-          date: today,
-          spend_microcents: nextSpend,
-          call_count: (existing?.call_count ?? 0) + 1,
-          last_called_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,date' },
-      );
+      // ATOMIC, deliberately. This was SELECT-then-UPSERT, which loses every
+      // increment that overlaps another: ten concurrent calls recorded one.
+      // The sentinel row is written by every AI call from every user, so the
+      // row that undercounted worst is the one the system-wide runaway
+      // breaker reads. bump_aimee_spend does the addition inside Postgres'
+      // row lock (20260916000000_aimee_spend_atomic.sql), exactly as
+      // bump_ai_usage already does for the rate-limit ledger.
+      //
+      // No fallback to the old upsert if the RPC is missing: a fallback that
+      // silently undercounts is the defect, not a mitigation. Deploy the
+      // migration before these functions.
+      const { error } = await supabase.rpc('bump_aimee_spend', {
+        p_user_id: id,
+        p_date: today,
+        p_microcents: microcents,
+      });
+      if (error) {
+        console.error('[aimee-cost] recordSpend failed:', error);
+      }
     } catch (e) {
       console.error('[aimee-cost] recordSpend failed:', e);
     }

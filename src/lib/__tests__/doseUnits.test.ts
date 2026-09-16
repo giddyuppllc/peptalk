@@ -10,6 +10,7 @@ import {
   formatMassMcg,
   isMassUnit,
   normalizeDoseRange,
+  toDisplayUnitPair,
 } from '../doseUnits';
 import { formatDose as formatDoseV2 } from '../../utils/calculatorV2';
 
@@ -147,5 +148,61 @@ describe('one implementation, not four', () => {
 
   it('an explicit mcg choice is still honoured', () => {
     expect(formatDoseV2(0.25, 'mcg')).toBe('250 mcg');
+  });
+});
+
+describe('toDisplayUnitPair — the stored pair matches the printed one', () => {
+  it('puts a sub-milligram mass in mcg', () => {
+    // The live defect: planStarterDose returned tesamorelin as { 0.75, 'mg' },
+    // the prompt printed "750 mcg" through formatDoseAmount, and every screen
+    // that renders a STORED dose showed "0.75 mg".
+    expect(toDisplayUnitPair(0.75, 'mg')).toEqual({ value: 750, unit: 'mcg' });
+    expect(toDisplayUnitPair(0.6, 'mg')).toEqual({ value: 600, unit: 'mcg' });
+    expect(toDisplayUnitPair(0.2, 'mg')).toEqual({ value: 200, unit: 'mcg' });
+    expect(toDisplayUnitPair(750, 'mcg')).toEqual({ value: 750, unit: 'mcg' });
+  });
+
+  it('rolls up to mg at 1000 mcg, matching formatDoseAmount', () => {
+    expect(toDisplayUnitPair(1000, 'mcg')).toEqual({ value: 1, unit: 'mg' });
+    expect(toDisplayUnitPair(60000, 'mcg')).toEqual({ value: 60, unit: 'mg' });
+    expect(toDisplayUnitPair(1.5, 'mg')).toEqual({ value: 1.5, unit: 'mg' });
+  });
+
+  it('relabels only — it never re-rounds the mass', () => {
+    // roundDoseForDisplay would move 1250 mcg to 1.3 mg. A starter dose is a
+    // figure someone draws, so a 4% shift here is a dose change, not a
+    // display choice.
+    expect(toDisplayUnitPair(1.25, 'mg')).toEqual({ value: 1.25, unit: 'mg' });
+    expect(toDisplayUnitPair(1250, 'mcg')).toEqual({ value: 1.25, unit: 'mg' });
+    expect(toDisplayUnitPair(333, 'mcg')).toEqual({ value: 333, unit: 'mcg' });
+    // ...and the mass is preserved exactly through the ×1000, with no float tail.
+    for (const mg of [0.029, 0.333, 0.75, 1.25, 2.5, 12.6]) {
+      const p = toDisplayUnitPair(mg, 'mg');
+      expect(p.unit === 'mg' ? p.value * 1000 : p.value).toBeCloseTo(mg * 1000, 6);
+    }
+  });
+
+  it('leaves IU and ml alone — neither converts to a mass', () => {
+    expect(toDisplayUnitPair(1500, 'IU')).toEqual({ value: 1500, unit: 'IU' });
+    expect(toDisplayUnitPair(2.5, 'ml')).toEqual({ value: 2.5, unit: 'ml' });
+  });
+
+  it('the relabelled pair renders identically to the original', () => {
+    for (const [v, u] of [[0.75, 'mg'], [1.25, 'mg'], [1000, 'mcg'], [333, 'mcg'], [0.2, 'mg']] as const) {
+      const p = toDisplayUnitPair(v, u);
+      expect(formatDoseAmount(p.value, p.unit)).toBe(formatDoseAmount(v, u));
+    }
+  });
+
+  it('a display-rounded mass renders the same raw as it does formatted', () => {
+    // This is the property the stored-dose screens depend on: they print the
+    // pair with no formatter. It holds for any value already at display
+    // precision — which planStarterDose guarantees, because it rounds before
+    // relabelling. 1.25 mg is deliberately NOT in this list: relabelling must
+    // not silently move a drawn dose to 1.3 mg (see the test above).
+    for (const [v, u] of [[0.75, 'mg'], [1000, 'mcg'], [333, 'mcg'], [0.2, 'mg'], [1.5, 'mg']] as const) {
+      const p = toDisplayUnitPair(v, u);
+      expect(`${p.value} ${p.unit}`).toBe(formatDoseAmount(p.value, p.unit));
+    }
   });
 });

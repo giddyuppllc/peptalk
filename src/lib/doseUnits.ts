@@ -147,6 +147,33 @@ export function formatDoseAmount(value: number, unit: DoseUnit): string {
 }
 
 /**
+ * The same mass, relabelled into the unit it will be DISPLAYED in.
+ *
+ * `planStarterDose` returned tesamorelin's starter as `{ 0.75, 'mg' }`. The
+ * "Start cycle" prompt runs that through formatDoseAmount and prints
+ * "750 mcg" — but the PAIR is what gets stored on the protocol, and five
+ * screens render the stored pair. So the prompt said 750 mcg and the protocol
+ * then read "0.75 mg" everywhere else: two decimals on a dosing figure, which
+ * the 2026-09-15 work order rules out, and a second number for the same dose.
+ *
+ * This changes the LABEL ONLY. No rounding happens here: 0.75 mg becomes
+ * 750 mcg and 1.25 mg stays 1.25 mg, because a starter dose is a figure
+ * someone draws — display-rounding it would move 1.25 mg to 1.3 mg, a 4%
+ * change to a stored dose. Use roundDoseForDisplay for the rounding, this for
+ * the unit.
+ *
+ * IU and ml are returned untouched: neither converts to a mass.
+ */
+export function toDisplayUnitPair(value: number, unit: DoseUnit): { value: number; unit: DoseUnit } {
+  if (!isMassUnit(unit) || !Number.isFinite(value)) return { value, unit };
+  // ×1000 on a decimal can leave a float tail (0.029 * 1000 = 28.999…); this
+  // is a unit change, so the mass must come back exactly.
+  const mcg = unit === 'mg' ? Math.round(value * 1_000 * 1e6) / 1e6 : value;
+  if (Math.abs(mcg) >= 1000) return { value: Math.round(mcg / 1000 * 1e6) / 1e6, unit: 'mg' };
+  return { value: mcg, unit: 'mcg' };
+}
+
+/**
  * A dose at the precision it is drawn at (up to 2dp), for the dosing
  * calculator only. There the label sits beside a syringe volume computed from
  * the same number: semaglutide's 1250 mcg microdose is drawn as 1.25 mg, and
