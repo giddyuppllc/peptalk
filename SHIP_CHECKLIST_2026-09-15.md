@@ -247,6 +247,17 @@ From the App Review sweep (CAN'T VERIFY) and the 09-15 verification:
 - [ ] Supabase Auth → Redirect URLs: add `https://app.peptalk.bio/**`. PWA
       password reset and verification links fall back to peptalk.bio without
       it.
+- [ ] **Password reset now has a screen to land on** (`app/set-password.tsx`,
+      new 2026-09-16). The reset email has always said "follow the link to
+      pick a new password"; the link set a session and routed home, and
+      `auth.updateUser({ password })` existed nowhere in the repo.
+
+      Nothing to deploy — it is app code — but it only works if the redirect
+      URLs above are whitelisted, on BOTH paths: `peptalk://auth/callback`
+      for the native builds and `https://app.peptalk.bio/**` for the PWA.
+      Test it end to end on a real device and in the installed PWA before
+      shipping; the native path keys off `type=recovery` in the link, the web
+      path off Supabase's `PASSWORD_RECOVERY` event.
 - [ ] Supabase Auth: `mailer_autoconfirm` is `true`. Order: redirect URL → SMTP
       or verified Resend domain with DKIM → Confirm email ON → real signup test.
 - [ ] Email: `RESEND_API_KEY` is not set, so no transactional email has ever
