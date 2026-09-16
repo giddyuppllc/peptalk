@@ -115,6 +115,21 @@ export async function checkAiAllowance(
       // system-wide breaker is not the user's to buy past, and offering an
       // upgrade there would sell a plan that changes nothing.
       upgrade: cost.reason === 'user_cap_hit' && (tier === 'free' || tier === 'plus'),
+      // A credit pack tops up the SAME microcent budget this gate measures, and
+      // `checkCostCap` already spends credits before it refuses — for every
+      // tier, not just the paid ones. So a top-up is the honest offer wherever
+      // the user's own cost cap is what stopped them, and it is the ONLY offer
+      // that exists for Pro, which has no higher plan to move to.
+      //
+      // Same exclusion as `upgrade`: never on `global_cap_hit`. The system-wide
+      // breaker is not the user's to buy past, and taking money that changes
+      // nothing is this codebase's signature failure.
+      //
+      // ⚠️ Deliberately NOT emitted on the per-message rate limit (RATE_LIMITS
+      // in aimee-chat-stream). Credits move the COST ceiling only; the message
+      // count is a separate gate that never reads the credit balance, so
+      // offering a pack there would sell something that cannot unblock them.
+      topUp: cost.reason === 'user_cap_hit',
     },
   };
 }

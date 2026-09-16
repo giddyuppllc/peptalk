@@ -75,6 +75,7 @@ import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
 import { useIsOnline } from '../../src/hooks/useNetworkStatus';
 import { isAllowedNavigationPath } from '../../src/lib/aimeeNavAllowlist';
+import { aimeeDenialOffer } from '../../src/lib/aimeeDenialActions';
 // All validation/clamping for Aimee `client_action` payloads lives in
 // a pure module so it can be unit-tested without a renderer. See
 // scripts/verify-aimee-action-sanitize.ts for the contract.
@@ -615,21 +616,13 @@ export default function PepTalkScreen() {
             stillStreaming = false;
             return true;
           } else if (ev.type === 'denied') {
-            const upgrade = ev.upgrade === true;
             updateMessage(placeholderId, {
-              content: ev.message ?? 'Aimee requires an upgrade.',
+              // The server's own sentence. The old fallback said "Aimee
+              // requires an upgrade", which is wrong for a Pro subscriber —
+              // there is no upgrade — and wrong for the system-wide breaker.
+              content: ev.message ?? 'Aimee is unavailable right now.',
               streaming: false,
-              quickReplies: upgrade ? ['View subscription plans'] : undefined,
-              navAction: upgrade ? '/subscription' : undefined,
-              actions: upgrade
-                ? [
-                    {
-                      label: 'See plans',
-                      route: '/subscription',
-                      icon: 'sparkles-outline',
-                    },
-                  ]
-                : undefined,
+              ...aimeeDenialOffer({ upgrade: ev.upgrade, topUp: ev.topUp }),
             });
             return true;
           }

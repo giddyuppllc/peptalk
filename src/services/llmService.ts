@@ -26,6 +26,7 @@ import { ensureAiConsent } from '../utils/ensureAiConsent';
 import { sanitizeForLLM } from './privacyGuard';
 import { applyAiDataConsent } from '../lib/aiDataConsent';
 import { withHealthConsent } from '../lib/aiFeatureConsent';
+import { aimeeDenialOffer } from '../lib/aimeeDenialActions';
 import { supabase } from './supabase';
 import { captureException } from './telemetry';
 
@@ -748,11 +749,7 @@ export async function generateAIResponse(
             role: 'bot',
             content: data.error ?? 'Please upgrade to use Aimee AI.',
             timestamp: new Date().toISOString(),
-            quickReplies: data.upgrade ? ['View subscription plans'] : undefined,
-            navAction: data.upgrade ? '/subscription' : undefined,
-            actions: data.upgrade
-              ? [{ label: 'See plans', route: '/subscription', icon: 'sparkles-outline' }]
-              : undefined,
+            ...aimeeDenialOffer({ upgrade: data.upgrade, topUp: data.topUp }),
           };
         }
       }
@@ -1051,6 +1048,7 @@ export interface AimeeStreamEvent {
     action: { type: string; path?: string; [k: string]: unknown };
   }[];
   upgrade?: boolean;
+  topUp?: boolean;
   /** Status code from the edge fn for error/denied events. */
   status?: number;
 }
@@ -1165,6 +1163,9 @@ export async function* generateAIResponseStream(
         type: 'denied',
         message: errBody?.error ?? 'AI unavailable',
         upgrade: errBody?.upgrade === true,
+        // Carried through so the chat can offer a credit pack. Without it a
+        // Pro subscriber at the cost cap saw a refusal and nothing else.
+        topUp: errBody?.topUp === true,
         status: res.status,
       };
       return;

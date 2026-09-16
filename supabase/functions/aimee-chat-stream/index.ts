@@ -143,7 +143,17 @@ Deno.serve(async (req) => {
   // tier — never anything the client sent.
   const costCheck = await checkCostCap(supabase, user.id, tier);
   if (!costCheck.allowed) {
-    return jsonError(429, denialMessage(costCheck.reason), { reason: costCheck.reason });
+    // This call site used to send the reason alone, so a cost-cap refusal
+    // reached the chat with no action on it for ANY tier — free and plus
+    // included, even though a plan change would have fixed theirs. Both
+    // signals now match `_shared/aiAllowance.ts`: a plan is offered only where
+    // one would help, and a top-up wherever the user's own cost cap is what
+    // stopped them, which is the only path Pro has.
+    return jsonError(429, denialMessage(costCheck.reason), {
+      reason: costCheck.reason,
+      upgrade: costCheck.reason === 'user_cap_hit' && (tier === 'free' || tier === 'plus'),
+      topUp: costCheck.reason === 'user_cap_hit',
+    });
   }
 
   // 5. Parse and validate body --------------------------------------------
