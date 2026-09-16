@@ -106,6 +106,21 @@ describe('an opt-in that could not be written is bound to the account that made 
     expect(store().pendingOptIn).toBeNull();
   });
 
+  it('drops an unattributable choice even with nobody signed in, rather than keeping it', async () => {
+    // "No session yet" is a reason to keep WAITING, and a choice with no
+    // address would wait for ever — surviving every wipe of the in-memory
+    // state and every account that signs in on this install. It is not the
+    // account-mismatch branch's job to clean that up, because that branch
+    // never runs without a session.
+    useLeaderboardStore.setState({ pendingOptIn: true, pendingOptInEmail: null });
+    mockFetchEmail.mockResolvedValue(null);
+
+    await store().flushPendingOptIn();
+    expect(mockFetchEmail).not.toHaveBeenCalled();
+    expect(mockSave).not.toHaveBeenCalled();
+    expect(store().pendingOptIn).toBeNull();
+  });
+
   it('holds nothing when the account cannot be named', async () => {
     mockSave.mockResolvedValue(false);
     await store().recordOnboardingChoice(true, '');
