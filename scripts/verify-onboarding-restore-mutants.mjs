@@ -73,8 +73,11 @@ const MUTANTS = [
     find: 'currentUserId: deps.getCurrentUserId(),', replace: 'currentUserId: userId,' },
   { file: RUNNER, tests: [T_RUNNER], why: 'run with no session',
     find: "if (!userId) return Promise.resolve('signed-out');", replace: "if (!userId) { /* mutant */ }" },
+  // The call gained its `{ serverKnown }` meta on 2026-09-16 (the restore
+  // branch: 'settled' is not 'the server copy is known'). The old search text
+  // matched 0x and reported INCONCLUSIVE rather than a silent pass.
   { file: RUNNER, tests: [T_RUNNER], why: 'never settle',
-    find: "deps.setRestoreStatus(userId, 'settled');", replace: '' },
+    find: "deps.setRestoreStatus(userId, 'settled', { serverKnown });", replace: '' },
   { file: RUNNER, tests: [T_RUNNER], why: 'no shared run for concurrent callers',
     find: 'if (inflight && inflight.userId === userId) return inflight.promise;', replace: '' },
   { file: RUNNER, tests: [T_RUNNER], why: 'no timeout on the fetch',
@@ -102,8 +105,17 @@ const MUTANTS = [
   // ── wiring and callers ──
   { file: SERVICE, tests: [T_GATE, T_WIRING], why: 'let the restore lower or set isComplete outright',
     find: 'isComplete: state.isComplete || patch.isComplete,', replace: 'isComplete: patch.isComplete,' },
-  { file: SERVICE, tests: [T_WIRING], why: 'mirror answers while the restore is out',
-    find: " || state.restore.status !== 'settled'", replace: '' },
+  // Was `|| state.restore.status !== 'settled'` on the guard line. That became
+  // an EQUIVALENT mutant on 2026-09-16: the line below it now returns unless
+  // `serverKnown`, and setRestoreStatus writes `serverKnown: meta?.serverKnown
+  // === true` on every call, so 'pending' and 'idle' both force it false —
+  // serverKnown implies settled. Removing the status clause changes nothing
+  // observable. Recorded rather than counted, and the mutant retargeted at the
+  // condition that is now load-bearing: a restore that STOPPED without reading
+  // the server (timeout, error) must not let this device's empties overwrite
+  // the user's stored history.
+  { file: SERVICE, tests: [T_WIRING], why: 'mirror answers the server was never read for',
+    find: 'if (!state.restore.serverKnown) return;', replace: '' },
   { file: SERVICE, tests: [T_WIRING], why: 'mirror answers while signed out',
     find: "if (!userId || state.restore.userId !== userId || state.restore.status !== 'settled') return;",
     replace: 'if (false) return;' },
@@ -118,8 +130,12 @@ const MUTANTS = [
     find: "if (error) return { status: 'error' };", replace: '' },
   { file: STORE, tests: [T_FETCH], why: 'an auth failure reads as signed out',
     find: "userError && userError.name !== 'AuthSessionMissingError'", replace: 'false' },
+  // The shared in-flight promise became keyed by user on 2026-09-16 (the
+  // restore branch: one account's profile can no longer land in another's
+  // session), so the bare `if (inflightServerProfile)` no longer exists.
   { file: STORE, tests: [T_FETCH], why: 'concurrent fetches race each other',
-    find: 'if (inflightServerProfile) return inflightServerProfile;', replace: '' },
+    find: 'if (inflightServerProfile && inflightServerProfile.userId === requestedUserId) {',
+    replace: 'if (false) {' },
 ];
 
 const isWin = process.platform === 'win32';

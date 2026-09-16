@@ -9,7 +9,7 @@ SELECT-only `db query --linked`, and `secrets list` (digests only).
 **Updated 2026-09-16.** The four 09-16 branches are now merged in too —
 `fix/privacy-manifest-and-reporting`, `feat/safety-only-compounds`,
 `fix/profile-restore-races` and `fix/spend-ledger-and-dose-guard`. HEAD is
-**77 commits** ahead of `origin/master` (`3e2561c`), none pushed. On the
+**78 commits** ahead of `origin/master` (`3e2561c`), none pushed. On the
 merged tree: `tsc` 0 · `lint:ci` 0 · `jest` 0 (**103 suites, 2167 tests**).
 `verify:all` is **46 steps** and needs `PEPTALK_UNRELEASED=1` until §0's tag
 and push are done.
@@ -36,7 +36,7 @@ Do the sections in order. A later section depends on the one before it.
 ## 0. Before anything touches production
 
 - [ ] `git fetch`. `origin/master` was `3e2561c` on 09-15 and is unchanged as
-      of 09-16; the local branch is **77 commits** ahead of it, none pushed.
+      of 09-16; the local branch is **78 commits** ahead of it, none pushed.
       **Decide** where this branch goes: fast-forward `master`, or a PR.
       CLAUDE.md says to work on `master`.
 - [ ] Re-run the net on the exact commit you will ship. Every command must
@@ -71,7 +71,7 @@ Do the sections in order. A later section depends on the one before it.
       the 1.10.0 (75) failure CLAUDE.md records: a rejected binary that
       corresponded to no commit.
 
-      Right now it reports `HEAD is not tagged v1.10.1` and `77 commits on
+      Right now it reports `HEAD is not tagged v1.10.1` and `78 commits on
       HEAD are on no remote branch`. Clear both before building:
       ```bash
       git push origin reconcile/master-2026-09-07
@@ -88,8 +88,9 @@ Do the sections in order. A later section depends on the one before it.
 ## 1. Migrations
 
 **Do NOT run `supabase db push`.** CLAUDE.md says it is "safe again". That
-stopped being true: the live ledger is 11 files behind the repo (57 recorded,
-68 files). Eight of those 11 are already live. `db push` would run them again,
+stopped being true: the live ledger is **13** files behind the repo (57
+recorded, 70 files — two more arrived with the 09-16 branches). Eight of those
+13 are already live. `db push` would run them again,
 and `CREATE OR REPLACE FUNCTION` would overwrite the live function bodies.
 
 Versions are unique and ordered. The check was
@@ -131,7 +132,8 @@ npx supabase migration repair --status applied 20260827090000 --linked
 
 ### 1b. Never applied: apply in this order, then record
 
-The 09-15 probe confirmed that none of these three changes exists live.
+The 09-15 probe confirmed that none of the first three exists live. Items 4
+and 5 arrived on 09-16 and have never been applied anywhere.
 
 **1. `20260915000000_community_reports_resolved_by_set_null.sql`** (from `78d266d`)
 Changes `community_reports.resolved_by` to `ON DELETE SET NULL`, so Delete
@@ -184,6 +186,37 @@ npm run verify:rpcgrants
 Verify: `select proname, prosecdef, proconfig from pg_proc where proname = 'bump_aimee_spend';`
 must show `prosecdef = t` and `proconfig = {search_path=}`, and
 `verify:rpcgrants` must not list it (no anon or authenticated EXECUTE).
+
+**5. `20260916120000_community_reports_user_and_ai_targets.sql`** (from the
+09-16 privacy-manifest / reporting branch)
+Makes a *member* and an *Aimee reply* reportable. `community_reports` was
+polymorphic over exactly two targets and enforced it with
+`CHECK ((post_id IS NOT NULL)::int + (comment_id IS NOT NULL)::int = 1)`, so
+there was no shape in which a report could name a person — which App Review
+1.2 wants for the leaderboard (it publishes another member's display name,
+avatar and metrics to every signed-in user) and Play's generative-AI policy
+wants for AI output. An Aimee message has no row to point at, so the report
+carries the text and the time.
+
+**Additive only.** Existing rows already satisfy the widened CHECK; no
+backfill, no column dropped, no row rewritten. It drops the original
+constraint by *looking its generated name up* rather than guessing at
+`community_reports_check`, and re-adds it widened. Worth knowing: the
+auto-moderator's IF/ELSIF tests post then comment, so the two new kinds fall
+through to `RETURN NEW` — **no automatic action is ever taken against a member
+or an assistant reply.** Whether N reports should suspend an account is a
+business rule nobody has stated, so it was not invented. [DECIDE]
+```bash
+npx supabase db query --linked -f supabase/migrations/20260916120000_community_reports_user_and_ai_targets.sql
+npx supabase migration repair --status applied 20260916120000 --linked
+```
+Verify: `select conname, pg_get_constraintdef(oid) from pg_constraint where conrelid = 'public.community_reports'::regclass and contype = 'c';`
+must show `community_reports_exactly_one_target` summing **four** targets,
+plus `community_reports_ai_time_with_text` and
+`community_reports_no_self_report`. Member reports are deduplicated by a
+partial unique index (`UNIQUE (reporter_id, post_id)` does not constrain rows
+where `post_id IS NULL` — Postgres treats NULLs as distinct); AI reports are
+deliberately not deduplicated.
 
 ### 1c. Close out
 - [ ] `npx supabase migration list --linked`: all 70 local versions show a remote.
