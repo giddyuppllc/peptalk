@@ -131,6 +131,23 @@ function inferVialSize(ref: DosingReference | null): 3 | 5 | 10 {
 }
 
 export function getCalculatorMetadata(peptideId: string): CalculatorMetadata {
+  // Deliberately the RAW reference, NOT the display boundary.
+  //
+  // Nothing this function returns is a dose: `displayUnit` decides whether the
+  // screen formats in mg or mcg, and the vial / diluent figures are the
+  // starting points of editable fields describing a vial the user is holding.
+  // Edward's 2026-09-16 decision withdraws DOSES from the safety-information-
+  // only compounds and explicitly keeps the calculator doing arithmetic, so
+  // suppressing here would degrade the arithmetic without hiding a dose.
+  //
+  // It would also introduce a seam: the ladder would still render in the unit
+  // the data implies while this said otherwise. SLU-PP-332 doses under 1 mg, so
+  // gating this flipped it to "0.63 mg" where every other surface says mcg —
+  // caught by doseDisplayPrecision.test.ts.
+  //
+  // The dose itself is suppressed where it belongs: app/doses/calculator.tsx
+  // reads the reference through getDosingReferenceForDisplay, so `ref` is null,
+  // `phase` stays null, and the per-shot box opens empty.
   const ref = getDosingReference(peptideId);
   const ov = OVERRIDES[peptideId] ?? {};
   const inferredVial = inferVialSize(ref);

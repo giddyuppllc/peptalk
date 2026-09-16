@@ -28,6 +28,14 @@ import { GOAL_OPTIONS } from '../../src/constants/goals';
 import { GOAL_PEPTIDE_MATRIX, recommendPeptidesForGoal } from '../../src/data/goalPeptideMatrix';
 import { getPeptideById } from '../../src/data/peptides';
 import { getProtocolsByPeptide } from '../../src/data/protocols';
+// `startCycle` reads through the DISPLAY boundary so a safety-information-only
+// compound (Edward, 2026-09-16) is never handed a starting dose — it falls
+// into the screen's existing "Pick a protocol first" branch, which routes to
+// the peptide page and quotes no number. The recommendation list below keeps
+// the RAW getter on purpose: it reads `contraindications` / `cautionConditions`
+// to flag pregnancy and allergy risks, and suppressing a dose must never
+// suppress a safety flag.
+import { getProtocolsForDisplay } from '../../src/data/dosingDisplay';
 import { planStarterDose } from '../../src/lib/protocolDoseMath';
 import { formatDoseAmount } from '../../src/lib/doseUnits';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
@@ -77,7 +85,7 @@ export default function PlanCycleScreen() {
    * peptide page so the user can pick one manually.
    */
   const startCycle = (peptideId: string, peptideName: string) => {
-    const protocols = getProtocolsByPeptide(peptideId);
+    const protocols = getProtocolsForDisplay(peptideId);
     if (protocols.length === 0) {
       Alert.alert(
         'Pick a protocol first',

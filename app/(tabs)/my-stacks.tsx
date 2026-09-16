@@ -9,8 +9,12 @@ import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { getPeptideById , PEPTIDES } from '../../src/data/peptides';
 import { searchPeptides } from '../../src/lib/peptideSearch';
-import { PROTOCOL_TEMPLATES } from '../../src/data/protocols';
-import { getDosingReference } from '../../src/data/peptideDosingReference';
+// Display boundary — no "TYPICAL RESEARCH RANGE" pill and no suggested
+// per-slot amount for a safety-information-only compound (Edward, 2026-09-16).
+import {
+  getProtocolsForDisplay,
+  getDosingReferenceForDisplay,
+} from '../../src/data/dosingDisplay';
 import { CoachMark } from '../../src/components/tutorial/CoachMark';
 import { Spacing, BorderRadius } from '../../src/constants/theme';
 import { PeptideStack, PeptideCategory, GoalType, DoseLogEntry } from '../../src/types';
@@ -378,7 +382,7 @@ function CalculatorTab() {
           Otherwise falls back to the published flat range. */}
       {(() => {
         if (!selectedPeptide) return null;
-        const proto = PROTOCOL_TEMPLATES.find((pt) => pt.peptideId === selectedPeptide.id);
+        const proto = getProtocolsForDisplay(selectedPeptide.id)[0];
         if (!proto?.typicalDose) return null;
 
         const profileLbs = profileWeightLbs ?? 0;
@@ -1063,7 +1067,7 @@ function TodayCycleView({ onJumpToStacks }: TodayCycleViewProps) {
   // own dose/unit. Twice-daily protocols get a Morning + Evening row.
   const todaysPlan = useMemo(() => {
     if (!active) return [];
-    const ref = getDosingReference(active.protocol.peptideId);
+    const ref = getDosingReferenceForDisplay(active.protocol.peptideId);
     const phase = ref?.schedule?.[0];
     const dose = phase?.doseMcg
       ? { amount: phase.doseMcg, unit: 'mcg' as const }
