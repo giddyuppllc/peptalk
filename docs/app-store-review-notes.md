@@ -125,6 +125,17 @@ screen.
   AI feature, a consent modal explains the third-party processing and requires
   an affirmative tap before any data is sent. Declining leaves AI features off;
   the rest of the app works normally. Consent is revocable in Profile settings.
+- There is a **second, finer control** for health data specifically
+  ("AI-Powered Responses", Profile → Health Profile). It governs whether the
+  user's health profile — conditions, medications, allergies, labs, dose
+  history — is attached to an AI request, and it is **on by default** for a
+  user who has already granted the consent above. Turning it off does not
+  disable AI: chat, meal plans, recipes, pantry suggestions and workout
+  generation continue with the health fields stripped before the request
+  leaves the device, while lab interpretation, the lab photo scanner and the
+  weekly report rewrite refuse outright. The first modal names the health
+  profile among what is sent, so nothing is shared that the user was not told
+  about at the point of consent.
 - This is disclosed in the in-app Privacy Policy (Profile → Privacy Policy).
 
 ### Sign-in

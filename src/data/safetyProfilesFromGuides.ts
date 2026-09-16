@@ -5,9 +5,22 @@
  *   node scripts/gen-ppp-safety.mjs > src/data/safetyProfilesFromGuides.ts
  *
  * Edward, 2026-08-09: "if the information exists in the peptide protocol
- * portal we can use it as our own data." It is his own doctor-reviewed
- * clinical content, which is what makes this transcription rather than the
- * invention this app cannot afford.
+ * portal we can use it as our own data." That is the permission to
+ * transcribe, and transcription rather than invention is the point — this
+ * app cannot afford to author safety content.
+ *
+ * PROVENANCE, CORRECTED 2026-09-16. This header used to call the source
+ * "his own doctor-reviewed clinical content". Both halves were wrong and
+ * the sentence must not be quoted to App Review or to a customer:
+ *   - The Peptide Protocol Portal is LANCE's, not Edward's. Edward built
+ *     it; he does not own it. (A comment in the PPP repo itself says
+ *     "Edward's PPP" and is wrong about the same thing.)
+ *   - No named doctor and no review record backs "doctor-reviewed". The
+ *     one byline that looks like one, "Dr. Sean McGrath", is stamped
+ *     automatically by the portal's AI writer — not a person with an
+ *     account, a bio or a licence.
+ * What is true: these 39 profiles are a faithful transcription of the
+ * portal guides. Reusing them needs Lance's permission, not Edward's.
  *
  * The 15 hand-curated entries in safetyProfiles.ts are AUTHORITATIVE and are
  * deliberately not included here — getSafetyProfileByPeptideId checks those
@@ -1059,7 +1072,7 @@ export const GUIDE_SAFETY_PROFILES: SafetyProfile[] = [
     ],
   },
   {
-    // source: PPP guide "follistatin344"
+    // source: PPP guide "follistatin-344"
     peptideId: "follistatin-344",
     contraindications: [
       "6.1 Contraindications",

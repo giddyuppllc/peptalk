@@ -457,26 +457,42 @@ unless marked otherwise.
       community-only"; not re-checked).
 
 **Privacy and consent (sweep F, G, H)**
-- [ ] 🚩 **The notes tell Apple the opposite of what the code does. Settle
-      this before submitting — it is the one open item that is a false
-      statement to App Review, not a preference.**
+- [ ] 🚩 **The notes describe one consent. The app has two, and the second one
+      — the one covering health data — is on by default and is disclosed
+      nowhere.**
 
-      `docs/app-store-review-notes.md:124` says consent is *"opt-in and off by
-      default"*. On the merged tree (line numbers re-checked 2026-09-16):
-      `src/store/useHealthProfileStore.ts:114` is `aiDataConsent: true`, and
-      the v2 migration at `:581-593` rewrites a **stored `false` back to
-      `true`** — so it does not merely default on, it reverses a recorded
-      "no". The migration's own comment explains why it was done (testers were
-      all on the old opt-in default, onboarding never showed the toggle, so
-      everyone got the on-device bot and Aimee looked broken), which is a real
-      reason and a different question from what the notes claim.
+      ❌ **Retracted 2026-09-16 (same day).** An earlier revision of this line
+      said the notes "tell Apple the opposite of what the code does" and called
+      it a false statement to App Review. That was wrong, and it was wrong the
+      usual way: two different stores were read as one.
 
-      Deliberately untouched on 2026-09-16: the gate now works, so the default
-      is the whole decision, and it is Edward's. **Either change the default
-      and drop the migration, or change the sentence in the notes.** Shipping
-      both as they are means submitting a claim the binary contradicts.
-      `docs/app-store-review-notes-additions-2026-09-16.md:241-246` flags the
-      same thing from the notes' side.
+      What is actually true, both re-read on the merged tree:
+
+      | | store | default | what it covers |
+      |---|---|---|---|
+      | 5.1.2 modal | `useAiConsentStore.consented` | **`false`** | messages, voice, photos |
+      | health toggle | `profile.aiDataConsent` | **`true`** | profile, labs, doses, conditions, medications, allergies |
+
+      So `docs/app-store-review-notes.md:124` — *"opt-in and off by default…
+      the first time the user triggers any AI feature, a consent modal…
+      requires an affirmative tap"* — **is accurate** about the modal. Nothing
+      is sent to xAI or OpenAI until the user taps Agree & Continue.
+
+      The real defect is narrower and still worth fixing: a user agrees to a
+      modal that names *"your messages, voice, and photos"*
+      (`src/utils/ensureAiConsent.ts:26`) and their **health profile goes too**,
+      because `aiDataConsent` is already `true` underneath. The v2 migration at
+      `useHealthProfileStore.ts:581-593` also rewrites a stored `false` back to
+      `true`, which reverses a recorded "no" — its comment says as much, and
+      gives the real reason (testers were all stranded on the on-device bot, so
+      Aimee looked broken).
+
+      **Two things, and only the second is Edward's judgement call:**
+      1. The modal copy must name health data, and the review notes must
+         describe both consents. Draft copy is in §6 below. Fixing this does
+         not require changing any default.
+      2. Whether `aiDataConsent` keeps defaulting `true`, and whether that
+         migration stays. Untouched.
 - [ ] **The consent copy is now wrong in two places, because the behaviour
       changed under it on 2026-09-16.** [WORDS]
 
