@@ -202,15 +202,47 @@ describe('what the user logs matches what they were shown', () => {
   });
 
   it('"Start cycle" stores what its prompt prints, inside the range and below the max', () => {
+    // 2026-09-16: the pair now comes back in the unit it is DISPLAYED in, not
+    // the protocol's own unit, so the range comparisons below run in
+    // micrograms. planStarterDose used to return tesamorelin as
+    // { 0.75, 'mg' }: the prompt printed "750 mcg" through formatDoseAmount
+    // while the stored PAIR rendered "0.75 mg" on every screen that shows a
+    // stored dose — two numbers for one dose, one of them at two decimals.
+    // The mass is unchanged; only the label moved, so the range assertions
+    // still hold once both sides are in the same unit.
+    const mcg = (v: number, u: string) => (u === 'mg' ? v * 1000 : v);
     for (const p of rendered) {
       const s = planStarterDose(p);
       expect([p.id, roundDoseForDisplay(s.dose, s.unit)]).toEqual([p.id, s.dose]);
       if (p.titrationSchedule?.length) continue;
-      expect(s.unit).toBe(p.typicalDose.unit);
-      expect(s.dose).toBeGreaterThanOrEqual(p.typicalDose.min);
-      expect(s.dose).toBeLessThanOrEqual(p.typicalDose.max);
+      const { min, max, unit } = p.typicalDose;
+      if (unit === 'mg' || unit === 'mcg') {
+        // A mass reads in mcg below 1 mg and in mg from there; never both.
+        expect([p.id, s.unit]).toEqual([p.id, mcg(s.dose, s.unit) >= 1000 ? 'mg' : 'mcg']);
+      } else {
+        expect(s.unit).toBe(unit);
+      }
+      expect(mcg(s.dose, s.unit)).toBeGreaterThanOrEqual(mcg(min, unit));
+      expect(mcg(s.dose, s.unit)).toBeLessThanOrEqual(mcg(max, unit));
       // The stated purpose: "so the user isn't started at the max".
-      if (p.typicalDose.min < p.typicalDose.max) expect([p.id, s.dose < p.typicalDose.max]).toEqual([p.id, true]);
+      if (min < max) {
+        expect([p.id, mcg(s.dose, s.unit) < mcg(max, unit)]).toEqual([p.id, true]);
+      }
+    }
+  });
+
+  it('the starter pair is the pair the prompt prints — no second number for one dose', () => {
+    // The specific regression: 0.75 mg and 750 mcg are the same mass, but the
+    // prompt showed one and every stored-dose screen showed the other.
+    for (const p of rendered) {
+      const s = planStarterDose(p);
+      if (s.unit !== 'mg' && s.unit !== 'mcg') continue;
+      // Rendering the stored pair raw — which five screens do — must now give
+      // the same string as rendering it through the formatter.
+      expect([p.id, `${s.dose} ${s.unit}`]).toEqual([p.id, formatDoseAmount(s.dose, s.unit)]);
+      // And no stored dosing figure carries two decimals.
+      expect([p.id, (String(s.dose).split('.')[1] ?? '').length]).toEqual([p.id, expect.any(Number)]);
+      expect([p.id, (String(s.dose).split('.')[1] ?? '').length <= 1]).toEqual([p.id, true]);
     }
   });
 
