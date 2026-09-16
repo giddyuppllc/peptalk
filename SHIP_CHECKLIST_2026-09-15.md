@@ -466,6 +466,52 @@ unless marked otherwise.
       a 1.4.1 posture question, not an error: a named non-clinician
       recommending doses is the exact shape guideline 1.4.1 asks about.
 
+**App Review gate sweep, 2026-09-16 — what it left for you**
+- [ ] 🚩 **The Home Profile avatar is covered by the PT button on a modern
+      iPhone.** Measured from source constants, not guessed: the avatar sits at
+      y ≈ 69–106 with its right edge at `W−20`; the PT button is absolute at
+      `zIndex` 100 above the `<Stack>`, y 67–103 at `insets.top ≈ 59`, `right:
+      14`, and with `hitSlop` 10 its touch target (y ≈ 57–113, x ≈ `W−60…W−4`)
+      **contains the avatar outright**. iPhone SE does not overlap — so it only
+      bites on the phones Apple reviews on. Profile is still reachable from the
+      PT menu, so this is a **dead control, not a dead end**, and nothing was
+      moved. Whether the avatar moves, the PT button moves, or Home drops the
+      avatar is a design call. [DECIDE]
+- [ ] **A watchdog on the barcode scanner's `loading` state.**
+      `food-search.tsx:770` sets `onRequestClose` to a no-op while the camera
+      permission is resolving and renders an empty `<View>`;
+      `useCameraPermissionGate` has no timeout, so if `requestPermission()`
+      never settles (Android activity recreation during the system sheet is the
+      known case) there is a blank uncloseable modal with no recovery short of
+      killing the app. Deliberately **not** changed — well-meaning edits to
+      5.1.1(iv) permission code are exactly the failure mode that cost four
+      rejections, and the safe fix touches only `loading`, where the system
+      sheet is definitionally not up yet. [DECIDE]
+- [ ] **A second web password-reset race, unproven and untouched.**
+      `_layout.tsx:1115-1122` handles `PASSWORD_RECOVERY` by routing to
+      `/set-password` and returning *without* `restoreSession()`, so
+      `isAuthenticated` can still be false while a Supabase session exists —
+      and rule 3 would send them to `/auth`. supabase-js's event ordering could
+      not be established from the repo, and `routeGuard` is the most sensitive
+      file here. Exercise it when you test the PWA reset end to end.
+- [ ] **Onboarding's Create Account step has no Terms/Privacy links** —
+      previously "not re-checked", now confirmed real. `app/auth.tsx:424-437`
+      has the exact pattern and labels to copy. Not applied: it adds elements
+      to the primary funnel, which is your design call. [WORDS]
+- [ ] **A Free reviewer cannot verify the UGC moderation claims.** The notes
+      describe the live-chat disclaimer, per-message Report and image
+      moderation, but live chat is Plus/Pro-only and the notes keep the
+      reviewer on Free. Either say so in the notes or expect a 1.2 question.
+- [x] ~~"Unlimited Aimee chat" vs the monthly cap~~ — **closed**. The last two
+      live surfaces were in `src/config/tourSteps.ts` (a tour titled
+      *Unlimited* that fires the moment someone upgrades, and "20 messages per
+      day" on the free→plus tour). Both now reuse the approved strings, and
+      `paywallClaimsMatchLimits` covers that file.
+- [x] ~~The consent modal does not name health data~~ — **closed 2026-09-16.**
+      The fallback was corrected first and the root `AiConsentModal` — the one
+      a user meets — was missed, which briefly left the review notes claiming
+      something untrue. Both surfaces now carry the same wording.
+
 **A per-dose maximum from Jamie (merged 2026-09-16)** [DECIDE]
 - [ ] The overdose guard's only high-dose rule for a resolved compound was
       `amount > 3× the maximum`. Jamie's rulings now win on precedence, and

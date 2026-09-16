@@ -53,14 +53,14 @@ context for the developer.
 >    under DATA (`app/(tabs)/profile.tsx:912`). A 5.1.1(v) check that opens the
 >    section we named and finds nothing is a rejection.
 >
-> Still unreconciled, and **not** changed here because the fix is copy or a
-> decision: the Guideline 5.1.2 paragraph says *the first modal names the
-> health profile among what is sent*. That is true of the imperative fallback
-> (`src/utils/ensureAiConsent.ts:26`) and **not** true of the modal a user
-> actually meets first — the root `AiConsentModal`
-> (`src/components/AiConsentModal.tsx:60-83`) names chat messages, voice and
-> photos and never mentions health data. Either the modal copy gains the health
-> line or this paragraph has to stop claiming it.
+> 4. **Reconciled 2026-09-16.** The Guideline 5.1.2 paragraph says *the first
+>    modal names the health profile among what is sent*. That had been made
+>    true of the imperative fallback (`src/utils/ensureAiConsent.ts:26`) and
+>    **not** of the modal a user actually meets first, so this file was briefly
+>    claiming something the binary did not do. The root `AiConsentModal` now
+>    carries a fourth row — *The health details in your profile → xAI (Aimee)* —
+>    and points at the separate switch, in the fallback's own words. Both
+>    surfaces now say the same thing, and the paragraph is accurate.
 
 ---
 

@@ -73,9 +73,26 @@ export function AiConsentModal() {
               <Ionicons name="camera-outline" size={18} color="#888" />
               <Text style={styles.rowText}>Scanned photos → OpenAI (vision)</Text>
             </View>
+            {/* Added 2026-09-16. The three rows above are the transports; this
+                is the one that is attached to them without the user doing
+                anything, because profile.aiDataConsent defaults true. Agreeing
+                here while being told only about messages, voice and photos
+                meant labs, doses, conditions, medications and allergies went
+                along undisclosed. The imperative fallback
+                (src/utils/ensureAiConsent.ts) was corrected first and this
+                modal — the one a user actually meets — was missed, which left
+                docs/app-store-review-notes.md claiming something untrue. Same
+                wording as the fallback, so there is one author for both. */}
+            <View style={styles.row}>
+              <Ionicons name="fitness-outline" size={18} color="#888" />
+              <Text style={styles.rowText}>
+                The health details in your profile → xAI (Aimee)
+              </Text>
+            </View>
             <Text style={styles.fineprint}>
               Your data is used only to deliver these features — never for advertising. You
-              can use the rest of PepTalk without AI. Details are in our{' '}
+              can use the rest of PepTalk without AI, and you can switch the health details
+              off on their own in Profile. Details are in our{' '}
               {/* Close this modal BEFORE routing, or the link does nothing a
                   user can see. A React Native <Modal> is a separate window on
                   both platforms — a UIViewController on iOS, a Dialog on
