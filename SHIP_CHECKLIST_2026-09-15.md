@@ -421,13 +421,21 @@ unless marked otherwise.
       `onboarding.tsx:123` "Aimee chat (20/day)" — the allowance is monthly
       and is not counted in messages at all.
 
-      ⚠️ And a Pro user who hits the cap is offered **nothing**:
-      `aiAllowance.ts:117` sets `upgrade` only for `free` and `plus`, so Pro
-      dead-ends at a refusal with no path.
+      ✅ **Settled 2026-09-16 — Edward: "make the words match the caps".** The
+      caps are unchanged; all six claims now state the enforced number, and
+      `paywallClaimsMatchLimits.test.ts` fails if copy and gate drift apart
+      again (mutation-tested 3/3). Verified against the live project first:
+      **no `AIMEE_MONTHLY_CENTS_*` secret is set**, so the code defaults above
+      are the live values. "up to" is deliberate — the cost cap can bind
+      before the message count, so the figure is a ceiling.
 
-      **Not changed.** Either the caps move or the words do, and both are
-      yours — one is a cost commitment, the other a pricing promise under
-      Guideline 3.1.2. Say which and I will make it match.
+      ⚠️ **Still open, and it is behaviour rather than words:** a Pro user who
+      hits the cap is offered **nothing**. `aiAllowance.ts:117` sets `upgrade`
+      only for `free` and `plus`, so Pro dead-ends at a refusal. Now that Pro
+      is honestly sold as a finite 9,000 a month, what happens at 9,001 is a
+      real product question — credit packs already exist (`_shared/credits.ts`)
+      and would be the obvious path, but wiring them in is a decision, not a
+      correction. [DECIDE]
 - [ ] `app/calculators/index.tsx:65` says "we'll show **Edward's** recommended
       ladder". Left alone because it is *accurate* —
       `peptideDosingReference.ts` really is Edward's PEPTALK_DOSES doc. It is
