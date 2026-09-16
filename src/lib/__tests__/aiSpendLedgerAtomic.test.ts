@@ -97,11 +97,27 @@ function makeLedger() {
   };
 }
 
-function loadCost() {
+/**
+ * Shape of the module under test, DECLARED rather than `typeof import(...)`:
+ * tsconfig excludes supabase/functions (Deno, not React Native), and a
+ * type-position import drags it back into the program, where every
+ * `Deno.env.get` becomes a typecheck error. Loaded at RUNTIME by absolute
+ * path, under a Deno shim.
+ */
+interface Cost {
+  recordSpend(
+    supabase: unknown,
+    userId: string,
+    microcents: number,
+    opts?: { allowanceMC?: number; priorSpendMC?: number },
+  ): Promise<void>;
+}
+
+function loadCost(): Cost {
   jest.resetModules();
   (globalThis as any).Deno = { env: { get: () => undefined } };
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require(COST) as typeof import('../../../supabase/functions/aimee-chat-stream/_cost');
+  return require(COST) as Cost;
 }
 
 afterAll(() => {
