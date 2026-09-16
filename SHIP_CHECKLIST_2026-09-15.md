@@ -429,13 +429,37 @@ unless marked otherwise.
       are the live values. "up to" is deliberate — the cost cap can bind
       before the message count, so the figure is a ceiling.
 
-      ⚠️ **Still open, and it is behaviour rather than words:** a Pro user who
-      hits the cap is offered **nothing**. `aiAllowance.ts:117` sets `upgrade`
-      only for `free` and `plus`, so Pro dead-ends at a refusal. Now that Pro
-      is honestly sold as a finite 9,000 a month, what happens at 9,001 is a
-      real product question — credit packs already exist (`_shared/credits.ts`)
-      and would be the obvious path, but wiring them in is a decision, not a
-      correction. [DECIDE]
+      ✅ **Pro's dead-end is wired, 2026-09-16** (Edward: "wire up the credit
+      packs for pro"). The server now sends `topUp` on `user_cap_hit` for every
+      tier, and `src/lib/aimeeDenialActions.ts` turns the flags into the offer.
+      Found on the way: the chat stream's cost-cap refusal sent **neither**
+      flag, so free and plus were dead-ended there too. Mutations 4/4.
+
+      Credits are offered **only** against the cost cap. They do not move the
+      per-message limit or the system breaker, so a pack bought there would
+      change nothing — the server does not set `topUp` on either, and a test
+      pins that.
+
+- [ ] 🚩 **CONSOLE — the top-up offer only completes on native if the
+      consumable exists.** `listAvailablePacks()` asks the store what is real
+      and shows nothing when the SKU is absent, so there is no dead-end
+      *button* — but a Pro user who taps "Top up AI credit" would land on
+      `/subscription` and find an empty shelf.
+
+      **`peptalk_credits` must exist and be approved as a consumable in App
+      Store Connect AND as a one-time product in Play Console**, at the same
+      price the catalog claims. Nothing in this repo can verify that — IAP
+      products are console-only — and nothing on record says whether it was
+      ever created. Confirm before submitting, or the one remedy Pro has is
+      invisible on the platforms where most of them are.
+
+      Web is unaffected: the Square rail creates the link server-side and the
+      edge function refuses cleanly with a 503 if Square is unconfigured.
+- [ ] `src/lib/creditPacks.ts` still marks `priceCents` (499) and
+      `creditCents` (300) **"⚠️ placeholder — Edward sets this"**. §6 already
+      asks you to confirm $4.99; the credit value needs the same nod. The two
+      catalogs (client and edge) are kept in step by a test, so change one and
+      the other fails until it matches.
 - [ ] `app/calculators/index.tsx:65` says "we'll show **Edward's** recommended
       ladder". Left alone because it is *accurate* —
       `peptideDosingReference.ts` really is Edward's PEPTALK_DOSES doc. It is
