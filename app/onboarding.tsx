@@ -462,7 +462,15 @@ export default function OnboardingScreen() {
         // Leaderboard opt-in. Written to profiles now when there is a session;
         // otherwise held and flushed on the first authenticated boot. Off needs
         // no write — the column defaults to false.
-        void useLeaderboardStore.getState().recordOnboardingChoice(leaderboardOptIn);
+        //
+        // The account it was answered for travels with it. A held choice used
+        // to be a bare boolean applied to whoever was signed in at flush time,
+        // so an unconfirmed signup could put the NEXT person to use this
+        // install on the public leaderboard.
+        const optInAccount = isAuthenticated
+          ? useAuthStore.getState().user?.email ?? null
+          : accountEmail;
+        void useLeaderboardStore.getState().recordOnboardingChoice(leaderboardOptIn, optInAccount);
 
         // Record server-side that this account passed the age gate. Until now
         // the answer lived only on the device, so the gate could be shown in

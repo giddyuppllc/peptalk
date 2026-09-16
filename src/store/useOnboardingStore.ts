@@ -61,9 +61,18 @@ interface OnboardingStore {
    * Server restore progress for the signed-in user (see
    * src/services/onboardingRestore.ts). Session-only — never persisted, so a
    * stored value can never stand in for a restore that did not run.
+   *
+   * `serverKnown` is the part 'settled' does NOT say. Settled means the
+   * restore stopped; it is written identically by a success, a timeout and a
+   * thrown error. Only `serverKnown` says the server's copy of this user's
+   * answers was actually read — which is the precondition for overwriting it.
    */
-  restore: { userId: string | null; status: 'idle' | 'pending' | 'settled' };
-  setRestoreStatus: (userId: string | null, status: 'idle' | 'pending' | 'settled') => void;
+  restore: { userId: string | null; status: 'idle' | 'pending' | 'settled'; serverKnown: boolean };
+  setRestoreStatus: (
+    userId: string | null,
+    status: 'idle' | 'pending' | 'settled',
+    meta?: { serverKnown?: boolean },
+  ) => void;
   /** First unanswered step found by the restore, for the onboarding screen to open at. */
   resumeStep: { userId: string; step: 1 | 2 | 3 } | null;
   setResumeStep: (resume: { userId: string; step: 1 | 2 | 3 } | null) => void;
@@ -148,10 +157,21 @@ export const useOnboardingStore = create<OnboardingStore>()(
         set((state) => ({ profile: { ...state.profile, dataShareConsent } })),
 
       completeOnboarding: () => set({ isComplete: true }),
-      reset: () => set({ profile: emptyProfile, isComplete: false, resumeStep: null }),
+      // Both callers — the logout wipe and Delete My Data — leave the device
+      // with no answers on it. The restore state has to go with them: left at
+      // 'settled', the mirror treats the emptied store as an edit worth
+      // uploading, and a device-only wipe destroys the server record.
+      reset: () =>
+        set({
+          profile: emptyProfile,
+          isComplete: false,
+          resumeStep: null,
+          restore: { userId: null, status: 'idle', serverKnown: false },
+        }),
 
-      restore: { userId: null, status: 'idle' },
-      setRestoreStatus: (userId, status) => set({ restore: { userId, status } }),
+      restore: { userId: null, status: 'idle', serverKnown: false },
+      setRestoreStatus: (userId, status, meta) =>
+        set({ restore: { userId, status, serverKnown: meta?.serverKnown === true } }),
       resumeStep: null,
       setResumeStep: (resumeStep) => set({ resumeStep }),
     }),

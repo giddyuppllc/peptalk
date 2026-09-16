@@ -253,13 +253,25 @@ export async function fetchUserRecords<T = Record<string, unknown>>(
  * Returns true only when PostgREST accepted the row. Existing callers ignore
  * the result; the onboarding snapshot write reads it so a failed save is
  * reported rather than assumed.
+ *
+ * `userId` names the account the profile BELONGS to, and is an assertion, not
+ * a destination: the row is always written for the live session. A caller that
+ * knows whose data it is holding passes it, and a session that has moved on in
+ * between makes this refuse instead of upserting one person's health profile
+ * under another's user_id. That is not hypothetical — the store's 800ms
+ * debounce fires long after the change that scheduled it, and a sign-out and
+ * sign-in fit comfortably inside that window.
  */
 export async function syncHealthProfile(
   profile: unknown,
-  extras?: { setup_complete?: boolean; current_step?: number }
+  extras?: { setup_complete?: boolean; current_step?: number; userId?: string | null }
 ): Promise<boolean> {
   const userId = await getUserId();
   if (!userId) return false;
+  if (extras?.userId != null && extras.userId !== userId) {
+    console.warn('[sync] health_profiles upsert refused: profile belongs to another account');
+    return false;
+  }
 
   try {
     const { error } = await db

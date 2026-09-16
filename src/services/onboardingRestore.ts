@@ -101,8 +101,13 @@ const currentUserId = (): string | null => {
 async function writeSnapshot(snapshot: OnboardingSnapshot): Promise<boolean> {
   useHealthProfileStore.getState().setOnboardingSnapshot(snapshot);
   // Upserted directly as well as through the store's debounced sync, because
-  // that path swallows failures and this one must not.
-  const ok = await syncHealthProfile(useHealthProfileStore.getState().profile);
+  // that path swallows failures and this one must not. Named for the account
+  // that was signed in when the snapshot was decided: if the session changed
+  // while this was being assembled, the upsert refuses rather than filing one
+  // person's answers under another's user_id.
+  const ok = await syncHealthProfile(useHealthProfileStore.getState().profile, {
+    userId: currentUserId(),
+  });
   if (!ok) {
     captureException(new Error('Onboarding snapshot was not saved'), {
       source: 'onboardingRestore.writeSnapshot',
@@ -122,7 +127,9 @@ export const restoreOnboardingFromServer = createOnboardingRestorer({
       STORE_HYDRATION_WAIT_MS,
     );
   },
-  fetchServerProfile: () => syncHealthProfileFromServer(),
+  // Named, so the fetch is shared per account and never applies a row the
+  // session has moved on from while it was out.
+  fetchServerProfile: () => syncHealthProfileFromServer(currentUserId()),
   getLocal: () => {
     const { isComplete, profile } = useOnboardingStore.getState();
     return { isComplete, profile };
@@ -148,7 +155,8 @@ export const restoreOnboardingFromServer = createOnboardingRestorer({
     }
   },
   setResumeStep: (resume) => useOnboardingStore.getState().setResumeStep(resume),
-  setRestoreStatus: (userId, status) => useOnboardingStore.getState().setRestoreStatus(userId, status),
+  setRestoreStatus: (userId, status, meta) =>
+    useOnboardingStore.getState().setRestoreStatus(userId, status, meta),
   writeSnapshot,
   now: () => new Date().toISOString(),
   report: (err, source) => captureException(err, { source }),
@@ -158,7 +166,10 @@ export const restoreOnboardingFromServer = createOnboardingRestorer({
 export function clearOnboardingRestore(): void {
   const s = useOnboardingStore.getState();
   if (s.restore.status !== 'idle' || s.resumeStep) {
-    useOnboardingStore.setState({ restore: { userId: null, status: 'idle' }, resumeStep: null });
+    useOnboardingStore.setState({
+      restore: { userId: null, status: 'idle', serverKnown: false },
+      resumeStep: null,
+    });
   }
 }
 
@@ -171,11 +182,20 @@ export function clearOnboardingRestore(): void {
 // A device-local change (withoutProfileSync — Delete My Data, the sign-out
 // wipe) writes nothing here either: this upserts health_profiles directly, so
 // the health store's own suppression does not cover it.
+//
+// 'settled' is not enough on its own. It means the restore STOPPED, and a
+// timed-out or errored fetch settles exactly like a success — so a user on a
+// new phone with bad wifi restored nothing, re-answered onboarding, and Finish
+// replaced their server-side medical history, medications and allergies with
+// the empties this device had. `serverKnown` is the missing condition: the
+// server's copy was actually read, so overwriting it is a real decision rather
+// than a guess made from ignorance.
 useOnboardingStore.subscribe((state, prev) => {
   if (state.profile === prev.profile && state.isComplete === prev.isComplete) return;
   if (isProfileSyncSuppressed()) return;
   const userId = currentUserId();
   if (!userId || state.restore.userId !== userId || state.restore.status !== 'settled') return;
+  if (!state.restore.serverKnown) return;
   const parsed = parseOnboardingSnapshot(useHealthProfileStore.getState().profile);
   if (parsed.status === 'unsupported') return;
   const snapshot = snapshotToWrite(

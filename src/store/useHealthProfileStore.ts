@@ -41,6 +41,25 @@ export function isProfileSyncSuppressed(): boolean {
   return profileSyncSuppressed > 0;
 }
 
+/**
+ * Whose profile the store is currently holding, when that is known.
+ *
+ * Set only where the answer is certain: the server fetch below, which knows
+ * the account the row was read for. A profile typed on the device before any
+ * fetch has no owner recorded, and asserts nothing.
+ *
+ * It exists because the debounced upsert is fire-and-forget and runs 800ms
+ * after the change, by which time the session can be somebody else's. The
+ * upsert then writes whatever is in the store under whoever is signed in NOW.
+ * Passing this to syncHealthProfile turns that into a refusal.
+ */
+let profileOwnerId: string | null = null;
+
+/** The account the held profile was read for, or null when unknown. */
+export function healthProfileOwnerId(): string | null {
+  return profileOwnerId;
+}
+
 // ---------------------------------------------------------------------------
 // Defaults
 // ---------------------------------------------------------------------------
@@ -521,7 +540,13 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
       // onboarding restore and the user's other devices read back. Removing
       // the server copy is delete-user's job (Delete Account), never this.
       resetProfile: () =>
-        withoutProfileSync(() => set({ profile: emptyProfile, currentStep: 0 })),
+        withoutProfileSync(() => {
+          // The wiped store holds nobody's profile, and an in-flight server
+          // fetch started for the outgoing account must not land in it.
+          profileOwnerId = null;
+          abandonInflightServerProfile();
+          set({ profile: emptyProfile, currentStep: 0 });
+        }),
 
       // Queries
       hasAllergy: (substance) => {
@@ -583,8 +608,12 @@ useHealthProfileStore.subscribe((state, prev) => {
   // cancelling it here would drop that edit rather than protect anything.
   if (profileSyncSuppressed > 0) return;
   if (syncTimer) clearTimeout(syncTimer);
+  // The owner is captured NOW, not read inside the timer: by the time it fires
+  // the store may already hold a different account's profile, and the point of
+  // the assertion is to name the account this particular change belonged to.
+  const owner = profileOwnerId;
   syncTimer = setTimeout(() => {
-    syncHealthProfile(state.profile).catch(() => {});
+    syncHealthProfile(state.profile, { userId: owner }).catch(() => {});
   }, 800);
 });
 
@@ -600,8 +629,65 @@ useHealthProfileStore.subscribe((state, prev) => {
  * onboarding restore all ask at nearly the same moment; separate requests
  * could land in any order, and a later "server wins" overwrite would wipe a
  * snapshot the restore had just written into the store.
+ *
+ * SHARING IS PER ACCOUNT, AND THE ANSWER IS CHECKED BEFORE IT IS APPLIED.
+ * The share used to be a bare module-level promise, cleared only when it
+ * settled. Nothing reset it on sign-out. So: user A's fetch hangs, A signs
+ * out, B signs in, B's restore asks — and got back A's in-flight promise,
+ * whose "server wins" setState put A's medical history, medications and
+ * allergies into B's store. The debounced upsert then wrote them to the
+ * server under B's user_id, replacing B's whole profile JSON.
+ *
+ * Two independent guards, because either alone still loses the race:
+ *   - the share is keyed by the requesting account, so B never inherits A's
+ *     promise;
+ *   - the account the row was read for is compared with the account signed in
+ *     at the moment the answer lands, and a change between the two means the
+ *     answer is nobody's business on screen. That also covers the late reply
+ *     to a timed-out fetch: withTimeout abandons the request rather than
+ *     aborting it (supabase-js exposes no signal), so it does still arrive.
  */
-let inflightServerProfile: Promise<ServerProfileFetch> | null = null;
+let inflightServerProfile: { userId: string | null; promise: Promise<ServerProfileFetch> } | null =
+  null;
+
+/**
+ * Drop the shared request without waiting for it. Called by the sign-out and
+ * device wipes, so the next account starts from nothing in flight.
+ */
+export function abandonInflightServerProfile(): void {
+  inflightServerProfile = null;
+}
+
+/**
+ * Who is signed in right now, read from the LOCAL session (no network), the
+ * same way syncService reads it. `undefined` means the client could not say.
+ */
+async function liveAuthUserId(supabase: any): Promise<string | null | undefined> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.user?.id ?? null;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * May this row be written into the store?
+ *
+ * Only for the account on screen. When the live session cannot be read, the
+ * caller's own declared account is the fallback signal — and a caller that
+ * declared none has given no evidence at all, so nothing is written. Guessing
+ * in that position is what puts one person's medical history in front of
+ * another's.
+ */
+function answersForTheUserOnScreen(
+  rowUserId: string,
+  requestedUserId: string | null,
+  liveUserId: string | null | undefined,
+): boolean {
+  if (requestedUserId != null && requestedUserId !== rowUserId) return false;
+  return liveUserId === undefined ? requestedUserId === rowUserId : liveUserId === rowUserId;
+}
 
 /**
  * Lazy, as before, so boot does not pull the client in early. A parameter only
@@ -612,9 +698,13 @@ type SupabaseLoader = () => Promise<{ supabase: unknown }>;
 const loadSupabase: SupabaseLoader = () => import('../services/supabase');
 
 export function syncHealthProfileFromServer(
+  /** The account the caller is asking on behalf of. Null when it has none. */
+  requestedUserId: string | null = null,
   load: SupabaseLoader = loadSupabase,
 ): Promise<ServerProfileFetch> {
-  if (inflightServerProfile) return inflightServerProfile;
+  if (inflightServerProfile && inflightServerProfile.userId === requestedUserId) {
+    return inflightServerProfile.promise;
+  }
   const request = (async (): Promise<ServerProfileFetch> => {
     try {
       const { supabase } = await load();
@@ -635,22 +725,27 @@ export function syncHealthProfileFromServer(
 
       if (error) return { status: 'error' };
 
-      if (data?.profile) {
+      if (data?.profile && answersForTheUserOnScreen(user.id, requestedUserId, await liveAuthUserId(supabase))) {
         // Server wins on boot — overwrite local if remote exists
+        profileOwnerId = user.id;
         useHealthProfileStore.setState({
           profile: data.profile,
           currentStep: data.current_step ?? 0,
         });
       }
+      // Returned whether or not it was applied: planOnboardingRestore compares
+      // `userId` with the live session itself and already grants nothing when
+      // they differ. Withholding the result here would only turn a knowable
+      // "this answered for someone else" into an unknowable error.
       return { status: 'ok', userId: user.id, profile: data?.profile ?? null };
     } catch {
       // offline or not yet synced — local state stands
       return { status: 'error' };
     }
   })();
-  inflightServerProfile = request;
+  inflightServerProfile = { userId: requestedUserId, promise: request };
   void request.finally(() => {
-    if (inflightServerProfile === request) inflightServerProfile = null;
+    if (inflightServerProfile?.promise === request) inflightServerProfile = null;
   });
   return request;
 }
