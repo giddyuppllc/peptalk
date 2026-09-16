@@ -25,6 +25,7 @@ import { ChatMessage, EnhancedBotContext } from '../types';
 import { ensureAiConsent } from '../utils/ensureAiConsent';
 import { sanitizeForLLM } from './privacyGuard';
 import { applyAiDataConsent } from '../lib/aiDataConsent';
+import { withHealthConsent } from '../lib/aiFeatureConsent';
 import { supabase } from './supabase';
 import { captureException } from './telemetry';
 
@@ -827,16 +828,13 @@ export async function generateRecipe(params: {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token) {
+        // `constraints` is screen state the user typed on the recipe form.
+        // Allergens come from the health profile and travel in their own
+        // field so the consent filter can drop exactly those — the edge
+        // function folds them back into the constraint list server-side.
         const constraints: string[] = [];
         if (diet && diet !== 'any') constraints.push(diet);
         if (preferences) constraints.push(preferences);
-        // Allergens get pushed as strict "no X" entries so the AI avoids them.
-        // Duplicate entries are fine — constraints are a free-form list.
-        if (allergens && allergens.length > 0) {
-          for (const a of allergens) {
-            if (a.trim()) constraints.push(`strictly no ${a.trim()}`);
-          }
-        }
 
         const res = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/aimee-recipe`, {
           method: 'POST',
@@ -845,12 +843,13 @@ export async function generateRecipe(params: {
             'Content-Type': 'application/json',
             apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
           },
-          body: JSON.stringify({
+          body: JSON.stringify(withHealthConsent('aimee-recipe', {
             mealType,
             macroTargets: targets,
             constraints,
+            allergens: (allergens ?? []).map((a) => a.trim()).filter(Boolean),
             count: 3,
-          }),
+          })),
         });
         if (res.ok) {
           const data = await res.json();

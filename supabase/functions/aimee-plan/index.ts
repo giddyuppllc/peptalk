@@ -11,6 +11,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
 import { checkAiAllowance, recordAiSpend } from '../_shared/aiAllowance.ts';
+import { applyFeatureConsent } from '../_shared/aiFeatureConsent.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -82,7 +83,10 @@ Deno.serve(async (req) => {
       return json({ error: 'AI service not configured' }, 500);
     }
 
-    const body: PlanBody = await req.json().catch(() => ({}));
+    // Health-data consent (profile.aiDataConsent), enforced here as well as on
+    // the client so a stale or tampered build cannot bypass it. This feature
+    // still works without health data, so the fields are stripped, not refused.
+    const body: PlanBody = applyFeatureConsent('aimee-plan', await req.json().catch(() => ({}))).body;
     const days = [3, 5, 7].includes(body.days ?? 0) ? body.days! : 5;
     const macros = body.macroTargets;
     const dietType = body.dietType ?? 'balanced';

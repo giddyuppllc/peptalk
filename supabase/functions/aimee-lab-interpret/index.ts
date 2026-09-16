@@ -29,6 +29,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
 import { checkAiAllowance, recordAiSpend } from '../_shared/aiAllowance.ts';
+import { applyFeatureConsent, HEALTH_CONSENT_REFUSAL } from '../_shared/aiFeatureConsent.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -134,7 +135,12 @@ Deno.serve(async (req) => {
     const allowance = await checkAiAllowance(supabase, user.id, effectiveTier);
     if (!allowance.allowed) return jsonResp(allowance.body, allowance.status);
 
-    const body = await req.json().catch(() => ({}));
+    // Health-data consent (profile.aiDataConsent), enforced here as well as on
+    // the client so a stale or tampered build cannot bypass it. This request is
+    // nothing but health data, so it refuses rather than strips.
+    const consent = applyFeatureConsent('aimee-lab-interpret', await req.json().catch(() => ({})));
+    if (consent.refuse) return jsonResp(HEALTH_CONSENT_REFUSAL, 403);
+    const body = consent.body as Record<string, any>;
     const results = Array.isArray(body?.results) ? body.results : [];
     if (results.length === 0) {
       return jsonResp({ error: 'No lab results to interpret.' }, 400);

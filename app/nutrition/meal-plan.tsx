@@ -21,6 +21,7 @@ import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import type { MealType } from '../../src/types/fitness';
 import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
 import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
+import { withHealthConsent } from '../../src/lib/aiFeatureConsent';
 import { todayLocalISO } from '../../src/utils/dateUtil';
 
 interface PlannedMeal {
@@ -91,8 +92,11 @@ function MealPlanScreen() {
         Alert.alert('Sign in required', 'Please log in to generate a meal plan.');
         return;
       }
+      // The health toggle is a SEPARATE consent from the launch modal above.
+      // Without it `allergens`, `goals` and `dietType` are dropped and the
+      // plan still generates against the macro targets.
       const { data, error } = await (supabase as any).functions.invoke('aimee-plan', {
-        body: {
+        body: withHealthConsent('aimee-plan', {
           days,
           macroTargets: {
             calories: macroTargets.calories,
@@ -103,7 +107,7 @@ function MealPlanScreen() {
           dietType,
           allergens,
           goals,
-        },
+        }),
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (error) {
