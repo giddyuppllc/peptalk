@@ -402,6 +402,38 @@ unless marked otherwise.
       instead of taking over the token. Reassigning it across users needs a
       server-side path.
 
+**The paywall sells messages; the server meters money (2026-09-16)** [DECIDE]
+- [ ] 🚩 **"Unlimited Aimee chat" is not unlimited, and it is a headline Pro
+      feature.** The enforcement is a monthly **cost** cap, not a message
+      count — `aimee-chat-stream/_cost.ts:93-95`:
+
+      | tier | default cap / month | env override |
+      |---|---|---|
+      | pro | **1200¢ ($12)** | `AIMEE_MONTHLY_CENTS_PRO` |
+      | plus | 300¢ ($3) | `AIMEE_MONTHLY_CENTS_PLUS` |
+      | free | 25¢ ($0.25) | `AIMEE_MONTHLY_CENTS_FREE` |
+
+      (Defaults only — the live values are Supabase secrets, so check the real
+      ones before deciding.) Three claims do not survive that:
+      `subscription.tsx:111` "Unlimited Aimee chat" · `PaywallModal.tsx:109`
+      "Unlimited conversations with Aimee — no message limits." ·
+      `subscription.tsx:86` "20 personalized chats/**day**" and
+      `onboarding.tsx:123` "Aimee chat (20/day)" — the allowance is monthly
+      and is not counted in messages at all.
+
+      ⚠️ And a Pro user who hits the cap is offered **nothing**:
+      `aiAllowance.ts:117` sets `upgrade` only for `free` and `plus`, so Pro
+      dead-ends at a refusal with no path.
+
+      **Not changed.** Either the caps move or the words do, and both are
+      yours — one is a cost commitment, the other a pricing promise under
+      Guideline 3.1.2. Say which and I will make it match.
+- [ ] `app/calculators/index.tsx:65` says "we'll show **Edward's** recommended
+      ladder". Left alone because it is *accurate* —
+      `peptideDosingReference.ts` really is Edward's PEPTALK_DOSES doc. It is
+      a 1.4.1 posture question, not an error: a named non-clinician
+      recommending doses is the exact shape guideline 1.4.1 asks about.
+
 **A per-dose maximum from Jamie (merged 2026-09-16)** [DECIDE]
 - [ ] The overdose guard's only high-dose rule for a resolved compound was
       `amount > 3× the maximum`. Jamie's rulings now win on precedence, and
