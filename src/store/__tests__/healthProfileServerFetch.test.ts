@@ -181,6 +181,19 @@ describe('syncHealthProfileFromServer', () => {
     expect(mockMaybeSingle).toHaveBeenCalledTimes(2);
   });
 
+  it('the sign-out / wipe path drops the shared request (resetProfile)', async () => {
+    let release!: (v: unknown) => void;
+    mockMaybeSingle.mockReturnValueOnce(new Promise((r) => (release = r)));
+    const first = syncHealthProfileFromServer('user-a');
+    // logout() and Delete My Data both go through resetProfile. A request
+    // still out for the outgoing account must not be handed to the next one.
+    useHealthProfileStore.getState().resetProfile();
+    const second = syncHealthProfileFromServer('user-a');
+    release({ data: { profile: row }, error: null });
+    await Promise.all([first, second]);
+    expect(mockMaybeSingle).toHaveBeenCalledTimes(2);
+  });
+
   it('abandoning the shared request makes the next caller start a new one', async () => {
     let release!: (v: unknown) => void;
     mockMaybeSingle.mockReturnValueOnce(new Promise((r) => (release = r)));
