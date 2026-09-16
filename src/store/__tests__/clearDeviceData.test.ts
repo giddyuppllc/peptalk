@@ -55,8 +55,13 @@ const mockAuth = {
 jest.mock('../../services/supabase', () => {
   const builder = (table: string) => {
     const chain: Record<string, unknown> = {};
+    // PostgREST hands back the affected row when .select() follows a write,
+    // and nothing at all when it does not — which is the distinction
+    // saveLeaderboardOptIn depends on to know the UPDATE matched a row.
+    let written: unknown = null;
     const record = (op: string) => (payload?: unknown) => {
       mockWrites.push({ table, op, payload });
+      written = payload ?? null;
       return chain;
     };
     Object.assign(chain, {
@@ -69,8 +74,8 @@ jest.mock('../../services/supabase', () => {
       in: () => chain,
       order: () => chain,
       limit: () => chain,
-      maybeSingle: () => Promise.resolve({ data: null, error: null }),
-      single: () => Promise.resolve({ data: null, error: null }),
+      maybeSingle: () => Promise.resolve({ data: written, error: null }),
+      single: () => Promise.resolve({ data: written, error: null }),
       then: (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
         Promise.resolve({ data: [], error: null }).then(resolve, reject),
     });
@@ -456,14 +461,20 @@ describe('the leaderboard opt-in held on the device (merged with feat/leaderboar
   }
 
   /** The last value the persist middleware wrote for the leaderboard store. */
-  function persistedLeaderboard(): { pendingOptIn?: unknown } | null {
+  function persistedLeaderboard(): { pendingOptIn?: unknown; pendingOptInEmail?: unknown } | null {
     const calls = (secureStorage.setItem as jest.Mock).mock.calls.filter(([key]) => key === LEADERBOARD_KEY);
     if (calls.length === 0) return null;
     return JSON.parse(calls[calls.length - 1][1] as string).state;
   }
 
   function holdPendingOptIn() {
-    useLeaderboardStore.setState({ pendingOptIn: true, optIn: null });
+    // Bound to the account that made it — a bare boolean is no longer flushed
+    // to anyone, because it could not be attributed to an account.
+    useLeaderboardStore.setState({
+      pendingOptIn: true,
+      pendingOptInEmail: 'a@example.com',
+      optIn: null,
+    });
     (secureStorage.setItem as jest.Mock).mockClear();
     mockWrites.length = 0;
   }
@@ -476,13 +487,31 @@ describe('the leaderboard opt-in held on the device (merged with feat/leaderboar
     expect(useLeaderboardStore.getState().pendingOptIn).toBeNull();
   });
 
+  it('a choice held for one account is never written for another', async () => {
+    // A signs up on the email-confirmation path and never confirms. B signs in
+    // on the same install. B was silently put on the public leaderboard.
+    useLeaderboardStore.setState({
+      pendingOptIn: true,
+      pendingOptInEmail: 'ann@example.com',
+      optIn: null,
+    });
+    mockAuth.session = { user: { id: 'user-b', email: 'b@example.com' }, access_token: 'tok-b' };
+    mockWrites.length = 0;
+
+    await useLeaderboardStore.getState().flushPendingOptIn();
+
+    expect(optInUpdates()).toEqual([]);
+    expect(useLeaderboardStore.getState().optIn).toBeNull();
+    expect(useLeaderboardStore.getState().pendingOptIn).toBeNull();
+  });
+
   it('Delete My Data clears it, in memory and in storage, and nothing is flushed after', async () => {
     holdPendingOptIn();
     clearDeviceData();
     await settle();
 
     expect(useLeaderboardStore.getState().pendingOptIn).toBeNull();
-    expect(persistedLeaderboard()).toEqual({ pendingOptIn: null });
+    expect(persistedLeaderboard()).toEqual({ pendingOptIn: null, pendingOptInEmail: null });
 
     await useLeaderboardStore.getState().flushPendingOptIn();
     expect(optInUpdates()).toEqual([]);
@@ -497,7 +526,7 @@ describe('the leaderboard opt-in held on the device (merged with feat/leaderboar
     await settle();
 
     expect(useLeaderboardStore.getState().pendingOptIn).toBeNull();
-    expect(persistedLeaderboard()).toEqual({ pendingOptIn: null });
+    expect(persistedLeaderboard()).toEqual({ pendingOptIn: null, pendingOptInEmail: null });
 
     // A session for someone else on this device must not receive the choice.
     mockAuth.session = { user: { id: 'user-b', email: 'b@example.com' }, access_token: 'tok-b' };

@@ -2,11 +2,21 @@
  * Leaderboard store — the fetched boards, shout-outs, and the opt-in switch.
  *
  * WHAT IS PERSISTED, AND WHY SO LITTLE
- * Only `pendingOptIn`: a choice made in onboarding that could not be written
- * yet (no session — e.g. the email-confirmation path). It is flushed on the next
- * authenticated boot and then cleared. Everything else lives in memory only: the
- * server is the source of truth for who is on the board, and a persisted copy of
- * other people's rows is exactly the stale cache an opt-out must not survive.
+ * Only `pendingOptIn` and the address it was made for: a choice made in
+ * onboarding that could not be written yet (no session — e.g. the
+ * email-confirmation path). It is flushed on the next authenticated boot and
+ * then cleared. Everything else lives in memory only: the server is the source
+ * of truth for who is on the board, and a persisted copy of other people's
+ * rows is exactly the stale cache an opt-out must not survive.
+ *
+ * A HELD CHOICE IS BOUND TO AN ACCOUNT
+ * It used to be a bare boolean, resolved to whoever was signed in when the
+ * flush ran. A signs up on the email-confirmation path, never confirms, and B
+ * signs in on the same install — B was silently put on the public leaderboard
+ * having never been asked. The address the choice was made for is persisted
+ * with it and the flush requires a match, mirroring the `resume.userId ===
+ * currentUserId` guard in app/onboarding.tsx. A choice that cannot be
+ * attributed to an account is not held at all.
  *
  * OPT-OUT IS IMMEDIATE
  * When the write succeeds, the viewer's own rows are removed from every board
@@ -33,15 +43,23 @@ import {
   type LoadStatus,
 } from '../lib/leaderboardPayload';
 import {
+  fetchCurrentAccountEmail,
   fetchLeaderboard,
   fetchLeaderboardOptIn,
   fetchMyMetrics,
   fetchShoutouts,
+  normalizeAccountEmail,
   saveLeaderboardOptIn,
 } from '../services/leaderboardService';
 import { useCommunityStore } from './useCommunityStore';
 
 const EMPTY_LIST = { rows: [], status: 'idle' as LoadStatus };
+
+/**
+ * Monotonic token for the opt-in read. A fetch that started before the user
+ * touched the switch must not land on top of the choice they just made.
+ */
+let optInReadToken = 0;
 
 interface LeaderboardState {
   /** Server value. null = not loaded / signed out. */
@@ -49,6 +67,8 @@ interface LeaderboardState {
   savingOptIn: boolean;
   /** Onboarding choice not yet written to the server. Persisted. */
   pendingOptIn: boolean | null;
+  /** The account `pendingOptIn` was made for. Persisted with it. */
+  pendingOptInEmail: string | null;
   boards: Record<LeaderboardMetric, ListState<LeaderboardRow>>;
   shoutouts: ListState<ShoutoutRow>;
   myMetrics: MyMetrics | null;
@@ -58,8 +78,12 @@ interface LeaderboardActions {
   loadOptIn: () => Promise<void>;
   /** Returns true only when the server accepted the change. */
   setOptIn: (optIn: boolean) => Promise<boolean>;
-  /** Called from onboarding. Default-off needs no write. */
-  recordOnboardingChoice: (optIn: boolean) => Promise<void>;
+  /**
+   * Called from onboarding. Default-off needs no write. `forEmail` is the
+   * account the answer was given for — the signup address, or the signed-in
+   * one — so a choice that cannot be written yet stays attached to it.
+   */
+  recordOnboardingChoice: (optIn: boolean, forEmail?: string | null) => Promise<void>;
   flushPendingOptIn: () => Promise<void>;
   loadBoard: (metric: LeaderboardMetric) => Promise<void>;
   loadShoutouts: () => Promise<void>;
@@ -80,16 +104,26 @@ export const useLeaderboardStore = create<LeaderboardState & LeaderboardActions>
       optIn: null,
       savingOptIn: false,
       pendingOptIn: null,
+      pendingOptInEmail: null,
       boards: initialBoards(),
       shoutouts: { ...EMPTY_LIST },
       myMetrics: null,
 
       loadOptIn: async () => {
+        const token = ++optInReadToken;
         const v = await fetchLeaderboardOptIn();
+        // A late mount fetch used to overwrite a toggle the user had just
+        // flipped, showing the switch OFF while they were publicly ranked.
+        // The server's answer is only news if nothing newer happened while it
+        // was out.
+        if (token !== optInReadToken || get().savingOptIn) return;
         set({ optIn: v });
       },
 
       setOptIn: async (optIn) => {
+        // Invalidates any opt-in read already in flight: the user's own action
+        // is newer than whatever that read is about to come back with.
+        optInReadToken++;
         set({ savingOptIn: true });
         const ok = await saveLeaderboardOptIn(optIn);
         if (!ok) {
@@ -97,7 +131,7 @@ export const useLeaderboardStore = create<LeaderboardState & LeaderboardActions>
           return false;
         }
         // An explicit choice supersedes anything left over from onboarding.
-        set({ optIn, savingOptIn: false, pendingOptIn: null });
+        set({ optIn, savingOptIn: false, pendingOptIn: null, pendingOptInEmail: null });
         if (!optIn) {
           const { boards, shoutouts } = get();
           set(purgeSelf(boards, shoutouts));
@@ -111,20 +145,50 @@ export const useLeaderboardStore = create<LeaderboardState & LeaderboardActions>
         return true;
       },
 
-      recordOnboardingChoice: async (optIn) => {
+      recordOnboardingChoice: async (optIn, forEmail) => {
         if (optIn !== true) {
-          set({ pendingOptIn: null });
+          set({ pendingOptIn: null, pendingOptInEmail: null });
           return;
         }
-        set({ pendingOptIn: true });
-        await get().flushPendingOptIn();
+        // Written now when there is a session: the answer belongs to whoever
+        // is signed in at the moment it is given, with no ambiguity to store.
+        if (await saveLeaderboardOptIn(true)) {
+          set({ optIn: true, pendingOptIn: null, pendingOptInEmail: null });
+          return;
+        }
+        // No session yet (the email-confirmation signup path), or the write
+        // failed. Hold it — but only against the account it was meant for. A
+        // choice with no address cannot be attributed to anyone on the next
+        // boot, and handing it to whoever signs in next is the bug.
+        const email = normalizeAccountEmail(forEmail);
+        set(
+          email
+            ? { pendingOptIn: true, pendingOptInEmail: email }
+            : { pendingOptIn: null, pendingOptInEmail: null },
+        );
       },
 
       flushPendingOptIn: async () => {
-        const pending = get().pendingOptIn;
+        const { pendingOptIn: pending, pendingOptInEmail } = get();
         if (pending == null) return;
+        // Persisted by a build that did not record the account (or by a path
+        // that could not name one). Unattributable, so it is dropped rather
+        // than applied to whoever happens to be here.
+        if (!pendingOptInEmail) {
+          set({ pendingOptIn: null, pendingOptInEmail: null });
+          return;
+        }
+        const signedInAs = await fetchCurrentAccountEmail();
+        // No session yet — the account it was made for may still confirm.
+        if (!signedInAs) return;
+        if (signedInAs !== pendingOptInEmail) {
+          // Somebody else is using this install. Their leaderboard visibility
+          // is not for the previous signup to decide.
+          set({ pendingOptIn: null, pendingOptInEmail: null });
+          return;
+        }
         const ok = await saveLeaderboardOptIn(pending);
-        if (ok) set({ pendingOptIn: null, optIn: pending });
+        if (ok) set({ pendingOptIn: null, pendingOptInEmail: null, optIn: pending });
       },
 
       loadBoard: async (metric) => {
@@ -166,21 +230,26 @@ export const useLeaderboardStore = create<LeaderboardState & LeaderboardActions>
         return res;
       },
 
-      clearAll: () =>
+      clearAll: () => {
+        // An opt-in read still in flight must not repopulate a cleared store.
+        optInReadToken++;
         set({
           optIn: null,
           savingOptIn: false,
           pendingOptIn: null,
+          pendingOptInEmail: null,
           boards: initialBoards(),
           shoutouts: { ...EMPTY_LIST },
           myMetrics: null,
-        }),
+        });
+      },
     }),
     {
       name: 'peptalk-leaderboard-v1',
       storage: createJSONStorage(() => secureStorage),
-      // Only the unsent onboarding choice. Never other people's rows.
-      partialize: (s) => ({ pendingOptIn: s.pendingOptIn }),
+      // Only the unsent onboarding choice, and the account it was made for.
+      // Never other people's rows.
+      partialize: (s) => ({ pendingOptIn: s.pendingOptIn, pendingOptInEmail: s.pendingOptInEmail }),
     },
   ),
 );
