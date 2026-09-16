@@ -83,7 +83,7 @@ const TIERS: TierInfo[] = [
     description: 'Early access to the upgraded version',
     features: [
       'Stack Builder — unlimited peptide stacks with interaction & synergy analysis',
-      'Aimee — 20 personalized chats/day on dosing, timing, and side effects',
+      'Aimee — up to 750 messages a month on dosing, timing, and side effects',
       'Food Scanner — snap a plate, get every food + macros',
       'Voice Log — say what you ate, get the macros logged',
       'Unlimited meal & food logging + full micronutrient tracking',
@@ -108,7 +108,7 @@ const TIERS: TierInfo[] = [
     description: 'Full coaching + programs',
     features: [
       'Everything in Plus',
-      'Unlimited Aimee chat',
+      'Aimee — up to 9,000 messages a month',
       'Recipe Generator — personalized to your goals + allergens',
       'Multi-week training programs — progressive sets, reps, and rest',
       'Custom Workout Generator + tracker',
@@ -571,7 +571,7 @@ export default function SubscriptionScreen() {
         <View style={styles.hero}>
           <Text style={styles.heroTitle}>Choose Your Plan</Text>
           <Text style={styles.heroDesc}>
-            Unlock AI-powered tools, unlimited access, and professional health features.
+            Unlock AI-powered tools, a bigger Aimee allowance, and professional health features.
           </Text>
         </View>
 

@@ -105,8 +105,8 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
 
   // Pro tier features
   aimee_ai_unlimited: {
-    name: 'Unlimited Aimee',
-    description: 'Unlimited conversations with Aimee — no message limits.',
+    name: 'More Aimee',
+    description: 'Up to 9,000 messages a month with Aimee, and her full toolset.',
   },
   aimee_meal_plans: {
     name: 'Aimee Meal Plans',
