@@ -46,6 +46,10 @@ import {
   isAIAvailable,
 } from '../../src/services/llmService';
 import { canSendToCloud } from '../../src/services/privacyGuard';
+import { buildAiMessageReport } from '../../src/lib/aiReport';
+import { promptReportReasons } from '../../src/components/community/memberReportActions';
+import { AI_REPORT_COPY, REPORT_COPY } from '../../src/constants/reportCopy';
+import { useCommunityStore } from '../../src/store/useCommunityStore';
 import { generateCorrelationInsights, buildCorrelationSummaryForBot } from '../../src/services/watchCorrelationService';
 import { useJournalStore } from '../../src/store/useJournalStore';
 import { ChatMessage, EnhancedBotContext } from '../../src/types';
@@ -937,6 +941,32 @@ export default function PepTalkScreen() {
   const botActions = lastBotMessage?.actions || [];
   const lastBotHasJournal = !!lastBotMessage?.journalEntry;
 
+  /**
+   * Report one of Aimee's replies — Play's generative-AI policy wants an
+   * in-app way to flag offensive or unsafe AI output, and there was none.
+   *
+   * The payload is built by buildAiMessageReport, which reads the message's
+   * `content` and `timestamp` and nothing else. That matters here specifically:
+   * `buildContext()` a few lines up assembles the user's health profile for
+   * Aimee, and a report must never pick any of it up. Profile context is
+   * attached to AI calls only behind canSendToCloud(); a report attaches none
+   * under either state, so reporting keeps working for a user who has turned
+   * cloud AI off and leaks nothing for one who has not.
+   */
+  const reportAiMessage = useCallback(
+    (message: ChatMessage) => {
+      promptReportReasons(
+        async (reason) => {
+          const built = buildAiMessageReport(message, reason);
+          if (!built.ok) return { ok: false as const, error: built.error };
+          return useCommunityStore.getState().reportContent(built.body);
+        },
+        AI_REPORT_COPY.sheetTitle || REPORT_COPY.sheetTitle,
+      );
+    },
+    [],
+  );
+
   const renderMessage = useCallback(
     ({ item }: { item: ChatMessage }) => {
       // Tool results + pending actions live BELOW the bubble so the chat
@@ -946,11 +976,11 @@ export default function PepTalkScreen() {
         (item.pendingActions && item.pendingActions.length > 0) ||
         !!item.proUpsell;
       if (!hasCards) {
-        return <ChatBubble message={item} />;
+        return <ChatBubble message={item} onReport={reportAiMessage} />;
       }
       return (
         <View>
-          <ChatBubble message={item} />
+          <ChatBubble message={item} onReport={reportAiMessage} />
           <View style={{ marginLeft: 48, marginRight: 16 }}>
             {(item.toolResults ?? [])
               .filter((r) => !r.isPending)
@@ -1007,6 +1037,7 @@ export default function PepTalkScreen() {
       applyLogWaterAction,
       applyLogAppetiteAction,
       applyAddToPantryAction,
+      reportAiMessage,
       router,
     ],
   );
