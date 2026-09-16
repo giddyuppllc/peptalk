@@ -51,20 +51,52 @@ export async function fetchLeaderboardOptIn(): Promise<boolean | null> {
   }
 }
 
+/** One spelling for an address, so two forms of the same account still match. */
+export function normalizeAccountEmail(email: unknown): string | null {
+  if (typeof email !== 'string') return null;
+  const trimmed = email.trim().toLowerCase();
+  return trimmed ? trimmed : null;
+}
+
 /**
- * Write the choice. True only on a confirmed write — the switch must not show a
- * state the server did not accept.
+ * The signed-in account's address, or null when there is no session or it
+ * cannot be read. Used to check that a held choice belongs to whoever is
+ * actually signed in before it is written.
+ */
+export async function fetchCurrentAccountEmail(): Promise<string | null> {
+  try {
+    const { data: { user } } = await db.auth.getUser();
+    return normalizeAccountEmail(user?.email);
+  } catch (err) {
+    captureException(err, { source: 'leaderboardService.fetchCurrentAccountEmail' });
+    return null;
+  }
+}
+
+/**
+ * Write the choice. True only on a CONFIRMED write — the switch must not show
+ * a state the server did not accept.
+ *
+ * `.select()` is what makes that true rather than aspirational. A PostgREST
+ * `.update().eq()` with no select returns 204 and `error: null` whether or not
+ * any row matched, so a filter that matched nothing — an RLS policy that hides
+ * the row, a profile row that does not exist yet — reported success. "Leave
+ * the leaderboard" then told the user they were off it while they stayed
+ * publicly ranked. Reading the stored value back is the only way to know.
  */
 export async function saveLeaderboardOptIn(optIn: boolean): Promise<boolean> {
   try {
     const { data: { user } } = await db.auth.getUser();
     if (!user) return false;
-    const { error } = await db
+    const wanted = optIn === true;
+    const { data, error } = await db
       .from('profiles')
-      .update({ leaderboard_opt_in: optIn === true })
-      .eq('id', user.id);
+      .update({ leaderboard_opt_in: wanted })
+      .eq('id', user.id)
+      .select('leaderboard_opt_in')
+      .maybeSingle();
     if (error) throw error;
-    return true;
+    return data?.leaderboard_opt_in === wanted;
   } catch (err) {
     captureException(err, { source: 'leaderboardService.saveOptIn' });
     return false;
