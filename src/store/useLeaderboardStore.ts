@@ -17,6 +17,16 @@
  * "Hide this person" is the existing community block (symmetric), so the
  * leaderboard, the feed and comments all agree. The row is dropped locally at
  * once; the server also excludes blocked pairs.
+ *
+ * REPORT
+ * Hiding is a private action; reporting is the one that reaches a human. The
+ * board publishes another member's display name, avatar and progress metrics
+ * to every signed-in user, so under App Review 1.2 it needs both, from a
+ * visible control. `reportUser` goes through the same community-report
+ * function the feed uses — see src/lib/reportTargets.ts for the payload
+ * allowlist. It does NOT hide the person: reporting and blocking are separate
+ * choices in the feed too, and silently blocking someone a user only wanted to
+ * flag would be a decision the app made for them.
  */
 
 import { create } from 'zustand';
@@ -40,6 +50,8 @@ import {
   saveLeaderboardOptIn,
 } from '../services/leaderboardService';
 import { useCommunityStore } from './useCommunityStore';
+import { buildReportBody } from '../lib/reportTargets';
+import type { CommunityReportReason } from '../types/community';
 
 const EMPTY_LIST = { rows: [], status: 'idle' as LoadStatus };
 
@@ -65,6 +77,9 @@ interface LeaderboardActions {
   loadShoutouts: () => Promise<void>;
   loadMyMetrics: () => Promise<void>;
   hideUser: (userId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  /** Flag a member shown on the board or in a shout-out. Does not hide them. */
+  reportUser: (userId: string, reason: CommunityReportReason) =>
+    Promise<{ ok: true } | { ok: false; error: string }>;
   clearAll: () => void;
 }
 
@@ -164,6 +179,14 @@ export const useLeaderboardStore = create<LeaderboardState & LeaderboardActions>
           set(purgeUser(boards, shoutouts, userId));
         }
         return res;
+      },
+
+      reportUser: async (userId, reason) => {
+        // Built here rather than inline so the payload goes through the same
+        // allowlist as every other report and cannot pick up board data.
+        const built = buildReportBody({ kind: 'user', userId }, reason);
+        if (!built.ok) return { ok: false, error: built.error };
+        return useCommunityStore.getState().reportContent(built.body);
       },
 
       clearAll: () =>

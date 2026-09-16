@@ -50,6 +50,15 @@ export const LEADERBOARD_COPY = {
   hideCancel: 'Cancel', // DRAFT — Edward approves
   hideFailed: "Couldn't hide that person. Try again.", // DRAFT — Edward approves
   rowA11yHint: 'Long-press to hide this person', // DRAFT — Edward approves
+  /**
+   * TODO(Edward): a title for the sheet a row's visible "more" control opens —
+   * the one offering Report and Hide for that member. There is no existing
+   * string for it ('Post actions' in the feed is post-specific), so it is
+   * EMPTY and renders nothing: the sheet shows its buttons with no title,
+   * which works. Report / Hide / Cancel themselves reuse strings the app
+   * already ships.
+   */
+  rowActionsTitle: '',
 
   // ── Shout-outs ─────────────────────────────────────────────────────────
   shoutoutsTitle: 'Shout-outs', // DRAFT — Edward approves

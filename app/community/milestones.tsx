@@ -30,6 +30,7 @@ import {
 import { useLeaderboardStore } from '../../src/store/useLeaderboardStore';
 import { LEADERBOARD_COPY } from '../../src/constants/leaderboardCopy';
 import { ShoutoutRowView, leaderboardName } from '../../src/components/community/LeaderboardParts';
+import { promptMemberActions } from '../../src/components/community/memberReportActions';
 
 const KIND_ICON: Record<Milestone['kind'], React.ComponentProps<typeof Ionicons>['name']> = {
   dose_streak: 'flame-outline',
@@ -53,6 +54,7 @@ export default function MilestonesScreen() {
   const loadShoutouts = useLeaderboardStore((s) => s.loadShoutouts);
   const setOptIn = useLeaderboardStore((s) => s.setOptIn);
   const hideUser = useLeaderboardStore((s) => s.hideUser);
+  const reportUser = useLeaderboardStore((s) => s.reportUser);
 
   useEffect(() => {
     void loadOptIn();
@@ -79,6 +81,10 @@ export default function MilestonesScreen() {
       },
     ]);
   };
+
+  // Visible Report / Hide control on a shout-out, same sheet as the board.
+  const openActions = (userId: string, name: string) =>
+    promptMemberActions(userId, name, { hideUser, reportUser });
 
   return (
     <V3DetailShell
@@ -117,6 +123,7 @@ export default function MilestonesScreen() {
                 key={`${row.userId}-${row.kind}-${row.threshold}-${row.achievedOn}`}
                 row={row}
                 onLongPress={() => confirmHide(row.userId, leaderboardName(row))}
+                onActions={() => openActions(row.userId, leaderboardName(row))}
               />
             ))
           )}

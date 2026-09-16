@@ -31,6 +31,7 @@ import {
   ShoutoutRowView,
   leaderboardName,
 } from '../../src/components/community/LeaderboardParts';
+import { promptMemberActions } from '../../src/components/community/memberReportActions';
 
 const SHOUTOUT_PREVIEW = 5;
 
@@ -50,6 +51,7 @@ export default function LeaderboardScreen() {
   const loadShoutouts = useLeaderboardStore((s) => s.loadShoutouts);
   const loadMyMetrics = useLeaderboardStore((s) => s.loadMyMetrics);
   const hideUser = useLeaderboardStore((s) => s.hideUser);
+  const reportUser = useLeaderboardStore((s) => s.reportUser);
 
   useEffect(() => {
     void loadOptIn();
@@ -79,6 +81,13 @@ export default function LeaderboardScreen() {
         },
       },
     ]);
+  };
+
+  // The visible control: Report or Hide, from a button on the row itself. The
+  // long-press straight to Hide is kept for anyone who already knows it.
+  const openActions = (userId: string, name: string) => {
+    tapLight();
+    promptMemberActions(userId, name, { hideUser, reportUser });
   };
 
   const headline = { color: t.colors.textPrimary as string, fontFamily: t.isDark ? t.typography.headlineMale : t.typography.headlineFemale };
@@ -191,6 +200,7 @@ export default function LeaderboardScreen() {
                 row={row}
                 valueLabel={formatMetricValue(metric, row.value)}
                 onLongPress={() => confirmHide(row.userId, leaderboardName(row))}
+                onActions={() => openActions(row.userId, leaderboardName(row))}
               />
             ))
           )}
@@ -213,6 +223,7 @@ export default function LeaderboardScreen() {
                 key={`${row.userId}-${row.kind}-${row.threshold}-${row.achievedOn}`}
                 row={row}
                 onLongPress={() => confirmHide(row.userId, leaderboardName(row))}
+                onActions={() => openActions(row.userId, leaderboardName(row))}
               />
             ))
           )}
