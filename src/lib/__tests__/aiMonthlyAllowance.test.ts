@@ -311,14 +311,18 @@ describe.each(CASES)('$name, run for real', (c) => {
     const r = await run(c.name, c, { userSpendMC: 0, globalSpendMC: 0 });
     expect(r.providerCalls).toHaveLength(1);
     const bumps = r.log.filter(([op, name]) => op === 'rpc' && name === 'bump_ai_usage');
-    const spend = r.log.filter(([op, table]) => op === 'upsert' && table === 'aimee_cost_cents');
+    // Spend is recorded through the ATOMIC bump_aimee_spend RPC, never through
+    // a SELECT-then-UPSERT: that pattern lost nine of every ten concurrent
+    // increments (see aiSpendLedgerAtomic.test.ts).
+    const spend = r.log.filter(([op, name]) => op === 'rpc' && name === 'bump_aimee_spend');
     const monthStart = `${new Date().toISOString().slice(0, 7)}-01`;
     if (c.recordsSpend) {
       expect(bumps).toEqual([]);
-      const mine = spend.find(([, , row]) => row.user_id === USER);
+      expect(r.log.filter(([op, table]) => op === 'upsert' && table === 'aimee_cost_cents')).toEqual([]);
+      const mine = spend.find(([, , args]) => args.p_user_id === USER);
       expect(mine).toBeDefined();
-      expect(mine![2].spend_microcents).toBe(EXPECTED_MC);
-      expect(spend.find(([, , row]) => row.user_id === SENTINEL)![2].spend_microcents).toBe(EXPECTED_MC);
+      expect(mine![2].p_microcents).toBe(EXPECTED_MC);
+      expect(spend.find(([, , args]) => args.p_user_id === SENTINEL)![2].p_microcents).toBe(EXPECTED_MC);
     } else {
       expect(bumps).toHaveLength(1);
       expect(bumps[0][2].p_date).toBe(monthStart);

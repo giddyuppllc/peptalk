@@ -107,8 +107,29 @@ npm run verify:rpcgrants
 Verify: no anon EXECUTE on any `get_community_*`, `get_my_leaderboard_metrics`
 or `_leaderboard_*` function, and authenticated EXECUTE on the 3 `get_*` only.
 
+**4. `20260916000000_aimee_spend_atomic.sql`** (from the 09-16 fix branch)
+Adds `bump_aimee_spend`, a SECURITY DEFINER function that increments
+`aimee_cost_cents` inside one `INSERT ... ON CONFLICT DO UPDATE`. Creates a
+function and nothing else — no column, no constraint, no row change, no
+backfill. `recordSpend` (`_shared/aiAllowance.ts` → `aimee-chat-stream/_cost.ts`)
+calls it instead of the SELECT-then-UPSERT that lost nine of every ten
+concurrent increments, including on the global sentinel row the
+`AIMEE_MONTHLY_BUDGET_CENTS` runaway breaker reads.
+
+**Apply this BEFORE section 2.** The edge functions in section 2 call the RPC
+and have no fallback: deployed first, they would log `recordSpend failed` and
+record no spend at all.
+```bash
+npx supabase db query --linked -f supabase/migrations/20260916000000_aimee_spend_atomic.sql
+npx supabase migration repair --status applied 20260916000000 --linked
+npm run verify:rpcgrants
+```
+Verify: `select proname, prosecdef, proconfig from pg_proc where proname = 'bump_aimee_spend';`
+must show `prosecdef = t` and `proconfig = {search_path=}`, and
+`verify:rpcgrants` must not list it (no anon or authenticated EXECUTE).
+
 ### 1c. Close out
-- [ ] `npx supabase migration list --linked`: all 68 local versions show a remote.
+- [ ] `npx supabase migration list --linked`: all 69 local versions show a remote.
 
 ---
 

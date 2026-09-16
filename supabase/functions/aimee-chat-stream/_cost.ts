@@ -286,23 +286,25 @@ export async function recordSpend(
   const today = new Date().toISOString().slice(0, 10);
   for (const id of [userId, GLOBAL_SPEND_SENTINEL_USER_ID]) {
     try {
-      const { data: existing } = await supabase
-        .from('aimee_cost_cents')
-        .select('spend_microcents, call_count')
-        .eq('user_id', id)
-        .eq('date', today)
-        .maybeSingle();
-      const nextSpend = (existing?.spend_microcents ?? 0) + microcents;
-      await supabase.from('aimee_cost_cents').upsert(
-        {
-          user_id: id,
-          date: today,
-          spend_microcents: nextSpend,
-          call_count: (existing?.call_count ?? 0) + 1,
-          last_called_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,date' },
-      );
+      // ATOMIC, deliberately. This was SELECT-then-UPSERT, which loses every
+      // increment that overlaps another: ten concurrent calls recorded one.
+      // The sentinel row is written by every AI call from every user, so the
+      // row that undercounted worst is the one the system-wide runaway
+      // breaker reads. bump_aimee_spend does the addition inside Postgres'
+      // row lock (20260916000000_aimee_spend_atomic.sql), exactly as
+      // bump_ai_usage already does for the rate-limit ledger.
+      //
+      // No fallback to the old upsert if the RPC is missing: a fallback that
+      // silently undercounts is the defect, not a mitigation. Deploy the
+      // migration before these functions.
+      const { error } = await supabase.rpc('bump_aimee_spend', {
+        p_user_id: id,
+        p_date: today,
+        p_microcents: microcents,
+      });
+      if (error) {
+        console.error('[aimee-cost] recordSpend failed:', error);
+      }
     } catch (e) {
       console.error('[aimee-cost] recordSpend failed:', e);
     }
