@@ -941,6 +941,24 @@ export function getAllDosingReferencesForPeptide(peptideId: string): DosingRefer
   );
 }
 
+/**
+ * True when a schedule phase states a RANGE rather than one prescribed dose.
+ *
+ * `doseMcg` is always a single number, so a phase transcribed from
+ * "20-100 mg" or "200-400 mg" carries a MIDPOINT the source document never
+ * prescribed — the comments in this file say so outright ("60 mg midpoint of
+ * 20-100 mg", "mid of 200-400 mg"). `doseStated` preserves the original
+ * wording, so it is the only field that can tell the two apart.
+ *
+ * A surface that shows one figure and writes it to the dose log on one tap
+ * must not use a midpoint: it would present a number nobody chose as a
+ * prescription, and record it as a dose the user took. Thirteen of the
+ * reference's first phases are ranges, glutathione and NAD+ among them.
+ */
+export function phaseStatesRange(phase: Pick<DosingSchedulePhase, 'doseStated'>): boolean {
+  return /\d\s*(?:-|–|—|to)\s*\d/.test(phase.doseStated ?? '');
+}
+
 /** Standard PepTalk safety disclaimer attached to every reference reply. */
 export const PEPTALK_DOSING_DISCLAIMER =
   'This is supportive information based on medical research — not a source of truth. Talk to your doctor before starting any protocol. Some compounds (e.g. testosterone, HCG, GLP-1s, SARMs) are prescription or controlled substances and require a doctor’s prescription.';
