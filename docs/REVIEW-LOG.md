@@ -108,16 +108,114 @@ Consequences that matter when reviewing:
 5. **38 persisted stores, 3 with a real migration.** Now safe against corrupt
    blobs, but no store has a migration path for a deliberate schema change.
 
-## Blocked on Edward, not on code
+## What it actually takes to go live — verified 2026-09-18, not transcribed
 
-- **Play billing**: the service account is a placeholder, so every Android
-  purchase fails validation today.
-- **Email**: `RESEND_API_KEY` unset, and the DNS above means setting it alone
-  sends every welcome email to spam. A verified subdomain (`send.peptalk.bio`)
-  avoids touching the Workspace SPF record.
-- **Deep links**: Play Console SHA-256 needed for `assetlinks.json`.
+Every line here was checked against the live project or the live DNS today. Where
+something could not be checked, it says so rather than guessing.
+
+### 🔴 Blocking, in code's control
+
+**13 migrations in the repo are NOT in the live ledger.** 70 files, 57 applied.
+This branch's code expects several of them.
+
+```
+20260825000001_subscription_environment        20260915000000_community_reports_resolved_by_set_null
+20260825120000_age_attestation                 20260915120000_push_tokens_token_unique
+20260825130000_profile_personal_details        20260915200000_community_leaderboard
+20260825200000_welcome_email_sent              20260916000000_aimee_spend_atomic
+20260826100000_ai_credit_packs                 20260916120000_community_reports_user_and_ai_targets
+20260826140000_credit_rpc_revoke_anon
+20260826180000_credit_autorefill
+20260827090000_purchase_validation_log
+```
+
+**Do not `supabase db push` on the strength of that list.** Some may already be
+applied under a different recorded timestamp; re-running would fail or duplicate
+objects. Each needs verifying against the live schema, then `migration repair`
+for the applied ones and `db push` for the rest.
+`SHIP_CHECKLIST_2026-09-15.md` §1 has the worked list — but see the doc-status
+table below before trusting it.
+
+This was invisible until today. `check:migrations` could not parse the CLI's
+output — it now answers JSON, the parser only understood the table — so it
+reported "no migration rows" **while printing thirteen of them underneath its own
+failure message**. Every self-test passed throughout, because they exercise the
+parser against fixtures rather than the CLI. Fixed in `64f5e18`. Treat this as the
+canonical example of why a green check is not evidence.
+
+### ⚠️ Unverified — nobody can answer these from this machine
+
+- **Edge-function drift.** `check:drift` needs `SUPABASE_ACCESS_TOKEN`, which is
+  not set here, so whether the 55 deployed functions match this branch is
+  **unknown**. `docs/EDGE-FUNCTION-DRIFT.md` last spoke on 2026-09-01. Five more
+  functions are deployed with no source in this repo (`DB_HANDOFF.md`).
+- **Store build state.** Not checkable without console credentials.
+
+### 🔴 Blocking, needs Edward — no amount of code fixes these
+
+| What | State today | Consequence |
+|---|---|---|
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | literal `{…}`, 3 chars, unchanged since 2026-05-05 | **every Android purchase fails validation** |
+| `RESEND_API_KEY` | unset | no transactional email has ever sent |
+| `peptalk.bio` mail DNS | no Resend DKIM · SPF is Google-only · DMARC `p=quarantine` | setting the key alone sends **every welcome email to spam** |
+| Play Console SHA-256 | not supplied | `assetlinks.json` cannot be completed; Android deep links stay dead |
+| `SQUARE_LAUNCH_TRIAL_UNTIL` | unset | no launch trial is running |
+
+Unset but **harmless** — verified to have working fallbacks, so do not chase
+them: `GROK_API_KEY` (falls through to `XAI_API_KEY`), the Grok cost-per-token
+overrides, `OPENAI_VISION_API_KEY` / `OPENAI_TRANSCRIBE_API_KEY` (fall through to
+`OPENAI_WHISPER_API_KEY`, a real OpenAI key), `AIMEE_MONTHLY_CENTS_*` (code
+defaults are the live values).
+
+### The channels, and where each stands
+
+| Channel | Live now | Notes |
+|---|---|---|
+| PWA | build `02d7626`, from **2026-09-12** | six days behind; today's users have the silent Aimee fallback and the 3-message free cap |
+| iOS | 2 active Pro subscriptions | IAP works |
+| Android | **zero** subscriptions, ever | consistent with the dead service account |
+| Web / Square | 11 active subscriptions | works |
+
+Nothing here has been submitted or deployed, deliberately: HEAD is untagged, and
+`CLAUDE.md` requires every submitted build to come from a commit that sets its
+version and is tagged.
 
 ---
+
+## Which documents to trust
+
+This repo has 34 markdown files and they do not agree with each other.
+`CLAUDE.md` already records what that costs: *"that is how the HealthKit
+rejection got recorded inverted and shipped twice."* A reviewer acting on a
+stale doc is a real failure mode here, not a tidiness complaint.
+
+| Doc | Last touched | Trust |
+|---|---|---|
+| `CLAUDE.md` | 09-16 | **Current.** Read first. |
+| `SHIP_CHECKLIST_2026-09-15.md` | 09-16 | **Mostly current**, predates this session. Its §1 migration list is the worked version of the blocker above — but it was written when `check:migrations` was blind, so re-verify against the live ledger. |
+| `docs/app-store-review-notes*.md` | 09-16 | Current. |
+| `CSP.md`, `DOSING_*` | 09-15/16 | Current. |
+| `DEPLOY_RUNBOOK.md` | 08-30 | **Stale — CLAUDE.md says so explicitly**: "stops at June". |
+| `docs/TONIGHT-LAUNCH-CHECKLIST.md` | 08-30 | **Stale**, named by CLAUDE.md. |
+| `HANDOFF-healthkit.md` | 08-30 | **Stale**, named by CLAUDE.md. |
+| `CHANGELOG.md` | 08-31 | **Stale** — still titled with a May branch name. |
+| `docs/EDGE-FUNCTION-DRIFT.md`, `docs/DRIFT-REVIEW.md` | 09-01 | Point-in-time; drift is unverified since. |
+| `DB_HANDOFF.md`, `HANDOFF-2026-09-01.md` | 08-31/09-01 | Useful for the five source-less functions; otherwise dated. |
+| `PUNCH_LIST.md` | 08-09 | 5 weeks old. |
+| `INTENT_REVIEW.md`, `DATA_RECOVERY_BACKLOG.md` | 08-06/10 | 6 weeks old. |
+| 8 files from April–May | — | `tester-feedback`, `JAMIES-DESIGN-IDEAS`, `PAGE-REFERENCE`, `ACCESSIBILITY_TODO`, `VIDEO_CONTENT_TODO`, `SUPABASE_RLS_CHECKLIST`, `docs/WORKOUT_VIDEOS`, `DEPLOY_VIDEOS`. **Four to five months old.** |
+
+**The spec the code cites is not in the repo.** Several commits reference
+"Master Refactor Plan v3.1 §8 + §14", "§12.1" and similar.
+`peptalk-master-plan.md` is gitignored (`.gitignore:51`), so a reviewer cannot
+read the document those section numbers point into. That is deliberate, not an
+accident — but it means any review comment of the form "why is it built this
+way" may have an answer the reviewer has no access to.
+
+**Doc consolidation is Edward's call, not a reviewer's finding.** Deleting or
+merging these is a decision about what to keep, and nobody should spend a review
+run recommending it.
+
 
 ## Review log
 
