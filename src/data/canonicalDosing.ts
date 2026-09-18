@@ -235,3 +235,64 @@ export function getDoseConflicts(): CanonicalDose[] {
     .map((id) => getCanonicalDose(id))
     .filter((d): d is CanonicalDose => d !== null && d.conflict);
 }
+
+// ── the text every model-facing surface should quote ──────────────────────
+
+export interface CanonicalDoseText {
+  /** The dose as a human/model-readable string. */
+  text: string;
+  source: DoseSourceId;
+  sourceLabel: string;
+  /**
+   * True when `text` is the approving clinician's own words rather than a
+   * range this module formatted. Her phrasing carries qualifiers the numbers
+   * do not — "1 mg – 2 mg 3 times weekly, am on empty stomach, prior to
+   * workout" — so it is quoted verbatim and never reformatted.
+   */
+  verbatim: boolean;
+}
+
+/** mcg → the shortest honest string. 2000 → "2 mg", 330 → "330 mcg". */
+function formatMcg(mcg: number): string {
+  if (mcg >= 1000) {
+    const mg = mcg / 1000;
+    return `${Number(mg.toFixed(3))} mg`;
+  }
+  return `${Number(mcg.toFixed(3))} mcg`;
+}
+
+/**
+ * The dose a surface should put in front of a user or feed to a model.
+ *
+ * Aimee had three private copies of this — a hardcoded block in the streaming
+ * prompt, a generated JSON knowledge file built from protocols.ts, and an
+ * on-device knowledge base built from protocols.ts again. All three answered
+ * the same question, none of them asked this module, and the one they all read
+ * (protocols.ts) is the least attributable source we hold. Surfaces call here.
+ */
+export function getCanonicalDoseText(peptideId: string): CanonicalDoseText | null {
+  const ruling = getClinicianRuling(peptideId);
+  if (ruling?.dose?.verbatim) {
+    return {
+      text: ruling.dose.verbatim,
+      source: 'clinician_ruling',
+      sourceLabel: SOURCE_LABEL.clinician_ruling,
+      verbatim: true,
+    };
+  }
+
+  const canonical = getCanonicalDose(peptideId);
+  if (!canonical) return null;
+
+  const text =
+    canonical.minMcg === canonical.maxMcg
+      ? formatMcg(canonical.minMcg)
+      : `${formatMcg(canonical.minMcg)} – ${formatMcg(canonical.maxMcg)}`;
+
+  return {
+    text,
+    source: canonical.source,
+    sourceLabel: canonical.sourceLabel,
+    verbatim: false,
+  };
+}

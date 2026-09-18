@@ -255,15 +255,40 @@ function buildKnowledgeBlock(): string {
   Dose: ${pt.doseGuidance}${pt.storage ? `
   Storage: ${pt.storage}` : ""}${notes}${contra}`;
     }
-    return `• ${pt.name} (peptide: ${pt.peptideId})\n  Dose: ${pt.dose} ${pt.route}, ${pt.freq}\n  Cycle: ${pt.cycle}${pt.timing ? `\n  Timing: ${pt.timing}` : ""}${pt.storage ? `\n  Storage: ${pt.storage}` : ""}${notes}${contra}${titration}`;
+    // `doseVerbatim` is the approving clinician's own wording for this
+    // compound. When it is present it REPLACES the stored range on the Dose
+    // line rather than sitting beside it: two ranges on one card is the exact
+    // shape that let Aimee pick the wrong one, and the whole point of routing
+    // rulings here is that there is nothing left to pick between.
+    const doseLine = pt.doseVerbatim
+      ? `${pt.doseVerbatim} — ${pt.doseSource} ${pt.route}, ${pt.clinicianFrequency ?? pt.freq}`
+      : `${pt.dose} ${pt.route}, ${pt.freq}`;
+    return `• ${pt.name} (peptide: ${pt.peptideId})\n  Dose: ${doseLine}\n  Cycle: ${pt.cycle}${pt.timing ? `\n  Timing: ${pt.timing}` : ""}${pt.storage ? `\n  Storage: ${pt.storage}` : ""}${notes}${contra}${titration}`;
   });
+
+  // Compounds the approving clinician ruled on that carry no protocol
+  // template. They used to be absent from this block entirely, so Aimee said
+  // she had no dose for four compounds that had already been settled.
+  const rulingBlocks = ((knowledge as Record<string, unknown>).clinicianRulings as
+    | Array<Record<string, unknown>>
+    | undefined ?? []).map((r) => {
+    const parts = [`  Dose: ${r.dose} — ${r.doseSource}`];
+    if (r.freq) parts.push(`  Frequency: ${r.freq}`);
+    if (r.cycle) parts.push(`  Cycle: ${r.cycle}`);
+    if (Array.isArray(r.notes) && r.notes.length) parts.push(`  Key notes: ${(r.notes as string[]).join(" | ")}`);
+    return `• ${r.peptideId}\n${parts.join("\n")}`;
+  });
+
+  const rulingSection = rulingBlocks.length
+    ? `\n\nCLINICIAN-APPROVED RANGES (no protocol template — these are the answer for these compounds):\n${rulingBlocks.join("\n\n")}`
+    : "";
 
   return `\n\n=== CURATED PROTOCOL & PEPTIDE LIBRARY ===
 PEPTIDES:
 ${peptideLines.join("\n")}
 
 PROTOCOL TEMPLATES:
-${protocolBlocks.join("\n\n")}
+${protocolBlocks.join("\n\n")}${rulingSection}
 === END LIBRARY ===`;
 }
 

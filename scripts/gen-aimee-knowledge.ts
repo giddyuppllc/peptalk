@@ -13,6 +13,7 @@ import { PEPTIDES } from "../src/data/peptides";
 import { PROTOCOL_TEMPLATES } from "../src/data/protocols";
 import { isSafetyOnly } from "../src/data/safetyOnlyCompounds";
 import { redactDoseBearingNotes } from "../src/data/dosingDisplay";
+import { CLINICIAN_RULINGS, getClinicianRuling } from "../src/data/clinicianRulings";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
@@ -70,10 +71,21 @@ const protocolRows = PROTOCOL_TEMPLATES.map((pt) => {
     };
   }
 
+  // Jamie Esposito is the approving clinician (Edward, 2026-09-15). Where she
+  // has ruled, her wording rides alongside the numeric range so Aimee quotes
+  // the adjudicated answer instead of re-deriving one from protocols.ts — the
+  // least attributable store we hold, and until now the only source any Aimee
+  // surface read. verify:clinicianauthority fails the build if they disagree.
+  const ruling = getClinicianRuling(pt.peptideId);
+
   return {
     peptideId: pt.peptideId,
     name: pt.name,
     dose: `${pt.typicalDose.min}-${pt.typicalDose.max} ${pt.typicalDose.unit}`,
+    ...(ruling?.dose?.verbatim
+      ? { doseVerbatim: ruling.dose.verbatim, doseSource: "Clinician-approved" as const }
+      : {}),
+    ...(ruling?.frequency ? { clinicianFrequency: ruling.frequency } : {}),
     route: pt.route,
     freq: pt.frequencyLabel ?? pt.frequency,
     cycle: `${pt.durationWeeks.min}-${pt.durationWeeks.max} weeks`,
@@ -91,10 +103,30 @@ const protocolRows = PROTOCOL_TEMPLATES.map((pt) => {
   };
 });
 
+// Compounds Jamie ruled on that carry NO protocol template. Before this they
+// were invisible to Aimee: she had a clinician-approved range for 9-Me-BC,
+// adipotide, AICAR and CoQ10 and no way to reach it, so she answered "I don't
+// have a dose for that" for four compounds the approving clinician had already
+// settled. Safety-information-only compounds are excluded even when ruled —
+// Edward withdrew those figures from every surface (2026-09-16) and a ruling
+// does not put them back.
+const protocolIds = new Set(PROTOCOL_TEMPLATES.map((p) => p.peptideId));
+const rulingOnlyRows = CLINICIAN_RULINGS.filter(
+  (r) => r.dose?.verbatim && !protocolIds.has(r.peptideId) && !isSafetyOnly(r.peptideId),
+).map((r) => ({
+  peptideId: r.peptideId,
+  dose: r.dose!.verbatim,
+  doseSource: "Clinician-approved" as const,
+  ...(r.frequency ? { freq: r.frequency } : {}),
+  ...(r.cycle?.verbatim ? { cycle: r.cycle.verbatim } : {}),
+  ...(r.notes?.length ? { notes: r.notes } : {}),
+}));
+
 const out = {
   generatedAt: new Date().toISOString(),
   peptides: peptideRows,
   protocols: protocolRows,
+  clinicianRulings: rulingOnlyRows,
 };
 
 const outPath = path.join(repoRoot, "supabase/functions/aimee-chat/_knowledge.json");

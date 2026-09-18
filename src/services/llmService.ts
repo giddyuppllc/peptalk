@@ -78,6 +78,7 @@ function buildPeptideKnowledgeBase(): string {
   const { PROTOCOL_TEMPLATES } = require('../data/protocols');
   const { KNOWLEDGE_TOPICS } = require('../data/knowledgeTopics');
   const { SAFETY_PROFILES } = require('../data/safetyProfiles');
+  const { CLINICIAN_RULINGS, getClinicianRuling } = require('../data/clinicianRulings');
 
   const lines: string[] = [];
 
@@ -106,9 +107,26 @@ function buildPeptideKnowledgeBase(): string {
       );
       return;
     }
-    const dose = `${t.typicalDose.min}-${t.typicalDose.max} ${t.typicalDose.unit}`;
+    // Jamie Esposito's ruling outranks the stored range (Edward, 2026-09-15).
+    // The device copy of the knowledge base read protocols.ts and nothing else,
+    // so an answer here could differ from the same question asked through the
+    // edge function. One authority, quoted the same way on both sides.
+    const ruling = getClinicianRuling(t.peptideId);
+    const dose = ruling?.dose?.verbatim
+      ? `${ruling.dose.verbatim} (clinician-approved)`
+      : `${t.typicalDose.min}-${t.typicalDose.max} ${t.typicalDose.unit}`;
+    const freq = ruling?.frequency ?? t.frequencyLabel;
     protoLines.push(
-      `- ${t.name}: ${dose} ${t.route} ${t.frequencyLabel}${t.timing ? ` (${t.timing})` : ''}${contra}`
+      `- ${t.name}: ${dose} ${t.route} ${freq}${t.timing ? ` (${t.timing})` : ''}${contra}`
+    );
+  });
+
+  // Ruled compounds with no protocol template — otherwise unreachable here.
+  const ruledIds = new Set(PROTOCOL_TEMPLATES.map((t: any) => t.peptideId));
+  CLINICIAN_RULINGS.forEach((r: any) => {
+    if (!r.dose?.verbatim || ruledIds.has(r.peptideId) || isSafetyOnly(r.peptideId)) return;
+    protoLines.push(
+      `- ${r.peptideId}: ${r.dose.verbatim} (clinician-approved)${r.frequency ? ` ${r.frequency}` : ''}`
     );
   });
 
