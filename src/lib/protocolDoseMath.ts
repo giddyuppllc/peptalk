@@ -33,6 +33,7 @@ import {
   formatDoseRange,
   normalizeDoseRange,
   roundDoseForDisplay,
+  toDisplayUnitPair,
   type DoseRange,
   type DoseUnit,
 } from './doseUnits';
@@ -273,13 +274,26 @@ export function estimateSupplies(
  * to whole milligrams and landed three compounds ON the max it was meant to
  * avoid: CJC-1295 1–2 mg → 2 mg, tesamorelin 0.5–1 mg → 1 mg, somatropin
  * 0.2–1 mg → 1 mg. It now rounds to the display precision
- * (roundDoseForDisplay), kept in the protocol's unit and clamped inside the
- * range, so what is stored is exactly what the prompt printed.
+ * (roundDoseForDisplay), clamped inside the range, so what is stored is
+ * exactly what the prompt printed.
+ *
+ * The pair comes back in the unit it will be DISPLAYED in (mcg below 1 mg).
+ * It used to come back in the protocol's own unit, so tesamorelin returned
+ * `{ 0.75, 'mg' }`: the prompt printed "750 mcg" through formatDoseAmount,
+ * while the PAIR — which is what gets stored on the protocol — rendered as
+ * "0.75 mg" on the five screens that show a stored dose. Two numbers for one
+ * dose, one of them at two decimals, which the 2026-09-15 work order rules
+ * out. toDisplayUnitPair relabels only; the mass is unchanged and nothing is
+ * re-rounded (1.25 mg stays 1.25 mg).
  */
 export function planStarterDose(protocol: ProtocolTemplate): { dose: number; unit: DoseUnit } {
   const first = protocol.titrationSchedule?.[0];
-  if (first) return { dose: first.dose, unit: first.unit as DoseUnit };
+  if (first) {
+    const d = toDisplayUnitPair(first.dose, first.unit as DoseUnit);
+    return { dose: d.value, unit: d.unit };
+  }
   const { min, max, unit } = protocol.typicalDose;
   const mid = roundDoseForDisplay((min + max) / 2, unit);
-  return { dose: Math.min(max, Math.max(min, mid)), unit };
+  const d = toDisplayUnitPair(Math.min(max, Math.max(min, mid)), unit);
+  return { dose: d.value, unit: d.unit };
 }

@@ -19,8 +19,25 @@
  *   - after it, `recordSpend` of the tokens the provider reports, into the same
  *     `aimee_cost_cents` ledger, drawing credits for any part beyond the plan.
  *
- * A refusal answers 429 with `denialMessage(reason)` and `reason`, the same
+ * A refusal answers with `denialMessage(reason)` and `reason`, the same
  * response shape and wording the chat stream returns.
+ *
+ * 429 vs 503 — THESE ARE DIFFERENT EVENTS
+ * This module hardcoded 429 for every refusal, including `ledger_unreachable`,
+ * and the migration that introduced it deleted explicitly-reasoned 503
+ * branches from aimee-chat, food-scan, lab-scan and aimee-pantry-scan.
+ * `ledger_unreachable` is not a quota: it means the spend table could not be
+ * READ, so the cap cannot be enforced and the call is refused fail-closed.
+ * Answering 429 tells every client that a retry is pointless until the quota
+ * resets — `src/services/aimeeWorkout.ts:254` maps 429 to `rate_limit` — so a
+ * database blip reads as "you are out of messages" and backoff does not retry
+ * something that would succeed a second later. aimee-voice was left saying 503
+ * for its own bump failure and 429 for the ledger, in the same handler.
+ *
+ * `retryAfter` and `upgrade` come back too. The chat stream sends both, and
+ * `aimeeWorkout.ts:251` keys its upgrade prompt on `body?.upgrade` — without
+ * it, a user who has spent their allowance is told to wait rather than offered
+ * the plan that would let them continue.
  *
  * PRICING CAVEAT
  * Spend is priced with tokensToMicrocents, i.e. the Grok per-token rates
@@ -45,10 +62,20 @@ export interface AllowanceCheck {
   allowed: boolean;
   /** The pre-call cost state; pass it to recordAiSpend. */
   cost: CostCheckResult;
-  /** HTTP status to answer with when refused. */
-  status: 429;
+  /**
+   * HTTP status to answer with when refused.
+   * 429 = out of allowance. 503 = the ledger could not be read, so the cap
+   * could not be enforced; the client should back off and retry.
+   */
+  status: 429 | 503;
   /** Response body to answer with when refused. */
-  body: { error: string; reason?: string };
+  body: { error: string; reason?: string; retryAfter?: number; upgrade?: boolean };
+}
+
+/** Seconds until the monthly allowance resets (start of the next UTC month). */
+function secondsToMonthReset(now = new Date()): number {
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  return Math.max(1, Math.round((next.getTime() - now.getTime()) / 1000));
 }
 
 /**
@@ -63,11 +90,32 @@ export async function checkAiAllowance(
   tier: string,
 ): Promise<AllowanceCheck> {
   const cost = await checkCostCap(supabase, userId, tier);
+
+  if (cost.reason === 'ledger_unreachable') {
+    // Not a quota. The cap could not be read, so it could not be enforced —
+    // a transient, retryable failure, and the same 60 seconds aimee-voice and
+    // the chat stream already use for their own failed-closed path.
+    return {
+      allowed: cost.allowed,
+      cost,
+      status: 503,
+      body: { error: denialMessage(cost.reason), reason: cost.reason, retryAfter: 60 },
+    };
+  }
+
   return {
     allowed: cost.allowed,
     cost,
     status: 429,
-    body: { error: denialMessage(cost.reason), reason: cost.reason },
+    body: {
+      error: denialMessage(cost.reason),
+      reason: cost.reason,
+      retryAfter: secondsToMonthReset(),
+      // Only the account's OWN allowance is something a plan change fixes. The
+      // system-wide breaker is not the user's to buy past, and offering an
+      // upgrade there would sell a plan that changes nothing.
+      upgrade: cost.reason === 'user_cap_hit' && (tier === 'free' || tier === 'plus'),
+    },
   };
 }
 

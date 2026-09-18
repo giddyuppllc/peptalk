@@ -6,22 +6,51 @@ after the three 09-15 feature branches were merged onto it. Every live fact
 below came from a read-only check on 2026-09-15: `migration list --linked`,
 SELECT-only `db query --linked`, and `secrets list` (digests only).
 
+**Updated 2026-09-16.** The four 09-16 branches are now merged in too —
+`fix/privacy-manifest-and-reporting`, `feat/safety-only-compounds`,
+`fix/profile-restore-races` and `fix/spend-ledger-and-dose-guard`. HEAD is
+~80 commits ahead of `origin/master` (`3e2561c`), none pushed — count it
+with `git rev-list --count origin/master..HEAD` rather than trusting this
+number, which every commit to this file moves. On the
+merged tree: `tsc` 0 · `lint:ci` 0 · `jest` 0 (**103 suites, 2167 tests**).
+`verify:all` is **46 steps** and needs `PEPTALK_UNRELEASED=1` until §0's tag
+and push are done.
+
+Two merge resolutions are worth knowing about, because both changed behaviour
+rather than just text:
+
+- **`src/lib/plannedDose.ts` now reads through the display boundary.** The
+  spend-ledger branch moved the "today's planned dose" logic out of
+  `my-stacks.tsx` into that helper; the safety-only branch had just routed
+  that screen through `src/data/dosingDisplay.ts`. Merged naively, the helper
+  would have put a withheld figure back on the card. `verify:safetyonly`
+  scans `src/lib`, so the raw version fails it — confirmed by reverting it
+  (exit 1) and restoring it (exit 0).
+- **`doseSafety.ts` now applies both new rules at once**: the flat 10 mg
+  unit-confusion ceiling reaches resolved compounds, *and* the range is
+  omitted from the warning text for a safety-information-only compound. The
+  code auto-merged; only the two rationale blocks conflicted.
+
 Do the sections in order. A later section depends on the one before it.
 
 ---
 
 ## 0. Before anything touches production
 
-- [ ] `git fetch`. `origin/master` was `3e2561c` on 09-15, and the local
-      branch is 38 commits ahead of it (this checklist's commit included), none
-      pushed. **Decide** where this
-      branch goes: fast-forward `master`, or a PR. CLAUDE.md says to work on
-      `master`.
+- [ ] `git fetch`. `origin/master` was `3e2561c` on 09-15 and is unchanged as
+      of 09-16; the local branch is ~80 commits ahead of it, none pushed
+      (`git rev-list --count origin/master..HEAD` for the real figure).
+      **Decide** where this branch goes: fast-forward `master`, or a PR.
+      CLAUDE.md says to work on `master`.
 - [ ] Re-run the net on the exact commit you will ship. Every command must
       exit 0:
       `npx tsc --noEmit && npm run lint:ci && npx jest && npm run verify:all`
 
-      **`verify:all` grew on 2026-09-16 and now takes ~20 minutes.** It ends
+      **`verify:all` grew on 2026-09-16 to 46 steps and takes ~20 minutes.**
+      The four merges added `verify:safetyonly` and `verify:privacymanifest`
+      to it as well; both sides of the `package.json` conflict were kept, and
+      no step was dropped (checked by parsing the chain: 46 named, 0 missing,
+      0 duplicated). It ends
       with `verify:vacuous`, `check:migrations:self-test`,
       `test:leaderboard-sql:ci` and `verify:restoremutants` — the last of
       which is 34 mutants and about 15 of those minutes. They were all
@@ -45,8 +74,9 @@ Do the sections in order. A later section depends on the one before it.
       the 1.10.0 (75) failure CLAUDE.md records: a rejected binary that
       corresponded to no commit.
 
-      Right now it reports `HEAD is not tagged v1.10.1` and `42 commits on
-      HEAD are on no remote branch`. Clear both before building:
+      Right now it reports `HEAD is not tagged v1.10.1` and `N commits on
+      HEAD are on no remote branch` — it derives N itself, so read it from
+      the check rather than from here. Clear both before building:
       ```bash
       git push origin reconcile/master-2026-09-07
       git tag v1.10.1 && git push origin v1.10.1
@@ -62,8 +92,9 @@ Do the sections in order. A later section depends on the one before it.
 ## 1. Migrations
 
 **Do NOT run `supabase db push`.** CLAUDE.md says it is "safe again". That
-stopped being true: the live ledger is 11 files behind the repo (57 recorded,
-68 files). Eight of those 11 are already live. `db push` would run them again,
+stopped being true: the live ledger is **13** files behind the repo (57
+recorded, 70 files — two more arrived with the 09-16 branches). Eight of those
+13 are already live. `db push` would run them again,
 and `CREATE OR REPLACE FUNCTION` would overwrite the live function bodies.
 
 Versions are unique and ordered. The check was
@@ -105,7 +136,8 @@ npx supabase migration repair --status applied 20260827090000 --linked
 
 ### 1b. Never applied: apply in this order, then record
 
-The 09-15 probe confirmed that none of these three changes exists live.
+The 09-15 probe confirmed that none of the first three exists live. Items 4
+and 5 arrived on 09-16 and have never been applied anywhere.
 
 **1. `20260915000000_community_reports_resolved_by_set_null.sql`** (from `78d266d`)
 Changes `community_reports.resolved_by` to `ON DELETE SET NULL`, so Delete
@@ -138,8 +170,60 @@ npm run verify:rpcgrants
 Verify: no anon EXECUTE on any `get_community_*`, `get_my_leaderboard_metrics`
 or `_leaderboard_*` function, and authenticated EXECUTE on the 3 `get_*` only.
 
+**4. `20260916000000_aimee_spend_atomic.sql`** (from the 09-16 fix branch)
+Adds `bump_aimee_spend`, a SECURITY DEFINER function that increments
+`aimee_cost_cents` inside one `INSERT ... ON CONFLICT DO UPDATE`. Creates a
+function and nothing else — no column, no constraint, no row change, no
+backfill. `recordSpend` (`_shared/aiAllowance.ts` → `aimee-chat-stream/_cost.ts`)
+calls it instead of the SELECT-then-UPSERT that lost nine of every ten
+concurrent increments, including on the global sentinel row the
+`AIMEE_MONTHLY_BUDGET_CENTS` runaway breaker reads.
+
+**Apply this BEFORE section 2.** The edge functions in section 2 call the RPC
+and have no fallback: deployed first, they would log `recordSpend failed` and
+record no spend at all.
+```bash
+npx supabase db query --linked -f supabase/migrations/20260916000000_aimee_spend_atomic.sql
+npx supabase migration repair --status applied 20260916000000 --linked
+npm run verify:rpcgrants
+```
+Verify: `select proname, prosecdef, proconfig from pg_proc where proname = 'bump_aimee_spend';`
+must show `prosecdef = t` and `proconfig = {search_path=}`, and
+`verify:rpcgrants` must not list it (no anon or authenticated EXECUTE).
+
+**5. `20260916120000_community_reports_user_and_ai_targets.sql`** (from the
+09-16 privacy-manifest / reporting branch)
+Makes a *member* and an *Aimee reply* reportable. `community_reports` was
+polymorphic over exactly two targets and enforced it with
+`CHECK ((post_id IS NOT NULL)::int + (comment_id IS NOT NULL)::int = 1)`, so
+there was no shape in which a report could name a person — which App Review
+1.2 wants for the leaderboard (it publishes another member's display name,
+avatar and metrics to every signed-in user) and Play's generative-AI policy
+wants for AI output. An Aimee message has no row to point at, so the report
+carries the text and the time.
+
+**Additive only.** Existing rows already satisfy the widened CHECK; no
+backfill, no column dropped, no row rewritten. It drops the original
+constraint by *looking its generated name up* rather than guessing at
+`community_reports_check`, and re-adds it widened. Worth knowing: the
+auto-moderator's IF/ELSIF tests post then comment, so the two new kinds fall
+through to `RETURN NEW` — **no automatic action is ever taken against a member
+or an assistant reply.** Whether N reports should suspend an account is a
+business rule nobody has stated, so it was not invented. [DECIDE]
+```bash
+npx supabase db query --linked -f supabase/migrations/20260916120000_community_reports_user_and_ai_targets.sql
+npx supabase migration repair --status applied 20260916120000 --linked
+```
+Verify: `select conname, pg_get_constraintdef(oid) from pg_constraint where conrelid = 'public.community_reports'::regclass and contype = 'c';`
+must show `community_reports_exactly_one_target` summing **four** targets,
+plus `community_reports_ai_time_with_text` and
+`community_reports_no_self_report`. Member reports are deduplicated by a
+partial unique index (`UNIQUE (reporter_id, post_id)` does not constrain rows
+where `post_id IS NULL` — Postgres treats NULLs as distinct); AI reports are
+deliberately not deduplicated.
+
 ### 1c. Close out
-- [ ] `npx supabase migration list --linked`: all 68 local versions show a remote.
+- [ ] `npx supabase migration list --linked`: all 70 local versions show a remote.
 - [ ] `npm run check:migrations` — new on 2026-09-16, and the machine-checked
       version of the line above. It reads the live ledger (read-only:
       `supabase migration list --linked`, nothing else) and exits non-zero
@@ -305,16 +389,54 @@ unless marked otherwise.
 **Leaderboard (new today)**
 - [ ] Every leaderboard string is marked DRAFT in
       `src/constants/leaderboardCopy.ts`. Edward writes the final words.
-- [ ] A pending onboarding opt-in is not tied to an account. Sign-out and
-      Delete My Data now clear it (tested). One path remains: someone signs up
-      with no session (email-confirmation path), never confirms, and a
-      different account signs in on that device. That account receives the
-      opt-in. Decide whether to bind the pending choice to the signup
-      email/user.
+- [x] ~~A pending onboarding opt-in is not tied to an account.~~ **Closed
+      2026-09-16** (`766420e`, merged). The address the choice was made for is
+      persisted alongside it and the flush requires a match, mirroring the
+      `resume.userId === currentUserId` guard in `app/onboarding.tsx`. A
+      different account signing in clears the held choice instead of
+      inheriting it; no session keeps it waiting; a choice that cannot be
+      attributed to an address — including the bare boolean an older build
+      persisted — is not held at all. Tested with A-signs-up/B-signs-in.
 - [ ] Shared devices and push tokens (from the migration header): with UNIQUE
       (expo_push_token), a second user on the same device gets an RLS error
       instead of taking over the token. Reassigning it across users needs a
       server-side path.
+
+**A per-dose maximum from Jamie (merged 2026-09-16)** [DECIDE]
+- [ ] The overdose guard's only high-dose rule for a resolved compound was
+      `amount > 3× the maximum`. Jamie's rulings now win on precedence, and
+      several of them state a whole **titration span** rather than a per-dose
+      window — semaglutide "250 mcg – 12 mg" makes 3× the top a 36 mg ceiling,
+      so 25, 30 and 35 mg logged silently while the same dose typed as
+      "Ozempic" (which does not resolve) warned. Twenty compounds regressed
+      that way, retatrutide at 35 mg and glutathione at 1 g among them.
+
+      Fixed **without inventing a number**: the flat 10 mg unit-confusion
+      ceiling now also applies to a resolved compound, lifted only by that
+      compound's own documented maximum, so knowing the compound is never less
+      protective than not knowing it. The real fix is a per-dose maximum from
+      Jamie for the compounds whose ruling is a span. That is hers to give, not
+      ours to derive.
+
+**Safety-information-only compounds (merged 2026-09-16)** [WORDS]
+- [ ] Three empty copy slots in `src/constants/safetyOnlyCopy.ts`. Every one
+      renders **nothing** while empty — no box, no placeholder, no "coming
+      soon" — so the app is shippable without them; they are additive.
+      `SAFETY_ONLY_WHY_NO_DOSE` (peptide detail, where the dosing cards were),
+      `SAFETY_ONLY_PRESCRIBER_LINE` (several listed compounds are
+      prescription-only: hCG, hMG, somatropin, enclomiphene, MK-677, YK-11),
+      `SAFETY_ONLY_AIMEE_STOCK_ANSWER` (the on-device bot; the server prompt is
+      instructed separately and does not read this file).
+- [ ] The **existing** empty-state sentence says the compound "doesn't have a
+      published human-trial dosing protocol in our catalog". That is false for
+      hCG, somatropin and MK-677 — the app has data for them and is choosing
+      not to print it. It is currently hidden for listed compounds rather than
+      rewritten, because the replacement sentence is Edward's.
+- [ ] 17 ids are on the list (`src/data/safetyOnlyCompounds.ts`), mirrored for
+      Deno. Two of them — testosterone and gonadorelin — are not compounds in
+      the app at all (a lab marker and a goal-matrix entry), listed anyway so
+      the list reads as the decision rather than as whatever happens to be
+      mappable today. Oral 5-Amino-1MQ was deliberately left showing a dose.
 
 **App Review 1.4.1: dose calculator posture (sweep B)**
 - [ ] The iOS posture for dosing surfaces: pure unit math vs protocols for Rx
@@ -335,10 +457,26 @@ unless marked otherwise.
       community-only"; not re-checked).
 
 **Privacy and consent (sweep F, G, H)**
-- [ ] `aiDataConsent` still defaults to `true` (`useHealthProfileStore.ts:95`),
-      and the v2 migration still forces a stored `false` back to `true`
-      (`:556-565`). Deliberately untouched on 2026-09-16 — the gate now works,
-      so the default is the whole decision. **Both are still open.**
+- [ ] 🚩 **The notes tell Apple the opposite of what the code does. Settle
+      this before submitting — it is the one open item that is a false
+      statement to App Review, not a preference.**
+
+      `docs/app-store-review-notes.md:124` says consent is *"opt-in and off by
+      default"*. On the merged tree (line numbers re-checked 2026-09-16):
+      `src/store/useHealthProfileStore.ts:114` is `aiDataConsent: true`, and
+      the v2 migration at `:581-593` rewrites a **stored `false` back to
+      `true`** — so it does not merely default on, it reverses a recorded
+      "no". The migration's own comment explains why it was done (testers were
+      all on the old opt-in default, onboarding never showed the toggle, so
+      everyone got the on-device bot and Aimee looked broken), which is a real
+      reason and a different question from what the notes claim.
+
+      Deliberately untouched on 2026-09-16: the gate now works, so the default
+      is the whole decision, and it is Edward's. **Either change the default
+      and drop the migration, or change the sentence in the notes.** Shipping
+      both as they are means submitting a claim the binary contradicts.
+      `docs/app-store-review-notes-additions-2026-09-16.md:241-246` flags the
+      same thing from the notes' side.
 - [ ] **The consent copy is now wrong in two places, because the behaviour
       changed under it on 2026-09-16.** [WORDS]
 

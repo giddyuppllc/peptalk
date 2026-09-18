@@ -224,7 +224,9 @@ describe('the leaderboard is reachable', () => {
   it('onboarding offers the opt-in, default off, and Settings can change it', () => {
     const onboarding = read('app', 'onboarding.tsx');
     expect(onboarding).toMatch(/const \[leaderboardOptIn, setLeaderboardOptIn\] = useState\(false\)/);
-    expect(onboarding).toContain('recordOnboardingChoice(leaderboardOptIn)');
+    // The account it was answered for travels with the choice — a held opt-in
+    // must not be applied to whoever signs in next on this install.
+    expect(onboarding).toContain('recordOnboardingChoice(leaderboardOptIn, optInAccount)');
     const prefs = read('app', 'profile', 'community-prefs.tsx');
     expect(prefs).toContain('setLeaderboardOptIn(v)');
   });
