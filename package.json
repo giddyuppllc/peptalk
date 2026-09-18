@@ -78,7 +78,8 @@
     "verify:privacymanifest": "node scripts/verify-privacy-manifest.mjs --self-test && node scripts/verify-privacy-manifest.mjs",
     "verify:reportmutants": "node scripts/verify-report-mutants.mjs",
     "verify:clinicianauthority": "node scripts/verify-clinician-authority.mjs --mutate && node scripts/verify-clinician-authority.mjs",
-    "verify:purchasemutants": "node scripts/verify-purchase-mutants.mjs"
+    "verify:purchasemutants": "node scripts/verify-purchase-mutants.mjs",
+    "verify:sessionloopmutants": "node scripts/verify-session-loop-mutants.mjs"
   },
   "expo": {
     "install": {

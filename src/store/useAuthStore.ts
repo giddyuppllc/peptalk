@@ -82,6 +82,20 @@ function coerceProfileRow(
 interface AuthStore {
   user: User | null;
   isAuthenticated: boolean;
+  /**
+   * When a session we were holding vanished underneath us, or null.
+   *
+   * This is the App Review 2.1(a) death loop, made visible. The sequence is:
+   * sign in, the store goes authenticated, the session fails to persist,
+   * getSession() comes back empty, the user is cleared, routeGuard rule 3
+   * sends them to /auth — and they sign in again, to the same end. Twice
+   * rejected, both times described as "sent back to the login page after
+   * logging in", and there was nothing on screen either time to say why.
+   *
+   * Never persisted: it describes THIS launch. A stale one would accuse a
+   * perfectly good session of a failure that happened last week.
+   */
+  sessionLostAt: number | null;
   isLoading: boolean;
   hasHydrated: boolean;
 
@@ -106,6 +120,7 @@ export const useAuthStore = create<AuthStore>()(
     (set, get) => ({
       user: null,
       isAuthenticated: false,
+      sessionLostAt: null,
       isLoading: false,
       hasHydrated: false,
 
@@ -357,7 +372,14 @@ export const useAuthStore = create<AuthStore>()(
                 },
               );
             }
-            set({ user: null, isAuthenticated: false, hasHydrated: true });
+            // Only a session we WERE holding counts. A cold start with nobody
+            // signed in is not a failure and must not accuse itself of one.
+            set({
+              user: null,
+              isAuthenticated: false,
+              hasHydrated: true,
+              sessionLostAt: hadUser ? Date.now() : null,
+            });
             return;
           }
 
@@ -585,6 +607,14 @@ export const useAuthStore = create<AuthStore>()(
         set({
           user: null,
           isAuthenticated: false,
+          // A deliberate sign-out is not a lost session. Clearing here, and
+          // only here, is what keeps the banner honest: it is set when a
+          // session disappears on its own and stays set until someone chooses
+          // to leave. It is deliberately NOT cleared on a successful login —
+          // in the loop this exists to explain, the login succeeds and the
+          // session is gone again moments later, and clearing on the way in
+          // would erase the message on the way out.
+          sessionLostAt: null,
         });
       },
 
