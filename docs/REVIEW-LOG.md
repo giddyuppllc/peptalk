@@ -282,6 +282,33 @@ the code really was that way at that commit — but it is not actionable either.
 Every finding gets checked against HEAD before anything is changed. Two of
 #20's three would have been "fixed" twice otherwise.
 
+### PR #24 — dose formatting, one monthly AI allowance, onboarding restore — REVIEWED
+One finding, `normal`. Correct for this slice's tip, already fixed by a later
+slice. Verified both ends.
+
+1. **`checkAiAllowance` answered 429 for everything, including
+   `ledger_unreachable`** — so a transient `aimee_cost_cents` read failure read
+   to every migrated caller as "account capped" rather than "retry the outage".
+   The RN client keys its rate-limit copy off 429, so a database wobble would
+   have shown "limit reached" and no status-based retry would fire.
+   At `9814989` (#24's tip) the type itself was `status: 429` and the value was
+   hardcoded — the finding is exactly right. At HEAD, `ledger_unreachable`
+   returns **503 with `retryAfter: 60`**, and the module header records the
+   change. Nothing to do.
+
+**Three reviews, three times the same shape.** #20 had three findings and #24
+had one; every one was real at the commit reviewed and every one was already
+fixed downstream. That is worth drawing a conclusion from rather than just
+noting again:
+
+- The stack is catching its own defects. Three independent adversarial passes
+  found nothing that had survived to HEAD.
+- Mid-stack reviews are therefore mostly confirming history. **#23 is the one
+  that matters most** — it is the tip, so nothing downstream exists to have
+  fixed its findings, and anything found there is live.
+- The integration pass over the 84 multi-slice files is the other place a live
+  defect can still hide, because no single slice shows it.
+
 ### PR #21 — the dose guard, the privacy manifest, safety-information-only
 _awaiting review_
 
