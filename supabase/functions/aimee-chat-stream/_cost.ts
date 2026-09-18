@@ -85,7 +85,7 @@ function centsFromEnv(name: string, fallback: number, zeroDisables = false): num
  * Per-tier monthly allowance, in cents. Parsed once — a malformed secret
  * should log once at cold start, not on every request.
  *
- * Free gets three prompts a month (answers only). The message count is the
+ * Free gets no AI (see RATE_LIMITS in index.ts). The message count is the
  * real gate; this is just a backstop so one pathological huge-context prompt
  * cannot cost more than the taster is worth.
  */

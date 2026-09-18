@@ -105,13 +105,23 @@ describe('the server only promises a top-up where credits can deliver one', () =
     // an equality against user_cap_hit, so neither can be true for it — this
     // asserts no one has added a bare `topUp: true` anywhere.
     for (const src of [allowance(), stream()]) {
-      for (const line of src.split('\n')) {
+      const lines = src.split('\n');
+      for (let n = 0; n < lines.length; n++) {
+        const line = lines[n];
         if (!line.includes('topUp') && !line.includes('upgrade:')) continue;
         if (line.trimStart().startsWith('*') || line.trimStart().startsWith('//')) continue;
         if (line.includes('topUp: true') || line.includes('upgrade: true')) {
           // The one legitimate bare `upgrade: true` is the 403 for a tier with
           // no Aimee access at all, where a plan genuinely is the fix.
-          expect(line).toContain('403');
+          //
+          // Read a WINDOW, not the single line. The tier refusal in
+          // aiAllowance writes `status: 403` and `upgrade: true` as separate
+          // properties of the same object, which is ordinary formatting — and
+          // a one-line test called that a violation while the code was
+          // correct. The rule is "this flag sits in a 403", not "this flag
+          // shares a line with the digits 403".
+          const window = lines.slice(Math.max(0, n - 8), n + 4).join('\n');
+          expect(window).toContain('403');
         }
       }
     }

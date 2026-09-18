@@ -31,8 +31,38 @@ describe('the recipe-generator fallback notice', () => {
     expect(src()).toContain("const AI_UNAVAILABLE_TITLE = 'Aimee unavailable';");
   });
 
-  it('has no body copy yet, so nothing can render half-written', () => {
-    expect(src()).toMatch(/const AI_UNAVAILABLE_BODY: string = '';/);
+  /**
+   * The sentence as a reader sees it.
+   *
+   * The constant is written as concatenated literals, so the raw source holds
+   * `not built ' + 'around what you typed` — a naive match on the phrase fails
+   * against text that renders perfectly. Joining the pieces first is the
+   * difference between asserting on the copy and asserting on its formatting.
+   */
+  const bodyText = () => {
+    const raw = src().match(/const AI_UNAVAILABLE_BODY: string =\s*([\s\S]*?);/)?.[1] ?? '';
+    return raw
+      .replace(/'\s*\+\s*'/g, '')
+      .replace(/^\s*'|'\s*$/g, '')
+      .replace(/\\'/g, "'")
+      .trim();
+  };
+
+  it('now HAS body copy, so the notice is no longer a heading over a gap', () => {
+    // This assertion was the inverse until 2026-09-18: it pinned the body as
+    // EMPTY, because an alert box with a title and nothing under it reads as a
+    // broken screen and the words were not written yet. The words have landed,
+    // so what is worth pinning is that they are still there.
+    expect(bodyText().length).toBeGreaterThan(40);
+  });
+
+  it('does not claim the typed preferences were used, because they were not', () => {
+    // The fallback filters FALLBACK_RECIPES against the profile's allergens and
+    // sorts toward the calorie target. It does NOT read the free-text
+    // preferences box. Copy implying otherwise would send someone hunting for a
+    // constraint the results never had.
+    expect(bodyText()).toMatch(/allerg/i);
+    expect(bodyText()).toMatch(/not built around what you typed/i);
   });
 
   it('will not render while the body is empty', () => {

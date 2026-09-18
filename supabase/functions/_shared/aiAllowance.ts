@@ -64,13 +64,21 @@ export interface AllowanceCheck {
   cost: CostCheckResult;
   /**
    * HTTP status to answer with when refused.
-   * 429 = out of allowance. 503 = the ledger could not be read, so the cap
-   * could not be enforced; the client should back off and retry.
+   * 403 = this TIER has no AI at all. 429 = out of allowance. 503 = the ledger
+   * could not be read, so the cap could not be enforced; back off and retry.
    */
-  status: 429 | 503;
+  status: 403 | 429 | 503;
   /** Response body to answer with when refused. */
   body: { error: string; reason?: string; retryAfter?: number; upgrade?: boolean };
 }
+
+/**
+ * Tiers with no AI allowance of any kind.
+ *
+ * A set rather than `tier === 'free'` so the answer to "who has no AI" lives in
+ * one place; every AI function reads it through checkAiAllowance.
+ */
+const TIERS_WITHOUT_AI = new Set(['free']);
 
 /** Seconds until the monthly allowance resets (start of the next UTC month). */
 function secondsToMonthReset(now = new Date()): number {
@@ -89,6 +97,35 @@ export async function checkAiAllowance(
   userId: string,
   tier: string,
 ): Promise<AllowanceCheck> {
+  // Tier first, before any spend is measured.
+  //
+  // Free has no AI at all (Edward, 2026-09-18) — the taste is the 7-day Pro
+  // trial, not a permanent trickle. Until this existed, setting the chat's
+  // RATE_LIMITS.free to 0 closed the CHAT and nothing else: recipes, workouts,
+  // food-scan, pantry-scan and lab interpretation all route through here, and
+  // here only measured cost. A free account kept roughly 25 cents a month of
+  // every AI feature except the one that had been named.
+  //
+  // Refusing on tier rather than by setting the free cost cap to zero matters
+  // for what the user is told: a zero cap answers "you have used your monthly
+  // allowance" on the very first request of the month, which is untrue and
+  // unactionable. 403 with `upgrade` says the real thing.
+  //
+  // Beta testers and trial users both resolve to 'pro' before they reach this,
+  // so neither is caught.
+  if (TIERS_WITHOUT_AI.has(tier)) {
+    return {
+      allowed: false,
+      cost: { allowed: false, reason: 'tier_has_no_ai' } as unknown as CostCheckResult,
+      status: 403,
+      body: {
+        error: 'AI chat requires PepTalk+ or Pro subscription',
+        reason: 'tier_has_no_ai',
+        upgrade: true,
+      },
+    };
+  }
+
   const cost = await checkCostCap(supabase, userId, tier);
 
   if (cost.reason === 'ledger_unreachable') {

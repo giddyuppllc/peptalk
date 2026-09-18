@@ -152,7 +152,13 @@ const grouped = (n: number) => n.toLocaleString('en-US');
 
 describe('paywall claims match the enforced limits', () => {
   it('the gate still defines all three tiers', () => {
-    expect(gateLimit('free')).toBe(3);
+    // Free went 3 -> 0 on 2026-09-18: AI is what the subscription buys, and
+    // the taste is the 7-day Pro trial rather than a permanent trickle. The
+    // rest of this suite is what actually protects the user — that no figure
+    // shown to anyone exceeds what the gate enforces — and it passed through
+    // the change untouched, which is how we know no paywall copy was
+    // advertising free Aimee messages.
+    expect(gateLimit('free')).toBe(0);
     expect(gateLimit('plus')).toBe(750);
     expect(gateLimit('pro')).toBe(9000);
   });
