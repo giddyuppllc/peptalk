@@ -235,11 +235,52 @@ run recommending it.
 Rejected by the tooling as too large. Split into #19–#23. Review last, as an
 integration pass, once the pieces are done.
 
-### PR #19 — consent, permissions and the claims the app was making
-_awaiting review_
+### PR #19 — consent, permissions and the claims the app was making — REVIEWED
+Two findings, both `nit`.
 
-### PR #20 — onboarding restore, the leaderboard, per-account isolation
-_awaiting review_
+1. **`src/lib/protocolDoseMath.ts` — two functions answered "what dose does this
+   intensity mean" and only one read the authored bands.** CONFIRMED and FIXED
+   in `f12109d`. `intensityToDoseRange` honoured `doseBands`; `intensityToDose`
+   split the typical range into thirds. It rendered consistently only because
+   proto-ss31's bands are typicalDose's own extremes; a protocol with a band
+   INSIDE a wider range would have shown two different doses on one screen and
+   handed the wrong one to ActivateProtocolButton. `doseSanity` stays green
+   throughout — neither figure is out of range, they just disagree.
+   The mutation run then caught the first test being weak: its fixture copied
+   proto-ss31 and used `min === max` bands, so "mild takes the top of its band"
+   survived. Widened; 4/4.
+2. **`app/nutrition/recipe-generator.tsx` — the fallback notice ships with an
+   empty body.** CONFIRMED. Deliberate: `AI_UNAVAILABLE_BODY` is empty and the
+   notice is hidden while it is, so nothing half-finished renders. Awaiting
+   Edward's sentence.
+
+### PR #20 — the leaderboard, Delete My Data, per-account isolation — REVIEWED
+Three findings: two `normal`, one `nit`. **All three are correct for this
+slice's tip and all three are already fixed by slice #21.** Verified
+individually against HEAD, not assumed.
+
+1. **`src/services/peptalkBot.ts` emits doses for safety-only compounds**
+   (`normal`). Correct at #20. Fixed by `6bae1ef`. All three leak paths the
+   review named are closed at HEAD: the dosing-table entry (peptalkBot.ts:977),
+   the protocol's Typical Range block (:1021), and `importantNotes` through
+   `redactDoseBearingNotes` (:1050). `verify:safetyonly` passes.
+2. **`useLeaderboardStore.pendingOptIn` crosses accounts** (`normal`) — user A
+   abandons signup at email confirmation, the opt-in persists device-scoped, and
+   user B's next login writes `leaderboard_opt_in = true` to B's profile. Correct
+   at #20, and the most serious finding so far. Fixed by `766420e` / `c99480e`:
+   the choice is persisted with the address it was made for, an unattributable
+   one is dropped rather than applied, and a mismatch between `signedInAs` and
+   `pendingOptInEmail` clears it instead of writing it.
+3. **Docstrings advertise enforcement that does not exist** (`nit`) —
+   `scripts/verify-safety-only.mjs` and the mirror drift test. Correct at #20;
+   the script exists at HEAD and passes.
+
+**What this tells us about the stack, and it matters for #24, #21, #22 and #23.**
+A mid-stack slice is reviewed at its own tip, so a defect introduced in one
+slice and fixed in the next is reported as live. That is not a false positive —
+the code really was that way at that commit — but it is not actionable either.
+Every finding gets checked against HEAD before anything is changed. Two of
+#20's three would have been "fixed" twice otherwise.
 
 ### PR #21 — the dose guard, the privacy manifest, safety-information-only
 _awaiting review_
