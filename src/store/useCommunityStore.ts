@@ -18,6 +18,7 @@ import type {
   CommunityReactionKind,
   CommunityReportReason,
 } from '../types/community';
+import type { CommunityReportBody } from '../lib/reportTargets';
 
 interface CommunityState {
   topics: CommunityTopic[];
@@ -98,7 +99,11 @@ interface CommunityState {
    *  different table with a different lifecycle. */
   reportLiveMessage: (input: { messageId: string; reason: CommunityReportReason }) =>
     Promise<{ ok: boolean; error?: string }>;
-  reportContent: (input: { postId?: string; commentId?: string; reason: CommunityReportReason; notes?: string }) =>
+  /** Report a post, a comment, a member, or one of Aimee's replies.
+   *  Build the body with buildReportBody / buildAiMessageReport (src/lib) —
+   *  they are the allowlist that keeps a report from carrying anything but
+   *  its target. */
+  reportContent: (input: CommunityReportBody) =>
     Promise<{ ok: true } | { ok: false; error: string }>;
   blockUser: (userId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   unblockUser: (userId: string) => Promise<{ ok: true } | { ok: false; error: string }>;

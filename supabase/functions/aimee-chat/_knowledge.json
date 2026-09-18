@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-15T16:25:38.940Z",
+  "generatedAt": "2026-09-16T18:01:45.527Z",
   "peptides": [
     {
       "id": "semaglutide",
@@ -909,11 +909,9 @@
     {
       "peptideId": "aod-9604",
       "name": "AOD-9604 Fat-Loss Protocol",
-      "dose": "250-500 mcg",
+      "safetyInformationOnly": true,
+      "doseGuidance": "SAFETY INFORMATION ONLY - state no dose, range, frequency, cycle length or reconstitution for this compound. Direct the user to their prescriber.",
       "route": "subcutaneous",
-      "freq": "Once daily, fasted AM",
-      "cycle": "8-12 weeks",
-      "timing": "Fasted morning, 30 min before any food",
       "storage": "Lyophilized at -20°C. Reconstituted at 2-8°C, use within 30 days.",
       "notes": [
         "Synthetic hGH 177-191 fragment with lipolytic effect; does NOT raise blood sugar, IGF-1, or growth…",
@@ -967,15 +965,13 @@
     {
       "peptideId": "hcg",
       "name": "hCG TRT-Adjunct Protocol",
-      "dose": "250-1500 IU",
+      "safetyInformationOnly": true,
+      "doseGuidance": "SAFETY INFORMATION ONLY - state no dose, range, frequency, cycle length or reconstitution for this compound. Direct the user to their prescriber.",
       "route": "subcutaneous",
-      "freq": "2-3× per week",
-      "cycle": "8-52 weeks",
-      "timing": "Any time; consistent schedule preferred",
       "storage": "Reconstituted at 2-8°C, use within 30 days. Sensitive to heat and light.",
       "notes": [
         "LH-mimetic — preserves testicular function and fertility during TRT",
-        "Common TRT-adjunct dose: 250-500 IU 2-3× per week (men)"
+        "Women: highly variable by indication — ovulation induction, luteal phase support — physician-direct…"
       ],
       "contraindications": [
         "prostate cancer",
@@ -1199,15 +1195,13 @@
     {
       "peptideId": "hmg",
       "name": "hMG Fertility-Induction Protocol",
-      "dose": "75-300 IU",
+      "safetyInformationOnly": true,
+      "doseGuidance": "SAFETY INFORMATION ONLY - state no dose, range, frequency, cycle length or reconstitution for this compound. Direct the user to their prescriber.",
       "route": "intramuscular",
-      "freq": "Daily during stimulation phase",
-      "cycle": "1-4 weeks",
-      "timing": "Evening, consistent time",
       "storage": "Lyophilized at room temperature; reconstituted use immediately or refrigerate u…",
       "notes": [
         "FDA-approved as Menopur / Repronex — purified human menopausal gonadotropin with FSH and LH activity",
-        "Female fertility: 75-225 IU daily during stim, adjusted by ultrasound + estradiol monitoring (NOT a…"
+        "Requires physician supervision with regular bloodwork and (for women) follicular ultrasounds"
       ],
       "contraindications": [
         "pregnancy",
@@ -1220,15 +1214,13 @@
     {
       "peptideId": "somatropin",
       "name": "Somatropin (rhGH) Adult Replacement Protocol",
-      "dose": "0.2-1 mg",
+      "safetyInformationOnly": true,
+      "doseGuidance": "SAFETY INFORMATION ONLY - state no dose, range, frequency, cycle length or reconstitution for this compound. Direct the user to their prescriber.",
       "route": "subcutaneous",
-      "freq": "Once daily, evening",
-      "cycle": "12-52 weeks",
-      "timing": "Before bed on empty stomach",
       "storage": "Refrigerate (2-8°C); some formulations allow room temperature for limited perio…",
       "notes": [
         "FDA-approved recombinant human growth hormone for documented adult GH deficiency, pediatric GH defi…",
-        "Adult GHD starting dose: 0.2 mg (≈0.6 IU) per day, titrated by IGF-1 every 4-6 weeks to mid-normal…"
+        "Anti-aging / off-label use is controversial and banned by WADA — not endorsed here"
       ],
       "contraindications": [
         "active malignancy",

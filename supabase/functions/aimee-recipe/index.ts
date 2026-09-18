@@ -11,6 +11,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
 import { checkAiAllowance, recordAiSpend } from '../_shared/aiAllowance.ts';
+import { applyFeatureConsent } from '../_shared/aiFeatureConsent.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -29,6 +30,13 @@ interface RecipeBody {
   mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   macroTargets?: { calories: number; proteinGrams: number; carbsGrams: number; fatGrams: number };
   constraints?: string[]; // e.g. 'vegetarian', 'gluten-free', 'no dairy'
+  /**
+   * Allergens from the user's health profile. Separate from `constraints`
+   * (which is what the user typed on the recipe form) so the health-data
+   * consent filter in _shared/aiFeatureConsent.ts can drop exactly these.
+   * Folded into the constraint list below as strict "no X" entries.
+   */
+  allergens?: string[];
   count?: number;         // how many recipes to generate (default 3)
 }
 
@@ -81,13 +89,25 @@ Deno.serve(async (req) => {
       return json({ error: 'AI service not configured' }, 500);
     }
 
-    const body: RecipeBody = await req.json().catch(() => ({}));
+    // Health-data consent (profile.aiDataConsent), enforced here as well as on
+    // the client so a stale or tampered build cannot bypass it. This feature
+    // still works without health data, so the fields are stripped, not refused.
+    const body: RecipeBody = applyFeatureConsent('aimee-recipe', await req.json().catch(() => ({}))).body;
     const mealType = body.mealType ?? 'lunch';
     const count = Math.min(Math.max(body.count ?? 3, 1), 6);
     const macros = body.macroTargets;
     // Cap constraints so a malicious payload can't inflate the prompt
     // (token-burn DoS). 25 covers every legitimate allergy + diet combo.
-    const constraints = (body.constraints ?? []).slice(0, 25);
+    const constraints = [
+      ...(body.constraints ?? []),
+      // Allergens get pushed as strict "no X" entries so the AI avoids them.
+      // Duplicate entries are fine — constraints are a free-form list. Absent
+      // when the user has not consented to sharing health data.
+      ...(body.allergens ?? [])
+        .map((a) => (typeof a === 'string' ? a.trim() : ''))
+        .filter(Boolean)
+        .map((a) => `strictly no ${a}`),
+    ].slice(0, 25);
 
     const macroLine = macros
       ? `Target roughly 1/3 of daily macros per recipe: ~${Math.round(macros.calories / 3)}kcal, ~${Math.round(macros.proteinGrams / 3)}g protein, ~${Math.round(macros.carbsGrams / 3)}g carbs, ~${Math.round(macros.fatGrams / 3)}g fat.`

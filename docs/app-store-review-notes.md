@@ -4,6 +4,13 @@ Paste the **App Review Notes** section verbatim into App Store Connect →
 App Review Information → Notes when submitting. The other sections are
 context for the developer.
 
+> **Pending additions, not yet approved:**
+> `docs/app-store-review-notes-additions-2026-09-16.md` holds proposed notes for
+> the leaderboard, the one-time onboarding questions on the reviewer account,
+> and the safety-only compounds, plus the App Privacy / Play Data safety answers
+> that need updating. **Do not paste from that file** — it is a draft awaiting
+> Edward. Approved sections move into this file; nothing here has changed.
+
 ---
 
 ## App Review Notes (paste this into ASC)

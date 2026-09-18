@@ -95,6 +95,36 @@ export function timeUntilExpiry(
   return exp - now;
 }
 
+/** Minimum tier a live event requires in order to post. */
+export type LiveEventRequiredTier = 'free' | 'plus' | 'pro';
+
+/**
+ * Who may post in an admin-hosted live event.
+ *
+ * The live screens used to answer this with the raw stored tier string
+ * (`tier === 'plus' || tier === 'pro'`), which bypasses computeFeatureAccess
+ * entirely — so a lapsed subscriber, whose stored tier is still 'plus' until
+ * something rewrites it, kept posting. `hasLiveChatFeature` is
+ * hasFeature('community_live_chat'), which drops an inactive or expired paid
+ * tier back to the free feature set.
+ *
+ * `tier` is still consulted for a pro-only event, where it can only NARROW the
+ * answer: the feature key is granted by Plus, so it cannot tell Plus from Pro.
+ */
+export function canPostInLiveEvent(input: {
+  isHost: boolean;
+  requiredTier: LiveEventRequiredTier | null | undefined;
+  hasLiveChatFeature: boolean;
+  tier: SubscriptionTier;
+}): boolean {
+  if (input.isHost) return true;
+  const required = input.requiredTier ?? 'plus';
+  if (required === 'free') return true;
+  if (!input.hasLiveChatFeature) return false;
+  if (required === 'pro') return input.tier === 'pro';
+  return true;
+}
+
 /**
  * PURE core of useSubscriptionStore.hasFeature — the tier/expiry gating that
  * runs AFTER the preview-build bypass. Returns whether `feature` is unlocked

@@ -142,11 +142,20 @@ const SOCIAL_PROOF = [
     title: 'Private by default',
     body: 'health data encrypted on-device',
   },
-  {
-    icon: 'shield-checkmark-outline' as const,
-    title: 'Cancel anytime',
-    body: 'manage your subscription from your Apple ID at any time',
-  },
+  // Apple 3.1.2(a)'s cancellation pathway. The sentence names Apple ID, which
+  // is only true on iOS — on Android billing is Play, and on web it is Square,
+  // where there is no store account at all. Each needs its own sentence and
+  // neither is written yet, so the card is omitted there rather than telling
+  // an Android or web visitor to cancel somewhere they have never been.
+  ...(Platform.OS === 'ios'
+    ? [
+        {
+          icon: 'shield-checkmark-outline' as const,
+          title: 'Cancel anytime',
+          body: 'manage your subscription from your Apple ID at any time',
+        },
+      ]
+    : []),
 ];
 
 // ---------------------------------------------------------------------------
@@ -395,9 +404,13 @@ function TierCard({
           the user taps Subscribe. This line carries all three. */}
       {!isActive && info.tier !== 'free' && (
         <View style={styles.tierCta}>
+          {/* The price and the auto-renew term are true on every platform.
+              The cancellation pathway is not: Apple ID Subscriptions exists
+              only on iOS. Android and web need their own sentence naming
+              their own billing, which is not written yet. */}
           <Text style={styles.renewDisclosure}>
             {displayPrice}{plan?.period} · auto-renews monthly until cancelled.
-            Cancel anytime in your Apple ID Subscriptions.
+            {Platform.OS === 'ios' && ' Cancel anytime in your Apple ID Subscriptions.'}
           </Text>
           <GradientButton
             label={purchasing ? 'Processing…' : `Subscribe to ${info.name}`}
@@ -690,27 +703,42 @@ export default function SubscriptionScreen() {
         {/* Footer — Apple 3.1.2(a) requires Terms + Privacy to be
             tappable from the paywall itself, not buried in app settings. */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Subscriptions auto-renew unless cancelled at least 24 hours before
-            the renewal date. Payment is charged to your Apple ID account at
-            confirmation. Manage or cancel in your Apple ID Subscriptions.
-          </Text>
+          {/* Apple 3.1.2(a) disclosure. Two of its three sentences are about
+              the Apple ID account, so it is iOS-only. Android (Play) and web
+              (Square) need their own disclosure — until one is written,
+              nothing is shown rather than a charge described against the
+              wrong account. */}
+          {Platform.OS === 'ios' && (
+            <Text style={styles.footerText}>
+              Subscriptions auto-renew unless cancelled at least 24 hours before
+              the renewal date. Payment is charged to your Apple ID account at
+              confirmation. Manage or cancel in your Apple ID Subscriptions.
+            </Text>
+          )}
           <View style={styles.legalLinks}>
-            <TouchableOpacity
-              onPress={() =>
-                Linking.openURL(
-                  // Apple's standard EULA (Apple 3.1.2(c)). Leave the App Store
-                  // Connect EULA field blank so this default applies.
-                  'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/',
-                )
-              }
-              accessibilityRole="link"
-              accessibilityLabel="Open Terms of Use (EULA)"
-              hitSlop={6}
-            >
-              <Text style={styles.legalLink}>Terms of Use (EULA)</Text>
-            </TouchableOpacity>
-            <Text style={styles.legalDivider}>·</Text>
+            {/* Apple's standard EULA (Apple 3.1.2(c)). Leave the App Store
+                Connect EULA field blank so this default applies. It is
+                Apple's document and governs an App Store purchase, so it is
+                iOS-only; app/terms.tsx exists and is what Android and web
+                should point at, but which document governs a Play or Square
+                purchase is Edward's call, not a default. */}
+            {Platform.OS === 'ios' && (
+              <>
+                <TouchableOpacity
+                  onPress={() =>
+                    Linking.openURL(
+                      'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/',
+                    )
+                  }
+                  accessibilityRole="link"
+                  accessibilityLabel="Open Terms of Use (EULA)"
+                  hitSlop={6}
+                >
+                  <Text style={styles.legalLink}>Terms of Use (EULA)</Text>
+                </TouchableOpacity>
+                <Text style={styles.legalDivider}>·</Text>
+              </>
+            )}
             <TouchableOpacity
               onPress={() => router.push('/privacy' as any)}
               accessibilityRole="link"

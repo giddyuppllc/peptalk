@@ -16,6 +16,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
 import { checkAiAllowance, recordAiSpend } from '../_shared/aiAllowance.ts';
+import { applyFeatureConsent, HEALTH_CONSENT_REFUSAL } from '../_shared/aiFeatureConsent.ts';
 
 // 2026-05-17 vision routing fix: see food-scan for full rationale.
 // Grok-4.3 doesn't accept image inputs; OpenAI gpt-4o-mini does and
@@ -132,7 +133,12 @@ Deno.serve(async (req) => {
     if (contentLength > 10_000_000) {
       return jsonResp({ error: 'Request too large' }, 413);
     }
-    const { imageBase64 } = await req.json();
+    // Health-data consent (profile.aiDataConsent), enforced here as well as on
+    // the client so a stale or tampered build cannot bypass it. A photograph of
+    // a lab report IS the health record, so this refuses rather than strips.
+    const consent = applyFeatureConsent('lab-scan', await req.json());
+    if (consent.refuse) return jsonResp(HEALTH_CONSENT_REFUSAL, 403);
+    const { imageBase64 } = consent.body as { imageBase64?: unknown };
     if (!imageBase64 || typeof imageBase64 !== 'string') {
       return jsonResp({ error: 'No image provided' }, 400);
     }

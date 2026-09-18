@@ -14,6 +14,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
 import { checkAiAllowance, recordAiSpend } from '../_shared/aiAllowance.ts';
+import { applyFeatureConsent } from '../_shared/aiFeatureConsent.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -167,7 +168,10 @@ Deno.serve(async (req) => {
       return json({ error: 'AI service not configured' }, 500);
     }
 
-    const body = (await req.json()) as SuggestBody;
+    // Health-data consent (profile.aiDataConsent), enforced here as well as on
+    // the client so a stale or tampered build cannot bypass it. This feature
+    // still works without health data, so the fields are stripped, not refused.
+    const body = applyFeatureConsent('aimee-pantry-meal', await req.json()).body as SuggestBody;
     const count = Math.min(Math.max(body.count ?? 3, 1), 5);
 
     // Cap user-supplied collections so a malicious / accidental large

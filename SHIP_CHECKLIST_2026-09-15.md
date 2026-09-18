@@ -20,8 +20,39 @@ Do the sections in order. A later section depends on the one before it.
 - [ ] Re-run the net on the exact commit you will ship. Every command must
       exit 0:
       `npx tsc --noEmit && npm run lint:ci && npx jest && npm run verify:all`
-      `npm run verify:restoremutants` (34 mutants, about 15 minutes)
-      `npm run test:leaderboard-sql` (needs Docker)
+
+      **`verify:all` grew on 2026-09-16 and now takes ~20 minutes.** It ends
+      with `verify:vacuous`, `check:migrations:self-test`,
+      `test:leaderboard-sql:ci` and `verify:restoremutants` — the last of
+      which is 34 mutants and about 15 of those minutes. They were all
+      outside the chain, which meant the only thing running them was somebody
+      remembering to.
+
+      - `verify:vacuous` used to print its verdict and exit 0 even for a
+        scanner that passes over an empty corpus. It exits non-zero now,
+        INCONCLUSIVE included.
+      - `test:leaderboard-sql:ci` needs Docker. Without it: loud SKIPPED
+        banner and exit 0 locally, exit **1** under `CI`. Set
+        `LEADERBOARD_SQL_OPTIONAL=1` to opt out on purpose — it still prints
+        the banner. **Decide** whether the CI job gets a Docker service or
+        the opt-out; until one of those, CI will fail on this step.
+      - `verify:version` now fails on an untagged or unpushed HEAD (below).
+- [ ] **`verify:version` will fail on this branch until you tag and push.**
+      It only ever compared `app.json` against the latest `v*` tag, and with
+      no tags at all it printed "no release tags to compare against yet" and
+      exited 0 — the state of a fresh clone. It now also requires HEAD to
+      carry `v<expo.version>` and to exist on a remote, which is precisely
+      the 1.10.0 (75) failure CLAUDE.md records: a rejected binary that
+      corresponded to no commit.
+
+      Right now it reports `HEAD is not tagged v1.10.1` and `42 commits on
+      HEAD are on no remote branch`. Clear both before building:
+      ```bash
+      git push origin reconcile/master-2026-09-07
+      git tag v1.10.1 && git push origin v1.10.1
+      ```
+      `PEPTALK_UNRELEASED=1` downgrades it to a loud "NOT SHIPPABLE" notice
+      for in-progress work. Do not build with that set.
 - [ ] `npm run check:drift:cli`. Confirms the deployed edge functions still
       match `origin/master` before section 2 overwrites them
       (see `docs/EDGE-FUNCTION-DRIFT.md`).
@@ -109,6 +140,20 @@ or `_leaderboard_*` function, and authenticated EXECUTE on the 3 `get_*` only.
 
 ### 1c. Close out
 - [ ] `npx supabase migration list --linked`: all 68 local versions show a remote.
+- [ ] `npm run check:migrations` — new on 2026-09-16, and the machine-checked
+      version of the line above. It reads the live ledger (read-only:
+      `supabase migration list --linked`, nothing else) and exits non-zero
+      naming every repo migration with no ledger row.
+
+      It cannot pass without an answer: a missing CLI, an unlinked project or
+      any CLI error is exit 1 with the reason, never a skip. `npm run
+      check:migrations:self-test` runs the parser against fixtures offline and
+      is in `verify:all`.
+
+      It reports orphan ledger rows as a warning, not a blocker, and it will
+      NOT tell you to `db push` — some of the 11 unrecorded files are already
+      applied under a different recorded timestamp (§1a), and pushing them
+      blind is how the ledger got into this state.
 
 ---
 
@@ -144,6 +189,17 @@ npx supabase functions deploy clinical-review --no-verify-jwt   # per its own he
 - `delete-user` now purges R2 images. `R2_ACCESS_KEY_ID`,
   `R2_SECRET_ACCESS_KEY`, `R2_ENDPOINT`, `R2_COMMUNITY_BUCKET` and
   `R2_PUBLIC_BASE` are all set.
+- [ ] **Deploy order for the seven consent-gated functions.** `lab-scan`,
+      `aimee-lab-interpret`, `aimee-report-rewrite`, `aimee-pantry-meal`,
+      `aimee-plan`, `aimee-recipe` and `aimee-workout` now read `hasConsent`
+      off the request body and treat an ABSENT flag as no consent — the same
+      fail-closed shape `aimee-chat` already uses. A client build older than
+      this branch sends no flag.
+
+      So deploying these AHEAD of the app strips health fields (and, for the
+      first three, refuses outright with a 403) for everyone still on the old
+      build. Ship the app first, or in the same window. If you must deploy
+      early, say so — it is a visible behaviour change, not a silent one.
 - [ ] Afterwards, run `npm run check:drift:cli`. It should report no drift.
 
 ---
@@ -191,6 +247,17 @@ From the App Review sweep (CAN'T VERIFY) and the 09-15 verification:
 - [ ] Supabase Auth → Redirect URLs: add `https://app.peptalk.bio/**`. PWA
       password reset and verification links fall back to peptalk.bio without
       it.
+- [ ] **Password reset now has a screen to land on** (`app/set-password.tsx`,
+      new 2026-09-16). The reset email has always said "follow the link to
+      pick a new password"; the link set a session and routed home, and
+      `auth.updateUser({ password })` existed nowhere in the repo.
+
+      Nothing to deploy — it is app code — but it only works if the redirect
+      URLs above are whitelisted, on BOTH paths: `peptalk://auth/callback`
+      for the native builds and `https://app.peptalk.bio/**` for the PWA.
+      Test it end to end on a real device and in the installed PWA before
+      shipping; the native path keys off `type=recovery` in the link, the web
+      path off Supabase's `PASSWORD_RECOVERY` event.
 - [ ] Supabase Auth: `mailer_autoconfirm` is `true`. Order: redirect URL → SMTP
       or verified Resend domain with DKIM → Confirm email ON → real signup test.
 - [ ] Email: `RESEND_API_KEY` is not set, so no transactional email has ever
@@ -269,10 +336,31 @@ unless marked otherwise.
 
 **Privacy and consent (sweep F, G, H)**
 - [ ] `aiDataConsent` still defaults to `true` (`useHealthProfileStore.ts:95`),
-      and the v2 migration still forces it true (`:565`). 52eb417 already
-      stops health data being sent without consent. The default is the open
-      decision. The consent modal wording also needs to name health profile,
-      Health data, labs and doses.
+      and the v2 migration still forces a stored `false` back to `true`
+      (`:556-565`). Deliberately untouched on 2026-09-16 — the gate now works,
+      so the default is the whole decision. **Both are still open.**
+- [ ] **The consent copy is now wrong in two places, because the behaviour
+      changed under it on 2026-09-16.** [WORDS]
+
+      `src/utils/ensureAiConsent.ts:26` — the launch modal. It names messages,
+      voice and photos, and never mentions health data at all. There are TWO
+      consents and it only describes one of them; the health toggle
+      (`profile.aiDataConsent`) is what governs the profile, labs, doses,
+      side effects, check-ins and allergies, and a user who accepts this modal
+      has not been told about that.
+
+      `app/health-profile.tsx:810-814` — the toggle's own description ends
+      "Without this, you'll get local-only responses." That was never true for
+      the nine feature functions, and it is not true now either: with the
+      toggle off, meal plans, recipes, pantry suggestions and workout design
+      still run against the AI, just with no health fields attached. Lab
+      interpretation, the lab photo scanner and the weekly-report rewrite do
+      stop entirely.
+- [ ] Two consent-driven client refusals fall back to a SILENT return, which
+      matches the existing declined-modal behaviour but tells the user
+      nothing: the lab photo scan in `app/health-report/labs.tsx` and the
+      weekly-report rewrite. Decide whether either deserves a sentence.
+      [WORDS]
 - [ ] `NSMicrophoneUsageDescription` (`app.json:23`) says audio "never leaves
       the app without being transcribed first". It is uploaded for
       transcription.
@@ -297,14 +385,69 @@ unless marked otherwise.
       `health_calendar`, `biomarker_tracking`, `pdf_export`, `watch_sync`, …).
 - [ ] Profile "Export My Data" opens the Pro health-report paywall. Decide on
       an ungated export or a rename (not re-checked).
-- [ ] "Apple ID" billing wording still appears in `app/subscription.tsx` and
-      `app/(tabs)/profile.tsx`. Confirm it is gated off on Android and web,
-      and write the Google Play and web variants (not re-checked for gating).
+- [ ] "Apple ID" billing wording: **the paywall side is gated to iOS as of
+      2026-09-16** and `npm run verify:applebilling` (in verify:all) keeps it
+      that way. What is left is the copy that replaces it. [WORDS]
+      - Android and web pre-purchase disclosure (the sentence after
+        "auto-renews monthly until cancelled" — Play and Square each need
+        their own cancellation pathway).
+      - Android and web footer disclosure (currently nothing renders there).
+      - What the paywall's Terms link points at off iOS. Apple's standard
+        EULA governs an App Store purchase and nothing else; `app/terms.tsx`
+        exists, but which document governs a Play or Square purchase is not a
+        default to pick.
+      - The Play/Square wording for two warnings that were deliberately NOT
+        gated, because hiding them would DROP a real billing warning:
+        `app/(tabs)/profile.tsx` delete-account (both branches) and
+        `app/subscription.tsx`'s AlreadyOwnedError alert. Both are
+        allowlisted in the check with that reason.
+      - `app/(tabs)/profile.tsx:897` says "App Store review" / "App Store
+        listing" on Android too. Not billing, so outside the check.
+- [ ] **"Unlimited Aimee chat" versus the monthly allowance cap.** [WORDS]
+      `app/subscription.tsx:111` sells "Unlimited Aimee chat" and
+      `src/components/PaywallModal.tsx:109` says "no message limits", while
+      `supabase/functions/_shared/aiAllowance.ts` enforces a per-tier monthly
+      allowance and refuses past it. Not rewritten — Edward writes the words.
+- [ ] **Sold as Pro, gated nowhere, and no key exists to gate them on.**
+      `app/subscription.tsx:113` "Multi-week training programs" and `:116`
+      "Searchable research source library". `app/workouts/program/[programId]
+      .tsx` and `app/resources.tsx` have no PaywallGate, useFeatureGate or
+      tier check of any kind, and BOTH keys were deleted on 2026-09-07:
+      `workout_programs` (src/types/fitness.ts:470-474, removed because it was
+      sold as Pro while every free user had it) and `research_feed_premium`
+      (:481-484, removed because it had no screen at all).
+
+      So there is nothing to gate them on without adding a key, which is a
+      product decision, not a fix. Gate them or stop selling them. **Decide.**
+- [ ] **A rendered price claim changed on 2026-09-16 and needs your eye.**
+      `PaywallModal.getRequiredTier` walked ['pro','plus','free'] and returned
+      the FIRST hit; PRO_FEATURES is `[...PLUS_FEATURES, …]`, so every granted
+      key matched 'pro' immediately and the modal said "Available with PepTalk
+      Pro" / "Upgrade to PepTalk Pro" for PLUS features — lab_scan, meal_scan,
+      ad_free, community_live_chat — then opened a subscription screen whose
+      own tierForFeature highlights Plus. It now returns the minimum tier, so
+      those say PepTalk+. The template is untouched; only the tier substituted
+      into it changed.
 
 **Other**
 - [ ] `app/settings/integrations.tsx:347-349`: Oura "approval in progress",
       Whoop "partnership in progress" still in a Coming Soon section.
 - [ ] "Video coming soon" on exercises without clips: keep, hide, or form cues.
+      (`src/components/ExerciseVideo.tsx:57` and its `.web` twin,
+      `app/workouts/player-v2.tsx:169`, plus the empty state at
+      `app/learn/videos/index.tsx:97-99` and the always-on "COMING SOON" pill
+      on `src/components/MaxYourStackCard.tsx:89`.) Left alone on 2026-09-16.
+- [ ] **`AI_UNAVAILABLE_BODY` in `app/nutrition/recipe-generator.tsx` is
+      empty and the notice is hidden until it is not.** [WORDS] The box used
+      to render an icon, the heading "Aimee unavailable", and nothing else — a
+      TODO sat where the sentence goes. The title is written and stays
+      written; one constant needs the body (that these are the built-in
+      recipes, and to try again later — your words).
+- [ ] **Two reused strings on the new `app/set-password.tsx`.** [WORDS]
+      Every string on that screen already existed elsewhere, which is why
+      nothing was invented, but two of them are reused rather than chosen:
+      the screen heading is currently the field label "Password", and the
+      submit button is "Continue".
 - [ ] `app/peptide/[id].tsx:1482` footnote "protocol's published research bounds".
 - [ ] Onboarding Create Account step has no Terms/Privacy links (sweep R; not
       re-checked).

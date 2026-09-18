@@ -23,6 +23,7 @@ import type { SubscriptionTier } from '../types/fitness';
 import { useSubscriptionStore } from '../store/useSubscriptionStore';
 import { TIER_LABEL, tierPriceShort } from '../constants/tierPricing';
 import { trackPaywallDismissed } from '../services/analyticsEvents';
+import { captureException } from '../services/telemetry';
 
 // ---------------------------------------------------------------------------
 // Feature metadata — human-readable names & descriptions
@@ -58,10 +59,6 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
   dose_logging: {
     name: 'Dose Logging',
     description: 'Track your peptide doses on a calendar.',
-  },
-  calendar: {
-    name: 'Calendar',
-    description: 'View your doses, check-ins, and events on a calendar.',
   },
   journal: {
     name: 'Wellness Journal',
@@ -119,33 +116,9 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
     name: 'Aimee Workout Plans',
     description: 'Aimee builds custom workout programs based on your level and equipment.',
   },
-  workout_programs: {
-    name: 'Workout Programs',
-    description: 'Follow structured multi-week workout programs.',
-  },
-  exercise_library: {
-    name: 'Exercise Library',
-    description: "Jamie's full exercise library — step-by-step form, coaching cues, and safety notes for every move (demo videos as they drop).",
-  },
-  ai_meal_plans: {
-    name: 'Meal Plans',
-    description: 'Personalized weekly meal plans tailored to your macros.',
-  },
-  nutrition_planning: {
-    name: 'Nutrition Planning',
-    description: 'Advanced nutrition planning with macro optimization.',
-  },
-  grocery_from_plans: {
-    name: 'Grocery Lists',
-    description: 'Auto-generated shopping lists from your meal plans.',
-  },
   recipe_generator: {
     name: 'Recipes',
     description: 'Get personalized recipes based on your macros and preferences.',
-  },
-  meal_plan: {
-    name: 'Meal Plan',
-    description: 'Generate a multi-day meal plan tailored to your macros, diet, and allergens.',
   },
   health_reports: {
     name: 'Health Reports',
@@ -233,13 +206,31 @@ const FEATURE_META: Record<string, { name: string; description: string }> = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Determine the minimum tier that unlocks a feature. */
-function getRequiredTier(feature: string): SubscriptionTier {
-  const tiers: SubscriptionTier[] = ['pro', 'plus', 'free'];
+/**
+ * Minimum tier that unlocks a feature, or null when NO tier grants it.
+ *
+ * Two corrections, 2026-09-16, both of which made this modal state a plan the
+ * user did not need:
+ *
+ * 1. It walked ['pro', 'plus', 'free'] and returned the FIRST hit. PRO_FEATURES
+ *    is `[...PLUS_FEATURES, …]`, so every granted key matched 'pro' on the
+ *    first step and this modal said "Available with PepTalk Pro" / "Upgrade to
+ *    PepTalk Pro" for Plus features too — lab_scan, meal_scan, ad_free,
+ *    community_live_chat. The subscription screen's own tierForFeature answers
+ *    Plus for those, so the modal and the screen it opens disagreed.
+ *    Walking low → high returns the minimum, which is what the name says.
+ * 2. It fell through to 'free' for a key NO tier grants. That is not a
+ *    fallback but a false statement: "Available with Free ($0)" and "Upgrade to
+ *    Free" over a gate no purchase can open, with a paying user stuck behind it
+ *    (d9859bc, the exercise_library regression). Null is the honest answer and
+ *    the caller treats it as the defect it is.
+ */
+export function getRequiredTier(feature: string): SubscriptionTier | null {
+  const tiers: SubscriptionTier[] = ['free', 'plus', 'pro'];
   for (const tier of tiers) {
     if (TIER_FEATURES[tier].includes(feature)) return tier;
   }
-  return 'free';
+  return null;
 }
 
 // Tier labels + prices live in ../constants/tierPricing so this modal
@@ -284,6 +275,20 @@ export function PaywallModal({ visible, feature, onDismiss }: PaywallModalProps)
     }
   }, [visible, hasAccessNow, onDismiss]);
 
+  // A key no tier grants is a bug in the gate, not a state to render. Fail
+  // loudly in development; in production report it and get out of the user's
+  // way, reusing the auto-dismiss above rather than showing them a purchase
+  // that cannot unlock anything.
+  React.useEffect(() => {
+    if (!visible || requiredTier !== null) return;
+    const err = new Error(
+      `PaywallModal: no tier grants "${feature}" — this gate can never be satisfied`,
+    );
+    if (__DEV__) throw err;
+    captureException(err, { feature });
+    onDismiss();
+  }, [visible, requiredTier, feature, onDismiss]);
+
   const handleUpgrade = () => {
     onDismiss();
     // Carry the gated feature across. The subscription screen reads a
@@ -301,6 +306,10 @@ export function PaywallModal({ visible, feature, onDismiss }: PaywallModalProps)
     trackPaywallDismissed(feature);
     onDismiss();
   };
+
+  // Nothing honest to render for an ungranted key — the effect above has
+  // already reported it and asked the caller to dismiss.
+  if (requiredTier === null) return null;
 
   return (
     <Modal

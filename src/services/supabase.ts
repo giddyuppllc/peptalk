@@ -376,6 +376,8 @@ function makeNoopClient() {
         data: { subscription: { unsubscribe: () => {} } },
       }),
       resetPasswordForEmail: () => Promise.resolve({ data: null, error: notConfigured }),
+      updateUser: () =>
+        Promise.resolve({ data: { user: null }, error: notConfigured }),
       refreshSession: () =>
         Promise.resolve({ data: { user: null, session: null }, error: null }),
       setSession: () =>

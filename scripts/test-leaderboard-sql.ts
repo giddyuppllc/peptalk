@@ -245,9 +245,63 @@ function candidates(today: string, optIns: Record<string, boolean | undefined>, 
   }));
 }
 
+/**
+ * `--require-docker` is the mode verify:all runs.
+ *
+ * This test was outside verify:all because CI has no Docker, which meant the
+ * only thing standing between the leaderboard RLS policies and production was
+ * somebody remembering to run it by hand. A check nobody runs is not in the
+ * net.
+ *
+ * So it is in the chain now, and the absence of Docker is REPORTED rather than
+ * skipped past:
+ *
+ *   Docker present            run the real test.
+ *   absent, CI set            exit 1. CI must either provide Docker or the
+ *                             opt-out below; it may not quietly not-check.
+ *   absent, local             loud SKIPPED banner, exit 0, so a laptop without
+ *                             Docker can still run verify:all.
+ *   LEADERBOARD_SQL_OPTIONAL=1  deliberate opt-out, prints that it is opting
+ *                             out, everywhere including CI.
+ *
+ * Without the flag it behaves as before: no Docker is a hard exit 2.
+ */
+function reportNoDocker(): never {
+  const optedOut = process.env.LEADERBOARD_SQL_OPTIONAL === '1';
+  const ci = !!process.env.CI;
+  const banner = [
+    '',
+    '  ┌─────────────────────────────────────────────────────────────────┐',
+    '  │  LEADERBOARD SQL TESTS DID NOT RUN — no Docker daemon           │',
+    '  │  The leaderboard RLS policies and the opt-in join are UNCHECKED │',
+    '  └─────────────────────────────────────────────────────────────────┘',
+    '',
+  ].join('\n');
+  if (optedOut) {
+    console.warn(banner);
+    console.warn('  LEADERBOARD_SQL_OPTIONAL=1 — skipping on purpose. Run it before shipping.\n');
+    process.exit(0);
+  }
+  if (ci) {
+    console.error(banner);
+    console.error(
+      '  CI is set and Docker is missing. Give the job a Docker service, or set\n' +
+        '  LEADERBOARD_SQL_OPTIONAL=1 to record that this run does not check it.\n',
+    );
+    process.exit(1);
+  }
+  console.warn(banner);
+  console.warn(
+    '  Skipping locally. Run `npm run test:leaderboard-sql` with Docker up\n' +
+      '  before any release — this is on the ship checklist.\n',
+  );
+  process.exit(0);
+}
+
 function main(): void {
   const info = docker(['version', '--format', '{{.Server.Version}}']);
   if (info.status !== 0) {
+    if (process.argv.includes('--require-docker')) reportNoDocker();
     console.error('Docker is not available — this test needs a local Docker daemon.');
     process.exit(2);
   }

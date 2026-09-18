@@ -85,6 +85,12 @@ export const useAimeeReportsStore = create<ReportsState & ReportsActions>()(
         // App Review 5.1.2: explicit consent before sending report text to xAI (Aimee).
         const { ensureAiConsent } = await import('../utils/ensureAiConsent');
         if (!(await ensureAiConsent())) return;
+        // The health toggle is a SEPARATE consent. The templated body is dose
+        // counts, side-effect severities and check-in moods — the rewrite has
+        // nothing left to rewrite without it, so it refuses. Fail-soft: the
+        // templated body the user already sees simply stays.
+        const { healthConsentGranted, withHealthConsent } = await import('../lib/aiFeatureConsent');
+        if (!healthConsentGranted()) return;
         try {
           // Lazy-require to keep this store boot-cheap; supabase client
           // pulls in expo-secure-store + the SDK.
@@ -92,11 +98,11 @@ export const useAimeeReportsStore = create<ReportsState & ReportsActions>()(
           const { data, error } = await (supabase as any).functions.invoke(
             'aimee-report-rewrite',
             {
-              body: {
+              body: withHealthConsent('aimee-report-rewrite', {
                 body: report.body,
                 headline: report.headline,
                 recommendation: report.recommendation,
-              },
+              }),
             },
           );
           if (error) return;

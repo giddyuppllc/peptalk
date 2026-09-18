@@ -11,6 +11,7 @@ import { useLabResultsStore, type LabValue } from '../store/useLabResultsStore';
 import { useDoseLogStore } from '../store/useDoseLogStore';
 import { useHealthProfileStore } from '../store/useHealthProfileStore';
 import { ensureAiConsent } from '../utils/ensureAiConsent';
+import { healthConsentGranted, withHealthConsent } from '../lib/aiFeatureConsent';
 
 const FN_NAME = 'aimee-lab-interpret';
 
@@ -57,6 +58,12 @@ export async function interpretLatestLabs(): Promise<LabInterpretationResult> {
   if (!(await ensureAiConsent())) {
     return { error: 'AI features need your consent — you can enable them any time.' };
   }
+  // The health toggle (profile.aiDataConsent) is a SEPARATE consent from the
+  // launch modal above. Interpreting a lab panel is nothing but health data —
+  // there is no reduced version of this request to send — so it refuses.
+  if (!healthConsentGranted()) {
+    return { error: 'AI features need your consent — you can enable them any time.' };
+  }
   const { supabase } = await import('./supabase');
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) {
@@ -91,11 +98,11 @@ export async function interpretLatestLabs(): Promise<LabInterpretationResult> {
 
   try {
     const { data, error } = await supabase.functions.invoke(FN_NAME, {
-      body: {
+      body: withHealthConsent(FN_NAME, {
         results,
         activePeptides,
         profile,
-      },
+      }),
     });
     if (error) {
       // Surface upgrade hint if the function returned 403.

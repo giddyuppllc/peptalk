@@ -45,6 +45,7 @@ import {
   restoreOnboardingFromServer,
   clearOnboardingRestore,
 } from '../src/services/onboardingRestore';
+import { isRecoveryLink, postAuthLinkRoute } from '../src/lib/passwordRecovery';
 import { configureNotificationHandler } from '../src/services/notificationService';
 import { useNotificationStore } from '../src/store/useNotificationStore';
 import { initIAP, endIAP } from '../src/services/iapService';
@@ -1008,6 +1009,12 @@ function RootLayout() {
         //      platform (the prior code only parsed ?code=/?token_hash=).
         // Parse without depending on URL polyfill (RN ships an incomplete
         // one); a regex pull is sufficient.
+        // The link's `type` decides where this lands. It arrives in the QUERY
+        // for the OTP flow and in the FRAGMENT for the implicit flow — which is
+        // the client's current default — so it is read with a matcher that
+        // covers both. Reading it only from the query, as this did, made a
+        // recovery link indistinguishable from a signup confirmation.
+        const recovery = isRecoveryLink(url);
         const codeMatch = url.match(/[?&]code=([^&#]+)/);
         const tokenHashMatch = url.match(/[?&]token_hash=([^&#]+)/);
         const typeMatch = url.match(/[?&]type=([^&#]+)/);
@@ -1049,7 +1056,19 @@ function RootLayout() {
         // home only if onboarding really is complete.
         await restoreOnboardingFromServer();
         const ob = useOnboardingStore.getState();
-        if (!cancelled) router.replace(ob.isComplete && ob.profile.gender ? '/(tabs)' : '/onboarding');
+        // A recovery link goes to the set-password step. app/auth.tsx has been
+        // telling people the link lets them "pick a new password" since the
+        // Forgot password flow shipped; before this it routed them home and
+        // auth.updateUser({ password }) existed nowhere in the repo.
+        if (!cancelled) {
+          router.replace(
+            postAuthLinkRoute({
+              recovery,
+              onboardingComplete: ob.isComplete,
+              hasGender: !!ob.profile.gender,
+            }) as never,
+          );
+        }
       } catch (err: any) {
         if (__DEV__) console.warn('[auth-link] handling failed:', err);
         captureException(err, { source: 'auth.deepLink', url });
@@ -1087,6 +1106,18 @@ function RootLayout() {
     (async () => {
       const { supabase } = await import('../src/services/supabase');
       const { data } = supabase.auth.onAuthStateChange((event) => {
+        // Web: detectSessionInUrl handles the recovery link itself, so the
+        // deep-link handler above never sees it. PASSWORD_RECOVERY is the only
+        // signal the PWA gets, and nothing listened for it — which is why the
+        // reset link dead-ended on app.peptalk.bio too.
+        if (event === 'PASSWORD_RECOVERY') {
+          // The module singleton, not this component's `router`: adding it to
+          // the dep array below would tear down and re-register the auth
+          // subscription (and the AppState listener with it) on every router
+          // identity change. Same import style as lines 219 / 463 / 467.
+          import('expo-router').then(({ router: r }) => r.replace('/set-password' as never));
+          return;
+        }
         if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
           useAuthStore.getState().restoreSession()?.catch?.(() => {});
         }
