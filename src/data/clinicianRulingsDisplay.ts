@@ -28,7 +28,7 @@
  * upon".
  */
 
-import { CLINICIAN_RULINGS, getClinicianRuling, type ClinicianRuling } from './clinicianRulings';
+import { getClinicianRuling, type ClinicianRuling } from './clinicianRulings';
 
 /**
  * Word-level expansions, applied in order.
@@ -212,7 +212,18 @@ export function expandRuling(r: ClinicianRuling): ExpandedRuling {
   };
 }
 
-/** Every ruling, expanded. Used by the generators and by the test suite. */
-export function getAllExpandedRulings(): ExpandedRuling[] {
-  return CLINICIAN_RULINGS.map(expandRuling);
+/**
+ * Expand a set of rulings the caller has already chosen.
+ *
+ * This module used to enumerate CLINICIAN_RULINGS itself, and verify:safetyonly
+ * was right to fail on it: an unfiltered list of rulings is precisely what the
+ * safety-information-only list exists to stop reaching a screen. 5-Amino-1MQ and
+ * hCG are both ruled AND withdrawn, so a caller that asked this module for
+ * "everything" would have rendered figures Edward pulled.
+ *
+ * Choosing WHICH compounds a surface may speak about is a decision for the
+ * caller, which knows its audience. This module only renders what it is handed.
+ */
+export function expandRulings(rulings: ClinicianRuling[]): ExpandedRuling[] {
+  return rulings.map(expandRuling);
 }

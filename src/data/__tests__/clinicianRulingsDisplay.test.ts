@@ -13,7 +13,7 @@ import {
   extractFigures,
   verifyNoFigureChanged,
   expandRuling,
-  getAllExpandedRulings,
+  expandRulings,
   getExpandedRuling,
 } from '../clinicianRulingsDisplay';
 import { CLINICIAN_RULINGS, rulingDoseMcg } from '../clinicianRulings';
@@ -130,7 +130,7 @@ describe('every ruling we actually hold', () => {
   });
 
   it('preserves her wording alongside the expansion, for provenance', () => {
-    for (const e of getAllExpandedRulings()) {
+    for (const e of expandRulings(CLINICIAN_RULINGS)) {
       const source = CLINICIAN_RULINGS.find((r) => r.peptideId === e.peptideId)!;
       expect(e.verbatim.dose).toBe(source.dose?.verbatim);
       expect(e.verbatim.cycle).toBe(source.cycle?.verbatim);
@@ -147,7 +147,7 @@ describe('every ruling we actually hold', () => {
   });
 
   it('reads as one sentence, not a run of capitalised fragments', () => {
-    for (const e of getAllExpandedRulings()) {
+    for (const e of expandRulings(CLINICIAN_RULINGS)) {
       if (!e.summary) continue;
       // No ", Capital" joins — those are two table cells stapled together.
       expect(e.summary).not.toMatch(/, [A-Z][a-z]/);
