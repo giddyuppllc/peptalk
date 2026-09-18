@@ -10,13 +10,12 @@
  * until the user reinstalls. On web the storage is localStorage, which the user
  * can edit, and a killed app leaves partial writes.
  *
- * The second failure is quieter. Bumping `version` without supplying `migrate`
- * does not discard the old state — zustand logs "couldn't be migrated", falls
- * out of the branch returning undefined, and the next line destructures it.
- * The throw is swallowed by a trailing `.catch`, `hasHydrated` is never set,
- * and the store hydrates never. `useAuthStore`'s `hasHydrated` gates routing,
- * so that is a permanent stuck screen. 35 of 38 stores declared no version at
- * all, so whoever added the first one would have found this the hard way.
+ * It deliberately does NOT require a `migrate`. An earlier version did, on the
+ * claim that a `version` bump without one strands the store unhydrated. That is
+ * false: middleware.js:410 returns [false, undefined] on that path and the store
+ * hydrates its defaults. A bump without migrate DISCARDS the persisted state,
+ * which is a useful thing for a bump to mean, and a blanket pass-through migrate
+ * would have silently turned it into "the bump does nothing" in 35 stores.
  *
  * Self-test: `--self-test` removes each requirement in memory and asserts this
  * script notices. A check that passes without reading anything is worse than
@@ -62,7 +61,6 @@ function problemsFor(file, text) {
   const { name, block } = parsed;
 
   if (!/^      version:/m.test(block)) out.push(`${file}: no explicit \`version\``);
-  if (!/^      migrate:/m.test(block)) out.push(`${file}: no \`migrate\` — a future version bump would strand it unhydrated`);
 
   const merge = block.match(/^      merge: makeSafeMerge\('([^']+)'/m);
   if (!merge) {
@@ -94,7 +92,6 @@ if (SELF_TEST) {
   console.log(`  ✓ baseline clean (${sample})`);
 
   expectCaught('version removed', text.replace(/^      version: 0,\n/m, ''), 'no explicit');
-  expectCaught('migrate removed', text.replace(/^      migrate: passthroughMigrate,\n/m, ''), 'no `migrate`');
   expectCaught(
     'merge downgraded to the default spread',
     text.replace(/^      merge: makeSafeMerge\('[^']+', reportPersistProblem\),\n/m, ''),
@@ -128,7 +125,7 @@ console.log('— Persisted stores defend against their own storage —');
 console.log(`  ${files.length} persisted stores checked`);
 
 if (!problems.length) {
-  console.log('  ✓ every one declares version, migrate and a shape-checked merge');
+  console.log('  ✓ every one declares an explicit version and a shape-checked merge');
   process.exit(0);
 }
 

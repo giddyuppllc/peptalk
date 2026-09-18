@@ -27,14 +27,23 @@ export function reportPersistProblem(storeName: string, report: SafeMergeReport)
 
   // `unknown` alone is ordinary — it is what a removed field looks like on the
   // first launch after it was removed, and it needs no alarm. A DROPPED key is
-  // the one that would have crashed something.
-  if (report.dropped.length === 0) return;
+  // one that would have crashed something, and an ACTIONS key is a blob reaching
+  // for a function, which this app never wrote — both are worth saying.
+  if (report.dropped.length === 0 && report.actions.length === 0) return;
 
   captureException(
-    new Error(`Persisted state refused for ${storeName}: ${report.dropped.join(', ')}`),
+    new Error(
+      `Persisted state refused for ${storeName}: ` +
+        [...report.dropped, ...report.actions.map((k) => `${k} (action)`)].join(', '),
+    ),
     {
       source: 'persist.shape',
-      extra: { storeName, dropped: report.dropped, unknown: report.unknown },
+      extra: {
+        storeName,
+        dropped: report.dropped,
+        actions: report.actions,
+        unknown: report.unknown,
+      },
     },
   );
 }

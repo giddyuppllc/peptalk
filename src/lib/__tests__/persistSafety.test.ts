@@ -12,12 +12,7 @@
  * drop a key; it can never invent one.
  */
 
-import {
-  shapeCompatible,
-  safeMergeWithReport,
-  makeSafeMerge,
-  passthroughMigrate,
-} from '../persistSafety';
+import { shapeCompatible, safeMergeWithReport, makeSafeMerge } from '../persistSafety';
 
 describe('shapeCompatible', () => {
   it('refuses the swaps that actually throw', () => {
@@ -54,10 +49,25 @@ describe('shapeCompatible', () => {
     expect(shapeCompatible(7, undefined)).toBe(true);
   });
 
-  it('accepts a null persisted value against any default', () => {
-    // "not set yet" cannot be the cause of a type error.
-    expect(shapeCompatible(null, [])).toBe(true);
-    expect(shapeCompatible(undefined, 0)).toBe(true);
+  it('REFUSES a null persisted value against a non-null default', () => {
+    // The first version of this accepted it, on the reasoning that "not set
+    // yet" cannot cause a type error. `null.length` throws
+    // "Cannot read properties of null", into the same root boundary as the
+    // string case. And null is the ONLY corrupt value JSON.stringify itself
+    // emits — NaN, Infinity and undefined-in-an-array all serialise to null —
+    // so it is the likeliest corruption, not an edge case.
+    expect(shapeCompatible(null, [])).toBe(false);
+    expect(shapeCompatible(null, {})).toBe(false);
+    expect(shapeCompatible(null, '')).toBe(false);
+    expect(shapeCompatible(undefined, 0)).toBe(false);
+    expect(shapeCompatible(null, false)).toBe(false);
+  });
+
+  it('still accepts null where the default is itself null', () => {
+    // Every persisted key in the app that can legitimately hold null has a
+    // null default, so this is the path they take.
+    expect(shapeCompatible(null, null)).toBe(true);
+    expect(shapeCompatible(undefined, null)).toBe(true);
   });
 });
 
@@ -95,7 +105,10 @@ describe('safeMergeWithReport', () => {
     // where an action belongs turns every call site into "not a function".
     const { merged, report } = safeMergeWithReport({ addDose: 'hacked' }, current);
     expect(typeof merged.addDose).toBe('function');
-    expect(report.unknown).toContain('addDose');
+    // Its own bucket: an unknown key is a removed field, which is routine. A
+    // blob reaching for an action is not something this app ever wrote.
+    expect(report.actions).toContain('addDose');
+    expect(report.unknown).not.toContain('addDose');
   });
 
   it('drops keys the store no longer has', () => {
@@ -147,20 +160,5 @@ describe('makeSafeMerge', () => {
     });
     merge({ a: 'bad', b: NaN }, { a: [], b: 0 });
     expect(captured).toEqual({ name: 'doseLog', dropped: ['a', 'b'] });
-  });
-});
-
-describe('passthroughMigrate', () => {
-  it('returns the old state untouched', () => {
-    const old = { a: 1 };
-    expect(passthroughMigrate(old)).toBe(old);
-  });
-
-  it('returns something rather than undefined for any input', () => {
-    // The whole point. zustand destructures the migration result; returning
-    // undefined is what leaves a store unhydrated forever.
-    for (const v of [null, undefined, 0, '', false]) {
-      expect(() => passthroughMigrate(v)).not.toThrow();
-    }
   });
 });

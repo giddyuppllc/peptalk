@@ -8,7 +8,7 @@
  */
 
 import { Platform } from 'react-native';
-import { makeSafeMerge, passthroughMigrate } from '../lib/persistSafety';
+import { makeSafeMerge } from '../lib/persistSafety';
 import { reportPersistProblem } from '../lib/persistReporting';
 import { BETA_PRODUCT_ID } from '../lib/entitlement';
 import { create } from 'zustand';
@@ -661,13 +661,14 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
     }),
     {
       name: 'peptalk-subscription',
-      // Explicit, and deliberately still 0: bumping it would send every
-      // existing install through migrate for no gain. The point of
-      // declaring it is that `migrate` below now exists, so a future bump
-      // cannot leave this store unhydrated forever (zustand 5 destructures
-      // the migration result, and a missing migrate makes that undefined).
+      // Explicit so the number is visible, and deliberately still 0.
+      //
+      // In zustand 5.0.14 a bump with no `migrate` DISCARDS the persisted
+      // state and hydrates defaults — verified against middleware.js:392-420
+      // and by running it. That is the useful meaning of a bump, so nothing
+      // here overrides it: a store that needs to carry old data forward
+      // supplies its own migrate, and the three that do already have one.
       version: 0,
-      migrate: passthroughMigrate,
       // Storage is untrusted input: on web it is localStorage, which the
       // user can edit, and a killed app leaves partial writes. See
       // src/lib/persistSafety.ts.

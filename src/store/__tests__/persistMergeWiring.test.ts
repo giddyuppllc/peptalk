@@ -61,10 +61,9 @@ const STORES: [string, AnyStore][] = [
 describe.each(STORES)('%s store', (_label, store) => {
   const options = () => store.persist.getOptions();
 
-  it('has a merge, a migrate and an explicit version', () => {
+  it('has a merge and an explicit version', () => {
     const o = options();
     expect(typeof o.merge).toBe('function');
-    expect(o.migrate).toBeDefined();
     expect(typeof o.version).toBe('number');
   });
 
@@ -120,9 +119,13 @@ describe.each(STORES)('%s store', (_label, store) => {
     }
   });
 
-  it('its migrate returns something — undefined is what strands a store unhydrated', () => {
-    const o = options();
-    const migrate = o.migrate as (s: unknown, v: number) => unknown;
-    expect(migrate({ a: 1 }, 0)).toBeDefined();
-  });
-});
+  it('refuses a null where the default is an array — the likeliest corruption', () => {
+    // JSON.stringify turns NaN, Infinity and undefined-in-an-array into null,
+    // so a bad write produces null more often than anything else, and
+    // doses.length throws on it exactly as doses.map does on a string.
+    const current = store.getState();
+    const arrayKey = Object.keys(current).find((k) => Array.isArray(current[k]));
+    if (!arrayKey) return;
+    const merged = options().merge!({ [arrayKey]: null }, current) as Record<string, unknown>;
+    expect(Array.isArray(merged[arrayKey])).toBe(true);
+  });});
