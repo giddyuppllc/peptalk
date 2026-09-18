@@ -69,8 +69,34 @@ export function intensityToDose(
   protocol: ProtocolTemplate,
   intensity: ProtocolIntensity,
 ): DoseRange & { value: number } {
-  const { typicalDose } = protocol;
+  const { typicalDose, doseBands } = protocol;
   const r = normalizeDoseRange(typicalDose.min, typicalDose.max, typicalDose.unit);
+
+  // An authored band wins, exactly as it does in intensityToDoseRange below.
+  //
+  // These two are the same question asked twice — "what dose does this
+  // intensity mean" — and only the sibling honoured `doseBands`. It rendered
+  // consistently only because the one protocol with bands today, proto-ss31,
+  // authors {2,2}/{5,5}, which happen to be typicalDose's own extremes. The
+  // next protocol whose beginner band sits INSIDE a wider range would have put
+  // two different doses on one screen: the ActivationCard and the intensity
+  // picker reading the thirds split, the Beginner/Advanced pill reading the
+  // clinician's authored figure. `doseSanity`'s band-outside-range rule stays
+  // green throughout, because neither value is out of range — they just
+  // disagree.
+  //
+  // Found by review of PR #19. It is the same defect as Aimee's three private
+  // dosing copies, one level down: a clinician authored a number and only some
+  // of the surfaces read it.
+  if (doseBands && intensity !== 'standard') {
+    const band = intensity === 'mild' ? doseBands.beginner : doseBands.advanced;
+    const b = normalizeDoseRange(band.min, band.max, typicalDose.unit);
+    // Mild takes the bottom of the authored band, aggressive the top — the
+    // same ends intensityToDoseRange exposes, collapsed to the single figure
+    // this function returns.
+    return { ...b, value: intensity === 'mild' ? b.min : b.max };
+  }
+
   const value =
     intensity === 'mild'       ? r.min :
     intensity === 'aggressive' ? r.max :
