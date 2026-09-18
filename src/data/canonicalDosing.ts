@@ -32,6 +32,10 @@ import { PEPTIDE_DOSING_TABLE } from './peptideDosingTable';
 import { PROTOCOL_TEMPLATES } from './protocols';
 import { getClinicianRuling, rulingDoseMcg } from './clinicianRulings';
 import { expandClinicianText } from './clinicianRulingsDisplay';
+// Dose rendering has exactly one implementation in this repo; verify:doseformat
+// fails the build on a second one. A module that resolves WHICH dose is right
+// has no business also deciding how a number is spelled.
+import { formatMassMcg } from '../lib/doseUnits';
 
 export type DoseSourceId = 'clinician_ruling' | 'reconstitution_ladder' | 'master_table' | 'protocols';
 
@@ -253,15 +257,6 @@ export interface CanonicalDoseText {
   verbatim: boolean;
 }
 
-/** mcg → the shortest honest string. 2000 → "2 mg", 330 → "330 mcg". */
-function formatMcg(mcg: number): string {
-  if (mcg >= 1000) {
-    const mg = mcg / 1000;
-    return `${Number(mg.toFixed(3))} mg`;
-  }
-  return `${Number(mcg.toFixed(3))} mcg`;
-}
-
 /**
  * The dose a surface should put in front of a user or feed to a model.
  *
@@ -290,8 +285,8 @@ export function getCanonicalDoseText(peptideId: string): CanonicalDoseText | nul
 
   const text =
     canonical.minMcg === canonical.maxMcg
-      ? formatMcg(canonical.minMcg)
-      : `${formatMcg(canonical.minMcg)} – ${formatMcg(canonical.maxMcg)}`;
+      ? formatMassMcg(canonical.minMcg)
+      : `${formatMassMcg(canonical.minMcg)} – ${formatMassMcg(canonical.maxMcg)}`;
 
   return {
     text,
