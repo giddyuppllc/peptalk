@@ -257,6 +257,10 @@ function RootLayout() {
                 .getState()
                 .validatePurchase(platform, productId, transactionReceipt);
               if (!granted) {
+                // Same as the other registration below: say so. A refused
+                // validation left the paying user looking at an unchanged
+                // paywall with the only trace in Sentry.
+                useSubscriptionStore.getState().setFailedPurchase({ productId });
                 throw new Error(
                   `validate-purchase did not grant entitlement for ${productId}`,
                 );
@@ -533,6 +537,13 @@ function RootLayout() {
             .getState()
             .validatePurchase(platform, productId, transactionReceipt);
           if (!granted) {
+            // Tell the user. They have paid Apple or Google, the sheet closed
+            // cleanly, and the paywall is still in front of them — and until
+            // this line the only record of that was a Sentry event they will
+            // never see. Throwing is still correct (it keeps the purchase
+            // unfinished so the store replays it), but throwing on its own
+            // left the person who paid staring at an unchanged screen.
+            useSubscriptionStore.getState().setFailedPurchase({ productId });
             throw new Error(
               `validate-purchase did not grant entitlement for ${productId}`,
             );

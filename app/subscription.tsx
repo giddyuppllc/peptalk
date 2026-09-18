@@ -517,6 +517,7 @@ export default function SubscriptionScreen() {
   const tier = useSubscriptionStore((s) => s.tier);
   const productId = useSubscriptionStore((s) => s.productId);
   const pendingPurchase = useSubscriptionStore((s) => s.pendingPurchase);
+  const failedPurchase = useSubscriptionStore((s) => s.failedPurchase);
   const [restoring, setRestoring] = React.useState(false);
   // Live StoreKit prices (localized to the storefront) → keeps the displayed
   // price in sync with the purchase sheet. Falls back to hardcoded USD.
@@ -597,6 +598,30 @@ export default function SubscriptionScreen() {
             <Text style={styles.pendingBannerText}>
               Waiting for approval on your purchase. You'll get access once it's
               confirmed — no need to buy again.
+            </Text>
+          </View>
+        )}
+
+        {/* Paid, but our side refused the receipt.
+
+            DRAFT COPY — Edward approves the words.
+
+            This is the state where someone has been charged and the paywall is
+            still up. It was previously silent: the failure went to Sentry and
+            the screen did not change, so the only signal available to the
+            person who paid was that nothing happened. The claim here is one we
+            can actually keep — an unfinished purchase IS replayed by the store
+            on the next launch, and on Android an unacknowledged one is refunded
+            by Google on its own. It deliberately does not say "try again":
+            buying twice is the one thing that would make this worse. */}
+        {failedPurchase && (
+          <View style={styles.failedBanner}>
+            <Ionicons name="alert-circle-outline" size={18} color="#B91C1C" />
+            <Text style={styles.failedBannerText}>
+              Your payment went through, but we couldn't turn on your plan. That's
+              on us — don't buy again. Reopen the app in a few minutes and it
+              should sort itself out. If it doesn't, email support@peptalk.bio and
+              we'll fix it or refund you.
             </Text>
           </View>
         )}
@@ -1076,5 +1101,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: '#92400E',
+  },
+  failedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: 'rgba(220, 38, 38, 0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(220, 38, 38, 0.35)',
+  },
+  failedBannerText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#991B1B',
   },
 });
