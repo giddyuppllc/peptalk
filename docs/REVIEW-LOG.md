@@ -113,35 +113,47 @@ Consequences that matter when reviewing:
 Every line here was checked against the live project or the live DNS today. Where
 something could not be checked, it says so rather than guessing.
 
-### 🔴 Blocking, in code's control
+### ✅ CLEARED 2026-09-18 — the 13 unapplied migrations
 
-**13 migrations in the repo are NOT in the live ledger.** 70 files, 57 applied.
-This branch's code expects several of them.
+**All 70 migrations are now in the live ledger; `check:migrations` exits 0.**
 
-```
-20260825000001_subscription_environment        20260915000000_community_reports_resolved_by_set_null
-20260825120000_age_attestation                 20260915120000_push_tokens_token_unique
-20260825130000_profile_personal_details        20260915200000_community_leaderboard
-20260825200000_welcome_email_sent              20260916000000_aimee_spend_atomic
-20260826100000_ai_credit_packs                 20260916120000_community_reports_user_and_ai_targets
-20260826140000_credit_rpc_revoke_anon
-20260826180000_credit_autorefill
-20260827090000_purchase_validation_log
-```
+Nine were already applied and the ledger had simply lost them — repaired, no SQL
+run: `subscription_environment`, `age_attestation`, `profile_personal_details`,
+`welcome_email_sent`, `ai_credit_packs`, `credit_rpc_revoke_anon`,
+`credit_autorefill`, `purchase_validation_log`,
+`community_reports_resolved_by_set_null`.
 
-**Do not `supabase db push` on the strength of that list.** Some may already be
-applied under a different recorded timestamp; re-running would fail or duplicate
-objects. Each needs verifying against the live schema, then `migration repair`
-for the applied ones and `db push` for the rest.
-`SHIP_CHECKLIST_2026-09-15.md` §1 has the worked list — but see the doc-status
-table below before trusting it.
+Four were genuinely absent and were applied: `push_tokens_token_unique`,
+`community_leaderboard`, `aimee_spend_atomic`,
+`community_reports_user_and_ai_targets`.
 
-This was invisible until today. `check:migrations` could not parse the CLI's
-output — it now answers JSON, the parser only understood the table — so it
+Checked afterwards against the live schema rather than against the ledger:
+`profiles.leaderboard_opt_in`, `community_reports.reported_user_id`, the
+`push_tokens_expo_push_token_key` constraint, `bump_aimee_spend` and
+`get_community_leaderboard` all exist, and **anon cannot execute
+`get_community_leaderboard`** — the property that migration was written to hold.
+
+**Two traps worth carrying into the other reviews**, because the same shape is
+everywhere in this repo:
+
+- A first probe reported the credit-pack tables MISSING. The names had been
+  guessed; the real ones are `ai_credit_balance` and `ai_credit_grants`, both
+  live. Acting on that would have re-run a migration that then failed.
+- Object existence does not prove a `REVOKE` ran. `credit_rpc_revoke_anon`
+  exists to remove anon access, so the ACLs were read directly: `anon` and
+  `authenticated` are both false on all seven functions.
+
+Pre-flight before the push: the only `INSERT` among the four sits inside a
+function body, not a migration-time data change, and `push_tokens` held one row
+with zero duplicates, so the UNIQUE could not fail. Dry-run first; it listed
+exactly the four expected.
+
+**How this stayed invisible.** `check:migrations` could not parse the CLI's
+output — it now answers JSON and the parser only understood the table — so it
 reported "no migration rows" **while printing thirteen of them underneath its own
 failure message**. Every self-test passed throughout, because they exercise the
-parser against fixtures rather than the CLI. Fixed in `64f5e18`. Treat this as the
-canonical example of why a green check is not evidence.
+parser against fixtures rather than against the CLI. Fixed in `64f5e18`. This is
+the canonical example in this repo of why a green check is not evidence.
 
 ### ⚠️ Unverified — nobody can answer these from this machine
 
