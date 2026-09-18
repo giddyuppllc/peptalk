@@ -62,8 +62,23 @@ const MEAL_TYPE_OPTIONS = [
  * a test asserts the title is untouched and that an empty body renders nothing.
  */
 const AI_UNAVAILABLE_TITLE = 'Aimee unavailable';
-/** Edward's copy goes here. While it is empty the notice is not rendered. */
-const AI_UNAVAILABLE_BODY: string = '';
+/**
+ * DRAFT — Edward approves the words.
+ *
+ * Written against what the fallback path actually does, not what would sound
+ * reassuring. When Aimee cannot be reached, FALLBACK_RECIPES are filtered
+ * against the allergens on the user's profile and sorted toward their per-meal
+ * calorie target — so the allergy claim is one we keep. The free-text
+ * preferences they typed into the box above ("no dairy, under 30 min, meal prep
+ * friendly") are NOT applied by that path, so the copy says so rather than
+ * letting them wonder why the results ignored them.
+ *
+ * It leads with what they still get instead of what failed, and ends with the
+ * one action worth taking.
+ */
+const AI_UNAVAILABLE_BODY: string =
+  'These are our own recipes — still filtered for your allergies, but not built ' +
+  'around what you typed. Try again in a few minutes for Aimee\'s.';
 
 // ---------------------------------------------------------------------------
 // Generated Recipe Card

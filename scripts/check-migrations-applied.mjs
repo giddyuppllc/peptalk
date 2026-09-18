@@ -61,6 +61,37 @@ export function parseMigrationList(stdout) {
   const local = new Set();
   const remote = new Set();
   let rows = 0;
+
+  // JSON first. The CLI now answers with
+  // {"migrations":[{"local":"2026...","remote":"2026...","time":"..."}]} and
+  // this parser only understood the table, so it found zero rows and said
+  // "the CLI returned no migration rows" — while printing thirteen unapplied
+  // migrations directly underneath. The check was blind on the one question it
+  // exists to answer, and the self-tests all passed because they exercise the
+  // table parser against fixtures rather than the CLI.
+  //
+  // The table branch below is kept: an older CLI, or a piped/TTY difference,
+  // still renders one, and losing that would trade one blind spot for another.
+  const brace = stdout.indexOf('{');
+  if (brace !== -1) {
+    try {
+      const parsed = JSON.parse(stdout.slice(brace));
+      if (Array.isArray(parsed?.migrations)) {
+        for (const row of parsed.migrations) {
+          const l = String(row?.local ?? '').match(/\d{14}/);
+          const r = String(row?.remote ?? '').match(/\d{14}/);
+          if (!l && !r) continue;
+          rows++;
+          if (l) local.add(l[0]);
+          if (r) remote.add(r[0]);
+        }
+        if (rows > 0) return { local, remote, rows };
+      }
+    } catch {
+      // Not JSON, or not the shape we know. Fall through to the table.
+    }
+  }
+
   for (const raw of stdout.split(/\r?\n/)) {
     // Strip box drawing and ANSI, keep the column separators.
     const line = raw.replace(/\[[0-9;]*m/g, '').replace(/[│┃┆┊]/g, '|');

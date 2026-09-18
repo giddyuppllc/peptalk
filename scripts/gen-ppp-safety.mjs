@@ -1,7 +1,15 @@
 /**
  * Generate src/data/safetyProfilesFromGuides.ts from the PPP guides.
  *
- * Run: node scripts/gen-ppp-safety.mjs > src/data/safetyProfilesFromGuides.ts
+ * Run it through a temp file — NOT straight into its own input:
+ *   node scripts/gen-ppp-safety.mjs > /tmp/spg.ts && mv /tmp/spg.ts src/data/safetyProfilesFromGuides.ts
+ *
+ * Redirecting directly at src/data/safetyProfilesFromGuides.ts truncates that
+ * file before node starts, and the tsx probe below reads it back through
+ * safetyProfiles.ts, so the run dies and you are left with an empty file where
+ * 39 safety profiles used to be. The exit code is honest (1); the damage is
+ * done by the redirect, not by the script. Recover with
+ * `git checkout -- src/data/safetyProfilesFromGuides.ts`.
  *
  * WHY A SEPARATE FILE RATHER THAN EDITING safetyProfiles.ts
  * The 15 hand-curated profiles in safetyProfiles.ts stay authoritative and
@@ -99,9 +107,22 @@ lines.push(' * GENERATED — do not hand-edit. Regenerate with:');
 lines.push(' *   node scripts/gen-ppp-safety.mjs > src/data/safetyProfilesFromGuides.ts');
 lines.push(' *');
 lines.push(" * Edward, 2026-08-09: \"if the information exists in the peptide protocol");
-lines.push(' * portal we can use it as our own data.\" It is his own doctor-reviewed');
-lines.push(' * clinical content, which is what makes this transcription rather than the');
-lines.push(' * invention this app cannot afford.');
+lines.push(' * portal we can use it as our own data." That is the permission to');
+lines.push(' * transcribe, and transcription rather than invention is the point — this');
+lines.push(' * app cannot afford to author safety content.');
+lines.push(' *');
+lines.push(' * PROVENANCE, CORRECTED 2026-09-16. This header used to call the source');
+lines.push(" * \"his own doctor-reviewed clinical content\". Both halves were wrong and");
+lines.push(' * the sentence must not be quoted to App Review or to a customer:');
+lines.push(' *   - The Peptide Protocol Portal is LANCE\'s, not Edward\'s. Edward built');
+lines.push(' *     it; he does not own it. (A comment in the PPP repo itself says');
+lines.push(' *     "Edward\'s PPP" and is wrong about the same thing.)');
+lines.push(' *   - No named doctor and no review record backs "doctor-reviewed". The');
+lines.push(' *     one byline that looks like one, "Dr. Sean McGrath", is stamped');
+lines.push(' *     automatically by the portal\'s AI writer — not a person with an');
+lines.push(' *     account, a bio or a licence.');
+lines.push(' * What is true: these 39 profiles are a faithful transcription of the');
+lines.push(' * portal guides. Reusing them needs Lance\'s permission, not Edward\'s.');
 lines.push(' *');
 lines.push(' * The 15 hand-curated entries in safetyProfiles.ts are AUTHORITATIVE and are');
 lines.push(' * deliberately not included here — getSafetyProfileByPeptideId checks those');
@@ -139,6 +160,30 @@ for (const r of rows) {
 }
 lines.push('];');
 lines.push('');
+
+// FLOOR — refuse to emit a file that would delete the profiles.
+//
+// This guards a guide-extraction regression: if the guides stop matching and
+// this emits a handful of profiles, writing that over the catalogue would
+// silently drop safety content for peptides that had it.
+//
+// It does NOT rescue you from redirecting into this script's own input. The
+// SHELL truncates the target before node starts, the tsx probe above then
+// reads an empty file, and the run dies inside execSync — exit 1, well before
+// this point. That is the correct exit code; the file is blanked all the same,
+// because `>` already did the damage. Hence the temp-file instruction in the
+// header. Restore with `git checkout -- src/data/safetyProfilesFromGuides.ts`.
+const FLOOR = 30;
+if (rows.length < FLOOR) {
+  console.error(
+    `refusing to generate: ${rows.length} profiles is below the floor of ${FLOOR}.\n` +
+      'If you redirected into src/data/safetyProfilesFromGuides.ts, that file is now\n' +
+      'truncated and this script can no longer read the catalogue. Restore it\n' +
+      '(git checkout -- src/data/safetyProfilesFromGuides.ts), then generate to a\n' +
+      'temporary file and move it into place.',
+  );
+  process.exit(1);
+}
 
 process.stdout.write(lines.join('\n'));
 

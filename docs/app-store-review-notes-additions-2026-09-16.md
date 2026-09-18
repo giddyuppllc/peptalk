@@ -238,13 +238,22 @@ Answers that apply across the form:
   not un-publish it. **Edward rotates it** in Supabase → Authentication → Users
   and login-tests the build before submitting. Nothing in this branch changed
   that line.
-- **The AI-consent paragraph in the existing notes.** It says consent is
-  "opt-in and off by default", and `canSendToCloud()` in
-  `src/services/privacyGuard.ts` currently returns true unless consent is
-  explicitly `false` — i.e. opt-**out**. One of those is wrong and a reviewer
-  reading the note and then using the app would find the difference. A separate
-  branch is working on consent gating; this needs to be reconciled with that
-  work before either ships. Flagged, not changed.
+- **The AI-consent paragraph in the existing notes.** ❌ *Corrected
+  2026-09-16 — the original text of this bullet claimed the notes were wrong.
+  They are not.* There are **two** consents and this bullet had read them as
+  one:
+  - `useAiConsentStore.consented` — the Guideline 5.1.2 modal. Defaults
+    **`false`**. Nothing reaches xAI or OpenAI before an affirmative tap. The
+    notes' "opt-in and off by default" describes **this**, accurately.
+  - `profile.aiDataConsent` — the health-data toggle that `canSendToCloud()`
+    reads. Defaults **`true`**. This is the opt-**out** one.
+
+  So the notes are not contradicted by the binary; they are **incomplete**. A
+  user consents to a modal naming "your messages, voice, and photos" and their
+  health profile — labs, doses, conditions, medications, allergies — travels
+  on the second switch, which they were never shown. Fix the disclosure (modal
+  copy + a second paragraph in the notes); the default itself is a separate
+  decision for Edward. Still not changed here.
 - **Copy.** The report and block wording on the new surfaces reuses strings the
   app already ships. Two slots are empty and waiting on Edward:
   `LEADERBOARD_COPY.rowActionsTitle` (title for the member Report/Hide sheet)

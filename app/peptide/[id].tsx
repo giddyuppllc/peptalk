@@ -1509,9 +1509,9 @@ function BeginnerAdvancedDoseCard({
         </TouchableOpacity>
       </View>
       <Text style={dosePillStyles.footnote}>
-        Educational reference only — not medical advice. Ranges stay inside the
-        protocol's published research bounds. Always consult a licensed
-        healthcare provider before starting or changing any peptide protocol.
+        Educational reference only — not medical advice. Always consult a
+        licensed healthcare provider before starting or changing any peptide
+        protocol.
       </Text>
     </GlassCard>
   );

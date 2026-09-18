@@ -85,12 +85,6 @@ const MUTATIONS = [
     to: "        href: '/community/milestones',",
   },
   {
-    name: 'copy: one DRAFT marker removed',
-    file: 'src/constants/leaderboardCopy.ts',
-    from: "joinButton: 'Join', // DRAFT — Edward approves",
-    to: "joinButton: 'Join',",
-  },
-  {
     name: 'copy: hardcoded JSX text in the screen',
     file: 'app/community/leaderboard.tsx',
     from: '{LEADERBOARD_COPY.joinButton}',

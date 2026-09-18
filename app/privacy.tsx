@@ -54,7 +54,7 @@ const POLICY_SECTIONS: PolicySection[] = [
     paragraphs: [
       'We take the protection of your health-related information extremely seriously.',
       'All health data\u2014including dose logs, check-in responses, body composition data, and protocol details\u2014is encrypted in transit (TLS) and at rest, and stored in your private account on our secure backend so it syncs across your devices. We never sell this data or share it for advertising. Health data is sent to a third-party AI provider only when you actively use an AI feature (see \u201cAI & Cloud Services\u201d below), and only after you have granted consent.',
-      'Health platform integrations: if you choose to connect Apple Health (iOS) or Health Connect (Android), PepTalk reads only the data types you approve in the system permission dialog (such as steps, heart rate, sleep, weight, and body composition) to show trends alongside your protocols and check-ins. This data is read on-device with your explicit grant, is never sold or used for advertising, and you can revoke access at any time in Apple Health / Health Connect or your device settings. PepTalk does not write data back to Health Connect on Android.',
+      'Health platform integrations: if you choose to connect Apple Health (iOS) or Health Connect (Android), PepTalk reads only the data types you approve in the system permission dialog (such as steps, heart rate, sleep, weight, and body composition) to show trends alongside your protocols and check-ins. This data is read on-device with your explicit grant, is never sold or used for advertising, and you can revoke access at any time in Apple Health / Health Connect or your device settings. PepTalk also writes a small amount back, and only with the write permission you grant: on iOS, the weight you enter in a check-in and a mindful-session entry for a completed check-in; on Android, the weight you enter in a check-in. Nothing else is written to either platform.',
       'PepTalk does not qualify as a covered entity under HIPAA, but we voluntarily adhere to HIPAA-inspired principles: minimum necessary access, encryption at rest, and user control over all data.',
     ],
   },
@@ -79,7 +79,7 @@ const POLICY_SECTIONS: PolicySection[] = [
     title: 'Diagnostics & Crash Reporting',
     icon: 'bug-outline',
     paragraphs: [
-      'To keep the app stable, PepTalk uses a third-party crash- and performance-monitoring service (Sentry). When the app crashes or hits an error, it sends anonymous diagnostic data — the error, device model, OS version, and a random account identifier — so we can find and fix the problem.',
+      'To keep the app stable, PepTalk uses a third-party crash- and performance-monitoring service (Sentry). When the app crashes or hits an error, it sends diagnostic data — the error, device model, OS version, and your account identifier — so we can find and fix the problem. The identifier lets us see that one account hit the same fault twice; it carries no name or contact details.',
       'This diagnostic data does not include your health data, chat content, photos, or voice. Email and username are stripped before any report is sent. It is used only to fix bugs and improve reliability, and is never sold or used for advertising.',
     ],
   },
@@ -97,8 +97,8 @@ const POLICY_SECTIONS: PolicySection[] = [
     icon: 'person-outline',
     paragraphs: [
       'You have full control over your data at all times. Within PepTalk, you can:',
-      '\u2022  View your data \u2014 All stored data is accessible within the app\n\u2022  Export your data \u2014 Request a full export of your information\n\u2022  Delete all data \u2014 Use the "Delete My Data" button in Profile to permanently erase everything\n\u2022  Revoke consent \u2014 Disable cloud AI or any optional data features at any time',
-      'Data deletion is immediate and irreversible. Deleting your account removes all of your user-keyed records from our backend along with your authentication record; once deleted, we have no way to recover your information.',
+      '\u2022  View your data \u2014 All stored data is accessible within the app\n\u2022  Export your data \u2014 Request a full export of your information\n\u2022  Clear this device \u2014 "Delete My Data" in Profile removes your health data, dose logs, check-ins and chat history from the device you are holding. Your account on our backend is untouched, so signing in again restores it.\n\u2022  Delete everything \u2014 "Delete Account" in Profile removes your records from our backend and your sign-in record with them\n\u2022  Revoke consent \u2014 Disable cloud AI or any optional data features at any time',
+      'Deleting your account is immediate and irreversible: it removes all of your user-keyed records from our backend along with your authentication record, and once deleted we have no way to recover your information.',
     ],
   },
   {

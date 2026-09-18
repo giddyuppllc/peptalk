@@ -290,7 +290,11 @@ describe('route guard integration: the restore never splits the two flags', () =
           for (const inOnboarding of [true, false])
             for (const inAuth of [true, false]) {
               if (inOnboarding && inAuth) continue;
-              const s = { isComplete: state.isComplete, authHydrated: true, isAuthenticated, inOnboarding, inAuth };
+              // inPasswordRecovery: false — this sweep is about where a RESTORE
+              // leaves a user on an ordinary boot. The /set-password exemption
+              // added on 2026-09-16 has its own coverage in routeGuard.test.ts,
+              // including its place in that file's exhaustive no-loop sweep.
+              const s = { isComplete: state.isComplete, authHydrated: true, isAuthenticated, inOnboarding, inAuth, inPasswordRecovery: false };
               const target = decideRoute(s);
               if (!target) continue;
               expect(
@@ -306,13 +310,13 @@ describe('route guard integration: the restore never splits the two flags', () =
     const restored = world({ fetch: okFetch(completeServerProfile) });
     await restored.restore();
     expect(
-      decideRoute({ isComplete: restored.state.isComplete, authHydrated: true, isAuthenticated: true, inOnboarding: false, inAuth: false }),
+      decideRoute({ isComplete: restored.state.isComplete, authHydrated: true, isAuthenticated: true, inOnboarding: false, inAuth: false, inPasswordRecovery: false }),
     ).toBeNull();
 
     const failed = world({ fetch: async () => ({ status: 'error' }) });
     await failed.restore();
     expect(
-      decideRoute({ isComplete: failed.state.isComplete, authHydrated: true, isAuthenticated: true, inOnboarding: false, inAuth: false }),
+      decideRoute({ isComplete: failed.state.isComplete, authHydrated: true, isAuthenticated: true, inOnboarding: false, inAuth: false, inPasswordRecovery: false }),
     ).toBe('/onboarding');
   });
 });

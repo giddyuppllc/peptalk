@@ -26,6 +26,7 @@ import { ensureAiConsent } from '../utils/ensureAiConsent';
 import { sanitizeForLLM } from './privacyGuard';
 import { applyAiDataConsent } from '../lib/aiDataConsent';
 import { withHealthConsent } from '../lib/aiFeatureConsent';
+import { aimeeDenialOffer } from '../lib/aimeeDenialActions';
 import { supabase } from './supabase';
 import { captureException } from './telemetry';
 
@@ -77,6 +78,8 @@ function buildPeptideKnowledgeBase(): string {
   const { PROTOCOL_TEMPLATES } = require('../data/protocols');
   const { KNOWLEDGE_TOPICS } = require('../data/knowledgeTopics');
   const { SAFETY_PROFILES } = require('../data/safetyProfiles');
+  const { CLINICIAN_RULINGS, getClinicianRuling } = require('../data/clinicianRulings');
+  const { expandClinicianText } = require('../data/clinicianRulingsDisplay');
 
   const lines: string[] = [];
 
@@ -105,9 +108,29 @@ function buildPeptideKnowledgeBase(): string {
       );
       return;
     }
-    const dose = `${t.typicalDose.min}-${t.typicalDose.max} ${t.typicalDose.unit}`;
+    // Jamie Esposito's ruling outranks the stored range (Edward, 2026-09-15).
+    // The device copy of the knowledge base read protocols.ts and nothing else,
+    // so an answer here could differ from the same question asked through the
+    // edge function. One authority, quoted the same way on both sides.
+    const ruling = getClinicianRuling(t.peptideId);
+    const dose = ruling?.dose?.verbatim
+      ? `${expandClinicianText(ruling.dose.verbatim, `${t.peptideId} dose`)} (clinician-approved)`
+      : `${t.typicalDose.min}-${t.typicalDose.max} ${t.typicalDose.unit}`;
+    const freq = ruling?.frequency
+      ? expandClinicianText(ruling.frequency, `${t.peptideId} frequency`)
+      : t.frequencyLabel;
     protoLines.push(
-      `- ${t.name}: ${dose} ${t.route} ${t.frequencyLabel}${t.timing ? ` (${t.timing})` : ''}${contra}`
+      `- ${t.name}: ${dose} ${t.route} ${freq}${t.timing ? ` (${t.timing})` : ''}${contra}`
+    );
+  });
+
+  // Ruled compounds with no protocol template — otherwise unreachable here.
+  const ruledIds = new Set(PROTOCOL_TEMPLATES.map((t: any) => t.peptideId));
+  CLINICIAN_RULINGS.forEach((r: any) => {
+    if (!r.dose?.verbatim || ruledIds.has(r.peptideId) || isSafetyOnly(r.peptideId)) return;
+    protoLines.push(
+      `- ${r.peptideId}: ${expandClinicianText(r.dose.verbatim, `${r.peptideId} dose`)} (clinician-approved)` +
+        (r.frequency ? ` ${expandClinicianText(r.frequency, `${r.peptideId} frequency`)}` : '')
     );
   });
 
@@ -748,11 +771,7 @@ export async function generateAIResponse(
             role: 'bot',
             content: data.error ?? 'Please upgrade to use Aimee AI.',
             timestamp: new Date().toISOString(),
-            quickReplies: data.upgrade ? ['View subscription plans'] : undefined,
-            navAction: data.upgrade ? '/subscription' : undefined,
-            actions: data.upgrade
-              ? [{ label: 'See plans', route: '/subscription', icon: 'sparkles-outline' }]
-              : undefined,
+            ...aimeeDenialOffer({ upgrade: data.upgrade, topUp: data.topUp }),
           };
         }
       }
@@ -1051,6 +1070,7 @@ export interface AimeeStreamEvent {
     action: { type: string; path?: string; [k: string]: unknown };
   }[];
   upgrade?: boolean;
+  topUp?: boolean;
   /** Status code from the edge fn for error/denied events. */
   status?: number;
 }
@@ -1165,6 +1185,9 @@ export async function* generateAIResponseStream(
         type: 'denied',
         message: errBody?.error ?? 'AI unavailable',
         upgrade: errBody?.upgrade === true,
+        // Carried through so the chat can offer a credit pack. Without it a
+        // Pro subscriber at the cost cap saw a refusal and nothing else.
+        topUp: errBody?.topUp === true,
         status: res.status,
       };
       return;

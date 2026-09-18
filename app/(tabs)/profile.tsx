@@ -384,7 +384,7 @@ function UserProfile() {
               </Text>
               <Text style={styles.upgradeRowBody}>
                 {tier === 'free'
-                  ? 'Unlimited tracking, Aimee chat, Food Scanner & more'
+                  ? 'Unlimited tracking, 750 Aimee messages a month, Food Scanner & more'
                   : 'Workout programs, recipes, health reports & more'}
               </Text>
             </View>

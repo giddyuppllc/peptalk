@@ -148,6 +148,57 @@ describe('workoutsInWindow', () => {
   });
 });
 
+/**
+ * A row we cannot date must be dropped, not thrown over.
+ *
+ * `new Date('nonsense').toISOString()` does not return a bad string — it throws
+ * RangeError: Invalid time value. `completedAt` is read straight off a server
+ * row (useWorkoutStore.ts:549, `r.completed_at`), so one malformed value
+ * anywhere in a user's history threw out of the leaderboard's render. The only
+ * error boundary in the app is at the root, so that is not a broken card — it
+ * is the whole app replaced by the fallback screen.
+ */
+describe('a malformed completedAt cannot crash the leaderboard', () => {
+  const BAD = ['nonsense', '', '2026-13-45', 'yesterday', '  ', 'NaN', '0000-00-00'];
+
+  it.each(BAD)('workoutsInWindow survives %p', (bad) => {
+    expect(() => workoutsInWindow([{ completedAt: bad }], TODAY)).not.toThrow();
+    expect(workoutsInWindow([{ completedAt: bad }], TODAY)).toBe(0);
+  });
+
+  it.each(BAD)('milestoneEvents survives %p on its own', (bad) => {
+    // A single bad row is the reliable trigger: WORKOUT_COUNT_THRESHOLDS starts
+    // at 1, so the old code reached `new Date(NaN).toISOString()` on the very
+    // first threshold. The first draft of this test padded with ten good rows,
+    // where a NaN can sort anywhere and the throw only sometimes happened —
+    // it passed against the unfixed code, which is worse than no test.
+    expect(() => milestoneEvents([], [{ completedAt: bad }], TODAY)).not.toThrow();
+    expect(milestoneEvents([], [{ completedAt: bad }], TODAY)).toEqual([]);
+  });
+
+  it.each(BAD)('milestoneEvents survives %p mixed in with real workouts', (bad) => {
+    const good = Array.from({ length: 10 }, (_, i) => ({ completedAt: `${addDays(TODAY, -i)}T12:00:00.000Z` }));
+    expect(() => milestoneEvents([], [...good, { completedAt: bad }], TODAY)).not.toThrow();
+  });
+
+  it('drops the bad row without disturbing the good ones', () => {
+    const at = (o: number) => ({ completedAt: `${addDays(TODAY, o)}T23:30:00.000Z` });
+    const clean = workoutsInWindow([at(0), at(-1)], TODAY);
+    const dirty = workoutsInWindow([at(0), { completedAt: 'nonsense' }, at(-1)], TODAY);
+    expect(dirty).toBe(clean);
+  });
+
+  it('still dates a workout milestone on the right day with a bad row present', () => {
+    // 10 workouts, oldest first; the 5th chronologically is 5 days back.
+    const days = Array.from({ length: 10 }, (_, i) => addDays(TODAY, -(9 - i)));
+    const workouts = days.map((d) => ({ completedAt: `${d}T08:00:00.000Z` }));
+    const withBad = [...workouts, { completedAt: 'not-a-date' }];
+    const a = milestoneEvents([], workouts, TODAY).filter((e) => e.kind === 'workout_count');
+    const b = milestoneEvents([], withBad, TODAY).filter((e) => e.kind === 'workout_count');
+    expect(b).toEqual(a);
+  });
+});
+
 // ── milestones ──────────────────────────────────────────────────────────────
 
 describe('milestoneEvents', () => {

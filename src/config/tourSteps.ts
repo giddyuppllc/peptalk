@@ -126,7 +126,15 @@ const FREE_TO_PLUS_STEPS: TourStep[] = [
     screen: '/(tabs)/peptalk',
     targetKey: 'aimee_chat_input',
     title: 'Aimee AI chat',
-    body: 'Ask Aimee anything — peptide dosing, stacks, workouts, nutrition. 20 messages per day.',
+    // This body used to sell 20 messages per day. That was never the enforced
+    // allowance: the gate is a monthly MESSAGE count (aimee-chat-stream
+    // RATE_LIMITS, plus: 750) with a monthly COST cap alongside it, and
+    // whichever binds first wins. Edward settled this on 2026-09-16 — make the
+    // words match the caps — and the wording below is the one already shipping
+    // on app/subscription.tsx:86, reused rather than rewritten. Up to is
+    // load-bearing: the cost cap can bind before the count, so the figure is a
+    // ceiling, not a promise.
+    body: 'Ask Aimee anything — peptide dosing, stacks, workouts, nutrition. Up to 750 messages a month.',
     icon: 'chatbubble-ellipses',
     requiredTier: 'plus',
   },
@@ -175,8 +183,21 @@ const PLUS_TO_PRO_STEPS: TourStep[] = [
     id: 'pro_aimee_unlimited',
     screen: '/(tabs)/peptalk',
     targetKey: 'aimee_chat_input',
-    title: 'Unlimited Aimee',
-    body: 'No more message caps — chat with Aimee as much as you want, whenever you want.',
+    // This step used to be titled Unlimited, over a body promising no more
+    // message caps. Pro is not unlimited: 9,000 messages a month, plus a
+    // monthly cost cap, whichever binds first. The tour fires the moment
+    // someone upgrades, so that was the first thing a new Pro subscriber was
+    // told, and it was the one claim Edward had removed from every other
+    // surface on 2026-09-16 (make the words match the caps). Both strings
+    // below are the approved ones already shipping in
+    // src/components/PaywallModal.tsx, FEATURE_META.aimee_ai_unlimited —
+    // reused verbatim rather than written fresh.
+    //
+    // Nothing in this comment is quoted deliberately: paywallClaimsMatchLimits
+    // reads this file for string literals that mention Aimee, and an example of
+    // the defect sitting in a comment would read exactly like the defect.
+    title: 'More Aimee',
+    body: 'Up to 9,000 messages a month with Aimee, and her full toolset.',
     icon: 'chatbubble-ellipses',
     requiredTier: 'pro',
   },

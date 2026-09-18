@@ -6,6 +6,8 @@
  */
 
 import { create } from 'zustand';
+import { makeSafeMerge } from '../lib/persistSafety';
+import { reportPersistProblem } from '../lib/persistReporting';
 import { withTimeout, AUTH_TIMEOUT_MS } from '../lib/withTimeout';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { Alert } from '../lib/alert';
@@ -82,6 +84,20 @@ function coerceProfileRow(
 interface AuthStore {
   user: User | null;
   isAuthenticated: boolean;
+  /**
+   * When a session we were holding vanished underneath us, or null.
+   *
+   * This is the App Review 2.1(a) death loop, made visible. The sequence is:
+   * sign in, the store goes authenticated, the session fails to persist,
+   * getSession() comes back empty, the user is cleared, routeGuard rule 3
+   * sends them to /auth — and they sign in again, to the same end. Twice
+   * rejected, both times described as "sent back to the login page after
+   * logging in", and there was nothing on screen either time to say why.
+   *
+   * Never persisted: it describes THIS launch. A stale one would accuse a
+   * perfectly good session of a failure that happened last week.
+   */
+  sessionLostAt: number | null;
   isLoading: boolean;
   hasHydrated: boolean;
 
@@ -106,6 +122,7 @@ export const useAuthStore = create<AuthStore>()(
     (set, get) => ({
       user: null,
       isAuthenticated: false,
+      sessionLostAt: null,
       isLoading: false,
       hasHydrated: false,
 
@@ -357,7 +374,14 @@ export const useAuthStore = create<AuthStore>()(
                 },
               );
             }
-            set({ user: null, isAuthenticated: false, hasHydrated: true });
+            // Only a session we WERE holding counts. A cold start with nobody
+            // signed in is not a failure and must not accuse itself of one.
+            set({
+              user: null,
+              isAuthenticated: false,
+              hasHydrated: true,
+              sessionLostAt: hadUser ? Date.now() : null,
+            });
             return;
           }
 
@@ -585,6 +609,14 @@ export const useAuthStore = create<AuthStore>()(
         set({
           user: null,
           isAuthenticated: false,
+          // A deliberate sign-out is not a lost session. Clearing here, and
+          // only here, is what keeps the banner honest: it is set when a
+          // session disappears on its own and stays set until someone chooses
+          // to leave. It is deliberately NOT cleared on a successful login —
+          // in the loop this exists to explain, the login succeeds and the
+          // session is gone again moments later, and clearing on the way in
+          // would erase the message on the way out.
+          sessionLostAt: null,
         });
       },
 
@@ -660,6 +692,18 @@ export const useAuthStore = create<AuthStore>()(
     }),
     {
       name: 'peptalk-auth',
+      // Explicit so the number is visible, and deliberately still 0.
+      //
+      // In zustand 5.0.14 a bump with no `migrate` DISCARDS the persisted
+      // state and hydrates defaults — verified against middleware.js:392-420
+      // and by running it. That is the useful meaning of a bump, so nothing
+      // here overrides it: a store that needs to carry old data forward
+      // supplies its own migrate, and the three that do already have one.
+      version: 0,
+      // Storage is untrusted input: on web it is localStorage, which the
+      // user can edit, and a killed app leaves partial writes. See
+      // src/lib/persistSafety.ts.
+      merge: makeSafeMerge('peptalk-auth', reportPersistProblem),
       storage: createJSONStorage(() => secureStorage),
       partialize: (state) => ({
         user: state.user,

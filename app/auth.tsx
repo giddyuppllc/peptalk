@@ -3,7 +3,7 @@
  * Includes legal disclaimer toggle for new signups.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { describeAuthError } from '../src/lib/errorMessages';
 import { captureException } from '../src/services/telemetry';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Switch, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
@@ -17,11 +17,22 @@ import { useOnboardingStore } from '../src/store/useOnboardingStore';
 import { restoreOnboardingFromServer } from '../src/services/onboardingRestore';
 import { isValidEmail, validatePassword } from '../src/utils/validation';
 import { authRedirectUrl } from '../src/lib/authRedirect';
+import { sessionLostNotice, shouldShowSessionLost } from '../src/lib/sessionLostNotice';
+import { sessionPersistenceHealthy, subscribeSessionPersistence } from '../src/services/supabase';
 
 const ACCENT = '#E89672';
 
 export default function AuthScreen() {
   const router = useRouter();
+  // The 2.1(a) death loop, made visible. See src/lib/sessionLostNotice.ts for
+  // the sequence and for why the redirect itself is left alone.
+  const sessionLostAt = useAuthStore((st) => st.sessionLostAt);
+  const [persistHealthy, setPersistHealthy] = useState(sessionPersistenceHealthy);
+  useEffect(() => subscribeSessionPersistence(setPersistHealthy), []);
+  const lostNotice = shouldShowSessionLost(sessionLostAt)
+    ? sessionLostNotice(persistHealthy)
+    : null;
+
   const [mode, setMode] = useState<'login' | 'signup'>('login');
 
   const [email, setEmail] = useState('');
@@ -265,6 +276,16 @@ export default function AuthScreen() {
                 <PasswordToggle visible={showPw} onToggle={() => setShowPw(!showPw)} />
               </View>
 
+              {lostNotice && (
+                <View style={s.sessionLost} accessibilityRole="alert" accessibilityLiveRegion="polite">
+                  <Ionicons name="information-circle-outline" size={18} color="#B45309" />
+                  <View style={s.sessionLostText}>
+                    <Text style={s.sessionLostTitle}>{lostNotice.title}</Text>
+                    <Text style={s.sessionLostBody}>{lostNotice.body}</Text>
+                  </View>
+                </View>
+              )}
+
               {!!error && <Text style={s.error} accessibilityRole="alert" accessibilityLiveRegion="polite">{error}</Text>}
 
               <TouchableOpacity
@@ -394,6 +415,16 @@ export default function AuthScreen() {
                   />
                 </View>
               </View>
+
+              {lostNotice && (
+                <View style={s.sessionLost} accessibilityRole="alert" accessibilityLiveRegion="polite">
+                  <Ionicons name="information-circle-outline" size={18} color="#B45309" />
+                  <View style={s.sessionLostText}>
+                    <Text style={s.sessionLostTitle}>{lostNotice.title}</Text>
+                    <Text style={s.sessionLostBody}>{lostNotice.body}</Text>
+                  </View>
+                </View>
+              )}
 
               {!!error && <Text style={s.error} accessibilityRole="alert" accessibilityLiveRegion="polite">{error}</Text>}
 
@@ -563,6 +594,33 @@ const s = StyleSheet.create({
     fontFamily: 'DMSans-Medium',
     textAlign: 'center',
     marginTop: 12,
+  },
+
+  sessionLost: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: 'rgba(245, 158, 11, 0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+  },
+  sessionLostText: {
+    flex: 1,
+  },
+  sessionLostTitle: {
+    color: '#92400E',
+    fontSize: 13,
+    fontFamily: 'DMSans-Bold',
+    marginBottom: 3,
+  },
+  sessionLostBody: {
+    color: '#92400E',
+    fontSize: 12,
+    lineHeight: 17,
   },
 
   // Primary button

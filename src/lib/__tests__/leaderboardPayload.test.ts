@@ -145,20 +145,26 @@ describe('opt-out and hide purge cached rows immediately', () => {
   });
 });
 
-describe('copy lives in one file, every string marked DRAFT', () => {
+describe('copy lives in one file', () => {
   const copy = read('src', 'constants', 'leaderboardCopy.ts');
 
-  it('every line carrying a string literal is marked // DRAFT — Edward approves', () => {
+  /*
+   * The per-line `// DRAFT — Edward approves` marker, and the assertion that
+   * demanded one on every string, are gone: Edward read and approved this copy
+   * on 2026-09-18, so a gate that blocked on his not having read it now blocks
+   * on nothing, and would only be noise for the next person to add a string.
+   *
+   * What is worth keeping is the reason the file exists - that the strings live
+   * in ONE place. This asserts they have not drained out of it; the JSX check
+   * below is what refuses them reappearing inside a screen.
+   */
+  it('still holds the leaderboard strings rather than scattering them', () => {
     const code = copy
       .split('\n')
       .filter((l) => !l.trim().startsWith('*') && !l.trim().startsWith('/*') && !l.trim().startsWith('//'))
       .filter((l) => !/^\s*import /.test(l));
     const withStrings = code.filter((l) => /(['"`])[^'"`]*[A-Za-z—][^'"`]*\1/.test(l.replace(/\/\/.*$/, '')));
     expect(withStrings.length).toBeGreaterThan(40);
-    const unmarked = withStrings.filter(
-      (l) => !l.includes('// DRAFT — Edward approves') && !/metric === '|kind === '|value === 1|threshold === 1/.test(l.replace(/\/\/.*$/, '').replace(/return .*/, '')),
-    );
-    expect(unmarked).toEqual([]);
   });
 
   it.each([

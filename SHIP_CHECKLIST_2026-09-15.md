@@ -402,6 +402,116 @@ unless marked otherwise.
       instead of taking over the token. Reassigning it across users needs a
       server-side path.
 
+**The paywall sells messages; the server meters money (2026-09-16)** [DECIDE]
+- [ ] 🚩 **"Unlimited Aimee chat" is not unlimited, and it is a headline Pro
+      feature.** The enforcement is a monthly **cost** cap, not a message
+      count — `aimee-chat-stream/_cost.ts:93-95`:
+
+      | tier | default cap / month | env override |
+      |---|---|---|
+      | pro | **1200¢ ($12)** | `AIMEE_MONTHLY_CENTS_PRO` |
+      | plus | 300¢ ($3) | `AIMEE_MONTHLY_CENTS_PLUS` |
+      | free | 25¢ ($0.25) | `AIMEE_MONTHLY_CENTS_FREE` |
+
+      (Defaults only — the live values are Supabase secrets, so check the real
+      ones before deciding.) Three claims do not survive that:
+      `subscription.tsx:111` "Unlimited Aimee chat" · `PaywallModal.tsx:109`
+      "Unlimited conversations with Aimee — no message limits." ·
+      `subscription.tsx:86` "20 personalized chats/**day**" and
+      `onboarding.tsx:123` "Aimee chat (20/day)" — the allowance is monthly
+      and is not counted in messages at all.
+
+      ✅ **Settled 2026-09-16 — Edward: "make the words match the caps".** The
+      caps are unchanged; all six claims now state the enforced number, and
+      `paywallClaimsMatchLimits.test.ts` fails if copy and gate drift apart
+      again (mutation-tested 3/3). Verified against the live project first:
+      **no `AIMEE_MONTHLY_CENTS_*` secret is set**, so the code defaults above
+      are the live values. "up to" is deliberate — the cost cap can bind
+      before the message count, so the figure is a ceiling.
+
+      ✅ **Pro's dead-end is wired, 2026-09-16** (Edward: "wire up the credit
+      packs for pro"). The server now sends `topUp` on `user_cap_hit` for every
+      tier, and `src/lib/aimeeDenialActions.ts` turns the flags into the offer.
+      Found on the way: the chat stream's cost-cap refusal sent **neither**
+      flag, so free and plus were dead-ended there too. Mutations 4/4.
+
+      Credits are offered **only** against the cost cap. They do not move the
+      per-message limit or the system breaker, so a pack bought there would
+      change nothing — the server does not set `topUp` on either, and a test
+      pins that.
+
+- [ ] 🚩 **CONSOLE — the top-up offer only completes on native if the
+      consumable exists.** `listAvailablePacks()` asks the store what is real
+      and shows nothing when the SKU is absent, so there is no dead-end
+      *button* — but a Pro user who taps "Top up AI credit" would land on
+      `/subscription` and find an empty shelf.
+
+      **`peptalk_credits` must exist and be approved as a consumable in App
+      Store Connect AND as a one-time product in Play Console**, at the same
+      price the catalog claims. Nothing in this repo can verify that — IAP
+      products are console-only — and nothing on record says whether it was
+      ever created. Confirm before submitting, or the one remedy Pro has is
+      invisible on the platforms where most of them are.
+
+      Web is unaffected: the Square rail creates the link server-side and the
+      edge function refuses cleanly with a 503 if Square is unconfigured.
+- [ ] `src/lib/creditPacks.ts` still marks `priceCents` (499) and
+      `creditCents` (300) **"⚠️ placeholder — Edward sets this"**. §6 already
+      asks you to confirm $4.99; the credit value needs the same nod. The two
+      catalogs (client and edge) are kept in step by a test, so change one and
+      the other fails until it matches.
+- [ ] `app/calculators/index.tsx:65` says "we'll show **Edward's** recommended
+      ladder". Left alone because it is *accurate* —
+      `peptideDosingReference.ts` really is Edward's PEPTALK_DOSES doc. It is
+      a 1.4.1 posture question, not an error: a named non-clinician
+      recommending doses is the exact shape guideline 1.4.1 asks about.
+
+**App Review gate sweep, 2026-09-16 — what it left for you**
+- [ ] 🚩 **The Home Profile avatar is covered by the PT button on a modern
+      iPhone.** Measured from source constants, not guessed: the avatar sits at
+      y ≈ 69–106 with its right edge at `W−20`; the PT button is absolute at
+      `zIndex` 100 above the `<Stack>`, y 67–103 at `insets.top ≈ 59`, `right:
+      14`, and with `hitSlop` 10 its touch target (y ≈ 57–113, x ≈ `W−60…W−4`)
+      **contains the avatar outright**. iPhone SE does not overlap — so it only
+      bites on the phones Apple reviews on. Profile is still reachable from the
+      PT menu, so this is a **dead control, not a dead end**, and nothing was
+      moved. Whether the avatar moves, the PT button moves, or Home drops the
+      avatar is a design call. [DECIDE]
+- [ ] **A watchdog on the barcode scanner's `loading` state.**
+      `food-search.tsx:770` sets `onRequestClose` to a no-op while the camera
+      permission is resolving and renders an empty `<View>`;
+      `useCameraPermissionGate` has no timeout, so if `requestPermission()`
+      never settles (Android activity recreation during the system sheet is the
+      known case) there is a blank uncloseable modal with no recovery short of
+      killing the app. Deliberately **not** changed — well-meaning edits to
+      5.1.1(iv) permission code are exactly the failure mode that cost four
+      rejections, and the safe fix touches only `loading`, where the system
+      sheet is definitionally not up yet. [DECIDE]
+- [ ] **A second web password-reset race, unproven and untouched.**
+      `_layout.tsx:1115-1122` handles `PASSWORD_RECOVERY` by routing to
+      `/set-password` and returning *without* `restoreSession()`, so
+      `isAuthenticated` can still be false while a Supabase session exists —
+      and rule 3 would send them to `/auth`. supabase-js's event ordering could
+      not be established from the repo, and `routeGuard` is the most sensitive
+      file here. Exercise it when you test the PWA reset end to end.
+- [ ] **Onboarding's Create Account step has no Terms/Privacy links** —
+      previously "not re-checked", now confirmed real. `app/auth.tsx:424-437`
+      has the exact pattern and labels to copy. Not applied: it adds elements
+      to the primary funnel, which is your design call. [WORDS]
+- [ ] **A Free reviewer cannot verify the UGC moderation claims.** The notes
+      describe the live-chat disclaimer, per-message Report and image
+      moderation, but live chat is Plus/Pro-only and the notes keep the
+      reviewer on Free. Either say so in the notes or expect a 1.2 question.
+- [x] ~~"Unlimited Aimee chat" vs the monthly cap~~ — **closed**. The last two
+      live surfaces were in `src/config/tourSteps.ts` (a tour titled
+      *Unlimited* that fires the moment someone upgrades, and "20 messages per
+      day" on the free→plus tour). Both now reuse the approved strings, and
+      `paywallClaimsMatchLimits` covers that file.
+- [x] ~~The consent modal does not name health data~~ — **closed 2026-09-16.**
+      The fallback was corrected first and the root `AiConsentModal` — the one
+      a user meets — was missed, which briefly left the review notes claiming
+      something untrue. Both surfaces now carry the same wording.
+
 **A per-dose maximum from Jamie (merged 2026-09-16)** [DECIDE]
 - [ ] The overdose guard's only high-dose rule for a resolved compound was
       `amount > 3× the maximum`. Jamie's rulings now win on precedence, and
@@ -457,26 +567,42 @@ unless marked otherwise.
       community-only"; not re-checked).
 
 **Privacy and consent (sweep F, G, H)**
-- [ ] 🚩 **The notes tell Apple the opposite of what the code does. Settle
-      this before submitting — it is the one open item that is a false
-      statement to App Review, not a preference.**
+- [ ] 🚩 **The notes describe one consent. The app has two, and the second one
+      — the one covering health data — is on by default and is disclosed
+      nowhere.**
 
-      `docs/app-store-review-notes.md:124` says consent is *"opt-in and off by
-      default"*. On the merged tree (line numbers re-checked 2026-09-16):
-      `src/store/useHealthProfileStore.ts:114` is `aiDataConsent: true`, and
-      the v2 migration at `:581-593` rewrites a **stored `false` back to
-      `true`** — so it does not merely default on, it reverses a recorded
-      "no". The migration's own comment explains why it was done (testers were
-      all on the old opt-in default, onboarding never showed the toggle, so
-      everyone got the on-device bot and Aimee looked broken), which is a real
-      reason and a different question from what the notes claim.
+      ❌ **Retracted 2026-09-16 (same day).** An earlier revision of this line
+      said the notes "tell Apple the opposite of what the code does" and called
+      it a false statement to App Review. That was wrong, and it was wrong the
+      usual way: two different stores were read as one.
 
-      Deliberately untouched on 2026-09-16: the gate now works, so the default
-      is the whole decision, and it is Edward's. **Either change the default
-      and drop the migration, or change the sentence in the notes.** Shipping
-      both as they are means submitting a claim the binary contradicts.
-      `docs/app-store-review-notes-additions-2026-09-16.md:241-246` flags the
-      same thing from the notes' side.
+      What is actually true, both re-read on the merged tree:
+
+      | | store | default | what it covers |
+      |---|---|---|---|
+      | 5.1.2 modal | `useAiConsentStore.consented` | **`false`** | messages, voice, photos |
+      | health toggle | `profile.aiDataConsent` | **`true`** | profile, labs, doses, conditions, medications, allergies |
+
+      So `docs/app-store-review-notes.md:124` — *"opt-in and off by default…
+      the first time the user triggers any AI feature, a consent modal…
+      requires an affirmative tap"* — **is accurate** about the modal. Nothing
+      is sent to xAI or OpenAI until the user taps Agree & Continue.
+
+      The real defect is narrower and still worth fixing: a user agrees to a
+      modal that names *"your messages, voice, and photos"*
+      (`src/utils/ensureAiConsent.ts:26`) and their **health profile goes too**,
+      because `aiDataConsent` is already `true` underneath. The v2 migration at
+      `useHealthProfileStore.ts:581-593` also rewrites a stored `false` back to
+      `true`, which reverses a recorded "no" — its comment says as much, and
+      gives the real reason (testers were all stranded on the on-device bot, so
+      Aimee looked broken).
+
+      **Two things, and only the second is Edward's judgement call:**
+      1. The modal copy must name health data, and the review notes must
+         describe both consents. Draft copy is in §6 below. Fixing this does
+         not require changing any default.
+      2. Whether `aiDataConsent` keeps defaulting `true`, and whether that
+         migration stays. Untouched.
 - [ ] **The consent copy is now wrong in two places, because the behaviour
       changed under it on 2026-09-16.** [WORDS]
 

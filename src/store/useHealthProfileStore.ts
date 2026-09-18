@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { makeSafeMerge } from '../lib/persistSafety';
+import { reportPersistProblem } from '../lib/persistReporting';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { useDoseLogStore } from './useDoseLogStore';
 import { useChatStore } from './useChatStore';
@@ -573,6 +575,10 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
     }),
     {
       name: 'peptalk-health-profile',
+      // Storage is untrusted input: on web it is localStorage, which the
+      // user can edit, and a killed app leaves partial writes. See
+      // src/lib/persistSafety.ts.
+      merge: makeSafeMerge('peptalk-health-profile', reportPersistProblem),
       storage: createJSONStorage(() => secureStorage),
       partialize: (state) => ({
         profile: state.profile,

@@ -31,6 +31,11 @@ import { PEPTIDE_DOSING_REFERENCE } from './peptideDosingReference';
 import { PEPTIDE_DOSING_TABLE } from './peptideDosingTable';
 import { PROTOCOL_TEMPLATES } from './protocols';
 import { getClinicianRuling, rulingDoseMcg } from './clinicianRulings';
+import { expandClinicianText } from './clinicianRulingsDisplay';
+// Dose rendering has exactly one implementation in this repo; verify:doseformat
+// fails the build on a second one. A module that resolves WHICH dose is right
+// has no business also deciding how a number is spelled.
+import { formatMassMcg } from '../lib/doseUnits';
 
 export type DoseSourceId = 'clinician_ruling' | 'reconstitution_ladder' | 'master_table' | 'protocols';
 
@@ -234,4 +239,59 @@ export function getDoseConflicts(): CanonicalDose[] {
   return [...ids]
     .map((id) => getCanonicalDose(id))
     .filter((d): d is CanonicalDose => d !== null && d.conflict);
+}
+
+// ── the text every model-facing surface should quote ──────────────────────
+
+export interface CanonicalDoseText {
+  /** The dose as a human/model-readable string. */
+  text: string;
+  source: DoseSourceId;
+  sourceLabel: string;
+  /**
+   * True when `text` is the approving clinician's own words rather than a
+   * range this module formatted. Her phrasing carries qualifiers the numbers
+   * do not — "1 mg – 2 mg 3 times weekly, am on empty stomach, prior to
+   * workout" — so it is quoted verbatim and never reformatted.
+   */
+  verbatim: boolean;
+}
+
+/**
+ * The dose a surface should put in front of a user or feed to a model.
+ *
+ * Aimee had three private copies of this — a hardcoded block in the streaming
+ * prompt, a generated JSON knowledge file built from protocols.ts, and an
+ * on-device knowledge base built from protocols.ts again. All three answered
+ * the same question, none of them asked this module, and the one they all read
+ * (protocols.ts) is the least attributable source we hold. Surfaces call here.
+ */
+export function getCanonicalDoseText(peptideId: string): CanonicalDoseText | null {
+  const ruling = getClinicianRuling(peptideId);
+  if (ruling?.dose?.verbatim) {
+    return {
+      // Her shorthand, expanded into a sentence — same figures, in the same
+      // order, proven by clinicianRulingsDisplay's guard. The unexpanded record
+      // stays in clinicianRulings.ts and is what rulingDoseMcg() parses.
+      text: expandClinicianText(ruling.dose.verbatim, `${peptideId} dose`),
+      source: 'clinician_ruling',
+      sourceLabel: SOURCE_LABEL.clinician_ruling,
+      verbatim: true,
+    };
+  }
+
+  const canonical = getCanonicalDose(peptideId);
+  if (!canonical) return null;
+
+  const text =
+    canonical.minMcg === canonical.maxMcg
+      ? formatMassMcg(canonical.minMcg)
+      : `${formatMassMcg(canonical.minMcg)} – ${formatMassMcg(canonical.maxMcg)}`;
+
+  return {
+    text,
+    source: canonical.source,
+    sourceLabel: canonical.sourceLabel,
+    verbatim: false,
+  };
 }
