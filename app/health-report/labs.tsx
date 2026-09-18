@@ -35,6 +35,7 @@ import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { supabase } from '../../src/services/supabase';
 import { Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
 import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
+import { healthConsentGranted, withHealthConsent } from '../../src/lib/aiFeatureConsent';
 import { Disclaimer } from '../../src/components/Disclaimer';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
@@ -226,6 +227,10 @@ export default function LabsScreen() {
     }
     // App Review 5.1.2: explicit consent before sending the lab photo to the vision model.
     if (!(await ensureAiConsent())) return;
+    // The health toggle is a SEPARATE consent. A photo of a lab report IS the
+    // health record, so without it this refuses — same silent return as a
+    // declined modal above, leaving the manual panels below as the path.
+    if (!healthConsentGranted()) return;
     setScanning(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -240,7 +245,7 @@ export default function LabsScreen() {
           'Content-Type': 'application/json',
           apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
         },
-        body: JSON.stringify({ imageBase64: base64 }),
+        body: JSON.stringify(withHealthConsent('lab-scan', { imageBase64: base64 })),
       });
       const data = await res.json();
       if (!res.ok) {

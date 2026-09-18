@@ -10,6 +10,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
+import { checkAiAllowance, recordAiSpend } from '../_shared/aiAllowance.ts';
+import { applyFeatureConsent } from '../_shared/aiFeatureConsent.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -70,21 +72,21 @@ Deno.serve(async (req) => {
       return json({ error: 'Pro tier required', upgrade: true }, 403);
     }
 
-    // Rate limit — 5 meal plans/day per user (locked). Each plan is the
-    // single most expensive call at ~$0.003 because of large output tokens.
-    const rateLimit = await checkRateLimit(supabase, user.id, 'aimee-plan', 5);
-    if (!rateLimit.allowed) {
-      return json({
-        error: `Daily meal-plan limit reached (${rateLimit.limit}/day). Resets tomorrow.`,
-        retryAfter: rateLimit.retryAfter,
-      }, 429);
-    }
+    // Monthly allowance, shared with aimee-chat-stream. This was a per-day
+    // count (5 meal plans/day). "i dont want a daily cap" (2026-08-26): the
+    // per-tier monthly allowance and the system-wide breaker in _cost.ts
+    // are the limit, and the spend is recorded below so the breaker sees it.
+    const allowance = await checkAiAllowance(supabase, user.id, tier);
+    if (!allowance.allowed) return json(allowance.body, allowance.status);
 
     if (!OPENAI_API_KEY) {
       return json({ error: 'AI service not configured' }, 500);
     }
 
-    const body: PlanBody = await req.json().catch(() => ({}));
+    // Health-data consent (profile.aiDataConsent), enforced here as well as on
+    // the client so a stale or tampered build cannot bypass it. This feature
+    // still works without health data, so the fields are stripped, not refused.
+    const body: PlanBody = applyFeatureConsent('aimee-plan', await req.json().catch(() => ({}))).body;
     const days = [3, 5, 7].includes(body.days ?? 0) ? body.days! : 5;
     const macros = body.macroTargets;
     const dietType = body.dietType ?? 'balanced';
@@ -151,6 +153,7 @@ Generate exactly ${days} days. Keep meals realistic and varied. Snacks should be
     }
 
     const aiData = await aiRes.json();
+    await recordAiSpend(supabase, user.id, allowance.cost, aiData);
     const content = aiData.choices?.[0]?.message?.content ?? '{}';
 
     let parsed: { plan: unknown[] };
@@ -174,37 +177,4 @@ function json(body: unknown, status = 200): Response {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
-}
-
-async function checkRateLimit(
-  supabase: any,
-  userId: string,
-  functionName: string,
-  limit: number,
-): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number }> {
-  // Atomic via bump_ai_usage RPC (2026-05-17 audit fix). aimee-plan
-  // is the priciest call (~$0.003/each) — race-protect it tightly.
-  try {
-    const today = new Date().toISOString().slice(0, 10);
-    const { data, error } = await supabase.rpc('bump_ai_usage', {
-      p_user_id: userId,
-      p_function_name: functionName,
-      p_date: today,
-    });
-    if (error) throw error;
-    const newCount = Array.isArray(data) && data[0]
-      ? (data[0] as any).count ?? 0
-      : 0;
-    if (newCount > limit) {
-      const now = new Date();
-      const tomorrow = new Date(now);
-      tomorrow.setUTCHours(24, 0, 0, 0);
-      const retryAfter = Math.max(1, Math.round((tomorrow.getTime() - now.getTime()) / 1000));
-      return { allowed: false, limit, count: newCount, retryAfter };
-    }
-    return { allowed: true, limit, count: newCount };
-  } catch (err) {
-    console.error(`[${functionName}] rate-limit check failed; failing closed:`, err);
-    return { allowed: false, limit, count: 0, retryAfter: 60, failedClosed: true };
-  }
 }

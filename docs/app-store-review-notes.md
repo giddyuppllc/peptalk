@@ -4,6 +4,64 @@ Paste the **App Review Notes** section verbatim into App Store Connect →
 App Review Information → Notes when submitting. The other sections are
 context for the developer.
 
+> **Pending additions, not yet approved:**
+> `docs/app-store-review-notes-additions-2026-09-16.md` holds proposed notes for
+> the leaderboard, the one-time onboarding questions on the reviewer account,
+> and the safety-only compounds, plus the App Privacy / Play Data safety answers
+> that need updating. **Do not paste from that file** — it is a draft awaiting
+> Edward. Approved sections move into this file; nothing has been moved across
+> from it. (The corrections below are a separate matter — they are fixes to
+> statements in this file that the code contradicts, not additions from there.)
+
+> **Three corrections made 2026-09-16, each against the code rather than
+> against an older revision of this file.** They are here because this section
+> is pasted verbatim into App Store Connect, so a wrong sentence here is a
+> wrong sentence told to App Review:
+>
+> 1. Aimee's allowance said *20 messages/day on Plus, unlimited on Pro*. The
+>    gate is a monthly message count (`aimee-chat-stream` `RATE_LIMITS`: free 3,
+>    plus 750, pro 9,000) with a monthly cost cap alongside it. Neither the
+>    period nor either number was right, and *unlimited* is the exact claim
+>    Edward had removed from every in-app surface on 2026-09-16.
+> 2. The notes routed the reviewer through *Home → Profile* repeatedly — the
+>    navigation table, the HealthKit section, the live-chat section and the
+>    account-deletion line — immediately after telling them navigation is the
+>    four Home cards. Profile is not one of the four. Build 1.9.8 was rejected
+>    under 2.3 for a reviewer
+>    not finding a screen that existed, so an instruction that cannot be
+>    followed is the same defect in a different place.
+>
+>    It now names the **PT** button, and that is on purpose rather than for
+>    brevity. Home *does* have a Profile avatar in the top-right
+>    (`src/components/v3/AvatarShortcut.tsx`), but **on Home it is covered by
+>    the PT button on a modern iPhone** and cannot be tapped:
+>
+>    | control | vertical extent on Home | horizontal |
+>    |---|---|---|
+>    | Profile avatar (36pt, inside the greeting row) | y ≈ 69–106 — from `Greeting`'s `paddingTop: 60` (`v3.ts:114`); Home adds no top inset | right edge at `W − 20` |
+>    | PT button (36pt, absolute, `zIndex`/`elevation` 100, mounted at the ROOT above the Stack) | y = `insets.top + 8` → `+ 44`, i.e. 67–103 at `insets.top ≈ 59` | `right: 14`, plus `hitSlop` 10 |
+>
+>    With the hit slop the PT button's touch target is y ≈ 57–113 by
+>    x ≈ `W−60 … W−4`, which contains the avatar outright. On an iPhone SE
+>    (`insets.top` 20) they do not overlap, so this only bites on the phones
+>    Apple reviews on. Profile is still reachable — it is in the PT menu
+>    (`src/lib/navMap.ts:125`) — so this is a dead control, not a dead end.
+>    **▶ Edward's call** whether the avatar moves, the PT button moves, or Home
+>    drops the avatar; nothing was moved here, because that is a design choice.
+> 3. Account deletion said *Profile → Account → Delete account*. That screen
+>    does have an ACCOUNT section and Delete Account is **not** in it — it is
+>    under DATA (`app/(tabs)/profile.tsx:912`). A 5.1.1(v) check that opens the
+>    section we named and finds nothing is a rejection.
+>
+> 4. **Reconciled 2026-09-16.** The Guideline 5.1.2 paragraph says *the first
+>    modal names the health profile among what is sent*. That had been made
+>    true of the imperative fallback (`src/utils/ensureAiConsent.ts:26`) and
+>    **not** of the modal a user actually meets first, so this file was briefly
+>    claiming something the binary did not do. The root `AiConsentModal` now
+>    carries a fourth row — *The health details in your profile → xAI (Aimee)* —
+>    and points at the separate switch, in the fallback's own words. Both
+>    surfaces now say the same thing, and the paragraph is accurate.
+
 ---
 
 ## App Review Notes (paste this into ASC)
@@ -23,19 +81,25 @@ https://peptalk.bio/privacy).
   "unresponsive button" — the 2.1a finding.)
 
 ### How to get around the app (please read first)
-PepTalk has **no bottom tab bar** — this is deliberate, not a fault. Navigation
-is the four large cards on the Home screen. Everything below is reachable from
-there in two taps:
+PepTalk has **no bottom tab bar** — this is deliberate, not a fault. There are
+two ways around, and the first one reaches everything:
+
+1. **The round "PT" button in the top-right corner, on every screen.** It opens
+   a menu listing every screen in the app, grouped, starting with Doses. If you
+   are looking for a specific feature, this is the fastest way to it.
+2. The four large cards on the Home screen (Weekly Tracker, Nutrition,
+   Activity, Doses).
 
 | To reach | Tap |
 |---|---|
-| **Dose calculator** | Home → **Doses** → **Calculator** |
+| **Profile** (needed for four of the rows below) | **PT** button, top-right → **Profile** |
+| **Dose calculator** | Home → **Doses** → **Calculator**, or **PT** → **Dose Calculator** |
 | Reconstitution calculator | Home → **Doses** → **Calculator** (same screen, "Reconstitute" mode) |
-| Stack Builder | Home → **Doses** → **Stack Builder** |
-| Dose log | Home → **Doses** → **Dose Tracker** |
-| Peptide library | Home → **Doses** → **Library** |
-| Apple Health | Home → **Profile** → **Apple Health & Integrations** |
-| Subscriptions | Home → **Profile** → **Subscription** |
+| Stack Builder | Home → **Doses** → **Stack Builder**, or **PT** → **Stack Builder** |
+| Dose log | Home → **Doses** → **Dose Tracker**, or **PT** → **Dose Tracker** |
+| Peptide library | Home → **Doses** → **Library**, or **PT** → **Peptide Library** |
+| Apple Health | **PT** → **Profile** → **Apple Health & Integrations** |
+| Subscriptions | **PT** → **Profile** → **Subscription** |
 
 On first opening **Doses** you will see a one-time safety disclaimer with a
 checkbox — tick it and tap **Continue** to reach the tiles above. It appears
@@ -106,8 +170,14 @@ screen.
 - Every dosing surface (calculator, peptide detail page, Aimee AI) shows
   a disclaimer banner stating: not medical advice, no doctor-patient
   relationship, consult a licensed provider before any peptide use.
-- Aimee (the AI assistant) has system prompts forbidding medical advice
-  and is rate-limited to 20 messages/day on Plus / unlimited on Pro.
+- Aimee (the AI assistant) has system prompts forbidding medical advice, and
+  her allowance is metered per month: up to 750 messages a month on PepTalk+
+  and up to 9,000 messages a month on PepTalk Pro.
+- **The test account is Free, and Free includes 3 Aimee messages a month.**
+  After the third, Aimee replies with an upgrade offer rather than an answer.
+  That is the intended behaviour, not a failure — please do not read it as an
+  unresponsive assistant. Aimee is offered no tools on Free, so she answers
+  questions but does not log doses, meals or workouts on that tier.
 
 ### Third-party AI processing & consent (Guideline 5.1.2)
 - AI features (Aimee chat, voice→text, photo food/lab/pantry scanning,
@@ -118,14 +188,26 @@ screen.
   AI feature, a consent modal explains the third-party processing and requires
   an affirmative tap before any data is sent. Declining leaves AI features off;
   the rest of the app works normally. Consent is revocable in Profile settings.
+- There is a **second, finer control** for health data specifically
+  ("AI-Powered Responses", Profile → Health Profile). It governs whether the
+  user's health profile — conditions, medications, allergies, labs, dose
+  history — is attached to an AI request, and it is **on by default** for a
+  user who has already granted the consent above. Turning it off does not
+  disable AI: chat, meal plans, recipes, pantry suggestions and workout
+  generation continue with the health fields stripped before the request
+  leaves the device, while lab interpretation, the lab photo scanner and the
+  weekly report rewrite refuse outright. The first modal names the health
+  profile among what is sent, so nothing is shared that the user was not told
+  about at the point of consent.
 - This is disclosed in the in-app Privacy Policy (Profile → Privacy Policy).
 
 ### Sign-in
 - Email + password only (no third-party social auth), so Apple Sign-In
   is not required per Guideline 4.8.
-- Account deletion is implemented in-app: Profile → Account → Delete
-  account. Deletes all user-keyed rows server-side and removes the
-  auth.users record.
+- Account deletion is implemented in-app: Profile → scroll to the **DATA**
+  section → **Delete Account**. Deletes all user-keyed rows server-side and
+  removes the auth.users record. (The row directly above it, **Delete My
+  Data**, is a different action: it clears this device only.)
 
 ### Why 17+ age rating
 - Subject matter is peptide therapeutics for adults. Live community

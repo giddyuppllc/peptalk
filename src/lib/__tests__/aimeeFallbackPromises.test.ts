@@ -70,3 +70,52 @@ describe.each(PROMPTS.map((p) => [path.relative(ROOT, p), p]))(
     });
   },
 );
+
+/**
+ * A failed cloud request must not be answered by the on-device engine.
+ *
+ * This is the fault that hid every other fault. peptalk.tsx funnelled "no
+ * consent", "offline", "API error", "timeout" and "server refused" into one
+ * branch that called generateLocalBotResponse, so a spent allowance, a misread
+ * tier and a genuine outage all came back as a confident, slightly stupid
+ * answer. Nobody reported an outage because no error was ever shown.
+ *
+ * Offline and no-consent still use the local engine — there is no cloud reply
+ * to be had, and an instant local one beats a placeholder bubble. What must not
+ * happen is substituting it for a request that was expected to succeed.
+ */
+describe('the local engine does not stand in for a failed cloud request', () => {
+  const tab = fs.readFileSync(path.join(ROOT, 'app', '(tabs)', 'peptalk.tsx'), 'utf8');
+
+  it('is the file we think it is', () => {
+    // Refuses to pass vacuously if the screen moves or the call is renamed.
+    expect(tab).toMatch(/generateLocalBotResponse/);
+    expect(tab.length).toBeGreaterThan(2000);
+  });
+
+  it('decides by cause before reaching for the local engine', () => {
+    expect(tab).toMatch(/const aiWasExpected = useAI && isDeviceOnline;/);
+  });
+
+  it('answers a failed cloud request with a stated failure, not a local answer', () => {
+    // The guard must sit BEFORE the local call in the step-3 block, and return.
+    const step3 = tab.slice(tab.indexOf('const aiWasExpected'));
+    const guard = step3.indexOf('if (aiWasExpected)');
+    const local = step3.indexOf('generateLocalBotResponse');
+    expect(guard).toBeGreaterThan(-1);
+    expect(local).toBeGreaterThan(-1);
+    expect(guard).toBeLessThan(local);
+    expect(step3.slice(guard, local)).toMatch(/AIMEE_UNAVAILABLE_MESSAGE/);
+    expect(step3.slice(guard, local)).toMatch(/return;/);
+  });
+
+  it('says something, rather than failing silently', () => {
+    const copy = fs.readFileSync(
+      path.join(ROOT, 'src', 'lib', 'aimeeDenialActions.ts'),
+      'utf8',
+    );
+    expect(copy).toMatch(/export const AIMEE_UNAVAILABLE_MESSAGE\s*=/);
+    const line = copy.slice(copy.indexOf('AIMEE_UNAVAILABLE_MESSAGE'));
+    expect(line).toMatch(/["'][^"']{20,}["']/);
+  });
+});

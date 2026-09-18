@@ -8,6 +8,8 @@
  */
 
 import { Platform } from 'react-native';
+import { makeSafeMerge } from '../lib/persistSafety';
+import { reportPersistProblem } from '../lib/persistReporting';
 import { BETA_PRODUCT_ID } from '../lib/entitlement';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
@@ -102,6 +104,21 @@ interface SubscriptionState {
    * this is set — the UI shows a "waiting for approval" state.
    */
   pendingPurchase: { productId: string; sinceMs: number } | null;
+  /**
+   * A purchase the stores accepted and our backend then refused to validate.
+   *
+   * This is the money path. The user has paid Apple or Google, the native
+   * sheet closed successfully, and validate-purchase did not grant
+   * entitlement — so the paywall is still standing in front of someone who
+   * just bought the thing behind it. Until now that state reached Sentry and
+   * nothing else: no message, no receipt, no explanation. Same shape as the
+   * on-device bot silently standing in for a failed Aimee request.
+   *
+   * Not persisted, for the same reason pendingPurchase is not: a stale one
+   * across restarts is worse than losing it, and the store replays an
+   * unfinished purchase on the next launch anyway.
+   */
+  failedPurchase: { productId: string; sinceMs: number } | null;
   /** ms epoch of the last successful server sync. Used to flag stale state. */
   lastSyncedAt: number;
   /**
@@ -157,6 +174,7 @@ interface SubscriptionActions {
   syncFromServer: () => Promise<void>;
   /** Mark a purchase as pending approval (parental consent, SCA, etc.). */
   setPendingPurchase: (info: { productId: string } | null) => void;
+  setFailedPurchase: (info: { productId: string } | null) => void;
   /**
    * True if `lastSyncedAt` is older than `STALE_SYNC_MS`. Call this before
    * gating a feature if the user appears to have no subscription — their
@@ -177,6 +195,7 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
       expiresAt: null,
       isActive: true,
       pendingPurchase: null,
+      failedPurchase: null,
       lastSyncedAt: 0,
       hasHydrated: false,
 
@@ -279,6 +298,7 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
         isActive: false,
         lastSyncedAt: 0,
         pendingPurchase: null,
+        failedPurchase: null,
       }),
 
       getFeatures: () => {
@@ -326,6 +346,7 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
             expiresAt: data.expiresAt ?? null,
             isActive: true,
             pendingPurchase: null,
+            failedPurchase: null,
             lastSyncedAt: Date.now(),
           });
           // Fire the success funnel event at the point entitlement is
@@ -368,6 +389,12 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
       setPendingPurchase: (info) => {
         set({
           pendingPurchase: info ? { productId: info.productId, sinceMs: Date.now() } : null,
+        });
+      },
+
+      setFailedPurchase: (info) => {
+        set({
+          failedPurchase: info ? { productId: info.productId, sinceMs: Date.now() } : null,
         });
       },
 
@@ -634,6 +661,18 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
     }),
     {
       name: 'peptalk-subscription',
+      // Explicit so the number is visible, and deliberately still 0.
+      //
+      // In zustand 5.0.14 a bump with no `migrate` DISCARDS the persisted
+      // state and hydrates defaults — verified against middleware.js:392-420
+      // and by running it. That is the useful meaning of a bump, so nothing
+      // here overrides it: a store that needs to carry old data forward
+      // supplies its own migrate, and the three that do already have one.
+      version: 0,
+      // Storage is untrusted input: on web it is localStorage, which the
+      // user can edit, and a killed app leaves partial writes. See
+      // src/lib/persistSafety.ts.
+      merge: makeSafeMerge('peptalk-subscription', reportPersistProblem),
       storage: createJSONStorage(() => secureStorage),
       partialize: (state) => ({
         tier: state.tier,

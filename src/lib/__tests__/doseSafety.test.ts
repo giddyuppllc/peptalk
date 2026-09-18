@@ -60,20 +60,92 @@ describe('checkDoseSafety — unit-confusion detection', () => {
   });
 
   it('matches the peptide case-insensitively', () => {
-    // 8000 mcg is the discriminating dose: it exceeds 3x semaglutide's own
-    // maximum, but sits UNDER the flat 10,000 mcg ceiling used for compounds
-    // with no known range. So it is flagged only if the name actually resolves.
+    // 2000 mcg is the discriminating dose: it exceeds 3x BPC-157's maximum
+    // (Jamie's ruling, 500 mcg), but sits UNDER the flat 10,000 mcg ceiling used
+    // for compounds with no known range. So it is flagged only if the name
+    // actually resolves. (This used semaglutide at 8000 mcg until her 12 mg
+    // ruling put 3x semaglutide above the flat ceiling, where no dose can tell
+    // the two paths apart.)
     //
     // My first attempt at this test used 250 mg and passed while killing no
     // mutant — at that dose both the known and unknown paths flag it, so
     // breaking the lookup changed nothing. A test that cannot distinguish the
     // two paths does not test the lookup.
-    expect(checkDoseSafety('semaglutide', 8000, 'mcg').safe).toBe(false);
-    expect(checkDoseSafety('Semaglutide', 8000, 'mcg').safe).toBe(false);
-    expect(checkDoseSafety('SEMAGLUTIDE', 8000, 'mcg').safe).toBe(false);
+    expect(checkDoseSafety('bpc-157', 2000, 'mcg').safe).toBe(false);
+    expect(checkDoseSafety('Bpc-157', 2000, 'mcg').safe).toBe(false);
+    expect(checkDoseSafety('BPC-157', 2000, 'mcg').safe).toBe(false);
     // Control: an unknown compound at the same dose is NOT flagged, which is
     // what makes the three assertions above meaningful.
-    expect(checkDoseSafety('zzz-not-real', 8000, 'mcg').safe).toBe(true);
+    expect(checkDoseSafety('zzz-not-real', 2000, 'mcg').safe).toBe(true);
+  });
+
+  it('flags 25 mg of semaglutide — knowing the compound is not a licence to log more', () => {
+    // RESTORED 2026-09-16. This fixture was moved off semaglutide when
+    // clinician rulings took precedence: Jamie's ruling spans the whole
+    // titration (250 mcg to 12 mg), so `maxMcg * 3` became a 36 mg ceiling and
+    // 25, 30 and 35 mg logged with NO warning — while typing "Ozempic", which
+    // resolves to nothing, still warned at the same dose. The guard got looser
+    // the more the app knew.
+    //
+    // A titration span is not a per-dose window. Until there is a per-compound
+    // max-per-dose figure (Edward/Jamie), a resolved compound is held to the
+    // stricter of its own 3x ceiling and the mg/mcg-confusion ceiling.
+    for (const mg of [25, 30, 35]) {
+      const r = checkDoseSafety('semaglutide', mg, 'mg');
+      expect(r.safe).toBe(false);
+      expect(r.code).toBe('unusually_high');
+      expect(r.message).toBeTruthy();
+    }
+    // The top of Jamie's own range is NOT flagged: no clinical number moved.
+    expect(checkDoseSafety('semaglutide', 12, 'mg').safe).toBe(true);
+    // And the unresolved brand name behaves the same way, which is the point.
+    expect(checkDoseSafety('Ozempic', 25, 'mg').safe).toBe(false);
+  });
+
+  it.each([
+    ['retatrutide', 30, 'mg'],
+    ['glutathione', 1000, 'mg'],
+    ['nad-plus', 600, 'mg'],
+    ['ipamorelin', 1500, 'mcg'],
+    ['melanotan-2', 1500, 'mcg'],
+    ['epithalon', 100, 'mg'],
+    ['mazdutide', 30, 'mg'],
+    ['survodutide', 30, 'mg'],
+    ['ghk-cu', 100, 'mg'],
+  ])('flags %s at %i %s, as it did before clinician rulings widened the ranges', (id, amount, unit) => {
+    const r = checkDoseSafety(id as string, amount as number, unit as string);
+    expect(r.safe).toBe(false);
+    expect(r.code).toBe('unusually_high');
+  });
+
+  it('does NOT warn on a compound whose own documented range is in milligrams', () => {
+    // The flat 10 mg ceiling is a mg/mcg-confusion heuristic. Where the
+    // compound's own reference range says hundreds of milligrams are normal,
+    // that is positive evidence the unknown path does not have — so the
+    // ceiling lifts to the documented maximum. Without this the guard would
+    // fire on 21 compounds' own reference doses, which is how a warning stops
+    // being read.
+    expect(checkDoseSafety('alpha-gpc', 600, 'mg').safe).toBe(true);
+    expect(checkDoseSafety('l-carnitine', 1000, 'mg').safe).toBe(true);
+    expect(checkDoseSafety('mk-677', 25, 'mg').safe).toBe(true);
+    expect(checkDoseSafety('glutathione', 400, 'mg').safe).toBe(true);
+    expect(checkDoseSafety('nad-plus', 200, 'mg').safe).toBe(true);
+    expect(checkDoseSafety('tirzepatide', 15, 'mg').safe).toBe(true);
+    // ...but one step past the documented maximum, it warns.
+    expect(checkDoseSafety('glutathione', 401, 'mg').safe).toBe(false);
+    expect(checkDoseSafety('mk-677', 26, 'mg').safe).toBe(false);
+  });
+
+  it('holds a resolved compound to the flat ceiling when its own range is small', () => {
+    // bpc-157's range is measured in micrograms, so 10 mg is over BOTH rules
+    // and the compound-specific message wins. 11 mg of an unresolved compound
+    // gets the unit-confusion message. Neither is new copy.
+    const known = checkDoseSafety('bpc-157', 11, 'mg');
+    expect(known.safe).toBe(false);
+    expect(known.message).toContain('typical maximum');
+    const unknown = checkDoseSafety('zzz-not-real', 11, 'mg');
+    expect(unknown.safe).toBe(false);
+    expect(unknown.message).toContain('mg vs mcg');
   });
 
   it('is unit-aware, not just magnitude-aware', () => {

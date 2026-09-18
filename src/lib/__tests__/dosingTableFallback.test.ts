@@ -22,7 +22,7 @@ describe('dosing card — explicit rows always win', () => {
 
   it('keeps curated cycle/frequency for an explicit row', () => {
     const e = getDosingTableEntry('mots-c');
-    expect(e?.cycleLength).toBe('6-8 Weeks');
+    expect(e?.cycleLength).toBe('6-10 Weeks'); // Jamie's ruling
     expect(e?.frequencyWeekly).toBe('3x Weekly (Mon/Wed/Fri)');
   });
 });

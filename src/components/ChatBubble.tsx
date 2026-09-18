@@ -1,5 +1,19 @@
+/**
+ * Chat bubbles.
+ *
+ * REPORTING AN AI REPLY
+ * Aimee's bubbles carry a visible report control (`onReport`). Google Play's
+ * generative-AI policy asks for an in-app way to flag offensive or unsafe AI
+ * output, and there was none anywhere in the chat screen or this component.
+ *
+ * It renders only on a finished bot message — not on the user's own bubbles
+ * (nothing to moderate) and not while `streaming` is still true, because a
+ * half-arrived sentence is not the response the user means to report.
+ */
+
 import React, { useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
@@ -9,6 +23,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { ChatMessage } from '../types';
+import { REPORT_COPY, AI_REPORT_COPY } from '../constants/reportCopy';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useSectionAccent } from '../hooks/useSectionAccent';
@@ -38,9 +53,11 @@ const mdStyles = StyleSheet.create({
 
 interface ChatBubbleProps {
   message: ChatMessage;
+  /** Flag this AI reply. Rendered only on finished bot messages. */
+  onReport?: (message: ChatMessage) => void;
 }
 
-export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
+export const ChatBubble: React.FC<ChatBubbleProps> = ({ message, onReport }) => {
   const t = useTheme();
   const accent = useSectionAccent();
   const isBot = message.role === 'bot';
@@ -146,7 +163,22 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
               </View>
             )}
 
-            <Text style={[styles.timestampBot, { color: t.textSecondary }]}>{timeLabel}</Text>
+            <View style={styles.botFooter}>
+              {/* Only when a report handler is wired, the message is finished,
+                  and there is text to review. */}
+              {onReport && !message.streaming && !!message.content?.trim() ? (
+                <Pressable
+                  onPress={() => onReport(message)}
+                  accessibilityRole="button"
+                  accessibilityLabel={AI_REPORT_COPY.messageActionA11yLabel || REPORT_COPY.report}
+                  hitSlop={10}
+                  style={styles.reportBtn}
+                >
+                  <Ionicons name="flag-outline" size={13} color={t.textSecondary} />
+                </Pressable>
+              ) : null}
+              <Text style={[styles.timestampBot, { color: t.textSecondary }]}>{timeLabel}</Text>
+            </View>
           </View>
         </LinearGradient>
       </View>
@@ -300,6 +332,17 @@ const styles = StyleSheet.create({
     color: Colors.darkText,
     fontSize: FontSizes.md,
     lineHeight: 22,
+  },
+  botFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  reportBtn: {
+    marginTop: 4,
+    padding: 2,
+    opacity: 0.7,
   },
   timestampBot: {
     fontSize: FontSizes.xs,

@@ -47,6 +47,39 @@ const MEAL_TYPE_OPTIONS = [
   { key: 'post_workout', label: 'Post-Workout' },
 ];
 
+/**
+ * The "recipes below are the built-in set, not Aimee's" notice.
+ *
+ * The title is written. The body is not, and inventing user-facing wording is
+ * not this file's job, so the notice does not render until the constant below
+ * holds Edward's sentence. What shipped before was a box with an icon, a
+ * heading and an empty space where the explanation should be — a reviewer
+ * reads that as an unfinished screen, and a user reads it as an error with no
+ * error in it.
+ *
+ * TO FINISH: put the sentence in AI_UNAVAILABLE_BODY. Nothing else changes —
+ * the notice, its styles and its accessibilityRole are all already here, and
+ * a test asserts the title is untouched and that an empty body renders nothing.
+ */
+const AI_UNAVAILABLE_TITLE = 'Aimee unavailable';
+/**
+ * DRAFT — Edward approves the words.
+ *
+ * Written against what the fallback path actually does, not what would sound
+ * reassuring. When Aimee cannot be reached, FALLBACK_RECIPES are filtered
+ * against the allergens on the user's profile and sorted toward their per-meal
+ * calorie target — so the allergy claim is one we keep. The free-text
+ * preferences they typed into the box above ("no dairy, under 30 min, meal prep
+ * friendly") are NOT applied by that path, so the copy says so rather than
+ * letting them wonder why the results ignored them.
+ *
+ * It leads with what they still get instead of what failed, and ends with the
+ * one action worth taking.
+ */
+const AI_UNAVAILABLE_BODY: string =
+  'These are our own recipes — still filtered for your allergies, but not built ' +
+  'around what you typed. Try again in a few minutes for Aimee\'s.';
+
 // ---------------------------------------------------------------------------
 // Generated Recipe Card
 // ---------------------------------------------------------------------------
@@ -189,6 +222,11 @@ export default function RecipeGeneratorScreen() {
   const [preferences, setPreferences] = useState('');
   const [loading, setLoading] = useState(false);
   const [recipes, setRecipes] = useState<GeneratedRecipe[]>([]);
+  // True when the last Generate fell back to the built-in recipes because the
+  // aimee-recipe call failed or returned nothing. Without it the canned list
+  // rendered exactly like an AI answer, so an outage looked like a working
+  // feature that ignored the user's inputs.
+  const [aiUnavailable, setAiUnavailable] = useState(false);
 
   // AI recipe gen can take 10-20s. Guard post-await setState so backing
   // out mid-generation doesn't leak state into the next mount.
@@ -317,11 +355,13 @@ export default function RecipeGeneratorScreen() {
         });
         if (!mountedRef.current) return;
         if (aiRecipes && aiRecipes.length > 0) {
+          setAiUnavailable(false);
           setRecipes(aiRecipes);
           setLoading(false);
           return;
         }
       }
+      setAiUnavailable(true);
       // AI was unavailable or returned nothing — surface a fallback that
       // STILL respects the user's allergens + macros. Filter the canned
       // recipes against the user's profile so we never propose something
@@ -358,6 +398,7 @@ export default function RecipeGeneratorScreen() {
         const haystack = (r.name + ' ' + r.ingredients.join(' ')).toLowerCase();
         return !allergens.some((a) => haystack.includes(a.toLowerCase()));
       });
+      setAiUnavailable(true);
       setRecipes(safe);
     }
     setLoading(false);
@@ -518,6 +559,25 @@ export default function RecipeGeneratorScreen() {
           )}
         </View>
 
+        {/* AI fallback notice — shown when the recipes below are the built-in
+            set, not Aimee's. Hidden entirely until AI_UNAVAILABLE_BODY has
+            Edward's sentence in it: the box rendered an icon, a heading and
+            nothing else, which reads to a reviewer as a half-finished screen.
+            The title is already written and does not change when the body
+            arrives — only the constant above needs filling in. */}
+        {aiUnavailable && !loading && AI_UNAVAILABLE_BODY.length > 0 && (
+          <View
+            style={[styles.unavailableNotice, { borderColor: t.cardBorder, backgroundColor: t.card }]}
+            accessibilityRole="alert"
+          >
+            <Ionicons name="cloud-offline-outline" size={18} color={t.textSecondary} />
+            <Text style={[styles.unavailableTitle, { color: t.text }]}>{AI_UNAVAILABLE_TITLE}</Text>
+            <Text style={[styles.unavailableBody, { color: t.textSecondary }]}>
+              {AI_UNAVAILABLE_BODY}
+            </Text>
+          </View>
+        )}
+
         {/* Results */}
         {recipes.length > 0 && (
           <View style={styles.section}>
@@ -607,6 +667,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.darkText,
     marginBottom: 8,
+  },
+  unavailableNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderWidth: 1,
+    borderRadius: 12,
+  },
+  unavailableTitle: {
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
+  },
+  unavailableBody: {
+    fontSize: FontSizes.sm,
+    lineHeight: 18,
+    flexShrink: 1,
   },
 
   // Targets

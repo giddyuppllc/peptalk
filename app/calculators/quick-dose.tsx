@@ -1,6 +1,12 @@
 /**
  * Quick Dose Calculator — Pick a peptide, get everything you need.
- * Uses the user's body weight + protocol data to auto-calculate.
+ * Uses protocol data to auto-calculate.
+ *
+ * Body weight is NOT an input here. The screen used to print "Your weight: …
+ * — used for dose calculations" and "Based on your weight: …" while nothing in
+ * this file used weight in any calculation — a false claim of personalised
+ * dosing (App Review 1.4.1). Both lines were removed on 2026-09-15;
+ * src/lib/__tests__/quickDoseWeightClaim.test.ts keeps them out.
  */
 
 import React, { useState, useMemo } from 'react';
@@ -15,8 +21,14 @@ import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
 import { PEPTIDES } from '../../src/data/peptides';
 import { searchPeptides } from '../../src/lib/peptideSearch';
-import { getProtocolsByPeptide } from '../../src/data/protocols';
-import { getDosingReference } from '../../src/data/peptideDosingReference';
+// Dose data reaches this screen through the display boundary so that a
+// safety-information-only compound (Edward, 2026-09-16) yields no protocol
+// and no reconstitution reference — the "Your Dose" and "Draw this much"
+// blocks both gate on those. See src/data/safetyOnlyCompounds.ts.
+import {
+  getProtocolsForDisplay,
+  getDosingReferenceForDisplay,
+} from '../../src/data/dosingDisplay';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { getPeptideTiming } from '../../src/data/peptideTiming';
 
@@ -37,14 +49,11 @@ function fmt(n: number, max = 3): string {
 
 export default function QuickDoseScreen() {
   const router = useRouter();
-  const weightLbs = useHealthProfileStore((s) => s.profile?.bodyMetrics?.weightLbs);
   const isPregnantOrNursing = useHealthProfileStore(
     (s) => s.profile?.medical?.pregnantOrNursing === true,
   );
   const [search, setSearch] = useState('');
   const [selectedPeptideId, setSelectedPeptideId] = useState<string | null>(null);
-
-  const weightKg = weightLbs ? Math.round(weightLbs / 2.20462) : null;
 
   /**
    * No cap. Every match, every time.
@@ -64,7 +73,7 @@ export default function QuickDoseScreen() {
   );
 
   const protocols = useMemo(
-    () => (selectedPeptideId ? getProtocolsByPeptide(selectedPeptideId) : []),
+    () => (selectedPeptideId ? getProtocolsForDisplay(selectedPeptideId) : []),
     [selectedPeptideId]
   );
 
@@ -79,7 +88,7 @@ export default function QuickDoseScreen() {
   // hardcoded 5mg/2mL. The old hardcode gave every peptide a 2.5 mg/mL concentration
   // (2× errors on semaglutide/retatrutide), which is why this screen was pulled.
   const dosingRef = useMemo(
-    () => (selectedPeptideId ? getDosingReference(selectedPeptideId) : null),
+    () => (selectedPeptideId ? getDosingReferenceForDisplay(selectedPeptideId) : null),
     [selectedPeptideId],
   );
 
@@ -201,12 +210,6 @@ export default function QuickDoseScreen() {
           />
         </View>
 
-        {weightKg && (
-          <Text style={styles.weightNote}>
-            Your weight: {weightLbs} lbs ({weightKg} kg) — used for dose calculations
-          </Text>
-        )}
-
         <ScrollView contentContainerStyle={styles.listContent}>
           {filteredPeptides.map((p) => (
             <AnimatedPress
@@ -290,11 +293,6 @@ export default function QuickDoseScreen() {
                   </View>
                 )}
               </View>
-              {weightKg && (
-                <Text style={styles.weightCalc}>
-                  Based on your weight: {weightLbs} lbs ({weightKg} kg)
-                </Text>
-              )}
             </GlassCard>
 
             {/* Reconstitution — the ONLY section that genuinely needs a curated
@@ -636,10 +634,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,0,0,0.08)', paddingHorizontal: 14, height: 44,
   },
   searchInput: { flex: 1, fontSize: FontSizes.md, color: Colors.darkText },
-  weightNote: {
-    fontSize: FontSizes.xs, color: Colors.iceMeltDeep,
-    paddingHorizontal: Spacing.lg, marginBottom: Spacing.sm,
-  },
 
   // Peptide list
   listContent: { paddingHorizontal: Spacing.lg, paddingBottom: 40 },
@@ -670,10 +664,6 @@ const styles = StyleSheet.create({
   },
   doseLabel: { fontSize: FontSizes.xs, color: Colors.darkTextSecondary, marginBottom: 2 },
   doseValue: { fontSize: FontSizes.md, fontWeight: '700', color: Colors.darkText },
-  weightCalc: {
-    fontSize: FontSizes.xs, color: Colors.iceMeltDeep,
-    marginTop: Spacing.sm, fontStyle: 'italic',
-  },
 
   // Steps
   stepList: { gap: Spacing.sm },

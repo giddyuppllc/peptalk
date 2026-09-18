@@ -18,7 +18,7 @@ import { CreditPackShelf } from '../src/components/CreditPackShelf';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../src/constants/theme';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
 import { PEPTIDES } from '../src/data/peptides';
-import type { SubscriptionTier } from '../src/types/fitness';
+import { TIER_FEATURES, type SubscriptionTier } from '../src/types/fitness';
 import {
   PRODUCT_IDS,
   purchaseProduct,
@@ -83,7 +83,7 @@ const TIERS: TierInfo[] = [
     description: 'Early access to the upgraded version',
     features: [
       'Stack Builder — unlimited peptide stacks with interaction & synergy analysis',
-      'Aimee — 20 personalized chats/day on dosing, timing, and side effects',
+      'Aimee — up to 750 messages a month on dosing, timing, and side effects',
       'Food Scanner — snap a plate, get every food + macros',
       'Voice Log — say what you ate, get the macros logged',
       'Unlimited meal & food logging + full micronutrient tracking',
@@ -108,7 +108,7 @@ const TIERS: TierInfo[] = [
     description: 'Full coaching + programs',
     features: [
       'Everything in Plus',
-      'Unlimited Aimee chat',
+      'Aimee — up to 9,000 messages a month',
       'Recipe Generator — personalized to your goals + allergens',
       'Multi-week training programs — progressive sets, reps, and rest',
       'Custom Workout Generator + tracker',
@@ -142,11 +142,20 @@ const SOCIAL_PROOF = [
     title: 'Private by default',
     body: 'health data encrypted on-device',
   },
-  {
-    icon: 'shield-checkmark-outline' as const,
-    title: 'Cancel anytime',
-    body: 'manage your subscription from your Apple ID at any time',
-  },
+  // Apple 3.1.2(a)'s cancellation pathway. The sentence names Apple ID, which
+  // is only true on iOS — on Android billing is Play, and on web it is Square,
+  // where there is no store account at all. Each needs its own sentence and
+  // neither is written yet, so the card is omitted there rather than telling
+  // an Android or web visitor to cancel somewhere they have never been.
+  ...(Platform.OS === 'ios'
+    ? [
+        {
+          icon: 'shield-checkmark-outline' as const,
+          title: 'Cancel anytime',
+          body: 'manage your subscription from your Apple ID at any time',
+        },
+      ]
+    : []),
 ];
 
 // ---------------------------------------------------------------------------
@@ -395,9 +404,13 @@ function TierCard({
           the user taps Subscribe. This line carries all three. */}
       {!isActive && info.tier !== 'free' && (
         <View style={styles.tierCta}>
+          {/* The price and the auto-renew term are true on every platform.
+              The cancellation pathway is not: Apple ID Subscriptions exists
+              only on iOS. Android and web need their own sentence naming
+              their own billing, which is not written yet. */}
           <Text style={styles.renewDisclosure}>
             {displayPrice}{plan?.period} · auto-renews monthly until cancelled.
-            Cancel anytime in your Apple ID Subscriptions.
+            {Platform.OS === 'ios' && ' Cancel anytime in your Apple ID Subscriptions.'}
           </Text>
           <GradientButton
             label={purchasing ? 'Processing…' : `Subscribe to ${info.name}`}
@@ -461,22 +474,16 @@ function TierCard({
 // Main Screen
 // ---------------------------------------------------------------------------
 
-/** Map a feature key to the minimum tier that unlocks it. */
+/** Map a feature key to the plan to highlight for it. */
 function tierForFeature(feature: string | undefined): SubscriptionTier | null {
   if (!feature) return null;
-  const proOnly = [
-    // Pro-tier exclusives — kept tight so Plus has the AI vision food
-    // scanner (moved out per pricing call) without giving away the
-    // workout-program library or recipe generator.
-    'recipe_generator',
-    'workout_programs',
-    'exercise_library',
-    'custom_workout_generator',
-    'generated_workout_tracker',
-    'health_reports',
-    'aimee_ai_unlimited',
-  ];
-  if (proOnly.includes(feature)) return 'pro';
+  // Derived from TIER_FEATURES rather than a hand-kept list. The list here had
+  // drifted: it still named 'workout_programs' and 'exercise_library' as Pro
+  // after d9859bc removed them from every tier, and it omitted Pro-only keys
+  // such as 'aimee_meal_plans' and 'workout_videos', so those highlighted Plus.
+  // Anything Plus grants (Free keys included, as before) highlights Plus.
+  if (TIER_FEATURES.plus.includes(feature)) return 'plus';
+  if (TIER_FEATURES.pro.includes(feature)) return 'pro';
   return 'plus';
 }
 
@@ -510,6 +517,7 @@ export default function SubscriptionScreen() {
   const tier = useSubscriptionStore((s) => s.tier);
   const productId = useSubscriptionStore((s) => s.productId);
   const pendingPurchase = useSubscriptionStore((s) => s.pendingPurchase);
+  const failedPurchase = useSubscriptionStore((s) => s.failedPurchase);
   const [restoring, setRestoring] = React.useState(false);
   // Live StoreKit prices (localized to the storefront) → keeps the displayed
   // price in sync with the purchase sheet. Falls back to hardcoded USD.
@@ -564,7 +572,7 @@ export default function SubscriptionScreen() {
         <View style={styles.hero}>
           <Text style={styles.heroTitle}>Choose Your Plan</Text>
           <Text style={styles.heroDesc}>
-            Unlock AI-powered tools, unlimited access, and professional health features.
+            Unlock AI-powered tools, a bigger Aimee allowance, and professional health features.
           </Text>
         </View>
 
@@ -590,6 +598,30 @@ export default function SubscriptionScreen() {
             <Text style={styles.pendingBannerText}>
               Waiting for approval on your purchase. You'll get access once it's
               confirmed — no need to buy again.
+            </Text>
+          </View>
+        )}
+
+        {/* Paid, but our side refused the receipt.
+
+            DRAFT COPY — Edward approves the words.
+
+            This is the state where someone has been charged and the paywall is
+            still up. It was previously silent: the failure went to Sentry and
+            the screen did not change, so the only signal available to the
+            person who paid was that nothing happened. The claim here is one we
+            can actually keep — an unfinished purchase IS replayed by the store
+            on the next launch, and on Android an unacknowledged one is refunded
+            by Google on its own. It deliberately does not say "try again":
+            buying twice is the one thing that would make this worse. */}
+        {failedPurchase && (
+          <View style={styles.failedBanner}>
+            <Ionicons name="alert-circle-outline" size={18} color="#B91C1C" />
+            <Text style={styles.failedBannerText}>
+              Your payment went through, but we couldn't turn on your plan. That's
+              on us — don't buy again. Reopen the app in a few minutes and it
+              should sort itself out. If it doesn't, email support@peptalk.bio and
+              we'll fix it or refund you.
             </Text>
           </View>
         )}
@@ -660,17 +692,24 @@ export default function SubscriptionScreen() {
           <Text style={styles.restoreBtnText}>{restoring ? 'Restoring…' : 'Restore Purchases'}</Text>
         </TouchableOpacity>
 
-        {/* Redeem a discount code (Apple Offer Code / Play promo code). Lets
-            partner / cross-site customers apply a discount the OS-blessed way:
-            the redemption sheet applies it to the subscription itself. */}
-        <TouchableOpacity
-          style={styles.restoreBtn}
-          onPress={() => presentCodeRedemption()}
-          accessibilityRole="button"
-          accessibilityLabel="Redeem a discount code"
-        >
-          <Text style={styles.restoreBtnText}>Have a discount code?</Text>
-        </TouchableOpacity>
+        {/* Redeem a discount code (Apple Offer Code). Lets partner /
+            cross-site customers apply a discount the OS-blessed way: the
+            redemption sheet applies it to the subscription itself.
+
+            iOS only. presentCodeRedemption() returns false without doing
+            anything on Android (our codes are Apple offer codes; there is no
+            Play promo code to redeem) and on web, so this rendered as a dead
+            button there. */}
+        {Platform.OS === 'ios' && (
+          <TouchableOpacity
+            style={styles.restoreBtn}
+            onPress={() => presentCodeRedemption()}
+            accessibilityRole="button"
+            accessibilityLabel="Redeem a discount code"
+          >
+            <Text style={styles.restoreBtnText}>Have a discount code?</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Manage Subscription (paid users only). Required by Apple for
             auto-renewing subscriptions — deep-links to the native manage
@@ -689,27 +728,42 @@ export default function SubscriptionScreen() {
         {/* Footer — Apple 3.1.2(a) requires Terms + Privacy to be
             tappable from the paywall itself, not buried in app settings. */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Subscriptions auto-renew unless cancelled at least 24 hours before
-            the renewal date. Payment is charged to your Apple ID account at
-            confirmation. Manage or cancel in your Apple ID Subscriptions.
-          </Text>
+          {/* Apple 3.1.2(a) disclosure. Two of its three sentences are about
+              the Apple ID account, so it is iOS-only. Android (Play) and web
+              (Square) need their own disclosure — until one is written,
+              nothing is shown rather than a charge described against the
+              wrong account. */}
+          {Platform.OS === 'ios' && (
+            <Text style={styles.footerText}>
+              Subscriptions auto-renew unless cancelled at least 24 hours before
+              the renewal date. Payment is charged to your Apple ID account at
+              confirmation. Manage or cancel in your Apple ID Subscriptions.
+            </Text>
+          )}
           <View style={styles.legalLinks}>
-            <TouchableOpacity
-              onPress={() =>
-                Linking.openURL(
-                  // Apple's standard EULA (Apple 3.1.2(c)). Leave the App Store
-                  // Connect EULA field blank so this default applies.
-                  'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/',
-                )
-              }
-              accessibilityRole="link"
-              accessibilityLabel="Open Terms of Use (EULA)"
-              hitSlop={6}
-            >
-              <Text style={styles.legalLink}>Terms of Use (EULA)</Text>
-            </TouchableOpacity>
-            <Text style={styles.legalDivider}>·</Text>
+            {/* Apple's standard EULA (Apple 3.1.2(c)). Leave the App Store
+                Connect EULA field blank so this default applies. It is
+                Apple's document and governs an App Store purchase, so it is
+                iOS-only; app/terms.tsx exists and is what Android and web
+                should point at, but which document governs a Play or Square
+                purchase is Edward's call, not a default. */}
+            {Platform.OS === 'ios' && (
+              <>
+                <TouchableOpacity
+                  onPress={() =>
+                    Linking.openURL(
+                      'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/',
+                    )
+                  }
+                  accessibilityRole="link"
+                  accessibilityLabel="Open Terms of Use (EULA)"
+                  hitSlop={6}
+                >
+                  <Text style={styles.legalLink}>Terms of Use (EULA)</Text>
+                </TouchableOpacity>
+                <Text style={styles.legalDivider}>·</Text>
+              </>
+            )}
             <TouchableOpacity
               onPress={() => router.push('/privacy' as any)}
               accessibilityRole="link"
@@ -1047,5 +1101,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: '#92400E',
+  },
+  failedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: 'rgba(220, 38, 38, 0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(220, 38, 38, 0.35)',
+  },
+  failedBannerText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#991B1B',
   },
 });

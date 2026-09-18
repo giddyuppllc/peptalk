@@ -46,6 +46,10 @@ import {
   isAIAvailable,
 } from '../../src/services/llmService';
 import { canSendToCloud } from '../../src/services/privacyGuard';
+import { buildAiMessageReport } from '../../src/lib/aiReport';
+import { promptReportReasons } from '../../src/components/community/memberReportActions';
+import { AI_REPORT_COPY, REPORT_COPY } from '../../src/constants/reportCopy';
+import { useCommunityStore } from '../../src/store/useCommunityStore';
 import { generateCorrelationInsights, buildCorrelationSummaryForBot } from '../../src/services/watchCorrelationService';
 import { useJournalStore } from '../../src/store/useJournalStore';
 import { ChatMessage, EnhancedBotContext } from '../../src/types';
@@ -71,6 +75,7 @@ import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
 import { useIsOnline } from '../../src/hooks/useNetworkStatus';
 import { isAllowedNavigationPath } from '../../src/lib/aimeeNavAllowlist';
+import { AIMEE_UNAVAILABLE_MESSAGE, aimeeDenialOffer } from '../../src/lib/aimeeDenialActions';
 // All validation/clamping for Aimee `client_action` payloads lives in
 // a pure module so it can be unit-tested without a renderer. See
 // scripts/verify-aimee-action-sanitize.ts for the contract.
@@ -611,21 +616,13 @@ export default function PepTalkScreen() {
             stillStreaming = false;
             return true;
           } else if (ev.type === 'denied') {
-            const upgrade = ev.upgrade === true;
             updateMessage(placeholderId, {
-              content: ev.message ?? 'Aimee requires an upgrade.',
+              // The server's own sentence. The old fallback said "Aimee
+              // requires an upgrade", which is wrong for a Pro subscriber —
+              // there is no upgrade — and wrong for the system-wide breaker.
+              content: ev.message ?? 'Aimee is unavailable right now.',
               streaming: false,
-              quickReplies: upgrade ? ['View subscription plans'] : undefined,
-              navAction: upgrade ? '/subscription' : undefined,
-              actions: upgrade
-                ? [
-                    {
-                      label: 'See plans',
-                      route: '/subscription',
-                      icon: 'sparkles-outline',
-                    },
-                  ]
-                : undefined,
+              ...aimeeDenialOffer({ upgrade: ev.upgrade, topUp: ev.topUp }),
             });
             return true;
           }
@@ -835,9 +832,40 @@ export default function PepTalkScreen() {
       }
     }
 
-    // 3. Local fallback (no API key, no consent, API failure, timeout, thrown error)
+    /*
+     * 3. We are here for one of three reasons, and they are not the same thing.
+     *
+     * OFFLINE, or AI not enabled (no consent, not available): the on-device
+     * engine is the right answer. There is no cloud reply to be had, and an
+     * instant local one beats a placeholder bubble behind a blinking caret —
+     * which is what Jamie screenshotted next to the offline banner.
+     *
+     * ONLINE with AI enabled: the request FAILED — it errored, timed out, or
+     * the server refused it. Answering that with the local engine is how this
+     * has been hiding every fault in the system. A user who has run out of
+     * allowance, whose tier is misread, or who asked while the model was down
+     * got a canned answer and concluded Aimee is stupid. Nobody reported an
+     * outage because there was never an error to report.
+     *
+     * Edward, 2026-09-18: the fallback "was a back up when ai was down and we
+     * were testing — it makes answers feel dumb in the end."
+     *
+     * So: say what happened. A visible failure is recoverable; a silent
+     * downgrade is not.
+     */
+    const aiWasExpected = useAI && isDeviceOnline;
+
     setTimeout(() => {
       try {
+        if (aiWasExpected) {
+          handleBotResponse({
+            id: `bot-${Date.now()}`,
+            role: 'bot',
+            content: AIMEE_UNAVAILABLE_MESSAGE,
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
         const botResponse = generateLocalBotResponse(text, context);
         handleBotResponse(botResponse);
       } catch (err) {
@@ -937,6 +965,32 @@ export default function PepTalkScreen() {
   const botActions = lastBotMessage?.actions || [];
   const lastBotHasJournal = !!lastBotMessage?.journalEntry;
 
+  /**
+   * Report one of Aimee's replies — Play's generative-AI policy wants an
+   * in-app way to flag offensive or unsafe AI output, and there was none.
+   *
+   * The payload is built by buildAiMessageReport, which reads the message's
+   * `content` and `timestamp` and nothing else. That matters here specifically:
+   * `buildContext()` a few lines up assembles the user's health profile for
+   * Aimee, and a report must never pick any of it up. Profile context is
+   * attached to AI calls only behind canSendToCloud(); a report attaches none
+   * under either state, so reporting keeps working for a user who has turned
+   * cloud AI off and leaks nothing for one who has not.
+   */
+  const reportAiMessage = useCallback(
+    (message: ChatMessage) => {
+      promptReportReasons(
+        async (reason) => {
+          const built = buildAiMessageReport(message, reason);
+          if (!built.ok) return { ok: false as const, error: built.error };
+          return useCommunityStore.getState().reportContent(built.body);
+        },
+        AI_REPORT_COPY.sheetTitle || REPORT_COPY.sheetTitle,
+      );
+    },
+    [],
+  );
+
   const renderMessage = useCallback(
     ({ item }: { item: ChatMessage }) => {
       // Tool results + pending actions live BELOW the bubble so the chat
@@ -946,11 +1000,11 @@ export default function PepTalkScreen() {
         (item.pendingActions && item.pendingActions.length > 0) ||
         !!item.proUpsell;
       if (!hasCards) {
-        return <ChatBubble message={item} />;
+        return <ChatBubble message={item} onReport={reportAiMessage} />;
       }
       return (
         <View>
-          <ChatBubble message={item} />
+          <ChatBubble message={item} onReport={reportAiMessage} />
           <View style={{ marginLeft: 48, marginRight: 16 }}>
             {(item.toolResults ?? [])
               .filter((r) => !r.isPending)
@@ -1007,6 +1061,7 @@ export default function PepTalkScreen() {
       applyLogWaterAction,
       applyLogAppetiteAction,
       applyAddToPantryAction,
+      reportAiMessage,
       router,
     ],
   );

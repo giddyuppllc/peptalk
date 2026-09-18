@@ -810,7 +810,10 @@ export default function HealthProfileScreen() {
             <Text style={styles.consentDesc}>
               Allow PepTalk to use your health profile for personalized AI
               responses. Your data is sent securely and never stored by the AI
-              provider. Without this, you'll get local-only responses.
+              provider. Turn it off and Aimee, meal plans, recipes and workouts
+              still work — they just stop using your health details. Lab
+              interpretation, the lab photo scanner and the weekly report
+              rewrite need it, and stop.
             </Text>
           </View>
           <Switch

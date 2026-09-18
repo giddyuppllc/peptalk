@@ -1,12 +1,66 @@
 import { create } from 'zustand';
+import { makeSafeMerge } from '../lib/persistSafety';
+import { reportPersistProblem } from '../lib/persistReporting';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { useDoseLogStore } from './useDoseLogStore';
 import { useChatStore } from './useChatStore';
 import { useCheckinStore } from './useCheckinStore';
-import { HealthProfile, BodyMetrics, MedicalHistory, NutritionProfile, SleepProfile, LifestyleProfile, DeviceConnections, GoalType, BiologicalSex, CycleTracking } from '../types';
+import { HealthProfile, BodyMetrics, MedicalHistory, NutritionProfile, SleepProfile, LifestyleProfile, DeviceConnections, GoalType, BiologicalSex, CycleTracking, OnboardingSnapshot } from '../types';
+import type { ServerProfileFetch } from '../lib/onboardingRestore';
 import { secureStorage } from '../services/secureStorage';
 import { syncHealthProfile } from '../services/syncService';
 import { Clamps, clampNumber } from '../utils/inputClamps';
+
+// ---------------------------------------------------------------------------
+// Local-only changes
+// ---------------------------------------------------------------------------
+
+/** >0 while a change must stay on this device (see the sync subscription). */
+let profileSyncSuppressed = 0;
+
+/**
+ * Run `fn` without its profile changes reaching the server. Scoped: zustand
+ * notifies subscribers synchronously inside `set`, so only changes made during
+ * `fn` are skipped — the next ordinary edit syncs as normal. A counter rather
+ * than a boolean so a nested call cannot re-enable sync for its outer caller.
+ */
+export function withoutProfileSync<T>(fn: () => T): T {
+  profileSyncSuppressed += 1;
+  try {
+    return fn();
+  } finally {
+    profileSyncSuppressed -= 1;
+  }
+}
+
+/**
+ * True while inside withoutProfileSync. For the OTHER uploads of profile data
+ * that do not go through this store's subscription — the onboarding restore's
+ * mirror (src/services/onboardingRestore.ts) upserts health_profiles directly,
+ * and a device wipe must not reach the server through it either.
+ */
+export function isProfileSyncSuppressed(): boolean {
+  return profileSyncSuppressed > 0;
+}
+
+/**
+ * Whose profile the store is currently holding, when that is known.
+ *
+ * Set only where the answer is certain: the server fetch below, which knows
+ * the account the row was read for. A profile typed on the device before any
+ * fetch has no owner recorded, and asserts nothing.
+ *
+ * It exists because the debounced upsert is fire-and-forget and runs 800ms
+ * after the change, by which time the session can be somebody else's. The
+ * upsert then writes whatever is in the store under whoever is signed in NOW.
+ * Passing this to syncHealthProfile turns that into a refusal.
+ */
+let profileOwnerId: string | null = null;
+
+/** The account the held profile was read for, or null when unknown. */
+export function healthProfileOwnerId(): string | null {
+  return profileOwnerId;
+}
 
 // ---------------------------------------------------------------------------
 // Defaults
@@ -132,6 +186,8 @@ interface HealthProfileStore {
   /** Free-text goal expansion + feature-wish feedback. */
   setGoalNotes: (notes: string) => void;
   setFeatureWish: (wish: string) => void;
+  /** Onboarding answers mirrored for restore on another device. */
+  setOnboardingSnapshot: (snapshot: OnboardingSnapshot) => void;
   setPeptideExperience: (
     level: HealthProfile['peptideExperience'],
     current?: string[],
@@ -294,6 +350,15 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
           profile: {
             ...state.profile,
             featureWish: wish,
+            lastUpdated: new Date().toISOString(),
+          },
+        })),
+
+      setOnboardingSnapshot: (snapshot) =>
+        set((state) => ({
+          profile: {
+            ...state.profile,
+            onboarding: snapshot,
             lastUpdated: new Date().toISOString(),
           },
         })),
@@ -470,7 +535,20 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
           },
         })),
 
-      resetProfile: () => set({ profile: emptyProfile, currentStep: 0 }),
+      // Device-local. Both callers — Profile → "Delete My Data" and the logout
+      // wipe — describe clearing THIS device. Without the suppression the
+      // cloud-sync subscription below saw an empty profile as an edit and
+      // upserted it over the server copy, silently destroying the data that
+      // onboarding restore and the user's other devices read back. Removing
+      // the server copy is delete-user's job (Delete Account), never this.
+      resetProfile: () =>
+        withoutProfileSync(() => {
+          // The wiped store holds nobody's profile, and an in-flight server
+          // fetch started for the outgoing account must not land in it.
+          profileOwnerId = null;
+          abandonInflightServerProfile();
+          set({ profile: emptyProfile, currentStep: 0 });
+        }),
 
       // Queries
       hasAllergy: (substance) => {
@@ -497,6 +575,10 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
     }),
     {
       name: 'peptalk-health-profile',
+      // Storage is untrusted input: on web it is localStorage, which the
+      // user can edit, and a killed app leaves partial writes. See
+      // src/lib/persistSafety.ts.
+      merge: makeSafeMerge('peptalk-health-profile', reportPersistProblem),
       storage: createJSONStorage(() => secureStorage),
       partialize: (state) => ({
         profile: state.profile,
@@ -527,36 +609,149 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
 useHealthProfileStore.subscribe((state, prev) => {
   if (state.profile === prev.profile) return; // no change
+  // A local-only change (see withoutProfileSync). Returns BEFORE touching the
+  // timer: a real edit made just before the reset is still owed its sync, and
+  // cancelling it here would drop that edit rather than protect anything.
+  if (profileSyncSuppressed > 0) return;
   if (syncTimer) clearTimeout(syncTimer);
+  // The owner is captured NOW, not read inside the timer: by the time it fires
+  // the store may already hold a different account's profile, and the point of
+  // the assertion is to name the account this particular change belonged to.
+  const owner = profileOwnerId;
   syncTimer = setTimeout(() => {
-    syncHealthProfile(state.profile).catch(() => {});
+    syncHealthProfile(state.profile, { userId: owner }).catch(() => {});
   }, 800);
 });
 
 /**
  * Pull the authoritative health profile from Supabase on app boot.
  * Call this from _layout.tsx after restoreSession.
+ *
+ * Returns what it found, because the onboarding restore decides on it: "no
+ * row" and "could not ask" must not look alike. `error` used to be ignored, so
+ * a PostgREST failure read as a user with no profile.
+ *
+ * Concurrent calls share one request. Boot, the sign-in effect and the
+ * onboarding restore all ask at nearly the same moment; separate requests
+ * could land in any order, and a later "server wins" overwrite would wipe a
+ * snapshot the restore had just written into the store.
+ *
+ * SHARING IS PER ACCOUNT, AND THE ANSWER IS CHECKED BEFORE IT IS APPLIED.
+ * The share used to be a bare module-level promise, cleared only when it
+ * settled. Nothing reset it on sign-out. So: user A's fetch hangs, A signs
+ * out, B signs in, B's restore asks — and got back A's in-flight promise,
+ * whose "server wins" setState put A's medical history, medications and
+ * allergies into B's store. The debounced upsert then wrote them to the
+ * server under B's user_id, replacing B's whole profile JSON.
+ *
+ * Two independent guards, because either alone still loses the race:
+ *   - the share is keyed by the requesting account, so B never inherits A's
+ *     promise;
+ *   - the account the row was read for is compared with the account signed in
+ *     at the moment the answer lands, and a change between the two means the
+ *     answer is nobody's business on screen. That also covers the late reply
+ *     to a timed-out fetch: withTimeout abandons the request rather than
+ *     aborting it (supabase-js exposes no signal), so it does still arrive.
  */
-export async function syncHealthProfileFromServer(): Promise<void> {
+let inflightServerProfile: { userId: string | null; promise: Promise<ServerProfileFetch> } | null =
+  null;
+
+/**
+ * Drop the shared request without waiting for it. Called by the sign-out and
+ * device wipes, so the next account starts from nothing in flight.
+ */
+export function abandonInflightServerProfile(): void {
+  inflightServerProfile = null;
+}
+
+/**
+ * Who is signed in right now, read from the LOCAL session (no network), the
+ * same way syncService reads it. `undefined` means the client could not say.
+ */
+async function liveAuthUserId(supabase: any): Promise<string | null | undefined> {
   try {
-    const { supabase } = await import('../services/supabase');
-    const { data: { user } } = await (supabase as any).auth.getUser();
-    if (!user) return;
-
-    const { data } = await (supabase as any)
-      .from('health_profiles')
-      .select('profile, setup_complete, current_step')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (data?.profile) {
-      // Server wins on boot — overwrite local if remote exists
-      useHealthProfileStore.setState({
-        profile: data.profile,
-        currentStep: data.current_step ?? 0,
-      });
-    }
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.user?.id ?? null;
   } catch {
-    // offline or not yet synced — local state stands
+    return undefined;
   }
+}
+
+/**
+ * May this row be written into the store?
+ *
+ * Only for the account on screen. When the live session cannot be read, the
+ * caller's own declared account is the fallback signal — and a caller that
+ * declared none has given no evidence at all, so nothing is written. Guessing
+ * in that position is what puts one person's medical history in front of
+ * another's.
+ */
+function answersForTheUserOnScreen(
+  rowUserId: string,
+  requestedUserId: string | null,
+  liveUserId: string | null | undefined,
+): boolean {
+  if (requestedUserId != null && requestedUserId !== rowUserId) return false;
+  return liveUserId === undefined ? requestedUserId === rowUserId : liveUserId === rowUserId;
+}
+
+/**
+ * Lazy, as before, so boot does not pull the client in early. A parameter only
+ * so tests can hand in a client: jest cannot run a dynamic import() without
+ * --experimental-vm-modules, and would report every case as a fetch error.
+ */
+type SupabaseLoader = () => Promise<{ supabase: unknown }>;
+const loadSupabase: SupabaseLoader = () => import('../services/supabase');
+
+export function syncHealthProfileFromServer(
+  /** The account the caller is asking on behalf of. Null when it has none. */
+  requestedUserId: string | null = null,
+  load: SupabaseLoader = loadSupabase,
+): Promise<ServerProfileFetch> {
+  if (inflightServerProfile && inflightServerProfile.userId === requestedUserId) {
+    return inflightServerProfile.promise;
+  }
+  const request = (async (): Promise<ServerProfileFetch> => {
+    try {
+      const { supabase } = await load();
+      const { data: { user }, error: userError } = await (supabase as any).auth.getUser();
+      // supabase-js reports "no session" as an AuthSessionMissingError too;
+      // only a DIFFERENT error means it could not tell.
+      if (!user) {
+        return userError && userError.name !== 'AuthSessionMissingError'
+          ? { status: 'error' }
+          : { status: 'signed-out' };
+      }
+
+      const { data, error } = await (supabase as any)
+        .from('health_profiles')
+        .select('profile, setup_complete, current_step')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) return { status: 'error' };
+
+      if (data?.profile && answersForTheUserOnScreen(user.id, requestedUserId, await liveAuthUserId(supabase))) {
+        // Server wins on boot — overwrite local if remote exists
+        profileOwnerId = user.id;
+        useHealthProfileStore.setState({
+          profile: data.profile,
+          currentStep: data.current_step ?? 0,
+        });
+      }
+      // Returned whether or not it was applied: planOnboardingRestore compares
+      // `userId` with the live session itself and already grants nothing when
+      // they differ. Withholding the result here would only turn a knowable
+      // "this answered for someone else" into an unknowable error.
+      return { status: 'ok', userId: user.id, profile: data?.profile ?? null };
+    } catch {
+      // offline or not yet synced — local state stands
+      return { status: 'error' };
+    }
+  })();
+  inflightServerProfile = { userId: requestedUserId, promise: request };
+  void request.finally(() => {
+    if (inflightServerProfile?.promise === request) inflightServerProfile = null;
+  });
+  return request;
 }

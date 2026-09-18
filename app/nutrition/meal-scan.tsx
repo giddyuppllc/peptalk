@@ -20,7 +20,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView } from 'expo-camera';
+import { useCameraPermissionGate } from '../../src/hooks/useCameraPermissionGate';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../src/hooks/useTheme';
 import { tapMedium, notifySuccess } from '../../src/utils/haptics';
@@ -138,7 +139,8 @@ function MealScanScreen() {
   const addMeal = useMealStore((state) => state.addMeal);
 
   const cameraRef = useRef<CameraView>(null);
-  const [permission, requestPermission] = useCameraPermissions();
+  // Asks with the system prompt directly — see src/lib/cameraPermissionGate.ts.
+  const { state: cameraState, canAskAgain, requestPermission } = useCameraPermissionGate();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [matches, setMatches] = useState<ScannedFood[]>([]);
@@ -156,7 +158,10 @@ function MealScanScreen() {
   }, []);
 
   // ── Permission gate ──
-  if (!permission) {
+  // Before the system has answered: no custom screen and no back control in
+  // front of the system prompt (5.1.1(iv), the rule Apple enforced four times
+  // on the HealthKit explainer). The custom screen is only for after a denial.
+  if (cameraState === 'loading' || cameraState === 'request') {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: t.bg }]}>
         <StatusBar style={t.statusBar} />
@@ -164,7 +169,7 @@ function MealScanScreen() {
       </SafeAreaView>
     );
   }
-  if (!permission.granted) {
+  if (cameraState === 'denied') {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: t.bg }]} edges={['top']}>
         <StatusBar style={t.statusBar} />
@@ -187,17 +192,17 @@ function MealScanScreen() {
           <TouchableOpacity
             style={[s.primaryBtn, { backgroundColor: accent.deep }]}
             onPress={() => {
-              if (permission.canAskAgain) {
+              if (canAskAgain) {
                 requestPermission();
               } else {
                 Linking.openSettings().catch(() => {});
               }
             }}
             accessibilityRole="button"
-            accessibilityLabel={permission.canAskAgain ? 'Enable camera' : 'Open settings to enable camera'}
+            accessibilityLabel={canAskAgain ? 'Enable camera' : 'Open settings to enable camera'}
           >
             <Text style={s.primaryBtnText}>
-              {permission.canAskAgain ? 'Enable Camera' : 'Open Settings'}
+              {canAskAgain ? 'Enable Camera' : 'Open Settings'}
             </Text>
           </TouchableOpacity>
         </View>

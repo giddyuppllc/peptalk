@@ -1967,7 +1967,7 @@ const _ALL_PROGRAMS: WorkoutProgram[] = [
  *   - Lusciously Lean BODYreCOMP 1.0 (`ll-body-recomp-1`)
  *   - Men's BUILD (`mens-build`)
  * Plus the custom workout builder at /workouts/new covering the
- * "make your own" slot from the 451-exercise library directly.
+ * "make your own" slot from the exercise library directly.
  *
  * Everything else stays defined above and reachable via getProgramById
  * (so any saved/active-program state from before the cull still

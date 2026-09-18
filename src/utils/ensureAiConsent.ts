@@ -23,7 +23,7 @@ export function ensureAiConsent(): Promise<boolean> {
   return new Promise((resolve) => {
     Alert.alert(
       'Use AI features?',
-      "Aimee and the food/lab scanners send what you share (your messages, voice, and photos) to PepTalk's AI providers — OpenAI (voice transcription) and xAI (Aimee) — to generate a response. They aren't used for advertising. You can review this in our Privacy Policy.",
+      "Aimee and the food/lab scanners send what you share — your messages, voice, photos, and the health details in your profile — to PepTalk's AI providers, OpenAI (voice transcription) and xAI (Aimee), to generate a response. They aren't used for advertising. You can switch the health details off on their own in Profile, and review all of this in our Privacy Policy.",
       [
         { text: 'Not now', style: 'cancel', onPress: () => resolve(false) },
         {

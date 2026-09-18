@@ -26,8 +26,9 @@ import { useLiveEventStore, type LiveMessage } from '../../../../src/store/useLi
 import { useAuthStore } from '../../../../src/store/useAuthStore';
 import { useCommunityStore } from '../../../../src/store/useCommunityStore';
 import { useOnboardingStore } from '../../../../src/store/useOnboardingStore';
-import { useTier } from '../../../../src/hooks/useFeatureGate';
+import { useTier, useFeatureGate } from '../../../../src/hooks/useFeatureGate';
 import { LiveChatDisclaimerModal } from '../../../../src/components/LiveChatDisclaimerModal';
+import { canPostInLiveEvent } from '../../../../src/lib/entitlement';
 
 export default function LiveEventChatScreen() {
   const router = useRouter();
@@ -46,6 +47,13 @@ export default function LiveEventChatScreen() {
 
   const currentUserId = useAuthStore((s) => s.user?.id);
   const tier = useTier();
+  // The feature-key path, not the raw tier string. `useTier()` reads the
+  // STORED tier, which a lapsed subscriber still carries; hasFeature runs
+  // computeFeatureAccess, which drops an inactive or expired paid tier back
+  // to the free feature set. Posting was gated on the stored string alone,
+  // so a lapsed member kept posting. The tier is still read below for the
+  // pro-only case, where it narrows but never widens this check.
+  const canJoinLiveChat = useFeatureGate('community_live_chat');
   const acceptedChatDisclaimer = useOnboardingStore(
     (s) => s.acceptedLiveChatDisclaimer,
   );
@@ -85,11 +93,12 @@ export default function LiveEventChatScreen() {
 
   const isHost = !!currentUserId && active?.hostUserId === currentUserId;
   const required = active?.requiredTier ?? 'plus';
-  const tierAllowed =
-    isHost ||
-    required === 'free' ||
-    (required === 'plus' && (tier === 'plus' || tier === 'pro')) ||
-    (required === 'pro' && tier === 'pro');
+  const tierAllowed = canPostInLiveEvent({
+    isHost,
+    requiredTier: required,
+    hasLiveChatFeature: canJoinLiveChat,
+    tier,
+  });
 
   // The store's `active` may transiently hold a different event (e.g. the
   // currently-live one). Only treat it as resolved when it matches the

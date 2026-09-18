@@ -191,6 +191,24 @@ export interface OnboardingProfile {
   dataShareConsent: boolean;
 }
 
+/**
+ * Onboarding answers as recorded server-side, inside
+ * `health_profiles.profile.onboarding`, so a new device or a reinstall can
+ * restore them. See src/lib/onboardingRestore.ts.
+ */
+export interface OnboardingSnapshot {
+  version: 1;
+  gender: Gender | null;
+  ageRange: AgeRange | null;
+  healthGoals: GoalType[];
+  /**
+   * When onboarding's final step succeeded on some device. That step cannot be
+   * finished without accepting the medical disclaimer, which is stored nowhere
+   * else, so this is the only record that it was. Null means never completed.
+   */
+  completedAt: string | null;
+}
+
 export interface DashboardSegment {
   id: SegmentId;
   gender: Gender;
@@ -503,6 +521,54 @@ export interface ProtocolTemplate {
    * range instead of a ladder.
    */
   titrationSchedule?: TitrationStep[];
+  /**
+   * Authored Beginner / Advanced per-dose bands, in `typicalDose.unit`.
+   *
+   * Absent: the Quick dose reference and the Mild/Aggressive intensities are
+   * DERIVED from typicalDose by a thirds split (see src/lib/protocolDoseMath).
+   * Present: used verbatim instead of the split. Set this only when a named
+   * clinician has stated the beginner and advanced doses — record who in
+   * `doseProvenance`. Both bands must sit inside typicalDose and beginner must
+   * not exceed advanced; the dose-sanity test enforces it.
+   */
+  doseBands?: {
+    beginner: { min: number; max: number };
+    advanced: { min: number; max: number };
+  };
+  /**
+   * Who approved the dose figures on this protocol, and when. Additive: the
+   * free-text `source` above predates it and names no one.
+   */
+  doseProvenance?: DoseProvenance[];
+}
+
+/** One approval record for a dose value. */
+export interface DoseProvenance {
+  /** The approved value exactly as stated, e.g. "2–5 mg daily; 2 mg beginner, 5 mg advanced". */
+  value: string;
+  /** Where the value came from (document, message, review round). */
+  source: string;
+  /** The person whose sign-off this is, and the channel it came through. */
+  approver: string;
+  /** ISO date the change was recorded in code. */
+  date: string;
+  /** The value(s) this replaced, so the change is reversible and auditable. */
+  replaced?: string;
+  /** Which fields/stores were changed to match. */
+  fields?: string[];
+  /**
+   * The approved numbers in machine-readable form. When present, the
+   * dose-sanity check requires typicalDose / doseBands (and the master-table
+   * row, if one exists) to equal them — so a later edit or regeneration cannot
+   * quietly put the old figures back.
+   */
+  approved?: {
+    typicalDose: { min: number; max: number; unit: DoseUnit };
+    doseBands?: {
+      beginner: { min: number; max: number };
+      advanced: { min: number; max: number };
+    };
+  };
 }
 
 export interface ActiveProtocol {
@@ -721,6 +787,9 @@ export interface HealthProfile {
   goalNotes?: string;
   /** What the user said they wished PepTalk had — feedback we read. */
   featureWish?: string;
+
+  /** Onboarding answers, mirrored here so another device can restore them. */
+  onboarding?: OnboardingSnapshot;
 
   // Peptide experience
   peptideExperience: 'none' | 'beginner' | 'intermediate' | 'experienced';

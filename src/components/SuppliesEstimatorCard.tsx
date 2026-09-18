@@ -31,11 +31,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from './GlassCard';
 import { useTheme } from '../hooks/useTheme';
 import { Spacing, FontSizes } from '../constants/theme';
-import type { ProtocolTemplate, ProtocolFrequency } from '../types';
-import {
-  type ProtocolIntensity,
-  intensityToDoseRange,
-} from './ProtocolIntensityPicker';
+import type { ProtocolTemplate } from '../types';
+import { estimateSupplies, type ProtocolIntensity } from '../lib/protocolDoseMath';
 
 interface SuppliesEstimatorCardProps {
   protocol: ProtocolTemplate;
@@ -51,93 +48,18 @@ interface SuppliesEstimatorCardProps {
   intensity?: ProtocolIntensity;
 }
 
-const FREQUENCY_PER_WEEK: Record<ProtocolFrequency, number> = {
-  daily:        7,
-  twice_daily:  14,
-  eod:          3.5,
-  // 5 consecutive days then 2 off — 5 doses/week, not 7.
-  five_on_two_off: 5,
-  tiw:          3,
-  biw:          2,
-  weekly:       1,
-  biweekly:     0.5,
-  monthly:      0.25,
-  custom:       1,
-};
-
-interface PeriodTotals {
-  label: string;
-  doses: number;
-  vialsRange: [number, number] | null; // null when vialMcg unknown
-  syringes: number;
-  bacWaterMl: number | null;
-  swabs: number;
-}
-
-function ceilRange(min: number, max: number): [number, number] {
-  return [Math.ceil(min), Math.ceil(max)];
-}
-
-function fmtRange(range: [number, number], unit: string): string {
-  const [lo, hi] = range;
-  if (lo === hi) return `${lo} ${unit}`;
-  return `${lo}–${hi} ${unit}`;
-}
-
 export function SuppliesEstimatorCard({ protocol, vialMcg, bacWaterMl, intensity }: SuppliesEstimatorCardProps) {
   const t = useTheme();
 
-  const periods = useMemo<PeriodTotals[]>(() => {
-    // Range shifts with intensity (Mild/Standard/Aggressive); supplies math
-    // tracks the chosen tier so vial counts don't lie about your supply.
-    const range = intensityToDoseRange(protocol, intensity ?? 'standard');
-    const minMcg = range.min;
-    const maxMcg = range.max;
-    // Vials are derived from a mcg-per-vial concentration, so the whole vial /
-    // BAC-water chain only means anything for a MASS dose. An IU or ml protocol
-    // (hcg, oxytocin, hmg, cerebrolysin) has no mass equivalent in this
-    // dataset — count syringes and swabs, but say nothing about vials rather
-    // than treating millilitres as micrograms.
-    const massBased = range.massBased;
-    const perWeek = FREQUENCY_PER_WEEK[protocol.frequency] ?? 1;
-
-    // Build three planning horizons: 1 week, 2 weeks, and the upper
-    // bound of the protocol's cycle range. Most users plan in those
-    // brackets — anything else they can math from there.
-    const cycleWeeks = protocol.durationWeeks.max;
-    const horizons: { label: string; weeks: number }[] = [
-      { label: '1 week',      weeks: 1 },
-      { label: '2 weeks',     weeks: 2 },
-      { label: `Full cycle (${cycleWeeks} wks)`, weeks: cycleWeeks },
-    ];
-
-    const bacPerVialMl = bacWaterMl && bacWaterMl > 0 ? bacWaterMl : 2;
-
-    return horizons.map(({ label, weeks }) => {
-      const doses = Math.ceil(perWeek * weeks);
-      const vialsRange =
-        massBased && vialMcg && vialMcg > 0
-          ? ceilRange((minMcg * doses) / vialMcg, (maxMcg * doses) / vialMcg)
-          : null;
-      const totalBacMl = vialsRange ? vialsRange[1] * bacPerVialMl : null;
-      return {
-        label,
-        doses,
-        vialsRange,
-        syringes: doses,
-        bacWaterMl: totalBacMl,
-        swabs: doses * 2,
-      };
-    });
-  }, [protocol, vialMcg, bacWaterMl, intensity]);
-
-  const hasVialMath = periods[0]?.vialsRange != null;
-  // Whether a vial count is even POSSIBLE for this protocol. For an IU or ml
-  // dose it never is, so telling the user to "enter vial size" would send them
-  // to fill in a field that can never produce an answer.
-  const doseIsMassBased = useMemo(
-    () => intensityToDoseRange(protocol, intensity ?? 'standard').massBased,
-    [protocol, intensity],
+  // The arithmetic lives in src/lib/protocolDoseMath (estimateSupplies) so a
+  // test can pin the vial count a user is told to buy; labels render verbatim.
+  // Vials are derived from a mcg-per-vial amount, so the vial / BAC-water chain
+  // only means anything for a MASS dose — an IU or ml protocol counts syringes
+  // and swabs and says nothing about vials. `doseIsMassBased` decides whether
+  // telling the user to "enter vial size" could ever produce an answer.
+  const { periods, hasVialMath, doseIsMassBased } = useMemo(
+    () => estimateSupplies(protocol, { vialMcg, bacWaterMl, intensity }),
+    [protocol, vialMcg, bacWaterMl, intensity],
   );
 
   return (
@@ -172,9 +94,7 @@ export function SuppliesEstimatorCard({ protocol, vialMcg, bacWaterMl, intensity
         {/* Vials row */}
         <SupplyRow
           label="Vials"
-          values={periods.map((p) =>
-            p.vialsRange ? fmtRange(p.vialsRange, p.vialsRange[1] === 1 ? 'vial' : 'vials') : '—',
-          )}
+          values={periods.map((p) => p.vialsLabel)}
           t={t}
           highlight
         />
@@ -182,23 +102,21 @@ export function SuppliesEstimatorCard({ protocol, vialMcg, bacWaterMl, intensity
         {/* Syringes row */}
         <SupplyRow
           label="Syringes (U-100)"
-          values={periods.map((p) => `${p.syringes}`)}
+          values={periods.map((p) => p.syringesLabel)}
           t={t}
         />
 
         {/* BAC water row */}
         <SupplyRow
           label="BAC water"
-          values={periods.map((p) =>
-            p.bacWaterMl != null ? `${p.bacWaterMl} mL` : '—',
-          )}
+          values={periods.map((p) => p.bacWaterLabel)}
           t={t}
         />
 
         {/* Alcohol swabs row */}
         <SupplyRow
           label="Alcohol swabs"
-          values={periods.map((p) => `${p.swabs}`)}
+          values={periods.map((p) => p.swabsLabel)}
           t={t}
           last
         />

@@ -23,7 +23,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../../src/hooks/useTheme';
 import { Spacing, FontSizes, BorderRadius } from '../../../../src/constants/theme';
-import { useTier } from '../../../../src/hooks/useFeatureGate';
+import { useFeatureGate } from '../../../../src/hooks/useFeatureGate';
 
 interface EventRow {
   id: string;
@@ -40,8 +40,9 @@ interface EventRow {
 export default function LiveEventListScreen() {
   const router = useRouter();
   const t = useTheme();
-  const tier = useTier();
-  const isPaying = tier === 'plus' || tier === 'pro';
+  // Feature key, not the raw tier string — see [eventId].tsx. The stored
+  // tier survives expiry; computeFeatureAccess (behind hasFeature) does not.
+  const isPaying = useFeatureGate('community_live_chat');
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

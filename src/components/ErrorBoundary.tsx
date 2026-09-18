@@ -159,6 +159,15 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
     maxWidth: 340,
+    // This is the crash screen: if its own recovery button goes off-screen,
+    // the only way out of the app is to kill it. `container` is flex: 1 with
+    // justifyContent: 'center', so an over-tall `content` overflows evenly top
+    // and bottom and takes the button row with it — and React Native defaults
+    // flexShrink to 0, so nothing gives. On a 568pt device the 32pt padding
+    // leaves ~504pt against an icon (80) + title + subtitle + a 320pt error box
+    // + the button row, which does not fit. flexShrink here, and on errorBox
+    // below, lets the stack dump surrender height to Try Again instead.
+    flexShrink: 1,
   },
   iconContainer: {
     width: 80,
@@ -185,6 +194,10 @@ const styles = StyleSheet.create({
   },
   errorBox: {
     maxHeight: 320,
+    // A ceiling is not the same as permission to shrink — see the note on
+    // `content`. The stack dump is the one thing here nobody needs to read in
+    // full, so it is the one that gives way.
+    flexShrink: 1,
     width: '100%',
     backgroundColor: 'rgba(0,0,0,0.04)',
     borderRadius: 10,

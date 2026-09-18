@@ -2,7 +2,7 @@
  * New custom workout — 3-step quick logger.
  *
  *   Step 1: name the workout
- *   Step 2: tap exercises from the 436-exercise library
+ *   Step 2: tap exercises from the exercise library
  *           (search bar + muscle-group category chips)
  *   Step 3: for each picked exercise, set sets × reps. Two numbers, that's it.
  *

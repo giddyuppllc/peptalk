@@ -41,6 +41,11 @@ import { useOnboardingStore } from '../src/store/useOnboardingStore';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
 import { syncHealthProfileFromServer } from '../src/store/useHealthProfileStore';
+import {
+  restoreOnboardingFromServer,
+  clearOnboardingRestore,
+} from '../src/services/onboardingRestore';
+import { isRecoveryLink, postAuthLinkRoute } from '../src/lib/passwordRecovery';
 import { configureNotificationHandler } from '../src/services/notificationService';
 import { useNotificationStore } from '../src/store/useNotificationStore';
 import { initIAP, endIAP } from '../src/services/iapService';
@@ -60,6 +65,7 @@ import { useCycleStore } from '../src/store/useCycleStore';
 import { useIntegrationsStore } from '../src/store/useIntegrationsStore';
 import { useLabResultsStore } from '../src/store/useLabResultsStore';
 import { useSideEffectStore } from '../src/store/useSideEffectStore';
+import { useLeaderboardStore } from '../src/store/useLeaderboardStore';
 import { subscribeToReconnect } from '../src/hooks/useNetworkStatus';
 import { initTelemetry, installGlobalErrorHandler, installLifecycleBreadcrumbs, markLifecycle, captureException } from '../src/services/telemetry';
 import { useTheme } from '../src/hooks/useTheme';
@@ -251,6 +257,10 @@ function RootLayout() {
                 .getState()
                 .validatePurchase(platform, productId, transactionReceipt);
               if (!granted) {
+                // Same as the other registration below: say so. A refused
+                // validation left the paying user looking at an unchanged
+                // paywall with the only trace in Sentry.
+                useSubscriptionStore.getState().setFailedPurchase({ productId });
                 throw new Error(
                   `validate-purchase did not grant entitlement for ${productId}`,
                 );
@@ -527,6 +537,13 @@ function RootLayout() {
             .getState()
             .validatePurchase(platform, productId, transactionReceipt);
           if (!granted) {
+            // Tell the user. They have paid Apple or Google, the sheet closed
+            // cleanly, and the paywall is still in front of them — and until
+            // this line the only record of that was a Sentry event they will
+            // never see. Throwing is still correct (it keeps the purchase
+            // unfinished so the store replays it), but throwing on its own
+            // left the person who paid staring at an unchanged screen.
+            useSubscriptionStore.getState().setFailedPurchase({ productId });
             throw new Error(
               `validate-purchase did not grant entitlement for ${productId}`,
             );
@@ -550,9 +567,11 @@ function RootLayout() {
         captureException(err, { source: 'boot.subscription.syncFromServer' });
       });
 
-    // Pull health profile from server (overwrites local on login)
+    // Pull health profile from server (overwrites local on login).
+    // The account is named, and read at call time rather than closed over, so
+    // the fetch can refuse to apply a row the session has moved on from.
     try {
-      syncHealthProfileFromServer()?.catch?.((err: unknown) => {
+      syncHealthProfileFromServer(useAuthStore.getState().user?.id ?? null)?.catch?.((err: unknown) => {
         if (__DEV__) console.warn('[boot] syncHealthProfileFromServer failed:', err);
       });
     } catch (err) {
@@ -650,6 +669,9 @@ function RootLayout() {
       // Chat history: safe to restore now that deleteChat propagates to the
       // server and tombstones suppress anything deleted locally.
       ['chat history', () => useChatStore.getState().syncFromServer()],
+      // A leaderboard opt-in chosen in onboarding before a session existed
+      // (email-confirmation signup) is written here, once there is one.
+      ['leaderboard opt-in', () => useLeaderboardStore.getState().flushPendingOptIn()],
     ];
     // 2026-05-18 cold-boot audit: gate boot syncs on a fresh session.
     // Previously they fired unconditionally — if the user had a stale
@@ -919,8 +941,12 @@ function RootLayout() {
           cancelRemindersByTag,
           cancelDailyCheckInReminder,
         } = await import('../src/services/notificationService');
-        const token = await registerForPushNotifications();
-        if (!token) return; // user denied, or notifications unavailable
+        // 'ifGranted': never raise the OS prompt at sign-in. Signing in says
+        // nothing about notifications, and this ran before the user had seen
+        // any screen that mentions them. The prompt is shown from
+        // Settings → Notifications (app/settings/notifications.tsx).
+        const token = await registerForPushNotifications('ifGranted');
+        if (!token) return; // not allowed (yet), or notifications unavailable
         let waited = 0;
         while (!useNotificationStore.getState().hasHydrated && waited < 5000) {
           await new Promise((resolve) => setTimeout(resolve, 50));
@@ -996,6 +1022,12 @@ function RootLayout() {
         //      platform (the prior code only parsed ?code=/?token_hash=).
         // Parse without depending on URL polyfill (RN ships an incomplete
         // one); a regex pull is sufficient.
+        // The link's `type` decides where this lands. It arrives in the QUERY
+        // for the OTP flow and in the FRAGMENT for the implicit flow — which is
+        // the client's current default — so it is read with a matcher that
+        // covers both. Reading it only from the query, as this did, made a
+        // recovery link indistinguishable from a signup confirmation.
+        const recovery = isRecoveryLink(url);
         const codeMatch = url.match(/[?&]code=([^&#]+)/);
         const tokenHashMatch = url.match(/[?&]token_hash=([^&#]+)/);
         const typeMatch = url.match(/[?&]type=([^&#]+)/);
@@ -1026,13 +1058,30 @@ function RootLayout() {
 
         // Pull the just-granted session into local state + route.
         await useAuthStore.getState().restoreSession();
-        // A user who authenticated via a confirmation/recovery link has an
-        // account — never force them back through onboarding. (A signup
-        // started from the /auth screen mid-onboarding leaves isComplete
-        // false; without this they'd be bounced to /onboarding by the nav
-        // guard and hit "User already registered" at the account step.)
-        useOnboardingStore.getState().completeOnboarding();
-        if (!cancelled) router.replace('/(tabs)');
+        // This used to call completeOnboarding() here, for everyone who
+        // arrived by a confirmation or password-recovery link — granting
+        // completion for signing in, the exact rule the 2.1(a) fixes forbid,
+        // and leaving a recovered account on a new phone with no answers,
+        // permanently. Its reason ("User already registered" at the account
+        // step) is gone: onboarding now sees the session and skips that step.
+        //
+        // Respect completion instead: restore what the server holds, then go
+        // home only if onboarding really is complete.
+        await restoreOnboardingFromServer();
+        const ob = useOnboardingStore.getState();
+        // A recovery link goes to the set-password step. app/auth.tsx has been
+        // telling people the link lets them "pick a new password" since the
+        // Forgot password flow shipped; before this it routed them home and
+        // auth.updateUser({ password }) existed nowhere in the repo.
+        if (!cancelled) {
+          router.replace(
+            postAuthLinkRoute({
+              recovery,
+              onboardingComplete: ob.isComplete,
+              hasGender: !!ob.profile.gender,
+            }) as never,
+          );
+        }
       } catch (err: any) {
         if (__DEV__) console.warn('[auth-link] handling failed:', err);
         captureException(err, { source: 'auth.deepLink', url });
@@ -1070,6 +1119,18 @@ function RootLayout() {
     (async () => {
       const { supabase } = await import('../src/services/supabase');
       const { data } = supabase.auth.onAuthStateChange((event) => {
+        // Web: detectSessionInUrl handles the recovery link itself, so the
+        // deep-link handler above never sees it. PASSWORD_RECOVERY is the only
+        // signal the PWA gets, and nothing listened for it — which is why the
+        // reset link dead-ended on app.peptalk.bio too.
+        if (event === 'PASSWORD_RECOVERY') {
+          // The module singleton, not this component's `router`: adding it to
+          // the dep array below would tear down and re-register the auth
+          // subscription (and the AppState listener with it) on every router
+          // identity change. Same import style as lines 219 / 463 / 467.
+          import('expo-router').then(({ router: r }) => r.replace('/set-password' as never));
+          return;
+        }
         if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
           useAuthStore.getState().restoreSession()?.catch?.(() => {});
         }
@@ -1114,11 +1175,13 @@ function RootLayout() {
       // fresh signup or device-switch picks up server state. Previously
       // only ran at boot, leaving signup users with empty health profiles
       // until the next cold launch.
-      syncHealthProfileFromServer()?.catch?.((err: unknown) => {
+      syncHealthProfileFromServer(useAuthStore.getState().user?.id ?? null)?.catch?.((err: unknown) => {
         if (__DEV__) console.warn('[auth] syncHealthProfileFromServer failed:', err);
       });
       fetchWorkoutOverrides()?.catch?.(() => {});
       useChatStore.getState().flushPendingSyncs()?.catch?.(() => {});
+      // Onboarding leaderboard opt-in made before this session existed.
+      useLeaderboardStore.getState().flushPendingOptIn()?.catch?.(() => {});
 
       // Register the device's Expo push token so server-side fanout
       // can deliver pushes for community replies / mentions / reactions.
@@ -1129,10 +1192,29 @@ function RootLayout() {
     wasAuthenticatedRef.current = isAuthenticated;
   }, [isAuthenticated, authHydrated]);
 
+  // Restore onboarding answers from the server for a signed-in user — on app
+  // start with a session, and on every sign-in. The decision and its rules are
+  // src/lib/onboardingRestore.ts: completion is restored only from the
+  // server's record that onboarding was finished, never for having a session.
+  // Shared with handleLogin and the auth deep link, so it runs once per user.
+  useEffect(() => {
+    if (!authHydrated || !hasHydrated) return;
+    if (!isAuthenticated || !currentUserId) {
+      clearOnboardingRestore();
+      return;
+    }
+    void restoreOnboardingFromServer();
+  }, [authHydrated, hasHydrated, isAuthenticated, currentUserId]);
+
   useEffect(() => {
     if (!navReady || !hasHydrated) return;
     const inOnboarding = segments[0] === 'onboarding';
     const inAuth = segments[0] === 'auth';
+    // The password-reset landing step. Both routes into it — the native deep
+    // link above (postAuthLinkRoute) and the web PASSWORD_RECOVERY event — send
+    // the user here before onboarding can be complete on a fresh install, and
+    // the guard used to evict them to /onboarding. See routeGuard.ts.
+    const inPasswordRecovery = segments[0] === 'set-password';
 
     // Decision lives in src/lib/routeGuard.ts so it is unit-testable. This
     // used to read `if (isComplete) return;` — completing onboarding once
@@ -1146,6 +1228,7 @@ function RootLayout() {
       isAuthenticated,
       inOnboarding,
       inAuth,
+      inPasswordRecovery,
     });
     if (target) router.replace(target);
   }, [

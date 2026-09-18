@@ -68,7 +68,19 @@ export function CelebrationModal() {
   if (!badge) return null;
 
   return (
-    <Modal visible transparent animationType="fade">
+    // onRequestClose was absent. React Native treats it as required on Android,
+    // and this overlay is 97% opaque over the whole app with exactly one way
+    // out — the Awesome! button below. Leaving hardware back unhandled on that
+    // is an unspecified behaviour guarding the only escape, so it is wired to
+    // the same dismiss the button uses. Unlike the permission and consent
+    // gates, nothing here has to be acknowledged: this is a congratulation, so
+    // a second way past it is correct rather than a 5.1.1(iv) defect.
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      onRequestClose={() => dismissCelebration(badge.id)}
+    >
       {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
       <View style={styles.overlay} accessibilityViewIsModal={true}>
         <Confetti
@@ -112,6 +124,11 @@ export function CelebrationModal() {
           <AnimatedPress
             onPress={() => dismissCelebration(badge.id)}
             style={styles.dismissBtn}
+            // The only control on a full-screen overlay had no role and no
+            // label, so a screen reader announced the gradient wrapper rather
+            // than a button. Label is the visible text.
+            accessibilityRole="button"
+            accessibilityLabel="Awesome"
           >
             <LinearGradient
               colors={[Colors.pepBlue, Colors.pepTeal]}

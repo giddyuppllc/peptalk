@@ -12,10 +12,11 @@
  * request failed says "carry on" at exactly the moment it does not know — the
  * opposite of the truth. Absence is honest; a wrong number is not.
  *
- * Free IS shown — it has three prompts a month, and the whole point of a
- * taster is that the person can see it running out and decide before it does.
- * Free is metered in messages rather than cents, because a percentage of a few
- * cents tells that user nothing.
+ * Free has no AI allowance (Edward, 2026-09-18) — the taste is the 7-day Pro
+ * trial, not a permanent trickle. A meter reading "0 of 0" tells that user
+ * nothing they can act on, so free renders no meter and meets the lock and the
+ * upgrade path instead. Trial users are on the Pro tier for its duration and
+ * see the Pro meter, which is the point: they see what they would be buying.
  */
 
 import React, { useEffect, useState } from 'react';

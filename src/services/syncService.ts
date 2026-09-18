@@ -50,7 +50,10 @@ type TableName =
   | 'chat_messages'
   | 'journal_entries'
   | 'saved_stacks'
-  | 'health_profiles'
+  // health_profiles is deliberately NOT here. Its primary key is user_id and it
+  // has no id column, so syncRecord/batchSync (onConflict 'id') and
+  // deleteRecord (.eq('id')) would all fail against it. It syncs through
+  // syncHealthProfile below, keyed on user_id. verify:onconflict flagged it.
   | 'injection_sites'
   | 'pantry_items'
   | 'cycle_period_entries'
@@ -246,12 +249,29 @@ export async function fetchUserRecords<T = Record<string, unknown>>(
  * Sync the user's health profile. The DB stores the full profile JSON in a
  * single `profile` column so we never have to migrate shape changes.
  */
+/**
+ * Returns true only when PostgREST accepted the row. Existing callers ignore
+ * the result; the onboarding snapshot write reads it so a failed save is
+ * reported rather than assumed.
+ *
+ * `userId` names the account the profile BELONGS to, and is an assertion, not
+ * a destination: the row is always written for the live session. A caller that
+ * knows whose data it is holding passes it, and a session that has moved on in
+ * between makes this refuse instead of upserting one person's health profile
+ * under another's user_id. That is not hypothetical — the store's 800ms
+ * debounce fires long after the change that scheduled it, and a sign-out and
+ * sign-in fit comfortably inside that window.
+ */
 export async function syncHealthProfile(
   profile: unknown,
-  extras?: { setup_complete?: boolean; current_step?: number }
-): Promise<void> {
+  extras?: { setup_complete?: boolean; current_step?: number; userId?: string | null }
+): Promise<boolean> {
   const userId = await getUserId();
-  if (!userId) return;
+  if (!userId) return false;
+  if (extras?.userId != null && extras.userId !== userId) {
+    console.warn('[sync] health_profiles upsert refused: profile belongs to another account');
+    return false;
+  }
 
   try {
     const { error } = await db
@@ -267,9 +287,14 @@ export async function syncHealthProfile(
         { onConflict: 'user_id' },
       );
 
-    if (error) console.warn('[sync] health_profiles upsert failed:', error.message);
+    if (error) {
+      console.warn('[sync] health_profiles upsert failed:', error.message);
+      return false;
+    }
+    return true;
   } catch (e) {
     if (__DEV__) console.warn('[sync] health_profiles sync error:', e);
+    return false;
   }
 }
 

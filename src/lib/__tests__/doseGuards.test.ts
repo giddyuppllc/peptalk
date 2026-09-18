@@ -103,22 +103,44 @@ describe('the range shown to the user', () => {
     checkDoseSafety(name, 99999, 'mg').message?.match(/\(([^)]+)\)/)?.[1] ?? '';
 
   it('renders under 1000 mcg as mcg, with no decimals', () => {
-    expect(rangeOf('BPC-157')).toBe('333 mcg–333 mcg');
+    expect(rangeOf('BPC-157')).toBe('200 mcg–500 mcg');
   });
 
   it('renders at or above 1000 mcg as mg', () => {
-    expect(rangeOf('MK-677')).toBe('10 mg–25 mg');
+    // Was MK-677 until 2026-09-16, when it became a safety-information-only
+    // compound and stopped printing a range at all (see the test below).
+    // Methylene Blue exercises the same whole-mg branch.
+    expect(rangeOf('Methylene Blue')).toBe('5 mg–25 mg');
+  });
+
+  /**
+   * Safety-information-only compounds (Edward, 2026-09-16): the guard still
+   * FIRES, it just stops naming the recommended window. Both halves matter —
+   * a test that only checked the range was gone would pass just as happily if
+   * the guard had been switched off. See src/data/safetyOnlyCompounds.ts.
+   */
+  it('withholds the range for a safety-information-only compound, but still warns', () => {
+    const result = checkDoseSafety('MK-677', 99999, 'mg');
+    expect(result.safe).toBe(false);
+    expect(result.code).toBe('unusually_high');
+    expect(rangeOf('MK-677')).toBe('');
+    expect(result.message).not.toContain('10 mg');
+    expect(result.message).not.toContain('25 mg');
   });
 
   it('switches units mid-range at the 1000 mcg boundary', () => {
-    // The single most informative fixture: one string exercising both branches,
-    // the two-decimal mg format and the zero-decimal mcg format.
-    expect(rangeOf('TB-500')).toBe('500 mcg–1.5 mg');
+    // One string exercising both branches: the zero-decimal mcg format and the
+    // mg format. (Jamie's TB-500 ruling: 330 mcg – 1 mg.)
+    expect(rangeOf('TB-500')).toBe('330 mcg–1 mg');
+  });
+
+  it('keeps decimals in the mg format', () => {
+    expect(rangeOf('thymosin-alpha-1')).toBe('1 mg–1.6 mg');
   });
 
   it('never shows a raw micrograms figure where mg was meant', () => {
-    // A dropped conversion would surface as e.g. "1500 mcg" instead of "1.5 mg".
-    expect(rangeOf('TB-500')).not.toContain('1500');
+    // A dropped conversion would surface as e.g. "1000 mcg" instead of "1 mg".
+    expect(rangeOf('TB-500')).not.toContain('1000');
     expect(rangeOf('MK-677')).not.toContain('10000');
   });
 });

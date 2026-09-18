@@ -3,7 +3,7 @@
  * Includes legal disclaimer toggle for new signups.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { describeAuthError } from '../src/lib/errorMessages';
 import { captureException } from '../src/services/telemetry';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Switch, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
@@ -14,13 +14,25 @@ import { useRouter } from 'expo-router';
 import { PasswordToggle } from '../src/components/PasswordToggle';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useOnboardingStore } from '../src/store/useOnboardingStore';
+import { restoreOnboardingFromServer } from '../src/services/onboardingRestore';
 import { isValidEmail, validatePassword } from '../src/utils/validation';
 import { authRedirectUrl } from '../src/lib/authRedirect';
+import { sessionLostNotice, shouldShowSessionLost } from '../src/lib/sessionLostNotice';
+import { sessionPersistenceHealthy, subscribeSessionPersistence } from '../src/services/supabase';
 
 const ACCENT = '#E89672';
 
 export default function AuthScreen() {
   const router = useRouter();
+  // The 2.1(a) death loop, made visible. See src/lib/sessionLostNotice.ts for
+  // the sequence and for why the redirect itself is left alone.
+  const sessionLostAt = useAuthStore((st) => st.sessionLostAt);
+  const [persistHealthy, setPersistHealthy] = useState(sessionPersistenceHealthy);
+  useEffect(() => subscribeSessionPersistence(setPersistHealthy), []);
+  const lostNotice = shouldShowSessionLost(sessionLostAt)
+    ? sessionLostNotice(persistHealthy)
+    : null;
+
   const [mode, setMode] = useState<'login' | 'signup'>('login');
 
   const [email, setEmail] = useState('');
@@ -33,7 +45,11 @@ export default function AuthScreen() {
 
   const login = useAuthStore((s) => s.login);
   const signup = useAuthStore((s) => s.signup);
-  const isLoading = useAuthStore((s) => s.isLoading);
+  const authLoading = useAuthStore((s) => s.isLoading);
+  // Signed in, answers still being restored: keep the button busy so a second
+  // tap cannot start another sign-in on top of the first.
+  const [restoring, setRestoring] = useState(false);
+  const isLoading = authLoading || restoring;
 
   const handleLogin = async () => {
     const normalizedEmail = email.trim().toLowerCase();
@@ -51,16 +67,23 @@ export default function AuthScreen() {
       // Signing in is not the same as having been onboarded, and this used to
       // conflate them: login unconditionally marked onboarding complete.
       //
-      // Onboarding answers are stored ONLY on the device — the store has no
-      // syncFromServer, it is absent from the boot sync list, and nothing
-      // writes gender or goals to the profiles table. So a reinstall or a new
-      // phone arrives with an empty profile, and completing onboarding here
-      // meant the user was never asked again: no sex, no goals, no body
-      // metrics, permanently.
+      // Onboarding answers used to be stored ONLY on the device, so a
+      // reinstall or a new phone arrived with an empty profile, and completing
+      // onboarding here meant the user was never asked again: no sex, no
+      // goals, no body metrics, permanently.
       //
-      // Respect completion, never grant it. Anyone whose answers are missing
-      // goes through the questions; onboarding sees the existing session and
-      // skips its account step.
+      // Respect completion, never grant it. The restore below brings back the
+      // answers the server holds, and marks onboarding complete only on the
+      // server's record that it was finished — never for signing in. It is
+      // bounded and never throws; a failed fetch changes nothing. Anyone whose
+      // answers are still missing goes through the questions; onboarding sees
+      // the existing session and skips its account step.
+      setRestoring(true);
+      try {
+        await restoreOnboardingFromServer();
+      } finally {
+        setRestoring(false);
+      }
       const ob = useOnboardingStore.getState();
       if (ob.isComplete && ob.profile.gender) {
         router.replace('/(tabs)');
@@ -253,6 +276,16 @@ export default function AuthScreen() {
                 <PasswordToggle visible={showPw} onToggle={() => setShowPw(!showPw)} />
               </View>
 
+              {lostNotice && (
+                <View style={s.sessionLost} accessibilityRole="alert" accessibilityLiveRegion="polite">
+                  <Ionicons name="information-circle-outline" size={18} color="#B45309" />
+                  <View style={s.sessionLostText}>
+                    <Text style={s.sessionLostTitle}>{lostNotice.title}</Text>
+                    <Text style={s.sessionLostBody}>{lostNotice.body}</Text>
+                  </View>
+                </View>
+              )}
+
               {!!error && <Text style={s.error} accessibilityRole="alert" accessibilityLiveRegion="polite">{error}</Text>}
 
               <TouchableOpacity
@@ -382,6 +415,16 @@ export default function AuthScreen() {
                   />
                 </View>
               </View>
+
+              {lostNotice && (
+                <View style={s.sessionLost} accessibilityRole="alert" accessibilityLiveRegion="polite">
+                  <Ionicons name="information-circle-outline" size={18} color="#B45309" />
+                  <View style={s.sessionLostText}>
+                    <Text style={s.sessionLostTitle}>{lostNotice.title}</Text>
+                    <Text style={s.sessionLostBody}>{lostNotice.body}</Text>
+                  </View>
+                </View>
+              )}
 
               {!!error && <Text style={s.error} accessibilityRole="alert" accessibilityLiveRegion="polite">{error}</Text>}
 
@@ -551,6 +594,33 @@ const s = StyleSheet.create({
     fontFamily: 'DMSans-Medium',
     textAlign: 'center',
     marginTop: 12,
+  },
+
+  sessionLost: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: 'rgba(245, 158, 11, 0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+  },
+  sessionLostText: {
+    flex: 1,
+  },
+  sessionLostTitle: {
+    color: '#92400E',
+    fontSize: 13,
+    fontFamily: 'DMSans-Bold',
+    marginBottom: 3,
+  },
+  sessionLostBody: {
+    color: '#92400E',
+    fontSize: 12,
+    lineHeight: 17,
   },
 
   // Primary button

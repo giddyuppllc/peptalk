@@ -12,7 +12,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView } from 'expo-camera';
+import { useCameraPermissionGate } from '../../src/hooks/useCameraPermissionGate';
 import { GlassCard } from '../../src/components/GlassCard';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
@@ -96,7 +97,9 @@ export default function FoodScannerScreen() {
   const canUseFoodScanner = useSubscriptionStore((s) => s.hasFeature('ai_food_scanner'));
   const addMeal = useMealStore((s) => s.addMeal);
   const cameraRef = useRef<CameraView>(null);
-  const [permission, requestPermission] = useCameraPermissions();
+  // Asks with the system prompt directly (5.1.1(iv)); held off while the Plus
+  // upsell below is showing, so nobody is asked for a camera they cannot use.
+  const { state: cameraState, canAskAgain, requestPermission } = useCameraPermissionGate(canUseFoodScanner);
   const [photo, setPhoto] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -147,8 +150,18 @@ export default function FoodScannerScreen() {
     );
   }
 
-  // Camera permissions
-  if (!permission?.granted) {
+  // Camera permissions. Before the system has answered there is NO custom
+  // screen and no back control in front of the system prompt — the same rule
+  // Apple enforced four times on the HealthKit explainer (5.1.1(iv)). The
+  // custom screen below is only for after the system has said no.
+  if (cameraState === 'loading' || cameraState === 'request') {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
+        <StatusBar style={t.statusBar} />
+      </SafeAreaView>
+    );
+  }
+  if (cameraState === 'denied') {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
         <StatusBar style={t.statusBar} />
@@ -167,18 +180,18 @@ export default function FoodScannerScreen() {
           {/* 2026-05-17 a11y fix: route to Settings when OS won't prompt again. */}
           <AnimatedPress
             onPress={() => {
-              if (permission?.canAskAgain ?? true) {
+              if (canAskAgain) {
                 requestPermission();
               } else {
                 Linking.openSettings().catch(() => {});
               }
             }}
             accessibilityRole="button"
-            accessibilityLabel={(permission?.canAskAgain ?? true) ? 'Enable camera' : 'Open settings to enable camera'}
+            accessibilityLabel={canAskAgain ? 'Enable camera' : 'Open settings to enable camera'}
           >
             <LinearGradient colors={[accent.deep, accent.deep]} style={styles.upgradeBtn}>
               <Text style={styles.upgradeBtnText}>
-                {(permission?.canAskAgain ?? true) ? 'Enable Camera' : 'Open Settings'}
+                {canAskAgain ? 'Enable Camera' : 'Open Settings'}
               </Text>
             </LinearGradient>
           </AnimatedPress>

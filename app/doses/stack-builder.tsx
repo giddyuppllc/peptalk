@@ -25,7 +25,10 @@ import {
   makeInteractionKey,
   getInteraction,
 } from '../../src/data/interactions';
-import { getDosingReference } from '../../src/data/peptideDosingReference';
+// Display boundary: a safety-information-only compound (Edward, 2026-09-16)
+// has no reference, so "Add to tracker" never writes a SUGGESTED dose for it.
+// The user can still log what they actually took from the tracker.
+import { getDosingReferenceForDisplay } from '../../src/data/dosingDisplay';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useStackStore } from '../../src/store/useStackStore';
 import { analyzeStack } from '../../src/services/analysisEngine';
@@ -252,7 +255,7 @@ export default function StackBuilderScreen() {
     tapMedium();
     let added = 0;
     for (const id of currentStack) {
-      const ref = getDosingReference(id);
+      const ref = getDosingReferenceForDisplay(id);
       const mg = ref ? ref.schedule[0].doseMcg / 1000 : 0;
       if (mg <= 0) continue;
       logDose({

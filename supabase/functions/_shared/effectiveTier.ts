@@ -73,6 +73,51 @@ const TIER_RANK: Record<string, number> = { free: 0, plus: 1, pro: 2 };
 // once it falls this far past expiry (is_active=false revokes it immediately).
 const GRACE_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
 
+export interface SubscriptionRow {
+  tier: string | null;
+  expires_at: string | null;
+  /**
+   * FALSE for a one-off grant — a trial, a beta or goodwill row — that ends on
+   * `expires_at` with nothing to renew it. Optional here so a caller that does
+   * not select the column, or a row written before it existed, behaves exactly
+   * as it did before: as a renewing subscription, with its grace intact.
+   */
+  renews?: boolean | null;
+}
+
+/**
+ * Is this row entitling the user right now?
+ *
+ * Exported and pure so the decision can be tested directly. Everything else in
+ * this file needs a Supabase client to exercise, and the part that actually
+ * decides whether somebody keeps paid access had no test of its own.
+ */
+export function isRowLive(row: SubscriptionRow, now: number): boolean {
+  // NULL expiry is NOT live (only failure paths produce it — see header).
+  //
+  // Both of the next two guards are defence in depth rather than load-bearing:
+  // `new Date(null).getTime()` is 0 and `new Date('nonsense').getTime()` is
+  // NaN, and the comparison at the end rejects both — 0 because the epoch is in
+  // the past, NaN because every comparison with it is false. A mutation run
+  // confirmed that removing either changes no behaviour today.
+  //
+  // They stay because both of those are accidents of JavaScript rather than
+  // anything this function decided. Flip the final `>` to `>=`, or invert the
+  // condition during a refactor, and the NaN accident stops holding; a clock
+  // anywhere near the epoch and the 0 accident stops holding too. Stating the
+  // contract costs two lines and does not depend on either.
+  if (!row.expires_at) return false;
+
+  const exp = new Date(row.expires_at).getTime();
+  if (!Number.isFinite(exp)) return false;
+
+  // Grace exists to absorb renewal-webhook lag. A grant that does not renew has
+  // no lag to absorb, and grace would silently extend it — a 7-day trial would
+  // run for ten, which is not a rounding error on something seven days long.
+  const grace = row.renews === false ? 0 : GRACE_MS;
+  return exp > now - grace;
+}
+
 /**
  * Returns the tier the SERVER should honor for this user — the highest tier
  * backed by a LIVE subscriptions row (is_active && within the expiry+grace
@@ -91,7 +136,7 @@ export async function resolveEffectiveTier(
 
   const { data, error } = await admin
     .from('subscriptions')
-    .select('tier, expires_at')
+    .select('tier, expires_at, renews')
     .eq('user_id', userId)
     .eq('is_active', true);
 
@@ -104,12 +149,10 @@ export async function resolveEffectiveTier(
 
   if (!data || data.length === 0) return 'free';
 
-  const liveAfter = Date.now() - GRACE_MS;
+  const now = Date.now();
   let best = 'free';
-  for (const row of data as { tier: string | null; expires_at: string | null }[]) {
-    // NULL expiry is NOT live (only failure paths produce it — see header).
-    if (!row.expires_at) continue;
-    if (new Date(row.expires_at).getTime() <= liveAfter) continue;
+  for (const row of data as SubscriptionRow[]) {
+    if (!isRowLive(row, now)) continue;
     const t = (row.tier ?? 'free').toLowerCase();
     if ((TIER_RANK[t] ?? 0) > (TIER_RANK[best] ?? 0)) best = t;
   }

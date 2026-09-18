@@ -31,6 +31,41 @@ export function sessionPersistenceHealthy(): boolean {
   return sessionPersistOk;
 }
 
+/**
+ * Notified when the flag above changes.
+ *
+ * A plain boolean read is no use to a screen: the flip happens inside a
+ * storage write, long after the component rendered, and nothing re-reads it.
+ * The comment above this pair has claimed since it was written that "the app
+ * uses it to warn the user" — it did not. The only consumer was a Sentry
+ * `extra` field, so the one person who needed to know was the only one who
+ * never found out.
+ */
+type PersistenceListener = (healthy: boolean) => void;
+const persistenceListeners = new Set<PersistenceListener>();
+
+export function subscribeSessionPersistence(fn: PersistenceListener): () => void {
+  persistenceListeners.add(fn);
+  return () => persistenceListeners.delete(fn);
+}
+
+/**
+ * Set the flag and tell anyone listening. Every write to `sessionPersistOk`
+ * goes through here — assigning it directly is how a listener silently stops
+ * firing, and verify:sessionpersistence fails the build on a bare assignment.
+ */
+function setSessionPersistOk(next: boolean): void {
+  if (sessionPersistOk === next) return;
+  sessionPersistOk = next;
+  for (const fn of persistenceListeners) {
+    try {
+      fn(next);
+    } catch {
+      // A listener that throws must not break a storage write.
+    }
+  }
+}
+
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
@@ -158,13 +193,13 @@ const secureStoreAdapter = {
           }
         }
         await SecureStore.deleteItemAsync(key).catch(() => {});
-        sessionPersistOk = true;
+        setSessionPersistOk(true);
       } catch (err) {
         // Still swallowed — throwing here would break supabase-js, which does
         // not expect its storage adapter to reject. But it is no longer silent:
         // the flag lets the app tell the user their session will not survive,
         // instead of appearing to work and then logging them out.
-        sessionPersistOk = false;
+        setSessionPersistOk(false);
         captureException(err, { source: 'securestore.write', extra: { key, bytes: value.length } });
       }
     }),
@@ -242,7 +277,7 @@ const webStorageAdapter = {
     try {
       if (canUseLocalStorage()) {
         window.localStorage.setItem(key, value);
-        sessionPersistOk = true;
+        setSessionPersistOk(true);
         return;
       }
     } catch {
@@ -254,7 +289,7 @@ const webStorageAdapter = {
     // because private-mode and blocked-storage browsers would otherwise emit
     // this on every token refresh.
     if (sessionPersistOk) {
-      sessionPersistOk = false;
+      setSessionPersistOk(false);
       captureException(
         new Error('Web session storage unavailable — session held in memory, will not survive a reload'),
         { source: 'webstorage.write', extra: { key } },
@@ -376,6 +411,8 @@ function makeNoopClient() {
         data: { subscription: { unsubscribe: () => {} } },
       }),
       resetPasswordForEmail: () => Promise.resolve({ data: null, error: notConfigured }),
+      updateUser: () =>
+        Promise.resolve({ data: { user: null }, error: notConfigured }),
       refreshSession: () =>
         Promise.resolve({ data: { user: null, session: null }, error: null }),
       setSession: () =>
