@@ -4,6 +4,8 @@
  */
 
 import { create } from 'zustand';
+import { makeSafeMerge } from '../lib/persistSafety';
+import { reportPersistProblem } from '../lib/persistReporting';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
 
@@ -147,6 +149,10 @@ export const useProgressGoalsStore = create<ProgressGoalsState & ProgressGoalsAc
     }),
     {
       name: 'peptalk-progress-goals',
+      // Storage is untrusted input: on web it is localStorage, which the
+      // user can edit, and a killed app leaves partial writes. See
+      // src/lib/persistSafety.ts.
+      merge: makeSafeMerge('peptalk-progress-goals', reportPersistProblem),
       version: 3,
       storage: createJSONStorage(() => secureStorage),
       migrate: (_persisted: any, version: number) => {

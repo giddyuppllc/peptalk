@@ -40,6 +40,8 @@
  */
 
 import { create } from 'zustand';
+import { makeSafeMerge, passthroughMigrate } from '../lib/persistSafety';
+import { reportPersistProblem } from '../lib/persistReporting';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
 import type { LeaderboardMetric } from '../lib/leaderboardMetrics';
@@ -269,6 +271,17 @@ export const useLeaderboardStore = create<LeaderboardState & LeaderboardActions>
     }),
     {
       name: 'peptalk-leaderboard-v1',
+      // Explicit, and deliberately still 0: bumping it would send every
+      // existing install through migrate for no gain. The point of
+      // declaring it is that `migrate` below now exists, so a future bump
+      // cannot leave this store unhydrated forever (zustand 5 destructures
+      // the migration result, and a missing migrate makes that undefined).
+      version: 0,
+      migrate: passthroughMigrate,
+      // Storage is untrusted input: on web it is localStorage, which the
+      // user can edit, and a killed app leaves partial writes. See
+      // src/lib/persistSafety.ts.
+      merge: makeSafeMerge('peptalk-leaderboard-v1', reportPersistProblem),
       storage: createJSONStorage(() => secureStorage),
       // Only the unsent onboarding choice, and the account it was made for.
       // Never other people's rows.
