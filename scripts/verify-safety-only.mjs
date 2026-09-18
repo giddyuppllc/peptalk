@@ -344,19 +344,29 @@ if (MUTATE) {
 
     for (const m of mutants) {
       const original = readFileSync(m.file, 'utf8');
-      if (!original.includes(m.find)) {
+      // Match against LF text, always. Every anchor above is written with \n and
+      // every source file in this repo is CRLF on a Windows checkout, so an
+      // anchor spanning a line break never matched here while matching fine
+      // in CI. Two of the three mutants below were silently never applied on
+      // Edward's machine - decoration, not tests. The file is written back in
+      // its own ending style so a mutation does not also become a whole-file
+      // line-ending rewrite.
+      const crlf = original.includes('\r\n');
+      const asFound = (t) => (crlf ? t.replace(/\n/g, '\r\n') : t);
+      const normalized = original.replace(/\r\n/g, '\n');
+      if (!normalized.includes(m.find)) {
         fail(`mutant "${m.name}": anchor not found in ${m.file} — the mutation never applied`);
         continue;
       }
-      let mutated = original.replace(m.find, m.replace);
+      let mutated = normalized.replace(m.find, m.replace);
       if (m.alsoFind) {
-        if (!original.includes(m.alsoFind)) {
+        if (!normalized.includes(m.alsoFind)) {
           fail(`mutant "${m.name}": secondary anchor not found in ${m.file}`);
           continue;
         }
         mutated = mutated.replace(m.alsoFind, m.alsoReplace);
       }
-      writeFileSync(m.file, mutated);
+      writeFileSync(m.file, asFound(mutated));
       let red;
       try {
         red = suiteIsRed();
