@@ -50,7 +50,10 @@ type TableName =
   | 'chat_messages'
   | 'journal_entries'
   | 'saved_stacks'
-  | 'health_profiles'
+  // health_profiles is deliberately NOT here. Its primary key is user_id and it
+  // has no id column, so syncRecord/batchSync (onConflict 'id') and
+  // deleteRecord (.eq('id')) would all fail against it. It syncs through
+  // syncHealthProfile below, keyed on user_id. verify:onconflict flagged it.
   | 'injection_sites'
   | 'pantry_items'
   | 'cycle_period_entries'

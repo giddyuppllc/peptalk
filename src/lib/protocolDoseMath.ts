@@ -1,0 +1,178 @@
+/**
+ * protocolDoseMath — the PURE arithmetic behind the peptide detail screen's
+ * "Quick dose reference" pills, the "Cycle plan" card, the calculator's
+ * intensity picker and the Supplies estimator.
+ *
+ * WHY THIS IS ITS OWN FILE
+ * These functions used to live inside two React Native component files, so no
+ * test and no script could call the numbers a user actually sees without
+ * dragging in the RN runtime. When Jamie reported SS-31 rendering
+ * "Beginner 5 mg – 16.55 mg / Advanced 28.1 mg – 40 mg" and a cycle total of
+ * "140 mg–3360 mg", there was no way to prove a fix other than reading the
+ * formula. Moving the maths here — unchanged — lets the dose-sanity test call
+ * exactly what the screens call.
+ *
+ * THE SPLIT, stated rather than buried
+ * Without authored bands, Beginner/Mild is the lower third of the protocol's
+ * typicalDose span and Advanced/Aggressive the upper third:
+ *
+ *     beginner = [min, min + span × 0.33]
+ *     advanced = [min + span × 0.66, max]
+ *
+ * For SS-31's old 5–40 mg that is 5 + 35 × 0.33 = 16.55 and
+ * 5 + 35 × 0.66 = 28.1 — the exact figures Jamie screenshotted.
+ *
+ * AUTHORED BANDS
+ * A split is a formula, not a clinical statement. Where a clinician has named
+ * the beginner and advanced doses outright, the protocol carries them in
+ * `doseBands` and they are used verbatim instead of the split. Protocols
+ * without `doseBands` behave exactly as before.
+ */
+import type { ProtocolTemplate, ProtocolFrequency } from '../types';
+import { formatDoseRange, normalizeDoseRange, type DoseRange } from './doseUnits';
+
+export type ProtocolIntensity = 'mild' | 'standard' | 'aggressive';
+
+/** Injections per week for each protocol frequency enum. */
+export const FREQUENCY_PER_WEEK: Record<ProtocolFrequency, number> = {
+  daily:        7,
+  twice_daily:  14,
+  eod:          3.5,
+  // 5 consecutive days then 2 off. Modelled as 5/week rather than folded into
+  // `daily`, which would overstate every supply count by 40%.
+  five_on_two_off: 5,
+  tiw:          3,
+  biw:          2,
+  weekly:       1,
+  biweekly:     0.5,
+  monthly:      0.25,
+  custom:       1,
+};
+
+/**
+ * Derive a single dose for the chosen intensity from the protocol's typical
+ * range. Mild = min, Standard = midpoint, Aggressive = max.
+ *
+ * The returned `unit` is authoritative — it is NOT always mcg. See
+ * src/lib/doseUnits.ts: mg normalises to mcg, but IU and ml are activity and
+ * volume units with no mass equivalent, so they come back untouched. Callers
+ * must format with the unit rather than assuming mcg.
+ */
+export function intensityToDose(
+  protocol: ProtocolTemplate,
+  intensity: ProtocolIntensity,
+): DoseRange & { value: number } {
+  const { typicalDose } = protocol;
+  const r = normalizeDoseRange(typicalDose.min, typicalDose.max, typicalDose.unit);
+  const value =
+    intensity === 'mild'       ? r.min :
+    intensity === 'aggressive' ? r.max :
+    (r.min + r.max) / 2;
+  return { ...r, value };
+}
+
+/**
+ * Build a (min, max) dose range pair shifted by intensity. Used by the
+ * Quick dose reference, Cycle plan + Supplies estimator so range-based math
+ * (total dose over cycle, vials needed) reflects the chosen intensity.
+ *
+ *   - Mild:       authored beginner band, else lower-third of typical range
+ *   - Standard:   full typical range (default behavior)
+ *   - Aggressive: authored advanced band, else upper-third of typical range
+ *
+ * Carries `unit` + `massBased` through, so a caller doing mass-only maths
+ * (vials from a mcg/vial concentration) can decline rather than silently
+ * treat millilitres as micrograms.
+ */
+export function intensityToDoseRange(
+  protocol: ProtocolTemplate,
+  intensity: ProtocolIntensity,
+): DoseRange {
+  const { typicalDose, doseBands } = protocol;
+  if (doseBands && intensity !== 'standard') {
+    const band = intensity === 'mild' ? doseBands.beginner : doseBands.advanced;
+    return normalizeDoseRange(band.min, band.max, typicalDose.unit);
+  }
+  const r = normalizeDoseRange(typicalDose.min, typicalDose.max, typicalDose.unit);
+  const span = r.max - r.min;
+  if (intensity === 'mild') {
+    return { ...r, min: r.min, max: r.min + span * 0.33 };
+  }
+  if (intensity === 'aggressive') {
+    return { ...r, min: r.min + span * 0.66, max: r.max };
+  }
+  return r;
+}
+
+export interface CyclePlanSummary {
+  /** Per-dose range for the intensity (Standard = full typical range). */
+  range: DoseRange;
+  perWeek: number;
+  totalInjMin: number;
+  totalInjMax: number;
+  /** range.min × totalInjMin … range.max × totalInjMax, same unit as range. */
+  totalRange: DoseRange;
+  vialsMin: number | null;
+  vialsMax: number | null;
+  perDoseLabel: string;
+  totalDoseLabel: string;
+  vialsLabel: string | null;
+  injectionCountLabel: string;
+  weeksLabel: string;
+}
+
+/**
+ * Everything the Cycle plan card prints, computed without React. The card
+ * renders these labels verbatim.
+ */
+export function computeCyclePlan(
+  protocol: ProtocolTemplate,
+  intensity?: ProtocolIntensity,
+  vialMcg?: number,
+): CyclePlanSummary {
+  const { durationWeeks, frequency } = protocol;
+  // Intensity shifts the dose range — Mild = lower 1/3, Standard = full,
+  // Aggressive = upper 1/3 of the published typical range. Standard is
+  // the default when no intensity is set so existing call sites are
+  // unchanged.
+  const range = intensityToDoseRange(protocol, intensity ?? 'standard');
+  const perWeek = FREQUENCY_PER_WEEK[frequency] ?? 1;
+  const totalInjMin = perWeek * durationWeeks.min;
+  const totalInjMax = perWeek * durationWeeks.max;
+  // Total-over-cycle is just dose x injections, so it stays valid in whatever
+  // unit the protocol uses — including IU and ml.
+  const totalRange: DoseRange = {
+    ...range,
+    min: range.min * totalInjMin,
+    max: range.max * totalInjMax,
+  };
+  // Vials come from a mcg/vial concentration, so they are meaningful ONLY for
+  // a mass dose. For an IU or ml protocol there is no conversion, and
+  // inventing one is exactly how Cerebrolysin ended up reading "5 mcg-30 mcg".
+  const canCountVials = range.massBased && !!vialMcg && vialMcg > 0;
+  const vialsMin = canCountVials ? Math.ceil(totalRange.min / vialMcg!) : null;
+  const vialsMax = canCountVials ? Math.ceil(totalRange.max / vialMcg!) : null;
+  return {
+    range,
+    perWeek,
+    totalInjMin,
+    totalInjMax,
+    totalRange,
+    vialsMin,
+    vialsMax,
+    perDoseLabel: formatDoseRange(range),
+    totalDoseLabel: formatDoseRange(totalRange),
+    vialsLabel:
+      vialsMin != null && vialsMax != null
+        ? vialsMin === vialsMax ? `${vialsMin} vial${vialsMin === 1 ? '' : 's'}` : `${vialsMin}–${vialsMax} vials`
+        : null,
+    injectionCountLabel:
+      totalInjMin === totalInjMax
+        ? `${Math.round(totalInjMin)} injections`
+        : `${Math.round(totalInjMin)}–${Math.round(totalInjMax)} injections`,
+    weeksLabel:
+      durationWeeks.min === durationWeeks.max
+        ? `${durationWeeks.min} weeks`
+        : `${durationWeeks.min}–${durationWeeks.max} weeks`,
+  };
+}

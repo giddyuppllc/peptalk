@@ -8,10 +8,61 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  S3Client,
+  ListObjectsV2Command,
+  DeleteObjectsCommand,
+} from 'npm:@aws-sdk/client-s3@3.658.1';
 import { reportError } from '../_shared/sentry.ts';
+import { purgeUserImages } from '../_shared/r2UserObjects.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+/**
+ * Remove the user's community images from R2 (post/, comment/, avatar/ under
+ * their id — the keys community-upload-image mints). Without this the images
+ * stayed publicly readable after the account was gone.
+ *
+ * Best-effort: runs only after the auth user is deleted, so a failure never
+ * leaves a half-deleted account, and it never fails the request — it reports
+ * to Sentry instead. Returns how many objects were deleted, or null if R2 is
+ * not configured.
+ */
+async function deleteUserImages(userId: string): Promise<number | null> {
+  const endpoint = Deno.env.get('R2_ENDPOINT');
+  const accessKeyId = Deno.env.get('R2_ACCESS_KEY_ID');
+  const secretAccessKey = Deno.env.get('R2_SECRET_ACCESS_KEY');
+  if (!endpoint || !accessKeyId || !secretAccessKey) {
+    console.warn('[delete-user] R2 not configured; community images not removed');
+    return null;
+  }
+  const Bucket = Deno.env.get('R2_COMMUNITY_BUCKET') ?? 'peptalk-community';
+  const s3 = new S3Client({ region: 'auto', endpoint, credentials: { accessKeyId, secretAccessKey } });
+
+  const { deleted, failed } = await purgeUserImages(userId, {
+    async listPage(Prefix, ContinuationToken) {
+      const page = await s3.send(new ListObjectsV2Command({ Bucket, Prefix, ContinuationToken }));
+      return {
+        keys: (page.Contents ?? []).map((o) => o.Key ?? ''),
+        nextToken: page.IsTruncated ? page.NextContinuationToken : undefined,
+      };
+    },
+    async deleteKeys(keys) {
+      const res = await s3.send(
+        new DeleteObjectsCommand({
+          Bucket,
+          Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true },
+        }),
+      );
+      return res.Errors?.length ?? 0;
+    },
+  });
+  if (failed > 0) {
+    reportError('delete-user', new Error(`R2 image cleanup: ${failed} object(s) not deleted`));
+  }
+  return deleted;
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -105,6 +156,14 @@ Deno.serve(async (req) => {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Community images on R2, after the account is really gone.
+    try {
+      await deleteUserImages(user.id);
+    } catch (err) {
+      reportError('delete-user', err);
+      console.error('[delete-user] R2 image cleanup failed:', err);
     }
 
     return new Response(JSON.stringify({ success: true }), {

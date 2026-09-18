@@ -162,6 +162,7 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
 
   // ───────────────────── TB-500 ─────────────────────
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes this entry's dose ladder, 2026-09-15.
     peptideId: 'tb-500',
     peptideName: 'TB-500',
     vialMg: 10,
@@ -169,33 +170,16 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
     diluent: 'bac_water',
     mgPerMl: 3.33,
     schedule: [
-      {
-        label: 'Starting',
-        doseMcg: 500,
-        doseStated: '500 mcg (15 units)',
-        units: 15,
-        frequency: 'daily',
-      },
-      {
-        label: 'Build-up',
-        doseMcg: 1000,
-        doseStated: '1 mg (30 units)',
-        units: 30,
-        frequency: 'daily',
-      },
-      {
-        label: 'Injury-recovery research dose',
-        doseMcg: 1500,
-        doseStated: '1.5 mg',
-        frequency: '2-3× weekly',
-      },
+      { label: 'Starting', doseMcg: 330, doseStated: '330 mcg (10 units)', units: 10, frequency: 'daily' },
+      { label: 'Build-up', doseMcg: 1000, doseStated: '1 mg (30 units)', units: 30, frequency: 'daily' },
     ],
-    cycleLength: 'Open — research dependent',
+    cycleLength: '4-12 weeks',
     route: 'subcutaneous',
   },
 
   // ───────────────────── THYMOSIN-ALPHA-1 ─────────────────────
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes this entry's dose ladder, 2026-09-15.
     peptideId: 'thymosin-alpha-1',
     peptideName: 'Thymosin-α-1',
     vialMg: 5,
@@ -203,29 +187,16 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
     diluent: 'bac_water',
     mgPerMl: 1.67,
     schedule: [
-      {
-        label: 'Week 1',
-        weeks: '1',
-        doseMcg: 300,
-        doseStated: '300 mcg (18 units)',
-        units: 18,
-        frequency: 'daily',
-      },
-      {
-        label: 'Weeks 2-8',
-        weeks: '2-8',
-        doseMcg: 500,
-        doseStated: '500 mcg (30 units)',
-        units: 30,
-        frequency: 'daily',
-      },
+      { label: 'Starting', doseMcg: 1000, doseStated: '1 mg (60 units)', units: 60, frequency: 'daily' },
+      { label: 'Build-up', doseMcg: 1600, doseStated: '1.6 mg (96 units)', units: 96, frequency: 'daily' },
     ],
-    cycleLength: '8 weeks',
+    cycleLength: '4-26 weeks',
     route: 'subcutaneous',
   },
 
   // ───────────────────── CJC-1295 W/ DAC ─────────────────────
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes this entry's dose ladder, 2026-09-15.
     peptideId: 'cjc-1295',
     peptideName: 'CJC-1295 w/ DAC',
     vialMg: 5,
@@ -233,14 +204,12 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
     diluent: 'bac_water',
     mgPerMl: 2.5,
     schedule: [
-      { label: 'Weeks 1-2', weeks: '1-2', doseMcg: 300, doseStated: '12 units (≈300 mcg)', units: 12, frequency: 'Mon + Thu' },
-      { label: 'Weeks 3-4', weeks: '3-4', doseMcg: 500, doseStated: '20 units (≈500 mcg)', units: 20, frequency: 'Mon + Thu' },
-      { label: 'Weeks 5-6', weeks: '5-6', doseMcg: 750, doseStated: '30 units (≈750 mcg)', units: 30, frequency: 'Mon + Thu' },
-      { label: 'Weeks 7-12', weeks: '7-12', doseMcg: 1000, doseStated: '40 units (≈1 mg)', units: 40, frequency: 'Mon + Thu' },
+      { label: 'Starting', doseMcg: 1000, doseStated: '1 mg (40 units)', units: 40, frequency: 'Every 4-6 days' },
+      { label: 'Build-up', doseMcg: 2000, doseStated: '2 mg (80 units)', units: 80, frequency: 'Every 4-6 days' },
     ],
     cycleLength: '12 weeks',
     route: 'subcutaneous',
-    notes: ['Biweekly Monday / Thursday cycle.'],
+    notes: ['Dosages should be given every 4-6 days due to DAC extending the half life.'],
   },
 
   // ───────────────────── CJC-1295 NO DAC ─────────────────────
@@ -299,6 +268,7 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
   // canonical recon; the 40 mg vial mapping lives in the notes block
   // for the (rarer) users with that size.
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes this entry's dose ladder, 2026-09-15.
     peptideId: 'mots-c',
     peptideName: 'MOTS-c',
     vialMg: 10,
@@ -306,16 +276,15 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
     diluent: 'bac_water',
     mgPerMl: 3.33,
     schedule: [
-      { label: 'Weeks 1-2', weeks: '1-2', doseMcg: 200, doseStated: '200 mcg (6 units)', units: 6, frequency: 'daily' },
-      { label: 'Weeks 3-4', weeks: '3-4', doseMcg: 400, doseStated: '400 mcg (12 units)', units: 12, frequency: 'daily' },
-      { label: 'Weeks 5-6', weeks: '5-6', doseMcg: 600, doseStated: '600 mcg (18 units)', units: 18, frequency: 'daily' },
-      { label: 'Weeks 7-8', weeks: '7-8', doseMcg: 800, doseStated: '800 mcg (24 units)', units: 24, frequency: 'daily' },
+      { label: 'Starting', doseMcg: 1000, doseStated: '1 mg (30 units)', units: 30, frequency: '3× weekly' },
+      { label: 'Build-up', doseMcg: 2000, doseStated: '2 mg (60 units)', units: 60, frequency: '3× weekly' },
     ],
-    cycleLength: '6-8 weeks',
+    cycleLength: '6-10 weeks',
     route: 'subcutaneous',
     notes: [
+      'AM on an empty stomach, prior to workout.',
       'Above figures are for the 10 mg vial (3 ml diluent → 3.33 mg/mL).',
-      'For a 40 mg vial reconstituted with 3 ml (13.33 mg/mL), divide unit count by 4: 1.5 / 3 / 4.5 / 6 units for the same 200/400/600/800 mcg dose.',
+      'For a 40 mg vial reconstituted with 3 ml (13.33 mg/mL), divide unit count by 4: 7.5 / 15 units for the same 1 / 2 mg dose.',
     ],
   },
 
@@ -589,7 +558,7 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
       { label: 'Weeks 5-6', weeks: '5-6', doseMcg: 400, doseStated: '0.4 mg', frequency: 'daily' },
       { label: 'Weeks 7-8', weeks: '7-8', doseMcg: 400, doseStated: '0.4 mg', frequency: 'daily' },
     ],
-    cycleLength: '8 weeks on',
+    cycleLength: '12-24 weeks',
     cycleOff: '4 weeks off',
     route: 'subcutaneous',
   },
@@ -618,6 +587,7 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
 
   // ───────────────────── CAGRILINTIDE ─────────────────────
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes this entry's dose ladder, 2026-09-15.
     peptideId: 'cagrilintide',
     peptideName: 'Cagrilintide',
     vialMg: 10,
@@ -625,13 +595,8 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
     diluent: 'bac_water',
     mgPerMl: 3.33,
     schedule: [
-      {
-        label: 'Starting',
-        doseMcg: 600,
-        doseStated: '0.6 mg',
-        frequency: 'weekly',
-        notes: 'Increase 0.6 mg every 2 weeks as needed; range 0.6-4.5 mg.',
-      },
+      { label: 'Starting', doseMcg: 1200, doseStated: '1.2 mg (36 units)', units: 36, frequency: 'weekly' },
+      { label: 'Build-up', doseMcg: 2400, doseStated: '2.4 mg (72 units)', units: 72, frequency: 'weekly' },
     ],
     cycleLength: 'Open — titrate per response',
     route: 'subcutaneous',
@@ -639,6 +604,7 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
 
   // ───────────────────── GLUTATHIONE ─────────────────────
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes this entry's dose ladder, 2026-09-15.
     peptideId: 'glutathione',
     peptideName: 'Glutathione',
     vialMg: 1500,
@@ -648,12 +614,12 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
     schedule: [
       {
         label: 'Range',
-        doseMcg: 100_000, // mid of 50-150 mg
-        doseStated: '50-150 mg (1 unit ≈ 3 mg)',
+        doseMcg: 300_000, // mid of 200-400 mg
+        doseStated: '200-400 mg (1 unit ≈ 3 mg)',
         frequency: 'biweekly',
       },
     ],
-    cycleLength: 'Biweekly injections',
+    cycleLength: 'As long as needed',
     route: 'subcutaneous or IM',
   },
 
@@ -721,7 +687,7 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
       { label: '+2 wk', weeks: '3-4', doseMcg: 40, doseStated: '40 mcg', frequency: 'daily' },
       { label: '+2 wk', weeks: '5-6', doseMcg: 50, doseStated: '50 mcg', frequency: 'daily' },
     ],
-    cycleLength: '6-8 weeks',
+    cycleLength: '4-6 weeks',
     route: 'subcutaneous',
     notes: [
       'HYDROPHOBIC — reconstitute with acetic acid, NOT bac water. BAC water causes rapid degradation.',
@@ -762,7 +728,7 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
       { label: 'Week 1', weeks: '1', doseMcg: 100, doseStated: '100 mcg', frequency: 'daily, 30-60 min before bed' },
       { label: 'Weekly +50 mcg', weeks: '2-8', doseMcg: 275, doseStated: '250-300 mcg by week 8', frequency: 'daily, 30-60 min before bed' },
     ],
-    cycleLength: '8 weeks on',
+    cycleLength: '2-6 weeks',
     cycleOff: '4 weeks off',
     route: 'subcutaneous',
   },
@@ -818,6 +784,7 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
 
   // ───────────────────── MELANOTAN 2 ─────────────────────
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes this entry's dose ladder, 2026-09-15.
     peptideId: 'melanotan-2',
     peptideName: 'Melanotan II',
     vialMg: 10,
@@ -826,18 +793,10 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
     mgPerMl: 3.33,
     schedule: [
       {
-        label: 'Loading (Week 1)',
-        weeks: '1',
-        doseMcg: 125, // mid of 50-200 mcg
-        doseStated: '50-200 mcg daily',
+        label: 'Range',
+        doseMcg: 375, // mid of 250-500 mcg
+        doseStated: '250-500 mcg daily',
         frequency: 'daily',
-      },
-      {
-        label: 'Maintenance',
-        weeks: '2+',
-        doseMcg: 100,
-        doseStated: '100 mcg',
-        frequency: '2× weekly',
       },
     ],
     cycleLength: '4-6 weeks',
@@ -873,6 +832,7 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
 
   // ───────────────────── HEXARELIN ─────────────────────
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes this entry's dose ladder, 2026-09-15.
     peptideId: 'hexarelin',
     peptideName: 'Hexarelin',
     vialMg: 10,
@@ -882,10 +842,9 @@ export const PEPTIDE_DOSING_REFERENCE: DosingReference[] = [
     schedule: [
       {
         label: 'Starting',
-        doseMcg: 250, // mid of 200-300 mcg
-        doseStated: '200-300 mcg daily',
+        doseMcg: 150, // mid of 100-200 mcg
+        doseStated: '100-200 mcg daily',
         frequency: 'daily',
-        notes: 'Increase by 50 mcg every 2 weeks.',
       },
     ],
     cycleLength: '8-12 weeks',

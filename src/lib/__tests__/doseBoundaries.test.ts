@@ -12,17 +12,18 @@
  * three was ever exercised. Each now has its own case.
  *
  * Numbers are measured against the real catalog, not guessed:
- *   BPC-157 canonical 333 mcg → high fires ABOVE 3× (999), low fires BELOW /10 (33.3)
+ *   BPC-157 canonical 200-500 mcg (Jamie's ruling) → high fires ABOVE 3× (1500),
+ *   low fires BELOW /10 (20)
  *   unknown compound          → mg/mcg confusion fires ABOVE 10000 mcg
  */
 import { checkDoseSafety, checkDoseGuards } from '../../services/doseSafety';
 
 describe('the >3x ceiling is exclusive', () => {
   it('allows exactly 3× the maximum', () => {
-    expect(checkDoseSafety('BPC-157', 999, 'mcg').safe).toBe(true);
+    expect(checkDoseSafety('BPC-157', 1500, 'mcg').safe).toBe(true);
   });
   it('flags one microgram past it', () => {
-    const r = checkDoseSafety('BPC-157', 1000, 'mcg');
+    const r = checkDoseSafety('BPC-157', 1501, 'mcg');
     expect(r.safe).toBe(false);
     expect(r.code).toBe('unusually_high');
   });
@@ -30,10 +31,10 @@ describe('the >3x ceiling is exclusive', () => {
 
 describe('the <1/10 floor is exclusive', () => {
   it('allows a dose just above a tenth of the minimum', () => {
-    expect(checkDoseSafety('BPC-157', 34, 'mcg').safe).toBe(true);
+    expect(checkDoseSafety('BPC-157', 20, 'mcg').safe).toBe(true);
   });
   it('flags one just below it', () => {
-    const r = checkDoseSafety('BPC-157', 33, 'mcg');
+    const r = checkDoseSafety('BPC-157', 19, 'mcg');
     expect(r.safe).toBe(false);
     expect(r.code).toBe('unusually_low');
   });

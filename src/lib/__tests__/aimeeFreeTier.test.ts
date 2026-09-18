@@ -101,7 +101,12 @@ describe('free tier is answers-only', () => {
   const chat = read(CHAT);
 
   it('withholds the tool list entirely rather than filtering results', () => {
-    expect(chat).toContain('tools: args.canUseTools ? AIMEE_TOOLS : []');
+    // The free branch is still a literal empty list. The paid branch also
+    // passes through the health-data consent filter (52eb417), which can only
+    // REMOVE tools — see aiDataConsent.test.ts.
+    expect(chat).toContain(
+      'tools: args.canUseTools ? toolsAllowedForConsent(AIMEE_TOOLS, args.hasConsent) : []',
+    );
   });
 
   it('free is the tier denied tools', () => {

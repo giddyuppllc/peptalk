@@ -212,7 +212,7 @@ Deno.serve(async (req) => {
 
     if (!aiRes.ok) {
       const err = await aiRes.text();
-      console.error('[aimee-lab-interpret] AI error:', err);
+      console.error('[aimee-lab-interpret] AI error:', aiRes.status, err.slice(0, 500));
       return jsonResp({ error: 'Lab interpretation temporarily unavailable.' }, 502);
     }
 

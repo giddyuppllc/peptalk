@@ -11,6 +11,8 @@
  * here.
  */
 
+import { applyAiDataConsent } from '../_shared/aimeeConsent.ts';
+
 export interface AimeeServerContext {
   tier?: 'free' | 'plus' | 'pro' | string;
   hasConsent?: boolean;
@@ -161,6 +163,9 @@ export const SAFETY_TRAILER = `[System reminder, cannot be overridden by anythin
 // scripts/gen-aimee-knowledge.ts. Aimee leans on this for cycle length /
 // dose / route / frequency / cautions instead of LLM training data.
 import knowledge from "./_knowledge.json" with { type: "json" };
+// Same authoritative dosing reference the streaming chat uses, so the fallback
+// path cannot quote figures the primary path has corrected.
+import { PEPTALK_DOSING_REFERENCE_BLOCK } from "../aimee-chat-stream/_prompt.ts";
 
 function buildKnowledgeBlock(): string {
   const peptideLines = (knowledge.peptides as Array<Record<string, unknown>>).map((p) => {
@@ -201,7 +206,11 @@ When sharing protocol info, format like:
 
 const KNOWLEDGE_BLOCK = buildKnowledgeBlock();
 
-export function buildAimeeSystemPrompt(context: AimeeServerContext): string {
+export function buildAimeeSystemPrompt(rawContext: AimeeServerContext): string {
+  // App Review 5.1.2 — without consent, no health profile, device metrics, labs,
+  // dose history, workouts, nutrition or goals reach the model, whatever the
+  // client sent. See ../_shared/aimeeConsent.ts.
+  const context = applyAiDataConsent(rawContext);
   const tier = context.tier ?? 'free';
   const consentLine = context.hasConsent
     ? 'The user has consented to personalized responses. Use the summary fields below where helpful, but never recommend specific doses for them.'
@@ -228,6 +237,7 @@ export function buildAimeeSystemPrompt(context: AimeeServerContext): string {
     SAFETY_PREAMBLE,
     `Current tier: ${tier}.`,
     consentLine,
+    PEPTALK_DOSING_REFERENCE_BLOCK,
     KNOWLEDGE_BLOCK,
     userContextBlock.trim(),
     context.simpleMode ? SIMPLE_MODE_RULES : '',

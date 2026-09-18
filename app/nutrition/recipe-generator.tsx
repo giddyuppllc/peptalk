@@ -189,6 +189,11 @@ export default function RecipeGeneratorScreen() {
   const [preferences, setPreferences] = useState('');
   const [loading, setLoading] = useState(false);
   const [recipes, setRecipes] = useState<GeneratedRecipe[]>([]);
+  // True when the last Generate fell back to the built-in recipes because the
+  // aimee-recipe call failed or returned nothing. Without it the canned list
+  // rendered exactly like an AI answer, so an outage looked like a working
+  // feature that ignored the user's inputs.
+  const [aiUnavailable, setAiUnavailable] = useState(false);
 
   // AI recipe gen can take 10-20s. Guard post-await setState so backing
   // out mid-generation doesn't leak state into the next mount.
@@ -317,11 +322,13 @@ export default function RecipeGeneratorScreen() {
         });
         if (!mountedRef.current) return;
         if (aiRecipes && aiRecipes.length > 0) {
+          setAiUnavailable(false);
           setRecipes(aiRecipes);
           setLoading(false);
           return;
         }
       }
+      setAiUnavailable(true);
       // AI was unavailable or returned nothing — surface a fallback that
       // STILL respects the user's allergens + macros. Filter the canned
       // recipes against the user's profile so we never propose something
@@ -358,6 +365,7 @@ export default function RecipeGeneratorScreen() {
         const haystack = (r.name + ' ' + r.ingredients.join(' ')).toLowerCase();
         return !allergens.some((a) => haystack.includes(a.toLowerCase()));
       });
+      setAiUnavailable(true);
       setRecipes(safe);
     }
     setLoading(false);
@@ -518,6 +526,22 @@ export default function RecipeGeneratorScreen() {
           )}
         </View>
 
+        {/* AI fallback notice — shown when the recipes below are the built-in
+            set, not Aimee's. The title reuses this screen's existing
+            "Aimee unavailable" wording. */}
+        {aiUnavailable && !loading && (
+          <View
+            style={[styles.unavailableNotice, { borderColor: t.cardBorder, backgroundColor: t.card }]}
+            accessibilityRole="alert"
+          >
+            <Ionicons name="cloud-offline-outline" size={18} color={t.textSecondary} />
+            <Text style={[styles.unavailableTitle, { color: t.text }]}>Aimee unavailable</Text>
+            {/* TODO(Edward): body copy for this notice — e.g. that these are
+                built-in recipes and to try again later. Left blank on purpose
+                rather than inventing user-facing wording. */}
+          </View>
+        )}
+
         {/* Results */}
         {recipes.length > 0 && (
           <View style={styles.section}>
@@ -607,6 +631,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.darkText,
     marginBottom: 8,
+  },
+  unavailableNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderWidth: 1,
+    borderRadius: 12,
+  },
+  unavailableTitle: {
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
   },
 
   // Targets

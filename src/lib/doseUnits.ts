@@ -104,6 +104,23 @@ export function formatDoseAmount(value: number, unit: DoseUnit): string {
   return `${trim(value)} ${unit}`;
 }
 
+/**
+ * The Quick dose reference pill text for one band: "min<sep>max", or a single
+ * amount when the band is one dose.
+ *
+ * An authored band can be a single dose (SS-31: beginner 2 mg, advanced 5 mg),
+ * which would otherwise print "2 mg – 2 mg". A derived thirds-split band always
+ * has width unless the protocol's own min equals its max, and no protocol that
+ * reaches the card has that (checked 2026-09-15 across all 41) — so every
+ * derived pill renders exactly as it did when the card formatted inline.
+ * Differs from formatDoseRange only in taking the separator, because the pill
+ * prints " – " and its accessibility label " to ".
+ */
+export function formatDoseBand(range: DoseRange, sep: string): string {
+  if (range.min === range.max) return formatDoseAmount(range.min, range.unit);
+  return `${formatDoseAmount(range.min, range.unit)}${sep}${formatDoseAmount(range.max, range.unit)}`;
+}
+
 /** Format a range, collapsing to a single amount when both ends match. */
 export function formatDoseRange(range: DoseRange): string {
   if (range.min === range.max) return formatDoseAmount(range.min, range.unit);

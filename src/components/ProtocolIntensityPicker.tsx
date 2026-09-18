@@ -23,13 +23,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { FontSizes } from '../constants/theme';
 import type { ProtocolTemplate } from '../types';
+import { formatDoseAmount } from '../lib/doseUnits';
 import {
-  formatDoseAmount,
-  normalizeDoseRange,
-  type DoseRange,
-} from '../lib/doseUnits';
+  intensityToDose,
+  type ProtocolIntensity,
+} from '../lib/protocolDoseMath';
 
-export type ProtocolIntensity = 'mild' | 'standard' | 'aggressive';
+// The dose maths moved to src/lib/protocolDoseMath (pure, testable without the
+// RN runtime). Re-exported so existing importers keep working unchanged.
+export {
+  intensityToDose,
+  intensityToDoseRange,
+  type ProtocolIntensity,
+} from '../lib/protocolDoseMath';
 
 interface ProtocolIntensityPickerProps {
   protocol: ProtocolTemplate;
@@ -68,57 +74,6 @@ const OPTIONS: IntensityOption[] = [
     tint: '#B45309',
   },
 ];
-
-/**
- * Derive a single dose for the chosen intensity from the protocol's typical
- * range. Mild = min, Standard = midpoint, Aggressive = max.
- *
- * The returned `unit` is authoritative — it is NOT always mcg. See
- * src/lib/doseUnits.ts: mg normalises to mcg, but IU and ml are activity and
- * volume units with no mass equivalent, so they come back untouched. Callers
- * must format with the unit rather than assuming mcg.
- */
-export function intensityToDose(
-  protocol: ProtocolTemplate,
-  intensity: ProtocolIntensity,
-): DoseRange & { value: number } {
-  const { typicalDose } = protocol;
-  const r = normalizeDoseRange(typicalDose.min, typicalDose.max, typicalDose.unit);
-  const value =
-    intensity === 'mild'       ? r.min :
-    intensity === 'aggressive' ? r.max :
-    (r.min + r.max) / 2;
-  return { ...r, value };
-}
-
-/**
- * Build a (min, max) dose range pair shifted by intensity. Used by the
- * Cycle plan + Supplies estimator so range-based math (total dose over
- * cycle, vials needed) reflects the chosen intensity.
- *
- *   - Mild:       lower-third of typical range
- *   - Standard:   full typical range (default behavior)
- *   - Aggressive: upper-third of typical range
- *
- * Carries `unit` + `massBased` through, so a caller doing mass-only maths
- * (vials from a mcg/vial concentration) can decline rather than silently
- * treat millilitres as micrograms.
- */
-export function intensityToDoseRange(
-  protocol: ProtocolTemplate,
-  intensity: ProtocolIntensity,
-): DoseRange {
-  const { typicalDose } = protocol;
-  const r = normalizeDoseRange(typicalDose.min, typicalDose.max, typicalDose.unit);
-  const span = r.max - r.min;
-  if (intensity === 'mild') {
-    return { ...r, min: r.min, max: r.min + span * 0.33 };
-  }
-  if (intensity === 'aggressive') {
-    return { ...r, min: r.min + span * 0.66, max: r.max };
-  }
-  return r;
-}
 
 export function ProtocolIntensityPicker({
   protocol,

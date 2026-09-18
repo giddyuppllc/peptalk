@@ -30,8 +30,9 @@
 import { PEPTIDE_DOSING_REFERENCE } from './peptideDosingReference';
 import { PEPTIDE_DOSING_TABLE } from './peptideDosingTable';
 import { PROTOCOL_TEMPLATES } from './protocols';
+import { getClinicianRuling, rulingDoseMcg } from './clinicianRulings';
 
-export type DoseSourceId = 'reconstitution_ladder' | 'master_table' | 'protocols';
+export type DoseSourceId = 'clinician_ruling' | 'reconstitution_ladder' | 'master_table' | 'protocols';
 
 /**
  * Precedence. Ladder first because it is the only source whose numbers can be
@@ -43,6 +44,10 @@ export type DoseSourceId = 'reconstitution_ladder' | 'master_table' | 'protocols
  * consumer follows.
  */
 export const SOURCE_PRECEDENCE: DoseSourceId[] = [
+  // Jamie Esposito's rulings outrank every stored figure: she is the approving
+  // clinician for PepTalk (Edward, 2026-09-15). When she has ruled, the other
+  // sources are inputs she has already adjudicated, not rivals.
+  'clinician_ruling',
   'reconstitution_ladder',
   'master_table',
   'protocols',
@@ -50,6 +55,7 @@ export const SOURCE_PRECEDENCE: DoseSourceId[] = [
 
 /** Human-facing provenance, safe to show in the UI. */
 export const SOURCE_LABEL: Record<DoseSourceId, string> = {
+  clinician_ruling: 'Clinician-approved',
   reconstitution_ladder: 'Reconstitution reference',
   master_table: 'Master dosing table',
   protocols: 'Protocol template',
@@ -127,6 +133,13 @@ export function parseRangeToMcg(raw: string | undefined | null): { minMcg: numbe
 
 // ── per-source readers ────────────────────────────────────────────────────
 
+function fromRuling(peptideId: string): SourceRange | null {
+  const dose = getClinicianRuling(peptideId)?.dose;
+  if (!dose || dose.unit === 'IU') return null;
+  return { source: 'clinician_ruling', ...rulingDoseMcg(dose), selfVerifying: true };
+}
+
+
 function fromLadder(peptideId: string): SourceRange | null {
   const entry = PEPTIDE_DOSING_REFERENCE.find((e) => e.peptideId === peptideId);
   if (!entry || !entry.schedule?.length) return null;
@@ -163,6 +176,7 @@ function fromProtocols(peptideId: string): SourceRange | null {
 }
 
 const READERS: Record<DoseSourceId, (id: string) => SourceRange | null> = {
+  clinician_ruling: fromRuling,
   reconstitution_ladder: fromLadder,
   master_table: fromTable,
   protocols: fromProtocols,
@@ -188,7 +202,9 @@ export function getCanonicalDose(peptideId: string): CanonicalDose | null {
   // Disagreement that matters = ranges that do not overlap at all. Two sources
   // describing overlapping windows are compatible; disjoint ones cannot both
   // be right.
-  const conflict = sources.some(
+  // A clinician ruling IS the adjudication, so it is never reported as a
+  // conflict waiting for one.
+  const conflict = winner.source !== 'clinician_ruling' && sources.some(
     (a) => sources.some((b) => a.maxMcg < b.minMcg || b.maxMcg < a.minMcg),
   );
 

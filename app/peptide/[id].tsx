@@ -11,7 +11,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
 import { ProtocolPlanCard } from '../../src/components/ProtocolPlanCard';
 import { intensityToDoseRange, intensityToDose } from '../../src/components/ProtocolIntensityPicker';
-import { formatDoseAmount } from '../../src/lib/doseUnits';
+import { formatDoseAmount, formatDoseBand } from '../../src/lib/doseUnits';
 import { ActivateProtocolButton } from '../../src/components/ActivateProtocolButton';
 import { SuppliesEstimatorCard } from '../../src/components/SuppliesEstimatorCard';
 import { DosingReferenceTableCard } from '../../src/components/DosingReferenceTableCard';
@@ -1433,6 +1433,8 @@ function BeginnerAdvancedDoseCard({
 }) {
   const beginner = intensityToDoseRange(protocol, 'mild');
   const advanced = intensityToDoseRange(protocol, 'aggressive');
+  // See formatDoseBand: a single authored dose prints once, not "2 mg – 2 mg".
+  const bandLabel = formatDoseBand;
 
   return (
     <GlassCard style={styles.section}>
@@ -1446,14 +1448,14 @@ function BeginnerAdvancedDoseCard({
           activeOpacity={0.85}
           style={[dosePillStyles.pill, { borderColor: '#6FA89155', backgroundColor: '#6FA8910D' }]}
           accessibilityRole="button"
-          accessibilityLabel={`Beginner dose ${formatDoseAmount(beginner.min, beginner.unit)} to ${formatDoseAmount(beginner.max, beginner.unit)}`}
+          accessibilityLabel={`Beginner dose ${bandLabel(beginner, ' to ')}`}
         >
           <View style={dosePillStyles.pillTopRow}>
             <Ionicons name="leaf-outline" size={14} color="#6FA891" />
             <Text style={[dosePillStyles.pillLabel, { color: '#3F6E5A' }]}>Beginner</Text>
           </View>
           <Text style={dosePillStyles.pillRange}>
-            {formatDoseAmount(beginner.min, beginner.unit)} – {formatDoseAmount(beginner.max, beginner.unit)}
+            {bandLabel(beginner, ' – ')}
           </Text>
           <Text style={dosePillStyles.pillHint}>Cautious start</Text>
         </TouchableOpacity>
@@ -1463,14 +1465,14 @@ function BeginnerAdvancedDoseCard({
           activeOpacity={0.85}
           style={[dosePillStyles.pill, { borderColor: '#B4530955', backgroundColor: '#B453090D' }]}
           accessibilityRole="button"
-          accessibilityLabel={`Advanced dose ${formatDoseAmount(advanced.min, advanced.unit)} to ${formatDoseAmount(advanced.max, advanced.unit)}`}
+          accessibilityLabel={`Advanced dose ${bandLabel(advanced, ' to ')}`}
         >
           <View style={dosePillStyles.pillTopRow}>
             <Ionicons name="flash-outline" size={14} color="#B45309" />
             <Text style={[dosePillStyles.pillLabel, { color: '#7A3A05' }]}>Advanced</Text>
           </View>
           <Text style={dosePillStyles.pillRange}>
-            {formatDoseAmount(advanced.min, advanced.unit)} – {formatDoseAmount(advanced.max, advanced.unit)}
+            {bandLabel(advanced, ' – ')}
           </Text>
           <Text style={dosePillStyles.pillHint}>Experienced users</Text>
         </TouchableOpacity>

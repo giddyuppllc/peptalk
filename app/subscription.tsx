@@ -18,7 +18,7 @@ import { CreditPackShelf } from '../src/components/CreditPackShelf';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../src/constants/theme';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
 import { PEPTIDES } from '../src/data/peptides';
-import type { SubscriptionTier } from '../src/types/fitness';
+import { TIER_FEATURES, type SubscriptionTier } from '../src/types/fitness';
 import {
   PRODUCT_IDS,
   purchaseProduct,
@@ -461,22 +461,16 @@ function TierCard({
 // Main Screen
 // ---------------------------------------------------------------------------
 
-/** Map a feature key to the minimum tier that unlocks it. */
+/** Map a feature key to the plan to highlight for it. */
 function tierForFeature(feature: string | undefined): SubscriptionTier | null {
   if (!feature) return null;
-  const proOnly = [
-    // Pro-tier exclusives — kept tight so Plus has the AI vision food
-    // scanner (moved out per pricing call) without giving away the
-    // workout-program library or recipe generator.
-    'recipe_generator',
-    'workout_programs',
-    'exercise_library',
-    'custom_workout_generator',
-    'generated_workout_tracker',
-    'health_reports',
-    'aimee_ai_unlimited',
-  ];
-  if (proOnly.includes(feature)) return 'pro';
+  // Derived from TIER_FEATURES rather than a hand-kept list. The list here had
+  // drifted: it still named 'workout_programs' and 'exercise_library' as Pro
+  // after d9859bc removed them from every tier, and it omitted Pro-only keys
+  // such as 'aimee_meal_plans' and 'workout_videos', so those highlighted Plus.
+  // Anything Plus grants (Free keys included, as before) highlights Plus.
+  if (TIER_FEATURES.plus.includes(feature)) return 'plus';
+  if (TIER_FEATURES.pro.includes(feature)) return 'pro';
   return 'plus';
 }
 
@@ -660,17 +654,24 @@ export default function SubscriptionScreen() {
           <Text style={styles.restoreBtnText}>{restoring ? 'Restoring…' : 'Restore Purchases'}</Text>
         </TouchableOpacity>
 
-        {/* Redeem a discount code (Apple Offer Code / Play promo code). Lets
-            partner / cross-site customers apply a discount the OS-blessed way:
-            the redemption sheet applies it to the subscription itself. */}
-        <TouchableOpacity
-          style={styles.restoreBtn}
-          onPress={() => presentCodeRedemption()}
-          accessibilityRole="button"
-          accessibilityLabel="Redeem a discount code"
-        >
-          <Text style={styles.restoreBtnText}>Have a discount code?</Text>
-        </TouchableOpacity>
+        {/* Redeem a discount code (Apple Offer Code). Lets partner /
+            cross-site customers apply a discount the OS-blessed way: the
+            redemption sheet applies it to the subscription itself.
+
+            iOS only. presentCodeRedemption() returns false without doing
+            anything on Android (our codes are Apple offer codes; there is no
+            Play promo code to redeem) and on web, so this rendered as a dead
+            button there. */}
+        {Platform.OS === 'ios' && (
+          <TouchableOpacity
+            style={styles.restoreBtn}
+            onPress={() => presentCodeRedemption()}
+            accessibilityRole="button"
+            accessibilityLabel="Redeem a discount code"
+          >
+            <Text style={styles.restoreBtnText}>Have a discount code?</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Manage Subscription (paid users only). Required by Apple for
             auto-renewing subscriptions — deep-links to the native manage

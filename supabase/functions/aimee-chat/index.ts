@@ -269,7 +269,7 @@ Deno.serve(async (req) => {
 
     if (!openaiResponse.ok) {
       const err = await openaiResponse.text();
-      console.error('[aimee-chat] OpenAI error:', err);
+      console.error('[aimee-chat] OpenAI error:', openaiResponse.status, err.slice(0, 500));
       return new Response(JSON.stringify({ error: 'AI service temporarily unavailable' }), {
         status: 502,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

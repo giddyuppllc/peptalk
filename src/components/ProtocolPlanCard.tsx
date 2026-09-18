@@ -26,12 +26,8 @@ import { GlassCard } from './GlassCard';
 import { useTheme } from '../hooks/useTheme';
 import { useHealthProfileStore } from '../store/useHealthProfileStore';
 import { Spacing, FontSizes } from '../constants/theme';
-import type { Peptide, ProtocolTemplate, GoalType, ProtocolFrequency } from '../types';
-import { formatDoseRange } from '../lib/doseUnits';
-import {
-  type ProtocolIntensity,
-  intensityToDoseRange,
-} from './ProtocolIntensityPicker';
+import type { Peptide, ProtocolTemplate, GoalType } from '../types';
+import { computeCyclePlan, type ProtocolIntensity } from '../lib/protocolDoseMath';
 
 interface ProtocolPlanCardProps {
   peptide: Peptide;
@@ -45,21 +41,6 @@ interface ProtocolPlanCardProps {
    *  cycle math. Defaults to Standard (full typical range) when omitted. */
   intensity?: ProtocolIntensity;
 }
-
-const FREQUENCY_PER_WEEK: Record<ProtocolFrequency, number> = {
-  daily:        7,
-  twice_daily:  14,
-  eod:          3.5,
-  // 5 consecutive days then 2 off. Modelled as 5/week rather than folded into
-  // `daily`, which would overstate every supply count by 40%.
-  five_on_two_off: 5,
-  tiw:          3,
-  biw:          2,
-  weekly:       1,
-  biweekly:     0.5,
-  monthly:      0.25,
-  custom:       1,
-};
 
 const GOAL_LABELS: Record<GoalType, string> = {
   weight_loss:       'Weight loss',
@@ -108,46 +89,12 @@ export function ProtocolPlanCard({ peptide, protocol, vialMcg, goal, intensity }
   const profileGoal = useHealthProfileStore((s) => s.profile?.primaryGoals?.[0]);
   const effectiveGoal = goal ?? profileGoal ?? null;
 
-  const summary = useMemo(() => {
-    const { durationWeeks, frequency } = protocol;
-    // Intensity shifts the dose range — Mild = lower 1/3, Standard = full,
-    // Aggressive = upper 1/3 of the published typical range. Standard is
-    // the default when no intensity is set so existing call sites are
-    // unchanged.
-    const range = intensityToDoseRange(protocol, intensity ?? 'standard');
-    const perWeek = FREQUENCY_PER_WEEK[frequency] ?? 1;
-    const totalInjMin = perWeek * durationWeeks.min;
-    const totalInjMax = perWeek * durationWeeks.max;
-    // Total-over-cycle is just dose x injections, so it stays valid in whatever
-    // unit the protocol uses — including IU and ml.
-    const totalRange = {
-      ...range,
-      min: range.min * totalInjMin,
-      max: range.max * totalInjMax,
-    };
-    // Vials come from a mcg/vial concentration, so they are meaningful ONLY for
-    // a mass dose. For an IU or ml protocol there is no conversion, and
-    // inventing one is exactly how Cerebrolysin ended up reading "5 mcg-30 mcg".
-    const canCountVials = range.massBased && !!vialMcg && vialMcg > 0;
-    const vialsMin = canCountVials ? Math.ceil(totalRange.min / vialMcg!) : null;
-    const vialsMax = canCountVials ? Math.ceil(totalRange.max / vialMcg!) : null;
-    return {
-      perDoseLabel: formatDoseRange(range),
-      totalDoseLabel: formatDoseRange(totalRange),
-      vialsLabel:
-        vialsMin != null && vialsMax != null
-          ? vialsMin === vialsMax ? `${vialsMin} vial${vialsMin === 1 ? '' : 's'}` : `${vialsMin}–${vialsMax} vials`
-          : null,
-      injectionCountLabel:
-        totalInjMin === totalInjMax
-          ? `${Math.round(totalInjMin)} injections`
-          : `${Math.round(totalInjMin)}–${Math.round(totalInjMax)} injections`,
-      weeksLabel:
-        durationWeeks.min === durationWeeks.max
-          ? `${durationWeeks.min} weeks`
-          : `${durationWeeks.min}–${durationWeeks.max} weeks`,
-    };
-  }, [protocol, vialMcg, intensity]);
+  // The arithmetic lives in src/lib/protocolDoseMath so it can be tested
+  // without the RN runtime; the labels below are rendered verbatim.
+  const summary = useMemo(
+    () => computeCyclePlan(protocol, intensity, vialMcg),
+    [protocol, vialMcg, intensity],
+  );
 
   const guidance = effectiveGoal ? GOAL_CYCLE_GUIDANCE[effectiveGoal] : undefined;
   const topNote = protocol.importantNotes?.[0];
