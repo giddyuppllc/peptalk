@@ -31,6 +31,7 @@ import { PEPTIDE_DOSING_REFERENCE } from './peptideDosingReference';
 import { PEPTIDE_DOSING_TABLE } from './peptideDosingTable';
 import { PROTOCOL_TEMPLATES } from './protocols';
 import { getClinicianRuling, rulingDoseMcg } from './clinicianRulings';
+import { expandClinicianText } from './clinicianRulingsDisplay';
 
 export type DoseSourceId = 'clinician_ruling' | 'reconstitution_ladder' | 'master_table' | 'protocols';
 
@@ -274,7 +275,10 @@ export function getCanonicalDoseText(peptideId: string): CanonicalDoseText | nul
   const ruling = getClinicianRuling(peptideId);
   if (ruling?.dose?.verbatim) {
     return {
-      text: ruling.dose.verbatim,
+      // Her shorthand, expanded into a sentence — same figures, in the same
+      // order, proven by clinicianRulingsDisplay's guard. The unexpanded record
+      // stays in clinicianRulings.ts and is what rulingDoseMcg() parses.
+      text: expandClinicianText(ruling.dose.verbatim, `${peptideId} dose`),
       source: 'clinician_ruling',
       sourceLabel: SOURCE_LABEL.clinician_ruling,
       verbatim: true,

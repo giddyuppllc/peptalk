@@ -79,6 +79,7 @@ function buildPeptideKnowledgeBase(): string {
   const { KNOWLEDGE_TOPICS } = require('../data/knowledgeTopics');
   const { SAFETY_PROFILES } = require('../data/safetyProfiles');
   const { CLINICIAN_RULINGS, getClinicianRuling } = require('../data/clinicianRulings');
+  const { expandClinicianText } = require('../data/clinicianRulingsDisplay');
 
   const lines: string[] = [];
 
@@ -113,9 +114,11 @@ function buildPeptideKnowledgeBase(): string {
     // edge function. One authority, quoted the same way on both sides.
     const ruling = getClinicianRuling(t.peptideId);
     const dose = ruling?.dose?.verbatim
-      ? `${ruling.dose.verbatim} (clinician-approved)`
+      ? `${expandClinicianText(ruling.dose.verbatim, `${t.peptideId} dose`)} (clinician-approved)`
       : `${t.typicalDose.min}-${t.typicalDose.max} ${t.typicalDose.unit}`;
-    const freq = ruling?.frequency ?? t.frequencyLabel;
+    const freq = ruling?.frequency
+      ? expandClinicianText(ruling.frequency, `${t.peptideId} frequency`)
+      : t.frequencyLabel;
     protoLines.push(
       `- ${t.name}: ${dose} ${t.route} ${freq}${t.timing ? ` (${t.timing})` : ''}${contra}`
     );
@@ -126,7 +129,8 @@ function buildPeptideKnowledgeBase(): string {
   CLINICIAN_RULINGS.forEach((r: any) => {
     if (!r.dose?.verbatim || ruledIds.has(r.peptideId) || isSafetyOnly(r.peptideId)) return;
     protoLines.push(
-      `- ${r.peptideId}: ${r.dose.verbatim} (clinician-approved)${r.frequency ? ` ${r.frequency}` : ''}`
+      `- ${r.peptideId}: ${expandClinicianText(r.dose.verbatim, `${r.peptideId} dose`)} (clinician-approved)` +
+        (r.frequency ? ` ${expandClinicianText(r.frequency, `${r.peptideId} frequency`)}` : '')
     );
   });
 

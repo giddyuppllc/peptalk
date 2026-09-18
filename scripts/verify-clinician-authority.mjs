@@ -41,8 +41,10 @@ function loadRulings() {
     'npx tsx -e "' +
       "import {CLINICIAN_RULINGS, rulingDoseMcg} from './src/data/clinicianRulings';" +
       "import {isSafetyOnly} from './src/data/safetyOnlyCompounds';" +
+      "import {expandClinicianText} from './src/data/clinicianRulingsDisplay';" +
       'const out=CLINICIAN_RULINGS.filter(r=>r.dose).map(r=>({' +
       'id:r.peptideId,verbatim:r.dose.verbatim,safetyOnly:isSafetyOnly(r.peptideId),' +
+      'approved:expandClinicianText(r.dose.verbatim,r.peptideId),' +
       '...rulingDoseMcg(r.dose)}));' +
       'console.log(JSON.stringify(out));"',
     { encoding: 'utf8', maxBuffer: 1e8, cwd: ROOT },
@@ -103,9 +105,9 @@ function checkKnowledge(rulings, knowledgeText) {
     const mine = rows.get(r.id) ?? [];
     if (mine.length) {
       for (const row of mine) {
-        if (row.doseVerbatim !== r.verbatim) {
+        if (row.doseApproved !== r.approved) {
           fail(
-            `${r.id} ("${row.name}"): _knowledge.json doseVerbatim is ${JSON.stringify(row.doseVerbatim ?? null)}, ` +
+            `${r.id} ("${row.name}"): _knowledge.json doseApproved is ${JSON.stringify(row.doseApproved ?? null)}, ` +
               `the clinician ruled ${JSON.stringify(r.verbatim)}`,
           );
         }
@@ -121,7 +123,7 @@ function checkKnowledge(rulings, knowledgeText) {
     }
     if (!ruledOnly.has(r.id)) {
       fail(`${r.id}: clinician ruled "${r.verbatim}" and Aimee has no entry for it at all`);
-    } else if (ruledOnly.get(r.id).dose !== r.verbatim) {
+    } else if (ruledOnly.get(r.id).dose !== r.approved) {
       fail(`${r.id}: clinicianRulings entry says "${ruledOnly.get(r.id).dose}", the ruling is "${r.verbatim}"`);
     }
   }
@@ -218,22 +220,22 @@ if (MUTATE) {
   // Each mutation must produce at least one failure. If one does not, the
   // corresponding check is decorative and the suite says so.
   const cases = [
-    ['knowledge: doseVerbatim wrong', () => {
+    ['knowledge: doseApproved wrong', () => {
       const k = JSON.parse(knowledgeText);
-      const row = k.protocols.find((p) => p.doseVerbatim);
-      row.doseVerbatim = '999 mg – 1000 mg';
+      const row = k.protocols.find((p) => p.doseApproved);
+      row.doseApproved = '999 mg – 1000 mg';
       return { knowledge: JSON.stringify(k) };
     }],
     ['knowledge: ruled compound deleted', () => {
       const k = JSON.parse(knowledgeText);
-      const i = k.protocols.findIndex((p) => p.doseVerbatim);
+      const i = k.protocols.findIndex((p) => p.doseApproved);
       k.protocols.splice(i, 1);
       k.clinicianRulings = [];
       return { knowledge: JSON.stringify(k) };
     }],
     ['knowledge: protocols range contradicts ruling', () => {
       const k = JSON.parse(knowledgeText);
-      const row = k.protocols.find((p) => p.doseVerbatim && parseRange(p.dose));
+      const row = k.protocols.find((p) => p.doseApproved && parseRange(p.dose));
       row.dose = '9000-9001 mcg';
       return { knowledge: JSON.stringify(k) };
     }],

@@ -14,6 +14,7 @@ import { PROTOCOL_TEMPLATES } from "../src/data/protocols";
 import { isSafetyOnly } from "../src/data/safetyOnlyCompounds";
 import { redactDoseBearingNotes } from "../src/data/dosingDisplay";
 import { CLINICIAN_RULINGS, getClinicianRuling } from "../src/data/clinicianRulings";
+import { expandClinicianText } from "../src/data/clinicianRulingsDisplay";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
@@ -83,9 +84,18 @@ const protocolRows = PROTOCOL_TEMPLATES.map((pt) => {
     name: pt.name,
     dose: `${pt.typicalDose.min}-${pt.typicalDose.max} ${pt.typicalDose.unit}`,
     ...(ruling?.dose?.verbatim
-      ? { doseVerbatim: ruling.dose.verbatim, doseSource: "Clinician-approved" as const }
+      ? {
+          // Her shorthand expanded into a sentence. Same figures in the same
+          // order — clinicianRulingsDisplay proves it — but "am on empty
+          // stomach" reads as the verb until you already know it means
+          // morning, and Aimee repeats what she is handed.
+          doseApproved: expandClinicianText(ruling.dose.verbatim, `${pt.peptideId} dose`),
+          doseSource: "Clinician-approved" as const,
+        }
       : {}),
-    ...(ruling?.frequency ? { clinicianFrequency: ruling.frequency } : {}),
+    ...(ruling?.frequency
+      ? { clinicianFrequency: expandClinicianText(ruling.frequency, `${pt.peptideId} frequency`) }
+      : {}),
     route: pt.route,
     freq: pt.frequencyLabel ?? pt.frequency,
     cycle: `${pt.durationWeeks.min}-${pt.durationWeeks.max} weeks`,
@@ -115,11 +125,13 @@ const rulingOnlyRows = CLINICIAN_RULINGS.filter(
   (r) => r.dose?.verbatim && !protocolIds.has(r.peptideId) && !isSafetyOnly(r.peptideId),
 ).map((r) => ({
   peptideId: r.peptideId,
-  dose: r.dose!.verbatim,
+  dose: expandClinicianText(r.dose!.verbatim, `${r.peptideId} dose`),
   doseSource: "Clinician-approved" as const,
-  ...(r.frequency ? { freq: r.frequency } : {}),
-  ...(r.cycle?.verbatim ? { cycle: r.cycle.verbatim } : {}),
-  ...(r.notes?.length ? { notes: r.notes } : {}),
+  ...(r.frequency ? { freq: expandClinicianText(r.frequency, `${r.peptideId} frequency`) } : {}),
+  ...(r.cycle?.verbatim ? { cycle: expandClinicianText(r.cycle.verbatim, `${r.peptideId} cycle`) } : {}),
+  ...(r.notes?.length
+    ? { notes: r.notes.map((n, i) => expandClinicianText(n, `${r.peptideId} note ${i}`)) }
+    : {}),
 }));
 
 const out = {

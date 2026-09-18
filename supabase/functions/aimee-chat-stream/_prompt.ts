@@ -255,13 +255,13 @@ function buildKnowledgeBlock(): string {
   Dose: ${pt.doseGuidance}${pt.storage ? `
   Storage: ${pt.storage}` : ""}${notes}${contra}`;
     }
-    // `doseVerbatim` is the approving clinician's own wording for this
+    // `doseApproved` is the approving clinician's ruling for this
     // compound. When it is present it REPLACES the stored range on the Dose
     // line rather than sitting beside it: two ranges on one card is the exact
     // shape that let Aimee pick the wrong one, and the whole point of routing
     // rulings here is that there is nothing left to pick between.
-    const doseLine = pt.doseVerbatim
-      ? `${pt.doseVerbatim} — ${pt.doseSource} ${pt.route}, ${pt.clinicianFrequency ?? pt.freq}`
+    const doseLine = pt.doseApproved
+      ? `${pt.doseApproved} — ${pt.doseSource} ${pt.route}, ${pt.clinicianFrequency ?? pt.freq}`
       : `${pt.dose} ${pt.route}, ${pt.freq}`;
     return `• ${pt.name} (peptide: ${pt.peptideId})\n  Dose: ${doseLine}\n  Cycle: ${pt.cycle}${pt.timing ? `\n  Timing: ${pt.timing}` : ""}${pt.storage ? `\n  Storage: ${pt.storage}` : ""}${notes}${contra}${titration}`;
   });
