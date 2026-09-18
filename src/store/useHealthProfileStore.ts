@@ -3,7 +3,8 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { useDoseLogStore } from './useDoseLogStore';
 import { useChatStore } from './useChatStore';
 import { useCheckinStore } from './useCheckinStore';
-import { HealthProfile, BodyMetrics, MedicalHistory, NutritionProfile, SleepProfile, LifestyleProfile, DeviceConnections, GoalType, BiologicalSex, CycleTracking } from '../types';
+import { HealthProfile, BodyMetrics, MedicalHistory, NutritionProfile, SleepProfile, LifestyleProfile, DeviceConnections, GoalType, BiologicalSex, CycleTracking, OnboardingSnapshot } from '../types';
+import type { ServerProfileFetch } from '../lib/onboardingRestore';
 import { secureStorage } from '../services/secureStorage';
 import { syncHealthProfile } from '../services/syncService';
 import { Clamps, clampNumber } from '../utils/inputClamps';
@@ -132,6 +133,8 @@ interface HealthProfileStore {
   /** Free-text goal expansion + feature-wish feedback. */
   setGoalNotes: (notes: string) => void;
   setFeatureWish: (wish: string) => void;
+  /** Onboarding answers mirrored for restore on another device. */
+  setOnboardingSnapshot: (snapshot: OnboardingSnapshot) => void;
   setPeptideExperience: (
     level: HealthProfile['peptideExperience'],
     current?: string[],
@@ -294,6 +297,15 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
           profile: {
             ...state.profile,
             featureWish: wish,
+            lastUpdated: new Date().toISOString(),
+          },
+        })),
+
+      setOnboardingSnapshot: (snapshot) =>
+        set((state) => ({
+          profile: {
+            ...state.profile,
+            onboarding: snapshot,
             lastUpdated: new Date().toISOString(),
           },
         })),
@@ -536,27 +548,66 @@ useHealthProfileStore.subscribe((state, prev) => {
 /**
  * Pull the authoritative health profile from Supabase on app boot.
  * Call this from _layout.tsx after restoreSession.
+ *
+ * Returns what it found, because the onboarding restore decides on it: "no
+ * row" and "could not ask" must not look alike. `error` used to be ignored, so
+ * a PostgREST failure read as a user with no profile.
+ *
+ * Concurrent calls share one request. Boot, the sign-in effect and the
+ * onboarding restore all ask at nearly the same moment; separate requests
+ * could land in any order, and a later "server wins" overwrite would wipe a
+ * snapshot the restore had just written into the store.
  */
-export async function syncHealthProfileFromServer(): Promise<void> {
-  try {
-    const { supabase } = await import('../services/supabase');
-    const { data: { user } } = await (supabase as any).auth.getUser();
-    if (!user) return;
+let inflightServerProfile: Promise<ServerProfileFetch> | null = null;
 
-    const { data } = await (supabase as any)
-      .from('health_profiles')
-      .select('profile, setup_complete, current_step')
-      .eq('user_id', user.id)
-      .maybeSingle();
+/**
+ * Lazy, as before, so boot does not pull the client in early. A parameter only
+ * so tests can hand in a client: jest cannot run a dynamic import() without
+ * --experimental-vm-modules, and would report every case as a fetch error.
+ */
+type SupabaseLoader = () => Promise<{ supabase: unknown }>;
+const loadSupabase: SupabaseLoader = () => import('../services/supabase');
 
-    if (data?.profile) {
-      // Server wins on boot — overwrite local if remote exists
-      useHealthProfileStore.setState({
-        profile: data.profile,
-        currentStep: data.current_step ?? 0,
-      });
+export function syncHealthProfileFromServer(
+  load: SupabaseLoader = loadSupabase,
+): Promise<ServerProfileFetch> {
+  if (inflightServerProfile) return inflightServerProfile;
+  const request = (async (): Promise<ServerProfileFetch> => {
+    try {
+      const { supabase } = await load();
+      const { data: { user }, error: userError } = await (supabase as any).auth.getUser();
+      // supabase-js reports "no session" as an AuthSessionMissingError too;
+      // only a DIFFERENT error means it could not tell.
+      if (!user) {
+        return userError && userError.name !== 'AuthSessionMissingError'
+          ? { status: 'error' }
+          : { status: 'signed-out' };
+      }
+
+      const { data, error } = await (supabase as any)
+        .from('health_profiles')
+        .select('profile, setup_complete, current_step')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) return { status: 'error' };
+
+      if (data?.profile) {
+        // Server wins on boot — overwrite local if remote exists
+        useHealthProfileStore.setState({
+          profile: data.profile,
+          currentStep: data.current_step ?? 0,
+        });
+      }
+      return { status: 'ok', userId: user.id, profile: data?.profile ?? null };
+    } catch {
+      // offline or not yet synced — local state stands
+      return { status: 'error' };
     }
-  } catch {
-    // offline or not yet synced — local state stands
-  }
+  })();
+  inflightServerProfile = request;
+  void request.finally(() => {
+    if (inflightServerProfile === request) inflightServerProfile = null;
+  });
+  return request;
 }

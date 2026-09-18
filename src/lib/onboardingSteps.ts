@@ -22,6 +22,7 @@
  *
  * None of this touches `isComplete`. Auth may respect onboarding completion,
  * never grant it — see src/lib/__tests__/onboardingCompletionGate.test.ts.
+ * Restoring completion from the server's record is src/lib/onboardingRestore.ts.
  */
 
 export const WELCOME_STEP = 0;
@@ -82,4 +83,44 @@ export function shouldForwardHome(
   ctx: OnboardingStepContext & { isComplete: boolean },
 ): boolean {
   return storedStep === WELCOME_STEP && ctx.isAuthenticated && ctx.isComplete && !ctx.isEditMode;
+}
+
+/**
+ * Hold a fresh onboarding screen blank while the server restore for this
+ * signed-in user is still out (src/services/onboardingRestore.ts).
+ *
+ * Without it a returning user on a new device sees step 1 for as long as the
+ * profile fetch takes, then gets pulled home or forward mid-glance. Keyed on
+ * the STORED step, like shouldForwardHome, so a user already answering
+ * questions is never blanked. `waitElapsed` is the screen's own ceiling: a
+ * restore that never settles costs a short delay, never a blank screen.
+ */
+export function shouldAwaitServerRestore(
+  storedStep: number,
+  ctx: OnboardingStepContext & { isComplete: boolean; restoreSettled: boolean; waitElapsed: boolean },
+): boolean {
+  return (
+    storedStep === WELCOME_STEP &&
+    ctx.isAuthenticated &&
+    !ctx.isComplete &&
+    !ctx.isEditMode &&
+    !ctx.restoreSettled &&
+    !ctx.waitElapsed
+  );
+}
+
+/**
+ * The step to jump to for a restore's resume point, or null to stay put.
+ * Forward only, from a screen that has not moved yet: answers being typed are
+ * never yanked backwards or skipped past.
+ */
+export function resumeStepToApply(
+  storedStep: number,
+  resumeStep: number | null,
+  ctx: OnboardingStepContext,
+): number | null {
+  if (resumeStep == null || ctx.isEditMode || !ctx.isAuthenticated) return null;
+  if (storedStep !== WELCOME_STEP) return null;
+  if (resumeStep <= visibleOnboardingStep(storedStep, ctx)) return null;
+  return resumeStep;
 }

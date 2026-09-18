@@ -82,9 +82,19 @@ describe('formatDoseAmount — mass rollup preserved', () => {
     expect(formatDoseAmount(60000, 'mcg')).toBe('60 mg');
   });
 
-  it('keeps a real fraction rather than rounding it away', () => {
-    expect(formatDoseAmount(1250, 'mcg')).toBe('1.25 mg');
+  it('shows mg to at most one decimal', () => {
+    // Work order 2026-09-15: "no dosing figure ever renders at two decimals".
+    // This used to assert 1250 mcg -> "1.25 mg"; SS-31's split rendered
+    // "16.55 mg" through the same path.
     expect(formatDoseAmount(2500, 'mcg')).toBe('2.5 mg');
+    expect(formatDoseAmount(1250, 'mcg')).toBe('1.3 mg');
+    expect(formatDoseAmount(16550, 'mcg')).toBe('16.6 mg');
+    expect(formatDoseAmount(0.25, 'mg')).toBe('250 mcg');
+  });
+
+  it('decides mcg vs mg after rounding', () => {
+    expect(formatDoseAmount(999.6, 'mcg')).toBe('1 mg');
+    expect(formatDoseAmount(999.4, 'mcg')).toBe('999 mcg');
   });
 
   it('rounds mcg rather than showing false precision', () => {
@@ -96,10 +106,10 @@ describe('formatDoseAmount — mass rollup preserved', () => {
     expect(formatDoseAmount(250, 'IU')).toBe('250 IU');
   });
 
-  it('trims a computed fraction to 2dp for IU/ml', () => {
+  it('rounds a computed fraction: whole IU, ml to 1dp', () => {
     // Intensity shifting produces fractions (min + span*0.33).
-    expect(formatDoseAmount(13.25, 'ml')).toBe('13.25 ml');
-    expect(formatDoseAmount(13.256, 'ml')).toBe('13.26 ml');
+    expect(formatDoseAmount(149.25, 'IU')).toBe('149 IU');
+    expect(formatDoseAmount(13.25, 'ml')).toBe('13.3 ml');
   });
 });
 
@@ -124,12 +134,15 @@ describe('one implementation, not four', () => {
     }
   });
 
-  it('calculatorV2 borrows the same digits for its mg rendering', () => {
-    // It still honours an explicit mcg choice — that toggle is the user's —
-    // but the number itself must match the rest of the app.
+  it('calculatorV2 matches the app for whole doses but keeps the drawn precision', () => {
+    // It honours an explicit mcg choice — that toggle is the user's. Whole and
+    // 1dp doses read the same as everywhere else; a 2dp dose is NOT display-
+    // rounded, because the calculator prints it beside the syringe volume
+    // computed from it (formatDoseAmountExact).
     expect(formatDoseV2(1, 'mg')).toBe(formatMassMcg(1000));
     expect(formatDoseV2(60, 'mg')).toBe(formatMassMcg(60000));
-    expect(formatDoseV2(1.25, 'mg')).toBe(formatMassMcg(1250));
+    expect(formatDoseV2(2.5, 'mg')).toBe(formatMassMcg(2500));
+    expect(formatDoseV2(1.25, 'mg')).toBe('1.25 mg');
   });
 
   it('an explicit mcg choice is still honoured', () => {

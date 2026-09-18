@@ -14,6 +14,8 @@ import {
   showOnboardingBack,
   showSignInLink,
   shouldForwardHome,
+  shouldAwaitServerRestore,
+  resumeStepToApply,
 } from '../onboardingSteps';
 
 const signedOut = { isAuthenticated: false, isEditMode: false };
@@ -96,6 +98,61 @@ describe('shouldForwardHome — respects completion, never grants it', () => {
   });
 });
 
+describe('shouldAwaitServerRestore — no step flashes while the restore is out', () => {
+  const waiting = { ...signedIn, isComplete: false, restoreSettled: false, waitElapsed: false };
+
+  it('holds a fresh screen for a signed-in, not-yet-onboarded visitor', () => {
+    expect(shouldAwaitServerRestore(WELCOME_STEP, waiting)).toBe(true);
+  });
+
+  it('stops holding once the restore settles', () => {
+    expect(shouldAwaitServerRestore(WELCOME_STEP, { ...waiting, restoreSettled: true })).toBe(false);
+  });
+
+  it('stops holding at its own ceiling, whatever the restore is doing', () => {
+    expect(shouldAwaitServerRestore(WELCOME_STEP, { ...waiting, waitElapsed: true })).toBe(false);
+  });
+
+  it('never holds a signed-out visitor — there is nothing to restore', () => {
+    expect(shouldAwaitServerRestore(WELCOME_STEP, { ...waiting, isAuthenticated: false })).toBe(false);
+  });
+
+  it('never holds an onboarded visitor, edit mode, or someone mid-flow', () => {
+    expect(shouldAwaitServerRestore(WELCOME_STEP, { ...waiting, isComplete: true })).toBe(false);
+    expect(shouldAwaitServerRestore(WELCOME_STEP, { ...waiting, isEditMode: true })).toBe(false);
+    for (const step of [1, 2, 3]) expect(shouldAwaitServerRestore(step, waiting)).toBe(false);
+  });
+});
+
+describe('resumeStepToApply — forward only, from an untouched screen', () => {
+  it('opens a fresh signed-in screen at the resume step', () => {
+    expect(resumeStepToApply(WELCOME_STEP, 2, signedIn)).toBe(2);
+    expect(resumeStepToApply(WELCOME_STEP, 3, signedIn)).toBe(3);
+  });
+
+  it('does nothing when the resume step is where the screen already opens', () => {
+    expect(resumeStepToApply(WELCOME_STEP, 1, signedIn)).toBeNull();
+  });
+
+  it('never moves someone who is already answering', () => {
+    expect(resumeStepToApply(1, 3, signedIn)).toBeNull();
+    expect(resumeStepToApply(3, 2, signedIn)).toBeNull();
+  });
+
+  it('never applies without a session, in edit mode, or with no resume step', () => {
+    expect(resumeStepToApply(WELCOME_STEP, 3, signedOut)).toBeNull();
+    expect(resumeStepToApply(WELCOME_STEP, 3, editing)).toBeNull();
+    expect(resumeStepToApply(WELCOME_STEP, null, signedIn)).toBeNull();
+  });
+
+  it('never lands a signed-in visitor on Welcome', () => {
+    for (const r of [0, 1, 2, 3]) {
+      const target = resumeStepToApply(WELCOME_STEP, r, signedIn);
+      if (target != null) expect(target).toBeGreaterThanOrEqual(FIRST_QUESTION_STEP);
+    }
+  });
+});
+
 describe('app/onboarding.tsx is wired to these rules', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'app', 'onboarding.tsx'), 'utf8');
   const code = src
@@ -119,6 +176,15 @@ describe('app/onboarding.tsx is wired to these rules', () => {
   it('routes Back through onboardingBackAction, with no raw decrement', () => {
     expect(code).toMatch(/onboardingBackAction\(step, stepCtx\)/);
     expect(code).not.toMatch(/setStep\(\(s\) => s - 1\)/);
+  });
+
+  it('renders nothing, not a step, while the server restore is out', () => {
+    expect(code).toMatch(/const awaitRestore = shouldAwaitServerRestore\(storedStep, \{/);
+    expect(code).toMatch(/if \(forwardHome \|\| awaitRestore\) \{/);
+  });
+
+  it('applies the resume step only through resumeStepToApply', () => {
+    expect(code).toMatch(/resumeStepToApply\(storedStep, resume\.step,/);
   });
 
   it('every footer Back button is gated on showBack', () => {

@@ -9,12 +9,11 @@
  *
  * Why a dedicated function:
  *   - Different cadence than chat (once/week per user, not interactive).
- *     Should not count against the daily chat cap.
  *   - Different prompt — rewrite-only, no tool calls.
  *
  * Tier:    Pro only.
- * Limit:   2 rewrites/day per user. Plenty for the Sunday cron plus an
- *          ad-hoc tap on the Reports surface.
+ * Limit:   the monthly AI allowance shared with aimee-chat-stream
+ *          (_shared/aiAllowance.ts). It was 2 rewrites/day.
  * Cost:    ~$0.0006/call → ~$0.024/year per Pro user.
  *
  * Deploy: supabase functions deploy aimee-report-rewrite
@@ -23,6 +22,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
+import { checkAiAllowance, recordAiSpend } from '../_shared/aiAllowance.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -38,8 +38,6 @@ const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL') ?? 'grok-4.3';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-
-const DAILY_LIMIT = 2;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -67,41 +65,6 @@ You will receive a TEMPLATED WEEKLY REPORT assembled from real data. Your job is
 - Length cap: 80 words across the rewrite. Trim filler ruthlessly.
 
 Return ONLY the rewritten body as plain text. No JSON, no markdown fences.`;
-
-async function checkRateLimit(
-  supabase: any,
-  userId: string,
-  functionName: string,
-  limit: number,
-): Promise<{ allowed: boolean; limit: number; retryAfter?: number }> {
-  try {
-    const today = new Date().toISOString().slice(0, 10);
-    const { data, error } = await supabase.rpc('bump_ai_usage', {
-      p_user_id: userId,
-      p_function_name: functionName,
-      p_date: today,
-    });
-    if (error) throw error;
-    const newCount = Array.isArray(data) && data[0]
-      ? (data[0] as any).count ?? 0
-      : 0;
-    if (newCount > limit) {
-      const now = new Date();
-      const tomorrow = new Date(now);
-      tomorrow.setUTCHours(24, 0, 0, 0);
-      const retryAfter = Math.max(
-        1,
-        Math.round((tomorrow.getTime() - now.getTime()) / 1000),
-      );
-      return { allowed: false, limit, retryAfter };
-    }
-    return { allowed: true, limit };
-  } catch (err) {
-    reportError('aimee-report-rewrite', err);
-    console.error(`[${functionName}] rate-limit check failed; failing closed:`, err);
-    return { allowed: false, limit, retryAfter: 60 };
-  }
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -151,16 +114,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    const rate = await checkRateLimit(supabase, user.id, 'aimee-report-rewrite', DAILY_LIMIT);
-    if (!rate.allowed) {
-      return jsonResp(
-        {
-          error: `Daily report-rewrite limit reached (${rate.limit}/day).`,
-          retryAfter: rate.retryAfter,
-        },
-        429,
-      );
-    }
+    // Monthly allowance, shared with aimee-chat-stream. This was a per-day
+    // count (2 rewrites/day). "i dont want a daily cap" (2026-08-26): the
+    // per-tier monthly allowance and the system-wide breaker in _cost.ts
+    // are the limit, and the spend is recorded below so the breaker sees it.
+    const allowance = await checkAiAllowance(supabase, user.id, tier);
+    if (!allowance.allowed) return jsonResp(allowance.body, allowance.status);
 
     const body = await req.json().catch(() => ({}));
     const templatedBody = typeof body?.body === 'string' ? body.body.slice(0, 4000) : '';
@@ -207,6 +166,7 @@ Deno.serve(async (req) => {
       return jsonResp({ error: `Grok ${res.status}` }, 502);
     }
     const completion = await res.json();
+    await recordAiSpend(supabase, user.id, allowance.cost, completion);
     const rewritten: string =
       completion?.choices?.[0]?.message?.content?.trim() ?? '';
     if (!rewritten) {

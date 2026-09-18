@@ -29,7 +29,13 @@
  * without `doseBands` behave exactly as before.
  */
 import type { ProtocolTemplate, ProtocolFrequency } from '../types';
-import { formatDoseRange, normalizeDoseRange, type DoseRange } from './doseUnits';
+import {
+  formatDoseRange,
+  normalizeDoseRange,
+  roundDoseForDisplay,
+  type DoseRange,
+  type DoseUnit,
+} from './doseUnits';
 
 export type ProtocolIntensity = 'mild' | 'standard' | 'aggressive';
 
@@ -175,4 +181,105 @@ export function computeCyclePlan(
         ? `${durationWeeks.min} weeks`
         : `${durationWeeks.min}–${durationWeeks.max} weeks`,
   };
+}
+
+export interface SupplyPeriod {
+  label: string;
+  weeks: number;
+  doses: number;
+  /** [fewest, most] vials; null when no vial size is known or the dose is not a mass. */
+  vialsRange: [number, number] | null;
+  syringes: number;
+  bacWaterMl: number | null;
+  swabs: number;
+  vialsLabel: string;
+  syringesLabel: string;
+  bacWaterLabel: string;
+  swabsLabel: string;
+}
+
+export interface SuppliesEstimate {
+  periods: SupplyPeriod[];
+  /** Whether a vial count is possible at all (mass dose). */
+  doseIsMassBased: boolean;
+  hasVialMath: boolean;
+}
+
+/**
+ * Everything the Supplies estimator card prints, computed without React.
+ * Moved out of SuppliesEstimatorCard unchanged in its arithmetic so a test can
+ * pin the vial count a user is told to buy. One edge fix: BAC water is rounded
+ * to 0.1 mL for display, so a 1.1 mL reconstitution over 3 vials reads "3.3 mL"
+ * rather than "3.3000000000000003 mL" (the card printed the raw product).
+ *
+ * Horizons: 1 week, 2 weeks, and the protocol's longest cycle
+ * (durationWeeks.max). Doses per horizon = ceil(injections/week × weeks). The
+ * vial range is [dose range min, max] × doses ÷ vial size, for the chosen
+ * intensity's dose range (Standard = the full typicalDose).
+ */
+export function estimateSupplies(
+  protocol: ProtocolTemplate,
+  opts: { vialMcg?: number; bacWaterMl?: number; intensity?: ProtocolIntensity } = {},
+): SuppliesEstimate {
+  const { vialMcg, bacWaterMl, intensity } = opts;
+  const range = intensityToDoseRange(protocol, intensity ?? 'standard');
+  const perWeek = FREQUENCY_PER_WEEK[protocol.frequency] ?? 1;
+  const cycleWeeks = protocol.durationWeeks.max;
+  const horizons = [
+    { label: '1 week', weeks: 1 },
+    { label: '2 weeks', weeks: 2 },
+    { label: `Full cycle (${cycleWeeks} wks)`, weeks: cycleWeeks },
+  ];
+  const bacPerVialMl = bacWaterMl && bacWaterMl > 0 ? bacWaterMl : 2;
+
+  const periods = horizons.map(({ label, weeks }): SupplyPeriod => {
+    const doses = Math.ceil(perWeek * weeks);
+    const vialsRange: [number, number] | null =
+      range.massBased && vialMcg && vialMcg > 0
+        ? [Math.ceil((range.min * doses) / vialMcg), Math.ceil((range.max * doses) / vialMcg)]
+        : null;
+    const bac = vialsRange ? Math.round(vialsRange[1] * bacPerVialMl * 10) / 10 : null;
+    const [lo, hi] = vialsRange ?? [0, 0];
+    const vialWord = hi === 1 ? 'vial' : 'vials';
+    return {
+      label,
+      weeks,
+      doses,
+      vialsRange,
+      syringes: doses,
+      bacWaterMl: bac,
+      swabs: doses * 2,
+      vialsLabel: vialsRange ? (lo === hi ? `${lo} ${vialWord}` : `${lo}–${hi} ${vialWord}`) : '—',
+      syringesLabel: `${doses}`,
+      bacWaterLabel: bac != null ? `${bac} mL` : '—',
+      swabsLabel: `${doses * 2}`,
+    };
+  });
+
+  return {
+    periods,
+    doseIsMassBased: range.massBased,
+    hasVialMath: periods[0]?.vialsRange != null,
+  };
+}
+
+/**
+ * The dose "Start cycle" on the Plan Your Cycle screen seeds an active protocol
+ * with — the same number its confirmation prompt shows.
+ *
+ * A titration ladder's first step when there is one; otherwise the midpoint of
+ * typicalDose, "so the user isn't started at the max". That midpoint used to be
+ * Math.round'ed in the protocol's own unit, which for a milligram range rounds
+ * to whole milligrams and landed three compounds ON the max it was meant to
+ * avoid: CJC-1295 1–2 mg → 2 mg, tesamorelin 0.5–1 mg → 1 mg, somatropin
+ * 0.2–1 mg → 1 mg. It now rounds to the display precision
+ * (roundDoseForDisplay), kept in the protocol's unit and clamped inside the
+ * range, so what is stored is exactly what the prompt printed.
+ */
+export function planStarterDose(protocol: ProtocolTemplate): { dose: number; unit: DoseUnit } {
+  const first = protocol.titrationSchedule?.[0];
+  if (first) return { dose: first.dose, unit: first.unit as DoseUnit };
+  const { min, max, unit } = protocol.typicalDose;
+  const mid = roundDoseForDisplay((min + max) / 2, unit);
+  return { dose: Math.min(max, Math.max(min, mid)), unit };
 }

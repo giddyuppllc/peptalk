@@ -249,12 +249,17 @@ export async function fetchUserRecords<T = Record<string, unknown>>(
  * Sync the user's health profile. The DB stores the full profile JSON in a
  * single `profile` column so we never have to migrate shape changes.
  */
+/**
+ * Returns true only when PostgREST accepted the row. Existing callers ignore
+ * the result; the onboarding snapshot write reads it so a failed save is
+ * reported rather than assumed.
+ */
 export async function syncHealthProfile(
   profile: unknown,
   extras?: { setup_complete?: boolean; current_step?: number }
-): Promise<void> {
+): Promise<boolean> {
   const userId = await getUserId();
-  if (!userId) return;
+  if (!userId) return false;
 
   try {
     const { error } = await db
@@ -270,9 +275,14 @@ export async function syncHealthProfile(
         { onConflict: 'user_id' },
       );
 
-    if (error) console.warn('[sync] health_profiles upsert failed:', error.message);
+    if (error) {
+      console.warn('[sync] health_profiles upsert failed:', error.message);
+      return false;
+    }
+    return true;
   } catch (e) {
     if (__DEV__) console.warn('[sync] health_profiles sync error:', e);
+    return false;
   }
 }
 

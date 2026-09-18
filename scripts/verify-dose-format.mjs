@@ -48,7 +48,7 @@ const FORMATTER_OWNERS = new Map([
   [
     'src/utils/calculatorV2.ts',
     'Honours the calculator\'s explicit mg/mcg toggle, which formatDoseAmount ' +
-      'deliberately does not. Borrows formatMassMcg for the digits.',
+      'deliberately does not. Calls formatDoseAmountExact: a drawn dose is not display-rounded.',
   ],
 ]);
 

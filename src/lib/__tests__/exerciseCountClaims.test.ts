@@ -50,3 +50,26 @@ describe('exercise counts on user-facing surfaces are derived, not typed', () =>
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * Aimee was told the library held 451 exercises (and, in the dev fallback
+ * prompt, 289) while it holds EXERCISES.length. The edge function cannot import
+ * src/data without dragging app code into a Deno bundle, so these prompts carry
+ * a literal, and this pins every literal to the real count.
+ */
+describe('model-facing exercise counts match EXERCISES.length', () => {
+  const MODEL_FACING = [
+    'supabase/functions/aimee-chat-stream/_prompt.ts',
+    'supabase/functions/aimee-chat-stream/_tools.ts',
+    'src/services/llmService.ts',
+  ];
+  // Prose, so comments are NOT stripped: the prompt text lives in strings.
+  const COUNT = /\b(\d{2,4})\+?(?:-exercise\b| exercises\b)/g;
+
+  it.each(MODEL_FACING)('%s states the real count, and only the real count', (rel) => {
+    const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    const counts = [...src.matchAll(COUNT)].map((m) => Number(m[1]));
+    expect(counts.length).toBeGreaterThan(0);
+    expect(counts).toEqual(counts.map(() => EXERCISES.length));
+  });
+});
