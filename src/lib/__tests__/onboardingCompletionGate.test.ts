@@ -138,6 +138,15 @@ describe('the restore judges "answered" exactly as the onboarding screen does', 
     expect(code).toMatch(/isOnboardingHeightValid\(parseInt\(heightFeet, 10\), parseInt\(heightInches, 10\)\)/);
   });
 
+  it('a resumed user is attested with their stored age bucket, not ageToRange(0)', () => {
+    // Resumed past step 1, selectedAge is still 0 and ageToRange(0) is '18-29'.
+    expect(code).toMatch(
+      /const attestedRange = selectedAge >= MIN_AGE \? ageToRange\(selectedAge\) : profile\.ageRange;/,
+    );
+    expect(code).toMatch(/if \(attestedRange\) void attestAge\(attestedRange, MIN_AGE\);/);
+    expect(code).not.toMatch(/attestAge\(ageToRange\(selectedAge\)/);
+  });
+
   it('step 3 still requires the disclaimer from everyone', () => {
     expect(code).toMatch(/if \(isAuthenticated\) return acceptedTerms;/);
     expect(code).toMatch(/emailOk &&\s*passwordCheck\.valid &&\s*acceptedTerms/);

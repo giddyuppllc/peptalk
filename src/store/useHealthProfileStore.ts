@@ -10,6 +10,38 @@ import { syncHealthProfile } from '../services/syncService';
 import { Clamps, clampNumber } from '../utils/inputClamps';
 
 // ---------------------------------------------------------------------------
+// Local-only changes
+// ---------------------------------------------------------------------------
+
+/** >0 while a change must stay on this device (see the sync subscription). */
+let profileSyncSuppressed = 0;
+
+/**
+ * Run `fn` without its profile changes reaching the server. Scoped: zustand
+ * notifies subscribers synchronously inside `set`, so only changes made during
+ * `fn` are skipped — the next ordinary edit syncs as normal. A counter rather
+ * than a boolean so a nested call cannot re-enable sync for its outer caller.
+ */
+export function withoutProfileSync<T>(fn: () => T): T {
+  profileSyncSuppressed += 1;
+  try {
+    return fn();
+  } finally {
+    profileSyncSuppressed -= 1;
+  }
+}
+
+/**
+ * True while inside withoutProfileSync. For the OTHER uploads of profile data
+ * that do not go through this store's subscription — the onboarding restore's
+ * mirror (src/services/onboardingRestore.ts) upserts health_profiles directly,
+ * and a device wipe must not reach the server through it either.
+ */
+export function isProfileSyncSuppressed(): boolean {
+  return profileSyncSuppressed > 0;
+}
+
+// ---------------------------------------------------------------------------
 // Defaults
 // ---------------------------------------------------------------------------
 
@@ -482,7 +514,14 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
           },
         })),
 
-      resetProfile: () => set({ profile: emptyProfile, currentStep: 0 }),
+      // Device-local. Both callers — Profile → "Delete My Data" and the logout
+      // wipe — describe clearing THIS device. Without the suppression the
+      // cloud-sync subscription below saw an empty profile as an edit and
+      // upserted it over the server copy, silently destroying the data that
+      // onboarding restore and the user's other devices read back. Removing
+      // the server copy is delete-user's job (Delete Account), never this.
+      resetProfile: () =>
+        withoutProfileSync(() => set({ profile: emptyProfile, currentStep: 0 })),
 
       // Queries
       hasAllergy: (substance) => {
@@ -539,6 +578,10 @@ export const useHealthProfileStore = create<HealthProfileStore>()(
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
 useHealthProfileStore.subscribe((state, prev) => {
   if (state.profile === prev.profile) return; // no change
+  // A local-only change (see withoutProfileSync). Returns BEFORE touching the
+  // timer: a real edit made just before the reset is still owed its sync, and
+  // cancelling it here would drop that edit rather than protect anything.
+  if (profileSyncSuppressed > 0) return;
   if (syncTimer) clearTimeout(syncTimer);
   syncTimer = setTimeout(() => {
     syncHealthProfile(state.profile).catch(() => {});

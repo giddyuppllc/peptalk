@@ -27,6 +27,7 @@ import { useOnboardingStore } from '../store/useOnboardingStore';
 import {
   useHealthProfileStore,
   syncHealthProfileFromServer,
+  isProfileSyncSuppressed,
 } from '../store/useHealthProfileStore';
 import { useMealStore, DEFAULT_TARGETS } from '../store/useMealStore';
 import { useProgressGoalsStore } from '../store/useProgressGoalsStore';
@@ -166,8 +167,13 @@ export function clearOnboardingRestore(): void {
 // Runs only once the restore for this user has settled. Before that, the
 // restore's own reconcile covers it, and a write made while the fetch is out
 // could be overwritten by the fetch's "server wins" a moment later.
+//
+// A device-local change (withoutProfileSync — Delete My Data, the sign-out
+// wipe) writes nothing here either: this upserts health_profiles directly, so
+// the health store's own suppression does not cover it.
 useOnboardingStore.subscribe((state, prev) => {
   if (state.profile === prev.profile && state.isComplete === prev.isComplete) return;
+  if (isProfileSyncSuppressed()) return;
   const userId = currentUserId();
   if (!userId || state.restore.userId !== userId || state.restore.status !== 'settled') return;
   const parsed = parseOnboardingSnapshot(useHealthProfileStore.getState().profile);

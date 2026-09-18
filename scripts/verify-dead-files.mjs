@@ -6,13 +6,11 @@
  * verify:routes already covers reachability there.
  *
  * WHAT A HIT MEANS — read before deleting
- * Both files currently on the list are PARKED WORK, not rubbish, and deleting
- * either would destroy something deliberate. That is the normal case, not the
- * exception:
+ * Files on the list are PARKED WORK, not rubbish, and deleting one would
+ * destroy something deliberate. That is the normal case, not the exception.
+ * (LeaderboardStrip was listed here until 2026-09-15, when it moved off mock
+ * data onto the real opt-in leaderboard and was mounted in the community feed.)
  *
- *   LeaderboardStrip    a Phase 2 feature on mock data. verify:routes already
- *                       records community/leaderboard as deliberately
- *                       unlaunched for the same reason.
  *   MaxYourStackCard    a coming-soon tease with a waitlist opt-in. Orphaned
  *                       when app/workouts/index.tsx was cut from 1140 lines to
  *                       238 in Jamie's simplification — dropped from the hub,
@@ -34,11 +32,6 @@ const slash = (s) => s.split(String.fromCharCode(92)).join('/');
 
 /** Orphaned on purpose, with the reason. */
 const ALLOWED = new Map([
-  [
-    'src/components/LeaderboardStrip.tsx',
-    'Phase 2, still on mock data. Ships with the community leaderboard, which ' +
-      'verify:routes also records as deliberately unlaunched.',
-  ],
   [
     'src/components/MaxYourStackCard.tsx',
     'Coming-soon tease for Pro+ programming, with a waitlist opt-in. Dropped ' +

@@ -21,8 +21,14 @@ import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
 import { PEPTIDES } from '../../src/data/peptides';
 import { searchPeptides } from '../../src/lib/peptideSearch';
-import { getProtocolsByPeptide } from '../../src/data/protocols';
-import { getDosingReference } from '../../src/data/peptideDosingReference';
+// Dose data reaches this screen through the display boundary so that a
+// safety-information-only compound (Edward, 2026-09-16) yields no protocol
+// and no reconstitution reference — the "Your Dose" and "Draw this much"
+// blocks both gate on those. See src/data/safetyOnlyCompounds.ts.
+import {
+  getProtocolsForDisplay,
+  getDosingReferenceForDisplay,
+} from '../../src/data/dosingDisplay';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { getPeptideTiming } from '../../src/data/peptideTiming';
 
@@ -67,7 +73,7 @@ export default function QuickDoseScreen() {
   );
 
   const protocols = useMemo(
-    () => (selectedPeptideId ? getProtocolsByPeptide(selectedPeptideId) : []),
+    () => (selectedPeptideId ? getProtocolsForDisplay(selectedPeptideId) : []),
     [selectedPeptideId]
   );
 
@@ -82,7 +88,7 @@ export default function QuickDoseScreen() {
   // hardcoded 5mg/2mL. The old hardcode gave every peptide a 2.5 mg/mL concentration
   // (2× errors on semaglutide/retatrutide), which is why this screen was pulled.
   const dosingRef = useMemo(
-    () => (selectedPeptideId ? getDosingReference(selectedPeptideId) : null),
+    () => (selectedPeptideId ? getDosingReferenceForDisplay(selectedPeptideId) : null),
     [selectedPeptideId],
   );
 

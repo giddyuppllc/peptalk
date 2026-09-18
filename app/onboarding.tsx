@@ -53,6 +53,8 @@ import {
   useCommunityPrefsStore,
   type CommunityPreset,
 } from '../src/store/useCommunityPrefsStore';
+import { useLeaderboardStore } from '../src/store/useLeaderboardStore';
+import { LEADERBOARD_COPY } from '../src/constants/leaderboardCopy';
 
 const COMMUNITY_PRESETS: {
   value: CommunityPreset;
@@ -214,9 +216,12 @@ export default function OnboardingScreen() {
   // Once the restore has landed, pre-fill Basics from the health profile the
   // user already has, so continuing does not blank or overwrite it (step 2
   // writes activity level unconditionally). Only empty fields, only once.
+  // A resume point arrives just before the restore reports settled; seeding on
+  // either means a resumed Basics step never renders empty for a frame.
+  const restoreLanded = restoreSettled || (resume != null && resume.userId === currentUserId);
   const seededFromProfile = useRef(false);
   useEffect(() => {
-    if (seededFromProfile.current || !restoreSettled || !isAuthenticated || isEditMode) return;
+    if (seededFromProfile.current || !restoreLanded || !isAuthenticated || isEditMode) return;
     seededFromProfile.current = true;
     const hp = useHealthProfileStore.getState().profile;
     const w = hp?.bodyMetrics?.weightLbs;
@@ -242,7 +247,7 @@ export default function OnboardingScreen() {
       const notes = hp.goalNotes;
       setGoalNotes((cur) => cur || notes);
     }
-  }, [restoreSettled, isAuthenticated, isEditMode]);
+  }, [restoreLanded, isAuthenticated, isEditMode]);
 
   // Open at the restore's resume point: forward only, from an untouched screen.
   useEffect(() => {
@@ -266,6 +271,9 @@ export default function OnboardingScreen() {
   const [communityPreset, setCommunityPreset] = useState<
     'all_in' | 'picky' | 'nothing'
   >('nothing');
+  // Community leaderboard opt-in — its own explicit choice, default OFF. Stored
+  // server-side on profiles.leaderboard_opt_in; never inferred from the preset.
+  const [leaderboardOptIn, setLeaderboardOptIn] = useState(false);
 
   // Stores
   const signup = useAuthStore((s) => s.signup);
@@ -450,6 +458,11 @@ export default function OnboardingScreen() {
         // §11.4 — apply the community public-tracking preset chosen at
         // intake. User can fine-tune per-category later in Profile.
         applyCommunityPreset(communityPreset);
+
+        // Leaderboard opt-in. Written to profiles now when there is a session;
+        // otherwise held and flushed on the first authenticated boot. Off needs
+        // no write — the column defaults to false.
+        void useLeaderboardStore.getState().recordOnboardingChoice(leaderboardOptIn);
 
         // Record server-side that this account passed the age gate. Until now
         // the answer lived only on the device, so the gate could be shown in
@@ -1080,6 +1093,35 @@ export default function OnboardingScreen() {
                       </TouchableOpacity>
                     );
                   })}
+                </View>
+
+                {/* Community leaderboard — explicit opt-in, default off. */}
+                <Text style={[s.label, { marginTop: 20 }]}>{LEADERBOARD_COPY.onboardingLabel}</Text>
+                <Text style={s.labelSub}>{LEADERBOARD_COPY.onboardingSub}</Text>
+                <View
+                  style={[
+                    s.chip,
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 10,
+                      paddingVertical: 12,
+                      paddingHorizontal: 14,
+                      marginBottom: 12,
+                    },
+                  ]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.chipText, { fontWeight: '700' }]}>{LEADERBOARD_COPY.onboardingToggle}</Text>
+                    <Text style={[s.labelSub, { marginTop: 2 }]}>{LEADERBOARD_COPY.onboardingToggleHint}</Text>
+                  </View>
+                  <Switch
+                    value={leaderboardOptIn}
+                    onValueChange={setLeaderboardOptIn}
+                    trackColor={{ true: ACCENT }}
+                    accessibilityLabel={LEADERBOARD_COPY.onboardingToggle}
+                  />
                 </View>
 
                 <Text style={[s.label, { marginTop: 20 }]}>Choose your plan</Text>

@@ -482,7 +482,17 @@ export const useAuthStore = create<AuthStore>()(
           // expiry, last-validated time) lingered into User B's
           // session. P0 from Wave 76.11 logout audit.
           useSubscriptionStore.getState().clearSubscription();
-          useOnboardingStore.getState().reset();
+          // Local-only: the session is still live here (auth state is cleared
+          // last, and a failed revoke keeps it), and the onboarding restore
+          // mirrors onboarding changes into health_profiles.
+          // The wipe itself must never be skipped, so a missing helper still
+          // resets rather than throwing past it.
+          let localOnly = (fn: () => void) => fn();
+          try {
+            const { withoutProfileSync } = require('./useHealthProfileStore');
+            if (typeof withoutProfileSync === 'function') localOnly = withoutProfileSync;
+          } catch {}
+          localOnly(() => useOnboardingStore.getState().reset());
         } catch {}
 
         // Lazy-require the rest so this file doesn't force early
@@ -536,6 +546,8 @@ export const useAuthStore = create<AuthStore>()(
         safeClear('progressGoals', () => require('./useProgressGoalsStore').useProgressGoalsStore.getState().clearAll?.());
         safeClear('featureWaitlist', () => require('./useFeatureWaitlistStore').useFeatureWaitlistStore.getState().clearAll?.());
         safeClear('community', () => require('./useCommunityStore').useCommunityStore.getState().clearAll?.());
+        // Other people's leaderboard rows + this account's unsent opt-in choice.
+        safeClear('leaderboard', () => require('./useLeaderboardStore').useLeaderboardStore.getState().clearAll?.());
         // Reset preferences to default + drop pushToken. Don't fully
         // clear — notification preferences are device-pref-ish — but
         // we don't want User B inheriting User A's reminder schedule.
