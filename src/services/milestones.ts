@@ -12,6 +12,7 @@
  */
 
 import { useDoseLogStore } from '../store/useDoseLogStore';
+import { dateOnlyToIsoLocal } from '../lib/dateOnlyIso';
 import { useWorkoutStore } from '../store/useWorkoutStore';
 import { useBodyCompositionStore } from '../store/useBodyCompositionStore';
 import { useLabResultsStore } from '../store/useLabResultsStore';
@@ -42,21 +43,6 @@ function dateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/**
- * Convert a date-only "YYYY-MM-DD" string to a stable ISO timestamp.
- *
- * Naive `new Date('2026-05-17').toISOString()` parses the string as UTC
- * midnight, so a user east of UTC sees "2026-05-17" → "2026-05-17T00:00:00Z"
- * but a user west of UTC sees the same string render as the previous day
- * in milestone cards. Anchor to local noon instead — the date component
- * stays stable across DST + UTC offsets. 2026-05-17 timezone fix.
- */
-function dateOnlyToIsoLocal(iso: string): string {
-  if (typeof iso !== 'string') return new Date().toISOString();
-  const [y, mo, d] = iso.split('-').map(Number);
-  if (!y || !mo || !d) return new Date(iso).toISOString();
-  return new Date(y, mo - 1, d, 12, 0, 0, 0).toISOString();
-}
 
 function epley1RM(weightLb: number, reps: number): number {
   if (reps <= 1) return weightLb;
