@@ -75,7 +75,7 @@ import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { useTourTarget } from '../../src/hooks/useTourTarget';
 import { useIsOnline } from '../../src/hooks/useNetworkStatus';
 import { isAllowedNavigationPath } from '../../src/lib/aimeeNavAllowlist';
-import { aimeeDenialOffer } from '../../src/lib/aimeeDenialActions';
+import { AIMEE_UNAVAILABLE_MESSAGE, aimeeDenialOffer } from '../../src/lib/aimeeDenialActions';
 // All validation/clamping for Aimee `client_action` payloads lives in
 // a pure module so it can be unit-tested without a renderer. See
 // scripts/verify-aimee-action-sanitize.ts for the contract.
@@ -832,9 +832,40 @@ export default function PepTalkScreen() {
       }
     }
 
-    // 3. Local fallback (no API key, no consent, API failure, timeout, thrown error)
+    /*
+     * 3. We are here for one of three reasons, and they are not the same thing.
+     *
+     * OFFLINE, or AI not enabled (no consent, not available): the on-device
+     * engine is the right answer. There is no cloud reply to be had, and an
+     * instant local one beats a placeholder bubble behind a blinking caret —
+     * which is what Jamie screenshotted next to the offline banner.
+     *
+     * ONLINE with AI enabled: the request FAILED — it errored, timed out, or
+     * the server refused it. Answering that with the local engine is how this
+     * has been hiding every fault in the system. A user who has run out of
+     * allowance, whose tier is misread, or who asked while the model was down
+     * got a canned answer and concluded Aimee is stupid. Nobody reported an
+     * outage because there was never an error to report.
+     *
+     * Edward, 2026-09-18: the fallback "was a back up when ai was down and we
+     * were testing — it makes answers feel dumb in the end."
+     *
+     * So: say what happened. A visible failure is recoverable; a silent
+     * downgrade is not.
+     */
+    const aiWasExpected = useAI && isDeviceOnline;
+
     setTimeout(() => {
       try {
+        if (aiWasExpected) {
+          handleBotResponse({
+            id: `bot-${Date.now()}`,
+            role: 'bot',
+            content: AIMEE_UNAVAILABLE_MESSAGE,
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
         const botResponse = generateLocalBotResponse(text, context);
         handleBotResponse(botResponse);
       } catch (err) {

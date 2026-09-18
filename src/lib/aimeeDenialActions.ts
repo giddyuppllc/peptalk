@@ -66,6 +66,24 @@ export const DENIAL_COPY = {
   topUpAction: 'Top up AI credit',
 } as const;
 
+/**
+ * What Aimee says when the cloud request was expected to work and did not.
+ *
+ * DRAFT — Edward approves.
+ *
+ * It replaces a canned answer from the on-device engine. That substitution is
+ * why "the AI stopped working" was invisible for so long: an outage, a spent
+ * allowance and a misread tier all produced a confident, slightly stupid reply
+ * instead of an error, so nobody had anything to report.
+ *
+ * It does not name a cause, because at this point the client does not know
+ * one — the stream may have errored, timed out, or been refused. A refusal
+ * that DOES carry a reason is handled upstream by `aimeeDenialOffer`, which
+ * shows the upgrade or top-up path instead of this.
+ */
+export const AIMEE_UNAVAILABLE_MESSAGE =
+  "I couldn't reach my brain just then — that's on us, not you. Try again in a moment.";
+
 const SUBSCRIPTION_ROUTE = '/subscription';
 
 export function aimeeDenialOffer(flags: {
