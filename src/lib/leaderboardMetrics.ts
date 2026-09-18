@@ -79,6 +79,29 @@ function fromDayNumber(n: number): string {
   return new Date(n * DAY_MS).toISOString().slice(0, 10);
 }
 
+/**
+ * A timestamp's UTC day, or null when it is not a date at all.
+ *
+ * `new Date('nonsense').toISOString()` does not return a bad string — it throws
+ * `RangeError: Invalid time value`. These metrics run on `completedAt` read
+ * straight off a server row (`r.completed_at`, useWorkoutStore.ts:549), so one
+ * malformed value anywhere in a user's history threw out of the leaderboard's
+ * render. The only error boundary in the app is at the root, so that is not a
+ * broken card — it is the whole app replaced by the fallback screen.
+ *
+ * A row we cannot date is dropped, which is what the surrounding code already
+ * does with a row that has no `completedAt` at all.
+ */
+function utcDayKey(value: string | number | null | undefined): string | null {
+  if (value === null || value === undefined) return null;
+  // One check, not three. An earlier draft also tested `value === ''`, which no
+  // test could ever catch because `new Date('').getTime()` is already NaN —
+  // dead code dressed as a guard. The finite check is the whole guard.
+  const t = new Date(value).getTime();
+  if (!Number.isFinite(t)) return null;
+  return new Date(t).toISOString().slice(0, 10);
+}
+
 export function addDays(iso: string, days: number): string {
   return fromDayNumber(toDayNumber(iso) + days);
 }
@@ -185,8 +208,9 @@ export function workoutsInWindow(workouts: WorkoutInput[], today: string): numbe
   const todayN = toDayNumber(today);
   const start = todayN - (METRIC_WINDOW_DAYS - 1);
   return workouts.filter((w) => {
-    if (!w.completedAt) return false;
-    const dn = toDayNumber(new Date(w.completedAt).toISOString().slice(0, 10));
+    const key = utcDayKey(w.completedAt);
+    if (key === null) return false;
+    const dn = toDayNumber(key);
     return dn >= start && dn <= todayN;
   }).length;
 }
@@ -221,13 +245,15 @@ export function milestoneEvents(
       }
     }
   }
+  // Day keys, not epoch millis: a row we cannot date is dropped here rather
+  // than becoming a NaN that throws out of toISOString() further down.
   const completed = workouts
-    .filter((w): w is { completedAt: string } => !!w.completedAt)
-    .map((w) => new Date(w.completedAt).getTime())
-    .sort((a, b) => a - b);
+    .map((w) => utcDayKey(w.completedAt))
+    .filter((k): k is string => k !== null)
+    .sort();
   for (const t of WORKOUT_COUNT_THRESHOLDS) {
     if (completed.length >= t) {
-      out.push({ kind: 'workout_count', threshold: t, achievedOn: new Date(completed[t - 1]).toISOString().slice(0, 10) });
+      out.push({ kind: 'workout_count', threshold: t, achievedOn: completed[t - 1] });
     }
   }
   return out
