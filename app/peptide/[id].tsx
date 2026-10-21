@@ -10,6 +10,10 @@ import { useAuthStore } from '../../src/store/useAuthStore';
 import { GlassCard } from '../../src/components/GlassCard';
 import { TitrationScheduleCard } from '../../src/components/TitrationScheduleCard';
 import { ProtocolPlanCard } from '../../src/components/ProtocolPlanCard';
+import {
+  FLOATING_BOTTOM_CLEARANCE,
+  FLOATING_TOP_RIGHT_CLEARANCE,
+} from '../../src/constants/floatingControls';
 import { intensityToDoseRange, intensityToDose } from '../../src/components/ProtocolIntensityPicker';
 import { formatDoseAmount, formatDoseBand } from '../../src/lib/doseUnits';
 import { ActivateProtocolButton } from '../../src/components/ActivateProtocolButton';
@@ -1613,7 +1617,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    // The closing disclaimer scrolls clear of the global Home/Aimee FABs.
+    paddingBottom: FLOATING_BOTTOM_CLEARANCE,
   },
   // Native Stack header is `headerTransparent: true` for this route
   // (see app/_layout.tsx peptide/[id] options). The back chevron floats
@@ -1626,9 +1631,16 @@ const styles = StyleSheet.create({
 
   // Back control. Replaces the old blank headerSpacer — same vertical budget,
   // but now occupied by something the user can actually see and press.
+  // A row: the favourite heart was added beside the chevron later, and in the
+  // old column two 40px buttons overflowed the 52px band, pushing the chevron
+  // up off the top of the screen. Padded right so the heart clears the PT nav
+  // button.
   backRow: {
     height: 52,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: FLOATING_TOP_RIGHT_CLEARANCE - 20,
   },
   backBtn: {
     width: 40,

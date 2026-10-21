@@ -34,6 +34,7 @@ import {
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { supabase } from '../../src/services/supabase';
 import { Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../../src/constants/floatingControls';
 import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
 import { healthConsentGranted, withHealthConsent } from '../../src/lib/aiFeatureConsent';
 import { Disclaimer } from '../../src/components/Disclaimer';
@@ -562,7 +563,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: { fontSize: FontSizes.xl, fontWeight: '700', flex: 1, textAlign: 'center' },
-  scroll: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.lg },
+  // The disclaimer scrolls clear of the global Home/Aimee FABs.
+  scroll: { paddingHorizontal: Spacing.lg, paddingBottom: FLOATING_BOTTOM_CLEARANCE },
   subtitle: { fontSize: FontSizes.sm, lineHeight: 20, marginBottom: Spacing.md },
   dateRow: {
     flexDirection: 'row',

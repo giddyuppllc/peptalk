@@ -18,6 +18,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../../src/constants/floatingControls';
 import { LearnVideoCard } from '../../src/components/LearnVideoCard';
 import { SyringeSVG } from '../../src/components/v3';
 import { ACETIC_ACID_PEPTIDE_NAMES } from '../../src/data/calculatorMetadata';
@@ -548,7 +549,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     color: '#2D2D2D',
   },
-  scroll: { paddingBottom: 40 },
+  // The last row scrolls clear of the global Home/Aimee FABs.
+  scroll: { paddingBottom: FLOATING_BOTTOM_CLEARANCE },
   section: {
     paddingHorizontal: Spacing.lg,
     marginBottom: Spacing.lg,

@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Spacing, FontSizes } from '../../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../../src/constants/floatingControls';
 import { useNotificationStore } from '../../src/store/useNotificationStore';
 import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { setCuesEnabled } from '../../src/lib/cue';
@@ -471,7 +472,8 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.sm,
-    paddingBottom: 60,
+    // The last row scrolls clear of the global Home/Aimee FABs.
+    paddingBottom: FLOATING_BOTTOM_CLEARANCE,
     gap: Spacing.sm,
   },
   section: { padding: Spacing.md, gap: Spacing.sm },

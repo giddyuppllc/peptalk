@@ -17,6 +17,7 @@ import { GlassCard } from '../../../src/components/GlassCard';
 import { GradientButton } from '../../../src/components/GradientButton';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { Spacing, FontSizes } from '../../../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../../../src/constants/floatingControls';
 import { useCommunityStore } from '../../../src/store/useCommunityStore';
 import { pickAndUploadCommunityImage } from '../../../src/services/communityImageUpload';
 
@@ -291,7 +292,8 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: FontSizes.lg, fontWeight: '700' },
   scroll: {
     paddingHorizontal: Spacing.md,
-    paddingBottom: 60,
+    // "Post" scrolls clear of the global Home/Aimee FABs.
+    paddingBottom: FLOATING_BOTTOM_CLEARANCE,
   },
   label: {
     fontSize: 11,

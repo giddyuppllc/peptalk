@@ -22,6 +22,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import { HealthPermissionExplainer } from '../../src/components/HealthPermissionExplainer';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../../src/constants/floatingControls';
 import { useIntegrationsStore } from '../../src/store/useIntegrationsStore';
 import { ADAPTERS } from '../../src/services/integrations/manager';
 import { listUnderComingSoon } from '../../src/lib/integrationListing';
@@ -204,7 +205,8 @@ export default function IntegrationsSettingsScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 40 }}
+        // The last row scrolls clear of the global Home/Aimee FABs.
+        contentContainerStyle={{ paddingBottom: FLOATING_BOTTOM_CLEARANCE }}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.section}>

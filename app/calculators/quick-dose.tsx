@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard } from '../../src/components/GlassCard';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE, FLOATING_TOP_RIGHT_CLEARANCE } from '../../src/constants/floatingControls';
 import { PEPTIDES } from '../../src/data/peptides';
 import { searchPeptides } from '../../src/lib/peptideSearch';
 // Dose data reaches this screen through the display boundary so that a
@@ -616,6 +617,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, gap: Spacing.sm,
+    // Keep the title clear of the global PT button (top-right).
+    paddingRight: FLOATING_TOP_RIGHT_CLEARANCE,
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 20,
@@ -623,7 +626,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.darkText, flex: 1 },
-  scroll: { paddingHorizontal: Spacing.lg },
+  scroll: { paddingHorizontal: Spacing.lg, paddingBottom: FLOATING_BOTTOM_CLEARANCE },
 
   // Search
   searchWrap: {
@@ -636,7 +639,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: FontSizes.md, color: Colors.darkText },
 
   // Peptide list
-  listContent: { paddingHorizontal: Spacing.lg, paddingBottom: 40 },
+  listContent: { paddingHorizontal: Spacing.lg, paddingBottom: FLOATING_BOTTOM_CLEARANCE },
   peptideRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     paddingVertical: Spacing.sm,

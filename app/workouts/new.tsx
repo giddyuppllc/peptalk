@@ -24,6 +24,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { Spacing, BorderRadius } from '../../src/constants/theme';
+import {
+  FLOATING_BOTTOM_CLEARANCE,
+  FLOATING_TOP_RIGHT_CLEARANCE,
+} from '../../src/constants/floatingControls';
 import { EXERCISES, getExerciseById, searchExercises } from '../../src/data/exercises';
 import {
   useWorkoutTemplateStore,
@@ -675,6 +679,8 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
+    // Keep the header "Next" clear of the global PT button.
+    paddingRight: FLOATING_TOP_RIGHT_CLEARANCE,
   },
   headerCenter: {
     alignItems: 'center',
@@ -904,7 +910,9 @@ const s = StyleSheet.create({
   bottomBar: {
     paddingHorizontal: Spacing.lg,
     paddingTop: 10,
-    paddingBottom: Spacing.md,
+    // Lifts the CTA above the global Home/Aimee FABs, which float over the
+    // bottom of this bar.
+    paddingBottom: FLOATING_BOTTOM_CLEARANCE,
     borderTopWidth: 1,
   },
   bottomCta: {

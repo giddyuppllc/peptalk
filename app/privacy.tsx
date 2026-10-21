@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../src/constants/floatingControls';
 
 // ── Section Data ──────────────────────────────────────────────────
 
@@ -244,7 +245,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.xxl,
+    // The footer note scrolls clear of the global Home/Aimee FABs.
+    paddingBottom: Math.max(Spacing.xxl, FLOATING_BOTTOM_CLEARANCE),
   },
 
   // ── Header ────────────────────────────────────────────────────

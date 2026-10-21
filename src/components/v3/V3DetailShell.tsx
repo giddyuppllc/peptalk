@@ -58,7 +58,12 @@ export function V3DetailShell({
             color={t.colors.textPrimary as string}
           />
         </Pressable>
-        <Greeting variant="screen-header" subline={title} />
+        {/* flex:1 so the greeting spans the row. Without it the row sized it
+            to its text, and its avatar sat jammed against (often over) the
+            name instead of at the right edge, as on Home. */}
+        <View style={styles.greeting}>
+          <Greeting variant="screen-header" subline={title} />
+        </View>
       </View>
       <AimeePersistentChip observation={observation} intent={intent} />
       <View style={[styles.body, contentStyle]}>{children}</View>
@@ -79,6 +84,9 @@ const styles = StyleSheet.create({
     paddingRight: 0,
     paddingTop: 60,
     gap: 4,
+  },
+  greeting: {
+    flex: 1,
   },
   body: {
     flex: 1,

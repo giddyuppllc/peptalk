@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { Spacing, BorderRadius } from '../../src/constants/theme';
+import { FLOATING_TOP_RIGHT_CLEARANCE } from '../../src/constants/floatingControls';
 import { useMealStore } from '../../src/store/useMealStore';
 import { useFeatureLimit } from '../../src/hooks/useFeatureLimit';
 import { PaywallModal } from '../../src/components/PaywallModal';
@@ -240,6 +241,8 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
+    // Keep the save button clear of the global PT button.
+    paddingRight: FLOATING_TOP_RIGHT_CLEARANCE,
   },
   iconBtn: {
     width: 40,

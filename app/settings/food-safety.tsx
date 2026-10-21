@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../../src/constants/floatingControls';
 import { useMealStore } from '../../src/store/useMealStore';
 import {
   DEFAULT_SAFETY_WINDOWS,
@@ -108,7 +109,8 @@ export default function FoodSafetySettingsScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        // The last row scrolls clear of the global Home/Aimee FABs.
+        contentContainerStyle={{ paddingBottom: FLOATING_BOTTOM_CLEARANCE }}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.introBox}>

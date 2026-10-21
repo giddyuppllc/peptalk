@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 import { GlassCard } from './GlassCard';
 import { AnimatedPress } from './AnimatedPress';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../constants/floatingControls';
 import type { BodyRegion } from '../data/bodyMapData';
 import { getExercisesByMuscle } from '../data/exercises';
 import { useCheckinStore } from '../store/useCheckinStore';
@@ -345,7 +346,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xxl,
+    // The last row scrolls clear of the global Home/Aimee FABs.
+    paddingBottom: Math.max(Spacing.xxl, FLOATING_BOTTOM_CLEARANCE),
   },
   sectionHeader: {
     flexDirection: 'row',

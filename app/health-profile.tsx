@@ -23,6 +23,7 @@ import {
   BiologicalSex,
 } from '../src/types';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../src/constants/theme';
+import { FLOATING_TOP_RIGHT_CLEARANCE } from '../src/constants/floatingControls';
 import { useTheme } from '../src/hooks/useTheme';
 
 // ---------------------------------------------------------------------------
@@ -912,6 +913,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+    // Keep "Save & Exit" clear of the global PT button.
+    paddingRight: FLOATING_TOP_RIGHT_CLEARANCE,
     borderBottomWidth: 1, borderBottomColor: Colors.darkCardBorder,
   },
   headerTitle: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.darkText },

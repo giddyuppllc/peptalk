@@ -27,6 +27,7 @@ import {
   Spacing,
   BorderRadius,
 } from '../../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../../src/constants/floatingControls';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useIsAdmin } from '../../src/hooks/useIsAdmin';
 import { sendFeedback } from '../../src/services/feedback';
@@ -578,7 +579,8 @@ function AdvancedFitnessToggle({ t }: { t: ReturnType<typeof useTheme> }) {
 
 const profileStyles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { paddingHorizontal: Spacing.lg, paddingBottom: 40 },
+  // The version line scrolls clear of the global Home/Aimee FABs.
+  scroll: { paddingHorizontal: Spacing.lg, paddingBottom: FLOATING_BOTTOM_CLEARANCE },
   pageTitle: { fontSize: 32, fontWeight: '900', letterSpacing: -0.5, color: '#2D2D2D', marginTop: 12, marginBottom: 20 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   backBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 12, marginBottom: 20 },

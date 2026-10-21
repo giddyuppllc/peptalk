@@ -49,6 +49,7 @@ import { canSendToCloud } from '../../src/services/privacyGuard';
 import { buildAiMessageReport } from '../../src/lib/aiReport';
 import { promptReportReasons } from '../../src/components/community/memberReportActions';
 import { AI_REPORT_COPY, REPORT_COPY } from '../../src/constants/reportCopy';
+import { FLOATING_TOP_RIGHT_CLEARANCE } from '../../src/constants/floatingControls';
 import { useCommunityStore } from '../../src/store/useCommunityStore';
 import { generateCorrelationInsights, buildCorrelationSummaryForBot } from '../../src/services/watchCorrelationService';
 import { useJournalStore } from '../../src/store/useJournalStore';
@@ -1522,6 +1523,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
+    // Keep "Start new chat" clear of the global PT button.
+    paddingRight: FLOATING_TOP_RIGHT_CLEARANCE,
     paddingVertical: 14,
     borderBottomWidth: 1,
   },

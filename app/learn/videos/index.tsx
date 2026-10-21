@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from '../../../src/components/GlassCard';
 import { getRealVideos, getFeaturedVideos } from '../../../src/data/videos';
+import { FLOATING_TOP_RIGHT_CLEARANCE } from '../../../src/constants/floatingControls';
 import { VideoCategory } from '../../../src/types';
 
 // ── Constants ────────────────────────────────────────────────────
@@ -314,6 +315,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 12,
     paddingHorizontal: 20,
+    // Keep the title clear of the global PT button.
+    paddingRight: FLOATING_TOP_RIGHT_CLEARANCE,
     paddingTop: 12,
     paddingBottom: 8,
   },

@@ -89,6 +89,25 @@ if (html.includes(MARKER)) {
   console.log(`[inject-pwa] replaced previous injection (${before - html.length} bytes)`);
 }
 
+// Focus rings only for keyboard users. React Native Web moves focus into a
+// Modal when it opens (onto its first button, or its ScrollView), and Chrome
+// draws the focus ring for programmatic focus that no pointer preceded — so
+// the AI-consent sheet at launch and every paywall showed a hard black box
+// round their content to people who had only ever tapped. A Tab key turns the
+// rings back on; a touch or click turns them off again.
+const FOCUS_RING = `<style>html:not([data-keyboard-nav]) :focus { outline: none !important; }</style>
+    <script>
+(function () {
+  var root = document.documentElement;
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Tab' || e.key.indexOf('Arrow') === 0) root.setAttribute('data-keyboard-nav', '');
+  }, true);
+  function pointer() { root.removeAttribute('data-keyboard-nav'); }
+  document.addEventListener('pointerdown', pointer, true);
+  document.addEventListener('touchstart', pointer, true);
+})();
+</script>`;
+
 const HEAD_TAGS = `${MARKER}
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#14b8a6" />
@@ -97,6 +116,7 @@ const HEAD_TAGS = `${MARKER}
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="PepTalk" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    ${FOCUS_RING}
     ${MARKER_END}`;
 
 const hasIconFont = relocateIconFont();

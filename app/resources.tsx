@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from '../src/components/GlassCard';
 import { useTheme } from '../src/hooks/useTheme';
 import { Spacing, FontSizes } from '../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../src/constants/floatingControls';
 import { SOURCES } from '../src/data/sources';
 import {
   Source,
@@ -306,7 +307,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   filterChipText: { fontSize: FontSizes.xs, fontWeight: '600' },
-  list: { paddingHorizontal: Spacing.md, paddingBottom: 40, gap: Spacing.sm },
+  // The last card's "View source" scrolls clear of the global Home/Aimee FABs.
+  list: { paddingHorizontal: Spacing.md, paddingBottom: FLOATING_BOTTOM_CLEARANCE, gap: Spacing.sm },
   card: { padding: Spacing.md },
   cardHeader: {
     flexDirection: 'row',

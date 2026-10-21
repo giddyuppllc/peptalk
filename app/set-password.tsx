@@ -41,6 +41,7 @@ import { captureException } from '../src/services/telemetry';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useOnboardingStore } from '../src/store/useOnboardingStore';
 import { postAuthLinkRoute } from '../src/lib/passwordRecovery';
+import { FLOATING_TOP_RIGHT_CLEARANCE } from '../src/constants/floatingControls';
 
 const ACCENT = '#E89672';
 
@@ -193,6 +194,9 @@ const s = StyleSheet.create({
     fontFamily: 'DMSans-Bold',
     color: '#2D2D2D',
     marginBottom: 24,
+    // Keep the heading clear of the global PT button; scroll already pads
+    // 24 on this side.
+    marginRight: FLOATING_TOP_RIGHT_CLEARANCE - 24,
   },
   inputLabel: {
     fontSize: 13,

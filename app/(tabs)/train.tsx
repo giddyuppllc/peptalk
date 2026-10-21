@@ -32,6 +32,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { Spacing, BorderRadius, FontSizes } from '../../src/constants/theme';
+import { FLOATING_TOP_RIGHT_CLEARANCE } from '../../src/constants/floatingControls';
 import { useMealStore } from '../../src/store/useMealStore';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
@@ -318,6 +319,9 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: Spacing.md,
     paddingBottom: Spacing.lg,
+    // Keep the title clear of the global PT button; scroll already pads
+    // Spacing.lg on this side.
+    paddingRight: FLOATING_TOP_RIGHT_CLEARANCE - Spacing.lg,
   },
   title: {
     fontSize: 32,
