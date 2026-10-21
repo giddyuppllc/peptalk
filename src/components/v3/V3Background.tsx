@@ -28,7 +28,7 @@ export function V3Background() {
 
   if (t.isDark) {
     return (
-      <View style={StyleSheet.absoluteFill}>
+      <View style={styles.fill}>
         <LinearGradient
           colors={[t.colors.bgBase1 as string, t.colors.bgBase2 as string]}
           style={StyleSheet.absoluteFill}
@@ -65,7 +65,7 @@ export function V3Background() {
 
   // Female render — pastel gradient + 3 radial orbs.
   return (
-    <View style={StyleSheet.absoluteFill}>
+    <View style={styles.fill}>
       <LinearGradient
         colors={[t.colors.bgBase1 as string, t.colors.bgBase2 as string]}
         style={StyleSheet.absoluteFill}
@@ -111,6 +111,12 @@ export function V3Background() {
 }
 
 const styles = StyleSheet.create({
+  // The orbs hang past the window edges on purpose. Clip them here, or on web
+  // the right-hand orb widens the page and every v3 screen scrolls sideways.
+  fill: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
   orb: {
     position: 'absolute',
     borderRadius: 9999,

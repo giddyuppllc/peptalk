@@ -19,7 +19,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { StreamVideoSurface } from '../../src/components/StreamVideoSurface';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -59,11 +59,9 @@ export default function VideoTaggerScreen() {
 
   // Email guard — production users get bounced. Server still refuses to sign
   // URLs without ALLOW_TAGGER_FREE+ADMIN_EMAILS, but we don't want to leak
-  // the manifest UI either. Effect runs unconditionally to keep hook order
-  // stable across renders (rules of hooks).
-  React.useEffect(() => {
-    if (!isAdmin) router.replace('/(tabs)');
-  }, [isAdmin, router]);
+  // the manifest UI either. The bounce is a <Redirect> below, not a
+  // router.replace() in an effect: opened as a deep link, the effect fired
+  // before the root layout had mounted and the error boundary took the page.
 
   const edits = useVideoTaggerStore((s) => s.edits);
   const remoteEdits = useVideoTaggerStore((s) => s.remoteEdits);
@@ -227,8 +225,8 @@ export default function VideoTaggerScreen() {
     }
   };
 
-  // ── Non-admin bail (effect above triggers the redirect) ──
-  if (!isAdmin) return null;
+  // ── Non-admin bail ──
+  if (!isAdmin) return <Redirect href="/(tabs)" />;
 
   // ── Empty state ────────────────────────────────────────────────
   if (queue.length === 0) {

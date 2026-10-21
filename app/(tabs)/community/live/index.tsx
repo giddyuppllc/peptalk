@@ -58,8 +58,7 @@ export default function LiveEventListScreen() {
         .from('community_live_events')
         .select(`
           id, title, description, status, started_at, ended_at,
-          required_tier, host_user_id,
-          profiles:host_user_id ( username, display_name )
+          required_tier, host_user_id
         `)
         .order('started_at', { ascending: false, nullsFirst: false })
         .limit(50);
@@ -67,8 +66,24 @@ export default function LiveEventListScreen() {
         setError(true);
         setEvents([]);
       } else {
+        // host_user_id references auth.users, not profiles, so PostgREST
+        // cannot embed the host — asking it to failed every load with
+        // PGRST200 and this screen only ever showed its error state. Names
+        // come from public_profiles, as useLiveEventStore already does.
+        const rows: EventRow[] = data ?? [];
+        const hostIds = Array.from(new Set(rows.map((r) => r.host_user_id).filter(Boolean)));
+        const hosts = new Map<string, { username?: string; display_name?: string }>();
+        if (hostIds.length > 0) {
+          const { data: people } = await (supabase as any)
+            .from('public_profiles')
+            .select('id, username, display_name')
+            .in('id', hostIds);
+          for (const p of (people ?? []) as any[]) {
+            hosts.set(p.id, { username: p.username ?? undefined, display_name: p.display_name ?? undefined });
+          }
+        }
         setError(false);
-        setEvents(data ?? []);
+        setEvents(rows.map((r) => ({ ...r, profiles: hosts.get(r.host_user_id) })));
       }
     } catch {
       setError(true);

@@ -88,8 +88,7 @@ export async function deliverPendingCommunityNotifications(): Promise<void> {
     let q = (supabase as any)
       .from('community_notifications')
       .select(`
-        id, kind, post_id, comment_id, body, created_at,
-        actor:actor_id ( id, username, display_name )
+        id, kind, post_id, comment_id, body, created_at, actor_id
       `)
       .eq('user_id', user.id)
       .eq('is_read', false)
@@ -108,6 +107,20 @@ export async function deliverPendingCommunityNotifications(): Promise<void> {
     const { data, error } = await q;
     if (error || !data || data.length === 0) return;
 
+    // actor_id references auth.users, not profiles, so PostgREST cannot embed
+    // the actor. The embed this used to ask for failed every call with
+    // PGRST200, and the early return above meant no community banner was ever
+    // delivered. Names come from public_profiles instead.
+    const actorIds = Array.from(new Set((data as any[]).map((r) => r.actor_id).filter(Boolean)));
+    const actors = new Map<string, { username?: string; display_name?: string }>();
+    if (actorIds.length > 0) {
+      const { data: people } = await (supabase as any)
+        .from('public_profiles')
+        .select('id, username, display_name')
+        .in('id', actorIds);
+      for (const p of (people ?? []) as any[]) actors.set(p.id, p);
+    }
+
     let newest = lastId;
     for (const row of data) {
       // Skip rows we've already shown.
@@ -116,9 +129,10 @@ export async function deliverPendingCommunityNotifications(): Promise<void> {
       const copy = KIND_COPY[row.kind];
       if (!copy) continue;
 
+      const person = row.actor_id ? actors.get(row.actor_id) : undefined;
       const actor =
-        row.actor?.display_name?.trim() ||
-        row.actor?.username?.trim() ||
+        person?.display_name?.trim() ||
+        person?.username?.trim() ||
         'Someone';
 
       // Moderation rows carry a freeform reason in row.body. Surface it
