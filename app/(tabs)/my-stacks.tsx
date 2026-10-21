@@ -9,8 +9,12 @@ import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { getPeptideById , PEPTIDES } from '../../src/data/peptides';
 import { searchPeptides } from '../../src/lib/peptideSearch';
-import { PROTOCOL_TEMPLATES } from '../../src/data/protocols';
-import { getDosingReference } from '../../src/data/peptideDosingReference';
+// Display boundary — no "TYPICAL RESEARCH RANGE" pill and no suggested
+// per-slot amount for a safety-information-only compound (Edward, 2026-09-16).
+// plannedDoseForProtocol reads the reference through the same boundary.
+import { getProtocolsForDisplay } from '../../src/data/dosingDisplay';
+import { formatDoseAmount } from '../../src/lib/doseUnits';
+import { plannedDoseForProtocol } from '../../src/lib/plannedDose';
 import { CoachMark } from '../../src/components/tutorial/CoachMark';
 import { Spacing, BorderRadius } from '../../src/constants/theme';
 import { PeptideStack, PeptideCategory, GoalType, DoseLogEntry } from '../../src/types';
@@ -378,7 +382,7 @@ function CalculatorTab() {
           Otherwise falls back to the published flat range. */}
       {(() => {
         if (!selectedPeptide) return null;
-        const proto = PROTOCOL_TEMPLATES.find((pt) => pt.peptideId === selectedPeptide.id);
+        const proto = getProtocolsForDisplay(selectedPeptide.id)[0];
         if (!proto?.typicalDose) return null;
 
         const profileLbs = profileWeightLbs ?? 0;
@@ -1061,13 +1065,17 @@ function TodayCycleView({ onJumpToStacks }: TodayCycleViewProps) {
   // Today's planned doses — for the active cycle's peptide. Uses Edward's
   // dosing reference when it exists; otherwise falls back to the protocol's
   // own dose/unit. Twice-daily protocols get a Morning + Evening row.
+  //
+  // plannedDoseForProtocol owns which of the two wins: a ladder step is used
+  // only when the source stated ONE dose. Where it stated a RANGE, `doseMcg`
+  // is a midpoint nobody prescribed (the reference's own comments say "60 mg
+  // midpoint of 20-100 mg") and this card is one tap from the dose log, so the
+  // user's own protocol dose wins. It reads the reference through the display
+  // boundary, so a safety-information-only compound offers no ladder step and
+  // the number on this card is the one the user set themselves.
   const todaysPlan = useMemo(() => {
     if (!active) return [];
-    const ref = getDosingReference(active.protocol.peptideId);
-    const phase = ref?.schedule?.[0];
-    const dose = phase?.doseMcg
-      ? { amount: phase.doseMcg, unit: 'mcg' as const }
-      : { amount: active.protocol.dose, unit: active.protocol.unit };
+    const dose = plannedDoseForProtocol(active.protocol);
 
     const slots: { slot: string; time: string }[] =
       active.protocol.frequency === 'twice_daily'
@@ -1240,8 +1248,11 @@ function TodayCycleView({ onJumpToStacks }: TodayCycleViewProps) {
               >
                 {slot.peptideName}
               </Text>
+              {/* Through formatDoseAmount, never raw: `{amount} {unit}` here
+                  printed glutathione as "300000 mcg" and NAD+ as "60000 mcg",
+                  which is the complaint doseUnits.ts was written to answer. */}
               <Text style={[todayStyles.doseAmount, { color: t.textSecondary }]} numberOfLines={1}>
-                {slot.amount} {slot.unit}
+                {formatDoseAmount(slot.amount, slot.unit)}
               </Text>
             </View>
 
@@ -1261,7 +1272,7 @@ function TodayCycleView({ onJumpToStacks }: TodayCycleViewProps) {
                 onPress={() => handleQuickLog(slot)}
                 activeOpacity={0.85}
                 accessibilityRole="button"
-                accessibilityLabel={`Log ${slot.slot} ${slot.peptideName} ${slot.amount} ${slot.unit}`}
+                accessibilityLabel={`Log ${slot.slot} ${slot.peptideName} ${formatDoseAmount(slot.amount, slot.unit)}`}
               >
                 <Text style={todayStyles.logBtnText}>LOG</Text>
               </TouchableOpacity>
@@ -1836,7 +1847,7 @@ export default function MyStacksScreen() {
                   // told Aimee the user was still running it indefinitely.
                   Alert.alert(
                     getPeptideById(proto.peptideId)?.name ?? proto.peptideId,
-                    `Started ${proto.startDate} · ${proto.dose} ${proto.unit} ${proto.frequency}`,
+                    `Started ${proto.startDate} · ${formatDoseAmount(proto.dose, proto.unit)} ${proto.frequency}`,
                     [
                       { text: 'Cancel', style: 'cancel' },
                       {
@@ -1867,7 +1878,7 @@ export default function MyStacksScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.protocolName, { color: t.text }]}>{proto.peptideId}</Text>
                   <Text style={[styles.protocolInfo, { color: t.textSecondary }]}>
-                    {proto.dose} {proto.unit} · {proto.route} · {proto.frequency}
+                    {formatDoseAmount(proto.dose, proto.unit)} · {proto.route} · {proto.frequency}
                   </Text>
                 </View>
                 <Text style={[styles.protocolDate, { color: t.textMuted }]}>

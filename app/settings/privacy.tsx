@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Spacing, FontSizes } from '../../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../../src/constants/floatingControls';
 import { supabase } from '../../src/services/supabase';
 import { useAuthStore } from '../../src/store/useAuthStore';
 
@@ -93,7 +94,7 @@ export default function PrivacySettingsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: FLOATING_BOTTOM_CLEARANCE }} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <GlassCard>
             <View style={styles.toggleRow}>

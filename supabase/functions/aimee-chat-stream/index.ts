@@ -55,6 +55,7 @@ import { AIMEE_TOOLS, executeTool } from './_tools.ts';
 import { checkCostCap, denialMessage, recordSpend } from './_cost.ts';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
+import { toolRequiresAiDataConsent, toolsAllowedForConsent } from '../_shared/aimeeConsent.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -71,11 +72,29 @@ const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
  * change. Free is 0 — the tier gate refuses before any spend.
  */
 const RATE_LIMITS: Record<string, number> = {
-  // Free gets a real taste — three prompts a month, answers only. Enough to
-  // see what Aimee is, not enough to use her as the product. Tools are
-  // withheld on this tier (see TOOLS_MIN_TIER) so nothing is written to the
-  // account by an unpaid conversation.
-  free: 3,
+  /**
+   * Free gets no AI. The taste is the TRIAL, not a permanent trickle.
+   *
+   * Edward, 2026-09-18: "can new users ... have ... a free trail week of pro?
+   * and then the free acc has none of the ai features otherwise -- that makes
+   * most sense to me."
+   *
+   * Three prompts a month was neither a trial nor a product: enough to make
+   * Aimee look thin and not enough to show what she does. A week of Pro shows
+   * the real thing; after it, AI is what the subscription buys.
+   *
+   * ⚠ THIS MUST NOT DEPLOY WITHOUT THE TRIAL. On its own it takes three
+   * messages a month away from ~226 existing free accounts and offers nothing
+   * back. The trial is granted by
+   * supabase/migrations/20260918130000_launch_trial_on_signup.sql for new
+   * accounts, and existing ones need the backfill Edward runs at ship time.
+   * `freeTierRequiresTrial.test.ts` fails if this number and that migration
+   * ever disagree about which world we are in.
+   *
+   * The comment that stood here claimed "Free is 0" while the value was 3 —
+   * the intent was written down and never applied.
+   */
+  free: 0,
   plus: 750,
   pro: 9000,
 };
@@ -132,7 +151,13 @@ Deno.serve(async (req) => {
   });
   const messageLimit = RATE_LIMITS[tier] ?? 0;
   if (messageLimit === 0) {
-    // An unknown tier, not free — free has its own small allowance above.
+    // Free, an expired trial, or a tier we do not recognise — all three land
+    // here, and all three mean the same thing to the caller: AI is what the
+    // subscription buys. `upgrade: true` is what the client turns into the
+    // lock and the upgrade path, so this must never become a bare 403.
+    //
+    // The comment here used to read "an unknown tier, not free — free has its
+    // own small allowance above". Free no longer does; see RATE_LIMITS.
     return jsonError(403, 'AI chat requires PepTalk+ or Pro subscription', { upgrade: true });
   }
   const canUseTools = TIER_CAN_USE_TOOLS[tier] === true;
@@ -142,7 +167,17 @@ Deno.serve(async (req) => {
   // tier — never anything the client sent.
   const costCheck = await checkCostCap(supabase, user.id, tier);
   if (!costCheck.allowed) {
-    return jsonError(429, denialMessage(costCheck.reason), { reason: costCheck.reason });
+    // This call site used to send the reason alone, so a cost-cap refusal
+    // reached the chat with no action on it for ANY tier — free and plus
+    // included, even though a plan change would have fixed theirs. Both
+    // signals now match `_shared/aiAllowance.ts`: a plan is offered only where
+    // one would help, and a top-up wherever the user's own cost cap is what
+    // stopped them, which is the only path Pro has.
+    return jsonError(429, denialMessage(costCheck.reason), {
+      reason: costCheck.reason,
+      upgrade: costCheck.reason === 'user_cap_hit' && (tier === 'free' || tier === 'plus'),
+      topUp: costCheck.reason === 'user_cap_hit',
+    });
   }
 
   // 5. Parse and validate body --------------------------------------------
@@ -284,6 +319,7 @@ answer the underlying question if you can.`;
           ];
           const collected = await streamRound({
             canUseTools,
+            hasConsent: safeContext.hasConsent === true,
             system: systemPrompt,
             messages: messagesForRound,
             send,
@@ -323,6 +359,10 @@ answer the underlying question if you can.`;
                 error:
                   'Malformed tool arguments — your function.arguments was not valid JSON. Re-emit the tool call with valid JSON.',
               };
+            } else if (safeContext.hasConsent !== true && toolRequiresAiDataConsent(tc.name)) {
+              // Never offered without consent, so a call here is a model
+              // hallucinating the tool. Refuse rather than read health records.
+              result = { error: 'This tool is unavailable: the user has not consented to sharing health data.' };
             } else {
               try {
                 result = await executeTool(tc.name, tc.input, {
@@ -509,6 +549,8 @@ async function streamRound(args: {
   send: (obj: Record<string, unknown>) => void;
   /** Free tier is answers-only — no tools are offered to the model at all. */
   canUseTools: boolean;
+  /** aiDataConsent. Without it, tools that read stored health records are withheld. */
+  hasConsent: boolean;
 }): Promise<StreamRoundResult> {
   // Accumulate tool calls by index (OpenAI streams args as deltas).
   const toolBuf: Map<number, { id: string; name: string; jsonStr: string; started: boolean }> = new Map();
@@ -521,7 +563,10 @@ async function streamRound(args: {
     // Withheld entirely rather than filtered after the fact: a model that is
     // never offered a tool cannot call one, so an unpaid conversation cannot
     // log a dose, change a protocol, or navigate the app.
-    tools: args.canUseTools ? AIMEE_TOOLS : [],
+    //
+    // Without health-data consent (5.1.2), the tools that read the user's
+    // stored health records back to the model are withheld the same way.
+    tools: args.canUseTools ? toolsAllowedForConsent(AIMEE_TOOLS, args.hasConsent) : [],
     maxTokens: 1024,
     temperature: 0.7,
   })) {

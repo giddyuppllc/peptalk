@@ -16,7 +16,7 @@
  *   per_shot_dose outside protocol range      — warn but allow
  */
 
-import { formatDoseAmount } from '../lib/doseUnits';
+import { formatDoseAmountExact } from '../lib/doseUnits';
 
 export interface CalculatorInput {
   /** Manufacturer-stated mg in the vial (user-editable, pre-filled). */
@@ -153,8 +153,9 @@ export function calculate(input: CalculatorInput): CalculatorResult {
  *
  * Unlike formatDoseAmount this HONOURS an explicit unit choice — the calculator
  * has a mg/mcg toggle and a per-compound default in calculatorMetadata, and a
- * user who picks mcg means it. It only borrows the canonical number rendering
- * so the digits match everywhere else in the app.
+ * user who picks mcg means it. It borrows doseUnits' exact rendering (trailing
+ * zeros trimmed, up to 2dp) rather than the rounded display precision — see
+ * formatDoseAmountExact for why a drawn dose is not rounded.
  *
  * It used to do its own: `mg.toFixed(mg >= 10 ? 1 : 2)`, which printed
  * "1.00 mg" and "60.0 mg" — trailing zeros implying a precision the source data
@@ -162,11 +163,12 @@ export function calculate(input: CalculatorInput): CalculatorResult {
  */
 export function formatDose(mg: number, displayUnit: 'mg' | 'mcg'): string {
   if (displayUnit === 'mcg') return `${Math.round(mg * 1000)} mcg`;
-  // formatDoseAmount(_, 'mg'), NOT formatMassMcg — the latter rolls a sub-1mg
-  // value down into mcg, which would silently overrule the unit the user just
-  // picked. A 0.25 mg dose must read "0.25 mg" here even though the app's
-  // automatic rendering would call it "250 mcg".
-  return formatDoseAmount(mg, 'mg');
+  // NOT formatMassMcg / formatDoseAmount — those roll a sub-1mg value down into
+  // mcg (overruling the unit the user just picked) and, since 2026-09-15, round
+  // to 1dp for display. This label sits beside the syringe volume computed from
+  // the same number, so it keeps the drawn precision: a 0.25 mg dose reads
+  // "0.25 mg" and semaglutide's 1.25 mg microdose does not become "1.3 mg".
+  return formatDoseAmountExact(mg, 'mg');
 }
 
 /** Convert from the chosen display unit back to mg for storage. */

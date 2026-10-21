@@ -22,8 +22,10 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import { HealthPermissionExplainer } from '../../src/components/HealthPermissionExplainer';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../../src/constants/floatingControls';
 import { useIntegrationsStore } from '../../src/store/useIntegrationsStore';
 import { ADAPTERS } from '../../src/services/integrations/manager';
+import { listUnderComingSoon } from '../../src/lib/integrationListing';
 import {
   BIOMARKER_SOURCE_LABELS,
   type BiomarkerSource,
@@ -183,7 +185,9 @@ export default function IntegrationsSettingsScreen() {
 
   // Partition adapters into: available + unavailable (scaffolded dark)
   const available = ADAPTERS.filter((a) => a.available());
-  const darkScaffold = ADAPTERS.filter((a) => !a.available() && !(a.source === 'health_connect' && Platform.OS === 'ios'));
+  // Apple Health is never listed as "coming soon" where it cannot exist
+  // (Android, web, iPad) — see src/lib/integrationListing.ts.
+  const darkScaffold = ADAPTERS.filter((a) => listUnderComingSoon(a.source, a.available(), Platform.OS));
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
@@ -201,7 +205,8 @@ export default function IntegrationsSettingsScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 40 }}
+        // The last row scrolls clear of the global Home/Aimee FABs.
+        contentContainerStyle={{ paddingBottom: FLOATING_BOTTOM_CLEARANCE }}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.section}>

@@ -31,6 +31,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { useBodyCompositionStore } from '../../src/store/useBodyCompositionStore';
 import { Spacing, BorderRadius, FontSizes } from '../../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../../src/constants/floatingControls';
 import { tapMedium, notifySuccess } from '../../src/utils/haptics';
 
 interface FieldState {
@@ -319,7 +320,9 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: 160,
+    // Grows by exactly what the save bar's bottom padding grew by, so the
+    // last field still clears the (now taller) sticky bar.
+    paddingBottom: 160 - (Spacing.lg + 6) + FLOATING_BOTTOM_CLEARANCE,
   },
   hint: {
     fontSize: FontSizes.sm,
@@ -392,7 +395,9 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
-    paddingBottom: Spacing.lg + 6,
+    // Lifts "Save scan" above the global Home/Aimee FABs, which float over
+    // the bottom of this bar.
+    paddingBottom: FLOATING_BOTTOM_CLEARANCE,
     borderTopWidth: 1,
   },
   saveBtn: {

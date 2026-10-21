@@ -13,6 +13,10 @@ import {
   FontSizes,
   BorderRadius,
 } from '../../src/constants/theme';
+import {
+  FLOATING_BOTTOM_CLEARANCE,
+  FLOATING_TOP_RIGHT_CLEARANCE,
+} from '../../src/constants/floatingControls';
 
 // ---------------------------------------------------------------------------
 // Category metadata
@@ -475,6 +479,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
+    // Keep the search button clear of the global PT button.
+    paddingRight: FLOATING_TOP_RIGHT_CLEARANCE,
   },
   backBtn: {
     width: 32,
@@ -593,7 +599,9 @@ const styles = StyleSheet.create({
 
   // List
   listContent: {
-    paddingBottom: 100,
+    // The last entry scrolls clear of Home/Aimee and of this screen's own
+    // FAB (56pt), which now sits above Aimee.
+    paddingBottom: FLOATING_BOTTOM_CLEARANCE + 56 + Spacing.md,
   },
 
   // Entry card
@@ -685,7 +693,8 @@ const styles = StyleSheet.create({
   // FAB
   fab: {
     position: 'absolute',
-    bottom: 32,
+    // Stacked above the global Aimee FAB, which occupies the corner below.
+    bottom: FLOATING_BOTTOM_CLEARANCE,
     right: 24,
     width: 56,
     height: 56,

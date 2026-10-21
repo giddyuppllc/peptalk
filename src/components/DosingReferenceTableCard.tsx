@@ -2,18 +2,18 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from './GlassCard';
+import { PEPTIDE_DOSING_TABLE_DISCLAIMER } from '../data/peptideDosingTable';
 import {
-  getDosingTableEntry,
-  PEPTIDE_DOSING_TABLE_DISCLAIMER,
-} from '../data/peptideDosingTable';
-import { getDosingReference } from '../data/peptideDosingReference';
-import { getProtocolsByPeptide } from '../data/protocols';
+  getDosingTableEntryForDisplay,
+  getDosingReferenceForDisplay,
+  getProtocolsForDisplay,
+} from '../data/dosingDisplay';
 import {
   unitRangeForDose,
   reconstitutionNote,
   tableAgreesWithProtocol,
 } from '../lib/syringeUnits';
-import { normalizeDoseRange } from '../lib/doseUnits';
+import { normalizeDoseRange, roundDoseFiguresInText } from '../lib/doseUnits';
 
 /**
  * Surfaces the master dosing-reference TABLE row for a peptide:
@@ -25,7 +25,10 @@ import { normalizeDoseRange } from '../lib/doseUnits';
  * nothing when the peptide has no table entry.
  */
 export function DosingReferenceTableCard({ peptideId }: { peptideId: string }) {
-  const entry = getDosingTableEntry(peptideId);
+  // Null for a safety-information-only compound (Edward, 2026-09-16), so the
+  // whole card — range, cycle, frequency, time-off, titration prose — does not
+  // render. The stored row is untouched; see src/data/dosingDisplay.ts.
+  const entry = getDosingTableEntryForDisplay(peptideId);
   if (!entry) return null;
 
   /**
@@ -39,8 +42,8 @@ export function DosingReferenceTableCard({ peptideId }: { peptideId: string }) {
    * the reconstitution it assumes. A tick count without the vial it came from
    * is a confident wrong number for anyone who mixed theirs differently.
    */
-  const ref = getDosingReference(peptideId);
-  const protocol = getProtocolsByPeptide(peptideId)[0];
+  const ref = getDosingReferenceForDisplay(peptideId);
+  const protocol = getProtocolsForDisplay(peptideId)[0];
   const syringe = (() => {
     if (!ref?.mgPerMl || !protocol?.typicalDose) return null;
     const dose = normalizeDoseRange(
@@ -75,7 +78,8 @@ export function DosingReferenceTableCard({ peptideId }: { peptideId: string }) {
   })();
 
   const rows: { label: string; value?: string; icon: string }[] = [
-    { label: 'Dosing range', value: entry.dosingRange, icon: 'flask-outline' },
+    // Display-rounded ("0.25mg" -> "250mcg"); the stored string is untouched.
+    { label: 'Dosing range', value: roundDoseFiguresInText(entry.dosingRange), icon: 'flask-outline' },
     { label: 'On the syringe', value: syringe ?? undefined, icon: 'medical-outline' },
     { label: 'Cycle length', value: entry.cycleLength, icon: 'time-outline' },
     { label: 'Frequency (daily)', value: entry.frequencyDaily, icon: 'today-outline' },
@@ -124,22 +128,25 @@ export function DosingReferenceTableCard({ peptideId }: { peptideId: string }) {
         </View>
       )}
 
-      {/* Titration strategy — the source table links to a separate
-          "Click For Notes [n]" page. The prose isn't ingested yet, so we
-          show the note reference + a pending hint rather than guessing. */}
-      <View style={styles.titrationBlock}>
-        <View style={styles.rowLabelWrap}>
-          <Ionicons name="trending-up-outline" size={14} color="#6B7280" />
-          <Text style={styles.rowLabel}>Titration strategy</Text>
-        </View>
-        {entry.titrationNote ? (
+      {/* Titration strategy. When there is no note the whole block is hidden,
+          heading included.
+
+          It used to render "Detailed titration notes (ref [n]) coming soon."
+          — a promise, on a dosing surface, with a reference number the reader
+          cannot look up. The master table's Notes [1..63] are all ingested now
+          (peptideDosingTable.ts), but an entry DERIVED from a protocol takes
+          its note from protocol.importantNotes[0], which is often undefined,
+          so this branch is live. Showing nothing is the honest state: the
+          dosing rows above and the disclaimer below are unaffected. */}
+      {entry.titrationNote ? (
+        <View style={styles.titrationBlock}>
+          <View style={styles.rowLabelWrap}>
+            <Ionicons name="trending-up-outline" size={14} color="#6B7280" />
+            <Text style={styles.rowLabel}>Titration strategy</Text>
+          </View>
           <Text style={styles.titrationText}>{entry.titrationNote}</Text>
-        ) : (
-          <Text style={styles.titrationPending}>
-            Detailed titration notes (ref [{entry.titrationNoteRef}]) coming soon.
-          </Text>
-        )}
-      </View>
+        </View>
+      ) : null}
 
       <Text style={styles.disclaimer}>{PEPTIDE_DOSING_TABLE_DISCLAIMER}</Text>
     </GlassCard>
@@ -172,13 +179,6 @@ const styles = StyleSheet.create({
   fastedPillText: { fontSize: 12, fontWeight: '700' },
   titrationBlock: { marginTop: 12 },
   titrationText: { fontSize: 13, lineHeight: 19, color: '#2D2D2D', marginTop: 6 },
-  titrationPending: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: '#6B7280',
-    fontStyle: 'italic',
-    marginTop: 6,
-  },
   disclaimer: {
     fontSize: 11,
     lineHeight: 16,

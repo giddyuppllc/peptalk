@@ -39,7 +39,11 @@ const corsHeaders = {
  * gate is worse than no meter, because people plan around it.
  */
 const MESSAGE_LIMITS: Record<string, number> = {
-  free: 3,
+  // Free is 0 — AI is what the subscription buys, and the taste is the 7-day
+  // Pro trial rather than a permanent trickle. A meter advertising three
+  // messages the chat gate refuses is the contradiction this mirror exists to
+  // prevent, so the two move together or not at all.
+  free: 0,
   plus: 750,
   pro: 9000,
 };
@@ -132,9 +136,10 @@ Deno.serve(async (req) => {
       atLimit: cost.reason === 'user_cap_hit' || (messageLimit > 0 && messagesUsed >= messageLimit),
       resetsAt,
       /**
-       * Free is metered in MESSAGES, not cents — three prompts a month. A
-       * percentage of a few cents means nothing to that user; "1 of 3 left"
-       * does. Paid tiers report both and the client shows the cents meter.
+       * Message metering stays for the tiers that have a message allowance.
+       * Free now reports messageLimit 0, which the client reads as "no AI on
+       * this plan" rather than "0 of 3 left" — the meter is not the place to
+       * sell an upgrade, and a full bar at zero is a lie either way.
        */
       messageLimit,
       messagesUsed,

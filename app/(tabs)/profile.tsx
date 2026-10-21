@@ -13,7 +13,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { useOnboardingStore } from '../../src/store/useOnboardingStore';
-import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import { useSubscriptionStore } from '../../src/store/useSubscriptionStore';
 import { useTutorialStore } from '../../src/store/useTutorialStore';
 import { GlassCard } from '../../src/components/GlassCard';
@@ -21,25 +20,14 @@ import { PasswordToggle } from '../../src/components/PasswordToggle';
 // The three schedule* imports went with the dead NotificationSettings block —
 // app/settings/notifications.tsx owns that scheduling now.
 import { notificationsAvailable } from '../../src/services/notificationService';
-import { useDoseLogStore } from '../../src/store/useDoseLogStore';
-import { useCheckinStore } from '../../src/store/useCheckinStore';
-import { useJournalStore } from '../../src/store/useJournalStore';
-import { useMealStore } from '../../src/store/useMealStore';
-import { useWorkoutStore } from '../../src/store/useWorkoutStore';
-import { useChatStore } from '../../src/store/useChatStore';
-import { useCycleStore } from '../../src/store/useCycleStore';
-import { usePantryStore } from '../../src/store/usePantryStore';
-import { useStackStore } from '../../src/store/useStackStore';
-import { useBodyMapStore } from '../../src/store/useBodyMapStore';
-import { useAllergyStore } from '../../src/store/useAllergyStore';
-import { useLabResultsStore } from '../../src/store/useLabResultsStore';
-import { useIntegrationsStore } from '../../src/store/useIntegrationsStore';
+import { clearDeviceData } from '../../src/store/clearDeviceData';
 import {
   Colors,
   FontSizes,
   Spacing,
   BorderRadius,
 } from '../../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../../src/constants/floatingControls';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useIsAdmin } from '../../src/hooks/useIsAdmin';
 import { sendFeedback } from '../../src/services/feedback';
@@ -397,7 +385,7 @@ function UserProfile() {
               </Text>
               <Text style={styles.upgradeRowBody}>
                 {tier === 'free'
-                  ? 'Unlimited tracking, Aimee chat, Food Scanner & more'
+                  ? 'Unlimited tracking, 750 Aimee messages a month, Food Scanner & more'
                   : 'Workout programs, recipes, health reports & more'}
               </Text>
             </View>
@@ -591,7 +579,8 @@ function AdvancedFitnessToggle({ t }: { t: ReturnType<typeof useTheme> }) {
 
 const profileStyles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { paddingHorizontal: Spacing.lg, paddingBottom: 40 },
+  // The version line scrolls clear of the global Home/Aimee FABs.
+  scroll: { paddingHorizontal: Spacing.lg, paddingBottom: FLOATING_BOTTOM_CLEARANCE },
   pageTitle: { fontSize: 32, fontWeight: '900', letterSpacing: -0.5, color: '#2D2D2D', marginTop: 12, marginBottom: 20 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   backBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 12, marginBottom: 20 },
@@ -646,22 +635,8 @@ export default function ProfileScreen() {
             // Local data wipe — clear EVERY user-data store on this device.
             // (Server-side account deletion is handled separately via the
             // delete-user edge function in handleDeleteAccount; this path is
-            // device-local only and must not leave orphaned data behind.)
-            useOnboardingStore.getState().reset();
-            useHealthProfileStore.getState().resetProfile();
-            useDoseLogStore.getState().clearAll();
-            useCheckinStore.getState().clearAll();
-            useJournalStore.getState().clearAll();
-            useMealStore.getState().clearAll();
-            useWorkoutStore.getState().clearAll();
-            useChatStore.getState().resetForLogout(); // no clearAll; wipes all threads + queued syncs
-            useCycleStore.getState().clearAll();
-            usePantryStore.getState().clearAll();
-            useStackStore.getState().clearAll();
-            useBodyMapStore.getState().clearAll();
-            useAllergyStore.getState().clearAll();
-            useLabResultsStore.getState().clearAll();
-            useIntegrationsStore.getState().clearAll();
+            // device-local only and must not write to the server.)
+            clearDeviceData();
             Alert.alert('Done', 'All data has been deleted.');
           },
         },

@@ -8,12 +8,19 @@
  * handles intent routing and confirm cards — no parallel intent shape
  * here.
  *
- * Tier + rate limit (audit fix):
+ * Tier + limits:
  *   - Pro tier only. Plus/Free are rejected with 403.
- *   - 60 calls/day per user, enforced via the atomic `bump_ai_usage`
- *     RPC (same pattern as aimee-chat-stream). Without this, a Pro user
- *     or stolen token could hammer Whisper unbounded.
- *   - BETA_TESTER_EMAILS (csv) bypass the tier check but NOT the cap.
+ *   - The monthly AI allowance shared with aimee-chat-stream
+ *     (_shared/aiAllowance.ts): refused once the account's allowance, or the
+ *     system-wide breaker, is spent.
+ *   - A MONTHLY call count, VOICE_MONTHLY_LIMIT. This was 60 calls/day; the
+ *     window is now the billing month ("i dont want a daily cap",
+ *     2026-08-26). Unlike the token-priced functions, a Whisper call reports
+ *     no tokens, so its spend never reaches the monthly ledger and the dollar
+ *     breaker cannot see it. Without a count, a Pro user or a stolen token
+ *     could hammer Whisper unbounded. Enforced via the atomic
+ *     `bump_ai_usage` RPC.
+ *   - BETA_TESTER_EMAILS (csv) bypass the tier check but NOT the limits.
  *
  * Deploy: supabase functions deploy aimee-voice
  *
@@ -27,6 +34,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
+import { checkAiAllowance } from '../_shared/aiAllowance.ts';
+import { denialMessage } from '../aimee-chat-stream/_cost.ts';
 
 // 2026-05-20 fix: don't fall back to OPENAI_API_KEY — on this project
 // that env var holds the Grok/xAI key (OPENAI_BASE_URL points to
@@ -44,7 +53,18 @@ const WHISPER_MODEL = 'whisper-1';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-const VOICE_DAILY_LIMIT = 60;
+/**
+ * Voice calls per account per billing month: the previous 60/day x 30, the
+ * same conversion aimee-chat-stream used when its message count went monthly,
+ * so nobody loses allowance. Whether voice keeps a count at all, or gets a
+ * per-minute price so it can join the dollar allowance instead, is open.
+ */
+const VOICE_MONTHLY_LIMIT = 60 * 30;
+
+/** First day of the current UTC month: the bucket key bump_ai_usage stores. */
+function monthPeriod(): string {
+  return `${new Date().toISOString().slice(0, 7)}-01`;
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -67,23 +87,22 @@ async function checkRateLimit(
   limit: number,
 ): Promise<{ allowed: boolean; limit: number; retryAfter?: number; failedClosed?: boolean }> {
   try {
-    const today = new Date().toISOString().slice(0, 10);
     const { data, error } = await supabase.rpc('bump_ai_usage', {
       p_user_id: userId,
       p_function_name: functionName,
-      p_date: today,
+      p_date: monthPeriod(),
     });
     if (error) throw error;
     const newCount = Array.isArray(data) && data[0]
       ? (data[0] as any).count ?? 0
       : 0;
     if (newCount > limit) {
+      // Resets with the billing month, not at midnight.
       const now = new Date();
-      const tomorrow = new Date(now);
-      tomorrow.setUTCHours(24, 0, 0, 0);
+      const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
       const retryAfter = Math.max(
         1,
-        Math.round((tomorrow.getTime() - now.getTime()) / 1000),
+        Math.round((nextMonth.getTime() - now.getTime()) / 1000),
       );
       return { allowed: false, limit, retryAfter };
     }
@@ -110,13 +129,14 @@ async function refundRateLimit(
   functionName: string,
 ): Promise<void> {
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    // MUST read the same bucket checkRateLimit bumps.
+    const period = monthPeriod();
     const { data, error } = await supabase
       .from('ai_usage_log')
       .select('count')
       .eq('user_id', userId)
       .eq('function_name', functionName)
-      .eq('date', today)
+      .eq('date', period)
       .single();
     if (error || !data) return;
     const next = Math.max(0, ((data as any).count ?? 0) - 1);
@@ -125,7 +145,7 @@ async function refundRateLimit(
       .update({ count: next })
       .eq('user_id', userId)
       .eq('function_name', functionName)
-      .eq('date', today);
+      .eq('date', period);
   } catch (err) {
     console.error(`[${functionName}] rate-limit refund failed (non-fatal):`, err);
   }
@@ -193,11 +213,15 @@ Deno.serve(async (req) => {
       return jsonResp({ error: 'Audio exceeds 25 MB Whisper cap' }, 413);
     }
 
-    // Daily cap — 60 voice messages per Pro user. Consumed only now that
-    // the request is valid and we're about to call the billable Whisper
-    // endpoint (P2.26: the bump used to run before this validation).
-    // Atomic via RPC so concurrent requests can't sneak past.
-    const rate = await checkRateLimit(supabase, user.id, 'aimee-voice', VOICE_DAILY_LIMIT);
+    // Monthly AI allowance first: read-only, so a refusal consumes nothing.
+    const allowance = await checkAiAllowance(supabase, user.id, tier);
+    if (!allowance.allowed) return jsonResp(allowance.body, allowance.status);
+
+    // Monthly voice count. Consumed only now that the request is valid and
+    // we're about to call the billable Whisper endpoint (P2.26: the bump used
+    // to run before this validation). Atomic via RPC so concurrent requests
+    // can't sneak past.
+    const rate = await checkRateLimit(supabase, user.id, 'aimee-voice', VOICE_MONTHLY_LIMIT);
     if (!rate.allowed) {
       // P3.16: transient DB failure → 503 (retryable), not 429. Mirrors aimee-chat.
       if (rate.failedClosed) {
@@ -211,7 +235,8 @@ Deno.serve(async (req) => {
       }
       return jsonResp(
         {
-          error: `Daily voice limit reached (${rate.limit}/day). Resets tomorrow.`,
+          error: denialMessage('user_cap_hit'),
+          reason: 'voice_monthly_limit',
           retryAfter: rate.retryAfter,
         },
         429,

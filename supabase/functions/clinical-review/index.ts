@@ -11,6 +11,9 @@
  * POST { t, kind, peptideId, verdict, reviewer?, note? }
  *                          -> { ok: true }
  *   verdict null/'' deletes the row (reviewer un-picked an answer).
+ * POST { t, kind: 'edit', peptideId, payload, reviewer? }
+ *                          -> { ok: true }, or { ok: true, cleared: true }
+ *   a payload with no non-blank field deletes that reviewer's edit row.
  *
  * Deploy (no JWT — the token below is the auth, and the reviewer has no session):
  *   supabase secrets set CLINICAL_REVIEW_TOKEN=<random-string>
@@ -19,6 +22,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { withErrorReporting } from '../_shared/sentry.ts';
+import { isClearedEditPayload } from './_payload.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -114,6 +118,17 @@ Deno.serve(withErrorReporting('clinical-review', async (req) => {
           return json({ error: 'payload must be an object' }, 400);
         if (JSON.stringify(payload).length > 40000)
           return json({ error: 'payload too large' }, 413);
+        /* Every field cleared: delete this reviewer's edit row, the same way an
+           un-picked verdict is deleted below. It used to upsert `{}`, so a
+           cleared card could never be removed from the table. */
+        if (isClearedEditPayload(payload)) {
+          const { error } = await db
+            .from('clinical_review_decisions')
+            .delete()
+            .match({ kind, peptide_id: peptideId, reviewer });
+          if (error) return json({ error: error.message }, 500);
+          return json({ ok: true, cleared: true });
+        }
         const { error } = await db.from('clinical_review_decisions').upsert(
           { kind, peptide_id: peptideId, verdict: null, reviewer, payload, updated_at: new Date().toISOString() },
           { onConflict: 'kind,peptide_id,reviewer' },

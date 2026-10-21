@@ -15,6 +15,7 @@ import {
   FontSizes,
   BorderRadius,
 } from '../../src/constants/theme';
+import { FLOATING_TOP_RIGHT_CLEARANCE } from '../../src/constants/floatingControls';
 
 // ---------------------------------------------------------------------------
 // Category metadata
@@ -501,6 +502,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
+    // Keep "Cancel" clear of the global PT button.
+    paddingRight: FLOATING_TOP_RIGHT_CLEARANCE,
   },
   backBtn: {
     width: 32,

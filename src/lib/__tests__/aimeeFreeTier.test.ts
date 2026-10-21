@@ -69,17 +69,42 @@ function limitsIn(src: string, name: string): Record<string, number> {
   return out;
 }
 
-describe('free tier gets three messages a month', () => {
+describe('free tier gets no AI — the taste is the trial', () => {
   const chat = read(CHAT);
 
-  it('the chat gate allows exactly 3 for free', () => {
-    expect(limitsIn(chat, 'RATE_LIMITS').free).toBe(3);
+  it('the chat gate allows nothing for free', () => {
+    // Was 3. Edward, 2026-09-18: "the free acc has none of the ai features
+    // otherwise" — a week of Pro shows the real thing; three prompts a month
+    // showed a thin version of it and were neither trial nor product.
+    expect(limitsIn(chat, 'RATE_LIMITS').free).toBe(0);
   });
 
-  it('the 403 no longer catches free', () => {
-    // The gate refuses only tiers with a zero limit. Free is no longer one, so
-    // this must not be reachable for it.
-    expect(limitsIn(chat, 'RATE_LIMITS').free).toBeGreaterThan(0);
+  it('so the 403 catches free, carrying the upgrade flag the client needs', () => {
+    // A zero limit routes into the tier refusal. It must never become a bare
+    // 403: `upgrade: true` is what the client turns into the lock and the
+    // upgrade path, and without it free users meet a dead end instead of an
+    // offer.
+    expect(limitsIn(chat, 'RATE_LIMITS').free).toBe(0);
+    expect(chat).toContain("jsonError(403, 'AI chat requires PepTalk+ or Pro subscription', { upgrade: true })");
+  });
+
+  it('NEVER ships without the trial that replaces it', () => {
+    // On its own this takes three messages a month away from ~226 existing
+    // free accounts and offers nothing back. The trial is what makes removing
+    // the trickle defensible, so the two are pinned together: if free is 0,
+    // the migration that grants the trial must exist and must grant Pro.
+    const free = limitsIn(chat, 'RATE_LIMITS').free;
+    if (free > 0) return; // trickle restored — the coupling does not apply
+
+    const migration = read('supabase/migrations/20260918130000_launch_trial_on_signup.sql');
+    expect(migration).toContain("'launch_trial_pro_7d'");
+    expect(migration).toContain("'pro'");
+    expect(migration).toContain("NOW() + INTERVAL '7 days'");
+    // renews=false, or the 3-day grace makes a 7-day trial a 10-day one.
+    expect(migration).toMatch(/FALSE\s*\)/);
+    // And the grant must be wired into the signup trigger, not left as a
+    // function nobody calls.
+    expect(migration).toContain('CREATE TRIGGER on_auth_user_created');
   });
 
   it('the limit message states a MONTHLY window, not a daily one', () => {
@@ -101,7 +126,12 @@ describe('free tier is answers-only', () => {
   const chat = read(CHAT);
 
   it('withholds the tool list entirely rather than filtering results', () => {
-    expect(chat).toContain('tools: args.canUseTools ? AIMEE_TOOLS : []');
+    // The free branch is still a literal empty list. The paid branch also
+    // passes through the health-data consent filter (52eb417), which can only
+    // REMOVE tools — see aiDataConsent.test.ts.
+    expect(chat).toContain(
+      'tools: args.canUseTools ? toolsAllowedForConsent(AIMEE_TOOLS, args.hasConsent) : []',
+    );
   });
 
   it('free is the tier denied tools', () => {

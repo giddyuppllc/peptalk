@@ -25,6 +25,7 @@ import { useAllergyStore } from '../../src/store/useAllergyStore';
 import { supabase } from '../../src/services/supabase';
 import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
 import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
+import { withHealthConsent } from '../../src/lib/aiFeatureConsent';
 import { todayLocalISO } from '../../src/utils/dateUtil';
 
 interface SuggestedIngredient {
@@ -118,8 +119,11 @@ function PantrySuggestionsInner() {
           ].filter(Boolean),
         ),
       );
+      // The health toggle is a SEPARATE consent from the launch modal above.
+      // Without it `allergens` (medical + food) and `activeStackPeptides` are
+      // dropped and the pantry suggestions still generate.
       const { data, error } = await supabase.functions.invoke('aimee-pantry-meal', {
-        body: {
+        body: withHealthConsent('aimee-pantry-meal', {
           pantryItems: items.map((i) => ({
             name: i.name,
             brand: i.brand,
@@ -134,7 +138,7 @@ function PantrySuggestionsInner() {
           activeStackPeptides,
           allergens,
           count: 3,
-        },
+        }),
       });
       if (error) throw error;
       const list = (data?.suggestions ?? []) as Suggestion[];

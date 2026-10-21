@@ -54,7 +54,19 @@ export function LiveChatDisclaimerModal({ visible, onAccepted }: Props) {
     // early-return guard above can't leave the Modal mounted with
     // visible={true} mid-animation (Android Modal z-order race that
     // sandwiched the user with a tap-eating overlay).
-    <Modal visible={shouldShow} transparent animationType="fade">
+    // onRequestClose was ABSENT, which is not the same as "no dismiss". React
+    // Native treats it as required on Android; without it the hardware back
+    // button's behaviour on a visible Modal is unspecified rather than chosen,
+    // and RN warns. The sibling gate (PeptideDisclaimerModal) states the
+    // intention explicitly and this one now matches it: back does nothing,
+    // because acceptance is the only way through this gate. No behaviour
+    // changes — back did nothing before either.
+    <Modal
+      visible={shouldShow}
+      transparent
+      animationType="fade"
+      onRequestClose={() => { /* gate dismiss to the button */ }}
+    >
       {/* 2026-05-17 a11y: trap VoiceOver focus inside the modal */}
       <View style={styles.backdrop} accessibilityViewIsModal={true}>
         <View style={[styles.card, { backgroundColor: t.bg }]}>
@@ -99,6 +111,19 @@ export function LiveChatDisclaimerModal({ visible, onAccepted }: Props) {
             style={styles.checkRow}
             onPress={() => setChecked(!checked)}
             activeOpacity={0.75}
+            // The same three props PeptideDisclaimerModal was given, for the
+            // same reason, on the same shape of control — a required consent
+            // checkbox built from a View plus a Text. Without them a screen
+            // reader never announces it as a checkbox or says whether it is
+            // ticked, Android composes the label from the children as
+            // ", I understand and agree", and the inner Text is exposed as a
+            // separate non-clickable node, so a tap aimed at the words lands on
+            // dead space. That ends with the box unticked, Continue inert and
+            // the gate never closing. The fix was applied to the twin and not
+            // to this file; the label below is the visible text, unchanged.
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked }}
+            accessibilityLabel="I understand and agree"
           >
             <View
               style={[
@@ -120,6 +145,10 @@ export function LiveChatDisclaimerModal({ visible, onAccepted }: Props) {
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel="Continue into live chat"
+            // Announce the disabled state as well as the role. Without it the
+            // button reads as tappable while the checkbox is unticked, which is
+            // the same dead end from the other side.
+            accessibilityState={{ disabled: !checked }}
           >
             <LinearGradient
               colors={checked ? ['#3E7CB1', '#7FB3D8'] : ['#D1D5DB', '#D1D5DB']}
@@ -178,7 +207,14 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     marginBottom: 14,
   },
-  bodyScroll: { marginBottom: 16 },
+  // flexShrink: 1 — the same fix, and the same reason, as the sibling gate in
+  // PeptideDisclaimerModal.tsx. React Native defaults flexShrink to 0, `card`
+  // caps at 86%, and this ScrollView carried only a margin, so four bullets
+  // plus the liability box could push the acceptance checkbox and the Continue
+  // button it enables past the card's bottom edge. This modal has no dismiss
+  // of any kind (see the onRequestClose note above), so that would leave it
+  // unpassable. Nothing moves while the copy fits.
+  bodyScroll: { marginBottom: 16, flexShrink: 1 },
   body: {
     fontSize: 14,
     fontFamily: 'DMSans-Regular',

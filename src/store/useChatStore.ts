@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { makeSafeMerge } from '../lib/persistSafety';
+import { reportPersistProblem } from '../lib/persistReporting';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { ChatMessage } from '../types';
 import { secureStorage } from '../services/secureStorage';
@@ -766,6 +768,10 @@ export const useChatStore = create<ChatStore>()(
     }),
     {
       name: 'peptalk-chat',
+      // Storage is untrusted input: on web it is localStorage, which the
+      // user can edit, and a killed app leaves partial writes. See
+      // src/lib/persistSafety.ts.
+      merge: makeSafeMerge('peptalk-chat', reportPersistProblem),
       version: 2,
       // Debounced storage layer — collapses streaming-token write
       // storms into one encrypted write per ~400 ms instead of 30+

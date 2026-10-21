@@ -14,6 +14,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useV3Theme } from '../../src/theme/V3ThemeProvider';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
+import { FLOATING_TOP_RIGHT_CLEARANCE } from '../../src/constants/floatingControls';
 import { usePantryStore, type PantryItem, type StorageLocation } from '../../src/store/usePantryStore';
 
 type ExpiryColorKey = 'danger' | 'caution' | 'positive' | 'muted';
@@ -344,6 +345,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
+    // Keep the add button clear of the global PT button.
+    paddingRight: FLOATING_TOP_RIGHT_CLEARANCE,
   },
   iconBtn: {
     width: 40,

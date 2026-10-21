@@ -12,28 +12,59 @@
  * three was ever exercised. Each now has its own case.
  *
  * Numbers are measured against the real catalog, not guessed:
- *   BPC-157 canonical 333 mcg → high fires ABOVE 3× (999), low fires BELOW /10 (33.3)
+ *   BPC-157 canonical 200-500 mcg (Jamie's ruling) → high fires AT and above
+ *   3× (1500), low fires BELOW /10 (20)
  *   unknown compound          → mg/mcg confusion fires ABOVE 10000 mcg
+ *   resolved compound         → the same 10000 mcg ceiling, lifted only to the
+ *                               compound's own documented maximum
  */
 import { checkDoseSafety, checkDoseGuards } from '../../services/doseSafety';
 
-describe('the >3x ceiling is exclusive', () => {
-  it('allows exactly 3× the maximum', () => {
-    expect(checkDoseSafety('BPC-157', 999, 'mcg').safe).toBe(true);
+describe('the 3× ceiling is INCLUSIVE', () => {
+  // CHANGED 2026-09-16, deliberately. This asserted that exactly 3× the
+  // maximum is allowed. Once clinician rulings took precedence, the ceiling
+  // moved with them: ipamorelin's and melanotan-2's maxima became 500 mcg, so
+  // exactly 3× is 1500 mcg — a dose that warned before the rulings and went
+  // silent after, on an exclusive comparison. Making it inclusive can only ADD
+  // warnings (swept: 4108 cells, 0 lost, 155 added), and 1500 mcg is not a
+  // dose a guard should wave through on a rounding technicality.
+  it('flags exactly 3× the maximum', () => {
+    const r = checkDoseSafety('BPC-157', 1500, 'mcg');
+    expect(r.safe).toBe(false);
+    expect(r.code).toBe('unusually_high');
+  });
+  it('allows one microgram below it', () => {
+    expect(checkDoseSafety('BPC-157', 1499, 'mcg').safe).toBe(true);
   });
   it('flags one microgram past it', () => {
-    const r = checkDoseSafety('BPC-157', 1000, 'mcg');
+    const r = checkDoseSafety('BPC-157', 1501, 'mcg');
     expect(r.safe).toBe(false);
     expect(r.code).toBe('unusually_high');
   });
 });
 
+describe('the mg/mcg ceiling applies to a RESOLVED compound too', () => {
+  // Lifted to the compound's own documented maximum, so a compound whose
+  // reference range is in milligrams is not warned about at its own dose.
+  it('holds a mcg-scale compound to the flat 10 mg ceiling', () => {
+    // BPC-157's 3× ceiling (1500 mcg) is the stricter of the two here, so the
+    // range-naming message wins; the point is that neither rule is skipped.
+    expect(checkDoseSafety('BPC-157', 10, 'mg').safe).toBe(false);
+  });
+  it('lifts it to the documented maximum for a mg-scale compound', () => {
+    // Glutathione's clinician range is 200–400 mg. 400 mg is its own maximum
+    // and must not warn; 401 mg is past everything the data supports.
+    expect(checkDoseSafety('glutathione', 400, 'mg').safe).toBe(true);
+    expect(checkDoseSafety('glutathione', 401, 'mg').safe).toBe(false);
+  });
+});
+
 describe('the <1/10 floor is exclusive', () => {
   it('allows a dose just above a tenth of the minimum', () => {
-    expect(checkDoseSafety('BPC-157', 34, 'mcg').safe).toBe(true);
+    expect(checkDoseSafety('BPC-157', 20, 'mcg').safe).toBe(true);
   });
   it('flags one just below it', () => {
-    const r = checkDoseSafety('BPC-157', 33, 'mcg');
+    const r = checkDoseSafety('BPC-157', 19, 'mcg');
     expect(r.safe).toBe(false);
     expect(r.code).toBe('unusually_low');
   });

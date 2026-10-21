@@ -32,6 +32,7 @@ Refine any selector interactively: `maestro studio`
 | Flow | Guards against | Guideline |
 |------|----------------|-----------|
 | `login.yaml` | "cannot continue after login" (the build-47 reject) | 2.1a |
+| `login-returning-user.yaml` | a returning user re-asked onboarding on a new device (needs an erased device and an account that finished onboarding on a build with the server restore) | 2.1a |
 | `healthkit-visible.yaml` | "HealthKit not identified in UI" | 2.5.1 |
 | `subscribe.yaml` | "unresponsive Subscribe button" | 2.1a |
 

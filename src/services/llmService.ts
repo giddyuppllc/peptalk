@@ -24,6 +24,9 @@ import { fetchWithTimeout } from '../lib/withTimeout';
 import { ChatMessage, EnhancedBotContext } from '../types';
 import { ensureAiConsent } from '../utils/ensureAiConsent';
 import { sanitizeForLLM } from './privacyGuard';
+import { applyAiDataConsent } from '../lib/aiDataConsent';
+import { withHealthConsent } from '../lib/aiFeatureConsent';
+import { aimeeDenialOffer } from '../lib/aimeeDenialActions';
 import { supabase } from './supabase';
 import { captureException } from './telemetry';
 
@@ -75,6 +78,8 @@ function buildPeptideKnowledgeBase(): string {
   const { PROTOCOL_TEMPLATES } = require('../data/protocols');
   const { KNOWLEDGE_TOPICS } = require('../data/knowledgeTopics');
   const { SAFETY_PROFILES } = require('../data/safetyProfiles');
+  const { CLINICIAN_RULINGS, getClinicianRuling } = require('../data/clinicianRulings');
+  const { expandClinicianText } = require('../data/clinicianRulingsDisplay');
 
   const lines: string[] = [];
 
@@ -87,14 +92,45 @@ function buildPeptideKnowledgeBase(): string {
   });
 
   // Compact protocol list: peptide | dose range | route | frequency | timing
+  // Safety-information-only compounds (Edward, 2026-09-16) keep their row and
+  // their contraindications, and lose the dose/route/frequency figures. The
+  // row must stay: removing it entirely would leave the model to answer from
+  // general training knowledge, which is how an unsourced number gets quoted.
+  const { isSafetyOnly } = require('../data/safetyOnlyCompounds');
   const protoLines: string[] = [];
   PROTOCOL_TEMPLATES.forEach((t: any) => {
-    const dose = `${t.typicalDose.min}-${t.typicalDose.max} ${t.typicalDose.unit}`;
     const contra = t.contraindications?.length
       ? ` | CONTRA: ${t.contraindications.join(', ')}`
       : '';
+    if (isSafetyOnly(t.peptideId)) {
+      protoLines.push(
+        `- ${t.name}: SAFETY INFORMATION ONLY - state no dose, range, frequency, cycle length or reconstitution for this compound${contra}`
+      );
+      return;
+    }
+    // Jamie Esposito's ruling outranks the stored range (Edward, 2026-09-15).
+    // The device copy of the knowledge base read protocols.ts and nothing else,
+    // so an answer here could differ from the same question asked through the
+    // edge function. One authority, quoted the same way on both sides.
+    const ruling = getClinicianRuling(t.peptideId);
+    const dose = ruling?.dose?.verbatim
+      ? `${expandClinicianText(ruling.dose.verbatim, `${t.peptideId} dose`)} (clinician-approved)`
+      : `${t.typicalDose.min}-${t.typicalDose.max} ${t.typicalDose.unit}`;
+    const freq = ruling?.frequency
+      ? expandClinicianText(ruling.frequency, `${t.peptideId} frequency`)
+      : t.frequencyLabel;
     protoLines.push(
-      `- ${t.name}: ${dose} ${t.route} ${t.frequencyLabel}${t.timing ? ` (${t.timing})` : ''}${contra}`
+      `- ${t.name}: ${dose} ${t.route} ${freq}${t.timing ? ` (${t.timing})` : ''}${contra}`
+    );
+  });
+
+  // Ruled compounds with no protocol template — otherwise unreachable here.
+  const ruledIds = new Set(PROTOCOL_TEMPLATES.map((t: any) => t.peptideId));
+  CLINICIAN_RULINGS.forEach((r: any) => {
+    if (!r.dose?.verbatim || ruledIds.has(r.peptideId) || isSafetyOnly(r.peptideId)) return;
+    protoLines.push(
+      `- ${r.peptideId}: ${expandClinicianText(r.dose.verbatim, `${r.peptideId} dose`)} (clinician-approved)` +
+        (r.frequency ? ` ${expandClinicianText(r.frequency, `${r.peptideId} frequency`)}` : '')
     );
   });
 
@@ -218,8 +254,17 @@ function localToday(): string {
   return `${d.getFullYear()}-${m}-${day}`;
 }
 
-function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
+export function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
   const { hasConsent } = sanitizeForLLM(context);
+
+  // App Review 5.1.2. Without aiDataConsent, send nothing about the user's body,
+  // health, activity or medication — and do not even read those stores. This
+  // used to build and send every summary regardless, passing hasConsent along
+  // as a flag nothing honoured. The server strips the same fields on its own
+  // (supabase/functions/_shared/aimeeConsent.ts) in case a client does not.
+  if (!hasConsent) {
+    return applyAiDataConsent({ hasConsent: false, simpleMode: context.simpleMode === true });
+  }
 
   const protoNames = (context.activeProtocols ?? [])
     .slice(0, 5)
@@ -396,7 +441,7 @@ function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
     /* ignore */
   }
 
-  return {
+  return applyAiDataConsent({
     hasConsent,
     simpleMode: context.simpleMode === true,
     activeProtocolSummary: protoNames || undefined,
@@ -410,7 +455,7 @@ function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
     bodyTrendSummary,
     selfStatedGoal,
     workoutDaysPerWeek,
-  };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -450,7 +495,7 @@ CRITICAL MEDICAL RULES (NEVER BREAK THESE):
 WHAT YOU CAN DO:
 - Answer questions about peptides: mechanisms, research, storage, quality, regulations
 - Explain what lab results mean (factually) and how they relate to tracked health data
-- Build workout plans using the exercise database (289 exercises with muscle groups, difficulty, equipment)
+- Build workout plans using the exercise database (384 exercises with muscle groups, difficulty, equipment)
 - Create meal plans and suggest foods based on macro targets
 - Help users build peptide stacks — flag which peptides denature each other, which have synergy
 - Navigate users to screens in the app (add ---NAV_ACTION--- tags, see below)
@@ -497,7 +542,7 @@ STACK BUILDER KNOWLEDGE:
 - Suggest stacks based on the user's stated health goals (fat loss, recovery, sleep, cognition, etc.)
 
 WORKOUT KNOWLEDGE:
-- 451 exercises organized by: muscle group, priority (P1=core compounds, P2=secondary, P3=isolation, P4=specialized), difficulty, location (home/gym/any), gender suitability, metrics (reps/weight/duration)
+- 384 exercises organized by: muscle group, priority (P1=core compounds, P2=secondary, P3=isolation, P4=specialized), difficulty, location (home/gym/any), gender suitability, metrics (reps/weight/duration)
 - 21 program templates available:
   FEMALE: Transformation (3/4/5 day), Weight Loss (3/4/5 day), 30min FIT (3/4/5 day)
   MALE: Hypertrophy (3/4/5 day), Strength (3/4/5 day), Aerobic/WOD (3/4/5 day), Body Recomp (3/4/5 day)
@@ -726,11 +771,7 @@ export async function generateAIResponse(
             role: 'bot',
             content: data.error ?? 'Please upgrade to use Aimee AI.',
             timestamp: new Date().toISOString(),
-            quickReplies: data.upgrade ? ['View subscription plans'] : undefined,
-            navAction: data.upgrade ? '/subscription' : undefined,
-            actions: data.upgrade
-              ? [{ label: 'See plans', route: '/subscription', icon: 'sparkles-outline' }]
-              : undefined,
+            ...aimeeDenialOffer({ upgrade: data.upgrade, topUp: data.topUp }),
           };
         }
       }
@@ -817,16 +858,13 @@ export async function generateRecipe(params: {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token) {
+        // `constraints` is screen state the user typed on the recipe form.
+        // Allergens come from the health profile and travel in their own
+        // field so the consent filter can drop exactly those — the edge
+        // function folds them back into the constraint list server-side.
         const constraints: string[] = [];
         if (diet && diet !== 'any') constraints.push(diet);
         if (preferences) constraints.push(preferences);
-        // Allergens get pushed as strict "no X" entries so the AI avoids them.
-        // Duplicate entries are fine — constraints are a free-form list.
-        if (allergens && allergens.length > 0) {
-          for (const a of allergens) {
-            if (a.trim()) constraints.push(`strictly no ${a.trim()}`);
-          }
-        }
 
         const res = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/aimee-recipe`, {
           method: 'POST',
@@ -835,12 +873,13 @@ export async function generateRecipe(params: {
             'Content-Type': 'application/json',
             apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
           },
-          body: JSON.stringify({
+          body: JSON.stringify(withHealthConsent('aimee-recipe', {
             mealType,
             macroTargets: targets,
             constraints,
+            allergens: (allergens ?? []).map((a) => a.trim()).filter(Boolean),
             count: 3,
-          }),
+          })),
         });
         if (res.ok) {
           const data = await res.json();
@@ -1031,6 +1070,7 @@ export interface AimeeStreamEvent {
     action: { type: string; path?: string; [k: string]: unknown };
   }[];
   upgrade?: boolean;
+  topUp?: boolean;
   /** Status code from the edge fn for error/denied events. */
   status?: number;
 }
@@ -1145,6 +1185,9 @@ export async function* generateAIResponseStream(
         type: 'denied',
         message: errBody?.error ?? 'AI unavailable',
         upgrade: errBody?.upgrade === true,
+        // Carried through so the chat can offer a credit pack. Without it a
+        // Pro subscriber at the cost cap saw a refusal and nothing else.
+        topUp: errBody?.topUp === true,
         status: res.status,
       };
       return;

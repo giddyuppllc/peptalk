@@ -30,6 +30,7 @@
 
 import type { Ionicons } from '@expo/vector-icons';
 import React from 'react';
+import { LEADERBOARD_COPY } from '../constants/leaderboardCopy';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -61,6 +62,20 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: 'flash-outline',
         href: '/calculators/quick-dose',
         hint: 'Common protocols at a glance',
+      },
+      {
+        // 712 lines of finished screen with no door. Nothing in the UI linked
+        // to it — the only references anywhere were Aimee's ROUTE_DESCRIPTIONS
+        // and a comment in this file describing the LAST time a calculator was
+        // stranded. Aimee needs Plus or Pro, so for a free user and for an App
+        // Review reviewer this feature did not exist.
+        //
+        // Label reused verbatim from ROUTE_DESCRIPTIONS rather than invented,
+        // so the sheet and Aimee call the same screen the same thing.
+        label: 'Plan a cycle',
+        icon: 'compass-outline',
+        href: '/calculators/plan',
+        hint: 'Goal, peptide candidates, protocol',
       },
       {
         label: 'Stack Builder',
@@ -109,6 +124,12 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Learn', icon: 'school-outline', href: '/learn' },
       { label: 'Peptides', icon: 'medical-outline', href: '/(tabs)/my-stacks' },
       { label: 'Community', icon: 'people-outline', href: '/(tabs)/community' },
+      {
+        label: LEADERBOARD_COPY.navLabel,
+        icon: 'trophy-outline',
+        href: '/community/leaderboard',
+        hint: LEADERBOARD_COPY.navHint,
+      },
       { label: 'Journal', icon: 'book-outline', href: '/journal' },
     ],
   },

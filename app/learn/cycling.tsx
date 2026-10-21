@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from '../../src/components/GlassCard';
 import { AnimatedPress } from '../../src/components/AnimatedPress';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../../src/constants/floatingControls';
 
 interface CycleGuide {
   peptideClass: string;
@@ -232,7 +233,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.darkText },
-  scroll: { paddingHorizontal: Spacing.lg },
+  // The last card scrolls clear of the global Home/Aimee FABs.
+  scroll: { paddingHorizontal: Spacing.lg, paddingBottom: FLOATING_BOTTOM_CLEARANCE },
 
   sectionTitle: {
     fontSize: FontSizes.sm, fontWeight: '600', color: Colors.darkTextSecondary,

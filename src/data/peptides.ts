@@ -277,7 +277,7 @@ export const PEPTIDES: Peptide[] = [
     abbreviation: 'CJC-1295 DAC',
     categories: ['Growth Hormone'],
     researchSummary:
-      'CJC-1295 is a synthetic growth hormone-releasing hormone (GHRH) analog with a Drug Affinity Complex (DAC) that extends its half-life significantly. Research demonstrates sustained elevation of growth hormone and IGF-1 levels in study models. It is widely used in research exploring the GH/IGF-1 axis and its downstream effects on body composition and metabolism. The long half-life (~6-8 days) means it is dosed weekly or twice-weekly for a steady GH elevation — see CJC-1295 (No DAC) for the short-acting, daily-dosed variant.',
+      'CJC-1295 is a synthetic growth hormone-releasing hormone (GHRH) analog with a Drug Affinity Complex (DAC) that extends its half-life significantly. Research demonstrates sustained elevation of growth hormone and IGF-1 levels in study models. It is widely used in research exploring the GH/IGF-1 axis and its downstream effects on body composition and metabolism. Dosages should be given every 4-6 days due to DAC extending the half life — see CJC-1295 (No DAC) for the short-acting, daily-dosed variant.',
     mechanismOfAction:
       'Binds to the GHRH receptor (GHRHR) on anterior pituitary somatotrophs, stimulating cAMP production and subsequent growth hormone synthesis and release. The DAC (maleimidopropionic acid) moiety enables covalent binding to serum albumin, extending plasma half-life.',
     receptorTargets: ['GHRHR'],
@@ -1265,9 +1265,9 @@ export const PEPTIDES: Peptide[] = [
   // Each of these already had a fully authored row in peptideDosingTable.ts and
   // was unreachable for want of a library entry — see DATA_RECOVERY_BACKLOG.md.
   // The ids below MUST match the dosing-table ids exactly or the content strands
-  // again. Framing follows Edward's own grid in
-  // supabase/functions/aimee-chat-stream/_prompt.ts, including its Rx flags,
-  // its "no validated human dose" flags, and its safety warnings.
+  // again. Dosing figures come from Edward's grid (peptideDosingTable.ts). The
+  // "no validated human dose" caveats once copied here were never in his grid —
+  // they were added to Aimee's prompt in commit 30820db and are removed.
   {
     id: 'cjc-1295-ipamorelin',
     name: 'CJC-1295 (No DAC) / Ipamorelin Blend',
@@ -1340,7 +1340,7 @@ export const PEPTIDES: Peptide[] = [
     aliases: ['PEGylated Mechano Growth Factor', 'IGF-1Ec'],
     categories: ['Recovery', 'Growth Hormone'],
     researchSummary:
-      'Mechano Growth Factor is a splice variant of IGF-1 (IGF-1Ec) expressed by skeletal muscle in response to mechanical loading and damage, where it appears to activate satellite cells ahead of the classical IGF-1 repair response. The PEGylated form was created to extend a very short native half-life. There are no human trials of injectable PEG-MGF; the evidence base is animal and in-vitro, and the post-workout dosing seen in practice is community protocol rather than a clinical range.',
+      'Mechano Growth Factor is a splice variant of IGF-1 (IGF-1Ec) expressed by skeletal muscle in response to mechanical loading and damage, where it appears to activate satellite cells ahead of the classical IGF-1 repair response. The PEGylated form was created to extend a very short native half-life. There are no human trials of injectable PEG-MGF; the evidence base is animal and in-vitro.',
     mechanismOfAction:
       'The unique C-terminal E-domain peptide of the IGF-1Ec splice variant is thought to act largely independently of the IGF-1 receptor, stimulating satellite-cell proliferation and delaying differentiation so the local pool of myogenic precursors expands before repair proceeds. PEGylation shields the peptide from renal clearance and proteolysis, lengthening exposure.',
     receptorTargets: ['Satellite cell targets (IGF-1R-independent E-domain activity)'],
@@ -1357,7 +1357,7 @@ export const PEPTIDES: Peptide[] = [
       primaryUses: ['Muscle repair research', 'Post-training recovery'],
       commonGoals: ['Recovery', 'Local muscle repair'],
       whatPeopleReport:
-        'Typically used post-workout on the reasoning that this mirrors when the natural splice variant is expressed. Reports are largely subjective and hard to separate from training itself. There is no validated human dose for this compound.',
+        'Typically used post-workout on the reasoning that this mirrors when the natural splice variant is expressed. Reports are largely subjective and hard to separate from training itself.',
       popularWith: ['Recovery'],
       pairsWith: ['igf-1-lr3'],
     },
@@ -1406,7 +1406,7 @@ export const PEPTIDES: Peptide[] = [
     approvalStatus: 'preclinical',
     complianceTier: 'research_only',
     evidenceGrade: 'C',
-    adverseEffects: ['No validated human dose', 'Preclinical (mouse and in-vitro) evidence only'],
+    adverseEffects: ['Preclinical (mouse and in-vitro) evidence only'],
     uses: {
       primaryUses: ['Fat metabolism research', 'NAD+ pathway research'],
       commonGoals: ['Fat loss', 'Metabolic health'],
@@ -1518,7 +1518,7 @@ export const PEPTIDES: Peptide[] = [
     abbreviation: 'BAM15',
     categories: ['Mitochondrial', 'Metabolic'],
     researchSummary:
-      'BAM15 is a mitochondrial protonophore — a chemical uncoupler — developed as a safer alternative to DNP. In mice it reduced fat mass without reducing food intake and without the hyperthermia that makes DNP lethal, because it appears to act on mitochondria without depolarising the plasma membrane. The important caveat is that all of this is preclinical. There are no human trials, no validated human dose, and the doses quoted in the community are extrapolations rather than clinical figures. Uncouplers as a drug class have a serious safety history.',
+      'BAM15 is a mitochondrial protonophore — a chemical uncoupler — developed as a safer alternative to DNP. In mice it reduced fat mass without reducing food intake and without the hyperthermia that makes DNP lethal, because it appears to act on mitochondria without depolarising the plasma membrane. The important caveat is that all of this is preclinical. There are no human trials. Uncouplers as a drug class have a serious safety history.',
     mechanismOfAction:
       'Transports protons across the inner mitochondrial membrane, dissipating the electrochemical gradient that ATP synthase depends on. Substrate oxidation therefore continues while ATP yield falls, and the energy is released as heat — raising metabolic rate. Its selectivity for mitochondrial over plasma membranes is what distinguishes it from DNP in animal work.',
     receptorTargets: ['Inner mitochondrial membrane (protonophore)'],
@@ -1531,7 +1531,7 @@ export const PEPTIDES: Peptide[] = [
     complianceTier: 'research_only',
     evidenceGrade: 'C',
     adverseEffects: [
-      'No validated human dose — animal and in-vitro evidence only',
+      'Animal and in-vitro evidence only',
       'Mitochondrial uncouplers as a class carry hyperthermia risk; DNP has caused deaths',
       'No human safety data',
     ],

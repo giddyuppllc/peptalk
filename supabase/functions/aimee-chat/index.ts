@@ -3,7 +3,8 @@
  *
  * Proxies chat requests to OpenAI/Grok with:
  * - Auth validation (user must be logged in)
- * - Tier-based rate limiting (free=0, plus=limited, pro=unlimited)
+ * - Tier gate (Plus and Pro) and the monthly AI allowance shared with
+ *   aimee-chat-stream (_shared/aiAllowance.ts)
  * - API key stays server-side (never exposed to client)
  *
  * Deploy: supabase functions deploy aimee-chat
@@ -14,6 +15,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildAimeeSystemPrompt, SAFETY_TRAILER, type AimeeServerContext } from './_prompt.ts';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
+import { checkAiAllowance, recordAiSpend } from '../_shared/aiAllowance.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 // Default to Grok — matches the other edge functions. If secrets aren't set
@@ -36,14 +38,14 @@ const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL') ?? 'grok-4.3';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-// Rate limits per tier (messages per day)
-const RATE_LIMITS: Record<string, number> = {
-  free: 0,      // No AI access
-  plus: 25,     // Limited
-  pro: 300,     // Generous but finite — protects against runaway cost on
-                // a leaked pro-tier token. Previously 999999 which was
-                // effectively uncapped.
-};
+// Tiers this fallback serves. Free is refused here, as before; the free
+// taster lives in aimee-chat-stream.
+//
+// There is no per-day message count any more ("i dont want a daily cap",
+// 2026-08-26). The per-tier MONTHLY allowance and the system-wide runaway
+// breaker in aimee-chat-stream/_cost.ts are the limit, applied through
+// _shared/aiAllowance.ts, and this function now records its spend there.
+const AI_TIERS = new Set(['plus', 'pro']);
 
 // Hard limits on incoming payload to prevent "giant context" cost abuse.
 const MAX_MESSAGES = 30;
@@ -108,9 +110,7 @@ Deno.serve(async (req) => {
       profileTier: profile?.subscription_tier,
       isBetaTester,
     });
-    const limit = RATE_LIMITS[tier] ?? 0;
-
-    if (limit === 0) {
+    if (!AI_TIERS.has(tier)) {
       return new Response(JSON.stringify({
         error: 'AI chat requires PepTalk+ or Pro subscription',
         upgrade: true,
@@ -120,29 +120,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 3. Check rate limit — uses ai_usage_log (service-role-writable only)
-    // so users can't reset their counter by deleting their own chat history.
-    const rateLimit = await checkRateLimit(supabase, user.id, 'aimee-chat', limit);
-    if (!rateLimit.allowed) {
-      // Distinguish a real cap-hit from a transient infrastructure failure:
-      // - cap-hit → 429 with the daily-limit copy + upgrade nudge
-      // - failed-closed → 503 with "temporarily unavailable" so users
-      //   retry once the DB recovers instead of thinking they hit the cap.
-      if (rateLimit.failedClosed) {
-        return new Response(JSON.stringify({
-          error: 'Aimee is temporarily unavailable — please try again in a minute.',
-          retryAfter: rateLimit.retryAfter,
-        }), {
-          status: 503,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      return new Response(JSON.stringify({
-        error: `Daily message limit reached (${rateLimit.limit}/day)${tier === 'plus' ? '. Upgrade to Pro for more.' : '. Resets tomorrow.'}`,
-        upgrade: tier === 'plus',
-        retryAfter: rateLimit.retryAfter,
-      }), {
-        status: 429,
+    // 3. Monthly allowance — the same gate aimee-chat-stream applies, against
+    // the server-resolved tier. Read-only: nothing is consumed until the
+    // provider call below succeeds and its spend is recorded.
+    const allowance = await checkAiAllowance(supabase, user.id, tier);
+    if (!allowance.allowed) {
+      return new Response(JSON.stringify(allowance.body), {
+        status: allowance.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -269,7 +253,7 @@ Deno.serve(async (req) => {
 
     if (!openaiResponse.ok) {
       const err = await openaiResponse.text();
-      console.error('[aimee-chat] OpenAI error:', err);
+      console.error('[aimee-chat] OpenAI error:', openaiResponse.status, err.slice(0, 500));
       return new Response(JSON.stringify({ error: 'AI service temporarily unavailable' }), {
         status: 502,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -277,6 +261,7 @@ Deno.serve(async (req) => {
     }
 
     const completion = await openaiResponse.json();
+    await recordAiSpend(supabase, user.id, allowance.cost, completion);
     const content = completion.choices?.[0]?.message?.content ?? '';
 
     // 6. Save messages to chat history
@@ -300,56 +285,3 @@ Deno.serve(async (req) => {
     });
   }
 });
-
-/**
- * Per-user, per-function, per-day call counter backed by `ai_usage_log`.
- * Service role writes only — user RLS only permits SELECT — so deleting
- * chat_messages can't reset the counter.
- *
- * Fail-open on DB error: we'd rather serve a paying user than strand them
- * when our rate-limit table is unreachable.
- */
-async function checkRateLimit(
-  supabase: any,
-  userId: string,
-  functionName: string,
-  limit: number,
-): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number; failedClosed?: boolean }> {
-  const today = new Date().toISOString().slice(0, 10);
-  try {
-    // 2026-05-17 security fix: migrated from read-modify-write to the
-    // atomic `bump_ai_usage` RPC. The previous pattern leaked one extra
-    // call past the limit under concurrent same-user requests. Other
-    // edge fns (aimee-chat-stream, aimee-voice, food-scan, lab-scan,
-    // aimee-pantry-scan, aimee-pantry-meal, aimee-recipe, aimee-plan,
-    // aimee-lab-interpret, aimee-pantry-parse, community-moderate-image)
-    // all use the same RPC; this one was the last hold-out.
-    const { data, error } = await supabase.rpc('bump_ai_usage', {
-      p_user_id: userId,
-      p_function_name: functionName,
-      p_date: today,
-    });
-    if (error) throw error;
-
-    const newCount = Array.isArray(data) && data[0]
-      ? (data[0] as any).count ?? 0
-      : 0;
-
-    if (newCount > limit) {
-      const now = new Date();
-      const tomorrow = new Date(now);
-      tomorrow.setUTCHours(24, 0, 0, 0);
-      const retryAfter = Math.max(1, Math.round((tomorrow.getTime() - now.getTime()) / 1000));
-      return { allowed: false, limit, count: newCount, retryAfter };
-    }
-    return { allowed: true, limit, count: newCount };
-  } catch (err) {
-    // Fail CLOSED. If we can't reach ai_usage_log we cannot enforce the
-    // per-user cap, and the function fans out to the LLM provider —
-    // unlimited spam quickly translates to real money. Better to return
-    // a transient error to the caller and let them retry once the DB
-    // recovers than to leave the cost door wide open.
-    console.error(`[${functionName}] rate-limit check failed; failing closed:`, err);
-    return { allowed: false, limit, count: 0, retryAfter: 60, failedClosed: true };
-  }
-}

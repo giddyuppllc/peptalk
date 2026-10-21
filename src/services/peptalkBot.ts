@@ -28,6 +28,14 @@ import { PEPTIDES, getPeptideById, getPeptidesByCategory } from '../data/peptide
 import { analyzeStack, getKnownInteraction } from './analysisEngine';
 import { getProtocolsByPeptide, PROTOCOL_TEMPLATES } from '../data/protocols';
 import { getDosingTableEntry } from '../data/peptideDosingTable';
+// Safety-information-only compounds (Edward, 2026-09-16) get NO dose from the
+// on-device bot. This is checked inline rather than by swapping in the display
+// getters, because the protocol row also carries the contraindication /
+// caution / storage material the bot renders as its SAFETY layer — that must
+// keep working. Only the dose-bearing lines are skipped.
+import { isSafetyOnly } from '../data/safetyOnlyCompounds';
+import { redactDoseBearingNotes } from '../data/dosingDisplay';
+import { SAFETY_ONLY_AIMEE_STOCK_ANSWER } from '../constants/safetyOnlyCopy';
 import { BOT_MEDICAL_SUFFIX, BOT_INFO_SUFFIX } from '../constants/legal';
 import { EXERCISES } from '../data/exercises';
 import { WORKOUT_PROGRAMS } from '../data/workoutPrograms';
@@ -964,7 +972,9 @@ function respondDosingProtocol(peptides: Peptide[], context?: BotContext): strin
     // at-a-glance range / cycle / frequency / time-off / fasted. Surfaced
     // for every peptide that has a table row, alongside whatever protocol
     // template detail follows.
-    const tableEntry = getDosingTableEntry(p.id);
+    // The whole master-table envelope is a dosing envelope (range, cycle,
+    // frequency, time off, titration prose), so it is skipped whole.
+    const tableEntry = isSafetyOnly(p.id) ? null : getDosingTableEntry(p.id);
     if (tableEntry) {
       parts.push(`**${p.name} — research dosing reference:**`);
       parts.push(`• **Dosing range:** ${tableEntry.dosingRange}`);
@@ -1003,28 +1013,45 @@ function respondDosingProtocol(peptides: Peptide[], context?: BotContext): strin
       }
 
       parts.push(`**${proto.name}**`);
-      parts.push('');
-      parts.push(`**Research-described parameters:**`);
-      parts.push(`• **Typical Range:** ${proto.typicalDose.min}-${proto.typicalDose.max} ${proto.typicalDose.unit}`);
-      parts.push(`• **Route:** ${proto.route}`);
-      parts.push(`• **Frequency:** ${proto.frequencyLabel}`);
-      parts.push(`• **Duration:** ${proto.durationWeeks.min}-${proto.durationWeeks.max} weeks`);
+      // Dose, route, frequency, duration and timing are the parameters Edward
+      // withdrew on 2026-09-16 for the safety-information-only compounds. The
+      // safety alert, contraindications, cautions, storage and notes above and
+      // below this block still render — the compound stays present, with its
+      // safety information, and without a number.
+      if (!isSafetyOnly(p.id)) {
+        parts.push('');
+        parts.push(`**Research-described parameters:**`);
+        parts.push(`• **Typical Range:** ${proto.typicalDose.min}-${proto.typicalDose.max} ${proto.typicalDose.unit}`);
+        parts.push(`• **Route:** ${proto.route}`);
+        parts.push(`• **Frequency:** ${proto.frequencyLabel}`);
+        parts.push(`• **Duration:** ${proto.durationWeeks.min}-${proto.durationWeeks.max} weeks`);
 
-      if (proto.timing) {
-        parts.push(`• **Timing:** ${proto.timing}`);
+        if (proto.timing) {
+          parts.push(`• **Timing:** ${proto.timing}`);
+        }
+      } else if (SAFETY_ONLY_AIMEE_STOCK_ANSWER !== '') {
+        // Empty until Edward writes it; renders nothing while empty.
+        parts.push(SAFETY_ONLY_AIMEE_STOCK_ANSWER);
       }
 
       parts.push('');
       parts.push(`**Storage:** ${proto.storageNotes}`);
 
-      if (proto.reconstitutionNotes) {
+      // Reconstitution prose is a vial + diluent + per-draw figure end to end
+      // ("2ml BAC water per 5mg vial -> 250 mcg per 0.1 ml"), so it is skipped
+      // whole for a safety-information-only compound.
+      if (proto.reconstitutionNotes && !isSafetyOnly(p.id)) {
         parts.push(`**Reconstitution:** ${proto.reconstitutionNotes}`);
       }
 
-      if (proto.importantNotes.length > 0) {
+      // importantNotes mixes safety material with dose figures in the same
+      // array — hCG carries "Banned by WADA" alongside "Common TRT-adjunct
+      // dose: 250-500 IU". Only the dose-bearing lines are dropped.
+      const keyNotes = redactDoseBearingNotes(p.id, proto.importantNotes);
+      if (keyNotes.length > 0) {
         parts.push('');
         parts.push(`**Key Notes:**`);
-        proto.importantNotes.forEach((note) => parts.push(`• ${note}`));
+        keyNotes.forEach((note) => parts.push(`• ${note}`));
       }
 
       // Show contraindications/cautions from the protocol itself

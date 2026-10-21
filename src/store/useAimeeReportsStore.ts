@@ -8,6 +8,8 @@
  */
 
 import { create } from 'zustand';
+import { makeSafeMerge } from '../lib/persistSafety';
+import { reportPersistProblem } from '../lib/persistReporting';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
 import {
@@ -85,6 +87,12 @@ export const useAimeeReportsStore = create<ReportsState & ReportsActions>()(
         // App Review 5.1.2: explicit consent before sending report text to xAI (Aimee).
         const { ensureAiConsent } = await import('../utils/ensureAiConsent');
         if (!(await ensureAiConsent())) return;
+        // The health toggle is a SEPARATE consent. The templated body is dose
+        // counts, side-effect severities and check-in moods — the rewrite has
+        // nothing left to rewrite without it, so it refuses. Fail-soft: the
+        // templated body the user already sees simply stays.
+        const { healthConsentGranted, withHealthConsent } = await import('../lib/aiFeatureConsent');
+        if (!healthConsentGranted()) return;
         try {
           // Lazy-require to keep this store boot-cheap; supabase client
           // pulls in expo-secure-store + the SDK.
@@ -92,11 +100,11 @@ export const useAimeeReportsStore = create<ReportsState & ReportsActions>()(
           const { data, error } = await (supabase as any).functions.invoke(
             'aimee-report-rewrite',
             {
-              body: {
+              body: withHealthConsent('aimee-report-rewrite', {
                 body: report.body,
                 headline: report.headline,
                 recommendation: report.recommendation,
-              },
+              }),
             },
           );
           if (error) return;
@@ -139,6 +147,18 @@ export const useAimeeReportsStore = create<ReportsState & ReportsActions>()(
     }),
     {
       name: 'peptalk-aimee-reports-v1',
+      // Explicit so the number is visible, and deliberately still 0.
+      //
+      // In zustand 5.0.14 a bump with no `migrate` DISCARDS the persisted
+      // state and hydrates defaults — verified against middleware.js:392-420
+      // and by running it. That is the useful meaning of a bump, so nothing
+      // here overrides it: a store that needs to carry old data forward
+      // supplies its own migrate, and the three that do already have one.
+      version: 0,
+      // Storage is untrusted input: on web it is localStorage, which the
+      // user can edit, and a killed app leaves partial writes. See
+      // src/lib/persistSafety.ts.
+      merge: makeSafeMerge('peptalk-aimee-reports-v1', reportPersistProblem),
       storage: createJSONStorage(() => secureStorage),
     },
   ),

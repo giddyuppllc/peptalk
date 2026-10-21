@@ -23,6 +23,7 @@ import {
   BiologicalSex,
 } from '../src/types';
 import { Colors, FontSizes, Spacing, BorderRadius } from '../src/constants/theme';
+import { FLOATING_TOP_RIGHT_CLEARANCE } from '../src/constants/floatingControls';
 import { useTheme } from '../src/hooks/useTheme';
 
 // ---------------------------------------------------------------------------
@@ -810,7 +811,10 @@ export default function HealthProfileScreen() {
             <Text style={styles.consentDesc}>
               Allow PepTalk to use your health profile for personalized AI
               responses. Your data is sent securely and never stored by the AI
-              provider. Without this, you'll get local-only responses.
+              provider. Turn it off and Aimee, meal plans, recipes and workouts
+              still work — they just stop using your health details. Lab
+              interpretation, the lab photo scanner and the weekly report
+              rewrite need it, and stop.
             </Text>
           </View>
           <Switch
@@ -909,6 +913,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+    // Keep "Save & Exit" clear of the global PT button.
+    paddingRight: FLOATING_TOP_RIGHT_CLEARANCE,
     borderBottomWidth: 1, borderBottomColor: Colors.darkCardBorder,
   },
   headerTitle: { fontSize: FontSizes.xl, fontWeight: '700', color: Colors.darkText },

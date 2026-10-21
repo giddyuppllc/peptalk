@@ -147,7 +147,32 @@ export function unregisterNotificationResponseHandler(): void {
 
 // ─── Register for Push Notifications ─────────────────────────────────────────
 
-export async function registerForPushNotifications(): Promise<string | null> {
+/**
+ * 'ifGranted' never shows the OS permission prompt: it returns a token only if
+ * the user has already allowed notifications. 'prompt' may show it.
+ *
+ * The default is 'ifGranted'. Sign-in, every foreground sync and even LOGOUT
+ * (pushTokenSync.clearPushToken re-reading the token) used to call this, and it
+ * requested permission whenever the status was not granted, so the system
+ * prompt appeared the moment someone signed in and again as they signed out,
+ * with nothing on screen about notifications. Only a screen where the user is
+ * looking at notification settings passes 'prompt'.
+ */
+export type PushPermissionMode = 'ifGranted' | 'prompt';
+
+/** Whether to show the OS prompt, given the mode and the current status. Pure. */
+export function shouldRequestNotificationPermission(
+  mode: PushPermissionMode,
+  current: { status: string; canAskAgain?: boolean },
+): boolean {
+  if (mode !== 'prompt') return false;
+  if (current.status === 'granted') return false;
+  return current.canAskAgain !== false;
+}
+
+export async function registerForPushNotifications(
+  mode: PushPermissionMode = 'ifGranted',
+): Promise<string | null> {
   if (!isAvailable()) return null;
 
   if (Device && !Device.isDevice) {
@@ -177,10 +202,10 @@ export async function registerForPushNotifications(): Promise<string | null> {
     });
   }
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
+  const existing = await Notifications.getPermissionsAsync();
+  let finalStatus = existing.status;
 
-  if (existingStatus !== 'granted') {
+  if (shouldRequestNotificationPermission(mode, existing)) {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
   }

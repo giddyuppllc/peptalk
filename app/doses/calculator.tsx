@@ -26,18 +26,23 @@ import { tapLight, tapMedium } from '../../src/utils/haptics';
 import { PeptideDisclaimerModal } from '../../src/components/PeptideDisclaimerModal';
 import { PEPTIDES } from '../../src/data/peptides';
 import { findPeptideByQuery } from '../../src/lib/peptideSearch';
+import { PEPTALK_DOSING_DISCLAIMER } from '../../src/data/peptideDosingReference';
+// Read through the display boundary: a safety-information-only compound
+// (Edward, 2026-09-16) has no reference and no table row here, so nothing
+// pre-fills the vial / diluent fields and the recommended-protocol card does
+// not render. The ARITHMETIC still works — that is the whole point of the
+// decision. See src/data/safetyOnlyCompounds.ts.
 import {
-  getDosingReference,
-  getAllDosingReferencesForPeptide,
-  PEPTALK_DOSING_DISCLAIMER,
-} from '../../src/data/peptideDosingReference';
+  getDosingReferenceForDisplay,
+  getAllDosingReferencesForDisplay,
+  getDosingTableEntryForDisplay,
+} from '../../src/data/dosingDisplay';
 import {
   getVialSizeOptions,
   getDefaultVialMg,
   STANDARD_VIAL_MG,
 } from '../../src/data/vialSizes';
 import { getCalculatorMetadata } from '../../src/data/calculatorMetadata';
-import { getDosingTableEntry } from '../../src/data/peptideDosingTable';
 import {
   calculate,
   formatDose,
@@ -177,7 +182,7 @@ export default function CalculatorV2Screen() {
   // `ref.vialMg`, so someone holding a 10 mg retatrutide vial was silently given
   // 5 mg maths and therefore the wrong unit count on every draw.
   const variants = useMemo(
-    () => (peptideId ? getAllDosingReferencesForPeptide(peptideId) : []),
+    () => (peptideId ? getAllDosingReferencesForDisplay(peptideId) : []),
     [peptideId],
   );
   // Default to whatever getDosingReference would have returned, so behaviour is
@@ -196,7 +201,7 @@ export default function CalculatorV2Screen() {
     const chosen = variantId
       ? variants.find((v) => v.peptideId === variantId)
       : null;
-    return chosen ?? getDosingReference(peptideId);
+    return chosen ?? getDosingReferenceForDisplay(peptideId);
   }, [peptideId, variantId, variants]);
 
   // Reset the choice when the peptide changes, or the previous peptide's
@@ -943,7 +948,7 @@ export default function CalculatorV2Screen() {
                       adds at-a-glance weekly frequency / time-off / fasted
                       from src/data/peptideDosingTable.ts when available. */}
                   {(() => {
-                    const te = peptideId ? getDosingTableEntry(peptideId) : null;
+                    const te = peptideId ? getDosingTableEntryForDisplay(peptideId) : null;
                     if (!te) return null;
                     const bits: string[] = [];
                     if (te.frequencyWeekly) bits.push(te.frequencyWeekly);

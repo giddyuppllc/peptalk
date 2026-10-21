@@ -119,7 +119,24 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   iconWrap: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 18, fontWeight: '700' },
-  body: { marginBottom: 16 },
+  // flexShrink is what keeps Continue on screen, and on this screen that is
+  // load-bearing rather than cosmetic.
+  //
+  // In React Native flexShrink defaults to 0 (unlike the web's 1). `sheet` caps
+  // itself at 80% of the window; this ScrollView, with only a margin, therefore
+  // claimed the FULL height of its text and refused to give any of it back, so
+  // everything after it — which here is the single Continue button — was pushed
+  // past the sheet's bottom edge. There is deliberately no dismiss control, no
+  // touchable backdrop and no Android back on this modal (5.1.1(iv), see the
+  // note at the top of this file), so a pushed-out Continue is not a degraded
+  // screen: it is a modal with no controls at all, on the flow Apple has
+  // already rejected four times. Reachable on a small device at an
+  // accessibility text size, where this copy runs to nine dense lines.
+  //
+  // flexShrink rather than flex: with flex: 1 the sheet would always stretch to
+  // its 80% cap. This changes nothing when the copy fits and only takes height
+  // back when it does not.
+  body: { marginBottom: 16, flexShrink: 1 },
   copy: { fontSize: 14, lineHeight: 21 },
   primaryBtn: { borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   primaryText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },

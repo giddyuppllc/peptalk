@@ -25,6 +25,7 @@ import { tapLight } from '../../src/utils/haptics';
 import { PEPTIDES } from '../../src/data/peptides';
 import { searchPeptides } from '../../src/lib/peptideSearch';
 import { Disclaimer } from '../../src/components/Disclaimer';
+import { FLOATING_BOTTOM_CLEARANCE } from '../../src/constants/floatingControls';
 
 export default function PeptideLibraryScreen() {
   const t = useV3Theme();
@@ -53,7 +54,8 @@ export default function PeptideLibraryScreen() {
         initialNumToRender={12}
         maxToRenderPerBatch={12}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 80 }}
+        // The last row scrolls clear of the global Home/Aimee FABs.
+        contentContainerStyle={{ paddingBottom: FLOATING_BOTTOM_CLEARANCE }}
         ListHeaderComponent={
           <View
             style={[
@@ -148,10 +150,12 @@ export default function PeptideLibraryScreen() {
             </GlassCard>
           </Pressable>
         )}
+        // Required medical disclaimer. Uses the app's existing approved
+        // wording via the shared component — no new copy. It is the list's
+        // footer so it scrolls clear of Home and Aimee; pinned under the
+        // list, both buttons sat on top of it permanently.
+        ListFooterComponent={<Disclaimer variant="dosing" />}
       />
-          {/* Required medical disclaimer. Uses the app's existing
-          approved wording via the shared component — no new copy. */}
-      <Disclaimer variant="dosing" />
     </V3DetailShell>
   );
 }

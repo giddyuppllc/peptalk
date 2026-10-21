@@ -52,30 +52,37 @@ describe('parseRangeToMcg', () => {
 });
 
 describe('precedence', () => {
-  it('ranks the self-verifying ladder first', () => {
-    expect(SOURCE_PRECEDENCE[0]).toBe('reconstitution_ladder');
+  it("ranks Jamie's rulings first, then the self-verifying ladder", () => {
+    expect(SOURCE_PRECEDENCE[0]).toBe('clinician_ruling');
+    expect(SOURCE_PRECEDENCE[1]).toBe('reconstitution_ladder');
     expect(SOURCE_PRECEDENCE[SOURCE_PRECEDENCE.length - 1]).toBe('protocols');
   });
 
-  it('prefers the ladder over the other two when it has an entry', () => {
-    // NAD+ is the clearest case: the master table records 200-600 mcg for a
-    // compound the ladder doses at 60,000 mcg — a 100x transcription error.
-    // Reading the table here would set an overdose ceiling ~100x too low and
-    // flag every real NAD+ dose.
+  it("a clinician ruling outranks every stored source", () => {
+    // NAD+: Jamie ruled 50–200 mg. The ladder's 60 mg is inside it and still
+    // reported; her ruling is the adjudication, so it is not a conflict.
     const nad = getCanonicalDose('nad-plus');
     expect(nad).not.toBeNull();
-    expect(nad!.source).toBe('reconstitution_ladder');
-    expect(nad!.verified).toBe(true);
-    expect(nad!.minMcg).toBe(60000);
-    // and it still reports what the other sources claimed
-    expect(nad!.sources.map((s) => s.source)).toContain('master_table');
-    expect(nad!.conflict).toBe(true);
+    expect(nad!.source).toBe('clinician_ruling');
+    expect([nad!.minMcg, nad!.maxMcg]).toEqual([50000, 200000]);
+    expect(nad!.sources.map((s) => s.source)).toContain('reconstitution_ladder');
+    expect(nad!.conflict).toBe(false);
+  });
+
+  it('prefers the ladder over the table when she has not ruled', () => {
+    // melanotan-1: no ruling; ladder 100-125 mcg vs table 250-1000 mcg.
+    const m = getCanonicalDose('melanotan-1');
+    expect(m).not.toBeNull();
+    expect(m!.source).toBe('reconstitution_ladder');
+    expect(m!.verified).toBe(true);
+    expect(m!.sources.map((s) => s.source)).toContain('master_table');
+    expect(m!.conflict).toBe(true);
   });
 
   it('falls through to a lower-precedence source when the ladder is silent', () => {
-    // tirzepatide has no ladder entry; it must still resolve, from a lower
-    // source, rather than going unguarded.
-    const t = getCanonicalDose('tirzepatide');
+    // mk-677 has no ruling and no ladder entry; it must still resolve, from a
+    // lower source, rather than going unguarded.
+    const t = getCanonicalDose('mk-677');
     expect(t).not.toBeNull();
     expect(t!.source).not.toBe('reconstitution_ladder');
     expect(t!.verified).toBe(false);
@@ -92,9 +99,9 @@ describe('conflict reporting', () => {
     const conflicts = getDoseConflicts();
     const ids = conflicts.map((c) => c.peptideId);
 
-    // melanotan-2: ladder 100-125 vs table 250-1000 — no overlap at all, so
+    // melanotan-1: ladder 100-125 vs table 250-1000 — no overlap at all, so
     // at least one source is wrong about this compound.
-    expect(ids).toContain('melanotan-2');
+    expect(ids).toContain('melanotan-1');
 
     // Every reported conflict must genuinely be disjoint somewhere.
     for (const c of conflicts) {

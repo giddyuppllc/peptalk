@@ -21,6 +21,8 @@
  */
 
 import { create } from 'zustand';
+import { makeSafeMerge } from '../lib/persistSafety';
+import { reportPersistProblem } from '../lib/persistReporting';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { WorkoutVideo, WorkoutVideoCategory } from '../data/workoutVideos';
@@ -60,6 +62,18 @@ export const useVideoTaggerStore = create<State>()(
     }),
     {
       name: 'video-tagger-edits.v1',
+      // Explicit so the number is visible, and deliberately still 0.
+      //
+      // In zustand 5.0.14 a bump with no `migrate` DISCARDS the persisted
+      // state and hydrates defaults — verified against middleware.js:392-420
+      // and by running it. That is the useful meaning of a bump, so nothing
+      // here overrides it: a store that needs to carry old data forward
+      // supplies its own migrate, and the three that do already have one.
+      version: 0,
+      // Storage is untrusted input: on web it is localStorage, which the
+      // user can edit, and a killed app leaves partial writes. See
+      // src/lib/persistSafety.ts.
+      merge: makeSafeMerge('video-tagger-edits.v1', reportPersistProblem),
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

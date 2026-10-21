@@ -15,6 +15,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
+import { checkAiAllowance, recordAiSpend } from '../_shared/aiAllowance.ts';
+import { applyFeatureConsent, HEALTH_CONSENT_REFUSAL } from '../_shared/aiFeatureConsent.ts';
 
 // 2026-05-17 vision routing fix: see food-scan for full rationale.
 // Grok-4.3 doesn't accept image inputs; OpenAI gpt-4o-mini does and
@@ -123,15 +125,20 @@ Deno.serve(async (req) => {
       }, 403);
     }
 
-    // 3. Parse + size guard — validate the request BEFORE consuming any
-    //    quota (P2.26: the bump used to run here, ahead of validation).
+    // 3. Parse + size guard — validate the request before checking the
+    //    allowance.
     // 2026-05-17 security fix: reject oversize bodies before parsing
     // so an attacker can't OOM the worker by streaming 100MB.
     const contentLength = Number(req.headers.get('content-length') ?? 0);
     if (contentLength > 10_000_000) {
       return jsonResp({ error: 'Request too large' }, 413);
     }
-    const { imageBase64 } = await req.json();
+    // Health-data consent (profile.aiDataConsent), enforced here as well as on
+    // the client so a stale or tampered build cannot bypass it. A photograph of
+    // a lab report IS the health record, so this refuses rather than strips.
+    const consent = applyFeatureConsent('lab-scan', await req.json());
+    if (consent.refuse) return jsonResp(HEALTH_CONSENT_REFUSAL, 403);
+    const { imageBase64 } = consent.body as { imageBase64?: unknown };
     if (!imageBase64 || typeof imageBase64 !== 'string') {
       return jsonResp({ error: 'No image provided' }, 400);
     }
@@ -143,24 +150,14 @@ Deno.serve(async (req) => {
       return jsonResp({ error: 'AI service not configured' }, 500);
     }
 
-    // 4. Consume quota — request is valid and we're about to make the
-    //    billable vision call. Atomic bump enforces the per-day cap under
-    //    concurrency; a failed upstream call is refunded below.
-    const dailyLimit = effectiveTier === 'pro' ? 20 : 5;
-    const rateLimit = await checkRateLimit(supabase, user.id, 'lab-scan', dailyLimit);
-    if (!rateLimit.allowed) {
-      // P3.16: transient DB failure → 503 (retryable), not 429. Mirrors aimee-chat.
-      if (rateLimit.failedClosed) {
-        return jsonResp({
-          error: 'Lab scanning is temporarily unavailable — please try again in a minute.',
-          retryAfter: rateLimit.retryAfter,
-        }, 503);
-      }
-      return jsonResp({
-        error: `Daily lab-scan limit reached (${rateLimit.limit}/day). Resets tomorrow.`,
-        retryAfter: rateLimit.retryAfter,
-      }, 429);
-    }
+    // Monthly allowance, shared with aimee-chat-stream. This was a per-day
+    // count (Plus 5/day, Pro 20/day). "i dont want a daily cap" (2026-08-26): the
+    // per-tier monthly allowance and the system-wide breaker in _cost.ts
+    // are the limit, and the spend is recorded below so the breaker sees it.
+    // Read-only, so a refused or failed call consumes nothing and there is
+    // no longer anything to refund.
+    const allowance = await checkAiAllowance(supabase, user.id, effectiveTier);
+    if (!allowance.allowed) return jsonResp(allowance.body, allowance.status);
 
     // 5. Vision call
     const visionCall = () => fetch(`${VISION_BASE_URL}/chat/completions`, {
@@ -193,8 +190,7 @@ Deno.serve(async (req) => {
     try {
       visionRes = await visionCall();
     } catch (err) {
-      // Network/timeout — no result delivered and we weren't billed; refund.
-      await refundRateLimit(supabase, user.id, 'lab-scan');
+      // Network/timeout — no result delivered.
       console.error('[lab-scan] Vision API request failed:', err);
       return jsonResp({ error: 'Lab analysis temporarily unavailable' }, 502);
     }
@@ -202,12 +198,11 @@ Deno.serve(async (req) => {
     if (!visionRes.ok) {
       const err = await visionRes.text();
       console.error('[lab-scan] Vision API error:', err);
-      // Upstream returned non-2xx — refund the consumed scan.
-      await refundRateLimit(supabase, user.id, 'lab-scan');
       return jsonResp({ error: 'Lab analysis temporarily unavailable' }, 502);
     }
 
     const completion = await visionRes.json();
+    await recordAiSpend(supabase, user.id, allowance.cost, completion);
     const rawContent = completion.choices?.[0]?.message?.content ?? '';
 
     // 6. Parse JSON — strip code fences just in case
@@ -255,74 +250,4 @@ function jsonResp(body: unknown, status = 200): Response {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
-}
-
-async function checkRateLimit(
-  supabase: any,
-  userId: string,
-  functionName: string,
-  limit: number,
-): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number; failedClosed?: boolean }> {
-  // Atomic increment via bump_ai_usage RPC. P0 fix from 2026-05-17
-  // security audit — the previous read-modify-write leaked one call
-  // per concurrent same-user request.
-  try {
-    const today = new Date().toISOString().slice(0, 10);
-    const { data, error } = await supabase.rpc('bump_ai_usage', {
-      p_user_id: userId,
-      p_function_name: functionName,
-      p_date: today,
-    });
-    if (error) throw error;
-    const newCount = Array.isArray(data) && data[0]
-      ? (data[0] as any).count ?? 0
-      : 0;
-    if (newCount > limit) {
-      const now = new Date();
-      const tomorrow = new Date(now);
-      tomorrow.setUTCHours(24, 0, 0, 0);
-      const retryAfter = Math.max(1, Math.round((tomorrow.getTime() - now.getTime()) / 1000));
-      return { allowed: false, limit, count: newCount, retryAfter };
-    }
-    return { allowed: true, limit, count: newCount };
-  } catch (err) {
-    console.error(`[${functionName}] rate-limit check failed; failing closed:`, err);
-    return { allowed: false, limit, count: 0, retryAfter: 60, failedClosed: true };
-  }
-}
-
-/**
- * Best-effort refund of one unit consumed by checkRateLimit when the
- * billable upstream call never produced a usable, billed result (network
- * failure, timeout, or upstream non-2xx). The atomic bump stays up front
- * so the per-day cap is still enforced under concurrency; this hands the
- * unit back on the rare failure path. A lost refund only ever returns a
- * credit the user was owed — never a money leak — so a light
- * read-then-write is acceptable here.
- */
-async function refundRateLimit(
-  supabase: any,
-  userId: string,
-  functionName: string,
-): Promise<void> {
-  try {
-    const today = new Date().toISOString().slice(0, 10);
-    const { data, error } = await supabase
-      .from('ai_usage_log')
-      .select('count')
-      .eq('user_id', userId)
-      .eq('function_name', functionName)
-      .eq('date', today)
-      .single();
-    if (error || !data) return;
-    const next = Math.max(0, ((data as any).count ?? 0) - 1);
-    await supabase
-      .from('ai_usage_log')
-      .update({ count: next })
-      .eq('user_id', userId)
-      .eq('function_name', functionName)
-      .eq('date', today);
-  } catch (err) {
-    console.error(`[${functionName}] rate-limit refund failed (non-fatal):`, err);
-  }
 }

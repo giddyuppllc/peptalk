@@ -24,6 +24,7 @@ import * as Clipboard from 'expo-clipboard';
 import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Colors, Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../../src/constants/floatingControls';
 import { healthKitAdapter } from '../../src/services/integrations/healthKitAdapter';
 import type { BiomarkerScope } from '../../src/types/cycle';
 
@@ -308,7 +309,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: { fontSize: FontSizes.lg, fontWeight: '700' },
-  scroll: { paddingHorizontal: Spacing.md, paddingBottom: 60 },
+  // The last row scrolls clear of the global Home/Aimee FABs.
+  scroll: { paddingHorizontal: Spacing.md, paddingBottom: FLOATING_BOTTOM_CLEARANCE },
   intro: { fontSize: FontSizes.xs, lineHeight: 18, marginBottom: Spacing.md },
   actionsRow: { flexDirection: 'row', gap: 10, marginBottom: Spacing.md },
   actionBtn: {

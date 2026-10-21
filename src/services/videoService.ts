@@ -18,8 +18,12 @@
  * reviewed manually via app/admin/video-tagger.tsx; once Jamie confirms
  * a tag the JSON's exerciseId is set and the mapping wins.
  *
- * Coverage: 97 exercises mapped out of ~451 in the library. The rest
- * fall back to the "Video coming soon" placeholder in
+ * Coverage is a subset of the library: EXERCISE_VIDEO_SLUG_MAP below is the
+ * list, and the auto-regeneration banner directly above it carries the counts
+ * as of the last regen. No totals are restated here — the pair that used to be
+ * named both went stale in the same direction, understating the mapping and
+ * overstating the library, and nothing compared either to the data.
+ * Unmapped exercises fall back to the "Video coming soon" placeholder in
  * components/ExerciseVideo. Expanding coverage = (a) Jamie's tagger
  * review of medium-confidence suggestions, (b) recording more videos.
  */

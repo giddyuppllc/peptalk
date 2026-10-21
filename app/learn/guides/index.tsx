@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from '../../../src/components/GlassCard';
 import { HOW_TO_GUIDES } from '../../../src/data/howToGuides';
+import { FLOATING_TOP_RIGHT_CLEARANCE } from '../../../src/constants/floatingControls';
 import { GuideCategory } from '../../../src/types';
 
 // ── Constants ────────────────────────────────────────────────────
@@ -188,6 +189,9 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingTop: 12,
     paddingBottom: 8,
+    // Keep the title clear of the global PT button; scrollContent already
+    // pads 20 on this side.
+    paddingRight: FLOATING_TOP_RIGHT_CLEARANCE - 20,
   },
   backButton: {
     width: 36,

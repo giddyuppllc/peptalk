@@ -13,6 +13,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
+import { checkAiAllowance, recordAiSpend } from '../_shared/aiAllowance.ts';
+import { applyFeatureConsent } from '../_shared/aiFeatureConsent.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -155,21 +157,21 @@ Deno.serve(async (req) => {
       return json({ error: 'Pro tier required', upgrade: true }, 403);
     }
 
-    // Rate limit — 10 pantry-meal suggestions/day per user (Pro only, locked).
-    // ~$0.0016/call so a heavy user costs ~$0.50/mo on this fn.
-    const rateLimit = await checkRateLimit(supabase, user.id, 'aimee-pantry-meal', 10);
-    if (!rateLimit.allowed) {
-      return json({
-        error: `Daily pantry-suggestion limit reached (${rateLimit.limit}/day). Resets tomorrow.`,
-        retryAfter: rateLimit.retryAfter,
-      }, 429);
-    }
+    // Monthly allowance, shared with aimee-chat-stream. This was a per-day
+    // count (10 suggestions/day). "i dont want a daily cap" (2026-08-26): the
+    // per-tier monthly allowance and the system-wide breaker in _cost.ts
+    // are the limit, and the spend is recorded below so the breaker sees it.
+    const allowance = await checkAiAllowance(supabase, user.id, tier);
+    if (!allowance.allowed) return json(allowance.body, allowance.status);
 
     if (!OPENAI_API_KEY) {
       return json({ error: 'AI service not configured' }, 500);
     }
 
-    const body = (await req.json()) as SuggestBody;
+    // Health-data consent (profile.aiDataConsent), enforced here as well as on
+    // the client so a stale or tampered build cannot bypass it. This feature
+    // still works without health data, so the fields are stripped, not refused.
+    const body = applyFeatureConsent('aimee-pantry-meal', await req.json()).body as SuggestBody;
     const count = Math.min(Math.max(body.count ?? 3, 1), 5);
 
     // Cap user-supplied collections so a malicious / accidental large
@@ -238,10 +240,14 @@ Deno.serve(async (req) => {
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();
+      // Log the provider status + body server-side (never the key) so an
+      // x.ai outage, quota or bad-model response is visible in function logs.
+      console.error('[aimee-pantry-meal] AI call failed:', aiRes.status, errText.slice(0, 500));
       return json({ error: `AI call failed: ${errText}` }, 502);
     }
 
     const aiData = await aiRes.json();
+    await recordAiSpend(supabase, user.id, allowance.cost, aiData);
     const content: string = aiData.choices?.[0]?.message?.content ?? '';
     const cleaned = content.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
 
@@ -265,36 +271,4 @@ function json(body: unknown, status = 200): Response {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
-}
-
-async function checkRateLimit(
-  supabase: any,
-  userId: string,
-  functionName: string,
-  limit: number,
-): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number }> {
-  // Atomic via bump_ai_usage RPC (2026-05-17 audit fix).
-  try {
-    const today = new Date().toISOString().slice(0, 10);
-    const { data, error } = await supabase.rpc('bump_ai_usage', {
-      p_user_id: userId,
-      p_function_name: functionName,
-      p_date: today,
-    });
-    if (error) throw error;
-    const newCount = Array.isArray(data) && data[0]
-      ? (data[0] as any).count ?? 0
-      : 0;
-    if (newCount > limit) {
-      const now = new Date();
-      const tomorrow = new Date(now);
-      tomorrow.setUTCHours(24, 0, 0, 0);
-      const retryAfter = Math.max(1, Math.round((tomorrow.getTime() - now.getTime()) / 1000));
-      return { allowed: false, limit, count: newCount, retryAfter };
-    }
-    return { allowed: true, limit, count: newCount };
-  } catch (err) {
-    console.error(`[${functionName}] rate-limit check failed; failing closed:`, err);
-    return { allowed: false, limit, count: 0, retryAfter: 60, failedClosed: true };
-  }
 }

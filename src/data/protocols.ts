@@ -18,8 +18,6 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     peptideId: 'bpc-157',
     name: 'BPC-157 Standard SubQ Protocol',
     typicalDose: { min: 200, max: 500, unit: 'mcg' },
-    dosingMode: 'weight_based',
-    dosePerKg: { min: 2.5, max: 6, unit: 'mcg' },
     route: 'subcutaneous',
     frequency: 'twice_daily',
     frequencyLabel: '2x daily (AM + PM)',
@@ -42,8 +40,6 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     peptideId: 'tb-500',
     name: 'TB-500 Loading + Maintenance Protocol',
     typicalDose: { min: 330, max: 1000, unit: 'mcg' },
-    dosingMode: 'weight_based',
-    dosePerKg: { min: 25, max: 70, unit: 'mcg' },
     route: 'subcutaneous',
     frequency: 'biw',
     frequencyLabel: '2x/week (loading) → 1x/week (maintenance)',
@@ -60,13 +56,8 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     contraindications: ['active cancer', 'pregnancy', 'breastfeeding'],
     cautionConditions: ['autoimmune disease', 'blood clotting disorders'],
     source: 'published research',
-    // Loading-then-maintenance pattern.
-    titrationSchedule: [
-      { weekStart: 1, weekEnd: 4, dose: 5, unit: 'mg', frequency: 'biw', frequencyLabel: '2× / week',
-        note: 'Loading phase — saturates tissue stores. Some users extend to 6 weeks.' },
-      { weekStart: 5, dose: 5, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly',
-        note: 'Maintenance. Some protocols drop to once every 2 weeks for long cycles.' },
-    ],
+    // A 5 mg loading/maintenance titration lived here — five times Jamie
+    // Esposito's ruled maximum of 1 mg (330 mcg – 1 mg). Removed 2026-09-15.
   },
   {
     id: 'proto-ghkcu-subq',
@@ -162,8 +153,6 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     peptideId: 'ipamorelin',
     name: 'Ipamorelin Standalone Protocol',
     typicalDose: { min: 100, max: 500, unit: 'mcg' },
-    dosingMode: 'weight_based',
-    dosePerKg: { min: 1, max: 3, unit: 'mcg' },
     route: 'subcutaneous',
     frequency: 'tiw',
     frequencyLabel: '2-3x daily',
@@ -184,10 +173,11 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     id: 'proto-tesamorelin',
     peptideId: 'tesamorelin',
     name: 'Tesamorelin Protocol',
+    // Jamie picked the reconstitution-ladder figure: 500 mcg - 1 mg per shot, twice daily.
     typicalDose: { min: 0.5, max: 1, unit: 'mg' },
     route: 'subcutaneous',
-    frequency: 'daily',
-    frequencyLabel: 'Once daily',
+    frequency: 'twice_daily',
+    frequencyLabel: 'Twice daily (AM/PM)',
     durationWeeks: { min: 12, max: 26 },
     timing: 'Morning or before bed, fasted',
     storageNotes: 'Refrigerate. FDA-approved as Egrifta.',
@@ -207,7 +197,8 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     id: 'proto-semaglutide',
     peptideId: 'semaglutide',
     name: 'Semaglutide Titration Protocol',
-    typicalDose: { min: 250, max: 2500, unit: 'mcg' },
+    // Jamie Esposito's review ruling: 250 mcg – 12 mg (see clinicianRulings.ts).
+    typicalDose: { min: 250, max: 12000, unit: 'mcg' },
     route: 'subcutaneous',
     frequency: 'weekly',
     frequencyLabel: 'Once weekly',
@@ -492,7 +483,39 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     id: 'proto-ss31',
     peptideId: 'ss-31',
     name: 'SS-31 (Elamipretide) Protocol',
-    typicalDose: { min: 5, max: 40, unit: 'mg' },
+    // CORRECTED 2026-09-15 (Jamie Esposito): 2–5 mg daily; 2 mg beginner,
+    // 5 mg advanced. Was 5–40 mg, which the thirds split in
+    // src/lib/protocolDoseMath rendered as "Beginner 5 mg – 16.55 mg /
+    // Advanced 28.1 mg – 40 mg" and a cycle total of 140 mg–3360 mg.
+    // Beginner/advanced are authored in doseBands rather than derived, because
+    // a split of 2–5 gives 2–2.99 / 3.98–5, not the 2 and 5 she stated.
+    typicalDose: { min: 2, max: 5, unit: 'mg' },
+    doseBands: {
+      beginner: { min: 2, max: 2 },
+      advanced: { min: 5, max: 5 },
+    },
+    doseProvenance: [
+      {
+        value: '2–5 mg daily; 2 mg beginner, 5 mg advanced',
+        source: 'Written correction to the SS-31 dosing screens (Quick dose reference, Cycle plan)',
+        approver: 'Jamie Esposito (text, 13–14 Sep 2026, via Edward work order 2026-09-15)',
+        date: '2026-09-15',
+        replaced: 'typicalDose 5–40 mg (uncited); beginner/advanced derived by thirds split',
+        fields: [
+          'src/data/protocols.ts proto-ss31 typicalDose + doseBands',
+          "src/data/peptideDosingTable.ts ss-31 dosingRange (was '2mg-5mg sometimes 10mg')",
+          'supabase/functions/aimee-chat/_knowledge.json proto SS-31 dose',
+          'supabase/ss31-dose-correction-2026-09-15.sql (public.protocols, NOT applied)',
+        ],
+        approved: {
+          typicalDose: { min: 2, max: 5, unit: 'mg' },
+          doseBands: {
+            beginner: { min: 2, max: 2 },
+            advanced: { min: 5, max: 5 },
+          },
+        },
+      },
+    ],
     route: 'subcutaneous',
     frequency: 'daily',
     frequencyLabel: 'Once daily',
@@ -520,12 +543,14 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     // value, and the cause of TestFlight tester report
     // "MOTSC → blank screen, app freezes" because downstream syringe
     // math couldn't fit a 7.5 mg target into a 10 mg / 2 ml vial.
-    typicalDose: { min: 200, max: 1000, unit: 'mcg' },
+    // Jamie Esposito's review ruling (clinicianRulings.ts): 1 mg – 2 mg 3 times
+    // weekly, AM on an empty stomach, prior to workout; 6–10 weeks.
+    typicalDose: { min: 1000, max: 2000, unit: 'mcg' },
     route: 'subcutaneous',
-    frequency: 'daily',
-    frequencyLabel: 'daily (titrate weekly)',
+    frequency: 'tiw',
+    frequencyLabel: '3x weekly',
     durationWeeks: { min: 6, max: 10 },
-    timing: 'Morning or pre-exercise',
+    timing: 'AM on an empty stomach, prior to workout',
     storageNotes: 'Store at 2-8°C after reconstitution.',
     importantNotes: [
       'Mitochondrial-derived peptide — exercise mimetic',
@@ -548,7 +573,7 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     route: 'subcutaneous',
     frequency: 'daily',
     frequencyLabel: 'Once daily (SubQ) or orally',
-    durationWeeks: { min: 4, max: 8 },
+    durationWeeks: { min: 4, max: 12 },
     timing: 'Morning',
     storageNotes: 'Store reconstituted at 2-8°C.',
     importantNotes: [
@@ -908,11 +933,11 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     cautionConditions: ['pancreatitis history', 'gallbladder disease', 'eating disorder history', 'type 1 diabetes'],
     source: 'published research',
     titrationSchedule: [
-      { weekStart: 1, weekEnd: 4,  dose: 1.5, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Starting dose — minimize GI side effects' },
-      { weekStart: 5, weekEnd: 8,  dose: 3,   unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'First step up' },
-      { weekStart: 9, weekEnd: 16, dose: 4.5, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Second step up' },
-      { weekStart: 17, weekEnd: 24, dose: 6,  unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Common maintenance dose' },
-      { weekStart: 25,               dose: 9,  unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Maximum trial dose — only if tolerated and additional weight loss is needed' },
+      // Starts at Jamie's minimum (3 mg) and ends at her maximum (9 mg).
+      { weekStart: 1, weekEnd: 4,  dose: 3,   unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Starting dose — minimize GI side effects' },
+      { weekStart: 5, weekEnd: 12, dose: 4.5, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'First step up' },
+      { weekStart: 13, weekEnd: 20, dose: 6,  unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Common maintenance dose' },
+      { weekStart: 21,               dose: 9,  unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Maximum trial dose — only if tolerated and additional weight loss is needed' },
     ],
   },
   {
@@ -939,12 +964,11 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     cautionConditions: ['pancreatitis history', 'gallbladder disease', 'severe gastroparesis', 'type 1 diabetes'],
     source: 'published research',
     titrationSchedule: [
-      { weekStart: 1, weekEnd: 4,  dose: 0.6, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Starting dose' },
-      { weekStart: 5, weekEnd: 8,  dose: 1.2, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'First step up' },
-      { weekStart: 9, weekEnd: 12, dose: 1.8, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Second step up' },
-      { weekStart: 13, weekEnd: 16, dose: 2.4, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Third step up' },
-      { weekStart: 17, weekEnd: 20, dose: 3.6, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Fourth step up' },
-      { weekStart: 21,               dose: 4.8, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Common maintenance dose; trials extended to 6mg if needed' },
+      // Starts at Jamie's minimum (2.4 mg) and ends at her maximum (6 mg).
+      { weekStart: 1, weekEnd: 4,  dose: 2.4, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Starting dose' },
+      { weekStart: 5, weekEnd: 8,  dose: 3.6, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'First step up' },
+      { weekStart: 9, weekEnd: 12, dose: 4.8, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Common maintenance dose' },
+      { weekStart: 13,               dose: 6, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Maximum dose if needed' },
     ],
   },
   {
@@ -971,11 +995,9 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     cautionConditions: ['pancreatitis history', 'gastroparesis', 'eating disorder history'],
     source: 'published research',
     titrationSchedule: [
-      { weekStart: 1, weekEnd: 4,   dose: 0.16, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Starting dose' },
-      { weekStart: 5, weekEnd: 8,   dose: 0.3,  unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'First step up' },
-      { weekStart: 9, weekEnd: 12,  dose: 0.6,  unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Second step up' },
-      { weekStart: 13, weekEnd: 16, dose: 1.2,  unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Third step up' },
-      { weekStart: 17,               dose: 2.4, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Maintenance dose' },
+      // Starts at Jamie's minimum (1.2 mg) and ends at her maximum (2.4 mg).
+      { weekStart: 1, weekEnd: 4,   dose: 1.2,  unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Starting dose' },
+      { weekStart: 5,                dose: 2.4, unit: 'mg', frequency: 'weekly', frequencyLabel: 'Once weekly', note: 'Maintenance dose' },
     ],
   },
 
@@ -1115,7 +1137,7 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     route: 'subcutaneous',
     frequency: 'tiw',
     frequencyLabel: '3x weekly (Mon / Wed / Fri)',
-    durationWeeks: { min: 6, max: 8 },
+    durationWeeks: { min: 6, max: 10 },
     timing: 'Fasted, before exercise',
     storageNotes: 'Store at 2-8°C after reconstitution.',
     reconstitutionNotes: 'On a 10mg vial with 3ml BAC water (3.33 mg/mL), 1mg = 30 units and 2mg = 60 units.',
@@ -1123,7 +1145,6 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
       'Dose fasted, then train — refuel with protein and carbohydrate afterwards',
       'Fixed Monday / Wednesday / Friday schedule rather than daily dosing',
       'Run the cycle twice a year (bi-annually)',
-      'Higher per-dose amount than the daily titration protocol — these are alternatives, do not run both at once',
     ],
     contraindications: ['pregnancy'],
     cautionConditions: ['diabetes', 'hypoglycemia risk'],
@@ -1183,11 +1204,11 @@ export const PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
     route: 'subcutaneous',
     frequency: 'custom',
     frequencyLabel: 'Every 3-4 days',
-    durationWeeks: { min: 2, max: 4 },
+    durationWeeks: { min: 4, max: 12 },
     storageNotes: 'Reconstituted at 2-8°C, use within 21 days.',
     reconstitutionNotes: 'On a 10mg vial with 3ml BAC water (3.33 mg/mL), 1mg is approximately 30 units.',
     importantNotes: [
-      '1mg every 3-4 days for a short 2-4 week course',
+      '1mg every 3-4 days for a 4-12 week course',
       'For acute injuries specifically',
       'TB-500 acts systemically — injection site does not matter',
       'Commonly stacked with BPC-157',

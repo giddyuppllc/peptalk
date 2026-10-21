@@ -6,6 +6,7 @@ const state = (over: Partial<RouteGuardState> = {}): RouteGuardState => ({
   isAuthenticated: true,
   inOnboarding: false,
   inAuth: false,
+  inPasswordRecovery: false,
   ...over,
 });
 
@@ -110,22 +111,73 @@ describe('boot route guard', () => {
     });
   });
 
+  describe('the password-reset link must reach the password screen', () => {
+    // Added 2026-09-16. postAuthLinkRoute sends EVERY recovery link to
+    // /set-password whatever the onboarding state, and rule 1 then evicted it
+    // to /onboarding whenever isComplete was false.
+    //
+    // That is the normal state on this flow, not an edge: a reset link is what
+    // someone opens on a new phone or after a reinstall, where isComplete
+    // starts false and only becomes true if restoreOnboardingFromServer finds a
+    // snapshot. An account with no snapshot — which the review notes say is the
+    // REVIEWER account — never gets one, so the link established a session, the
+    // screen mounted, and the user was pulled into onboarding before they could
+    // type a password. "Forgot password" did nothing, silently.
+    it('leaves a signed-in visitor on /set-password even before onboarding', () => {
+      expect(
+        decideRoute(
+          state({ isComplete: false, isAuthenticated: true, inPasswordRecovery: true }),
+        ),
+      ).toBeNull();
+    });
+
+    it('and still sends them to /onboarding from anywhere else', () => {
+      // The exemption is this one route, not a hole in rule 1.
+      expect(
+        decideRoute(state({ isComplete: false, isAuthenticated: true })),
+      ).toBe('/onboarding');
+    });
+
+    it('does not let it become a way into the app without a session', () => {
+      // Rule 3 is deliberately unchanged: /set-password needs the session the
+      // link grants, and app/set-password.tsx sends a sessionless visitor to
+      // /auth itself. This must not become the forged-flag hole again.
+      expect(
+        decideRoute(
+          state({ isComplete: true, isAuthenticated: false, inPasswordRecovery: true }),
+        ),
+      ).toBe('/auth');
+    });
+
+    it('leaves an onboarded, signed-in visitor there too', () => {
+      expect(
+        decideRoute(
+          state({ isComplete: true, isAuthenticated: true, inPasswordRecovery: true }),
+        ),
+      ).toBeNull();
+    });
+  });
+
   it('never returns a redirect that would re-trigger itself', () => {
     // Exhaustive sweep of the state space: whatever the guard returns, landing
     // on that route must produce null, or the app redirect-loops on boot.
     const bools = [true, false];
     for (const isComplete of bools)
       for (const authHydrated of bools)
-        for (const isAuthenticated of bools) {
-          const s = state({ isComplete, authHydrated, isAuthenticated });
-          const target = decideRoute(s);
-          if (!target) continue;
-          const landed = decideRoute({
-            ...s,
-            inOnboarding: target === '/onboarding',
-            inAuth: target === '/auth',
-          });
-          expect(landed).toBeNull();
-        }
+        for (const isAuthenticated of bools)
+          // inPasswordRecovery joins the sweep: a new input flag that is never
+          // varied here would be exempt from the one property this file exists
+          // to prove.
+          for (const inPasswordRecovery of bools) {
+            const s = state({ isComplete, authHydrated, isAuthenticated, inPasswordRecovery });
+            const target = decideRoute(s);
+            if (!target) continue;
+            const landed = decideRoute({
+              ...s,
+              inOnboarding: target === '/onboarding',
+              inAuth: target === '/auth',
+            });
+            expect(landed).toBeNull();
+          }
   });
 });

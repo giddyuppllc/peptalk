@@ -15,6 +15,7 @@
  */
 
 import type { LabParsedValue } from './labParsers/types';
+import { healthConsentGranted, withHealthConsent } from '../lib/aiFeatureConsent';
 
 export interface LabOcrResult {
   ok: boolean;
@@ -36,6 +37,13 @@ export async function recognizeLabPhoto(uri: string): Promise<LabOcrResult> {
   if (!(await ensureAiConsent())) {
     return { ok: false, values: [], unmappedLines: [], reason: 'unavailable' };
   }
+  // The health toggle is a SEPARATE consent from the launch modal above. A
+  // photo of a lab report IS the health record — there is no reduced version
+  // of this request — so it refuses, landing on the existing manual-entry
+  // fall-through rather than inventing a new screen state.
+  if (!healthConsentGranted()) {
+    return { ok: false, values: [], unmappedLines: [], reason: 'unavailable' };
+  }
   try {
     const { supabase } = await import('./supabase');
     // Match the food-scan pattern: read the image as base64 client-side
@@ -50,7 +58,7 @@ export async function recognizeLabPhoto(uri: string): Promise<LabOcrResult> {
 
     const { data, error } = await (supabase as any).functions.invoke(
       'lab-scan',
-      { body: { imageBase64: base64 } },
+      { body: withHealthConsent('lab-scan', { imageBase64: base64 }) },
     );
 
     if (error) {

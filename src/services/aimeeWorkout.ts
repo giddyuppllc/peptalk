@@ -24,6 +24,7 @@ import type {
   GeneratedDay,
   GeneratedExercise,
 } from './workoutGenerator';
+import { healthConsentGranted, withHealthConsent } from '../lib/aiFeatureConsent';
 
 // Muscles the edge function is allowed to emit (mirrors the fn's taxonomy).
 const AI_MUSCLES: MuscleGroup[] = [
@@ -226,11 +227,18 @@ export async function generateAiWorkout(params: AiWorkoutParams): Promise<Genera
     throw new AiWorkoutError('auth', 'Please log in to generate a workout.');
   }
 
-  const availability = buildAvailability(params.location, params.gender);
+  // The health toggle is a SEPARATE consent from the modal above. `gender`
+  // here is derived from profile.biologicalSex, so without health consent
+  // withHealthConsent drops it and the server defaults to 'anyone' — which
+  // the library and the edge function both already handle. The availability
+  // matrix is built from the SAME effective value so the two can't disagree.
+  // Goal, days, location, level and focus are screen state, not health data.
+  const effectiveGender: ExerciseGender = healthConsentGranted() ? params.gender : 'anyone';
+  const availability = buildAvailability(params.location, effectiveGender);
   const focusMuscles = (params.focusMuscles ?? []).filter((m) => AI_MUSCLES.includes(m));
 
   const { data, error } = await (supabase as any).functions.invoke('aimee-workout', {
-    body: {
+    body: withHealthConsent('aimee-workout', {
       goal: params.goal,
       daysPerWeek: params.daysPerWeek,
       location: params.location,
@@ -238,7 +246,7 @@ export async function generateAiWorkout(params: AiWorkoutParams): Promise<Genera
       level: params.level ?? 'intermediate',
       focusMuscles,
       availability,
-    },
+    }),
     headers: { Authorization: `Bearer ${session.access_token}` },
   });
 

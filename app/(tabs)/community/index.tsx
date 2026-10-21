@@ -20,9 +20,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { GlassCard } from '../../../src/components/GlassCard';
 import { useTheme } from '../../../src/hooks/useTheme';
 import { Spacing, FontSizes } from '../../../src/constants/theme';
+import { FLOATING_TOP_RIGHT_CLEARANCE } from '../../../src/constants/floatingControls';
 import { useSubscriptionStore } from '../../../src/store/useSubscriptionStore';
 import { useCommunityStore } from '../../../src/store/useCommunityStore';
 import { PostCard } from '../../../src/components/community/PostCard';
+import { LeaderboardStrip } from '../../../src/components/LeaderboardStrip';
+import { LEADERBOARD_COPY } from '../../../src/constants/leaderboardCopy';
 import {
   REPORT_REASON_LABELS,
   type CommunityReportReason,
@@ -169,6 +172,14 @@ export default function CommunityFeedScreen() {
         <View style={{ flexDirection: 'row' }}>
           <TouchableOpacity
             style={styles.iconBtn}
+            onPress={() => router.push('/community/leaderboard' as any)}
+            accessibilityRole="button"
+            accessibilityLabel={LEADERBOARD_COPY.feedEntryA11y}
+          >
+            <Ionicons name="trophy-outline" size={20} color={t.text} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.iconBtn}
             onPress={() => router.push('/community/live' as any)}
             accessibilityRole="button"
             accessibilityLabel="Live events"
@@ -301,6 +312,9 @@ export default function CommunityFeedScreen() {
           }
         }}
         onEndReachedThreshold={0.5}
+        // Real opted-in leaderboard, above the posts. Renders as a plain entry
+        // row into /community/leaderboard when nobody is on the board yet.
+        ListHeaderComponent={<LeaderboardStrip />}
         ListFooterComponent={
           loadingMore ? (
             <View style={styles.footerLoading}>
@@ -395,6 +409,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
+    // Keep the right-hand icons clear of the global PT button.
+    paddingRight: FLOATING_TOP_RIGHT_CLEARANCE,
   },
   iconBtn: {
     width: 40,

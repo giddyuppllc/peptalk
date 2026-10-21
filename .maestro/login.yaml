@@ -117,4 +117,14 @@ tags:
 - assertNotVisible: "Enter a valid email and password."
 - assertNotVisible: "Email not confirmed"
 - assertNotVisible: "Something went wrong"
+
+# "Enter password" going away is NOT enough on its own. On a clean install the
+# onboarding answers are absent, so login routes to /onboarding — and until
+# 2026-09-15 that rendered the Welcome step, whose visible action is
+# "Already have an account? Sign In" → /auth. The password field was gone and
+# the old pass condition was satisfied by exactly the loop Apple rejected.
+# A signed-in user must see neither the Sign In link nor the Welcome step.
+- assertNotVisible: ".*Already have an account.*"
+- assertNotVisible: "Get Started"
+- assertNotVisible: "Your health. Optimized."
 - takeScreenshot: .maestro/screenshots/login-success

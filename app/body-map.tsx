@@ -22,6 +22,7 @@ import { BodyModel } from '@/components/BodyModel';
 import { BodyRegionPanel } from '@/components/BodyRegionPanel';
 import { BODY_REGIONS, BODY_REGION_MAP } from '@/data/bodyMapData';
 import { Colors, FontSizes, Spacing, BorderRadius } from '@/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '@/constants/floatingControls';
 
 export default function BodyMapScreen() {
   const insets = useSafeAreaInsets();
@@ -54,8 +55,12 @@ export default function BodyMapScreen() {
       </View>
 
       {/* ── Region Quick-Select Pills ───────────────────── */}
+      {/* flexGrow 0: on the web a horizontal ScrollView in this flex column
+          grew to fill the screen, and each pill stretched into a 330px-tall
+          capsule laid over the body model. */}
       <ScrollView
         horizontal
+        style={{ flexGrow: 0 }}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.pillRow}
       >
@@ -177,6 +182,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    // Centre the model and hint in the space above the global Home/Aimee FABs.
+    paddingBottom: FLOATING_BOTTOM_CLEARANCE,
   },
 
   // Hint

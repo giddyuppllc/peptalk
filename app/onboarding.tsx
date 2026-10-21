@@ -7,7 +7,7 @@
  * Screen 4: Create Account + Choose Plan
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { describeAuthError } from '../src/lib/errorMessages';
 import { captureException } from '../src/services/telemetry';
 import { View, Text, TouchableOpacity, TextInput, Switch, StyleSheet, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
@@ -21,15 +21,8 @@ import { useHealthProfileStore } from '../src/store/useHealthProfileStore';
 import { attestAge } from '../src/services/profileService';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useSubscriptionStore } from '../src/store/useSubscriptionStore';
-import {
-  computeMacroRecommendation,
-  activityFromOnboarding,
-  ageYearsFromRange,
-  goalFromOnboarding,
-} from '../src/services/macroCalculator';
+import { onboardingMacroTargets, applyMacroTargets } from '../src/services/onboardingRestore';
 import { isValidEmail, validatePassword, PASSWORD_MIN_LENGTH } from '../src/utils/validation';
-import { useMealStore } from '../src/store/useMealStore';
-import { useProgressGoalsStore } from '../src/store/useProgressGoalsStore';
 import { trackOnboardingComplete } from '../src/services/analyticsEvents';
 import { PasswordToggle } from '../src/components/PasswordToggle';
 import { AgeRange, Gender, ActivityLevel } from '../src/types';
@@ -42,9 +35,26 @@ import {
 } from '../src/types/cycle';
 import { useCycleStore } from '../src/store/useCycleStore';
 import {
+  visibleOnboardingStep,
+  onboardingBackAction,
+  showOnboardingBack,
+  showSignInLink,
+  shouldForwardHome,
+  shouldAwaitServerRestore,
+  resumeStepToApply,
+} from '../src/lib/onboardingSteps';
+import {
+  ONBOARDING_RESTORE_TIMEOUT_MS,
+  isOnboardingHeightValid,
+  isOnboardingWeightValid,
+  isStoredHeightValid,
+} from '../src/lib/onboardingRestore';
+import {
   useCommunityPrefsStore,
   type CommunityPreset,
 } from '../src/store/useCommunityPrefsStore';
+import { useLeaderboardStore } from '../src/store/useLeaderboardStore';
+import { LEADERBOARD_COPY } from '../src/constants/leaderboardCopy';
 
 const COMMUNITY_PRESETS: {
   value: CommunityPreset;
@@ -82,6 +92,13 @@ const COMMUNITY_PRESETS: {
  */
 const MIN_AGE = 18;
 
+/**
+ * How long a fresh screen stays blank waiting on the server restore before it
+ * shows the local answers anyway. Just past the restore's own budget, so the
+ * restore normally settles first; this only bounds a restore that never does.
+ */
+const RESTORE_WAIT_CAP_MS = ONBOARDING_RESTORE_TIMEOUT_MS + 1_500;
+
 const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
   { value: 'Male', label: 'Male', icon: 'man-outline' },
   { value: 'Female', label: 'Female', icon: 'woman-outline' },
@@ -103,7 +120,7 @@ const PLANS: { tier: 'free' | 'plus' | 'pro'; name: string; price: string; badge
   },
   {
     tier: 'plus', name: 'PepTalk+', price: '$9.99/mo', badge: 'POPULAR',
-    features: ['Unlimited Stack Builder + interaction analysis', 'Aimee chat (20/day) on dosing & timing', 'Food Scanner + voice meal log', Platform.OS === 'ios' ? 'Apple Watch + Apple Health sync' : 'Apple Watch + Health Connect sync'],
+    features: ['Unlimited Stack Builder + interaction analysis', 'Aimee chat (up to 750/month) on dosing & timing', 'Food Scanner + voice meal log', Platform.OS === 'ios' ? 'Apple Watch + Apple Health sync' : 'Apple Watch + Health Connect sync'],
   },
   {
     tier: 'pro', name: 'PepTalk Pro', price: '$49.99/mo', badge: 'BEST VALUE',
@@ -125,24 +142,50 @@ export default function OnboardingScreen() {
   const isAuthenticated = useAuthStore((st) => st.isAuthenticated);
   const isComplete = useOnboardingStore((st) => st.isComplete);
 
-  const [step, setStep] = useState(isEditMode ? 1 : 0);
+  const [storedStep, setStep] = useState(isEditMode ? 1 : 0);
+  const stepCtx = { isAuthenticated, isEditMode };
+  // A signed-in visitor never sees the Welcome step (2.1(a) login loop — see
+  // src/lib/onboardingSteps.ts). Derived every render, not chosen at mount:
+  // this screen stays mounted beneath /auth while the user signs in.
+  const step = visibleOnboardingStep(storedStep, stepCtx);
+  const forwardHome = shouldForwardHome(storedStep, { ...stepCtx, isComplete });
 
-  // Auto-route logged-in users after the welcome animation plays.
+  // Route signed-in, already-onboarded users home.
   //
   // Bound to focus, not just to mount. This screen stays mounted underneath
   // /auth when the user taps "Already have an account? Sign In", and an
-  // unfocused screen firing router.replace() yanks them out of the form they
-  // are typing into 1.8s later. useFocusEffect tears the timer down on blur, so
-  // it can only ever fire while this screen is the one on top.
+  // unfocused screen firing router.replace() would yank them out of the form
+  // they are typing into. useFocusEffect only runs while this screen is on top.
   useFocusEffect(
     React.useCallback(() => {
-      if (!(step === 0 && isAuthenticated && isComplete && !isEditMode)) return;
-      const timer = setTimeout(() => {
-        router.replace('/(tabs)');
-      }, 1800); // Let the animation play for 1.8s then auto-route
-      return () => clearTimeout(timer);
-    }, [step, isAuthenticated, isComplete, isEditMode, router]),
+      if (!forwardHome) return;
+      router.replace('/(tabs)');
+    }, [forwardHome, router]),
   );
+
+  // Server restore (src/services/onboardingRestore.ts). A returning user on a
+  // new device, a reinstall or a fresh web load has their answers on the
+  // server; while that fetch is out, a fresh screen renders nothing rather than
+  // a step it may be about to leave. A restored completion then forwards home
+  // through `forwardHome` above; a partial one opens at the first unanswered
+  // step. Neither happens without a session.
+  const currentUserId = useAuthStore((st) => st.user?.id ?? null);
+  const restoreSettled = useOnboardingStore(
+    (st) => st.restore.status === 'settled' && st.restore.userId === currentUserId,
+  );
+  const resume = useOnboardingStore((st) => st.resumeStep);
+  const [restoreWaitElapsed, setRestoreWaitElapsed] = useState(false);
+  const awaitRestore = shouldAwaitServerRestore(storedStep, {
+    ...stepCtx,
+    isComplete,
+    restoreSettled,
+    waitElapsed: restoreWaitElapsed,
+  });
+  useEffect(() => {
+    if (!awaitRestore) return;
+    const timer = setTimeout(() => setRestoreWaitElapsed(true), RESTORE_WAIT_CAP_MS);
+    return () => clearTimeout(timer);
+  }, [awaitRestore]);
 
   // Age (exact)
   const [selectedAge, setSelectedAge] = useState(0);
@@ -170,6 +213,49 @@ export default function OnboardingScreen() {
   const [contraceptionMethod, setContraceptionMethod] = useState<ContraceptionMethod | null>(null);
   const [lastPeriodDate, setLastPeriodDate] = useState('');
 
+  // Once the restore has landed, pre-fill Basics from the health profile the
+  // user already has, so continuing does not blank or overwrite it (step 2
+  // writes activity level unconditionally). Only empty fields, only once.
+  // A resume point arrives just before the restore reports settled; seeding on
+  // either means a resumed Basics step never renders empty for a frame.
+  const restoreLanded = restoreSettled || (resume != null && resume.userId === currentUserId);
+  const seededFromProfile = useRef(false);
+  useEffect(() => {
+    if (seededFromProfile.current || !restoreLanded || !isAuthenticated || isEditMode) return;
+    seededFromProfile.current = true;
+    const hp = useHealthProfileStore.getState().profile;
+    const w = hp?.bodyMetrics?.weightLbs;
+    const h = hp?.bodyMetrics?.heightInches;
+    if (typeof w === 'number' && isOnboardingWeightValid(w)) {
+      setWeightLbs((cur) => cur || String(w));
+    }
+    if (typeof h === 'number' && isStoredHeightValid(h)) {
+      const feet = Math.floor(h / 12);
+      const inches = h - feet * 12;
+      setHeightFeet((cur) => cur || String(feet));
+      if (inches > 0) setHeightInches((cur) => cur || String(inches));
+    }
+    const storedActivity = hp?.lifestyle?.activityLevel;
+    if (ACTIVITY_LEVELS.some((al) => al.value === storedActivity)) {
+      setActivityLevel((cur) => (cur === 'moderate' ? (storedActivity as ActivityLevel) : cur));
+    }
+    const days = hp?.lifestyle?.exerciseFrequency;
+    if (typeof days === 'number' && Number.isInteger(days) && days >= 0 && days <= 7) {
+      setWorkoutDaysPerWeek((cur) => cur ?? days);
+    }
+    if (typeof hp?.goalNotes === 'string' && hp.goalNotes.trim()) {
+      const notes = hp.goalNotes;
+      setGoalNotes((cur) => cur || notes);
+    }
+  }, [restoreLanded, isAuthenticated, isEditMode]);
+
+  // Open at the restore's resume point: forward only, from an untouched screen.
+  useEffect(() => {
+    if (!resume || resume.userId !== currentUserId) return;
+    const target = resumeStepToApply(storedStep, resume.step, { isAuthenticated, isEditMode });
+    if (target != null) setStep(target);
+  }, [resume, currentUserId, storedStep, isAuthenticated, isEditMode]);
+
   // Account
   const [accountFirstName, setAccountFirstName] = useState('');
   const [accountLastName, setAccountLastName] = useState('');
@@ -185,13 +271,14 @@ export default function OnboardingScreen() {
   const [communityPreset, setCommunityPreset] = useState<
     'all_in' | 'picky' | 'nothing'
   >('nothing');
+  // Community leaderboard opt-in — its own explicit choice, default OFF. Stored
+  // server-side on profiles.leaderboard_opt_in; never inferred from the preset.
+  const [leaderboardOptIn, setLeaderboardOptIn] = useState(false);
 
   // Stores
   const signup = useAuthStore((s) => s.signup);
   const isLoggingIn = useAuthStore((s) => s.isLoading);
   const setTier = useSubscriptionStore((s) => s.setTier);
-  const setMealTargets = useMealStore((s) => s.setTargets);
-  const setGoalValue = useProgressGoalsStore((s) => s.setGoalValue);
   const {
     profile, setGender, setAgeRange, toggleHealthGoal,
     setAcceptedSafety, completeOnboarding,
@@ -218,16 +305,14 @@ export default function OnboardingScreen() {
   // Everything else (activity, workout days, cycle, goal notes, feature
   // wish, account creation) is reachable but marked "Set up later in
   // Profile" and gated only on Step 3 (account screen itself).
-  const weightValid = useMemo(() => {
-    const w = parseFloat(weightLbs);
-    return !isNaN(w) && w >= 50 && w <= 1000;
-  }, [weightLbs]);
+  // The rules live in src/lib/onboardingRestore.ts because the server restore
+  // must judge "answered" by exactly the same standard as this screen.
+  const weightValid = useMemo(() => isOnboardingWeightValid(parseFloat(weightLbs)), [weightLbs]);
 
-  const heightValid = useMemo(() => {
-    const f = parseInt(heightFeet, 10);
-    const i = parseInt(heightInches, 10);
-    return !isNaN(f) && f >= 3 && f <= 8 && (isNaN(i) || (i >= 0 && i < 12));
-  }, [heightFeet, heightInches]);
+  const heightValid = useMemo(
+    () => isOnboardingHeightValid(parseInt(heightFeet, 10), parseInt(heightInches, 10)),
+    [heightFeet, heightInches],
+  );
 
   const canContinue = useMemo(() => {
     if (step === 0) return true; // Welcome — always can continue
@@ -357,31 +442,10 @@ export default function OnboardingScreen() {
         // whichever screen ran last won — 319 cal and 20 g protein apart for
         // identical inputs. The adapters map onboarding's coarser profile in,
         // preserving each user's activity MULTIPLIER (the two scales share
-        // multipliers under different names).
-        const macros =
-          body.weightLbs && body.heightInches && (profile.gender === 'Male' || profile.gender === 'Female')
-            ? computeMacroRecommendation({
-                weightLbs: body.weightLbs,
-                heightInches: body.heightInches,
-                ageYears: ageYearsFromRange(profile.ageRange),
-                biologicalSex: profile.gender === 'Male' ? 'male' : 'female',
-                activityLevel: activityFromOnboarding(life.activityLevel),
-                goal: goalFromOnboarding(profile.healthGoals),
-              })
-            : null;
-        if (macros) {
-          setMealTargets({
-            calories: macros.calories, proteinGrams: macros.proteinGrams,
-            carbsGrams: macros.carbsGrams, fatGrams: macros.fatGrams,
-            fiberGrams: macros.fiberGrams, waterOz: macros.waterOz,
-          });
-          setGoalValue('cal', macros.calories);
-          setGoalValue('pro', macros.proteinGrams);
-          setGoalValue('carb', macros.carbsGrams);
-          setGoalValue('fat', macros.fatGrams);
-          setGoalValue('fiber', macros.fiberGrams);
-          setGoalValue('water', macros.waterOz);
-        }
+        // multipliers under different names). The call is shared with the
+        // server restore, so a restored completion gets the same targets.
+        const macros = onboardingMacroTargets(profile, body, life);
+        if (macros) applyMacroTargets(macros);
 
         const trimmedFeatureWish = featureWish.trim();
         if (trimmedFeatureWish) persistFeatureWish(trimmedFeatureWish);
@@ -395,13 +459,32 @@ export default function OnboardingScreen() {
         // intake. User can fine-tune per-category later in Profile.
         applyCommunityPreset(communityPreset);
 
+        // Leaderboard opt-in. Written to profiles now when there is a session;
+        // otherwise held and flushed on the first authenticated boot. Off needs
+        // no write — the column defaults to false.
+        //
+        // The account it was answered for travels with it. A held choice used
+        // to be a bare boolean applied to whoever was signed in at flush time,
+        // so an unconfirmed signup could put the NEXT person to use this
+        // install on the public leaderboard.
+        const optInAccount = isAuthenticated
+          ? useAuthStore.getState().user?.email ?? null
+          : accountEmail;
+        void useLeaderboardStore.getState().recordOnboardingChoice(leaderboardOptIn, optInAccount);
+
         // Record server-side that this account passed the age gate. Until now
         // the answer lived only on the device, so the gate could be shown in
         // code but never demonstrated for a given account — which is exactly
         // what an age-rated, UGC-carrying app has to be able to evidence.
         // Fire-and-forget: a failed write must not block a completed signup,
         // and telemetry captures it inside the service.
-        void attestAge(ageToRange(selectedAge), MIN_AGE);
+        //
+        // A user resumed past step 1 by the server restore never typed an age
+        // on this screen (selectedAge is still 0), and ageToRange(0) would
+        // record '18-29' whatever they answered. Their bucket is the one they
+        // gave on the device that passed the gate; attest that instead.
+        const attestedRange = selectedAge >= MIN_AGE ? ageToRange(selectedAge) : profile.ageRange;
+        if (attestedRange) void attestAge(attestedRange, MIN_AGE);
 
         // completeOnboarding() is deliberately AFTER the confirmation check
         // below.
@@ -468,10 +551,17 @@ export default function OnboardingScreen() {
   };
 
   const handleBack = () => {
-    if (step === 0) return;
-    if (isEditMode && step === 1) { router.back(); return; }
-    setStep((s) => s - 1);
+    const action = onboardingBackAction(step, stepCtx);
+    if (action.kind === 'exit') { router.back(); return; }
+    if (action.kind === 'step') setStep(action.step);
   };
+  const showBack = showOnboardingBack(step, stepCtx);
+
+  if (forwardHome || awaitRestore) {
+    // Leaving for /(tabs), or about to learn whether we are — render nothing
+    // rather than a step for one frame.
+    return <SafeAreaView style={s.container} edges={['top', 'bottom']} />;
+  }
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -541,9 +631,11 @@ export default function OnboardingScreen() {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={s.signInLink} onPress={() => router.push('/auth')} activeOpacity={0.7}>
-              <Text style={s.signInLinkText}>Already have an account? <Text style={{ color: HIGHLIGHT, fontWeight: '700' }}>Sign In</Text></Text>
-            </TouchableOpacity>
+            {showSignInLink(stepCtx) && (
+              <TouchableOpacity style={s.signInLink} onPress={() => router.push('/auth')} activeOpacity={0.7}>
+                <Text style={s.signInLinkText}>Already have an account? <Text style={{ color: HIGHLIGHT, fontWeight: '700' }}>Sign In</Text></Text>
+              </TouchableOpacity>
+            )}
 
           </Animated.View>
 
@@ -650,10 +742,15 @@ export default function OnboardingScreen() {
           />
           {/* Fixed footer */}
           <View style={s.footer}>
-            <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
-              <Ionicons name="arrow-back" size={20} color="#6B7280" />
-              <Text style={s.footerBackText}>Back</Text>
-            </TouchableOpacity>
+            {showBack ? (
+              <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
+                <Ionicons name="arrow-back" size={20} color="#6B7280" />
+                <Text style={s.footerBackText}>Back</Text>
+              </TouchableOpacity>
+            ) : (
+              // Keeps Continue right-aligned under space-between.
+              <View />
+            )}
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
                 style={[s.footerNextBtn, !canContinue && { opacity: 0.4 }]}
@@ -835,10 +932,15 @@ export default function OnboardingScreen() {
             )}
           />
           <View style={s.footer}>
-            <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
-              <Ionicons name="arrow-back" size={20} color="#6B7280" />
-              <Text style={s.footerBackText}>Back</Text>
-            </TouchableOpacity>
+            {showBack ? (
+              <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
+                <Ionicons name="arrow-back" size={20} color="#6B7280" />
+                <Text style={s.footerBackText}>Back</Text>
+              </TouchableOpacity>
+            ) : (
+              // Keeps Continue right-aligned under space-between.
+              <View />
+            )}
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
                 style={[s.footerNextBtn, !canContinue && { opacity: 0.4 }]}
@@ -1001,6 +1103,35 @@ export default function OnboardingScreen() {
                   })}
                 </View>
 
+                {/* Community leaderboard — explicit opt-in, default off. */}
+                <Text style={[s.label, { marginTop: 20 }]}>{LEADERBOARD_COPY.onboardingLabel}</Text>
+                <Text style={s.labelSub}>{LEADERBOARD_COPY.onboardingSub}</Text>
+                <View
+                  style={[
+                    s.chip,
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 10,
+                      paddingVertical: 12,
+                      paddingHorizontal: 14,
+                      marginBottom: 12,
+                    },
+                  ]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.chipText, { fontWeight: '700' }]}>{LEADERBOARD_COPY.onboardingToggle}</Text>
+                    <Text style={[s.labelSub, { marginTop: 2 }]}>{LEADERBOARD_COPY.onboardingToggleHint}</Text>
+                  </View>
+                  <Switch
+                    value={leaderboardOptIn}
+                    onValueChange={setLeaderboardOptIn}
+                    trackColor={{ true: ACCENT }}
+                    accessibilityLabel={LEADERBOARD_COPY.onboardingToggle}
+                  />
+                </View>
+
                 <Text style={[s.label, { marginTop: 20 }]}>Choose your plan</Text>
                 {PLANS.map((plan) => {
                   const active = selectedPlan === plan.tier;
@@ -1090,10 +1221,15 @@ export default function OnboardingScreen() {
             )}
           />
           <View style={s.footer}>
-            <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
-              <Ionicons name="arrow-back" size={20} color="#6B7280" />
-              <Text style={s.footerBackText}>Back</Text>
-            </TouchableOpacity>
+            {showBack ? (
+              <TouchableOpacity style={s.footerBackBtn} onPress={handleBack} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
+                <Ionicons name="arrow-back" size={20} color="#6B7280" />
+                <Text style={s.footerBackText}>Back</Text>
+              </TouchableOpacity>
+            ) : (
+              // Keeps Continue right-aligned under space-between.
+              <View />
+            )}
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
                 style={[s.footerNextBtn, (!canContinue || isLoggingIn) && { opacity: 0.4 }]}

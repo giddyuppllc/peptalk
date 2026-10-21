@@ -64,19 +64,26 @@ driving Chrome against it:
 
 **NOT verified — this is why it ships report-only:**
 
-The app has a **desktop gate** (`src/components/DesktopGate.tsx`, mounted at
-`app/_layout.tsx:1126`). When
-`(min-width: 1024px) and (hover: hover) and (pointer: fine)` matches it renders
-"PepTalk is a mobile app" instead of the app. So on a desktop browser **only the
-gate page was exercised** — not the signed-in app. That leaves untested:
+⚠️ **The reason recorded here expired on 2026-09-12 and the conclusion did not.**
+This paragraph said the app had a desktop gate (`src/components/DesktopGate.tsx`,
+mounted in `app/_layout.tsx`) that rendered "PepTalk is a mobile app" on any
+wide, hover-capable, fine-pointer screen, so a desktop browser only ever
+exercised the gate page. That component was **deleted in `02d7626`**, together
+with `MobileBrowserGate`, when the installed-PWA-only wall came out of the root
+layout. Nothing has replaced it, and `src/lib/routeGuard.ts` is now the only
+thing deciding where a visitor may be.
+
+So a desktop browser runs the whole signed-in app, and the four items below are
+**testable on a desktop browser today** — they are listed as untested because
+nobody has been back to test them, not because the platform prevents it:
 
 - the Square **card iframe** actually mounting and tokenizing
 - **video playback** through the signed Stream URL
 - **Aimee** streaming from the edge function
 - push registration against `exp.host`
 
-Those run only on a phone (or an installed PWA, which the gate lets through via
-`display-mode: standalone`).
+Before flipping CSP to enforcing, exercise them in a desktop browser rather
+than reaching for a phone on the strength of the sentence that used to be here.
 
 ## Flipping to enforcing
 

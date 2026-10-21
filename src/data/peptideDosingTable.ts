@@ -90,10 +90,11 @@ export interface DosingTableEntry {
 const RAW_DOSING_TABLE: DosingTableEntry[] = [
   // ───────────── GH SECRETAGOGUES / GROWTH ─────────────
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '0.5mg-2mg'.
     peptideId: 'tesamorelin',
     compound: 'Tesamorelin',
     inCatalog: true,
-    dosingRange: '0.5mg-2mg',
+    dosingRange: '0.5mg-1mg',
     cycleLength: '3-6 Months',
     frequencyDaily: '1x Daily AM/PM',
     frequencyWeekly: '5 On 2 Off or Daily',
@@ -128,11 +129,12 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: cycleLength was '3-6 Months'.
     peptideId: 'ipamorelin',
     compound: 'Ipamorelin',
     inCatalog: true,
     dosingRange: '100mcg-500mcg',
-    cycleLength: '3-6 Months',
+    cycleLength: '8-12 Weeks',
     frequencyDaily: '1-3x Daily AM/Workout/PM',
     frequencyWeekly: '5 On 2 Off or Daily',
     titrationNoteRef: 4,
@@ -179,11 +181,12 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: cycleLength was '3-6 Months'.
     peptideId: 'sermorelin',
     compound: 'Sermorelin',
     inCatalog: true,
     dosingRange: '100mcg-500mcg',
-    cycleLength: '3-6 Months',
+    cycleLength: '12-24 Weeks',
     frequencyDaily: '1-2x Daily AM/PM',
     frequencyWeekly: '5 On 2 Off or Daily',
     titrationNoteRef: 8,
@@ -192,11 +195,12 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '25mcg-100mcg'; cycleLength was '4-8 Week'.
     peptideId: 'igf-1-lr3',
     compound: 'IGF-LR3',
     inCatalog: true,
-    dosingRange: '25mcg-100mcg',
-    cycleLength: '4-8 Week',
+    dosingRange: '20mcg-80mcg',
+    cycleLength: '4-6 Weeks',
     frequencyDaily: '1x Daily Post Workout',
     frequencyWeekly: '5 On 2 Off or Daily',
     titrationNoteRef: 9,
@@ -251,11 +255,12 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     // 6-8 weeks, fasted before exercise). The protocol was right; this
     // at-a-glance row was what the Dosing reference card rendered, so users
     // saw a dose 5x too low next to a note contradicting it.
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: cycleLength was '6-8 Weeks'.
     peptideId: 'mots-c',
     compound: 'Mots-c',
     inCatalog: true,
     dosingRange: '1mg-2mg',
-    cycleLength: '6-8 Weeks',
+    cycleLength: '6-10 Weeks',
     frequencyDaily: '1x On Dosing Days',
     frequencyWeekly: '3x Weekly (Mon/Wed/Fri)',
     titrationNoteRef: 13,
@@ -311,10 +316,11 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: true,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '200mcg-600mcg'.
     peptideId: 'nad-plus',
     compound: 'Nad+',
     inCatalog: true,
-    dosingRange: '200mcg-600mcg',
+    dosingRange: '50mg-200mg',
     cycleLength: 'As Long As Needed',
     frequencyDaily: '1x Daily AM',
     frequencyWeekly: '2-4x Week or Daily',
@@ -348,11 +354,17 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: cycleLength was '4-8 Weeks Max of 12 weeks'.
     peptideId: 'ss-31',
     compound: 'SS-31',
     inCatalog: true,
-    dosingRange: '2mg-5mg sometimes 10mg',
-    cycleLength: '4-8 Weeks Max of 12 weeks',
+    // NOT verbatim since 2026-09-15. The source page read "2mg-5mg sometimes
+    // 10mg"; Jamie Esposito's written correction (13–14 Sep 2026, via Edward's
+    // work order 2026-09-15) is 2–5 mg daily, 2 mg beginner / 5 mg advanced,
+    // so the "sometimes 10mg" upper figure no longer renders beside a 5 mg
+    // Advanced pill on the same screen. Provenance: proto-ss31 in protocols.ts.
+    dosingRange: '2mg-5mg',
+    cycleLength: '4-12 Weeks',
     frequencyDaily: '1x Daily AM',
     frequencyWeekly: '5 On 2 Off or Daily',
     titrationNoteRef: 20,
@@ -463,11 +475,12 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '100mcg-500mcg'; cycleLength was '3-6 Weeks'.
     peptideId: 'll-37',
     compound: 'LL-37',
     inCatalog: true,
-    dosingRange: '100mcg-500mcg',
-    cycleLength: '3-6 Weeks',
+    dosingRange: '50mcg-200mcg',
+    cycleLength: '2-4 Weeks',
     frequencyDaily: '1x Daily',
     frequencyWeekly: '3-5x A Week',
     titrationNoteRef: 29,
@@ -477,11 +490,12 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
   },
   // ───────────── NEURO / SEXUAL / GENERAL ─────────────
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: cycleLength was '2-8 Weeks'.
     peptideId: 'pt-141',
     compound: 'PT-141',
     inCatalog: true,
     dosingRange: '0.5mg-2mg',
-    cycleLength: '2-8 Weeks',
+    cycleLength: '1-24 Weeks',
     frequencyDaily: 'As Needed',
     frequencyWeekly: 'As Needed',
     titrationNoteRef: 30,
@@ -490,11 +504,12 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: cycleLength was '4-8 Weeks'.
     peptideId: 'semax',
     compound: 'Semax',
     inCatalog: true,
     dosingRange: '200mcg-600mcg',
-    cycleLength: '4-8 Weeks',
+    cycleLength: '2-4 Weeks',
     frequencyDaily: '1-2x Daily Am/Mid Day',
     frequencyWeekly: '5 On 2 Off or Daily',
     titrationNoteRef: 31,
@@ -503,11 +518,12 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '200mcg-600mcg'; cycleLength was '4-8 Weeks'.
     peptideId: 'selank',
     compound: 'Selank',
     inCatalog: true,
-    dosingRange: '200mcg-600mcg',
-    cycleLength: '4-8 Weeks',
+    dosingRange: '200mcg-500mcg',
+    cycleLength: '2-4 Weeks',
     frequencyDaily: '1-2x Daily Am/Mid Day',
     frequencyWeekly: '5 On 2 Off or Daily',
     titrationNoteRef: 32,
@@ -516,10 +532,11 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '250mcg-600mcg'.
     peptideId: 'kpv-inj',
     compound: 'KPV (inj)',
     inCatalog: false,
-    dosingRange: '250mcg-600mcg',
+    dosingRange: '200mcg-500mcg',
     cycleLength: '4-12 Weeks',
     frequencyDaily: '1x Daily',
     frequencyWeekly: '5 On 2 Off or Daily',
@@ -545,10 +562,11 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     // CORRECTED 2026-08-07 by Jamie Esposito (coach): cycle length 4-12 -> 4-8
     // weeks. The 250mcg-1mg range already brackets her 0.33mg practice, so the
     // range is unchanged; the note below records how she splits it.
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '250mcg-1mg'.
     peptideId: 'bpc-157',
     compound: 'Bpc-157 (inj/oral)',
     inCatalog: true,
-    dosingRange: '250mcg-1mg',
+    dosingRange: '200mcg-500mcg',
     cycleLength: '4-8 Weeks',
     frequencyDaily: '1-2x Daily Am and PM',
     frequencyWeekly: '5 On 2 Off or Daily',
@@ -563,11 +581,12 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
   {
     // CORRECTED 2026-08-07 by Jamie Esposito (coach). The transcribed row read
     // 2mg-5mg, roughly 5x her actual practice, and 4-12 week cycles.
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: cycleLength was '4-8 Weeks'.
     peptideId: 'tb-500',
     compound: 'TB-500',
     inCatalog: true,
     dosingRange: '0.33mg-1mg',
-    cycleLength: '4-8 Weeks',
+    cycleLength: '4-12 Weeks',
     frequencyDaily: '1x Daily (PM)',
     frequencyWeekly: 'Every 3-4 Days (acute) or Daily',
     titrationNoteRef: 36,
@@ -578,11 +597,12 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: cycleLength was '4-12 Weeks'.
     peptideId: 'ghk-cu',
     compound: 'GHK-Cu (inj/oral)',
     inCatalog: true,
     dosingRange: '1mg-5mg',
-    cycleLength: '4-12 Weeks',
+    cycleLength: 'As long as needed',
     frequencyDaily: '1-2x Daily Am and PM',
     frequencyWeekly: '5 On 2 Off or Daily',
     titrationNoteRef: 37,
@@ -630,10 +650,11 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '250mcg-1000mcg'.
     peptideId: 'melanotan-2',
     compound: 'Melanotan 2',
     inCatalog: true,
-    dosingRange: '250mcg-1000mcg',
+    dosingRange: '250mcg-500mcg',
     cycleLength: '4-12 Weeks (then maintenance)',
     frequencyDaily: '1x Daily',
     titrationNoteRef: 41,
@@ -642,11 +663,12 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '0.5mg-2mg'; cycleLength was '4-12 Weeks'.
     peptideId: 'thymosin-alpha-1',
     compound: 'Thymosin Alpha 1',
     inCatalog: true,
-    dosingRange: '0.5mg-2mg',
-    cycleLength: '4-12 Weeks',
+    dosingRange: '1mg-1.6mg',
+    cycleLength: '4-26 Weeks',
     frequencyDaily: '2x Weekly',
     titrationNoteRef: 42,
     titrationNotePending: true,
@@ -667,10 +689,11 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '2mg-5mg'.
     peptideId: 'epithalon',
     compound: 'Epitalon',
     inCatalog: true,
-    dosingRange: '2mg-5mg',
+    dosingRange: '5mg-10mg',
     cycleLength: '10-20 Days',
     frequencyDaily: '1x Daily PM',
     titrationNoteRef: 44,
@@ -680,10 +703,11 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
   },
   // ───────────── GLP-1 / INCRETIN / WEIGHT ─────────────
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '0.5mg-12mg'.
     peptideId: 'retatrutide',
     compound: 'Retatrutide',
     inCatalog: true,
-    dosingRange: '0.5mg-12mg',
+    dosingRange: '1mg-12mg',
     cycleLength: 'As Long As Needed',
     frequencyDaily: '1x Daily',
     frequencyWeekly: '1-2x Weekly (Split Dose)',
@@ -693,10 +717,11 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '0.5mg-15mg'.
     peptideId: 'tirzepatide',
     compound: 'Tirzepatide',
     inCatalog: true,
-    dosingRange: '0.5mg-15mg',
+    dosingRange: '2.5mg-15mg',
     cycleLength: 'As Long As Needed',
     frequencyDaily: '1x Daily',
     frequencyWeekly: '1-2x Weekly (Split Dose)',
@@ -706,10 +731,11 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '0.25mg-2.4mg'.
     peptideId: 'semaglutide',
     compound: 'Semaglutide',
     inCatalog: true,
-    dosingRange: '0.25mg-2.4mg',
+    dosingRange: '0.25mg-12mg',
     cycleLength: 'As Long As Needed',
     frequencyDaily: '1x Daily',
     frequencyWeekly: '1-2x Weekly (Split Dose)',
@@ -719,10 +745,11 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '3mg-6mg'.
     peptideId: 'mazdutide',
     compound: 'Mazdutide',
     inCatalog: true,
-    dosingRange: '3mg-6mg',
+    dosingRange: '3mg-9mg',
     cycleLength: 'As Long As Needed',
     frequencyDaily: '1x Daily',
     frequencyWeekly: '1-2x Weekly (Split Dose)',
@@ -732,10 +759,11 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '0.5mg-2.7mg'.
     peptideId: 'survodutide',
     compound: 'Survodutide',
     inCatalog: true,
-    dosingRange: '0.5mg-2.7mg',
+    dosingRange: '2.4mg-6mg',
     cycleLength: 'As Long As Needed',
     frequencyDaily: '1x Daily',
     frequencyWeekly: '1-2x Weekly (Split Dose)',
@@ -745,10 +773,11 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '0.3mg-4.5mg'.
     peptideId: 'cagrilintide',
     compound: 'Cagrilintide',
     inCatalog: true,
-    dosingRange: '0.3mg-4.5mg',
+    dosingRange: '1.2mg-2.4mg',
     cycleLength: 'As Long As Needed',
     frequencyDaily: '1x Daily',
     frequencyWeekly: '1-2x Weekly (Split Dose)',
@@ -785,11 +814,12 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '50mcg-200mcg'; cycleLength was '4-12 Weeks'.
     peptideId: 'kisspeptin-10',
     compound: 'Kisspeptin',
     inCatalog: true,
-    dosingRange: '50mcg-200mcg',
-    cycleLength: '4-12 Weeks',
+    dosingRange: '30mcg-100mcg',
+    cycleLength: '1-4 Weeks',
     frequencyDaily: '1-2x Daily',
     frequencyWeekly: '5 On 2 Off or Daily',
     titrationNoteRef: 53,
@@ -810,11 +840,12 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: cycleLength was '4-12 Weeks'.
     peptideId: 'hcg',
     compound: 'HCG',
     inCatalog: true,
     dosingRange: '500iu-1000iu',
-    cycleLength: '4-12 Weeks',
+    cycleLength: '8-52 Weeks',
     frequencyWeekly: '2-3x Weekly',
     titrationNoteRef: 55,
     titrationNotePending: true,
@@ -857,11 +888,12 @@ const RAW_DOSING_TABLE: DosingTableEntry[] = [
     fasted: false,
   },
   {
+    // Jamie Esposito ruling (clinicianRulings.ts) supersedes the grid: dosingRange was '100mcg-500mcg'; cycleLength was '2-4 Weeks'.
     peptideId: 'dsip',
     compound: 'DSIP',
     inCatalog: true,
-    dosingRange: '100mcg-500mcg',
-    cycleLength: '2-4 Weeks',
+    dosingRange: '100mcg-300mcg',
+    cycleLength: '2-6 Weeks',
     frequencyDaily: '1x Daily Pre Bed',
     frequencyWeekly: 'Daily or As Needed',
     titrationNoteRef: 59,
@@ -942,10 +974,10 @@ export const TITRATION_NOTES: Record<number, string> = {
   13: 'No titration strategy. However, you can work your dose higher beyond 1–2mg if desired.',
   14: 'No real titration strategy.',
   15: 'No real titration strategy.',
-  16: 'Start low to assess tolerance and work up to a max dose of 25mg.',
+  16: 'Start low to assess tolerance and work up to a max dose of 2mg.',
   17: 'Start at 50mg and work up as needed. This compound can be overwhelming at first.',
   18: 'Start low to assess tolerance and work up to a max dose of 25mg.',
-  19: 'Start low to assess tolerance and work up to a max dose of 25mg.',
+  19: 'Start low to assess tolerance and work up to a max dose of 200mg.',
   20: 'No real titration strategy. Assess a low dose, see how it combats fatigue, then work up as needed.',
   21: 'Start low and work up as needed. If fatigue symptoms present, drop the dose or the compound altogether.',
   22: 'No real titration strategy — you can increase as you see fit.',
@@ -967,8 +999,8 @@ export const TITRATION_NOTES: Record<number, string> = {
   38: 'No titration strategy.',
   39: 'No titration strategy.',
   40: 'Start low at 250mcg for 7–10 days, then increase to 500–1000mcg daily until color is achieved. Then drop frequency to 2–3x a week to maintain color.',
-  41: 'Start low at 250mcg for 7–10 days, then increase to 500–1000mcg daily until color is achieved. Then drop frequency to 2–3x a week to maintain color.',
-  42: 'Start 0.5mg 2x/week; increase to 1–2mg 3x/week as needed.',
+  41: 'Start low at 250mcg for 7–10 days, then increase to 500mcg daily until color is achieved. Then drop frequency to 2–3x a week to maintain color.',
+  42: 'Start 1mg 2x/week; increase to 1.6mg 3x/week as needed.',
   43: 'No titration strategy needed.',
   44: 'No titration strategy needed.',
   45: 'Start low in the clinical starting range (.5–2mg) and work up every 4 weeks or as results plateau. Maybe increase by .5–2mg at a time.',

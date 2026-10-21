@@ -87,6 +87,14 @@ describe('the age gate and the proof it records cannot drift', () => {
   it('records the same constant it enforced', () => {
     // Passing a literal here would let the gate change while the stored proof
     // kept claiming the old threshold.
-    expect(onboarding).toMatch(/attestAge\(ageToRange\(selectedAge\), MIN_AGE\)/);
+    //
+    // The bucket is the typed age when step 1 ran on this screen, or the stored
+    // bucket for a user the server restore resumed past it (selectedAge is 0
+    // there, and ageToRange(0) would record '18-29'). The threshold is the
+    // constant either way.
+    expect(onboarding).toMatch(
+      /const attestedRange = selectedAge >= MIN_AGE \? ageToRange\(selectedAge\) : profile\.ageRange;/,
+    );
+    expect(onboarding).toMatch(/attestAge\(attestedRange, MIN_AGE\)/);
   });
 });

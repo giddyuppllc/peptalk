@@ -26,6 +26,7 @@ import {
   notificationsAvailable,
   scheduleDoseReminder,
   cancelRemindersByTag,
+  registerForPushNotifications,
 } from '../services/notificationService';
 import type { ProtocolTemplate, AdministrationRoute, DoseUnit } from '../types';
 
@@ -148,6 +149,20 @@ export function ActivateProtocolButton({
                 startDate: startDateIso,
                 endDate: cycleEndDate.toISOString().slice(0, 10),
               });
+
+              // The user just confirmed a dialog saying this schedules
+              // reminders, so this is the moment to ask for notification
+              // permission (sign-in and logout no longer ask — see
+              // registerForPushNotifications). Asks only if never answered;
+              // a refusal must not stop the protocol being added.
+              try {
+                if (await registerForPushNotifications('prompt')) {
+                  const { syncPushToken } = await import('../services/pushTokenSync');
+                  void syncPushToken();
+                }
+              } catch {
+                // Best-effort, like the scheduling below.
+              }
 
               // Sweep any pre-existing notifications for this peptide so
               // re-activating doesn't double-schedule.

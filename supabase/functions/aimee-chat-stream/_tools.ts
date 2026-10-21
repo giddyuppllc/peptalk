@@ -29,6 +29,7 @@
  */
 
 import type { GrokTool } from './_grok.ts';
+import { isSafetyOnly } from '../_shared/safetyOnlyCompounds.ts';
 
 // ─── Tool definitions exposed to Grok ─────────────────────────────────────
 
@@ -39,7 +40,7 @@ export const AIMEE_TOOLS: GrokTool[] = [
     function: {
       name: 'suggest_workout',
       description: [
-        'Surface 1-5 real exercises from the curated 451-exercise PepTalk library that match the user\'s criteria.',
+        'Surface 1-5 real exercises from the curated 384-exercise PepTalk library that match the user\'s criteria.',
         'Call this when the user asks for workout ideas, exercise suggestions, or "build me a [push/pull/leg/etc.] day".',
         'Returns concrete exercise rows with names, muscle groups, equipment level, and difficulty.',
         'Do NOT invent exercises — use this tool whenever the user wants specific moves.',
@@ -330,12 +331,12 @@ export const AIMEE_TOOLS: GrokTool[] = [
         '"labs", "labs-entry", "body-composition", "body-composition-entry",',
         '"pantry", "pantry-add", "pantry-scan",',
         '"aimee-reports", "plan", "insights",',
-        // "community-leaderboard" is intentionally absent while the screen has
-        // no UI entry point — it is also absent from SCREEN_TO_PATH below.
-        // These two lists MUST stay in lockstep: a name advertised here but
-        // missing from the map makes the model request a screen that returns
-        // { error: 'unknown screen' }. Restore both together when it launches.
-        '"community-milestones",',
+        // These two lists MUST stay in lockstep with SCREEN_TO_PATH below: a
+        // name advertised here but missing from the map makes the model request
+        // a screen that returns { error: 'unknown screen' }. verify:aimeescreens
+        // enforces it. community-leaderboard restored 2026-09-15 with the real
+        // opt-in leaderboard (entry points: feed header + strip, navMap).
+        '"community-leaderboard", "community-milestones",',
         '"profile-appearance", "profile-community-prefs", "settings-notifications", "subscription".',
       ].join(' '),
       parameters: {
@@ -901,6 +902,27 @@ export function execScheduleWorkout(
 export function execOpenDosingCalculator(
   input: Record<string, unknown>,
 ): Record<string, unknown> {
+  // Safety-information-only compounds (Edward, 2026-09-16). The dose, vial and
+  // diluent figures on this call come from the MODEL, not from a data file, so
+  // this is the one place the suppression can be enforced rather than asked
+  // for: prompt rule 9 tells Aimee not to make the call, and this refuses it if
+  // she does anyway. Deep-linking the calculator pre-filled with doseMcg would
+  // put a suggested dose on screen by the back door.
+  const requestedId =
+    typeof input.peptideId === 'string'
+      ? input.peptideId
+      : typeof input.peptideName === 'string'
+        ? input.peptideName
+        : '';
+  if (isSafetyOnly(requestedId)) {
+    return {
+      ok: false,
+      error: 'safety_information_only',
+      message:
+        'PepTalk does not provide dosing for this compound. Do not state a dose, range, frequency or reconstitution for it; point the user to a licensed clinician.',
+    };
+  }
+
   const params = new URLSearchParams();
   // v3 calculator at /doses/calculator reads `peptideId`, `doseMcg`,
   // `vialMg`, `waterMl` from query params. Old /calculators/dosing was
@@ -973,11 +995,11 @@ const SCREEN_TO_PATH: Record<string, string> = {
   plan: '/plan',
   insights: '/insights',
   // Community v2
-  // 'community-leaderboard' removed 2026-08-24: /community/leaderboard has no
-  // UI entry point anywhere in the app — verify:routes records it as
-  // deliberately unlaunched — yet this map let Aimee navigate users straight
-  // into it. A screen with no way in and no way back to it is not somewhere to
-  // send people. Restore this line when the leaderboard actually launches.
+  // 'community-leaderboard' was removed 2026-08-24 while the screen had no UI
+  // entry point and ran on mock data. Restored 2026-09-15: the leaderboard is
+  // real (opt-in, server-derived) and reachable from the community feed and the
+  // nav sheet (src/lib/navMap.ts).
+  'community-leaderboard': '/community/leaderboard',
   'community-milestones': '/community/milestones',
   // Profile drills
   'profile-appearance': '/profile/appearance',

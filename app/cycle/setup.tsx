@@ -18,6 +18,7 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { GradientButton } from '../../src/components/GradientButton';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Spacing, FontSizes, BorderRadius } from '../../src/constants/theme';
+import { FLOATING_BOTTOM_CLEARANCE } from '../../src/constants/floatingControls';
 import { useCycleStore } from '../../src/store/useCycleStore';
 import { useHealthProfileStore } from '../../src/store/useHealthProfileStore';
 import {
@@ -119,7 +120,8 @@ function CycleSetupScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 40 }}
+        // "Continue" scrolls clear of the global Home/Aimee FABs.
+        contentContainerStyle={{ paddingBottom: FLOATING_BOTTOM_CLEARANCE }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >

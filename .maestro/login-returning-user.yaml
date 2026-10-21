@@ -1,0 +1,95 @@
+# PepTalk — a returning user on an erased device goes straight home.
+#
+# Onboarding answers used to live only on the device, so a new phone or a
+# reinstall asked every question again, even for an account that had finished
+# onboarding long ago. They are now mirrored to health_profiles.profile and
+# restored on sign-in (src/services/onboardingRestore.ts). This flow is the
+# end-to-end proof: sign in, and land on Home with no onboarding step between.
+#
+#   xcrun simctl erase <udid> && xcrun simctl boot <udid>
+#   xcrun simctl install <udid> <path-to-.app>
+#   maestro --device <udid> test .maestro/login-returning-user.yaml \
+#     -e EMAIL=<returning-user> -e PASSWORD=<password>
+#
+# ── Preconditions — a red run usually means one of these, not a defect ─────
+# 1. An ERASED device. `clearState` leaves the iOS Keychain intact, so the app
+#    can boot signed in with its old local answers and prove nothing.
+# 2. The account must have FINISHED onboarding on a build that includes the
+#    restore. Accounts onboarded on earlier builds have no answers on the
+#    server yet; their first launch on a new build uploads them from the device
+#    that holds them. Until that has happened this flow correctly shows the
+#    questions, and it is not a bug.
+# 3. The account's health profile holds a weight and height (onboarding step 2
+#    requires both, so any account that finished onboarding does).
+#
+# The sign-in steps and their per-platform selectors are copied from
+# login.yaml, where each one is explained. Change them there first.
+appId: com.peptalkapp.peptalk
+tags:
+  - smoke
+---
+- launchApp:
+    clearState: true
+
+- extendedWaitUntil:
+    visible: ".*Sign In.*"
+    timeout: 60000
+
+- tapOn: ".*Sign In.*"
+
+- extendedWaitUntil:
+    visible: "Email address"
+    timeout: 20000
+- tapOn: "Email address"
+- inputText: ${EMAIL}
+
+- tapOn: "Enter password"
+- inputText: ${PASSWORD}
+
+- tapOn: "Welcome back"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - pressKey: Enter
+
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          text: "Log In"
+          index: 0
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn:
+          text: "Log In"
+          index: 1
+
+- extendedWaitUntil:
+    notVisible: "Enter password"
+    timeout: 30000
+
+- assertNotVisible: "Invalid email or password"
+- assertNotVisible: "Enter a valid email and password."
+- assertNotVisible: "Email not confirmed"
+
+# Home renders beneath the launch-time AI-consent modal, which appears only
+# once onboarding is complete — so its presence is itself a good sign.
+# prepare-app.yaml clears it and the Android LogBox banner.
+- runFlow: prepare-app.yaml
+
+- extendedWaitUntil:
+    visible: "Hi, .*"
+    timeout: 30000
+
+# No onboarding step on the way, and none underneath.
+- assertNotVisible: "About you"
+- assertNotVisible: "Basics"
+- assertNotVisible: "Finish Setup"
+- assertNotVisible: "Step . of 3"
+- assertNotVisible: ".*Already have an account.*"
+- assertNotVisible: "Get Started"
+- takeScreenshot: .maestro/screenshots/login-returning-user-home

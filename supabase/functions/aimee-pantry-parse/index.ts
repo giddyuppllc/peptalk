@@ -14,6 +14,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { withErrorReporting } from '../_shared/sentry.ts';
+import { checkAiAllowance, recordAiSpend } from '../_shared/aiAllowance.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const OPENAI_BASE_URL = Deno.env.get('OPENAI_BASE_URL') ?? 'https://api.x.ai/v1';
@@ -106,16 +107,12 @@ Deno.serve(withErrorReporting('aimee-pantry-parse', async (req) => {
       return json({ error: 'Plus or Pro tier required', upgrade: true }, 403);
     }
 
-    // Rate limit — Plus 25/day, Pro 50/day. Text parsing is cheap (~$0.0005)
-    // but spammable. Caps locked in plan.
-    const limit = tier === 'pro' ? 50 : 25;
-    const rateLimit = await checkRateLimit(supabase, user.id, 'aimee-pantry-parse', limit);
-    if (!rateLimit.allowed) {
-      return json({
-        error: `Daily voice-entry limit reached (${rateLimit.limit}/day). Resets tomorrow.`,
-        retryAfter: rateLimit.retryAfter,
-      }, 429);
-    }
+    // Monthly allowance, shared with aimee-chat-stream. This was a per-day
+    // count (Plus 25/day, Pro 50/day). "i dont want a daily cap" (2026-08-26): the
+    // per-tier monthly allowance and the system-wide breaker in _cost.ts
+    // are the limit, and the spend is recorded below so the breaker sees it.
+    const allowance = await checkAiAllowance(supabase, user.id, tier);
+    if (!allowance.allowed) return json(allowance.body, allowance.status);
 
     if (!OPENAI_API_KEY) {
       return json({ error: 'AI service not configured' }, 500);
@@ -158,6 +155,7 @@ Deno.serve(withErrorReporting('aimee-pantry-parse', async (req) => {
     }
 
     const aiData = await aiRes.json();
+    await recordAiSpend(supabase, user.id, allowance.cost, aiData);
     const content: string = aiData.choices?.[0]?.message?.content ?? '';
     // Strip code fences if the model slipped them in
     const cleaned = content.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
@@ -180,43 +178,4 @@ function json(body: unknown, status = 200): Response {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
-}
-
-async function checkRateLimit(
-  supabase: any,
-  userId: string,
-  functionName: string,
-  limit: number,
-): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number }> {
-  const today = new Date().toISOString().slice(0, 10);
-  try {
-    // Atomic increment via the bump_ai_usage RPC (INSERT ... ON CONFLICT DO UPDATE
-    // count = count + 1 RETURNING count) — the same path every sibling AI function
-    // uses. The prior read-modify-write (SELECT count → check → upsert count+1) lost
-    // updates under concurrent same-user requests, letting the daily cap be bypassed
-    // for unbounded paid-tier LLM/vision spend.
-    const { data, error } = await supabase.rpc('bump_ai_usage', {
-      p_user_id: userId,
-      p_function_name: functionName,
-      p_date: today,
-    });
-    if (error) throw error;
-    const count = Array.isArray(data) && data[0] ? ((data[0] as { count?: number }).count ?? 0) : 0;
-    if (count > limit) {
-      const now = new Date();
-      const tomorrow = new Date(now);
-      tomorrow.setUTCHours(24, 0, 0, 0);
-      const retryAfter = Math.max(1, Math.round((tomorrow.getTime() - now.getTime()) / 1000));
-      return { allowed: false, limit, count, retryAfter };
-    }
-    return { allowed: true, limit, count };
-  } catch (err) {
-    // Fail CLOSED. If we can't reach ai_usage_log we cannot enforce the
-    // per-user cap, and the function fans out to the LLM/vision provider —
-    // unlimited spam quickly translates to real money. Better to return
-    // a 503 to the caller and let them retry once the DB recovers than
-    // to leave the cost door wide open.
-    console.error(`[${functionName}] rate-limit check failed; failing closed:`, err);
-    return { allowed: false, limit, count: 0, retryAfter: 60, failedClosed: true };
-  }
 }

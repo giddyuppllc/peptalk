@@ -12,7 +12,7 @@
  * Idempotent: re-running (or running on an already-injected file) is a no-op.
  * Run after export:  expo export -p web && node scripts/inject-pwa.mjs
  */
-import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, readdirSync, renameSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { join } from 'node:path';
 
@@ -89,6 +89,25 @@ if (html.includes(MARKER)) {
   console.log(`[inject-pwa] replaced previous injection (${before - html.length} bytes)`);
 }
 
+// Focus rings only for keyboard users. React Native Web moves focus into a
+// Modal when it opens (onto its first button, or its ScrollView), and Chrome
+// draws the focus ring for programmatic focus that no pointer preceded — so
+// the AI-consent sheet at launch and every paywall showed a hard black box
+// round their content to people who had only ever tapped. A Tab key turns the
+// rings back on; a touch or click turns them off again.
+const FOCUS_RING = `<style>html:not([data-keyboard-nav]) :focus { outline: none !important; }</style>
+    <script>
+(function () {
+  var root = document.documentElement;
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Tab' || e.key.indexOf('Arrow') === 0) root.setAttribute('data-keyboard-nav', '');
+  }, true);
+  function pointer() { root.removeAttribute('data-keyboard-nav'); }
+  document.addEventListener('pointerdown', pointer, true);
+  document.addEventListener('touchstart', pointer, true);
+})();
+</script>`;
+
 const HEAD_TAGS = `${MARKER}
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#14b8a6" />
@@ -97,8 +116,49 @@ const HEAD_TAGS = `${MARKER}
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="PepTalk" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    ${FOCUS_RING}
     ${MARKER_END}`;
 
+// Expo exports every font and image that came from a package under
+// dist/assets/node_modules/…, and the Vercel CLI never uploads a directory
+// named node_modules. So on app.peptalk.bio every one of them 404'd: Playfair
+// Display, DM Sans and Newsreader all fell back to system fonts, on every
+// screen, while a local server (which does serve the folder) looked perfect.
+// relocateIconFont() below rescued only Ionicons. Move the whole folder to a
+// name Vercel uploads and point the bundle at it.
+function relocatePackageAssets() {
+  const FROM = 'dist/assets/node_modules';
+  const TO = 'dist/assets/vendor';
+  if (existsSync(FROM)) {
+    if (existsSync(TO)) throw new Error(`[inject-pwa] both ${FROM} and ${TO} exist — re-export first`);
+    renameSync(FROM, TO);
+  }
+  const files = [];
+  (function walk(dir) {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (/\.(js|css|html|json|map)$/.test(e.name)) files.push(p);
+    }
+  })('dist');
+  let rewritten = 0;
+  for (const f of files) {
+    const src = readFileSync(f, 'utf8');
+    if (!src.includes('/assets/node_modules/')) continue;
+    writeFileSync(f, src.split('/assets/node_modules/').join('/assets/vendor/'));
+    rewritten++;
+  }
+  // Fail the build rather than ship a bundle that still asks for a path
+  // Vercel will 404.
+  const left = files.filter((f) => readFileSync(f, 'utf8').includes('assets/node_modules'));
+  if (left.length) {
+    console.error('[inject-pwa] still referencing assets/node_modules:', left.join(', '));
+    process.exit(1);
+  }
+  console.log(`[inject-pwa] package assets -> ${TO} (${rewritten} file(s) rewritten)`);
+}
+
+relocatePackageAssets();
 const hasIconFont = relocateIconFont();
 
 const ICON_FONT_SCRIPT = hasIconFont

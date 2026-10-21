@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { makeSafeMerge } from '../lib/persistSafety';
+import { reportPersistProblem } from '../lib/persistReporting';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import {
   AgeRange,
@@ -56,6 +58,26 @@ interface OnboardingStore {
   setDataShareConsent: (consent: boolean) => void;
   completeOnboarding: () => void;
   reset: () => void;
+
+  /**
+   * Server restore progress for the signed-in user (see
+   * src/services/onboardingRestore.ts). Session-only — never persisted, so a
+   * stored value can never stand in for a restore that did not run.
+   *
+   * `serverKnown` is the part 'settled' does NOT say. Settled means the
+   * restore stopped; it is written identically by a success, a timeout and a
+   * thrown error. Only `serverKnown` says the server's copy of this user's
+   * answers was actually read — which is the precondition for overwriting it.
+   */
+  restore: { userId: string | null; status: 'idle' | 'pending' | 'settled'; serverKnown: boolean };
+  setRestoreStatus: (
+    userId: string | null,
+    status: 'idle' | 'pending' | 'settled',
+    meta?: { serverKnown?: boolean },
+  ) => void;
+  /** First unanswered step found by the restore, for the onboarding screen to open at. */
+  resumeStep: { userId: string; step: 1 | 2 | 3 } | null;
+  setResumeStep: (resume: { userId: string; step: 1 | 2 | 3 } | null) => void;
 }
 
 const emptyProfile: OnboardingProfile = {
@@ -137,10 +159,38 @@ export const useOnboardingStore = create<OnboardingStore>()(
         set((state) => ({ profile: { ...state.profile, dataShareConsent } })),
 
       completeOnboarding: () => set({ isComplete: true }),
-      reset: () => set({ profile: emptyProfile, isComplete: false }),
+      // Both callers — the logout wipe and Delete My Data — leave the device
+      // with no answers on it. The restore state has to go with them: left at
+      // 'settled', the mirror treats the emptied store as an edit worth
+      // uploading, and a device-only wipe destroys the server record.
+      reset: () =>
+        set({
+          profile: emptyProfile,
+          isComplete: false,
+          resumeStep: null,
+          restore: { userId: null, status: 'idle', serverKnown: false },
+        }),
+
+      restore: { userId: null, status: 'idle', serverKnown: false },
+      setRestoreStatus: (userId, status, meta) =>
+        set({ restore: { userId, status, serverKnown: meta?.serverKnown === true } }),
+      resumeStep: null,
+      setResumeStep: (resumeStep) => set({ resumeStep }),
     }),
     {
       name: 'peptalk-onboarding',
+      // Explicit so the number is visible, and deliberately still 0.
+      //
+      // In zustand 5.0.14 a bump with no `migrate` DISCARDS the persisted
+      // state and hydrates defaults — verified against middleware.js:392-420
+      // and by running it. That is the useful meaning of a bump, so nothing
+      // here overrides it: a store that needs to carry old data forward
+      // supplies its own migrate, and the three that do already have one.
+      version: 0,
+      // Storage is untrusted input: on web it is localStorage, which the
+      // user can edit, and a killed app leaves partial writes. See
+      // src/lib/persistSafety.ts.
+      merge: makeSafeMerge('peptalk-onboarding', reportPersistProblem),
       storage: createJSONStorage(() => secureStorage),
       partialize: (state) => ({
         profile: state.profile,

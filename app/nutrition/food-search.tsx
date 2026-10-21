@@ -11,12 +11,13 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, FlatList, StyleSheet, TextInput, Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Image, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, FlatList, StyleSheet, TextInput, Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Image, Linking, useWindowDimensions } from 'react-native';
 import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView } from 'expo-camera';
+import { useCameraPermissionGate } from '../../src/hooks/useCameraPermissionGate';
 import { GradientButton } from '../../src/components/GradientButton';
 import {
   Colors,
@@ -719,7 +720,9 @@ function BarcodeScannerModal({ visible, onClose, onScanned }: BarcodeScannerProp
   // is open must resize the aiming box, or it no longer matches where the
   // camera is actually reading.
   const { width: windowW } = useWindowDimensions();
-  const [permission, requestPermission] = useCameraPermissions();
+  // Asks with the system prompt directly, only while the modal is open — see
+  // src/lib/cameraPermissionGate.ts.
+  const { state: cameraState, canAskAgain, requestPermission } = useCameraPermissionGate(visible);
   const [, setScanning] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
   const lastScannedRef = useRef<string>('');
@@ -760,12 +763,20 @@ function BarcodeScannerModal({ visible, onClose, onScanned }: BarcodeScannerProp
 
   if (!visible) return null;
 
+  // Android back must not be an exit before the system prompt either.
+  const awaitingSystemPrompt = cameraState === 'loading' || cameraState === 'request';
+
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" onRequestClose={awaitingSystemPrompt ? () => {} : onClose}>
       <View style={styles.scannerContainer}>
-        {!permission?.granted ? (
+        {awaitingSystemPrompt ? (
+          // Before the system has answered: nothing in front of the system
+          // prompt, and no Close control (5.1.1(iv)). This used to render the
+          // "Continue" pre-screen with a Close (X) — an exit before the sheet.
+          <View style={styles.scannerPermission} />
+        ) : cameraState === 'denied' ? (
           <>
-            {/* Header for permission screen */}
+            {/* Header for permission screen — only after the system said no */}
             <View style={styles.scannerHeaderAbsolute}>
               <SafeAreaView edges={['top']}>
                 <View style={styles.scannerHeaderRow}>
@@ -783,7 +794,12 @@ function BarcodeScannerModal({ visible, onClose, onScanned }: BarcodeScannerProp
             <View style={styles.scannerPermission}>
               <Ionicons name="camera-outline" size={60} color={Colors.darkTextSecondary} />
               <Text style={styles.scannerPermText}>PepTalk uses the camera to scan barcodes.</Text>
-              <GradientButton label="Continue" onPress={requestPermission} />
+              {canAskAgain ? (
+                <GradientButton label="Continue" onPress={requestPermission} />
+              ) : (
+                // The OS will not ask again, so Continue would do nothing.
+                <GradientButton label="Open Settings" onPress={() => { Linking.openSettings().catch(() => {}); }} />
+              )}
             </View>
           </>
         ) : (

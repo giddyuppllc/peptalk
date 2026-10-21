@@ -48,7 +48,7 @@ const FORMATTER_OWNERS = new Map([
   [
     'src/utils/calculatorV2.ts',
     'Honours the calculator\'s explicit mg/mcg toggle, which formatDoseAmount ' +
-      'deliberately does not. Borrows formatMassMcg for the digits.',
+      'deliberately does not. Calls formatDoseAmountExact: a drawn dose is not display-rounded.',
   ],
 ]);
 
@@ -136,6 +136,130 @@ if (wrong.length) {
   );
 } else {
   console.log('  ✓ every display unit matches the compound\'s own doses');
+}
+
+/* ── 3. No raw `{amount} {unit}` interpolation of a dose ──────────────────── */
+
+/**
+ * WHY (2026-09-16)
+ * Owning the one formatter is not enough if a screen never calls it. The
+ * "Today's planned dose" card on app/(tabs)/my-stacks.tsx printed
+ * `{slot.amount} {slot.unit}` straight out of the reconstitution ladder, so
+ * glutathione read "300000 mcg", NAD+ "60000 mcg" and MOTS-c "1000 mcg" — the
+ * exact complaint quoted in doseUnits.ts's own header, still on screen months
+ * after the header was written. Section 1 passed the whole time: the file
+ * defines no competing formatter, it just calls none.
+ *
+ * A pair like `{x.amount} {x.unit}` is a dose rendered by string
+ * concatenation. It must go through formatDoseAmount (or
+ * formatDoseAmountExact where a drawn dose needs its exact figure).
+ */
+const RAW_DOSE_PATTERNS = [
+  // JSX:  {slot.amount} {slot.unit}
+  /\{\s*([A-Za-z_$][\w$]*\.)?(amount|dose|doseAmount)\s*\}\s*\{\s*([A-Za-z_$][\w$]*\.)?(unit|doseUnit)\s*\}/,
+  // Template literal:  `${slot.amount} ${slot.unit}`
+  /\$\{\s*([A-Za-z_$][\w$]*\.)?(amount|dose|doseAmount)\s*\}\s*\$\{\s*([A-Za-z_$][\w$]*\.)?(unit|doseUnit)\s*\}/,
+];
+
+/**
+ * SCOPE: rendered surfaces only — screens under app/ and the components they
+ * render. src/services is excluded deliberately: doseSafety's warning copy
+ * must echo the user's OWN figure back verbatim ("250 mg is more than 3× …"),
+ * and privacyGuard/peptalkBot build text for redaction and for the model, not
+ * for a dose card. Formatting those would change what the guard quotes.
+ */
+const isRenderedSurface = (f) => f.startsWith('app/') || f.startsWith('src/components/');
+
+/** A comment line is not a render. */
+const isComment = (line) => /^\s*(\/\/|\/\*|\*|\{\/\*)/.test(line);
+
+/**
+ * Screens that still concatenate a dose, with the reason. Each is a separate
+ * screen and a separate change; this section was added with my-stacks.tsx in
+ * scope. An entry that no longer matches is a STALE entry and fails, so this
+ * list cannot quietly become permanent.
+ */
+const RAW_DOSE_BACKLOG = new Map([
+  ['src/components/DaySummarySheet.tsx', 'Day summary sheet — 2026-09-16 backlog.'],
+  ['src/components/peptides/DoseStrip.tsx', 'Dose history strip — 2026-09-16 backlog.'],
+  ['app/(tabs)/calendar.tsx', 'Calendar day list — 2026-09-16 backlog.'],
+  ['app/(tabs)/index.tsx', 'Home active-protocol summary — 2026-09-16 backlog.'],
+  ['app/doses/index.tsx', 'Doses hub "last logged" line — 2026-09-16 backlog.'],
+  ['app/doses/side-effects.tsx', 'Side-effect report — 2026-09-16 backlog.'],
+  ['app/doses/tracker.tsx', 'Tracker dose list — 2026-09-16 backlog.'],
+  ['app/health-report/index.tsx', 'Health report protocol list — 2026-09-16 backlog.'],
+]);
+
+/** Self-check: the patterns must match what they are for, and nothing else. */
+const MUST_MATCH = [
+  '{slot.amount} {slot.unit}',
+  '{d.amount} {d.unit}',
+  '{proto.dose} {proto.unit} · x',
+  'label={`${slot.amount} ${slot.unit}`}',
+  '{amount} {unit}',
+  '{slot.amount}{slot.unit}', // no separator is still a concatenated dose
+];
+const MUST_NOT_MATCH = [
+  '{formatDoseAmount(slot.amount, slot.unit)}',
+  '{slot.peptideName} {slot.unit}',
+  '{slot.amount} {slot.route}',
+  'const { amount, unit } = dose;',
+];
+const hits = (line) => RAW_DOSE_PATTERNS.some((re) => re.test(line));
+const selfFailures = [
+  ...MUST_MATCH.filter((s) => !hits(s)).map((s) => `should have matched: ${s}`),
+  ...MUST_NOT_MATCH.filter((s) => hits(s)).map((s) => `should NOT have matched: ${s}`),
+];
+if (selfFailures.length) {
+  console.error('\n✗ SELF-CHECK FAILED — the raw-dose pattern is wrong:');
+  for (const f of selfFailures) console.error(`    ${f}`);
+  process.exit(1);
+}
+
+const rawOffenders = [];
+const backlogSeen = new Set();
+const surfaces = sources.filter(isRenderedSurface);
+for (const file of surfaces) {
+  const lines = readFileSync(file, 'utf8').split('\n');
+  lines.forEach((line, i) => {
+    if (isComment(line) || !hits(line)) return;
+    if (RAW_DOSE_BACKLOG.has(file)) {
+      backlogSeen.add(file);
+      return;
+    }
+    rawOffenders.push({ file, line: i + 1, text: line.trim() });
+  });
+}
+
+console.log('\n— Dose rendering: no raw {amount} {unit} ——');
+console.log(`  ${surfaces.length} rendered surfaces scanned · ${backlogSeen.size} on the recorded backlog`);
+
+/** Positive control: the scan must actually be reading screens. */
+if (surfaces.length < 50) {
+  console.error(`\n✗ SELF-CHECK FAILED — only ${surfaces.length} rendered surfaces found; the glob is wrong.`);
+  process.exit(1);
+}
+
+const staleBacklog = [...RAW_DOSE_BACKLOG.keys()].filter((f) => !backlogSeen.has(f));
+if (staleBacklog.length) {
+  failed = true;
+  console.log('');
+  for (const f of staleBacklog) {
+    console.log(`  ❌ ${f} is on the raw-dose backlog but no longer matches.`);
+    console.log('     Delete the entry — a stale allowlist hides the next one.\n');
+  }
+}
+
+if (rawOffenders.length) {
+  failed = true;
+  console.log('');
+  for (const o of rawOffenders) {
+    console.log(`  ❌ ${o.file}:${o.line}  ${o.text}`);
+    console.log('     Render through formatDoseAmount from src/lib/doseUnits —');
+    console.log('     raw concatenation is how "300000 mcg" reached the screen.\n');
+  }
+} else if (!staleBacklog.length) {
+  console.log('  ✓ every dose outside the recorded backlog goes through the formatter');
 }
 
 console.log('');

@@ -31,6 +31,32 @@ describe('withTimeout', () => {
     await expect(withTimeout(thenable, 1000)).resolves.toBe('built');
   });
 
+  it('does NOT cancel the underlying work — the late answer still arrives', async () => {
+    // Deliberate: supabase-js exposes no abort signal, so the request is
+    // abandoned rather than aborted. Worth pinning, because every caller
+    // inherits the consequence — the work behind a timed-out call keeps
+    // running and its result still lands somewhere. Anything that writes
+    // shared state from it has to re-check who it is writing for at that
+    // moment (see the health-profile fetch's live-session check); the
+    // rejection here is not protection.
+    let settled = false;
+    let finish!: (v: string) => void;
+    const underlying = new Promise<string>((r) => (finish = r)).then((v) => {
+      settled = true;
+      return v;
+    });
+
+    const p = withTimeout(underlying, 5000, 'Profile');
+    jest.advanceTimersByTime(5000);
+    await expect(p).rejects.toBeInstanceOf(TimeoutError);
+    expect(settled).toBe(false);
+
+    // The abandoned request replies after the caller has given up on it.
+    finish('late row');
+    await expect(underlying).resolves.toBe('late row');
+    expect(settled).toBe(true);
+  });
+
   it('gives an interactive call a generous budget', () => {
     // A false timeout on a slow-but-working connection is worse than the hang
     // it replaces, so this only has to beat "forever".
