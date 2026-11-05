@@ -78,6 +78,9 @@ export interface BodyCompositionState {
   /** Delete a scan by id. */
   deleteScan: (id: string) => void;
 
+  /** Drop every scan — sign-out, so the next user on the device can't see them. */
+  clearAll: () => void;
+
   /** Most-recent scan (or null). */
   latestScan: () => BodyCompositionScan | null;
 
@@ -122,6 +125,7 @@ export const useBodyCompositionStore = create<BodyCompositionState>()(
         }));
       },
 
+      clearAll: () => set({ scans: [] }),
       deleteScan: (id) => {
         set((s) => ({ scans: s.scans.filter((sc) => sc.id !== id) }));
       },

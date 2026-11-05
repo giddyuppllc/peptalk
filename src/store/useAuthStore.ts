@@ -554,6 +554,15 @@ export const useAuthStore = create<AuthStore>()(
         // live event the previous user subscribed to keeps delivering
         // messages to this device after the next user signs in.
         safeClear('liveEvent', () => require('./useLiveEventStore').useLiveEventStore.getState().reset?.());
+        // These four were missed: side effects and body-composition scans are
+        // health data, and AI consent is a per-person decision. Left in place,
+        // the next person to sign in on this device saw the previous user's
+        // side effects and scans and inherited their consent to AI processing
+        // without being asked.
+        safeClear('sideEffects', () => require('./useSideEffectStore').useSideEffectStore.getState().clearAll?.());
+        safeClear('bodyComposition', () => require('./useBodyCompositionStore').useBodyCompositionStore.getState().clearAll?.());
+        safeClear('aiConsent', () => require('./useAiConsentStore').useAiConsentStore.getState().resetConsent?.());
+        safeClear('communityPrefs', () => require('./useCommunityPrefsStore').useCommunityPrefsStore.getState().reset?.());
         // Raw AsyncStorage keys outside any Zustand store — user A's
         // "don't ask me to review again" opt-out and last-prompt
         // timestamp inherited to user B before this clear.

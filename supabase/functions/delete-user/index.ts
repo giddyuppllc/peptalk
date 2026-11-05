@@ -83,6 +83,10 @@ Deno.serve(async (req) => {
       'side_effect_entries',
       'lab_results',
       'ai_usage_log',
+      // Per-user daily AI spend. No FK to auth.users (the table also holds the
+      // system-wide total under the all-zeros id, which this never matches),
+      // so nothing else removes a deleted user's rows.
+      'aimee_cost_cents',
       'subscription_events',
       'subscriptions',
       'profiles',

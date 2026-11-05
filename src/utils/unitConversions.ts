@@ -125,7 +125,9 @@ export function inToCm(inches: number): number {
   return inches * CM_PER_IN;
 }
 export function cmToFtIn(cm: number): { ft: number; inRemainder: number } {
-  const totalIn = cmToIn(cm);
+  // Round to whole inches BEFORE splitting: rounding the remainder afterwards
+  // turned 182.5 cm (71.85 in) into 5'12".
+  const totalIn = Math.round(cmToIn(cm));
   const ft = Math.floor(totalIn / 12);
   const inRemainder = totalIn - ft * 12;
   return { ft, inRemainder };

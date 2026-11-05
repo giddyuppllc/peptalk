@@ -198,18 +198,32 @@ export type CadenceKind =
   | 'weekly'
   | 'eod'
   | 'mon_wed_fri'
-  | 'mon_thu';
+  | 'mon_thu'
+  | 'five_on_two_off';
 
+/*
+ * The phrasings below are the ones peptideDosingReference actually uses. The
+ * parser used to know only ASCII "2x/week" and "mon/thu", so the reference's
+ * own "Mon + Thu" and "2× weekly" (× is U+00D7), "nightly", and both spellings
+ * of five-on/two-off all fell through to the weekly fallback — "Schedule cycle"
+ * planned one dose a week for protocols that run two, five or seven.
+ */
 export function parseCadence(frequency: string): CadenceKind {
-  const f = frequency.toLowerCase().trim();
-  if (/(mon\/?thu|2x\/?week|biw|twice weekly|twice\/week)/.test(f))
-    return 'mon_thu';
-  if (/(mon\/?wed\/?fri|3x\/?week|tiw|thrice weekly|3\/week)/.test(f))
+  const f = (frequency ?? '')
+    .toLowerCase()
+    .replace(/×/g, 'x')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (/five_on_two_off|5 ?(days? ?)?on ?\/? ?2 ?(days? ?)?off/.test(f)) return 'five_on_two_off';
+  // A weekly range plans the lower bound: an extra planned dose is the costlier mistake.
+  if (/2 ?- ?3 ?x ?(\/|per )? ?week/.test(f)) return 'mon_thu';
+  if (/mon ?(\/|\+|&|,|and)? ?wed ?(\/|\+|&|,|and)? ?fri|3 ?x ?(\/|per )? ?week|tiw|thrice weekly|3\/week/.test(f))
     return 'mon_wed_fri';
+  if (/mon ?(\/|\+|&|,|and)? ?thu|2 ?x ?(\/|per )? ?week|biw|twice weekly|twice ?(\/|a |per )week/.test(f))
+    return 'mon_thu';
   if (/(eod|every other day|alt(ernating)? days?)/.test(f)) return 'eod';
-  if (/once weekly|weekly|once\/week|1x\/?week/.test(f)) return 'weekly';
-  if (/daily|every day|each day|2-?3.?\s*(x|×)?\s*daily|twice daily/.test(f))
-    return 'daily';
+  if (/once weekly|weekly|once ?\/ ?week|1 ?x ?\/? ?week/.test(f)) return 'weekly';
+  if (/daily|every day|each day|nightly|every night|at night|before bed|am ?\/ ?pm/.test(f)) return 'daily';
   return 'weekly';
 }
 
@@ -279,6 +293,9 @@ function shouldEmit(d: Date, dayIndex: number, cadence: CadenceKind): boolean {
       return dow === 1 || dow === 3 || dow === 5;
     case 'mon_thu':
       return dow === 1 || dow === 4;
+    case 'five_on_two_off':
+      // Five consecutive days on, two off, anchored to the start day.
+      return dayIndex % 7 < 5;
   }
 }
 

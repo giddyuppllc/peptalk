@@ -662,6 +662,10 @@ export default function ProfileScreen() {
             useAllergyStore.getState().clearAll();
             useLabResultsStore.getState().clearAll();
             useIntegrationsStore.getState().clearAll();
+            // Side effects and body-composition scans are health data too and
+            // were left behind (same gap as logout; see logoutWipesEveryStore).
+            require('../../src/store/useSideEffectStore').useSideEffectStore.getState().clearAll?.();
+            require('../../src/store/useBodyCompositionStore').useBodyCompositionStore.getState().clearAll?.();
             Alert.alert('Done', 'All data has been deleted.');
           },
         },
