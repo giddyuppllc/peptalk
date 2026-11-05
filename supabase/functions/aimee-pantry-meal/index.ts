@@ -279,7 +279,7 @@ async function checkRateLimit(
   userId: string,
   functionName: string,
   limit: number,
-): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number }> {
+): Promise<{ allowed: boolean; limit: number; count: number; retryAfter?: number; /** The quota check itself failed, so the call was refused rather than allowed. */ failedClosed?: boolean }> {
   // Atomic via bump_ai_usage RPC (2026-05-17 audit fix).
   try {
     const today = new Date().toISOString().slice(0, 10);
