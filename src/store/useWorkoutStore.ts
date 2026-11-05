@@ -142,6 +142,24 @@ interface WorkoutActions {
   flushPendingSyncs: () => Promise<void>;
 }
 
+/**
+ * The planned calendar row a program session completes: same program and day,
+ * not yet done, the oldest one due by today (a missed day is still the one to
+ * finish). The player had no such lookup, so finishing a program day from it
+ * wrote a separate completed row and the planned day stayed "not done".
+ */
+export function findPlannedLogFor(
+  logs: WorkoutLog[],
+  programId: string | undefined,
+  dayId: string | undefined,
+  today: string,
+): WorkoutLog | undefined {
+  if (!programId || !dayId) return undefined;
+  return logs
+    .filter((l) => !l.completedAt && l.programId === programId && l.dayId === dayId && (!l.date || l.date <= today))
+    .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))[0];
+}
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------

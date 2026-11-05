@@ -40,7 +40,7 @@ import Animated, {
 import { useTheme } from '../../src/hooks/useTheme';
 import { useSectionAccent } from '../../src/hooks/useSectionAccent';
 import { Spacing, BorderRadius, FontSizes } from '../../src/constants/theme';
-import { useWorkoutStore } from '../../src/store/useWorkoutStore';
+import { useWorkoutStore, findPlannedLogFor } from '../../src/store/useWorkoutStore';
 import { useWorkoutTemplateStore } from '../../src/store/useWorkoutTemplateStore';
 import {
   StreamVideoSurface,
@@ -562,7 +562,11 @@ export default function WorkoutPlayerV2Screen() {
   };
 
   const handleFinishFromCelebration = () => {
-    finishWorkout(undefined, undefined, undefined, template?.name);
+    // A program day completes its planned calendar row rather than adding one.
+    const planned = !templateId
+      ? findPlannedLogFor(logs, programId, day?.id, new Date().toISOString().slice(0, 10))
+      : undefined;
+    finishWorkout(undefined, undefined, undefined, template?.name, planned ? { plannedLogId: planned.id } : undefined);
     // Finishing a session can earn first-workout / workouts-10.
     refreshAchievements();
     if (template) useWorkoutTemplateStore.getState().markUsed(template.id);
