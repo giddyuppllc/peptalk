@@ -21,60 +21,20 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Spacing, FontSizes } from '../../src/constants/theme';
 import { useNotificationStore } from '../../src/store/useNotificationStore';
-import { useDoseLogStore } from '../../src/store/useDoseLogStore';
 import { setCuesEnabled } from '../../src/lib/cue';
-import { getPeptideById } from '../../src/data/peptides';
 import {
-  scheduleDoseReminder,
-  scheduleWorkoutReminder,
-  scheduleMealReminder,
   cancelRemindersByTag,
   scheduleDailyCheckInReminder,
   cancelDailyCheckInReminder,
 } from '../../src/services/notificationService';
+import {
+  applyMasterSwitch,
+  rescheduleAllDoses,
+  rescheduleAllMeals,
+  rescheduleWorkouts,
+} from '../../src/services/reminderSync';
 
 const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
-
-// Expo weekday numbers are 1=Sun … 7=Sat; map to the day label
-// scheduleWorkoutReminder expects (mirrors app/(tabs)/profile.tsx).
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-/** Schedule workout reminders for the given days. */
-async function rescheduleWorkouts(time: string, days: number[]): Promise<void> {
-  for (const day of days) {
-    const dayLabel = DAY_LABELS[day - 1] ?? 'Workout';
-    await scheduleWorkoutReminder(dayLabel, time);
-  }
-}
-
-/** Schedule meal reminders for all configured meal types. */
-async function rescheduleAllMeals(mealTimes: Record<string, string>): Promise<void> {
-  for (const [meal, time] of Object.entries(mealTimes)) {
-    await scheduleMealReminder(meal, time);
-  }
-}
-
-/**
- * Re-schedule dose reminders for every active protocol. Mirrors the auto-
- * scheduling useDoseLogStore does on protocol activation (08:00 default,
- * anchored to the protocol start date). scheduleDoseReminder sweeps the
- * peptide's existing identifiers first, so this is idempotent.
- */
-async function rescheduleAllDoses(): Promise<void> {
-  const protocols = useDoseLogStore
-    .getState()
-    .protocols.filter((p) => p.isActive);
-  for (const protocol of protocols) {
-    const peptideName = getPeptideById(protocol.peptideId)?.name ?? protocol.peptideId;
-    await scheduleDoseReminder(
-      protocol.peptideId,
-      peptideName,
-      '08:00',
-      protocol.frequency,
-      protocol.startDate,
-    );
-  }
-}
 
 interface TimeRowProps {
   label: string;
@@ -227,7 +187,12 @@ export default function NotificationSettingsScreen() {
             </View>
             <Switch
               value={prefs.enabled}
-              onValueChange={setEnabled}
+              onValueChange={(v) => {
+                setEnabled(v);
+                // Off cancels everything already scheduled; on restores each
+                // category that is on (reminderSync.applyMasterSwitch).
+                void applyMasterSwitch(v);
+              }}
               trackColor={{ true: t.primary + '88', false: t.cardBorder }}
               thumbColor={prefs.enabled ? t.primary : '#fff'}
             />

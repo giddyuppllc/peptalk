@@ -927,6 +927,13 @@ function RootLayout() {
           waited += 50;
         }
         const prefs = useNotificationStore.getState().preferences;
+        // Master switch off: nothing scheduled by an older build (or before
+        // the switch was flipped) should keep firing.
+        if (!prefs.enabled) {
+          const { cancelAll } = await import('../src/services/notificationService');
+          await cancelAll();
+          return;
+        }
         if (prefs.dailyCheckInReminder && prefs.enabled) {
           await scheduleDailyCheckInReminder(prefs.checkInReminderTime);
         } else {
