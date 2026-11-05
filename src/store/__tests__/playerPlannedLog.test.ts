@@ -1,3 +1,8 @@
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: async () => null, setItem: async () => {}, removeItem: async () => {},
+}));
+jest.mock('../../services/syncService', () => ({ syncRecord: jest.fn(async () => true), fetchUserRecords: jest.fn(async () => []) }));
+jest.mock('../../services/secureStorage', () => ({ secureStorage: { getItem: async () => null, setItem: async () => {}, removeItem: async () => {} } }));
 import { findPlannedLogFor } from '../useWorkoutStore';
 import type { WorkoutLog } from '../../types/fitness';
 
