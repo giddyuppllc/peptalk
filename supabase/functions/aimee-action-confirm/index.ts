@@ -231,12 +231,15 @@ async function commitLogField(
   let value = output.value;
   const today = output.date ?? new Date().toISOString().slice(0, 10);
 
+  // Real check_ins columns (checked against production 2026-11-05). The old
+  // map pointed sleepHours and symptoms at columns that do not exist, so
+  // confirming either failed with a database error.
   const fieldMap: Record<string, string> = {
     mood: 'mood',
     energy: 'energy',
-    sleepHours: 'sleep_hours',
+    sleepQuality: 'sleep_quality',
     weightLbs: 'weight_lbs',
-    symptoms: 'symptoms',
+    symptoms: 'side_effect_tags',
     notes: 'notes',
   };
   const dbField = fieldMap[field];
@@ -254,18 +257,12 @@ async function commitLogField(
   // healthProfileSummary). This is the second-order-prompt-injection
   // defense; without it the action-confirm path was a write-anything
   // hole.
-  if (field === 'mood' || field === 'energy') {
+  if (field === 'mood' || field === 'energy' || field === 'sleepQuality') {
     const n = Number(value);
     if (!Number.isFinite(n) || n < 1 || n > 5) {
       throw new Error(`${field} must be 1-5`);
     }
-    value = n;
-  } else if (field === 'sleepHours') {
-    const n = Number(value);
-    if (!Number.isFinite(n) || n < 0 || n > 24) {
-      throw new Error('sleepHours must be 0-24');
-    }
-    value = n;
+    value = Math.round(n);
   } else if (field === 'weightLbs') {
     const n = Number(value);
     if (!Number.isFinite(n) || n < 40 || n > 800) {
@@ -303,15 +300,21 @@ async function commitLogField(
     return { check_in_id: existing.id, field: dbField, value };
   }
 
-  const { data: inserted, error: insertErr } = await supabase
-    .from('check_ins')
-    .insert({
-      user_id: userId,
-      date: today,
-      [dbField]: value,
-    })
-    .select('id')
-    .single();
+  // The app keys check-ins as `checkin-<date>` (useCheckinStore), so use the
+  // same id — a default uuid made a second row for the day once the app synced
+  // its own entry. That id has no user in it and is the table's primary key,
+  // so another account may already hold it for this date; then fall back to a
+  // generated id rather than fail the confirm.
+  const insertRow = (id?: string) =>
+    supabase
+      .from('check_ins')
+      .insert({ ...(id ? { id } : {}), user_id: userId, date: today, [dbField]: value })
+      .select('id')
+      .single();
+  let { data: inserted, error: insertErr } = await insertRow(`checkin-${today}`);
+  if (insertErr && (insertErr.code === '23505' || /duplicate key/i.test(insertErr.message ?? ''))) {
+    ({ data: inserted, error: insertErr } = await insertRow());
+  }
   if (insertErr) {
     throw new Error(`check_ins insert failed: ${insertErr.message}`);
   }

@@ -575,6 +575,7 @@ export default function PepTalkScreen() {
               } else if (
                 (action.type === 'log_dose' ||
                   action.type === 'log_meal' ||
+                  action.type === 'draft_meal_template' ||
                   action.type === 'schedule_workout' ||
                   action.type === 'log_water' ||
                   action.type === 'log_appetite' ||
@@ -982,6 +983,14 @@ export default function PepTalkScreen() {
               <AimeePendingActionCard
                 key={`pa-${a.id}`}
                 action={a}
+                onResolved={(decision) => {
+                  // propose_log_field is written by aimee-action-confirm on the
+                  // server; pull it into the check-in store so it shows now,
+                  // not after the next app launch.
+                  if (decision === 'confirm' && a.tool === 'propose_log_field') {
+                    void useCheckinStore.getState().syncFromServer();
+                  }
+                }}
                 onLocalConfirm={async (action) => {
                   // Client-side write actions deferred via the audit fix.
                   // The card already gated on tap-Confirm; here we run the
@@ -994,7 +1003,9 @@ export default function PepTalkScreen() {
                       if (!logged) {
                         return { ok: false, error: 'Not logged — safety check declined' };
                       }
-                    } else if (action.tool === 'log_meal') {
+                    } else if (action.tool === 'log_meal' || action.tool === 'draft_meal_template') {
+                      // A confirmed template is logged as today's meal through
+                      // the meal store, so it shows in the meal log and syncs.
                       applyLogMealAction(action.preview);
                     } else if (action.tool === 'schedule_workout') {
                       applyScheduleWorkoutAction(action.preview);

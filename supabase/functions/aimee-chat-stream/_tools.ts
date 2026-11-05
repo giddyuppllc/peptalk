@@ -136,8 +136,7 @@ export const AIMEE_TOOLS: GrokTool[] = [
       description: [
         'Draft a meal template (NOT a recipe) the user can add to their log.',
         'Call this when the user wants "ideas for breakfast/lunch/dinner", "what should I eat to hit my protein", or asks Aimee to plan a meal.',
-        'The draft is saved as a PENDING action — the user must tap Confirm in the UI before anything writes.',
-        'Returns a pending_action_id the client uses to show the confirm modal.',
+        'The app shows the draft as a confirm card — the user must tap Confirm before anything writes.',
       ].join(' '),
       parameters: {
         type: 'object',
@@ -221,7 +220,7 @@ export const AIMEE_TOOLS: GrokTool[] = [
       name: 'propose_log_field',
       description: [
         'Propose adding a single structured field to TODAY\'s check-in log.',
-        'Call this when the user mentions a data point in chat that they haven\'t logged — e.g. "I slept 7 hours" → propose a sleep field; "energy is low today" → propose energy=low.',
+        'Call this when the user mentions a data point in chat that they haven\'t logged — e.g. "slept great" → sleepQuality=5; "energy is low today" → energy=2.',
         'The proposal is saved as a PENDING action — the user must tap Confirm before anything writes.',
         'Returns a pending_action_id.',
       ].join(' '),
@@ -230,11 +229,13 @@ export const AIMEE_TOOLS: GrokTool[] = [
         properties: {
           field: {
             type: 'string',
-            enum: ['mood', 'energy', 'sleepHours', 'weightLbs', 'symptoms', 'notes'],
+            // Matches check_ins: sleep is a 1-5 quality score (no hours
+            // column); symptoms are stored as side_effect_tags.
+            enum: ['mood', 'energy', 'sleepQuality', 'weightLbs', 'symptoms', 'notes'],
           },
           value: {
             description:
-              'The value to set. Numeric for sleepHours/weightLbs; 1-5 scale for mood/energy; string for notes; array of strings for symptoms.',
+              'The value to set. 1-5 scale for mood/energy/sleepQuality; pounds for weightLbs; string for notes; array of strings for symptoms.',
           },
         },
         required: ['field', 'value'],
@@ -300,8 +301,8 @@ export const AIMEE_TOOLS: GrokTool[] = [
     function: {
       name: 'open_dosing_calculator',
       description: [
-        'Open the dosing calculator screen, optionally pre-filled with a peptide + suggested dose.',
-        'Call this when the user asks "calculate my dose for X", "how much X do I draw", or anything that needs the reconstitution math.',
+        'Open the reconstitution calculator, pre-filled ONLY with numbers the user gave you: their vial size, their water, and the amount their prescriber set.',
+        'Call this for "how many units do I draw for X mg" style math. Never put in an amount the user did not state — Aimee does not suggest doses (see the dosing policy).',
         'The client navigates to /doses/calculator with the deep-link params; no server state changes.',
       ].join(' '),
       parameters: {
@@ -309,7 +310,7 @@ export const AIMEE_TOOLS: GrokTool[] = [
         properties: {
           peptideId: { type: 'string', description: 'Canonical peptide id (e.g. "bpc-157", "selank").' },
           peptideName: { type: 'string', description: 'Display name if id unknown.' },
-          doseMcg: { type: 'number', description: 'Suggested dose in micrograms to pre-fill.' },
+          doseMcg: { type: 'number', description: 'The amount the USER stated, in micrograms. Omit if they did not give one.' },
           vialMg: { type: 'number', description: 'Vial size in milligrams to pre-fill.' },
           waterMl: { type: 'number', description: 'BAC water in mL to pre-fill (1-3 typical).' },
         },
@@ -516,7 +517,11 @@ export async function execSummarizePattern(
   ) {
     const { data: checkins } = await supabase
       .from('check_ins')
-      .select('date, mood, energy, sleep_hours')
+      // check_ins has sleep_quality (1-5), not sleep_hours. Selecting a column
+      // that does not exist failed the whole query, and the null result read
+      // as "No check-ins logged" for every user — the "I'll pull your trends"
+      // answers that came back with nothing (production, 2026-11).
+      .select('date, mood, energy, sleep_quality')
       .eq('user_id', userId)
       .gte('date', since)
       .order('date', { ascending: false })
@@ -524,12 +529,12 @@ export async function execSummarizePattern(
     if (checkins && checkins.length > 0) {
       const mood = checkins.map((c: any) => c.mood).filter((v: any) => typeof v === 'number');
       const energy = checkins.map((c: any) => c.energy).filter((v: any) => typeof v === 'number');
-      const sleep = checkins.map((c: any) => c.sleep_hours).filter((v: any) => typeof v === 'number');
+      const sleep = checkins.map((c: any) => c.sleep_quality).filter((v: any) => typeof v === 'number');
       summary.checkins = {
         count: checkins.length,
         avgMood: mood.length ? round2(mean(mood)) : null,
         avgEnergy: energy.length ? round2(mean(energy)) : null,
-        avgSleepHours: sleep.length ? round2(mean(sleep)) : null,
+        avgSleepQuality1to5: sleep.length ? round2(mean(sleep)) : null,
       };
     } else {
       summary.checkins = { count: 0, note: 'No check-ins logged in this window.' };
@@ -570,12 +575,15 @@ export async function execSummarizePattern(
         if (!perDay[d]) perDay[d] = { cal: 0, pro: 0 };
         const foods = Array.isArray(m.foods) ? m.foods : [];
         for (const f of foods) {
-          perDay[d].cal += Number(f?.calories) || 0;
-          perDay[d].pro += Number(f?.proteinGrams) || 0;
+          // The app stores per-serving values plus a servings count.
+          const servings = Number(f?.servings) > 0 ? Number(f.servings) : 1;
+          perDay[d].cal += (Number(f?.calories) || 0) * servings;
+          perDay[d].pro += (Number(f?.proteinGrams) || 0) * servings;
         }
+        // Quick-log totals are { calories, proteinGrams, … } (src/types/fitness.ts).
         const ql = m.quick_log ?? {};
         perDay[d].cal += Number(ql.calories) || 0;
-        perDay[d].pro += Number(ql.protein) || 0;
+        perDay[d].pro += Number(ql.proteinGrams ?? ql.protein) || 0;
       }
       const dayCount = Object.keys(perDay).length || 1;
       const totalCal = Object.values(perDay).reduce((acc, v) => acc + v.cal, 0);
@@ -626,15 +634,19 @@ export async function execGetUserMetrics(
   _input: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   // Pull the latest of each thing in parallel.
-  const [profileRes, latestCheckin, activeProtocols, latestDose] = await Promise.all([
+  // Columns checked against production 2026-11-05. profiles has no
+  // height_cm/weight_kg/dob/gender and check_ins no sleep_hours/symptoms; each
+  // missing column failed its whole query, so this tool returned nulls for
+  // everyone. Body stats live in health_profiles.profile (the app's JSON).
+  const [profileRes, latestCheckin, activeProtocols, latestDose, healthRes] = await Promise.all([
     supabase
       .from('profiles')
-      .select('subscription_tier, height_cm, weight_kg, dob, gender')
+      .select('subscription_tier')
       .eq('id', userId)
       .single(),
     supabase
       .from('check_ins')
-      .select('date, mood, energy, sleep_hours, weight_lbs, symptoms, notes')
+      .select('date, mood, energy, sleep_quality, weight_lbs, side_effect_tags, notes')
       .eq('user_id', userId)
       .order('date', { ascending: false })
       .limit(1)
@@ -653,10 +665,24 @@ export async function execGetUserMetrics(
       .order('date', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from('health_profiles')
+      .select('profile')
+      .eq('user_id', userId)
+      .maybeSingle(),
   ]);
 
+  const hp = (healthRes?.data?.profile ?? {}) as Record<string, any>;
+  const body = (hp.bodyMetrics ?? {}) as Record<string, unknown>;
+  const pick = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+
   return {
-    profile: profileRes?.data ?? null,
+    profile: {
+      subscriptionTier: profileRes?.data?.subscription_tier ?? null,
+      weightLbs: pick(body.weightLbs),
+      heightInches: pick(body.heightInches),
+      bodyFatPercent: pick(body.bodyFatPercent),
+    },
     latestCheckin: latestCheckin?.data ?? null,
     activeProtocols: activeProtocols?.data ?? [],
     latestDose: latestDose?.data ?? null,
@@ -688,25 +714,22 @@ export async function execDraftMealTemplate(
     totals,
   };
 
-  const { data, error } = await supabase
-    .from('aimee_pending_actions')
-    .insert({
-      user_id: userId,
-      conversation_id: conversationId,
-      tool_name: 'draft_meal_template',
-      input,
-      output,
-    })
-    .select('id')
-    .single();
-  if (error) {
-    return { error: 'failed to queue meal template', detail: error.message };
-  }
+  /*
+   * Confirmed on the device, like log_meal. This used to be a server-held
+   * pending action whose confirm inserted into meal_entries directly — and the
+   * app's meal log never reads meal_entries back, so a confirmed template
+   * appeared nowhere the user could see it. The client now shows the same
+   * "Meal template" confirm card and, on Confirm, adds it through useMealStore
+   * (which syncs it), exactly as a hand-logged meal.
+   */
+  void supabase;
+  void userId;
+  void conversationId;
   return {
-    pending_action_id: data.id,
-    requires_confirm: true,
+    ok: true,
     preview: output,
-    message: 'I drafted a meal template — tap Confirm in the chat to add it to your log, or Edit to tweak it first.',
+    message: `Drafted "${String(input.title ?? 'meal')}" — tap Confirm to add it to today's log.`,
+    client_action: { type: 'draft_meal_template', payload: output },
   };
 }
 
@@ -772,9 +795,12 @@ export async function execProposeLogField(
     const n = Number(value);
     if (!Number.isFinite(n) || n < 1 || n > 5) return { error: 'mood/energy must be 1-5' };
   }
-  if (field === 'sleepHours') {
+  if (field === 'sleepQuality') {
     const n = Number(value);
-    if (!Number.isFinite(n) || n < 0 || n > 24) return { error: 'sleepHours must be 0-24' };
+    if (!Number.isFinite(n) || n < 1 || n > 5) return { error: 'sleepQuality must be 1-5' };
+  }
+  if (!['mood', 'energy', 'sleepQuality', 'weightLbs', 'symptoms', 'notes'].includes(field)) {
+    return { error: `unknown field ${field}` };
   }
   if (field === 'weightLbs') {
     const n = Number(value);
@@ -924,7 +950,7 @@ export function execOpenDosingCalculator(
 // Routes verified against app/ directory. v3 screens are NOT inside
 // (tabs) for most surfaces — they're top-level routes pushed via the
 // 4-card home drill (per the v3 refactor; bottom tab bar is hidden).
-const SCREEN_TO_PATH: Record<string, string> = {
+export const SCREEN_TO_PATH: Record<string, string> = {
   // Original tab routes (still reachable as deep links)
   home: '/(tabs)',
   peptides: '/(tabs)/my-stacks',

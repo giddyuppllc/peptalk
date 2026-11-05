@@ -55,7 +55,7 @@ import { AIMEE_TOOLS, executeTool } from './_tools.ts';
 import { checkCostCap, denialMessage, recordSpend } from './_cost.ts';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
-import { normalizePlatform } from '../_shared/rxPolicy.ts';
+import { loadAiPolicy, normalizePlatform } from '../_shared/rxPolicy.ts';
 import { isSystemNoticeText } from '../_shared/chatNotices.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
@@ -193,7 +193,9 @@ Deno.serve(async (req) => {
 
   // 6. Build the server-side system prompt --------------------------------
   const safeContext: AimeeServerContext = sanitizeContext(clientContext, tier);
-  let systemPrompt = buildAimeeSystemPrompt(safeContext);
+  // Per-platform Aimee rules (ai_policy_settings), cached; safe defaults on any failure.
+  const aiPolicy = await loadAiPolicy(supabase, safeContext.platform ?? 'unknown');
+  let systemPrompt = buildAimeeSystemPrompt(safeContext, aiPolicy);
   if (!canUseTools) {
     // The model is offered no tools on this tier. Without being told, it still
     // SAYS it will log the dose or open the screen — the user gets a promise

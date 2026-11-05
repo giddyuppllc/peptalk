@@ -311,6 +311,8 @@ function labelForField(f: string): string {
       return 'Energy';
     case 'sleepHours':
       return 'Sleep (hours)';
+    case 'sleepQuality':
+      return 'Sleep quality';
     case 'weightLbs':
       return 'Weight (lbs)';
     case 'symptoms':

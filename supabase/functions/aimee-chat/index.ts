@@ -14,7 +14,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildAimeeSystemPrompt, SAFETY_TRAILER, type AimeeServerContext } from './_prompt.ts';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
-import { normalizePlatform } from '../_shared/rxPolicy.ts';
+import { loadAiPolicy, normalizePlatform } from '../_shared/rxPolicy.ts';
 import { isSystemNoticeText } from '../_shared/chatNotices.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
@@ -243,7 +243,9 @@ Deno.serve(async (req) => {
       // Chooses the prescription-compound rules; unknown ⇒ strict (iOS) rules.
       platform: normalizePlatform(clientContext?.platform),
     };
-    const serverSystemPrompt = buildAimeeSystemPrompt(safeContext);
+    // Per-platform Aimee rules (ai_policy_settings), cached; safe defaults on any failure.
+    const aiPolicy = await loadAiPolicy(supabase, safeContext.platform ?? 'unknown');
+    const serverSystemPrompt = buildAimeeSystemPrompt(safeContext, aiPolicy);
 
     // 5. Call OpenAI/Grok — 45s timeout prevents a hung upstream from
     // burning our entire edge-function budget and erroring with a 500
