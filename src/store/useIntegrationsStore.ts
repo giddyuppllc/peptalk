@@ -7,7 +7,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord, hydrateFromServer } from '../services/syncService';
+import { syncRecord, deleteRecord, hydrateFromServer, adoptLegacyIds } from '../services/syncService';
 import type {
   ConnectedIntegration,
   BiomarkerSource,
@@ -57,8 +57,28 @@ interface IntegrationsActions {
 // reconnected on another device upserted onConflict:'id' against a mismatched
 // key, duplicating the row or fighting the unique constraint. `int-${source}`
 // aligns the primary key with the natural key so cross-device sync dedups.
-function integrationId(source: BiomarkerSource): string {
-  return `int-${source}`;
+//
+// 2026-11-05: that made the primary key the same for EVERY user — `int-apple_health`
+// — so only the first account to connect each source could ever sync its
+// connection row (production: 2 rows in total). Ids are now per-row random;
+// a legacy one is replaced on the next connect, and unowned legacy rows are
+// re-keyed on sync (adoptLegacyIds).
+const LEGACY_INTEGRATION_ID = /^int-[a-z_]+$/;
+const isLegacyIntegrationId = (id: string) => LEGACY_INTEGRATION_ID.test(id);
+function newIntegrationId(source: BiomarkerSource): string {
+  return `int-${source}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function integrationRow(r: ConnectedIntegration) {
+  return {
+    id: r.id,
+    source: r.source,
+    connected: r.connected,
+    scopes: r.scopes,
+    last_synced_at: r.lastSyncedAt ?? null,
+    status_message: r.statusMessage ?? null,
+    last_error: r.lastError ?? null,
+  };
 }
 
 export const useIntegrationsStore = create<IntegrationsState & IntegrationsActions>()(
@@ -75,7 +95,7 @@ export const useIntegrationsStore = create<IntegrationsState & IntegrationsActio
 
         const existing = get().integrations.find((i) => i.source === source);
         const record: ConnectedIntegration = {
-          id: integrationId(source),
+          id: existing && !isLegacyIntegrationId(existing.id) ? existing.id : newIntegrationId(source),
           source,
           connected: ok,
           scopes,
@@ -90,15 +110,17 @@ export const useIntegrationsStore = create<IntegrationsState & IntegrationsActio
             : [...get().integrations, record],
         });
 
-        syncRecord('connected_integrations', {
-          id: record.id,
-          source: record.source,
-          connected: record.connected,
-          scopes: record.scopes,
-          last_synced_at: record.lastSyncedAt ?? null,
-          status_message: record.statusMessage ?? null,
-          last_error: record.lastError ?? null,
-        }).catch(() => {});
+        // The table is UNIQUE(user_id, source): drop the user's own legacy row
+        // (RLS: a no-op for anyone else's) before writing the re-keyed one.
+        if (existing && existing.id !== record.id) {
+          void deleteRecord('connected_integrations', existing.id)
+            .catch(() => {})
+            .finally(() => {
+              syncRecord('connected_integrations', integrationRow(record)).catch(() => {});
+            });
+        } else {
+          syncRecord('connected_integrations', integrationRow(record)).catch(() => {});
+        }
 
         // Auto-sync right after a successful connect so the user sees
         // data immediately rather than "Connected but empty."
@@ -297,7 +319,14 @@ export const useIntegrationsStore = create<IntegrationsState & IntegrationsActio
           }),
           { orderBy: 'last_synced_at', ascending: false, limit: 50 },
         );
-        set({ integrations: merged });
+        const adopted = await adoptLegacyIds(
+          'connected_integrations',
+          merged,
+          isLegacyIntegrationId,
+          (e) => newIntegrationId(e.source),
+          (e) => syncRecord('connected_integrations', integrationRow(e)),
+        );
+        set({ integrations: adopted });
       },
     }),
     {

@@ -29,7 +29,7 @@ jest.mock('../supabase', () => {
   };
 });
 
-import { adoptLegacyDayIds, isLegacyDayId, newDayScopedId } from '../syncService';
+import { adoptLegacyDayIds, adoptLegacyIds, isLegacyDayId, newDayScopedId } from '../syncService';
 
 beforeEach(() => {
   mockState.userId = 'user-b';
@@ -79,5 +79,25 @@ describe('day-scoped ids', () => {
     mockState.error = { message: 'boom' };
     expect(await adoptLegacyDayIds('check_ins', 'checkin', entries, push)).toBe(entries);
     expect(push).not.toHaveBeenCalled();
+  });
+});
+
+describe('connected_integrations legacy ids (int-<source>)', () => {
+  it('re-keys an unowned int-apple_health row and leaves an owned one', async () => {
+    const isLegacy = (id: string) => /^int-[a-z_]+$/.test(id);
+    const push = jest.fn().mockResolvedValue(true);
+    mockState.ownedIds = ['int-health_connect'];
+    const out = await adoptLegacyIds(
+      'connected_integrations' as never,
+      [
+        { id: 'int-apple_health', source: 'apple_health' },
+        { id: 'int-health_connect', source: 'health_connect' },
+      ],
+      isLegacy,
+      (e) => `int-${e.source}-x1`,
+      push,
+    );
+    expect(out.map((e) => e.id)).toEqual(['int-apple_health-x1', 'int-health_connect']);
+    expect(push).toHaveBeenCalledTimes(1);
   });
 });

@@ -388,7 +388,27 @@ export async function adoptLegacyDayIds<E extends { id: string; date: string }>(
   entries: E[],
   push: (entry: E) => Promise<boolean>,
 ): Promise<E[]> {
-  const legacy = entries.filter((e) => isLegacyDayId(prefix, e.id));
+  return adoptLegacyIds(
+    table,
+    entries,
+    (id) => isLegacyDayId(prefix, id),
+    (e) => newDayScopedId(prefix, e.date),
+    push,
+  );
+}
+
+/**
+ * The general form: any shared-primary-key id scheme (`int-<source>` for
+ * connected_integrations is the other one). See adoptLegacyDayIds.
+ */
+export async function adoptLegacyIds<E extends { id: string }>(
+  table: TableName,
+  entries: E[],
+  isLegacy: (id: string) => boolean,
+  makeId: (entry: E) => string,
+  push: (entry: E) => Promise<boolean>,
+): Promise<E[]> {
+  const legacy = entries.filter((e) => isLegacy(e.id));
   if (legacy.length === 0) return entries;
   const userId = await getUserId();
   if (!userId) return entries;
@@ -403,7 +423,7 @@ export async function adoptLegacyDayIds<E extends { id: string; date: string }>(
     const renamed = new Map<string, E>();
     for (const e of legacy) {
       if (owned.has(e.id)) continue;
-      const next = { ...e, id: newDayScopedId(prefix, e.date) };
+      const next = { ...e, id: makeId(e) };
       renamed.set(e.id, next);
       await push(next).catch(() => false);
     }
