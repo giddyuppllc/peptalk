@@ -6,6 +6,7 @@ import React from 'react';
 import { toUserMessage } from '../src/lib/errorMessages';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Linking, Platform } from 'react-native';
 import { Alert } from '../src/lib/alert';
+import { billingCopy } from '../src/lib/billingCopy';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -145,7 +146,7 @@ const SOCIAL_PROOF = [
   {
     icon: 'shield-checkmark-outline' as const,
     title: 'Cancel anytime',
-    body: 'manage your subscription from your Apple ID at any time',
+    body: billingCopy().perk,
   },
 ];
 
@@ -397,7 +398,7 @@ function TierCard({
         <View style={styles.tierCta}>
           <Text style={styles.renewDisclosure}>
             {displayPrice}{plan?.period} · auto-renews monthly until cancelled.
-            Cancel anytime in your Apple ID Subscriptions.
+            {' '}{billingCopy().renew}
           </Text>
           <GradientButton
             label={purchasing ? 'Processing…' : `Subscribe to ${info.name}`}
@@ -714,9 +715,7 @@ export default function SubscriptionScreen() {
             tappable from the paywall itself, not buried in app settings. */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Subscriptions auto-renew unless cancelled at least 24 hours before
-            the renewal date. Payment is charged to your Apple ID account at
-            confirmation. Manage or cancel in your Apple ID Subscriptions.
+            {billingCopy().footer}
           </Text>
           <View style={styles.legalLinks}>
             <TouchableOpacity

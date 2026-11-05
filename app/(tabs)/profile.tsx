@@ -6,6 +6,7 @@ import React, { useState, useCallback } from 'react';
 // bridge init for users who actually need it.
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Switch, StyleSheet, Image, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { Alert } from '../../src/lib/alert';
+import { deleteAccountSubscriptionMessage } from '../../src/lib/billingCopy';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -725,9 +726,7 @@ export default function ProfileScreen() {
 
     if (hasActiveSubscription) {
       const tierName = tier === 'pro' ? 'PepTalk Pro' : 'PepTalk+';
-      const message = status === 'expiring'
-        ? `Your ${tierName} subscription is set to renew soon through your Apple ID. Deleting your PepTalk account does NOT cancel that renewal — Apple owns billing.\n\nTap "Manage subscription" first to turn off auto-renew, then come back to delete.`
-        : `Your ${tierName} subscription will keep renewing through your Apple ID unless you cancel it FIRST.\n\nDeleting your PepTalk account does NOT cancel your Apple subscription — Apple owns billing.\n\nWe recommend you tap "Manage subscription" first to cancel through Apple, then come back to delete the account.`;
+      const message = deleteAccountSubscriptionMessage(tierName, status === 'expiring');
       Alert.alert(
         'Subscription still active',
         message,
