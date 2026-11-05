@@ -14,7 +14,7 @@
  *   SQUARE_WEBHOOK_URL             (this function's public URL — signed into the HMAC)
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { timingSafeEqual, parseRef, planForProduct } from '../_shared/square.ts';
+import { timingSafeEqual, parseRef, planForProduct, squareSubscriptionPatch } from '../_shared/square.ts';
 import { parseCreditRef } from '../_shared/credits.ts';
 import { withErrorReporting } from '../_shared/sentry.ts';
 
@@ -85,47 +85,52 @@ async function onInvoicePaid(invoice: any): Promise<Response> {
   return ok();
 }
 
-/** Subscription lifecycle (subscription.created/updated): active/cancel + expiry. */
+/** Subscription lifecycle (subscription.created/updated): active/cancel + expiry.
+ *  The decision lives in _shared/square.ts squareSubscriptionPatch (tested). */
 async function onSubscription(sub: any): Promise<Response> {
   const subId = sub?.id;
   if (!subId) return ok();
-  const status: string = sub?.status ?? ''; // ACTIVE | CANCELED | DEACTIVATED | PAUSED
+  const status: string = sub?.status ?? ''; // ACTIVE | PENDING | CANCELED | DEACTIVATED | PAUSED
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-  // charged_through_date ('YYYY-MM-DD') = paid-through; keep access until then
-  // even after a cancel, then it expires naturally.
-  const chargedThroughMs = sub?.charged_through_date
-    ? new Date(`${sub.charged_through_date}T23:59:59Z`).getTime()
-    : null;
-  const paidThroughFuture = chargedThroughMs != null && chargedThroughMs > Date.now();
 
-  /* CANCELED does NOT mean "access ends now". Square cancels at the END of the
-     billing period already paid for, so a subscription sits in CANCELED with a
-     charged_through_date still in the future — Square's own example shows
-     status CANCELED, canceled_date 2021-10-30, charged_through_date 2021-11-20.
-     This previously read `is_active: status === 'ACTIVE'`, and because
-     resolveEffectiveTier() selects on is_active = true, cancelling revoked a
-     paying customer's Pro instantly and threw away up to a month they had
-     already been billed for — the exact opposite of the line above it.
-     DEACTIVATED (billing failure / hard stop) and PAUSED still revoke. */
-  const patch: Record<string, unknown> = {
-    is_active: status === 'ACTIVE' || (status === 'CANCELED' && paidThroughFuture),
-    last_validated_at: new Date().toISOString(),
-  };
-  if (chargedThroughMs != null) {
-    patch.expires_at = new Date(chargedThroughMs).toISOString();
-  }
-  const { data, error } = await admin
+  const { data: rows, error: readErr } = await admin
     .from('subscriptions')
-    .update(patch)
+    .select('id, expires_at')
     .eq('original_transaction_id', subId)
-    .eq('platform', 'web')
-    .select('user_id');
-  if (error) {
-    console.error('[square-webhook] subscription update failed', error);
+    .eq('platform', 'web');
+  if (readErr) {
+    console.error('[square-webhook] subscription read failed', readErr);
     return new Response('db error', { status: 500 });
   }
-  if (!data?.length) console.warn('[square-webhook] subscription event for unknown sub', subId, status);
-  else console.log(`[square-webhook] sub ${subId} → ${status}`);
+  if (!rows?.length) {
+    // Usually subscription.created racing square-subscribe's own insert —
+    // that insert grants access, so nothing is lost.
+    console.warn('[square-webhook] subscription event for unknown sub', subId, status);
+    return ok();
+  }
+
+  for (const row of rows as { id: string; expires_at: string | null }[]) {
+    const patch = squareSubscriptionPatch({
+      status,
+      chargedThroughDate: sub?.charged_through_date ?? null,
+      timezone: sub?.timezone ?? null,
+      nowMs: Date.now(),
+      existingExpiresAt: row.expires_at,
+    });
+    if (Object.keys(patch).length === 0) {
+      console.warn(`[square-webhook] sub ${subId}: unhandled status ${status} — row left unchanged`);
+      continue;
+    }
+    const { error } = await admin
+      .from('subscriptions')
+      .update({ ...patch, last_validated_at: new Date().toISOString() })
+      .eq('id', row.id);
+    if (error) {
+      console.error('[square-webhook] subscription update failed', error);
+      return new Response('db error', { status: 500 });
+    }
+  }
+  console.log(`[square-webhook] sub ${subId} → ${status}`);
   return ok();
 }
 
