@@ -255,6 +255,31 @@ const activeMessages = (chats: Chat[], activeChatId: string | null): ChatMessage
   return chats.find((c) => c.id === activeChatId)?.messages ?? [];
 };
 
+/**
+ * A cloud chat_messages row as a local message.
+ *
+ * Model replies are written by the server as role 'assistant'. A 'bot' row in
+ * the cloud was written by the app — the on-device fallback, a canned reply or
+ * a notice — because the app never syncs streamed text (shouldCloudSyncMessage).
+ * Those rows predate the `source: 'local'` tag, so after a reinstall they came
+ * back untagged and were sent to the model as Aimee's own earlier words. They
+ * are tagged here, which keeps them out of every history builder.
+ */
+export function messageFromServerRow(r: {
+  id: string;
+  role: ChatMessage['role'];
+  content: string | null;
+  created_at: string | null;
+}): ChatMessage {
+  return {
+    id: r.id,
+    role: r.role,
+    content: r.content ?? '',
+    timestamp: r.created_at ?? new Date().toISOString(),
+    ...(r.role === 'bot' ? { source: 'local' as const } : {}),
+  };
+}
+
 export const useChatStore = create<ChatStore>()(
   persist(
     (set, get) => ({
@@ -710,12 +735,7 @@ export const useChatStore = create<ChatStore>()(
         for (const r of rows) {
           const chatId = r.chat_id;
           if (!chatId || tombstoned.has(chatId) || !r.id) continue;
-          const msg: ChatMessage = {
-            id: r.id,
-            role: r.role,
-            content: r.content ?? '',
-            timestamp: r.created_at ?? new Date().toISOString(),
-          };
+          const msg = messageFromServerRow(r);
           const bucket = grouped.get(chatId);
           if (bucket) bucket.push(msg);
           else grouped.set(chatId, [msg]);
