@@ -83,9 +83,9 @@ export const SOURCES: Source[] = [
   {
     id: 'fda-ozempic-label',
     type: 'regulatory',
-    title: 'Ozempic (semaglutide) Prescribing Information — FDA',
+    title: 'Ozempic (semaglutide) Prescribing Information — FDA label (DailyMed)',
     year: 2024,
-    url: 'https://www.accessdata.fda.gov/drugsatfda_docs/label/2024/209637s029lbl.pdf',
+    url: 'https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=adec4fd2-6858-4c99-91d4-531f5f2a2d79',
     lastReviewed: '2026-04-29',
     quote:
       'Boxed warning: risk of thyroid C-cell tumors. Contraindicated in patients with personal or family history of MTC or MEN 2.',
@@ -95,9 +95,9 @@ export const SOURCES: Source[] = [
   {
     id: 'fda-mounjaro-label',
     type: 'regulatory',
-    title: 'Mounjaro (tirzepatide) Prescribing Information — FDA',
+    title: 'Mounjaro (tirzepatide) Prescribing Information — FDA label (DailyMed)',
     year: 2024,
-    url: 'https://www.accessdata.fda.gov/drugsatfda_docs/label/2024/215866s019lbl.pdf',
+    url: 'https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=d2d7da5d-ad07-4228-955f-cf7e355c8cc0',
     lastReviewed: '2026-04-29',
     quote:
       'Recommended titration: 2.5 mg weekly for 4 weeks, then escalate by 2.5 mg every 4 weeks based on tolerability and response (max 15 mg weekly).',
