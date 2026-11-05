@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:mutation": "stryker run",
-    "test:edge": "deno test --no-lock --allow-env --allow-read supabase/functions/_shared/aimee_policy_test.ts",
+    "test:edge": "deno test --no-lock --allow-env --allow-read supabase/functions/_shared/aimee_policy_test.ts supabase/functions/_shared/replyBudget_test.ts",
     "verify:calc": "tsx scripts/verify-calculator-math.ts",
     "verify:sanitize": "tsx scripts/verify-aimee-action-sanitize.ts",
     "verify:cycle": "tsx scripts/verify-cycle-predictor.ts",
