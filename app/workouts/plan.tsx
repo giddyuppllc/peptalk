@@ -115,9 +115,14 @@ export default function PlanScreen() {
         days: [day],
       },
     });
+    // The calendar row this day was seeded as (program/[programId] seeds one
+    // planned log per training day) — finishing marks that row done.
+    const plannedLog = useWorkoutStore
+      .getState()
+      .logs.find((l) => !l.completedAt && l.date === planned.date && l.id.startsWith('plan-'));
     router.push({
       pathname: '/workouts/generated-tracker' as any,
-      params: { workoutId: id, dayIndex: '0' },
+      params: { workoutId: id, dayIndex: '0', ...(plannedLog ? { plannedLogId: plannedLog.id } : {}) },
     });
   };
 

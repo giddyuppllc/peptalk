@@ -88,7 +88,18 @@ interface WorkoutActions {
   // Live workout
   beginWorkout: (programId?: string, weekNum?: number, dayId?: string) => void;
   logSet: (set: WorkoutLogSet) => void;
-  finishWorkout: (rating?: 1 | 2 | 3 | 4 | 5, notes?: string, youtubeUrl?: string, workoutName?: string) => void;
+  finishWorkout: (
+    rating?: 1 | 2 | 3 | 4 | 5,
+    notes?: string,
+    youtubeUrl?: string,
+    workoutName?: string,
+    /**
+     * The planned calendar workout this session completes. Without it the
+     * planned row stayed "not done" forever next to a separate completed one:
+     * production had 296 planned workouts and not one marked complete.
+     */
+    opts?: { plannedLogId?: string },
+  ) => void;
   cancelWorkout: () => void;
 
   // Generated workouts (custom from the generator sheet)
@@ -331,7 +342,7 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
         set({ inProgress: { ...wp, sets: [...wp.sets, logSet] } });
       },
 
-      finishWorkout: (rating, notes, youtubeUrl, workoutName) => {
+      finishWorkout: (rating, notes, youtubeUrl, workoutName, opts) => {
         const wp = get().inProgress;
         if (!wp) return;
         const now = new Date();
@@ -339,8 +350,21 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
         const durationMinutes = Math.round(
           (now.getTime() - started.getTime()) / 60000,
         );
+        // Completing a planned day reuses the planned row's id, so the same
+        // cloud row flips to done instead of a duplicate appearing beside it.
+        const planned = opts?.plannedLogId
+          ? get().logs.find((l) => l.id === opts.plannedLogId && !l.completedAt)
+          : undefined;
         const completed: WorkoutLog = {
           ...wp,
+          ...(planned
+            ? {
+                id: planned.id,
+                programId: wp.programId ?? planned.programId,
+                dayId: wp.dayId ?? planned.dayId,
+                workoutName: planned.workoutName,
+              }
+            : {}),
           durationMinutes,
           rating,
           notes,
@@ -359,7 +383,7 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
         }
 
         set({
-          logs: [completed, ...get().logs],
+          logs: [completed, ...get().logs.filter((l) => l.id !== completed.id)],
           inProgress: null,
           activeProgram: updatedProgram,
         });

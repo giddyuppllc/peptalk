@@ -76,7 +76,7 @@ function GeneratedTrackerScreen() {
   const t = useTheme();
   const accent = useSectionAccent();
   const router = useRouter();
-  const params = useLocalSearchParams<{ workoutId?: string; dayIndex?: string }>();
+  const params = useLocalSearchParams<{ workoutId?: string; dayIndex?: string; plannedLogId?: string }>();
   const workoutId = params.workoutId ?? '';
   const dayIndex = parseInt(params.dayIndex ?? '0', 10);
 
@@ -263,7 +263,9 @@ function GeneratedTrackerScreen() {
                 logSet(logEntry);
               });
             });
-            finishWorkout(undefined, undefined, undefined, saved?.name);
+            finishWorkout(undefined, undefined, undefined, saved?.name, {
+              plannedLogId: params.plannedLogId,
+            });
             router.replace('/(tabs)/workouts');
           },
         },
