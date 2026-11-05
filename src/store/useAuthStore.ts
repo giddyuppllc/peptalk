@@ -91,7 +91,13 @@ interface AuthStore {
    *  show a "check your email" UI and NOT route into the authed app in that
    *  case. Returns `{ requiresEmailConfirmation: false }` when signup
    *  granted a session immediately. */
-  signup: (firstName: string, lastName: string, email: string, password: string) => Promise<{ requiresEmailConfirmation: boolean }>;
+  signup: (
+    firstName: string,
+    lastName: string,
+    email: string,
+    password: string,
+    opts?: { marketingOptIn?: boolean; source?: string },
+  ) => Promise<{ requiresEmailConfirmation: boolean }>;
   logout: () => Promise<void>;
   /** Permanently delete the current user's account (server-side + local wipe). */
   deleteAccount: () => Promise<void>;
@@ -194,7 +200,16 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      signup: async (firstName: string, lastName: string, email: string, password: string) => {
+      signup: async (
+        firstName: string,
+        lastName: string,
+        email: string,
+        password: string,
+        // Email-marketing consent from the sign-up form (unchecked by default).
+        // Sent as auth metadata so handle_new_user records it on the profile
+        // even when email confirmation means there is no session yet.
+        opts?: { marketingOptIn?: boolean; source?: string },
+      ) => {
         set({ isLoading: true });
         trackSignupStarted();
 
@@ -209,7 +224,13 @@ export const useAuthStore = create<AuthStore>()(
             email: normalizedEmail,
             password,
             options: {
-              data: { name: fullName, first_name: firstName, last_name: lastName },
+              data: {
+                name: fullName,
+                first_name: firstName,
+                last_name: lastName,
+                marketing_opt_in: opts?.marketingOptIn === true,
+                marketing_opt_in_source: opts?.source ?? 'signup',
+              },
               // Send the confirmation email back to the platform the user
               // actually signed up on. On native this is the peptalk://
               // scheme, which app/_layout.tsx picks up and exchanges for a

@@ -179,6 +179,8 @@ export default function OnboardingScreen() {
   const [accountError, setAccountError] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'plus' | 'pro'>('free');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  // Optional and OFF by default — never a condition of creating an account.
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   // §11.2 + §11.4 — referral-claim string + community public-tracking
   // opt-in preset. Both committed at handleNext() on the account step.
   const [referralClaimRaw, setReferralClaimRaw] = useState('');
@@ -343,6 +345,7 @@ export default function OnboardingScreen() {
               accountLastName.trim(),
               accountEmail,
               accountPassword,
+              { marketingOptIn, source: 'app_onboarding' },
             );
         // Don't grant a paid tier locally — the IAP receipt validator
         // (Apple/Google webhook → validate-purchase edge fn → profile
@@ -1084,6 +1087,26 @@ export default function OnboardingScreen() {
                     onValueChange={setAcceptedTerms}
                     trackColor={{ false: 'rgba(0,0,0,0.10)', true: `${HIGHLIGHT}55` }}
                     thumbColor={acceptedTerms ? HIGHLIGHT : '#ccc'}
+                  />
+                </View>
+
+                {/* Marketing consent — optional, unchecked by default */}
+                <View style={s.termsRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.termsBody}>
+                      Email me offers and news from PepTalk and our partner Science Based Body. Optional — unsubscribe anytime. See our{' '}
+                      <Text style={{ textDecorationLine: 'underline' }} onPress={() => router.push('/privacy' as any)}>
+                        Privacy Policy
+                      </Text>
+                      .
+                    </Text>
+                  </View>
+                  <Switch
+                    value={marketingOptIn}
+                    onValueChange={setMarketingOptIn}
+                    trackColor={{ false: 'rgba(0,0,0,0.10)', true: `${HIGHLIGHT}55` }}
+                    thumbColor={marketingOptIn ? HIGHLIGHT : '#ccc'}
+                    accessibilityLabel="Email me offers and news from PepTalk and Science Based Body"
                   />
                 </View>
               </View>

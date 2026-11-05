@@ -30,6 +30,8 @@ export default function AuthScreen() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  // Optional and OFF by default — never a condition of creating an account.
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
 
   const login = useAuthStore((s) => s.login);
   const signup = useAuthStore((s) => s.signup);
@@ -89,7 +91,10 @@ export default function AuthScreen() {
     if (!acceptedTerms) { setError('You must accept the terms to continue'); return; }
     setError('');
     try {
-      const result = await signup(firstName.trim(), lastName.trim(), normalizedEmail, password);
+      const result = await signup(firstName.trim(), lastName.trim(), normalizedEmail, password, {
+        marketingOptIn,
+        source: 'app_auth',
+      });
       if (result.requiresEmailConfirmation) {
         // Email-confirmation mode: Supabase returned the user but no
         // session. We can't drop them into tabs (authed calls would
@@ -381,6 +386,24 @@ export default function AuthScreen() {
                     accessibilityLabel="Accept terms and disclaimer"
                   />
                 </View>
+              </View>
+
+              {/* Marketing consent — optional, unchecked by default */}
+              <View style={s.disclaimerToggle}>
+                <Text style={[s.disclaimerToggleText, { flex: 1, paddingRight: 12 }]}>
+                  Email me offers and news from PepTalk and our partner Science Based Body. Optional — unsubscribe anytime. See our{' '}
+                  <Text style={{ textDecorationLine: 'underline' }} onPress={() => router.push('/privacy' as any)}>
+                    Privacy Policy
+                  </Text>
+                  .
+                </Text>
+                <Switch
+                  value={marketingOptIn}
+                  onValueChange={setMarketingOptIn}
+                  trackColor={{ false: 'rgba(0,0,0,0.10)', true: `${ACCENT}55` }}
+                  thumbColor={marketingOptIn ? ACCENT : '#D1D5DB'}
+                  accessibilityLabel="Email me offers and news from PepTalk and Science Based Body"
+                />
               </View>
 
               {!!error && <Text style={s.error} accessibilityRole="alert" accessibilityLiveRegion="polite">{error}</Text>}
