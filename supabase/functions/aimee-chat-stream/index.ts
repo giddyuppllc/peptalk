@@ -55,6 +55,8 @@ import { AIMEE_TOOLS, executeTool } from './_tools.ts';
 import { checkCostCap, denialMessage, recordSpend } from './_cost.ts';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
+import { normalizePlatform } from '../_shared/rxPolicy.ts';
+import { isSystemNoticeText } from '../_shared/chatNotices.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -90,6 +92,14 @@ const TIER_CAN_USE_TOOLS: Record<string, boolean> = {
 const MAX_MESSAGES = 30;
 const MAX_TOTAL_CHARS = 40_000;
 const MAX_TOOL_ROUNDS = 3;
+
+/**
+ * Ceiling on one model round's output. 1024 cut longer answers off, and if the
+ * model reasons before answering those tokens come out of the same budget. The
+ * per-tier monthly dollar allowance (_cost.ts) is unchanged and is charged on
+ * every token actually generated, reasoning included (see _grok.ts usage).
+ */
+const REPLY_MAX_TOKENS = 4096;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -569,7 +579,7 @@ async function streamRound(args: {
     // log a dose, change a protocol, or navigate the app.
     tools: args.canUseTools ? AIMEE_TOOLS : [],
     toolChoice: args.toolChoice,
-    maxTokens: 1024,
+    maxTokens: REPLY_MAX_TOKENS,
     temperature: 0.7,
   })) {
     switch (ev.type) {
@@ -748,6 +758,8 @@ function sanitizeContext(
     selfStatedGoal: s(clientContext?.selfStatedGoal, 400),
     workoutDaysPerWeek: n(clientContext?.workoutDaysPerWeek),
     currentRoute: s(clientContext?.currentRoute, 100),
+    // Chooses the prescription-compound rules; unknown ⇒ strict (iOS) rules.
+    platform: normalizePlatform(clientContext?.platform),
   };
 }
 
@@ -757,6 +769,7 @@ function mapMessages(messages: any[]): GrokMessage[] {
   for (const m of messages) {
     if (!m || typeof m.content !== 'string' || !m.content.trim()) continue;
     const role = m.role === 'assistant' || m.role === 'bot' ? 'assistant' : 'user';
+    if (role === 'assistant' && isSystemNoticeText(m.content)) continue;
     out.push({ role, content: m.content });
   }
   // OpenAI does not strictly require user-first, but we drop a leading

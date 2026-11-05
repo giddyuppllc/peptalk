@@ -14,6 +14,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildAimeeSystemPrompt, SAFETY_TRAILER, type AimeeServerContext } from './_prompt.ts';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
+import { normalizePlatform } from '../_shared/rxPolicy.ts';
+import { isSystemNoticeText } from '../_shared/chatNotices.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 // Default to Grok — matches the other edge functions. If secrets aren't set
@@ -238,6 +240,8 @@ Deno.serve(async (req) => {
       currentRoute: typeof clientContext?.currentRoute === 'string'
         ? clientContext.currentRoute.slice(0, 100)
         : undefined,
+      // Chooses the prescription-compound rules; unknown ⇒ strict (iOS) rules.
+      platform: normalizePlatform(clientContext?.platform),
     };
     const serverSystemPrompt = buildAimeeSystemPrompt(safeContext);
 
@@ -258,10 +262,15 @@ Deno.serve(async (req) => {
         model: OPENAI_MODEL,
         messages: [
           { role: 'system', content: serverSystemPrompt },
-          ...messages,
+          // Paywall bubbles are not Aimee's words; the model repeats them if
+          // they come back as assistant turns (see _shared/chatNotices.ts).
+          ...messages.filter(
+            (m: { role?: string; content?: unknown }) =>
+              !(m?.role === 'assistant' && isSystemNoticeText(String(m?.content ?? ''))),
+          ),
           { role: 'user', content: SAFETY_TRAILER },
         ],
-        max_tokens: 1024,
+        max_tokens: 4096,
         temperature: 0.7,
       }),
       signal: AbortSignal.timeout(45000),

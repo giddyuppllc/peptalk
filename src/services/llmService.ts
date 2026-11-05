@@ -208,6 +208,9 @@ interface AimeeServerContext {
   selfStatedGoal?: string;
   workoutDaysPerWeek?: number;
   currentRoute?: string;
+  /** Platform.OS — the server picks the prescription-compound rules from it
+   *  (iOS keeps the App-Review-safe wording; see _shared/rxPolicy.ts). */
+  platform?: string;
 }
 
 /** The device's LOCAL calendar date as YYYY-MM-DD (new Date() is local in RN). */
@@ -410,6 +413,7 @@ function buildServerContext(context: EnhancedBotContext): AimeeServerContext {
     bodyTrendSummary,
     selfStatedGoal,
     workoutDaysPerWeek,
+    platform: Platform.OS,
   };
 }
 

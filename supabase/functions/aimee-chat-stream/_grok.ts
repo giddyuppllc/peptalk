@@ -94,6 +94,26 @@ export interface GrokStreamEvent {
   usage?: GrokUsage;
 }
 
+/**
+ * Tokens to charge for one call, from the provider's usage block.
+ *
+ * Output is everything that is not the prompt: total_tokens - prompt_tokens
+ * when the provider reports a total. That counts reasoning tokens whether or
+ * not a provider folds them into completion_tokens (conventions differ), so the
+ * per-tier allowance cannot be outrun by a model that thinks a lot.
+ */
+export function usageFromWire(u: any): GrokUsage {
+  const input = Number(u?.prompt_tokens ?? 0) || 0;
+  const completion = Number(u?.completion_tokens ?? 0) || 0;
+  const reasoning = Number(u?.completion_tokens_details?.reasoning_tokens ?? 0) || 0;
+  const total = Number(u?.total_tokens ?? 0) || 0;
+  // Without a total, add reasoning on top: it may double-count on a provider
+  // that already folds it in, and over-charging the allowance is the safe way
+  // to be wrong.
+  const output = total > input ? total - input : completion + reasoning;
+  return { input_tokens: input, output_tokens: Math.max(output, completion) };
+}
+
 export function tokensToMicrocents(usage: GrokUsage): number {
   return (
     usage.input_tokens * INPUT_MICROCENTS_PER_TOKEN +
@@ -131,7 +151,7 @@ export async function* streamGrok(args: {
     model: GROK_MODEL,
     stream: true,
     stream_options: { include_usage: true },
-    max_tokens: args.maxTokens ?? 1024,
+    max_tokens: args.maxTokens ?? 4096,
     temperature: args.temperature ?? 0.7,
     messages: [
       { role: 'system', content: args.system },
@@ -232,10 +252,7 @@ export async function* streamGrok(args: {
       if (parsed?.usage) {
         yield {
           type: 'usage',
-          usage: {
-            input_tokens: parsed.usage.prompt_tokens ?? 0,
-            output_tokens: parsed.usage.completion_tokens ?? 0,
-          },
+          usage: usageFromWire(parsed.usage),
         };
       }
     }
@@ -264,7 +281,7 @@ export async function completeGrok(args: {
   }
   const body: Record<string, unknown> = {
     model: GROK_MODEL,
-    max_tokens: args.maxTokens ?? 1024,
+    max_tokens: args.maxTokens ?? 4096,
     temperature: args.temperature ?? 0.7,
     messages: [
       { role: 'system', content: args.system },
@@ -294,10 +311,7 @@ export async function completeGrok(args: {
   return {
     content: typeof msg.content === 'string' ? msg.content : '',
     toolCalls: Array.isArray(msg.tool_calls) ? msg.tool_calls : [],
-    usage: {
-      input_tokens: json?.usage?.prompt_tokens ?? 0,
-      output_tokens: json?.usage?.completion_tokens ?? 0,
-    },
+    usage: usageFromWire(json?.usage),
     finishReason: choice?.finish_reason ?? 'stop',
   };
 }
