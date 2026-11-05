@@ -1521,7 +1521,9 @@ function respondGoalSuggest(message: string, context: BotContext): string {
   if (targetGoals.length === 0) {
     parts.push(`I'd love to suggest peptides based on your goals, but I don't know your health objectives yet.`);
     parts.push('');
-    parts.push(`Set your goals in **Settings → Onboarding** or tell me what you're looking for:`);
+    // There is no Settings → Onboarding screen; goals are edited from
+    // Profile → Edit Profile (it opens onboarding in edit mode).
+    parts.push(`Set your goals in **Profile → Edit Profile** or tell me what you're looking for:`);
     parts.push(`• "What should I take for recovery?"`, `• "Best peptides for sleep"`, `• "Help me with energy"`);
     return parts.join('\n');
   }
