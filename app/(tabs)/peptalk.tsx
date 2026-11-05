@@ -44,6 +44,7 @@ import {
   generateAIResponse,
   generateAIResponseStream,
   isAIAvailable,
+  SIGN_IN_AGAIN,
 } from '../../src/services/llmService';
 import { canSendToCloud } from '../../src/services/privacyGuard';
 import { generateCorrelationInsights, buildCorrelationSummaryForBot } from '../../src/services/watchCorrelationService';
@@ -158,10 +159,12 @@ export default function PepTalkScreen() {
   // reachability alone was not enough.
   const isDeviceOnline = useIsOnline();
   const aimeeInputRef = useTourTarget('aimee_chat_input');
-  const { prefill, message: prefillMessage, speak: speakFlag } = useLocalSearchParams<{
+  const { prefill, message: prefillMessage, speak: speakFlag, src: prefillSrc } = useLocalSearchParams<{
     prefill?: string;
     message?: string;
     speak?: string;
+    /** 'obs' = the message is an orb's observation line (useAimeeRouter). */
+    src?: string;
   }>();
   const shouldSpeakNextReply = speakFlag === '1';
   // Split selectors — destructuring the full store subscribes to every change,
@@ -616,9 +619,20 @@ export default function PepTalkScreen() {
             stillStreaming = false;
             updateMessage(placeholderId, { streaming: false });
           } else if (ev.type === 'error') {
-            // Don't surface the placeholder as an error — drop a friendly
-            // line so it doesn't render as an empty bubble. The caller
-            // fallback path will not run because sawAnyEvent is true.
+            /*
+             * Nothing streamed yet: hand over to the fallbacks (legacy
+             * endpoint, then the on-device bot) instead of ending on an error
+             * line. Every network/5xx failure used to end here with "I had
+             * trouble responding" — the fallback chain, which exists for
+             * exactly these failures, never ran. The sign-in case still shows
+             * its message: that one needs the user to act.
+             */
+            if (!accumulated && ev.message !== SIGN_IN_AGAIN) {
+              clearTimeout(firstEventTimer);
+              clearTimeout(hardCapTimer);
+              removeMessage(placeholderId);
+              return false;
+            }
             if (!accumulated) {
               updateMessage(placeholderId, {
                 content:
@@ -726,7 +740,10 @@ export default function PepTalkScreen() {
       const context = buildContext();
       const localFallback = () => {
         try {
-          const botResponse = generateLocalBotResponse(prefillMessage, context);
+          const botResponse = generateLocalBotResponse(prefillMessage, {
+            ...context,
+            fromObservation: prefillSrc === 'obs',
+          });
           handleBotResponse(botResponse);
         } catch (err) {
           if (__DEV__) console.warn('[aimee] prefill local fallback threw:', err);
@@ -774,6 +791,7 @@ export default function PepTalkScreen() {
     }
   }, [
     prefillMessage,
+    prefillSrc,
     messages.length,
     addMessage,
     setTyping,

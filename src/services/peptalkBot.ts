@@ -28,6 +28,8 @@ import { PEPTIDES, getPeptideById, getPeptidesByCategory } from '../data/peptide
 import { analyzeStack, getKnownInteraction } from './analysisEngine';
 import { getProtocolsByPeptide, PROTOCOL_TEMPLATES } from '../data/protocols';
 import { getDosingTableEntry } from '../data/peptideDosingTable';
+import { matchAppPrompt, respondAppPrompt, respondObservation } from './aimeeAppPrompts';
+import { withholdRxDosing, strictRxPlatform } from '../lib/rxCompounds';
 import { BOT_MEDICAL_SUFFIX, BOT_INFO_SUFFIX } from '../constants/legal';
 import { EXERCISES } from '../data/exercises';
 import { WORKOUT_PROGRAMS } from '../data/workoutPrograms';
@@ -508,7 +510,7 @@ function detectIntent(message: string, peptides: Peptide[]): BotIntent {
 
   // Goal-based suggestions
   if (
-    /\b(what (should|can) i take|recommend|suggest|peptide for|best for|help (me|with)|good for my)\b/i.test(lower) &&
+    /\b(what (should|can) i take|recommend|suggest|peptides? for|best for|helps? (me|with)|good for my|is there an? (peptide|compound)|peptides? (that|which|to) help)\b/i.test(lower) &&
     peptides.length === 0
   ) {
     return 'goal_suggest';
@@ -947,7 +949,7 @@ function respondCategoryExplore(message: string): string {
   return parts.join('\n');
 }
 
-function respondDosingProtocol(peptides: Peptide[], context?: BotContext): string {
+function respondDosingProtocol(peptides: Peptide[], context?: BotContext, platform?: string): string {
   const enhanced = context as EnhancedBotContext | undefined;
   const hp = enhanced?.healthProfile;
   const parts: string[] = [];
@@ -1070,7 +1072,12 @@ function respondDosingProtocol(peptides: Peptide[], context?: BotContext): strin
   } else {
     parts.push(`I have detailed research protocols for ${PROTOCOL_TEMPLATES.length} peptides. Which peptide are you interested in?`);
     parts.push('');
-    parts.push(`Popular protocols: BPC-157, CJC-1295 + Ipamorelin, Semaglutide, Semax, DSIP, Epithalon`);
+    // Semaglutide is prescription-only: off the list where the rules say so.
+    parts.push(
+      strictRxPlatform(platform)
+        ? `Popular protocols: BPC-157, CJC-1295 + Ipamorelin, Semaglutide, Semax, DSIP, Epithalon`
+        : `Popular protocols: BPC-157, CJC-1295 + Ipamorelin, Semax, DSIP, Epithalon`,
+    );
   }
 
   parts.push('');
@@ -2135,12 +2142,122 @@ function getActions(intent: BotIntent, peptides: Peptide[], context: BotContext)
  * Local bot response generator — used as the offline/no-consent fallback
  * when the Grok AI API is unavailable or the user hasn't consented.
  */
+/** Platform.OS without making this module depend on react-native in tests. */
+function currentPlatform(context: BotContext): string | undefined {
+  if (context.platform) return context.platform;
+  try {
+    return require('react-native').Platform?.OS;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Dosing questions about a prescription compound on web/Android: the same
+ * answer the main chat gives (supabase/functions/_shared/rxPolicy.ts) — factual
+ * discussion yes, prescribing, doses, ranges, protocols and reconstitution no.
+ */
+function respondRxNoDosing(p: Peptide): string {
+  const parts: string[] = [];
+  parts.push(
+    `PepTalk doesn't provide prescribing, doses or protocols for prescription compounds like **${p.name}**. A licensed clinician who can see your full picture is the right person for that decision.`,
+  );
+  parts.push('');
+  parts.push(`What I can tell you about ${p.name}:`);
+  if (p.researchSummary) parts.push(p.researchSummary);
+  if (p.mechanismOfAction) parts.push(`• **How it works:** ${p.mechanismOfAction}`);
+  if (p.halfLife) parts.push(`• **Half-life:** ${p.halfLife}`);
+  const approval = (p as { approvalDetails?: string }).approvalDetails;
+  if (approval) parts.push(`• **Status:** ${approval}`);
+  return parts.join('\n');
+}
+
+/**
+ * "Delete my protocols", "edit my last dose" — requests to change the user's
+ * own data. The keyword router read "protocol" as a dosing question and
+ * answered with a dose warning (production, 2026-09-08). The fallback cannot
+ * change data, so it says where to do it.
+ */
+const MANAGE_RE =
+  /\b(delete|remove|clear|erase|cancel|undo|edit|change|fix|correct|rename)\b[^.?!]*\b(protocols?|stacks?|doses?|logs?|entries|entry|meals?|workouts?|check.?ins?|reminders?|account|data|history)\b/i;
+
+function respondManageData(message: string): { content: string; actions: BotAction[] } | null {
+  const m = message.match(MANAGE_RE);
+  if (!m) return null;
+  const thing = m[2].toLowerCase();
+  if (/protocol|stack/.test(thing)) {
+    return {
+      content: 'You can edit or remove protocols and stacks from **My Stacks**: open one, then use its menu.',
+      actions: [{ label: 'My Stacks', route: '/(tabs)/my-stacks', icon: 'layers-outline' }],
+    };
+  }
+  if (/dose|log|entr/.test(thing)) {
+    return {
+      content: 'Dose logs are edited from the **Dose tracker**: tap an entry to change or delete it.',
+      actions: [{ label: 'Dose tracker', route: '/doses/tracker', icon: 'list-outline' }],
+    };
+  }
+  if (/meal/.test(thing)) {
+    return {
+      content: 'Meals are edited from **Nutrition**: tap the meal in today’s log.',
+      actions: [{ label: 'Nutrition', route: '/nutrition', icon: 'nutrition-outline' }],
+    };
+  }
+  if (/workout/.test(thing)) {
+    return {
+      content: 'Workouts are edited from **My Workouts**.',
+      actions: [{ label: 'My Workouts', route: '/workouts/my-workouts', icon: 'barbell-outline' }],
+    };
+  }
+  if (/check.?in|reminder/.test(thing)) {
+    return {
+      content: 'Check-ins and reminders live on your **Calendar**: tap the day to change an entry.',
+      actions: [{ label: 'Calendar', route: '/(tabs)/calendar', icon: 'calendar-outline' }],
+    };
+  }
+  return {
+    content: 'Account and data settings are in your **Profile**, including deleting your account.',
+    actions: [{ label: 'Profile', route: '/(tabs)/profile', icon: 'person-outline' }],
+  };
+}
+
 export function generateLocalBotResponse(
   userMessage: string,
   context: BotContext
 ): ChatMessage {
+  // Orb taps (screen copy) and chip prompts get answers about the user's own
+  // data and the right screen — see aimeeAppPrompts.ts.
+  const appIntent = matchAppPrompt(userMessage);
+  if (context.fromObservation || appIntent) {
+    const r = context.fromObservation && !appIntent
+      ? respondObservation(userMessage)
+      : respondAppPrompt(appIntent!, context as EnhancedBotContext);
+    return {
+      id: uid(),
+      role: 'bot',
+      source: 'local',
+      content: r.content,
+      timestamp: new Date().toISOString(),
+      quickReplies: r.quickReplies.length > 0 ? r.quickReplies : undefined,
+      actions: r.actions.length > 0 ? r.actions : undefined,
+    };
+  }
+
+  const manage = respondManageData(userMessage);
+  if (manage) {
+    return {
+      id: uid(),
+      role: 'bot',
+      source: 'local',
+      content: manage.content,
+      timestamp: new Date().toISOString(),
+      actions: manage.actions,
+    };
+  }
+
   const mentionedPeptides = findMentionedPeptides(userMessage);
   const intent = detectIntent(userMessage, mentionedPeptides);
+  const platform = currentPlatform(context);
 
   let content: string;
 
@@ -2163,9 +2280,13 @@ export function generateLocalBotResponse(
     case 'category_explore':
       content = respondCategoryExplore(userMessage);
       break;
-    case 'dosing_protocol':
-      content = respondDosingProtocol(mentionedPeptides, context);
+    case 'dosing_protocol': {
+      const rx = mentionedPeptides.find((pp) => withholdRxDosing(pp.id, platform));
+      content = rx
+        ? respondRxNoDosing(rx)
+        : respondDosingProtocol(mentionedPeptides, context, platform);
       break;
+    }
     case 'side_effects':
       content = respondSideEffects(mentionedPeptides, context);
       break;
@@ -2211,6 +2332,7 @@ export function generateLocalBotResponse(
         quickReplies: quickReplies.length > 0 ? quickReplies : undefined,
         actions: journalActions.length > 0 ? journalActions : undefined,
         journalEntry: journalResult.journalEntry,
+        source: 'local',
       };
     }
     default:
@@ -2235,6 +2357,7 @@ export function generateLocalBotResponse(
     relatedPeptideIds: mentionedPeptides.map((p) => p.id),
     quickReplies: quickReplies.length > 0 ? quickReplies : undefined,
     actions: actions.length > 0 ? actions : undefined,
+    source: 'local',
   };
 }
 

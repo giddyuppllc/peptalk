@@ -143,6 +143,9 @@ function getKnowledgeBase(): string {
   return _knowledgeBase;
 }
 
+/** Shown when there is no session to send. peptalk.tsx keys on it. */
+export const SIGN_IN_AGAIN = 'Please sign in again to chat with Aimee.';
+
 /**
  * Build the knowledge base ahead of the first chat message so the user
  * doesn't eat the ~100ms concat cost when they send their first prompt.
@@ -690,7 +693,9 @@ export async function generateAIResponse(
   if (!(await ensureAiConsent())) return null;
 
   // Build conversation messages (last 10 for context)
-  const conversationMessages = context.conversationHistory.slice(-10).map((msg) => ({
+  // The on-device bot's replies are not the model's words; sending them as
+  // 'assistant' turns taught the model to repeat canned (and dosing) text.
+  const conversationMessages = context.conversationHistory.filter((m) => m.source !== 'local').slice(-10).map((msg) => ({
     role: msg.role === 'bot' ? 'assistant' as const : 'user' as const,
     content: msg.content,
   }));
@@ -722,8 +727,18 @@ export async function generateAIResponse(
         if (res.ok) {
           const data = await res.json();
           rawResponse = data.content;
-        } else if (res.status === 403 || res.status === 429) {
-          // Tier or rate limit — return the error message as bot response
+        } else if (res.status === 403) {
+          /*
+           * The legacy endpoint has no free allowance (RATE_LIMITS.free = 0),
+           * but this path only runs after the STREAM failed — and the stream
+           * gives Free three messages a month and says so itself when they are
+           * used up. Showing this 403 told free users "AI chat requires
+           * PepTalk+" whenever the stream hiccuped (≈34 of 66 non-empty bot
+           * replies, 2026-08..11). The on-device bot answers instead.
+           */
+          return null;
+        } else if (res.status === 429) {
+          // Rate limit — return the error message as bot response
           const data = await res.json();
           return {
             id: uid(),
@@ -1085,12 +1100,14 @@ export async function* generateAIResponseStream(
     if (__DEV__) console.warn('[llmService] session resolve failed:', e);
   }
   if (!session?.access_token) {
-    yield { type: 'error', message: 'Please sign in again to chat with Aimee.' };
+    yield { type: 'error', message: SIGN_IN_AGAIN };
     return;
   }
 
   const serverContext = buildServerContext(context);
-  const conversationMessages = context.conversationHistory.slice(-10).map((msg) => ({
+  // The on-device bot's replies are not the model's words; sending them as
+  // 'assistant' turns taught the model to repeat canned (and dosing) text.
+  const conversationMessages = context.conversationHistory.filter((m) => m.source !== 'local').slice(-10).map((msg) => ({
     role: msg.role === 'bot' ? ('assistant' as const) : ('user' as const),
     content: msg.content,
   }));
