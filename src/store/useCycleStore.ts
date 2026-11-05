@@ -222,6 +222,11 @@ export const useCycleStore = create<CycleState & CycleActions>()(
         const now = new Date().toISOString();
         const entry: PeriodEntry = {
           ...p,
+          // The HealthKit adapter mints `hk-period-<startDate>`: a primary key
+          // every user with a period starting that day would share, so only
+          // the first could ever sync (no HealthKit period has reached the
+          // server). Scope it.
+          id: isLegacyDayId('hk-period', p.id) ? newDayScopedId('hk-period', p.startDate) : p.id,
           createdAt: p.createdAt ?? now,
           updatedAt: now,
         };
@@ -507,9 +512,26 @@ export const useCycleStore = create<CycleState & CycleActions>()(
         const adoptedDayLogs = await adoptLegacyDayIds('cycle_day_logs', 'cyclelog', dayLogs, (e) =>
           syncRecord('cycle_day_logs', cycleDayLogRow(e)),
         );
+        // Same for HealthKit-imported periods (`hk-period-<startDate>`).
+        const adoptedPeriods = (
+          await adoptLegacyDayIds(
+            'cycle_period_entries',
+            'hk-period',
+            periods.map((p) => ({ ...p, date: p.startDate })),
+            (e) =>
+              syncRecord('cycle_period_entries', {
+                id: e.id,
+                start_date: e.startDate,
+                end_date: e.endDate ?? null,
+                daily_flow: e.dailyFlow ?? null,
+                notes: e.notes ?? null,
+                source: e.source,
+              }),
+          )
+        ).map(({ date: _d, ...p }) => p as PeriodEntry);
 
         set({
-          periods: periods.sort((a, b) => b.startDate.localeCompare(a.startDate)),
+          periods: adoptedPeriods.sort((a, b) => b.startDate.localeCompare(a.startDate)),
           dayLogs: adoptedDayLogs.sort((a, b) => b.date.localeCompare(a.date)),
           contraceptionHistory: contra,
         });
