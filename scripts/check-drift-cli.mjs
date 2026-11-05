@@ -133,8 +133,9 @@ if (process.argv.includes('--self-test')) {
 } else {
   let slugs;
   try {
-    slugs = JSON.parse(sh(['functions', 'list', '--project-ref', REF]))
-      .functions.map((f) => f.slug);
+    // CLI v2.100+ prints a bare array; older versions wrapped it in { functions }.
+    const listed = JSON.parse(sh(['functions', 'list', '--project-ref', REF]));
+    slugs = (Array.isArray(listed) ? listed : listed.functions).map((f) => f.slug);
   } catch (e) {
     console.error('drift: could not list deployed functions — is the Supabase CLI logged in?');
     console.error(String(e.message || e).split('\n')[0]);
