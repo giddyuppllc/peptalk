@@ -79,3 +79,28 @@ describe('dose duplicate guard', () => {
     expect(findRecentDuplicate([planned], input('bpc-157'), now)).toBeUndefined();
   });
 });
+
+describe('protocol duplicate guard', () => {
+  const proto = {
+    peptideId: 'bpc-157',
+    dose: 250,
+    unit: 'mcg' as const,
+    route: 'subcutaneous' as const,
+    frequency: 'daily' as const,
+    startDate: '2026-11-05',
+  };
+
+  it('activating the same peptide from the same start date twice keeps one active protocol', () => {
+    useDoseLogStore.getState().addProtocol(proto);
+    useDoseLogStore.getState().addProtocol({ ...proto, dose: 300 });
+    const active = useDoseLogStore.getState().protocols.filter((p) => p.isActive);
+    expect(active).toHaveLength(1);
+    expect(active[0].dose).toBe(300);
+  });
+
+  it('a different start date is a separate protocol', () => {
+    useDoseLogStore.getState().addProtocol(proto);
+    useDoseLogStore.getState().addProtocol({ ...proto, startDate: '2026-12-01' });
+    expect(useDoseLogStore.getState().protocols.filter((p) => p.isActive)).toHaveLength(2);
+  });
+});
