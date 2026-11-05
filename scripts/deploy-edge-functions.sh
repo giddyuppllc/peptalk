@@ -95,6 +95,9 @@ FUNCTIONS=(
   # Push + CRM fanout (called by pg_net triggers w/ x-internal-key)
   community-push-fanout
   crm-event-fanout
+
+  # PWA dose reminders (pg_cron every 5 min, service role + x-internal-key)
+  web-dose-reminders
 )
 
 echo "Deploying ${#FUNCTIONS[@]} edge functions..."

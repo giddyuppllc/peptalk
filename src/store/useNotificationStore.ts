@@ -67,10 +67,16 @@ export const useNotificationStore = create<NotificationStore>()(
 
       // ── Actions ────────────────────────────────────────────────────────────
 
-      setEnabled: (enabled: boolean) =>
+      setEnabled: (enabled: boolean) => {
         set((state) => ({
           preferences: { ...state.preferences, enabled },
-        })),
+        }));
+        // Web reminders are sent by the server, which has to hear about the
+        // switch (webPush.setWebRemindersEnabled). No-op on native.
+        void import('../services/webPush')
+          .then((m) => m.setWebRemindersEnabled(enabled))
+          .catch(() => {});
+      },
 
       setDailyCheckInReminder: (enabled: boolean) =>
         set((state) => ({
