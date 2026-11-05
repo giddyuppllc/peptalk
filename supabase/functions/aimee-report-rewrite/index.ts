@@ -20,6 +20,7 @@
  * Deploy: supabase functions deploy aimee-report-rewrite
  */
 
+import { replyMaxTokens, wasCutOff } from '../_shared/replyBudget.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
@@ -196,7 +197,8 @@ Deno.serve(async (req) => {
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.4,
-        max_tokens: 350,
+        // 350 visible + reasoning headroom (grok-4.3 reasons inside max_tokens).
+        max_tokens: replyMaxTokens(350),
       }),
       signal: AbortSignal.timeout(30000),
     });
@@ -209,7 +211,8 @@ Deno.serve(async (req) => {
     const completion = await res.json();
     const rewritten: string =
       completion?.choices?.[0]?.message?.content?.trim() ?? '';
-    if (!rewritten) {
+    if (!rewritten || wasCutOff(completion)) {
+      // A rewrite cut off at the cap is worse than the template it replaces.
       return jsonResp({ error: 'Empty rewrite — keeping the templated version.' }, 502);
     }
 

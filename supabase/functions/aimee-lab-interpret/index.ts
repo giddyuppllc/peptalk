@@ -25,6 +25,7 @@
  * Deploy: supabase functions deploy aimee-lab-interpret
  */
 
+import { replyMaxTokens, wasCutOff } from '../_shared/replyBudget.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
@@ -204,7 +205,8 @@ Deno.serve(async (req) => {
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userMessage },
         ],
-        max_tokens: 1200,
+        // 1,200 visible + reasoning headroom (grok-4.3 reasons inside max_tokens).
+        max_tokens: replyMaxTokens(1200),
         temperature: 0.4,
       }),
       signal: AbortSignal.timeout(45000),
@@ -220,6 +222,10 @@ Deno.serve(async (req) => {
     const markdown: string = completion.choices?.[0]?.message?.content ?? '';
     if (!markdown.trim()) {
       return jsonResp({ error: 'Empty response from AI service.' }, 502);
+    }
+    if (wasCutOff(completion)) {
+      // Never present a half interpretation of someone's labs as complete.
+      return jsonResp({ error: 'Lab interpretation temporarily unavailable.' }, 502);
     }
 
     return jsonResp({ markdown });
