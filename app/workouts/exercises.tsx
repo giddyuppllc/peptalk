@@ -14,7 +14,6 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { EXERCISES, searchExercises, getExerciseInstructions } from '../../src/data/exercises';
 import { ExerciseVideo } from '../../src/components/ExerciseVideo';
 import { hasExerciseVideo, getExerciseVideoSlug } from '../../src/services/videoService';
-import { PaywallGate } from '../../src/hooks/useFeatureGate';
 import type { Exercise, MuscleGroup, Equipment } from '../../src/types/fitness';
 
 // Muscle-group → icon for the form-guide hero shown when an exercise has
@@ -440,7 +439,9 @@ export default function ExerciseLibraryScreen() {
   }, []);
 
   return (
-    <PaywallGate feature="exercise_library">
+    // No paywall: the exercise list is free (d9859bc, 2026-09-07, removed
+    // 'exercise_library' from every tier and left this gate behind, which
+    // locked the library for every user, Pro included).
     <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
       <StatusBar style={t.statusBar} />
       {/* Header */}
@@ -589,7 +590,6 @@ export default function ExerciseLibraryScreen() {
         onClose={closeDetail}
       />
     </SafeAreaView>
-    </PaywallGate>
   );
 }
 

@@ -54,16 +54,19 @@ export async function recognizeLabPhoto(uri: string): Promise<LabOcrResult> {
     );
 
     if (error) {
-      // Edge fn missing or 4xx → manual entry stays the path.
+      // Edge fn missing → manual entry stays the path. The status is on
+      // error.context, not error.status (which never exists), so every
+      // refusal used to read as 'unavailable' and the screen said OCR was
+      // "rolling out" for a daily limit or a tier gate.
+      const { readEdgeFunctionError } = await import('../lib/edgeFunctionError');
+      const e = await readEdgeFunctionError(error);
+      const serverSaid = e.status !== null && e.status !== 404 && e.status !== 503 && !!e.message;
       return {
         ok: false,
         values: [],
         unmappedLines: [],
-        reason:
-          (error?.status ?? 0) >= 500
-            ? 'failed'
-            : 'unavailable',
-        error: error.message ?? 'Edge function unavailable',
+        reason: serverSaid || (e.status ?? 0) >= 500 ? 'failed' : 'unavailable',
+        error: e.message ?? 'Edge function unavailable',
       };
     }
 

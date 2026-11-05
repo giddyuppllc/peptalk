@@ -24,6 +24,7 @@ import type {
   GeneratedDay,
   GeneratedExercise,
 } from './workoutGenerator';
+import { readEdgeFunctionError } from '../lib/edgeFunctionError';
 
 // Muscles the edge function is allowed to emit (mirrors the fn's taxonomy).
 const AI_MUSCLES: MuscleGroup[] = [
@@ -243,11 +244,11 @@ export async function generateAiWorkout(params: AiWorkoutParams): Promise<Genera
   });
 
   if (error) {
-    // supabase-js wraps non-2xx; try to read the function's JSON error body.
-    const ctx = (error as any)?.context;
-    const status = ctx?.status ?? (error as any)?.status;
-    let body: any = ctx?.body;
-    if (typeof body === 'string') { try { body = JSON.parse(body); } catch { /* keep string */ } }
+    // supabase-js wraps non-2xx; context is a Response, and context.body is a
+    // stream rather than text, so the function's own message was always lost.
+    const e = await readEdgeFunctionError(error);
+    const status = e.status;
+    const body: any = e.body ?? {};
     if (status === 403 || body?.upgrade) {
       throw new AiWorkoutError('upgrade', 'Pro tier required for AI workout generation.');
     }

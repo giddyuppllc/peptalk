@@ -26,6 +26,7 @@
 
 import { Platform } from 'react-native';
 import { fetchWithTimeout } from '../lib/withTimeout';
+import { readEdgeFunctionError } from '../lib/edgeFunctionError';
 
 const ALLOWED_TYPES = new Set([
   'image/jpeg',
@@ -126,7 +127,10 @@ export async function uploadCommunityImage(
     body: { contentType, size, kind },
   });
   if (error) {
-    throw new Error(error.message || 'Upload failed (could not get signed URL)');
+    // Show the function's reason (size, type, daily cap), not supabase-js's
+    // generic "non-2xx status code".
+    const e = await readEdgeFunctionError(error);
+    throw new Error(e.message || 'Upload failed (could not get signed URL)');
   }
   const signed = data as {
     uploadUrl?: string;

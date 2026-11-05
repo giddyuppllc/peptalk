@@ -49,7 +49,10 @@ const MEAL_TYPE_MAP: Record<string, MealType> = {
 
 export default function MealPlanScreenWrapper() {
   return (
-    <PaywallGate feature="meal_plan">
+    // 'aimee_meal_plans' is the Pro feature aimee-plan enforces server-side.
+    // This said 'meal_plan', which d9859bc removed from every tier, so the
+    // screen was locked for everyone, Pro included.
+    <PaywallGate feature="aimee_meal_plans">
       <MealPlanScreen />
     </PaywallGate>
   );

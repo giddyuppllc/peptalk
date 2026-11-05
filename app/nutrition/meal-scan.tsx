@@ -75,7 +75,7 @@ const inferMealType = (): MealType => {
 type DetectResult =
   | { status: 'ok'; items: ScanItem[] }
   | { status: 'empty' }
-  | { status: 'error' }
+  | { status: 'error'; message?: string | null }
   | { status: 'no_consent' };
 
 // Detects foods in a photo by calling the `food-scan` Supabase edge function,
@@ -96,7 +96,14 @@ async function detectFoodsFromPhoto(photoUri: string): Promise<DetectResult> {
     const { data, error } = await (supabase as any).functions.invoke('food-scan', {
       body: { imageBase64: base64 },
     });
-    if (error) throw error;
+    if (error) {
+      // A refusal (daily limit, tier, oversized photo) carries the function's
+      // own message; only a real network failure falls through to the
+      // "check your connection" text below.
+      const { readEdgeFunctionError } = await import('../../src/lib/edgeFunctionError');
+      const e = await readEdgeFunctionError(error);
+      return { status: 'error', message: e.status !== null ? e.message : null };
+    }
 
     // Edge function returns { items: [{ name, estimatedGrams, calories,
     // protein, carbs, fat, fiber }], totals, description }. Keep the whole
@@ -231,7 +238,7 @@ function MealScanScreen() {
       if (detected.status === 'error') {
         Alert.alert(
           'Couldn\'t scan',
-          'Couldn\'t reach the scanner — check your connection and try again.',
+          detected.message || 'Couldn\'t reach the scanner — check your connection and try again.',
         );
         setPhotoUri(null);
         return;

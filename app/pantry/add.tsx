@@ -25,6 +25,7 @@ import { useFeatureGate } from '../../src/hooks/useFeatureGate';
 import { supabase } from '../../src/services/supabase';
 import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
 import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
+import { readEdgeFunctionError } from '../../src/lib/edgeFunctionError';
 
 const NL_ALLOWED_PANTRY_UNITS = new Set([
   'each', 'oz', 'g', 'lb', 'kg', 'cup', 'tbsp', 'tsp', 'ml', 'l',
@@ -112,7 +113,13 @@ export default function AddPantryScreen() {
         body: { text },
       });
       if (!mountedRef.current) return;
-      if (error) throw error;
+      if (error) {
+        // supabase-js's message is always the generic "non-2xx" text, so the
+        // "Pro tier" check below never matched. Rethrow with what the
+        // function actually said.
+        const e = await readEdgeFunctionError(error);
+        throw new Error(e.upgrade ? 'Plus or Pro required' : e.message ?? (error as Error).message);
+      }
       const items = (data?.items ?? []) as {
         name?: string;
         brand?: string | null;

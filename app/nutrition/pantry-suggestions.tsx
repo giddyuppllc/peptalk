@@ -26,6 +26,7 @@ import { supabase } from '../../src/services/supabase';
 import { clamp, clampString } from '../../src/utils/aimeeActionSanitize';
 import { ensureAiConsent } from '../../src/utils/ensureAiConsent';
 import { todayLocalISO } from '../../src/utils/dateUtil';
+import { readEdgeFunctionError } from '../../src/lib/edgeFunctionError';
 
 interface SuggestedIngredient {
   name: string;
@@ -136,7 +137,12 @@ function PantrySuggestionsInner() {
           count: 3,
         },
       });
-      if (error) throw error;
+      if (error) {
+        // Same generic-message problem as pantry/add: surface the function's
+        // own text so the 'Pro tier' upgrade branch below can match.
+        const e = await readEdgeFunctionError(error);
+        throw new Error(e.upgrade ? 'Pro tier required' : e.message ?? (error as Error).message);
+      }
       const list = (data?.suggestions ?? []) as Suggestion[];
       if (list.length === 0) {
         Alert.alert('No suggestions', 'Couldn\'t generate meals — try again with more pantry items.');
