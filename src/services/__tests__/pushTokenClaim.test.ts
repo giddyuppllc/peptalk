@@ -1,10 +1,10 @@
+import { writeToken, isMissingFunction } from '../pushTokenSync';
+
 jest.mock('react-native', () => ({ Platform: { OS: 'android' } }));
 jest.mock('../notificationService', () => ({
   notificationsAvailable: () => true,
   registerForPushNotifications: jest.fn(async () => 'ExponentPushToken[abc]'),
 }));
-
-import { writeToken, isMissingFunction } from '../pushTokenSync';
 
 function client(rpcResult: { error: unknown }) {
   const upsert = jest.fn(async () => ({ error: null }));

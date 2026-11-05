@@ -1,10 +1,10 @@
+import { findPlannedLogFor } from '../useWorkoutStore';
+import type { WorkoutLog } from '../../types/fitness';
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: async () => null, setItem: async () => {}, removeItem: async () => {},
 }));
 jest.mock('../../services/syncService', () => ({ syncRecord: jest.fn(async () => true), fetchUserRecords: jest.fn(async () => []) }));
 jest.mock('../../services/secureStorage', () => ({ secureStorage: { getItem: async () => null, setItem: async () => {}, removeItem: async () => {} } }));
-import { findPlannedLogFor } from '../useWorkoutStore';
-import type { WorkoutLog } from '../../types/fitness';
 
 const log = (id: string, date: string, extra: Partial<WorkoutLog> = {}): WorkoutLog =>
   ({ id, date, programId: 'p1', dayId: 'd1', startedAt: `${date}T08:00:00Z`, sets: [], durationMinutes: 0, ...extra }) as WorkoutLog;

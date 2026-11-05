@@ -1,3 +1,5 @@
+import { applyMasterSwitch } from '../reminderSync';
+
 jest.mock('react-native', () => ({ Platform: { OS: 'ios' } }));
 const calls: string[] = [];
 jest.mock('../notificationService', () => ({
@@ -27,8 +29,6 @@ jest.mock('../protocolAlerts', () => ({
   scheduleProtocolAlerts: async (a: { identifier: string }[]) => { a.forEach((x) => calls.push(`alert:${x.identifier}`)); },
 }));
 jest.mock('../../data/peptides', () => ({ getPeptideById: () => ({ name: 'BPC-157' }) }));
-
-import { applyMasterSwitch } from '../reminderSync';
 
 beforeEach(() => { calls.length = 0; });
 

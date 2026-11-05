@@ -28,7 +28,7 @@ const mockWeb = {
 jest.mock('../webPush', () => mockWeb);
 
 // required (not imported) so it loads after the mock state above exists
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const { scheduleDoseReminder, cancelRemindersByTag, cancelDoseRemindersFor, notificationsAvailable } =
   require('../notificationService') as typeof import('../notificationService');
 
