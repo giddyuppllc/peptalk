@@ -47,14 +47,8 @@ const OUTPUT_MICROCENTS_PER_TOKEN = Number(
 
 // ─── Wire shapes ──────────────────────────────────────────────────────────
 
-export interface GrokTool {
-  type: 'function';
-  function: {
-    name: string;
-    description: string;
-    parameters: Record<string, unknown>;
-  };
-}
+import type { GrokTool } from './_toolTypes.ts';
+export type { GrokTool };
 
 export interface GrokToolCall {
   id: string;

@@ -28,7 +28,7 @@
  * xAI's Grok which speaks that dialect.
  */
 
-import type { GrokTool } from './_grok.ts';
+import type { GrokTool } from './_toolTypes.ts';
 
 // ─── Tool definitions exposed to Grok ─────────────────────────────────────
 
