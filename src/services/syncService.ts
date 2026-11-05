@@ -353,3 +353,83 @@ export async function hydrateFromServer<Row, Entry extends { id: string }>(
  * entitlement anyway — resolveEffectiveTier() reads the `subscriptions` table,
  * which is the source of truth. Nothing client-side should be writing tier.
  */
+
+// ─── Day-keyed ids ──────────────────────────────────────────────────────────
+//
+// check_ins and cycle_day_logs used ids built from the DATE alone —
+// `checkin-2026-11-03`, `cyclelog-2026-08-12`. The id is the table's primary
+// key across ALL users, so the first person to save a check-in on a given day
+// owned that id, and every other user's check-in for that day was refused by
+// RLS (their upsert hit someone else's row). Production at 2026-11-05: 16
+// check-ins in total, exactly one per calendar day, across 281 accounts. The
+// rest exist only on people's phones, and Aimee's "what's in my data" never
+// saw them.
+//
+// New ids carry a random suffix. Existing legacy ids are adopted below.
+
+export const newDayScopedId = (prefix: string, date: string): string =>
+  `${prefix}-${date}-${Math.random().toString(36).slice(2, 10)}`;
+
+export const isLegacyDayId = (prefix: string, id: string): boolean =>
+  new RegExp(`^${prefix}-\\d{4}-\\d{2}-\\d{2}$`).test(id);
+
+/**
+ * Give fresh ids to local entries whose legacy id is NOT this user's row on
+ * the server — i.e. the ones that were refused and never synced — and push
+ * them. Entries whose legacy id the server returns for this user are theirs
+ * already and are left alone (re-keying those would duplicate the day).
+ *
+ * Does nothing unless the server answer is trustworthy: no session, or any
+ * error, returns the entries unchanged.
+ */
+export async function adoptLegacyDayIds<E extends { id: string; date: string }>(
+  table: TableName,
+  prefix: string,
+  entries: E[],
+  push: (entry: E) => Promise<boolean>,
+): Promise<E[]> {
+  return adoptLegacyIds(
+    table,
+    entries,
+    (id) => isLegacyDayId(prefix, id),
+    (e) => newDayScopedId(prefix, e.date),
+    push,
+  );
+}
+
+/**
+ * The general form: any shared-primary-key id scheme (`int-<source>` for
+ * connected_integrations is the other one). See adoptLegacyDayIds.
+ */
+export async function adoptLegacyIds<E extends { id: string }>(
+  table: TableName,
+  entries: E[],
+  isLegacy: (id: string) => boolean,
+  makeId: (entry: E) => string,
+  push: (entry: E) => Promise<boolean>,
+): Promise<E[]> {
+  const legacy = entries.filter((e) => isLegacy(e.id));
+  if (legacy.length === 0) return entries;
+  const userId = await getUserId();
+  if (!userId) return entries;
+  try {
+    const { data, error } = await db
+      .from(table)
+      .select('id')
+      .eq('user_id', userId)
+      .in('id', legacy.map((e) => e.id));
+    if (error) return entries;
+    const owned = new Set(((data ?? []) as { id: string }[]).map((r) => r.id));
+    const renamed = new Map<string, E>();
+    for (const e of legacy) {
+      if (owned.has(e.id)) continue;
+      const next = { ...e, id: makeId(e) };
+      renamed.set(e.id, next);
+      await push(next).catch(() => false);
+    }
+    if (renamed.size === 0) return entries;
+    return entries.map((e) => renamed.get(e.id) ?? e);
+  } catch {
+    return entries;
+  }
+}

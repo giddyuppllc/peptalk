@@ -15,6 +15,36 @@ const uid = () =>
   `dose-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
 /**
+ * A repeat of the same dose within this window is the same tap, not a second
+ * dose. Production had 68 duplicate dose_logs rows (2026-08 → 11): Stack
+ * Builder's "Add to Tracker" re-logged the whole stack on every tap, up to 7×
+ * in 2.6 s, and the calculator's log button did the same. Each copy got a
+ * fresh id, so the id-keyed upsert could not collapse them, and adherence,
+ * the calendar and Aimee's context all counted them as real doses.
+ */
+export const DUPLICATE_DOSE_WINDOW_MS = 10_000;
+
+export function findRecentDuplicate(
+  doses: DoseLogEntry[],
+  candidate: Pick<DoseLogEntry, 'peptideId' | 'date' | 'time' | 'amount' | 'unit' | 'route' | 'notes'>,
+  nowMs: number,
+): DoseLogEntry | undefined {
+  return doses.find(
+    (d) =>
+      !d.planned &&
+      d.peptideId === candidate.peptideId &&
+      d.date === candidate.date &&
+      d.time === candidate.time &&
+      d.amount === candidate.amount &&
+      d.unit === candidate.unit &&
+      d.route === candidate.route &&
+      (d.notes ?? '') === (candidate.notes ?? '') &&
+      nowMs - Date.parse(d.createdAt) >= 0 &&
+      nowMs - Date.parse(d.createdAt) < DUPLICATE_DOSE_WINDOW_MS,
+  );
+}
+
+/**
  * Mirror a protocol into public.active_protocols.
  *
  * Only the columns that exist are sent. `notes` and `templateId` have no
@@ -327,11 +357,20 @@ export const useDoseLogStore = create<DoseLogStore>()(
       // ── Dose Logging ─────────────────────────────────────────────────────
 
       logDose: (input) => {
+        const date = input.date || today();
+        const time = input.time || timeNow();
+        const repeat = findRecentDuplicate(
+          get().doses,
+          { ...input, date, time },
+          Date.now(),
+        );
+        if (repeat) return repeat;
+
         const entry: DoseLogEntry = {
           id: uid(),
           peptideId: input.peptideId,
-          date: input.date || today(),
-          time: input.time || timeNow(),
+          date,
+          time,
           amount: input.amount,
           unit: input.unit,
           route: input.route,
@@ -546,23 +585,34 @@ export const useDoseLogStore = create<DoseLogStore>()(
       // ── Protocols ────────────────────────────────────────────────────────
 
       addProtocol: (input) => {
+        // Activating the same peptide from the same start date again (a second
+        // tap, or a retry after the web reminder error) replaces the active
+        // protocol instead of stacking a copy: production had 10 duplicate
+        // active_protocols rows across 7 users, each doubling their schedule.
+        const startDate = input.startDate || today();
+        const same = get().protocols.find(
+          (p) => p.isActive && p.peptideId === input.peptideId && p.startDate === startDate,
+        );
         const protocol: ActiveProtocol = {
-          id: `proto-active-${Date.now()}`,
+          // Random suffix: two protocols created in the same millisecond (a stack
+          // activated in one loop) shared `proto-active-<ms>`, and the second
+          // upsert overwrote the first in active_protocols.
+          id: same?.id ?? `proto-active-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           peptideId: input.peptideId,
           templateId: input.templateId,
           dose: input.dose,
           unit: input.unit,
           route: input.route,
           frequency: input.frequency,
-          startDate: input.startDate || today(),
+          startDate,
           endDate: input.endDate,
           isActive: true,
           notes: input.notes,
-          createdAt: new Date().toISOString(),
+          createdAt: same?.createdAt ?? new Date().toISOString(),
         };
 
         set((state) => ({
-          protocols: [protocol, ...state.protocols],
+          protocols: [protocol, ...state.protocols.filter((p) => p.id !== protocol.id)],
         }));
 
         // Push to active_protocols. This table is what aimee-chat-stream reads

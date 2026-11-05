@@ -11,7 +11,7 @@
  * keeps the page from crowding when no peptides are selected.
  */
 
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { ScrollView, View, Text, TextInput, TouchableOpacity, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { Alert } from '../../src/lib/alert';
 import { Ionicons } from '@expo/vector-icons';
@@ -240,8 +240,13 @@ export default function StackBuilderScreen() {
     await analyzeCurrentStack();
   }, [analyzeCurrentStack]);
 
+  // Re-entrant taps re-logged the whole stack (up to 7× in production). The
+  // store also drops same-dose repeats, but the guard keeps the second tap
+  // from even reaching it.
+  const addingRef = useRef(false);
   const handleAddToTracker = useCallback(() => {
     if (currentStack.length === 0) return;
+    if (addingRef.current) return;
     if (conflicts.length > 0) {
       Alert.alert(
         'Conflicts in stack',
@@ -249,6 +254,10 @@ export default function StackBuilderScreen() {
       );
       return;
     }
+    addingRef.current = true;
+    setTimeout(() => {
+      addingRef.current = false;
+    }, 1500);
     tapMedium();
     let added = 0;
     for (const id of currentStack) {

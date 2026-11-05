@@ -52,6 +52,12 @@ try {
 // ---------------------------------------------------------------------------
 
 function isAvailable(): boolean {
+  // Not on web. expo-notifications loads there, but its web scheduler is an
+  // empty stub (NotificationScheduler.js: { addListener, removeListeners }),
+  // so every schedule/cancel call threw. Most paying users are on the PWA:
+  // "Activate protocol" added the protocol, then threw at the reminder step
+  // and told them "Could not activate" — tapping again added it twice.
+  if (Platform.OS === 'web') return false;
   return Notifications != null;
 }
 
