@@ -16,25 +16,18 @@
 
 import React, { useState } from 'react';
 import { toUserMessage } from '../lib/errorMessages';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Alert } from '../lib/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { FontSizes } from '../constants/theme';
 import { useDoseLogStore } from '../store/useDoseLogStore';
 import {
-  notificationsAvailable,
   scheduleDoseReminder,
   cancelRemindersByTag,
 } from '../services/notificationService';
+import { VIAL_LIFE_DAYS, protocolAlertsFor, scheduleProtocolAlerts, cancelProtocolAlerts } from '../services/protocolAlerts';
 import type { ProtocolTemplate, AdministrationRoute, DoseUnit } from '../types';
-
-let Notifications: any = null;
-try {
-  Notifications = require('expo-notifications');
-} catch {
-  Notifications = null;
-}
 
 interface ActivateProtocolButtonProps {
   peptideId: string;
@@ -55,7 +48,6 @@ interface ActivateProtocolButtonProps {
   frequency: 'daily' | 'eod' | '2x_week' | '3x_week' | 'weekly';
 }
 
-const VIAL_LIFE_DAYS = 28;
 
 function frequencyToReminderKey(freq: string): string {
   switch (freq) {
@@ -76,34 +68,6 @@ function frequencyToProtocolFrequency(freq: string): ProtocolTemplate['frequency
     case '3x_week':  return 'tiw';
     case 'weekly':   return 'weekly';
     default:         return 'daily';
-  }
-}
-
-async function scheduleOneShot(
-  identifier: string,
-  fireAt: Date,
-  title: string,
-  body: string,
-): Promise<void> {
-  if (!notificationsAvailable() || !Notifications) return;
-  if (fireAt.getTime() <= Date.now()) return;
-  try {
-    await Notifications.scheduleNotificationAsync({
-      identifier,
-      content: {
-        title,
-        body,
-        sound: 'default',
-        ...(Platform.OS === 'android' && { channelId: 'reminders' }),
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes?.DATE ?? 'date',
-        date: fireAt,
-        channelId: Platform.OS === 'android' ? 'reminders' : undefined,
-      },
-    });
-  } catch {
-    // Notifications are best-effort; ignore failures.
   }
 }
 
@@ -163,23 +127,16 @@ export function ActivateProtocolButton({
                 startDateIso,
               );
 
-              // Vial-expiry one-shot.
-              const vialExpiry = new Date(Date.now() + VIAL_LIFE_DAYS * 24 * 3600 * 1000);
-              vialExpiry.setHours(9, 0, 0, 0);
-              await scheduleOneShot(
-                `${tag}vial-expiry`,
-                vialExpiry,
-                `${peptideName} vial expiring`,
-                `Your reconstituted vial is ${VIAL_LIFE_DAYS} days old today. Discard if it shows cloudiness, particles, or color change. Reconstitute a fresh vial for continued cycling.`,
-              );
-
-              // Cycle-end one-shot.
-              cycleEndDate.setHours(9, 0, 0, 0);
-              await scheduleOneShot(
-                `${tag}cycle-end`,
-                cycleEndDate,
-                `${peptideName} cycle complete`,
-                `Your protocol's planned ${protocol.durationWeeks.max}-week cycle ends today. Review your check-ins and decide on a break vs. continuation with your provider.`,
+              // Vial-expiry and cycle-end one-shots (native local; web push).
+              await cancelProtocolAlerts(peptideId);
+              await scheduleProtocolAlerts(
+                protocolAlertsFor({
+                  peptideId,
+                  peptideName,
+                  startDate: startDateIso,
+                  endDate: cycleEndDate.toISOString().slice(0, 10),
+                  weeks: protocol.durationWeeks.max,
+                }),
               );
 
               Alert.alert(

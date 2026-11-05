@@ -16,6 +16,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
 import { reportError } from '../_shared/sentry.ts';
 import { runWebReminders, type ReminderRow, type SubscriptionRow } from '../_shared/webReminderRun.ts';
+import { runOneShots, type OneShotRow } from '../_shared/oneShotRun.ts';
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -54,18 +55,43 @@ Deno.serve(async (req) => {
       .limit(5000);
     if (error) throw new Error(`load reminders: ${error.message}`);
 
+    const loadSubs = async (userIds: string[]) => {
+      if (userIds.length === 0) return [];
+      const { data, error: subErr } = await supabase
+        .from('web_push_subscriptions')
+        .select('id, user_id, endpoint, p256dh, auth')
+        .in('user_id', userIds);
+      if (subErr) throw new Error(`load subscriptions: ${subErr.message}`);
+      return (data ?? []) as SubscriptionRow[];
+    };
+    const sendPush = async (sub: SubscriptionRow, payload: unknown) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          JSON.stringify(payload),
+          { TTL: 60 * 60, urgency: 'high' },
+        );
+        await supabase
+          .from('web_push_subscriptions')
+          .update({ last_sent_at: new Date().toISOString(), failure_count: 0 })
+          .eq('id', sub.id);
+        return { ok: true };
+      } catch (err) {
+        const statusCode = (err as { statusCode?: number }).statusCode;
+        if (statusCode !== 404 && statusCode !== 410) {
+          console.warn(`[web-dose-reminders] send failed (${statusCode ?? 'network'}) for ${sub.id}`);
+        }
+        return { ok: false, statusCode };
+      }
+    };
+    const prune = async (id: string) => {
+      await supabase.from('web_push_subscriptions').delete().eq('id', id);
+    };
+
     const result = await runWebReminders({
       now: new Date(),
       reminders: (reminders ?? []) as ReminderRow[],
-      subscriptionsFor: async (userIds) => {
-        if (userIds.length === 0) return [];
-        const { data, error: subErr } = await supabase
-          .from('web_push_subscriptions')
-          .select('id, user_id, endpoint, p256dh, auth')
-          .in('user_id', userIds);
-        if (subErr) throw new Error(`load subscriptions: ${subErr.message}`);
-        return (data ?? []) as SubscriptionRow[];
-      },
+      subscriptionsFor: loadSubs,
       claim: async (reminderId, dueAt) => {
         const { error: claimErr } = await supabase
           .from('web_push_sent')
@@ -74,29 +100,8 @@ Deno.serve(async (req) => {
         if (claimErr.code === '23505') return false; // already reminded
         throw new Error(`claim: ${claimErr.message}`);
       },
-      send: async (sub, payload) => {
-        try {
-          await webpush.sendNotification(
-            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            JSON.stringify(payload),
-            { TTL: 60 * 60, urgency: 'high' },
-          );
-          await supabase
-            .from('web_push_subscriptions')
-            .update({ last_sent_at: new Date().toISOString(), failure_count: 0 })
-            .eq('id', sub.id);
-          return { ok: true };
-        } catch (err) {
-          const statusCode = (err as { statusCode?: number }).statusCode;
-          if (statusCode !== 404 && statusCode !== 410) {
-            console.warn(`[web-dose-reminders] send failed (${statusCode ?? 'network'}) for ${sub.id}`);
-          }
-          return { ok: false, statusCode };
-        }
-      },
-      pruneSubscription: async (id) => {
-        await supabase.from('web_push_subscriptions').delete().eq('id', id);
-      },
+      send: sendPush,
+      pruneSubscription: prune,
       recordDelivered: async (reminderId, dueAt, delivered) => {
         await supabase
           .from('web_push_sent')
@@ -106,8 +111,40 @@ Deno.serve(async (req) => {
       },
     });
 
-    console.log('[web-dose-reminders]', JSON.stringify(result));
-    return json({ ok: true, ...result });
+    // One-time alerts (vial expiry, cycle end). Before migration
+    // 20261105060000 the table does not exist: skip, never fail the dose run.
+    let oneShots: unknown = null;
+    const { data: alerts, error: alertErr } = await supabase
+      .from('web_one_shot_alerts')
+      .select('id, user_id, tag, fire_at, title, body')
+      .is('sent_at', null)
+      .eq('enabled', true)
+      .lte('fire_at', new Date().toISOString())
+      .limit(2000);
+    if (alertErr) {
+      if (alertErr.code !== '42P01' && alertErr.code !== 'PGRST205') console.warn('[web-dose-reminders] one-shots:', alertErr.message);
+    } else {
+      oneShots = await runOneShots({
+        now: new Date(),
+        alerts: (alerts ?? []) as OneShotRow[],
+        subscriptionsFor: loadSubs,
+        claim: async (id) => {
+          const { data: claimed, error: cErr } = await supabase
+            .from('web_one_shot_alerts')
+            .update({ sent_at: new Date().toISOString() })
+            .eq('id', id)
+            .is('sent_at', null)
+            .select('id');
+          if (cErr) throw new Error(`claim one-shot: ${cErr.message}`);
+          return (claimed ?? []).length === 1;
+        },
+        send: sendPush,
+        pruneSubscription: prune,
+      });
+    }
+
+    console.log('[web-dose-reminders]', JSON.stringify({ ...result, oneShots }));
+    return json({ ok: true, ...result, oneShots });
   } catch (err) {
     reportError('web-dose-reminders', err);
     console.error('[web-dose-reminders] run failed:', (err as Error).message);

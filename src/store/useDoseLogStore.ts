@@ -673,6 +673,9 @@ export const useDoseLogStore = create<DoseLogStore>()(
             // reminders forever. Use the canonical helper that handles
             // both forms.
             notif.cancelDoseRemindersFor?.(proto.peptideId)?.catch?.(() => {});
+            // Its vial-expiry / cycle-end alerts too: they were left scheduled,
+            // so a stopped protocol still announced both.
+            require('../services/protocolAlerts').cancelProtocolAlerts?.(proto.peptideId)?.catch?.(() => {});
             // §16 — cycle-complete push routes to the cycle report.
             //
             // Generate the report BEFORE firing the push. generateCycleReportFor
@@ -709,6 +712,7 @@ export const useDoseLogStore = create<DoseLogStore>()(
             const { cancelDoseRemindersFor } = require('../services/notificationService');
             // Same canonical cancel helper — see deactivateProtocol comment.
             cancelDoseRemindersFor?.(proto.peptideId)?.catch?.(() => {});
+            require('../services/protocolAlerts').cancelProtocolAlerts?.(proto.peptideId)?.catch?.(() => {});
           } catch {}
         }
       },

@@ -24,6 +24,7 @@ import {
 import { useNotificationStore } from '../store/useNotificationStore';
 import { useDoseLogStore } from '../store/useDoseLogStore';
 import { getPeptideById } from '../data/peptides';
+import { protocolAlertsFor, scheduleProtocolAlerts } from './protocolAlerts';
 
 // Expo weekday numbers are 1=Sun … 7=Sat; scheduleWorkoutReminder takes a label.
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -61,7 +62,16 @@ export async function applyMasterSwitch(enabled: boolean): Promise<void> {
   }
   const prefs = useNotificationStore.getState().preferences;
   if (prefs.dailyCheckInReminder) await scheduleDailyCheckInReminder(prefs.checkInReminderTime);
-  if (prefs.doseReminders) await rescheduleAllDoses();
+  if (prefs.doseReminders) {
+    await rescheduleAllDoses();
+    // cancelAll above also removed each protocol's vial / cycle-end alerts.
+    for (const p of useDoseLogStore.getState().protocols.filter((x) => x.isActive)) {
+      const peptideName = getPeptideById(p.peptideId)?.name ?? p.peptideId;
+      await scheduleProtocolAlerts(
+        protocolAlertsFor({ peptideId: p.peptideId, peptideName, startDate: p.startDate, endDate: p.endDate ?? null }),
+      );
+    }
+  }
   if (prefs.workoutReminderEnabled) await rescheduleWorkouts(prefs.workoutReminderTime, prefs.workoutReminderDays);
   if (prefs.mealRemindersEnabled) await rescheduleAllMeals(prefs.mealReminderTimes);
   if (prefs.weeklyReportEnabled) await scheduleWeeklyReport();

@@ -156,6 +156,47 @@ export async function saveWebDoseReminder(
   }
 }
 
+/**
+ * A one-time alert (vial expiry, cycle end — see protocolAlerts.ts) for the
+ * web-dose-reminders function to send at `fireAt`. Keyed by tag per user, so
+ * re-activating replaces rather than duplicates.
+ */
+export async function saveWebOneShot(tag: string, fireAt: Date, title: string, body: string): Promise<boolean> {
+  const subscribed = await ensureWebPushSubscription();
+  if (!subscribed) return false;
+  try {
+    const userId = await currentUserId();
+    if (!userId) return false;
+    const client = await db();
+    const { error } = await client.from('web_one_shot_alerts').upsert(
+      {
+        user_id: userId,
+        tag,
+        fire_at: fireAt.toISOString(),
+        title: title.slice(0, 120),
+        body: body.slice(0, 500),
+        sent_at: null,
+      },
+      { onConflict: 'user_id,tag' },
+    );
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/** Remove one-time alerts whose tag starts with `prefix` (one protocol's). */
+export async function deleteWebOneShotsByPrefix(prefix: string): Promise<void> {
+  try {
+    const userId = await currentUserId();
+    if (!userId) return;
+    const client = await db();
+    await client.from('web_one_shot_alerts').delete().eq('user_id', userId).like('tag', `${prefix}%`);
+  } catch {
+    /* best-effort */
+  }
+}
+
 /** Stop web reminders for one peptide (deactivate / re-schedule). */
 export async function deleteWebDoseReminder(peptideId: string): Promise<void> {
   try {
@@ -193,6 +234,8 @@ export async function setWebRemindersEnabled(enabled: boolean): Promise<void> {
     if (!userId) return;
     const client = await db();
     await client.from('web_dose_reminders').update({ enabled }).eq('user_id', userId);
+    // One-time alerts pause with the switch too (sent only while enabled).
+    await client.from('web_one_shot_alerts').update({ enabled }).eq('user_id', userId);
   } catch {
     /* best-effort */
   }

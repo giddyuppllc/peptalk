@@ -22,6 +22,10 @@ jest.mock('../../store/useDoseLogStore', () => ({
     { peptideId: 'tb-500', isActive: false, frequency: 'daily', startDate: '2026-10-01' },
   ] }) },
 }));
+jest.mock('../protocolAlerts', () => ({
+  protocolAlertsFor: (p: { peptideId: string }) => [{ identifier: `protocol-${p.peptideId}-vial-expiry` }],
+  scheduleProtocolAlerts: async (a: { identifier: string }[]) => { a.forEach((x) => calls.push(`alert:${x.identifier}`)); },
+}));
 jest.mock('../../data/peptides', () => ({ getPeptideById: () => ({ name: 'BPC-157' }) }));
 
 import { applyMasterSwitch } from '../reminderSync';
@@ -35,5 +39,5 @@ test('master off cancels every scheduled local reminder and schedules nothing', 
 
 test('master on restores only the categories that are on', async () => {
   await applyMasterSwitch(true);
-  expect(calls).toEqual(['checkin', 'dose:bpc-157', 'workout:Mon', 'workout:Wed', 'safety']);
+  expect(calls).toEqual(['checkin', 'dose:bpc-157', 'alert:protocol-bpc-157-vial-expiry', 'workout:Mon', 'workout:Wed', 'safety']);
 });
