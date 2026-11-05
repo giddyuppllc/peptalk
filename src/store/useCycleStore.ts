@@ -11,7 +11,14 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
+import {
+  syncRecord,
+  deleteRecord,
+  hydrateFromServer,
+  adoptLegacyDayIds,
+  isLegacyDayId,
+  newDayScopedId,
+} from '../services/syncService';
 import type {
   PeriodEntry,
   CycleDayLog,
@@ -91,6 +98,25 @@ interface CycleActions {
    * conflict.
    */
   syncFromServer: () => Promise<void>;
+}
+
+/** The cycle_day_logs row for a day log. */
+function cycleDayLogRow(e: CycleDayLog) {
+  return {
+          id: e.id,
+          date: e.date,
+          flow: e.flow ?? null,
+          symptoms: e.symptoms,
+          moods: e.moods,
+          discharge: e.discharge ?? null,
+          bbt: e.bbt ?? null,
+          bbt_source: e.bbtSource ?? null,
+          notes: e.notes ?? null,
+          sexual_activity: e.sexualActivity ?? null,
+          positive_ovulation_test: e.positiveOvulationTest ?? null,
+          positive_pregnancy_test: e.positivePregnancyTest ?? null,
+          source: e.source,
+  };
 }
 
 export const useCycleStore = create<CycleState & CycleActions>()(
@@ -230,7 +256,14 @@ export const useCycleStore = create<CycleState & CycleActions>()(
         // constraint. Regenerating `cyclelog-${date}` on every write — exactly
         // like check_ins uses `checkin-${date}` — dedups across devices and
         // migrates any pre-existing random-id local rows on their next save.
-        const deterministicId = `cyclelog-${date}`;
+        // NOT a date-only id: `cyclelog-${date}` is the primary key across all
+        // users, so only the first user per date could ever sync a day log
+        // (see syncService, "Day-keyed ids"). Keep a non-legacy id; replace a
+        // legacy one on its next save.
+        const deterministicId =
+          existing && !isLegacyDayId('cyclelog', existing.id)
+            ? existing.id
+            : newDayScopedId('cyclelog', date);
         const merged: CycleDayLog = existing
           ? {
               ...existing,
@@ -264,21 +297,18 @@ export const useCycleStore = create<CycleState & CycleActions>()(
             : [merged, ...get().dayLogs],
         });
 
-        syncRecord('cycle_day_logs', {
-          id: merged.id,
-          date: merged.date,
-          flow: merged.flow ?? null,
-          symptoms: merged.symptoms,
-          moods: merged.moods,
-          discharge: merged.discharge ?? null,
-          bbt: merged.bbt ?? null,
-          bbt_source: merged.bbtSource ?? null,
-          notes: merged.notes ?? null,
-          sexual_activity: merged.sexualActivity ?? null,
-          positive_ovulation_test: merged.positiveOvulationTest ?? null,
-          positive_pregnancy_test: merged.positivePregnancyTest ?? null,
-          source: merged.source,
-        }).catch(() => {});
+        // cycle_day_logs is UNIQUE(user_id, date): drop the user's own legacy
+        // row before writing the re-keyed one, or the insert would collide.
+        const previousId = existing?.id;
+        if (previousId && previousId !== merged.id) {
+          void deleteRecord('cycle_day_logs', previousId)
+            .catch(() => {})
+            .finally(() => {
+              syncRecord('cycle_day_logs', cycleDayLogRow(merged)).catch(() => {});
+            });
+        } else {
+          syncRecord('cycle_day_logs', cycleDayLogRow(merged)).catch(() => {});
+        }
 
         return merged;
       },
@@ -472,9 +502,15 @@ export const useCycleStore = create<CycleState & CycleActions>()(
           ),
         ]);
 
+        // Day logs refused under a legacy date-only id get a fresh id and are
+        // pushed (syncService, adoptLegacyDayIds).
+        const adoptedDayLogs = await adoptLegacyDayIds('cycle_day_logs', 'cyclelog', dayLogs, (e) =>
+          syncRecord('cycle_day_logs', cycleDayLogRow(e)),
+        );
+
         set({
           periods: periods.sort((a, b) => b.startDate.localeCompare(a.startDate)),
-          dayLogs: dayLogs.sort((a, b) => b.date.localeCompare(a.date)),
+          dayLogs: adoptedDayLogs.sort((a, b) => b.date.localeCompare(a.date)),
           contraceptionHistory: contra,
         });
       },

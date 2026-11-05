@@ -2,7 +2,14 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { BodyMeasurements, CheckInEntry, CheckInRating, EmotionTag, PeptideEffect, SleepStageData } from '../types';
 import { secureStorage } from '../services/secureStorage';
-import { syncRecord, deleteRecord, hydrateFromServer } from '../services/syncService';
+import {
+  syncRecord,
+  deleteRecord,
+  hydrateFromServer,
+  adoptLegacyDayIds,
+  isLegacyDayId,
+  newDayScopedId,
+} from '../services/syncService';
 
 const toDateKey = (date: Date) => {
   const year = date.getFullYear();
@@ -56,6 +63,35 @@ interface CheckinStore {
   syncFromServer: () => Promise<void>;
 }
 
+/** The check_ins row for an entry. Columns match migration 20260420000000. */
+function checkInRow(e: CheckInEntry) {
+  return {
+    id: e.id,
+    date: e.date,
+    mood: e.mood,
+    energy: e.energy,
+    stress: e.stress,
+    sleep_quality: e.sleepQuality,
+    recovery: e.recovery,
+    appetite: e.appetite,
+    weight_lbs: e.weightLbs ?? null,
+    resting_heart_rate: e.restingHeartRate ?? null,
+    steps: e.steps ?? null,
+    hrv_ms: e.hrvMs ?? null,
+    vo2_max: e.vo2Max ?? null,
+    spo2: e.spo2 ?? null,
+    respiratory_rate: e.respiratoryRate ?? null,
+    body_measurements: e.bodyMeasurements ?? null,
+    notes: e.notes ?? null,
+    emotion_tags: e.emotionTags ?? [],
+    side_effect_tags: e.sideEffectTags ?? [],
+    peptide_effects: e.peptideEffects ?? [],
+    sleep_stages: e.sleepStages ?? null,
+    active_calories: e.activeCalories ?? null,
+    source: 'user',
+  };
+}
+
 export const useCheckinStore = create<CheckinStore>()(
   persist(
     (set, get) => ({
@@ -65,7 +101,12 @@ export const useCheckinStore = create<CheckinStore>()(
         const date = entry.date ?? toDateKey(new Date());
         const existing = get().entries.find((item) => item.date === date);
         const nextEntry: CheckInEntry = {
-          id: existing?.id ?? `checkin-${date}`,
+          // Never a date-only id: those collide between users (syncService,
+          // "Day-keyed ids"). A legacy id is replaced on its next save.
+          id:
+            existing && !isLegacyDayId('checkin', existing.id)
+              ? existing.id
+              : newDayScopedId('checkin', date),
           date,
           createdAt: new Date().toISOString(),
           mood: clampRating(entry.mood),
@@ -105,31 +146,16 @@ export const useCheckinStore = create<CheckinStore>()(
         // sleep_stages, and active_calories, which meant Apple Watch
         // sleep breakdowns and peptide-attributed effect tags were
         // local-only and would disappear on reinstall.
-        syncRecord('check_ins', {
-          id: nextEntry.id,
-          date: nextEntry.date,
-          mood: nextEntry.mood,
-          energy: nextEntry.energy,
-          stress: nextEntry.stress,
-          sleep_quality: nextEntry.sleepQuality,
-          recovery: nextEntry.recovery,
-          appetite: nextEntry.appetite,
-          weight_lbs: nextEntry.weightLbs ?? null,
-          resting_heart_rate: nextEntry.restingHeartRate ?? null,
-          steps: nextEntry.steps ?? null,
-          hrv_ms: nextEntry.hrvMs ?? null,
-          vo2_max: nextEntry.vo2Max ?? null,
-          spo2: nextEntry.spo2 ?? null,
-          respiratory_rate: nextEntry.respiratoryRate ?? null,
-          body_measurements: nextEntry.bodyMeasurements ?? null,
-          notes: nextEntry.notes ?? null,
-          emotion_tags: nextEntry.emotionTags ?? [],
-          side_effect_tags: nextEntry.sideEffectTags ?? [],
-          peptide_effects: nextEntry.peptideEffects ?? [],
-          sleep_stages: nextEntry.sleepStages ?? null,
-          active_calories: nextEntry.activeCalories ?? null,
-          source: 'user',
-        });
+        const previousId = existing?.id;
+        if (previousId && previousId !== nextEntry.id) {
+          // Re-keyed from a legacy date-only id: remove the old row first (RLS
+          // limits this to the user's own row; for everyone else it is a no-op).
+          void deleteRecord('check_ins', previousId).finally(() => {
+            void syncRecord('check_ins', checkInRow(nextEntry));
+          });
+        } else {
+          void syncRecord('check_ins', checkInRow(nextEntry));
+        }
 
         return nextEntry;
       },
@@ -237,7 +263,14 @@ export const useCheckinStore = create<CheckinStore>()(
           }),
           { orderBy: 'date', ascending: false, limit: 1000 },
         );
-        const sorted = merged.sort((a, b) => (a.date < b.date ? 1 : -1));
+        // Check-ins saved under a legacy date-only id that the server never
+        // accepted (another user owned that id) get a fresh id and are pushed
+        // now — this is what recovers months of check-ins that only lived on
+        // the phone.
+        const adopted = await adoptLegacyDayIds('check_ins', 'checkin', merged, (e) =>
+          syncRecord('check_ins', checkInRow(e)),
+        );
+        const sorted = adopted.sort((a, b) => (a.date < b.date ? 1 : -1));
         set({ entries: sorted });
       },
     }),
