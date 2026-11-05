@@ -182,6 +182,13 @@ for (const f of findings) {
  */
 const READ_ALLOWED = new Map([
   [
+    'app/workouts/generated-tracker.tsx::plannedLogId',
+    'Sent by app/workouts/plan.tsx as a conditional spread ' +
+      '(...(plannedLog ? { plannedLogId } : {})) when the day has a planned ' +
+      'calendar row; this scanner reads literal keys only. Covered by ' +
+      'src/store/__tests__/plannedWorkoutCompletion.test.ts.',
+  ],
+  [
     'app/doses/calculator.tsx::doseMcg',
     'Sent by Aimee SERVER-SIDE — execOpenDosingCalculator in ' +
       'supabase/functions/aimee-chat-stream/_tools.ts builds ' +

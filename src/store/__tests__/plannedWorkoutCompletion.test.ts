@@ -1,4 +1,6 @@
 /** Finishing a planned calendar day completes that row, not a duplicate beside it. */
+import { useWorkoutStore } from '../useWorkoutStore';
+
 const mockSync = jest.fn().mockResolvedValue(true);
 jest.mock('../../services/syncService', () => ({
   ...jest.requireActual('../../services/syncService'),
@@ -14,8 +16,6 @@ jest.mock('../../services/secureStorage', () => ({
     removeItem: jest.fn().mockResolvedValue(undefined),
   },
 }));
-
-import { useWorkoutStore } from '../useWorkoutStore';
 
 const PLANNED = {
   id: 'plan-ll-body-recomp-3-1783099289480',

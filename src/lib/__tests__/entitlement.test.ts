@@ -256,11 +256,11 @@ describe('computeFeatureAccess', () => {
 });
 
 describe('renewal grace matches the server', () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   const fs = require('node:fs');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   const path = require('node:path');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   const { RENEWAL_GRACE_MS, withinRenewalGrace, computeFeatureAccess } = require('../entitlement');
 
   it('uses the same grace as supabase/functions/_shared/effectiveTier.ts', () => {

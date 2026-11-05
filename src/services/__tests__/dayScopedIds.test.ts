@@ -6,6 +6,8 @@
  * user's row and was refused by RLS. Production 2026-11-05: 16 check-ins in
  * total, one per calendar day, from 281 accounts.
  */
+import { adoptLegacyDayIds, adoptLegacyIds, isLegacyDayId, newDayScopedId } from '../syncService';
+
 const mockState = {
   userId: 'user-b' as string | null,
   ownedIds: [] as string[],
@@ -28,8 +30,6 @@ jest.mock('../supabase', () => {
     },
   };
 });
-
-import { adoptLegacyDayIds, adoptLegacyIds, isLegacyDayId, newDayScopedId } from '../syncService';
 
 beforeEach(() => {
   mockState.userId = 'user-b';

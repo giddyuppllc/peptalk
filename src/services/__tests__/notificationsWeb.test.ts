@@ -1,4 +1,6 @@
 /** Reminders are unavailable on web: the expo-notifications web scheduler is a stub. */
+import { notificationsAvailable, scheduleDoseReminder, cancelRemindersByTag } from '../notificationService';
+
 jest.mock('react-native', () => ({ Platform: { OS: 'web', select: (o: Record<string, unknown>) => o.web ?? o.default } }));
 jest.mock('expo-constants', () => ({ __esModule: true, default: { appOwnership: null, expoConfig: {} } }));
 jest.mock('@react-native-async-storage/async-storage', () => ({ getItem: jest.fn(), setItem: jest.fn(), removeItem: jest.fn() }));
@@ -10,8 +12,6 @@ const mockGetAll = jest.fn(() => {
 });
 jest.mock('expo-notifications', () => ({ scheduleNotificationAsync: mockSchedule, getAllScheduledNotificationsAsync: mockGetAll }), { virtual: true });
 jest.mock('expo-device', () => ({}), { virtual: true });
-
-import { notificationsAvailable, scheduleDoseReminder, cancelRemindersByTag } from '../notificationService';
 
 it('reports unavailable on web and never calls the throwing web stub', async () => {
   expect(notificationsAvailable()).toBe(false);

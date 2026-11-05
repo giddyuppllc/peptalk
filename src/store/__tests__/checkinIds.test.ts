@@ -1,4 +1,6 @@
 /** saveCheckIn never mints a date-only id, and re-keys a legacy one. */
+import { useCheckinStore } from '../useCheckinStore';
+
 const mockSync = jest.fn().mockResolvedValue(true);
 const mockDelete = jest.fn().mockResolvedValue(true);
 jest.mock('../../services/syncService', () => {
@@ -19,8 +21,6 @@ jest.mock('../../services/secureStorage', () => ({
     removeItem: jest.fn().mockResolvedValue(undefined),
   },
 }));
-
-import { useCheckinStore } from '../useCheckinStore';
 
 const base = { mood: 3, energy: 3, stress: 3, sleepQuality: 3, recovery: 3, appetite: 3 } as const;
 const flush = () => new Promise((r) => setTimeout(r, 0));
