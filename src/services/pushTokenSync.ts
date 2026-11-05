@@ -29,7 +29,7 @@ export function isMissingFunction(error: { code?: string; message?: string } | n
  * that migration is not applied. Returns the error, or null.
  */
 export async function writeToken(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   supabase: any,
   userId: string,
   token: string,
