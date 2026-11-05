@@ -1,5 +1,7 @@
 # dependencies
 node_modules/
+# Worktrees link node_modules from the main checkout; the link is not a dir.
+node_modules
 
 # Private keys (NEVER commit)
 keys/
