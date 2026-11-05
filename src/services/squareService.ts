@@ -36,6 +36,20 @@ export async function subscribeWithCardToken(opts: {
 }
 
 /**
+ * Cancel the caller's WEB (Square) subscription at the end of the paid period.
+ * Web had no cancel path at all — see supabase/functions/square-cancel.
+ * Returns the date access ends (YYYY-MM-DD), when Square reports one.
+ */
+export async function cancelWebSubscription(): Promise<{ accessEnds: string | null }> {
+  if (Platform.OS !== 'web') throw new Error('Square cancel is web-only; native cancels in the store.');
+  const { data, error } = await supabase.functions.invoke('square-cancel', { body: {} });
+  if (error) throw new Error(error.message ?? 'Could not cancel the subscription.');
+  const res = data as { ok?: boolean; error?: string; results?: { canceledDate: string | null }[] } | null;
+  if (!res?.ok) throw new Error(res?.error ?? 'Could not cancel the subscription.');
+  return { accessEnds: res.results?.find((r) => r.canceledDate)?.canceledDate ?? null };
+}
+
+/**
  * One-time / hosted-checkout fallback (kept for reference; the recurring path
  * above is now the default web flow).
  */

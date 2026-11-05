@@ -199,16 +199,27 @@ describe('computeFeatureAccess', () => {
     ).toBe(true);
   });
 
-  it('expired paid user (past expiry, still flagged active) falls back to FREE', () => {
+  it('expired paid user (past expiry + renewal grace, still flagged active) falls back to FREE', () => {
+    // An ACTIVE row is honoured for the server's renewal grace (3 days) after
+    // expiry — see RENEWAL_GRACE_MS. Past that it is genuinely lapsed.
     expect(
       computeFeatureAccess(
-        { tier: 'pro', isActive: true, expiresAt: iso(NOW - 1000), feature: PRO_FEATURE },
+        { tier: 'pro', isActive: true, expiresAt: iso(NOW - 4 * DAY), feature: PRO_FEATURE },
         NOW,
       ),
     ).toBe(false);
     expect(
       computeFeatureAccess(
-        { tier: 'pro', isActive: true, expiresAt: iso(NOW - 1000), feature: FREE_FEATURE },
+        { tier: 'pro', isActive: true, expiresAt: iso(NOW - 4 * DAY), feature: FREE_FEATURE },
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it('an ACTIVE row just past expiry (renewal webhook not yet landed) keeps paid access', () => {
+    expect(
+      computeFeatureAccess(
+        { tier: 'pro', isActive: true, expiresAt: iso(NOW - 1000), feature: PRO_FEATURE },
         NOW,
       ),
     ).toBe(true);
@@ -241,5 +252,39 @@ describe('computeFeatureAccess', () => {
         NOW,
       ),
     ).toBe(false);
+  });
+});
+
+describe('renewal grace matches the server', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const fs = require('node:fs');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const path = require('node:path');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { RENEWAL_GRACE_MS, withinRenewalGrace, computeFeatureAccess } = require('../entitlement');
+
+  it('uses the same grace as supabase/functions/_shared/effectiveTier.ts', () => {
+    const src = fs.readFileSync(path.join(__dirname, '../../../supabase/functions/_shared/effectiveTier.ts'), 'utf8');
+    const m = src.match(/const GRACE_MS = (\d+) \* 24 \* 60 \* 60 \* 1000/);
+    expect(m).not.toBeNull();
+    expect(RENEWAL_GRACE_MS).toBe(Number(m[1]) * 24 * 60 * 60 * 1000);
+  });
+
+  it('a paid ACTIVE row an hour past expiry (renewal webhook pending) keeps paid features', () => {
+    const now = Date.parse('2026-10-08T05:00:00Z');
+    expect(withinRenewalGrace('2026-10-08T04:00:00Z', now)).toBe(true);
+    const tierFeature = (require('../../types/fitness').TIER_FEATURES.pro ?? []).find(
+      (f: string) => !(require('../../types/fitness').TIER_FEATURES.free ?? []).includes(f),
+    );
+    expect(computeFeatureAccess({ tier: 'pro', isActive: true, expiresAt: '2026-10-08T04:00:00Z', feature: tierFeature }, now)).toBe(true);
+  });
+
+  it('past the grace, or inactive, falls back to free', () => {
+    const now = Date.parse('2026-10-12T05:00:00Z');
+    expect(withinRenewalGrace('2026-10-08T04:00:00Z', now)).toBe(false);
+    const fitness = require('../../types/fitness');
+    const paidOnly = (fitness.TIER_FEATURES.pro ?? []).find((f: string) => !(fitness.TIER_FEATURES.free ?? []).includes(f));
+    expect(computeFeatureAccess({ tier: 'pro', isActive: true, expiresAt: '2026-10-08T04:00:00Z', feature: paidOnly }, now)).toBe(false);
+    expect(computeFeatureAccess({ tier: 'pro', isActive: false, expiresAt: '2026-12-08T04:00:00Z', feature: paidOnly }, now)).toBe(false);
   });
 });

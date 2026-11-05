@@ -75,3 +75,93 @@ export function parseRef(ref: string | undefined | null): ParsedRef | null {
   if (!userId || (tier !== 'plus' && tier !== 'pro')) return null;
   return { userId, tier, productId: productId ?? `peptalk_${tier}_monthly` };
 }
+
+/**
+ * Minutes east of UTC for `timeZone` at `instantMs` (America/New_York in
+ * November → -300). Pure Intl, available in Deno and Node.
+ */
+function tzOffsetMinutes(timeZone: string, instantMs: number): number {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }).formatToParts(new Date(instantMs));
+    const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+    const asUtc = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
+    return Math.round((asUtc - instantMs) / 60000);
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * End of a Square calendar date (YYYY-MM-DD) in the subscription's timezone.
+ *
+ * Square dates — charged_through_date, canceled_date — are LOCAL to the
+ * subscription's `timezone` (square-subscribe creates them in
+ * America/New_York). Reading '2026-10-08' as 23:59:59 UTC ended every paid
+ * period four or five hours early, so a renewal or cancel event arriving that
+ * evening found the period already "over" and revoked access.
+ */
+export function squareDateEndMs(date: string, timeZone = 'America/New_York'): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date ?? '');
+  if (!m) return null;
+  const naive = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 23, 59, 59);
+  return naive - tzOffsetMinutes(timeZone, naive) * 60000;
+}
+
+export interface SquareSubPatch {
+  is_active?: boolean;
+  expires_at?: string;
+}
+
+/**
+ * What a Square subscription.created / subscription.updated event should do to
+ * our `subscriptions` row. Pure, so the money decision is unit-tested.
+ *
+ * Production (Sept 2026): web PepTalk+ buyers were told "You've used your 3
+ * free Aimee messages" six to twelve minutes after paying, because an event
+ * landing after the purchase turned the row inactive. The handler treated
+ * every status except ACTIVE as revoke, and Square delivers events out of
+ * order — a PENDING created-event processed after the ACTIVE one was enough.
+ *
+ *  - ACTIVE, PENDING       → access. PENDING is a subscription being set up or
+ *                            starting; square-subscribe already granted it.
+ *  - CANCELED              → access until the end of the paid-through date
+ *                            (Square cancels at period end), then off.
+ *  - DEACTIVATED, PAUSED   → off (billing failure / hard stop / paused).
+ *  - anything else         → no change. Unknown is never a reason to revoke.
+ *
+ * expires_at never moves BACKWARDS for an active row: an older, re-delivered
+ * event with an earlier charged-through date must not shorten a period that a
+ * later invoice already extended.
+ */
+export function squareSubscriptionPatch(input: {
+  status?: string | null;
+  chargedThroughDate?: string | null;
+  timezone?: string | null;
+  nowMs: number;
+  existingExpiresAt?: string | null;
+}): SquareSubPatch {
+  const status = (input.status ?? '').toUpperCase();
+  const endMs = input.chargedThroughDate
+    ? squareDateEndMs(input.chargedThroughDate, input.timezone || 'America/New_York')
+    : null;
+  const existingMs = input.existingExpiresAt ? new Date(input.existingExpiresAt).getTime() : NaN;
+  const later = (a: number | null) =>
+    a == null ? undefined : new Date(Number.isFinite(existingMs) ? Math.max(a, existingMs) : a).toISOString();
+
+  if (status === 'ACTIVE' || status === 'PENDING') {
+    return { is_active: true, ...(endMs != null ? { expires_at: later(endMs) } : {}) };
+  }
+  if (status === 'CANCELED') {
+    if (endMs == null) return { is_active: false };
+    return { is_active: endMs > input.nowMs, expires_at: new Date(endMs).toISOString() };
+  }
+  if (status === 'DEACTIVATED' || status === 'PAUSED') {
+    return { is_active: false, ...(endMs != null ? { expires_at: new Date(endMs).toISOString() } : {}) };
+  }
+  return {};
+}

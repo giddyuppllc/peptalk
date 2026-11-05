@@ -8,7 +8,7 @@
  */
 
 import { Platform } from 'react-native';
-import { BETA_PRODUCT_ID } from '../lib/entitlement';
+import { BETA_PRODUCT_ID, withinRenewalGrace } from '../lib/entitlement';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { secureStorage } from '../services/secureStorage';
@@ -464,8 +464,7 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
             //   then tier rank (pro > plus > free) at *1000
             //   then last_validated_at recency in seconds (small additive)
             const score = (r: typeof candidates[number]): number => {
-              const valid = (r.is_active ?? false) &&
-                (!r.expires_at || new Date(r.expires_at).getTime() > nowMs);
+              const valid = (r.is_active ?? false) && withinRenewalGrace(r.expires_at, nowMs);
               const base = valid ? 100_000 : (r.is_active ? 10_000 : 0);
               const tierBoost = (tierRank[r.tier] ?? 0) * 1000;
               const recencyMs = r.last_validated_at
@@ -575,9 +574,10 @@ export const useSubscriptionStore = create<SubscriptionState & SubscriptionActio
               }
               return;
             }
+            // Same rule the server applies (effectiveTier GRACE_MS): an ACTIVE
+            // row stays paid through the renewal grace.
             const stillValid =
-              (data.is_active ?? true) &&
-              (!data.expires_at || new Date(data.expires_at) > new Date());
+              (data.is_active ?? true) && withinRenewalGrace(data.expires_at);
             if (purchaseSupersededSync()) {
               // A purchase was validated while this sync was in flight. Our
               // `data` is a snapshot of the subscriptions table taken BEFORE

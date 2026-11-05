@@ -54,6 +54,25 @@ export function isTierAtLeast(tier: string | null | undefined, min: Subscription
 }
 
 /**
+ * Renewal grace — MUST equal GRACE_MS in supabase/functions/_shared/effectiveTier.ts.
+ *
+ * An auto-renewing row keeps its OLD expires_at until the store/Square renewal
+ * webhook lands (seconds to hours later). The server honours paid access for
+ * this long past expiry on an ACTIVE row; the app cut access at the exact
+ * expiry instant, so a paying user at every renewal saw the paywall while the
+ * server would still have served them.
+ */
+export const RENEWAL_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
+
+/** Paid access for an ACTIVE row: within its expiry plus the renewal grace. */
+export function withinRenewalGrace(expiresAt: string | null, now: number = Date.now()): boolean {
+  if (!expiresAt) return true;
+  const exp = new Date(expiresAt).getTime();
+  if (Number.isNaN(exp)) return true;
+  return now <= exp + RENEWAL_GRACE_MS;
+}
+
+/**
  * Derive the lifecycle status from tier + expiry + productId.
  *
  * `now` is injectable for testing; defaults to Date.now().
@@ -119,12 +138,9 @@ export function computeFeatureAccess(
       const features = TIER_FEATURES.free ?? [];
       return features.includes(feature);
     }
-    if (expiresAt) {
-      const expiresMs = new Date(expiresAt).getTime();
-      if (Number.isFinite(expiresMs) && now > expiresMs) {
-        const features = TIER_FEATURES.free ?? [];
-        return features.includes(feature);
-      }
+    if (expiresAt && !withinRenewalGrace(expiresAt, now)) {
+      const features = TIER_FEATURES.free ?? [];
+      return features.includes(feature);
     }
   }
   const features = TIER_FEATURES[tier] ?? [];

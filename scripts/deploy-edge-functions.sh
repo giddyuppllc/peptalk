@@ -22,6 +22,12 @@ FUNCTIONS=(
   validate-purchase
   apple-notifications
   google-rtdn
+  reconcile-purchases
+  # Web (Square) — were missing, so a batch deploy never shipped Square fixes
+  square-subscribe
+  square-checkout
+  square-webhook
+  square-cancel
 
   # Account lifecycle
   delete-user
@@ -99,7 +105,8 @@ echo "Deploying ${#FUNCTIONS[@]} edge functions..."
 #   - google-rtdn: Google Cloud Pub/Sub (auth = OIDC token in body)
 # Without this flag, Supabase rejects the call with 401 BEFORE the function
 # code runs — webhooks die silently. Verified production-critical 2026-05-14.
-NO_VERIFY_JWT_FUNCTIONS=(apple-notifications google-rtdn)
+# square-webhook: Square posts with an HMAC signature, no JWT (live: verify_jwt=false).
+NO_VERIFY_JWT_FUNCTIONS=(apple-notifications google-rtdn square-webhook)
 
 is_no_verify_jwt() {
   local target="$1"
