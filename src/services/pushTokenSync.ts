@@ -17,6 +17,34 @@ import { registerForPushNotifications, notificationsAvailable } from './notifica
 
 let lastSyncedToken: string | null = null;
 
+/** PostgREST's "function not found" — the RPC's migration is not applied yet. */
+export function isMissingFunction(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === 'PGRST202' || error.code === '42883' || /could not find the function/i.test(error.message ?? '');
+}
+
+/**
+ * Save this device's token for the signed-in user. Prefers claim_push_token
+ * (reassigns a shared device's token); falls back to the plain upsert while
+ * that migration is not applied. Returns the error, or null.
+ */
+export async function writeToken(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  userId: string,
+  token: string,
+  platform: 'ios' | 'android',
+): Promise<{ code?: string; message?: string } | null> {
+  let { error } = await supabase.rpc('claim_push_token', { p_token: token, p_platform: platform });
+  if (error && isMissingFunction(error)) {
+    ({ error } = await supabase.from('push_tokens').upsert(
+      { user_id: userId, expo_push_token: token, platform, last_seen_at: new Date().toISOString() },
+      { onConflict: 'expo_push_token' },
+    ));
+  }
+  return error ?? null;
+}
+
 /**
  * Register an Expo push token + upsert into push_tokens for the current
  * user. Idempotent — call as often as you like.
@@ -53,18 +81,13 @@ export async function syncPushToken(): Promise<string | null> {
     // sync. Without this, user A's row sat in the table forever
     // and the apple-notifications fanout kept routing to this
     // device under user A's id.
-    const { error } = await (supabase as any)
-      .from('push_tokens')
-      .upsert(
-        {
-          user_id: user.id,
-          expo_push_token: token,
-          platform,
-          last_seen_at: new Date().toISOString(),
-        },
-        { onConflict: 'expo_push_token' },
-      );
-
+    //
+    // That reassignment needs claim_push_token (migration
+    // 20261105050000): the table's UPDATE policy only lets a user touch
+    // their own row, so a plain upsert onto another user's token is
+    // refused. Before that migration is applied the RPC does not exist and
+    // the original upsert still covers the same-user case.
+    const error = await writeToken(supabase, user.id, token, platform);
     if (error) {
       if (__DEV__) console.warn('[push-token-sync] upsert failed:', error);
       return token;
