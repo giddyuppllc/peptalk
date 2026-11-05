@@ -17,6 +17,8 @@ import path from 'node:path';
 
 const APP_DIR = path.join(__dirname, '..', '..', '..', 'app');
 const BOT_FILE = path.join(__dirname, '..', 'peptalkBot.ts');
+/** The fallback's answers to Aimee's chip prompts; routes passed to act(label, route, icon). */
+const APP_PROMPTS_FILE = path.join(__dirname, '..', 'aimeeAppPrompts.ts');
 
 /** Every URL path Expo Router will serve, in both group-qualified and bare form. */
 function buildValidPaths(): Set<string> {
@@ -65,8 +67,11 @@ const source = fs.readFileSync(BOT_FILE, 'utf8');
 // Static route literals the bot hands to router.push. Template literals
 // (`/peptide/${id}`) are excluded — their shape is covered by the dynamic
 // match above and their value isn't knowable statically.
+const appPromptSource = fs.readFileSync(APP_PROMPTS_FILE, 'utf8');
+const appPromptTargets = [...appPromptSource.matchAll(/act\('[^']*',\s*'([^']+)'/g)].map((m) => m[1]);
 const targets = [...source.matchAll(/route:\s*'([^']+)'/g)]
   .map((m) => m[1])
+  .concat(appPromptTargets)
   .filter((r) => !r.includes('${'));
 
 describe('bot action routes', () => {
@@ -74,6 +79,7 @@ describe('bot action routes', () => {
     // Guards against this test silently passing on an empty set if the shape
     // of peptalkBot.ts ever changes.
     expect(targets.length).toBeGreaterThan(10);
+    expect(appPromptTargets.length).toBeGreaterThan(10);
     expect(VALID.size).toBeGreaterThan(50);
   });
 

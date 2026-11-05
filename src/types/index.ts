@@ -308,6 +308,12 @@ export interface ChatMessage {
   role: ChatRole;
   content: string;
   timestamp: string;
+  /**
+   * 'local' = written by the on-device fallback bot, not the model. Kept out
+   * of the history sent to the model, which would otherwise read the fallback's
+   * canned text as its own earlier words.
+   */
+  source?: 'local';
   relatedPeptideIds?: string[];
   quickReplies?: string[];
   /** Tappable action buttons for navigation from bot responses */
@@ -392,6 +398,10 @@ export interface BotContext {
   currentStack: string[];
   savedStackNames: string[];
   conversationHistory: ChatMessage[];
+  /** The message is an orb's observation line (screen copy), not typed text. */
+  fromObservation?: boolean;
+  /** Platform.OS — selects the prescription-compound rules (see lib/rxCompounds). */
+  platform?: string;
 }
 
 // ─── Dose Logging & Protocol Tracking ─────────────────────────────────────────
