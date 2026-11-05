@@ -29,7 +29,7 @@ import { analyzeStack, getKnownInteraction } from './analysisEngine';
 import { getProtocolsByPeptide, PROTOCOL_TEMPLATES } from '../data/protocols';
 import { getDosingTableEntry } from '../data/peptideDosingTable';
 import { matchAppPrompt, respondAppPrompt, respondObservation } from './aimeeAppPrompts';
-import { withholdRxDosing, strictRxPlatform } from '../lib/rxCompounds';
+import { botDosingMode, strictRxPlatform } from '../lib/rxCompounds';
 import { BOT_MEDICAL_SUFFIX, BOT_INFO_SUFFIX } from '../constants/legal';
 import { EXERCISES } from '../data/exercises';
 import { WORKOUT_PROGRAMS } from '../data/workoutPrograms';
@@ -2173,6 +2173,42 @@ function respondRxNoDosing(p: Peptide): string {
 }
 
 /**
+ * Approved drug, platform allows label info: the general labeled use and
+ * standard titration from the prescribing information — the same summary the
+ * main chat quotes — never adjusted to the user.
+ */
+function respondRxLabel(p: Peptide, label: { display: string; brands: string; label: string }): string {
+  return [
+    `**${label.display}** — ${label.brands}.`,
+    '',
+    `Per the US prescribing information: ${label.label}`,
+    '',
+    `This is the general label, not a dose for you. I'm not a doctor — follow your prescriber's instructions.`,
+  ].join('\n');
+}
+
+/**
+ * Research / unapproved compound: what it is and what has been studied, no
+ * human doses, ranges, cycles or protocols (research use only).
+ */
+function respondResearchNoProtocol(p: Peptide): string {
+  const parts: string[] = [];
+  parts.push(`PepTalk doesn't provide dosing or protocols for research compounds like **${p.name}**.`);
+  parts.push('');
+  parts.push(`What I can tell you about ${p.name}:`);
+  if (p.researchSummary) parts.push(p.researchSummary);
+  if (p.mechanismOfAction) parts.push(`• **How it's thought to work:** ${p.mechanismOfAction}`);
+  if (p.halfLife) parts.push(`• **Half-life:** ${p.halfLife}`);
+  if (p.storageTemp) parts.push(`• **Storage:** ${p.storageTemp}`);
+  return parts.join('\n');
+}
+
+/** A dosing question with no compound named. */
+function respondDosingWhich(): string {
+  return `Which compound are you asking about? I can share what it is, how it works and what has been studied.`;
+}
+
+/**
  * "Delete my protocols", "edit my last dose" — requests to change the user's
  * own data. The keyword router read "protocol" as a dosing question and
  * answered with a dose warning (production, 2026-09-08). The fallback cannot
@@ -2281,10 +2317,24 @@ export function generateLocalBotResponse(
       content = respondCategoryExplore(userMessage);
       break;
     case 'dosing_protocol': {
-      const rx = mentionedPeptides.find((pp) => withholdRxDosing(pp.id, platform));
-      content = rx
-        ? respondRxNoDosing(rx)
-        : respondDosingProtocol(mentionedPeptides, context, platform);
+      // Same dosing policy as the main chat (lib/rxCompounds → rxPolicy.ts):
+      // research compounds never get doses or protocols; approved drugs get
+      // the cited label summary only where the platform allows it; only
+      // over-the-counter supplements keep the reference card.
+      const p = mentionedPeptides[0];
+      if (!p) {
+        content = respondDosingWhich();
+        break;
+      }
+      const mode = botDosingMode(p.id, platform);
+      content =
+        mode.kind === 'supplement'
+          ? respondDosingProtocol(mentionedPeptides, context, platform)
+          : mode.kind === 'approved_rx' && mode.labelAllowed && mode.approved
+            ? respondRxLabel(p, mode.approved)
+            : mode.kind === 'approved_rx'
+              ? respondRxNoDosing(p)
+              : respondResearchNoProtocol(p);
       break;
     }
     case 'side_effects':

@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { generateLocalBotResponse } from '../peptalkBot';
 import { INTENT_PROMPTS } from '../../lib/aimeeIntentPrompts';
-import { RX_COMPOUND_IDS } from '../../lib/rxCompounds';
+import { botDosingMode } from '../../lib/rxCompounds';
 import type { BotContext } from '../../types';
 
 const today = new Date().toISOString().slice(0, 10);
@@ -99,40 +99,49 @@ describe('goal questions', () => {
   });
 });
 
-describe('prescription compounds', () => {
+describe('dosing follows the main chat\'s policy (supabase/functions/_shared/rxPolicy.ts)', () => {
   const q = 'How much bac water to add to 15mg vial of Tirzepatide'; // production 08-11
 
-  it('web: no dosing, ranges or reconstitution; points to a clinician', () => {
-    const r = generateLocalBotResponse(q, ctx({ platform: 'web' }));
-    expect(r.content).not.toMatch(/Dosing range|Typical Range|Reconstitution:|Titration/i);
-    expect(r.content).toMatch(/licensed clinician/);
-    expect(r.content).toMatch(/Tirzepatide/);
-  });
-
-  it('android: same as web', () => {
-    const r = generateLocalBotResponse('what dose of semaglutide', ctx({ platform: 'android' }));
-    expect(r.content).not.toMatch(/Dosing range|Typical Range/i);
-  });
-
-  it('iOS keeps the existing reply, exactly as the main chat does', () => {
+  it('iOS: approved drug — no label dosing (label info off by default on iOS)', () => {
     const r = generateLocalBotResponse(q, ctx({ platform: 'ios' }));
-    expect(r.content).toMatch(/Dosing range|Typical Range/);
+    expect(r.content).not.toMatch(/Dosing range|Typical Range|Reconstitution:|Titration|prescribing information:/i);
+    expect(r.content).toMatch(/licensed clinician/);
   });
 
-  it('a non-prescription compound on web keeps its research reference', () => {
-    const r = generateLocalBotResponse('BPC-157 dosing', ctx({ platform: 'web' }));
-    expect(r.content).toMatch(/Dosing range|Typical Range/);
+  it('web / android: approved drug — the cited label summary, with the disclaimer', () => {
+    for (const platform of ['web', 'android']) {
+      const r = generateLocalBotResponse('what dose of semaglutide', ctx({ platform }));
+      expect(r.content).toMatch(/Per the US prescribing information/);
+      expect(r.content).toMatch(/0\.25 mg weekly for 4 weeks/);
+      expect(r.content).toMatch(/I'm not a doctor — follow your prescriber's instructions\./);
+      expect(r.content).not.toMatch(/Dosing range|Typical Range|Reconstitution:/);
+    }
   });
 
-  it('the list matches the main chat (supabase/functions/_shared/rxPolicy.ts)', () => {
-    const src = fs.readFileSync(
-      path.join(__dirname, '..', '..', '..', 'supabase', 'functions', '_shared', 'rxPolicy.ts'),
-      'utf8',
-    );
-    const block = src.slice(src.indexOf('RX_PROTOCOL_IDS'), src.indexOf(']);', src.indexOf('RX_PROTOCOL_IDS')));
-    const ids = [...block.matchAll(/'([a-z0-9-]+)'/g)].map((m) => m[1]).sort();
-    expect(ids.length).toBeGreaterThan(0);
-    expect([...RX_COMPOUND_IDS].sort()).toEqual(ids);
+  it('every platform: research compounds get facts, never doses or protocols', () => {
+    for (const platform of ['ios', 'android', 'web', undefined]) {
+      for (const msg of ['BPC-157 dosing', 'how much TB-500 should I take', 'retatrutide protocol']) {
+        const r = generateLocalBotResponse(msg, ctx({ platform }));
+        expect(r.content).toMatch(/doesn't provide dosing or protocols for research compounds/);
+        expect(r.content).not.toMatch(/Dosing range|Typical Range|Reconstitution:|Titration|Cycle length/i);
+        expect(r.content).not.toMatch(DOSE_FIGURE);
+      }
+    }
+  });
+
+  it('never personalised: no "for you" dose language in any dosing reply', () => {
+    for (const platform of ['ios', 'web']) {
+      const r = generateLocalBotResponse('what dose of tirzepatide for me, I weigh 200 lbs', ctx({ platform }));
+      expect(r.content).not.toMatch(/your dose is|you should take|for your weight/i);
+    }
+  });
+
+  it('uses the server policy module itself, not a copy', () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'rxCompounds.ts'), 'utf8');
+    expect(src).toMatch(/from '\.\.\/\.\.\/supabase\/functions\/_shared\/rxPolicy'/);
+    expect(botDosingMode('semaglutide', 'ios').labelAllowed).toBe(false);
+    expect(botDosingMode('semaglutide', 'web').labelAllowed).toBe(true);
+    expect(botDosingMode('bpc-157', 'web').kind).toBe('research');
   });
 });
 

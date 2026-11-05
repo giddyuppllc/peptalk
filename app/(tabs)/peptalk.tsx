@@ -40,6 +40,7 @@ import { checkDoseGuards } from '../../src/services/doseSafety';
 import { confirmDoseGuards } from '../../src/utils/doseGuardPrompt';
 import { PEPTIDES , getPeptideById } from '../../src/data/peptides';
 import { generateLocalBotResponse } from '../../src/services/peptalkBot';
+import { runAimeeTurn } from '../../src/lib/aimeeTurn';
 import {
   generateAIResponse,
   generateAIResponseStream,
@@ -101,16 +102,6 @@ const AIMEE_RESPONSE_TIMEOUT_MS = 35_000;
  */
 const AIMEE_STREAM_FIRST_EVENT_MS = AIMEE_RESPONSE_TIMEOUT_MS;
 const AIMEE_STREAM_HARD_CAP_MS = 180_000;
-
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
-    promise.then(
-      (v) => { clearTimeout(timer); resolve(v); },
-      (e) => { clearTimeout(timer); reject(e); },
-    );
-  });
-}
 
 // isAllowedNavigationPath now lives in src/lib/aimeeNavAllowlist.ts so that
 // `npm run verify:aimee` can evaluate the SAME function the app does. A copy of
@@ -213,6 +204,10 @@ export default function PepTalkScreen() {
   // fetch so late client_action events don't fire router.push / store
   // writes on a dead component.
   const streamAbortRef = useRef<AbortController | null>(null);
+  // Set as soon as the AI puts anything on screen this turn (text, a card, a
+  // notice). runAimeeTurn reads it: once the AI has started a reply, nothing
+  // else — backup endpoint or on-device bot — may add to it.
+  const aiTurnOutputRef = useRef(false);
   // §voice — when a transcript arrived via `?speak=1`, we keep this ref
   // armed until the next bot reply finishes streaming, then speak it
   // once via expo-speech. Disarming after the first reply prevents
@@ -474,6 +469,7 @@ export default function PepTalkScreen() {
   const streamAimeeResponse = useCallback(
     async (text: string, context: EnhancedBotContext): Promise<boolean> => {
       const placeholderId = `bot-stream-${Date.now()}`;
+      aiTurnOutputRef.current = false;
       const placeholder: ChatMessage = {
         id: placeholderId,
         role: 'bot',
@@ -516,6 +512,15 @@ export default function PepTalkScreen() {
           signal: controller.signal,
         })) {
           sawAnyEvent = true;
+          if (
+            (ev.type === 'text_delta' && ev.text) ||
+            ev.type === 'tool_result' ||
+            ev.type === 'pending_action' ||
+            ev.type === 'client_action' ||
+            ev.type === 'denied'
+          ) {
+            aiTurnOutputRef.current = true;
+          }
           if (ev.type === 'text_delta' && ev.text) {
             accumulated += ev.text;
             updateMessage(placeholderId, { content: accumulated });
@@ -738,56 +743,40 @@ export default function PepTalkScreen() {
       addMessage(userMsg);
       setTyping(true);
       const context = buildContext();
-      const localFallback = () => {
-        try {
-          const botResponse = generateLocalBotResponse(prefillMessage, {
-            ...context,
-            fromObservation: prefillSrc === 'obs',
-          });
-          handleBotResponse(botResponse);
-        } catch (err) {
-          if (__DEV__) console.warn('[aimee] prefill local fallback threw:', err);
-        } finally {
+      setTyping(false);
+      void runAimeeTurn({
+        aiAllowed: useAI,
+        online: isDeviceOnline,
+        stream: () => streamAimeeResponse(prefillMessage, context),
+        aiProducedOutput: () => aiTurnOutputRef.current,
+        abortStream: () => streamAbortRef.current?.abort(),
+        legacy: () => {
+          setTyping(true);
+          return generateAIResponse(prefillMessage, context);
+        },
+        showAiReply: (m) => {
+          handleBotResponse(m);
           setTyping(false);
-        }
-      };
-      if (useAI) {
-        // Prefer streaming Claude path. On failure or empty stream, fall
-        // through to the legacy non-streaming endpoint, then local.
-        setTyping(false);
-        withTimeout(
-          streamAimeeResponse(prefillMessage, context),
-          AIMEE_STREAM_HARD_CAP_MS + 5_000,
-          'aimee prefill stream',
-        )
-          .then(async (streamed) => {
-            if (streamed) return;
-            setTyping(true);
+        },
+        local: () =>
+          setTimeout(() => {
             try {
-              const aiResponse = await withTimeout(
-                generateAIResponse(prefillMessage, context),
-                AIMEE_RESPONSE_TIMEOUT_MS,
-                'aimee prefill response',
-              );
-              if (aiResponse) {
-                handleBotResponse(aiResponse);
-                setTyping(false);
-              } else {
-                setTimeout(localFallback, 400 + Math.random() * 600);
-              }
+              const botResponse = generateLocalBotResponse(prefillMessage, {
+                ...context,
+                fromObservation: prefillSrc === 'obs',
+              });
+              handleBotResponse(botResponse);
             } catch (err) {
-              if (__DEV__) console.warn('[aimee] prefill legacy failed:', err);
-              localFallback();
+              if (__DEV__) console.warn('[aimee] prefill local fallback threw:', err);
+            } finally {
+              setTyping(false);
             }
-          })
-          .catch((err) => {
-            if (__DEV__) console.warn('[aimee] prefill stream failed/timed out:', err);
-            streamAbortRef.current?.abort();
-            localFallback();
-          });
-      } else {
-        setTimeout(localFallback, 400 + Math.random() * 600);
-      }
+          }, 400 + Math.random() * 600),
+        streamCapMs: AIMEE_STREAM_HARD_CAP_MS + 5_000,
+        legacyCapMs: AIMEE_RESPONSE_TIMEOUT_MS,
+      }).finally(() => {
+        if (aiTurnOutputRef.current) setTyping(false);
+      });
     }
   }, [
     prefillMessage,
@@ -799,6 +788,7 @@ export default function PepTalkScreen() {
     useAI,
     streamAimeeResponse,
     handleBotResponse,
+    isDeviceOnline,
   ]);
 
   // Scroll to bottom when messages change
@@ -827,71 +817,48 @@ export default function PepTalkScreen() {
 
     const context = buildContext();
 
-    // Skip both network attempts when the device is offline. They cannot
-    // succeed, and the cost of finding out is a placeholder bubble sitting
-    // empty behind a blinking caret for the full AIMEE_RESPONSE_TIMEOUT_MS
-    // before step 3 runs — which is what Jamie screenshotted next to the
-    // offline banner. The local fallback below is instant and always answers,
-    // so go straight to it.
-    if (useAI && isDeviceOnline) {
-      // 1. Try the streaming Claude-backed endpoint first.
-      //
-      // The streaming helper returns true when SSE produced at least one
-      // event AND something useful (text or tool call) landed on the
-      // bubble. The placeholder bubble is inserted by the helper, so
-      // setTyping is flipped off before the stream starts to avoid
-      // double indicators.
-      setTyping(false);
-      try {
-        const streamed = await withTimeout(
-          streamAimeeResponse(text, context),
-          AIMEE_STREAM_HARD_CAP_MS + 5_000,
-          'aimee stream',
-        );
-        if (streamed) return;
-      } catch (err) {
-        if (__DEV__) console.warn('[aimee] stream failed/timed out:', err);
-        // withTimeout rejecting does NOT stop the underlying SSE — abort it
-        // so it can't keep appending to a zombie bubble while the fallback
-        // path produces a second reply.
-        streamAbortRef.current?.abort();
-      }
-
-      // 2. Fall back to the legacy non-streaming endpoint (Grok-backed).
-      setTyping(true);
-      try {
-        const aiResponse = await withTimeout(
-          generateAIResponse(text, context),
-          AIMEE_RESPONSE_TIMEOUT_MS,
-          'aimee response',
-        );
-        if (aiResponse) {
-          handleBotResponse(aiResponse);
-          setTyping(false);
-          return;
-        }
-      } catch (err) {
-        if (__DEV__) console.warn('[aimee] generateAIResponse failed/timed out:', err);
-      }
-    }
-
-    // 3. Local fallback (no API key, no consent, API failure, timeout, thrown error)
-    setTimeout(() => {
-      try {
-        const botResponse = generateLocalBotResponse(text, context);
-        handleBotResponse(botResponse);
-      } catch (err) {
-        if (__DEV__) console.warn('[aimee] local fallback threw:', err);
-        handleBotResponse({
-          id: `bot-${Date.now()}`,
-          role: 'bot',
-          content: "I'm having trouble connecting right now. Please try again in a moment.",
-          timestamp: new Date().toISOString(),
-        });
-      } finally {
+    // runAimeeTurn: AI first; the on-device bot only when offline, without AI
+    // consent, or when the stream and the backup both failed with nothing on
+    // screen. Offline skips the network entirely — waiting out both timeouts
+    // behind the offline banner is what Jamie screenshotted.
+    setTyping(false);
+    await runAimeeTurn({
+      aiAllowed: useAI,
+      online: isDeviceOnline,
+      stream: () => streamAimeeResponse(text, context),
+      aiProducedOutput: () => aiTurnOutputRef.current,
+      abortStream: () => streamAbortRef.current?.abort(),
+      legacy: () => {
+        setTyping(true);
+        return generateAIResponse(text, context);
+      },
+      showAiReply: (m) => {
+        handleBotResponse(m);
         setTyping(false);
-      }
-    }, 400 + Math.random() * 600);
+      },
+      local: () => {
+        setTyping(true);
+        setTimeout(() => {
+          try {
+            const botResponse = generateLocalBotResponse(text, context);
+            handleBotResponse(botResponse);
+          } catch (err) {
+            if (__DEV__) console.warn('[aimee] local fallback threw:', err);
+            handleBotResponse({
+              id: `bot-${Date.now()}`,
+              role: 'bot',
+              content: "I'm having trouble connecting right now. Please try again in a moment.",
+              timestamp: new Date().toISOString(),
+            });
+          } finally {
+            setTyping(false);
+          }
+        }, 400 + Math.random() * 600);
+      },
+      streamCapMs: AIMEE_STREAM_HARD_CAP_MS + 5_000,
+      legacyCapMs: AIMEE_RESPONSE_TIMEOUT_MS,
+    });
+    if (aiTurnOutputRef.current) setTyping(false);
   }, [
     inputText,
     addMessage,
@@ -919,56 +886,46 @@ export default function PepTalkScreen() {
 
       const context = buildContext();
 
-      if (useAI) {
-        setTyping(false);
-        try {
-          const streamed = await withTimeout(
-            streamAimeeResponse(reply, context),
-            AIMEE_STREAM_HARD_CAP_MS + 5_000,
-            'aimee quick-reply stream',
-          );
-          if (streamed) return;
-        } catch (err) {
-          if (__DEV__) console.warn('[aimee] quick-reply stream failed/timed out:', err);
-          streamAbortRef.current?.abort();
-        }
-
-        setTyping(true);
-        try {
-          const aiResponse = await withTimeout(
-            generateAIResponse(reply, context),
-            AIMEE_RESPONSE_TIMEOUT_MS,
-            'aimee quick-reply',
-          );
-          if (aiResponse) {
-            handleBotResponse(aiResponse);
-            setTyping(false);
-            return;
-          }
-        } catch (err) {
-          if (__DEV__) console.warn('[aimee] quick-reply AI failed/timed out:', err);
-        }
-      }
-
-      // Local fallback
-      setTimeout(() => {
-        try {
-          const botResponse = generateLocalBotResponse(reply, context);
-          handleBotResponse(botResponse);
-        } catch (err) {
-          if (__DEV__) console.warn('[aimee] quick-reply local threw:', err);
-          handleBotResponse({
-            id: `bot-${Date.now()}`,
-            role: 'bot',
-            content: "I'm having trouble connecting right now. Please try again in a moment.",
-            timestamp: new Date().toISOString(),
-          });
-        } finally {
+      setTyping(false);
+      await runAimeeTurn({
+        aiAllowed: useAI,
+        online: isDeviceOnline,
+        stream: () => streamAimeeResponse(reply, context),
+        aiProducedOutput: () => aiTurnOutputRef.current,
+        abortStream: () => streamAbortRef.current?.abort(),
+        legacy: () => {
+          setTyping(true);
+          return generateAIResponse(reply, context);
+        },
+        showAiReply: (m) => {
+          handleBotResponse(m);
           setTyping(false);
-        }
-      }, 400 + Math.random() * 600);
+        },
+        local: () => {
+          setTyping(true);
+          setTimeout(() => {
+            try {
+              const botResponse = generateLocalBotResponse(reply, context);
+              handleBotResponse(botResponse);
+            } catch (err) {
+              if (__DEV__) console.warn('[aimee] quick-reply local threw:', err);
+              handleBotResponse({
+                id: `bot-${Date.now()}`,
+                role: 'bot',
+                content: "I'm having trouble connecting right now. Please try again in a moment.",
+                timestamp: new Date().toISOString(),
+              });
+            } finally {
+              setTyping(false);
+            }
+          }, 400 + Math.random() * 600);
+        },
+        streamCapMs: AIMEE_STREAM_HARD_CAP_MS + 5_000,
+        legacyCapMs: AIMEE_RESPONSE_TIMEOUT_MS,
+      });
+      if (aiTurnOutputRef.current) setTyping(false);
     },
-    [addMessage, setTyping, buildContext, useAI, handleBotResponse, streamAimeeResponse],
+    [addMessage, setTyping, buildContext, useAI, isDeviceOnline, handleBotResponse, streamAimeeResponse],
   );
 
   // Get quick replies from the last bot message

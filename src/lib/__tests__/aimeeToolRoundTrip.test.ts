@@ -44,7 +44,7 @@ const PROD_COLUMNS: Record<string, string[]> = {
 
 /** A Supabase stand-in that records every table + column a query names. */
 function recordingDb() {
-  const calls: Array<{ table: string; columns: string[] }> = [];
+  const calls: { table: string; columns: string[] }[] = [];
   const builder = (table: string): any => {
     const b: any = {
       select: (cols: string) => {

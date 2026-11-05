@@ -1,31 +1,47 @@
 /**
- * Prescription compounds, for the on-device fallback bot.
+ * Dosing rules for the on-device fallback bot — the SAME module the main chat
+ * uses (supabase/functions/_shared/rxPolicy.ts), imported, not mirrored, so the
+ * fallback and Aimee cannot disagree.
  *
- * Mirrors RX_PROTOCOL_IDS and usesStrictRxRules in
- * supabase/functions/_shared/rxPolicy.ts — the main chat's rules — so the
- * fallback says the same thing Aimee would. rxCompounds.test.ts holds the two
- * lists together.
- *
- * On iOS (and an unknown platform) the fallback keeps its existing behaviour,
- * exactly as the main chat does. On web/PWA and Android it never gives doses,
- * ranges, protocols or reconstitution for these: PepTalk does not prescribe
- * (James, 2026-11-05).
+ * The fallback runs with no network, so it cannot read ai_policy_settings. It
+ * uses the same per-platform defaults the server falls back to: iOS (and an
+ * unknown platform) no label dosing; Android and web label info allowed.
+ * Research-compound protocols and personalised dosing are never given.
  */
-export const RX_COMPOUND_IDS = new Set([
-  'tesamorelin',
-  'semaglutide',
-  'tirzepatide',
-  'retatrutide',
-  'thymosin-alpha-1',
-]);
+import {
+  APPROVED_RX,
+  classifyCompound,
+  defaultPolicyFor,
+  normalizePlatform,
+  type ApprovedRx,
+  type CompoundClass,
+} from '../../supabase/functions/_shared/rxPolicy';
 
 export type BotPlatform = 'ios' | 'android' | 'web' | string | undefined;
 
-export function strictRxPlatform(platform: BotPlatform): boolean {
-  return platform !== 'android' && platform !== 'web';
+/** How the fallback may answer a dosing question about this compound. */
+export function botDosingMode(
+  idOrName: string,
+  platform: BotPlatform,
+): { kind: CompoundClass; labelAllowed: boolean; approved?: ApprovedRx } {
+  const kind = classifyCompound(idOrName);
+  const approved =
+    kind === 'approved_rx'
+      ? APPROVED_RX.find((r) => r.names.some((n) => idOrName.trim().toLowerCase().startsWith(n)))
+      : undefined;
+  return {
+    kind,
+    labelAllowed: kind === 'approved_rx' && defaultPolicyFor(normalizePlatform(platform)).approvedRxLabelInfo,
+    approved,
+  };
 }
 
-/** True when the fallback must not give dosing/protocol detail for this compound. */
+/** Kept for callers from the first version: true when no dose detail may be shown. */
 export function withholdRxDosing(peptideId: string, platform: BotPlatform): boolean {
-  return RX_COMPOUND_IDS.has(peptideId) && !strictRxPlatform(platform);
+  return botDosingMode(peptideId, platform).kind !== 'supplement';
+}
+
+/** Kept for callers: true where label info is off by default (iOS / unknown). */
+export function strictRxPlatform(platform: BotPlatform): boolean {
+  return !defaultPolicyFor(normalizePlatform(platform)).approvedRxLabelInfo;
 }
