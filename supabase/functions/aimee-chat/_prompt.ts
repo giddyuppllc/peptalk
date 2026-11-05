@@ -11,7 +11,7 @@
  * here.
  */
 
-import { type AiPolicy, type ChatPlatform, DEFAULT_POLICY, dosingPolicySection } from '../_shared/rxPolicy.ts';
+import { type AiPolicy, type ChatPlatform, defaultPolicyFor, dosingPolicySection } from '../_shared/rxPolicy.ts';
 
 export interface AimeeServerContext {
   tier?: 'free' | 'plus' | 'pro' | string;
@@ -175,7 +175,8 @@ ${peptideLines.join("\n")}
 
 const KNOWLEDGE_BLOCK = buildKnowledgeBlock();
 
-export function buildAimeeSystemPrompt(context: AimeeServerContext, policy: AiPolicy = DEFAULT_POLICY): string {
+export function buildAimeeSystemPrompt(context: AimeeServerContext, policyIn?: AiPolicy): string {
+  const policy = policyIn ?? defaultPolicyFor(context.platform ?? 'unknown');
   const tier = context.tier ?? 'free';
   const consentLine = context.hasConsent
     ? 'The user has consented to personalized responses. Use the summary fields below where helpful, but never recommend specific doses for them.'

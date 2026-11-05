@@ -14,8 +14,12 @@
  * (b) and (c) are not switches — they are fixed off and the admin page shows
  * them locked. (a) is stored per platform in public.ai_policy_settings
  * (migration 20261105010000) and edited from peptalk.bio/admin → Aimee rules.
- * A missing table, row or read error falls back to DEFAULT_POLICY, so the
- * functions can deploy before the migration.
+ * A missing table, row or read error falls back to defaultPolicyFor(platform)
+ * — iOS off, Android/web on — so the functions can deploy before the migration.
+ *
+ * This decides what Aimee SAYS. It never edits the underlying data (the dosing
+ * reference, compound data, protocols, calculator data, DB rows); the prompts
+ * filter that data when they are built.
  */
 
 export type ChatPlatform = 'ios' | 'android' | 'web' | 'unknown';
@@ -33,11 +37,23 @@ export interface AiPolicy {
   personalisedRxDosing: false;
 }
 
+/** Label info ON — the Android and web default. */
 export const DEFAULT_POLICY: AiPolicy = {
   approvedRxLabelInfo: true,
   researchCompoundProtocols: false,
   personalisedRxDosing: false,
 };
+
+/**
+ * Defaults per platform (James, 2026-11-05): iOS OFF — the App Review posture —
+ * Android and web ON. An unknown platform is treated as iOS. These are what a
+ * missing table, missing row or read error falls back to.
+ */
+export function defaultPolicyFor(platform: ChatPlatform): AiPolicy {
+  return platform === 'android' || platform === 'web'
+    ? DEFAULT_POLICY
+    : { ...DEFAULT_POLICY, approvedRxLabelInfo: false };
+}
 
 /** Shown on the admin page next to the two locked switches. */
 export const LOCKED_REASONS = {
@@ -182,10 +198,12 @@ export function clearPolicyCache() {
 /**
  * The policy for a platform. Unknown platforms read the iOS row (the one most
  * likely to be locked down). Any failure — table missing, row missing, network
- * — returns DEFAULT_POLICY and is not cached, so it recovers on the next call.
+ * — returns that platform's default and is not cached, so it recovers on the
+ * next call.
  */
 export async function loadAiPolicy(supabase: any, platform: ChatPlatform): Promise<AiPolicy> {
   const key = platform === 'unknown' ? 'ios' : platform;
+  const fallback = defaultPolicyFor(key);
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.policy;
   try {
@@ -194,11 +212,11 @@ export async function loadAiPolicy(supabase: any, platform: ChatPlatform): Promi
       .select('approved_rx_label_info')
       .eq('platform', key)
       .maybeSingle();
-    if (error || !data || typeof data.approved_rx_label_info !== 'boolean') return DEFAULT_POLICY;
+    if (error || !data || typeof data.approved_rx_label_info !== 'boolean') return fallback;
     const policy: AiPolicy = { ...DEFAULT_POLICY, approvedRxLabelInfo: data.approved_rx_label_info };
     cache.set(key, { at: Date.now(), policy });
     return policy;
   } catch {
-    return DEFAULT_POLICY;
+    return fallback;
   }
 }

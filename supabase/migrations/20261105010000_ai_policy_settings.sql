@@ -7,7 +7,7 @@
 -- are fixed off in code and shown locked on the admin page.
 --
 -- Read by aimee-chat-stream and aimee-chat (60s cache). A missing table or row
--- makes them use the code defaults (label info ON), so the functions can be
+-- makes them use the code defaults (iOS off, Android and web on), so the functions can be
 -- deployed before this migration.
 --
 -- Edited only from peptalk.bio/admin (service role). RLS on, no policies: no
@@ -26,5 +26,5 @@ ALTER TABLE public.ai_policy_settings ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.ai_policy_settings FROM anon, authenticated;
 
 INSERT INTO public.ai_policy_settings (platform, approved_rx_label_info, updated_by)
-VALUES ('ios', true, 'migration'), ('android', true, 'migration'), ('web', true, 'migration')
+VALUES ('ios', false, 'migration'), ('android', true, 'migration'), ('web', true, 'migration')
 ON CONFLICT (platform) DO NOTHING;

@@ -11,6 +11,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { classifyCompound } from '../_shared/rxPolicy.ts';
 import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 import { reportError } from '../_shared/sentry.ts';
 
@@ -54,9 +55,7 @@ interface SuggestBody {
 // Peptide-specific nutrition prompts injected into the Grok call when the
 // user has an active protocol for the matching peptide. Kept inline in this
 // edge function so it runs Deno-side; mirrors src/data/peptideNutrition.ts
-// on the client. Meal guidance only — no dose timing (see _shared/rxPolicy.ts:
-// research compounds get no protocols), so three entries are worded
-// differently from the client copy on purpose.
+// on the client.
 const PEPTIDE_NUTRITION_PROMPTS: Record<string, string> = {
   semaglutide:
     'User is on semaglutide: 1.0–1.2 g/lb protein to preserve lean mass; small frequent meals; hydration + electrolytes emphasized.',
@@ -69,13 +68,13 @@ const PEPTIDE_NUTRITION_PROMPTS: Record<string, string> = {
   cagrilintide:
     'User is on cagrilintide: pair protein with fiber-rich veggies, slow-digesting meals.',
   ipamorelin:
-    'User is on ipamorelin: favour lower-glycemic carbs in the evening.',
+    'User is on ipamorelin: no high-glycemic carbs in the evening dose window.',
   'cjc-1295':
     'User is on CJC-1295: low-carb evening, protein-forward meals.',
   tesamorelin:
     'User is on tesamorelin: protein-forward, no simple sugars in the fast-window meals.',
   sermorelin:
-    'User is on sermorelin: keep sugar low late in the evening.',
+    'User is on sermorelin: no sugar 2h before bedtime dose.',
   'bpc-157':
     'User is on BPC-157: collagen/glycine emphasis (bone broth, gelatin), vitamin C + zinc cofactors.',
   'tb-500':
@@ -87,7 +86,7 @@ const PEPTIDE_NUTRITION_PROMPTS: Record<string, string> = {
   aod9604:
     'User is on AOD-9604: protein + hydration priority.',
   'igf-1-lr3':
-    'User is on IGF-1 LR3: carbs + protein after training; 1.0–1.3 g/lb protein.',
+    'User is on IGF-1 LR3: post-workout dose with carbs + protein; 1.0–1.3 g/lb protein.',
 };
 
 const SYSTEM_PROMPT = `You suggest meals a user can cook tonight using primarily the ingredients they already have on hand.
@@ -203,7 +202,13 @@ Deno.serve(async (req) => {
     const stackPrompts: string[] = [];
     for (const pid of stackCapped) {
       const promptText = PEPTIDE_NUTRITION_PROMPTS[pid.toLowerCase()];
-      if (promptText) stackPrompts.push(promptText);
+      // Dosing policy (_shared/rxPolicy.ts): no protocols for research
+      // compounds. Guidance that is timed around a DOSE ("evening dose window",
+      // "post-workout dose") is left out of the prompt for those — the table
+      // itself is unchanged.
+      if (promptText && !(classifyCompound(pid) === 'research' && /\bdose\b/i.test(promptText))) {
+        stackPrompts.push(promptText);
+      }
     }
 
     const userPrompt = [

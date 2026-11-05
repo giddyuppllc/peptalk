@@ -8,6 +8,7 @@ import {
   DEFAULT_POLICY,
   classifyCompound,
   clearPolicyCache,
+  defaultPolicyFor,
   loadAiPolicy,
   normalizePlatform,
   type AiPolicy,
@@ -86,13 +87,38 @@ function fakeDb(row: unknown, error: unknown = null) {
   };
 }
 
-Deno.test('settings: a missing table or row uses the safe defaults', async () => {
+Deno.test('defaults: iOS off, Android and web on, unknown = iOS', () => {
+  assertFalse(defaultPolicyFor('ios').approvedRxLabelInfo);
+  assertFalse(defaultPolicyFor('unknown').approvedRxLabelInfo);
+  assert(defaultPolicyFor('android').approvedRxLabelInfo);
+  assert(defaultPolicyFor('web').approvedRxLabelInfo);
+  // A prompt built without a loaded policy uses the platform default.
+  assertFalse(streamPrompt({ ...ctx, platform: 'ios' }).includes('APPROVED DRUGS — LABEL SUMMARIES'));
+  assert(streamPrompt({ ...ctx, platform: 'web' }).includes('APPROVED DRUGS — LABEL SUMMARIES'));
+});
+
+Deno.test('settings: a missing table or row uses that platform\'s default', async () => {
   clearPolicyCache();
-  assertEquals(await loadAiPolicy(fakeDb(null, { code: '42P01', message: 'relation does not exist' }), 'ios'), DEFAULT_POLICY);
+  assertEquals(await loadAiPolicy(fakeDb(null, { code: '42P01', message: 'relation does not exist' }), 'ios'), defaultPolicyFor('ios'));
   clearPolicyCache();
   assertEquals(await loadAiPolicy(fakeDb(null), 'web'), DEFAULT_POLICY);
   clearPolicyCache();
   assertEquals(await loadAiPolicy({ from: () => { throw new Error('network'); } }, 'android'), DEFAULT_POLICY);
+});
+
+Deno.test('data is kept; the prompt filters it', () => {
+  const src = Deno.readTextFileSync(new URL('../aimee-chat-stream/_prompt.ts', import.meta.url));
+  // The dosing reference is still in the file, unedited...
+  for (const s of ['Retatrutide (5 mg vial) — [Rx]', 'KLOW (GHK-Cu / KPV / BPC-157 / TB-500 blend) — 10 units', 'L-Carnitine — 300-1000 mg']) {
+    assert(src.includes(s), `data line missing from source: ${s}`);
+  }
+  // ...but only the over-the-counter supplement lines reach the model.
+  const p = streamPrompt(ctx, ON);
+  assert(p.includes('L-Carnitine — 300-1000 mg'));
+  assertFalse(p.includes('Retatrutide (5 mg vial)'));
+  assertFalse(p.includes('KLOW (GHK-Cu'));
+  const pantry = Deno.readTextFileSync(new URL('../aimee-pantry-meal/index.ts', import.meta.url));
+  assert(pantry.includes("'User is on ipamorelin: no high-glycemic carbs in the evening dose window.'"), 'pantry table unchanged');
 });
 
 Deno.test('settings: a row turns label info off, is cached, and unknown platforms read iOS', async () => {
