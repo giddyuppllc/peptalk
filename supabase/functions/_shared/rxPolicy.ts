@@ -13,7 +13,7 @@
  *
  * (b) and (c) are not switches — they are fixed off and the admin page shows
  * them locked. (a) is stored per platform in public.ai_policy_settings
- * (migration 20261105010000) and edited from peptalk.bio/admin → Aimee rules.
+ * (migration 20261105030000) and edited from peptalk.bio/admin → Aimee rules.
  * A missing table, row or read error falls back to defaultPolicyFor(platform)
  * — iOS off, Android/web on — so the functions can deploy before the migration.
  *

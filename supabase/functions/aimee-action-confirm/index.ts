@@ -231,7 +231,7 @@ async function commitLogField(
   let value = output.value;
   const today = output.date ?? new Date().toISOString().slice(0, 10);
 
-  // check_ins.sleep_hours and .symptoms arrive with migration 20261105020000
+  // check_ins.sleep_hours and .symptoms arrive with migration 20261105040000
   // (they never existed, so confirming either failed). Until it runs, symptoms
   // fall back to side_effect_tags and sleep hours report that they cannot be
   // saved yet — see FALLBACK_COLUMN below.
@@ -306,7 +306,10 @@ async function commitLogField(
     }
     const { data: inserted, error } = await supabase
       .from('check_ins')
-      .insert({ user_id: userId, date: today, [column]: value })
+      // check_ins.id has no database default. Same format as newDayScopedId
+      // (src/services/syncService.ts): the old `checkin-<date>` key was shared
+      // by every user, so only one account per date could sync.
+      .insert({ id: newDayScopedId('checkin', String(today)), user_id: userId, date: today, [column]: value })
       .select('id')
       .single();
     return { id: inserted?.id, error, created: true };
@@ -317,7 +320,7 @@ async function commitLogField(
   if (res.error && isMissingColumn(res.error) && FALLBACK_COLUMN[dbField] !== undefined) {
     const alt = FALLBACK_COLUMN[dbField];
     if (alt === null) {
-      throw new Error(`${field} can be saved once the database update (20261105020000) is applied`);
+      throw new Error(`${field} can be saved once the database update (20261105040000) is applied`);
     }
     column = alt;
     res = await write(column);
@@ -326,7 +329,11 @@ async function commitLogField(
   return { check_in_id: res.id, field: column, value, ...(res.created ? { created: true } : {}) };
 }
 
-/** Where a new column's value goes before migration 20261105020000 runs. */
+/** Matches newDayScopedId in src/services/syncService.ts exactly. */
+const newDayScopedId = (prefix: string, date: string): string =>
+  `${prefix}-${date}-${Math.random().toString(36).slice(2, 10)}`;
+
+/** Where a new column's value goes before migration 20261105040000 runs. */
 const FALLBACK_COLUMN: Record<string, string | null> = {
   symptoms: 'side_effect_tags',
   sleep_hours: null,

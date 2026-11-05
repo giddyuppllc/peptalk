@@ -42,8 +42,8 @@ const PROD_COLUMNS: Record<string, string[]> = {
   aimee_pending_actions: 'id user_id conversation_id tool_name input output status created_at expires_at resolved_at'.split(' '),
 };
 
-/** Columns migration 20261105020000 adds, read from the migration file itself. */
-const MIGRATION_SQL = readFileSync(join(ROOT, 'supabase', 'migrations', '20261105020000_aimee_tool_columns.sql'), 'utf8');
+/** Columns migration 20261105040000 adds, read from the migration file itself. */
+const MIGRATION_SQL = readFileSync(join(ROOT, 'supabase', 'migrations', '20261105040000_aimee_tool_columns.sql'), 'utf8');
 function migrationColumns(table: string): string[] {
   const block =
     MIGRATION_SQL.split(`ALTER TABLE public.${table}`)

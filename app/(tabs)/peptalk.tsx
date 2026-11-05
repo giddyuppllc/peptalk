@@ -100,6 +100,13 @@ const AIMEE_RESPONSE_TIMEOUT_MS = 35_000;
  * worse answer under it. Now: nothing at all for 35s ⇒ fall back; otherwise
  * let it finish, with a hard ceiling so a wedged connection still ends.
  */
+/**
+ * Chat message id. `user-<ms>` alone collided whenever two messages landed in
+ * the same millisecond (a chip tap plus its reply, a fast quick reply), and
+ * chat_messages is keyed on it. Same prefix-time shape plus a random suffix.
+ */
+const msgId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
 const AIMEE_STREAM_FIRST_EVENT_MS = AIMEE_RESPONSE_TIMEOUT_MS;
 const AIMEE_STREAM_HARD_CAP_MS = 180_000;
 
@@ -493,7 +500,7 @@ export default function PepTalkScreen() {
    */
   const streamAimeeResponse = useCallback(
     async (text: string, context: EnhancedBotContext): Promise<boolean> => {
-      const placeholderId = `bot-stream-${Date.now()}`;
+      const placeholderId = msgId('bot-stream');
       aiTurnOutputRef.current = false;
       const placeholder: ChatMessage = {
         id: placeholderId,
@@ -760,7 +767,7 @@ export default function PepTalkScreen() {
       lastHandledPrefill.current = prefillMessage;
       messageHandled.current = true;
       const userMsg: ChatMessage = {
-        id: `user-${Date.now()}`,
+        id: msgId('user'),
         role: 'user',
         content: prefillMessage,
         timestamp: new Date().toISOString(),
@@ -831,7 +838,7 @@ export default function PepTalkScreen() {
 
     // Add user message
     const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
+      id: msgId('user'),
       role: 'user',
       content: text,
       timestamp: new Date().toISOString(),
@@ -870,7 +877,7 @@ export default function PepTalkScreen() {
           } catch (err) {
             if (__DEV__) console.warn('[aimee] local fallback threw:', err);
             handleBotResponse({
-              id: `bot-${Date.now()}`,
+              id: msgId('bot'),
               role: 'bot',
               content: "I'm having trouble connecting right now. Please try again in a moment.",
               timestamp: new Date().toISOString(),
@@ -901,7 +908,7 @@ export default function PepTalkScreen() {
       setInputText('');
 
       const userMsg: ChatMessage = {
-        id: `user-${Date.now()}`,
+        id: msgId('user'),
         role: 'user',
         content: reply,
         timestamp: new Date().toISOString(),
@@ -935,7 +942,7 @@ export default function PepTalkScreen() {
             } catch (err) {
               if (__DEV__) console.warn('[aimee] quick-reply local threw:', err);
               handleBotResponse({
-                id: `bot-${Date.now()}`,
+                id: msgId('bot'),
                 role: 'bot',
                 content: "I'm having trouble connecting right now. Please try again in a moment.",
                 timestamp: new Date().toISOString(),

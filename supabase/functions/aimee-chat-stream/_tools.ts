@@ -438,7 +438,7 @@ export const AIMEE_TOOLS: GrokTool[] = [
 //   - client_action: { type, ... }          → client executes a deep link
 
 /**
- * Columns added by migration 20261105020000 (check_ins.sleep_hours/symptoms,
+ * Columns added by migration 20261105040000 (check_ins.sleep_hours/symptoms,
  * profiles.height_cm/weight_kg/gender). Each query asks for them and, if the
  * database does not have them yet, asks again without — so the tools work
  * before and after the migration and the deploy order cannot break them.
@@ -534,7 +534,7 @@ export async function execSummarizePattern(
     requestedSignals.includes('energy') ||
     requestedSignals.includes('sleep')
   ) {
-    // sleep_hours arrives with migration 20261105020000. Asking for it before
+    // sleep_hours arrives with migration 20261105040000. Asking for it before
     // the column existed failed the whole query, and the null result read as
     // "No check-ins logged" for everyone — the "I'll pull your trends" answers
     // that came back with nothing (production, 2026-11).
@@ -661,7 +661,7 @@ export async function execGetUserMetrics(
 ): Promise<Record<string, unknown>> {
   // Pull the latest of each thing in parallel.
   // The tool's designed fields. height_cm / weight_kg / gender (profiles) and
-  // sleep_hours / symptoms (check_ins) come with migration 20261105020000 and
+  // sleep_hours / symptoms (check_ins) come with migration 20261105040000 and
   // are read when present; dob is the existing profiles.date_of_birth. Every
   // body field falls back to the user's health profile, so nothing is lost
   // before the migration or for accounts the backfill could not fill.
