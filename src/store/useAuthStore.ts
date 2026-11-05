@@ -620,7 +620,12 @@ export const useAuthStore = create<AuthStore>()(
         if (error) {
           // Deliberately do NOT wipe local state on failure — user needs
           // to retry. If they're offline, try again when reconnected.
-          throw new Error(error.message ?? 'Could not delete account. Please try again.');
+          // Show the function's own reason (e.g. the web subscription could
+          // not be cancelled, so the account was kept) — not supabase-js's
+          // generic "non-2xx status code".
+          const { readEdgeFunctionError } = await import('../lib/edgeFunctionError');
+          const detail = await readEdgeFunctionError(error);
+          throw new Error(detail.message ?? 'Could not delete account. Please try again.');
         }
 
         // Server-side deletion succeeded — now wipe local state.

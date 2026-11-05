@@ -15,14 +15,14 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { reportError } from '../_shared/sentry.ts';
+import { cancelSquareSubscriptions, squareBase } from '../_shared/squareCancel.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const SQUARE_ACCESS_TOKEN = Deno.env.get('SQUARE_ACCESS_TOKEN') ?? '';
 const SQUARE_ENV = Deno.env.get('SQUARE_ENV') ?? 'sandbox';
-const SQUARE_BASE =
-  SQUARE_ENV === 'production' ? 'https://connect.squareup.com' : 'https://connect.squareupsandbox.com';
+const SQUARE_BASE = squareBase(SQUARE_ENV);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -54,30 +54,13 @@ Deno.serve(async (req) => {
     if (error) return json({ error: 'Could not look up your subscription.' }, 500);
     if (!rows?.length) return json({ error: 'No active web subscription to cancel.' }, 404);
 
-    const results: { productId: string; canceledDate: string | null; ok: boolean }[] = [];
-    for (const row of rows as { product_id: string; original_transaction_id: string }[]) {
-      const res = await fetch(
-        `${SQUARE_BASE}/v2/subscriptions/${encodeURIComponent(row.original_transaction_id)}/cancel`,
-        {
-          method: 'POST',
-          headers: {
-            'Square-Version': '2024-07-17',
-            Authorization: `Bearer ${SQUARE_ACCESS_TOKEN}`,
-            'Content-Type': 'application/json',
-          },
-        },
-      );
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        console.error('[square-cancel] cancel failed', row.original_transaction_id, JSON.stringify(data));
-      }
-      results.push({
-        productId: row.product_id,
-        ok: res.ok,
-        canceledDate: data?.subscription?.canceled_date ?? null,
-      });
-    }
-    // The paid period is kept; square-webhook ends access on the CANCELED event.
+    const results = (
+      await cancelSquareSubscriptions(rows as { product_id: string; original_transaction_id: string }[], {
+        token: SQUARE_ACCESS_TOKEN,
+        base: SQUARE_BASE,
+        tag: 'square-cancel',
+      })
+    ).map((r) => ({ productId: r.productId, ok: r.ok, canceledDate: r.canceledDate }));
     if (results.every((r) => !r.ok)) return json({ error: 'Square could not cancel the subscription. Please contact support.' }, 502);
     return json({ ok: true, results });
   } catch (e) {
