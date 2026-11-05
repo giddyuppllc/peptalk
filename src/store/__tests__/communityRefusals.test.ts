@@ -1,3 +1,5 @@
+import { useCommunityStore } from '../useCommunityStore';
+
 jest.mock('@react-native-async-storage/async-storage', () => ({ getItem: async () => null, setItem: async () => {}, removeItem: async () => {} }));
 jest.mock('../../services/secureStorage', () => ({ secureStorage: { getItem: async () => null, setItem: async () => {}, removeItem: async () => {} } }));
 const mockInvoke = jest.fn();
@@ -7,8 +9,6 @@ jest.mock('../../services/supabase', () => ({
     functions: { invoke: (...a: unknown[]) => mockInvoke(...a) },
   },
 }));
-
-import { useCommunityStore } from '../useCommunityStore';
 
 /** What supabase-js returns for a 4xx: an error whose context is the Response. */
 const refused = (body: object) => ({

@@ -204,7 +204,7 @@ function scrubAnonAuthor(r: any, currentUserId: string | null) {
 }
 
 async function getSupa() {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+   
   const { supabase } = require('../services/supabase');
   return supabase as any;
 }
