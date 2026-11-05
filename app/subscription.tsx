@@ -487,7 +487,31 @@ function tierForFeature(feature: string | undefined): SubscriptionTier | null {
 // deep link so users land on the correct subscription page.
 const ANDROID_PACKAGE_NAME = 'com.peptalkapp.peptalk';
 
+/** Web: confirm, then cancel at period end via square-cancel. */
+async function cancelWebFlow() {
+  // window.confirm is the web-native dialog; RN Alert buttons do not render on web.
+  const ok = typeof window !== 'undefined' && window.confirm(
+    'Cancel your PepTalk subscription? You keep access until the end of the period you have paid for.',
+  );
+  if (!ok) return;
+  try {
+    const { cancelWebSubscription } = await import('../src/services/squareService');
+    const { accessEnds } = await cancelWebSubscription();
+    window.alert(accessEnds ? `Cancelled. You keep access through ${accessEnds}.` : 'Cancelled. You keep access until the end of your paid period.');
+    await useSubscriptionStore.getState().syncFromServer();
+  } catch (e) {
+    window.alert((e as Error)?.message || 'Could not cancel. Please contact support.');
+  }
+}
+
 async function openManageSubscriptions(productId?: string | null) {
+  // Web (Square) subscriptions are managed here, not in a store: this used to
+  // fall through to the Google Play link below, so web subscribers had no way
+  // to cancel at all.
+  if (Platform.OS === 'web') {
+    await cancelWebFlow();
+    return;
+  }
   const url = Platform.OS === 'ios'
     ? 'https://apps.apple.com/account/subscriptions'
     : productId

@@ -17,6 +17,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { timingSafeEqual, parseRef, planForProduct, squareSubscriptionPatch } from '../_shared/square.ts';
 import { parseCreditRef } from '../_shared/credits.ts';
 import { withErrorReporting } from '../_shared/sentry.ts';
+import { resolveEffectiveTier } from '../_shared/effectiveTier.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -61,6 +62,30 @@ async function fetchOrderRef(orderId: string): Promise<string | undefined> {
 
 const ok = () => new Response('ok', { status: 200 });
 
+/**
+ * Keep profiles.subscription_tier / is_pro / is_plus in step with the
+ * subscriptions rows, as apple-notifications and google-rtdn do. This webhook
+ * never touched the mirror, so a web subscription that ended left the profile
+ * saying 'plus' (six profiles in production) — and anything still reading the
+ * mirror kept serving, or showing, a tier nobody was paying for.
+ * Best-effort: the subscriptions row is the source of truth.
+ */
+// deno-lint-ignore no-explicit-any
+async function syncProfileMirror(admin: any, userIds: string[]): Promise<void> {
+  for (const userId of [...new Set(userIds)]) {
+    try {
+      const tier = await resolveEffectiveTier(admin, userId, { profileTier: null });
+      const { error } = await admin
+        .from('profiles')
+        .update({ subscription_tier: tier, is_pro: tier === 'pro', is_plus: tier === 'plus' })
+        .eq('id', userId);
+      if (error) console.warn('[square-webhook] profile mirror update failed:', error.message);
+    } catch (e) {
+      console.warn('[square-webhook] profile mirror sync skipped:', (e as Error).message);
+    }
+  }
+}
+
 /** Recurring renewal (invoice.payment_made): extend the web sub's expiry. */
 async function onInvoicePaid(invoice: any): Promise<Response> {
   const subId = invoice?.subscription_id;
@@ -81,7 +106,10 @@ async function onInvoicePaid(invoice: any): Promise<Response> {
     return new Response('db error', { status: 500 });
   }
   if (!data?.length) console.warn('[square-webhook] invoice.payment_made for unknown sub', subId);
-  else console.log('[square-webhook] renewed web sub', subId);
+  else {
+    console.log('[square-webhook] renewed web sub', subId);
+    await syncProfileMirror(admin, (data as { user_id: string }[]).map((r) => r.user_id));
+  }
   return ok();
 }
 
@@ -95,7 +123,7 @@ async function onSubscription(sub: any): Promise<Response> {
 
   const { data: rows, error: readErr } = await admin
     .from('subscriptions')
-    .select('id, expires_at')
+    .select('id, user_id, expires_at')
     .eq('original_transaction_id', subId)
     .eq('platform', 'web');
   if (readErr) {
@@ -109,7 +137,7 @@ async function onSubscription(sub: any): Promise<Response> {
     return ok();
   }
 
-  for (const row of rows as { id: string; expires_at: string | null }[]) {
+  for (const row of rows as { id: string; user_id: string; expires_at: string | null }[]) {
     const patch = squareSubscriptionPatch({
       status,
       chargedThroughDate: sub?.charged_through_date ?? null,
@@ -130,6 +158,7 @@ async function onSubscription(sub: any): Promise<Response> {
       return new Response('db error', { status: 500 });
     }
   }
+  await syncProfileMirror(admin, (rows as { user_id: string }[]).map((r) => r.user_id));
   console.log(`[square-webhook] sub ${subId} → ${status}`);
   return ok();
 }
@@ -291,6 +320,7 @@ Deno.serve(withErrorReporting('square-webhook', async (req) => {
     })
     .then(({ error }) => { if (error) console.warn('[square-webhook] event log skipped:', error.message); });
 
+  await syncProfileMirror(admin, [ref.userId]);
   console.log(`[square-webhook] granted ${ref.tier} (web) to ${ref.userId}`);
   return ok();
 }));
