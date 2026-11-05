@@ -63,7 +63,9 @@ export function browserTimeZone(): string {
 }
 
 async function db() {
-  const { supabase } = await import('./supabase');
+  // require, not import(): resolved lazily the same way, and testable.
+   
+  const { supabase } = require('./supabase');
   return supabase as any;
 }
 
@@ -192,6 +194,33 @@ export async function deleteWebOneShotsByPrefix(prefix: string): Promise<void> {
     if (!userId) return;
     const client = await db();
     await client.from('web_one_shot_alerts').delete().eq('user_id', userId).like('tag', `${prefix}%`);
+  } catch {
+    /* best-effort */
+  }
+}
+
+/**
+ * Sign-out on the web: detach THIS browser from the account.
+ *
+ * Deletes this browser's web_push_subscriptions row (must run while still
+ * signed in — RLS) and unsubscribes it from the push service, so a shared
+ * browser stops receiving the previous user's reminders. The user's reminder
+ * schedules are left alone: their other devices keep reminding.
+ */
+export async function removeThisBrowserSubscription(): Promise<void> {
+  if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = await reg?.pushManager?.getSubscription();
+    if (!sub) return;
+    const endpoint = sub.endpoint;
+    try {
+      const client = await db();
+      await client.from('web_push_subscriptions').delete().eq('endpoint', endpoint);
+    } catch {
+      /* the sender prunes it on its next 404/410 anyway */
+    }
+    await sub.unsubscribe();
   } catch {
     /* best-effort */
   }

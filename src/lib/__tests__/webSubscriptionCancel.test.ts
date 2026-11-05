@@ -25,7 +25,10 @@ describe('web subscription cancel', () => {
     expect(src).toContain("auth.getUser()");
     expect(src).toContain(".eq('user_id', user.id)");
     expect(src).toContain(".eq('platform', 'web')");
-    expect(src).toMatch(/\/v2\/subscriptions\/\$\{encodeURIComponent\(row\.original_transaction_id\)\}\/cancel/);
+    // The Square call itself lives in the shared helper delete-user uses too.
+    expect(src).toContain("from '../_shared/squareCancel.ts'");
+    expect(src).toContain('cancelSquareSubscriptions(');
+    expect(read('supabase/functions/_shared/squareCancel.ts')).toMatch(/\/v2\/subscriptions\/\$\{encodeURIComponent\(row\.original_transaction_id\)\}\/cancel/);
     // No user id is read from the request body.
     expect(src).not.toMatch(/req\.json\(\)/);
   });

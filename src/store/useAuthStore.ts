@@ -5,6 +5,7 @@
  * Profile data syncs to Supabase profiles table.
  */
 
+import { Platform } from 'react-native';
 import { create } from 'zustand';
 import { withTimeout, AUTH_TIMEOUT_MS } from '../lib/withTimeout';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -421,11 +422,20 @@ export const useAuthStore = create<AuthStore>()(
         // user-typed content in the body — "Time to take BPC-157" —
         // and would expose the prior user's data.) P0 from Wave
         // 76.11 logout audit.
+        //
+        // On the web the reminders are not on this device: they are server
+        // schedules shared by every browser the user has. Deleting them here
+        // stopped the user's reminders on all their devices; instead this
+        // browser is detached (its push subscription removed), so it stops
+        // receiving this user's reminders and the other devices carry on.
         try {
-          const { cancelAllReminders } = await import(
-            '../services/notificationService'
-          );
-          await cancelAllReminders();
+          if (Platform.OS === 'web') {
+            const { removeThisBrowserSubscription } = await import('../services/webPush');
+            await removeThisBrowserSubscription();
+          } else {
+            const { cancelAllReminders } = await import('../services/notificationService');
+            await cancelAllReminders();
+          }
         } catch {}
 
         // Abort any in-flight Aimee SSE stream — otherwise a late
