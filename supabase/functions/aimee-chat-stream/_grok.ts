@@ -116,6 +116,12 @@ export async function* streamGrok(args: {
   tools?: GrokTool[];
   maxTokens?: number;
   temperature?: number;
+  /**
+   * 'none' keeps the tools declared (the history holds tool calls and their
+   * results, which need them) but forbids another call — used for the final
+   * answer after the tool rounds run out.
+   */
+  toolChoice?: 'auto' | 'none';
 }): AsyncGenerator<GrokStreamEvent, void, unknown> {
   if (!GROK_API_KEY) {
     throw new Error('GROK_API_KEY (or XAI_API_KEY) is not configured');
@@ -135,7 +141,7 @@ export async function* streamGrok(args: {
   if (args.tools && args.tools.length > 0) {
     body.tools = args.tools;
     // Let the model decide when to call tools (default for xAI/OpenAI).
-    body.tool_choice = 'auto';
+    body.tool_choice = args.toolChoice ?? 'auto';
   }
 
   const res = await fetch(`${GROK_BASE_URL}/chat/completions`, {

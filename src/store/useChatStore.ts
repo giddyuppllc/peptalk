@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { shouldCloudSyncMessage } from '../lib/chatSync';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { ChatMessage } from '../types';
 import { secureStorage } from '../services/secureStorage';
@@ -382,6 +383,8 @@ export const useChatStore = create<ChatStore>()(
         // or app boot. This is why chat history doesn't diverge across
         // devices when the network flakes during a send.
         const chatId = get().activeChatId;
+        // An empty streaming placeholder is not a message yet (see chatSync.ts).
+        if (!shouldCloudSyncMessage(message)) return;
         (async () => {
           const ok = await syncChatMessage(message, chatId);
           if (!ok) {

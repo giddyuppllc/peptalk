@@ -270,6 +270,14 @@ answer the underlying question if you can.`;
           action: Record<string, unknown>;
         }> = [];
 
+        // Whether the conversation ends on tool results nobody has answered.
+        // When the rounds ran out mid-lookup, or the round after a lookup came
+        // back empty, the only text saved was the preamble — "I'll pull your
+        // 14-day trends now." — and the user got nothing after it (seen in
+        // production chat_messages, 2026-11-02). answerPending forces one
+        // last round that must answer from what the tools returned.
+        let answerPending = false;
+
         for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
           // Re-append the SAFETY_TRAILER at the BOTTOM of the message
           // queue every round so it can't be shadowed by adversarial
@@ -298,7 +306,13 @@ answer the underlying question if you can.`;
           // message credit is now earned and won't be refunded.
           if (collected.text || collected.toolCalls.length > 0) producedOutput = true;
 
-          if (collected.toolCalls.length === 0) break;
+          if (collected.toolCalls.length === 0) {
+            // A round after tool results that says nothing leaves them unanswered.
+            if (round > 0 && !collected.text.trim()) answerPending = true;
+            else answerPending = false;
+            break;
+          }
+          answerPending = true;
 
           // Append the assistant's tool_calls turn verbatim (OpenAI shape).
           convoMessages.push({
@@ -388,6 +402,36 @@ answer the underlying question if you can.`;
 
           if (round === MAX_TOOL_ROUNDS - 1) {
             send({ type: 'warning', message: 'Tool round limit reached' });
+          }
+        }
+
+        if (answerPending && canUseTools) {
+          // Separate the preamble the user already saw from the answer.
+          if (finalAssistantText) send({ type: 'text_delta', text: '\n\n' });
+          const closing = await streamRound({
+            canUseTools,
+            toolChoice: 'none',
+            system: systemPrompt,
+            messages: [
+              ...convoMessages,
+              {
+                role: 'user' as const,
+                content:
+                  'Answer my question now using the tool results above. Do not call any more tools.',
+              },
+              { role: 'user' as const, content: SAFETY_TRAILER },
+            ],
+            send,
+          });
+          totalUsage = {
+            input_tokens: totalUsage.input_tokens + closing.usage.input_tokens,
+            output_tokens: totalUsage.output_tokens + closing.usage.output_tokens,
+          };
+          if (closing.text.trim()) {
+            finalAssistantText = finalAssistantText
+              ? `${finalAssistantText}\n\n${closing.text}`
+              : closing.text;
+            producedOutput = true;
           }
         }
 
@@ -509,6 +553,8 @@ async function streamRound(args: {
   send: (obj: Record<string, unknown>) => void;
   /** Free tier is answers-only — no tools are offered to the model at all. */
   canUseTools: boolean;
+  /** 'none' = answer from what is already in the conversation, no new calls. */
+  toolChoice?: 'auto' | 'none';
 }): Promise<StreamRoundResult> {
   // Accumulate tool calls by index (OpenAI streams args as deltas).
   const toolBuf: Map<number, { id: string; name: string; jsonStr: string; started: boolean }> = new Map();
@@ -522,6 +568,7 @@ async function streamRound(args: {
     // never offered a tool cannot call one, so an unpaid conversation cannot
     // log a dose, change a protocol, or navigate the app.
     tools: args.canUseTools ? AIMEE_TOOLS : [],
+    toolChoice: args.toolChoice,
     maxTokens: 1024,
     temperature: 0.7,
   })) {

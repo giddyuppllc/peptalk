@@ -88,6 +88,18 @@ import {
  *  it, short enough that a truly hung network doesn't leave the typing
  *  indicator spinning forever. */
 const AIMEE_RESPONSE_TIMEOUT_MS = 35_000;
+/**
+ * A streamed reply is bounded by time to its FIRST event, not by its length.
+ *
+ * The whole stream used to sit inside the 35s withTimeout above. An answer that
+ * used a tool or two (each round is a full model call) ran past it, so a reply
+ * that was working was aborted mid-sentence and the non-streaming fallback —
+ * no tools, and a flat "requires PepTalk+" for free users — wrote a second,
+ * worse answer under it. Now: nothing at all for 35s ⇒ fall back; otherwise
+ * let it finish, with a hard ceiling so a wedged connection still ends.
+ */
+const AIMEE_STREAM_FIRST_EVENT_MS = AIMEE_RESPONSE_TIMEOUT_MS;
+const AIMEE_STREAM_HARD_CAP_MS = 180_000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -480,6 +492,13 @@ export default function PepTalkScreen() {
       streamAbortRef.current?.abort();
       const controller = new AbortController();
       streamAbortRef.current = controller;
+      // See AIMEE_STREAM_FIRST_EVENT_MS. Aborting makes the iterator end
+      // quietly: with no event seen the caller falls back; with text on the
+      // bubble it is kept.
+      const firstEventTimer = setTimeout(() => {
+        if (!sawAnyEvent) controller.abort();
+      }, AIMEE_STREAM_FIRST_EVENT_MS);
+      const hardCapTimer = setTimeout(() => controller.abort(), AIMEE_STREAM_HARD_CAP_MS);
       // Stash on globalThis so useAuthStore.logout() can abort
       // an in-flight stream even when the chat screen isn't
       // mounted (e.g. logout fired from the Profile tab). Without
@@ -655,6 +674,8 @@ export default function PepTalkScreen() {
         stillStreaming = false;
       }
 
+      clearTimeout(firstEventTimer);
+      clearTimeout(hardCapTimer);
       if (stillStreaming) {
         // Iterator closed without a 'done' event — finalize anyway.
         updateMessage(placeholderId, { streaming: false });
@@ -718,7 +739,7 @@ export default function PepTalkScreen() {
         setTyping(false);
         withTimeout(
           streamAimeeResponse(prefillMessage, context),
-          AIMEE_RESPONSE_TIMEOUT_MS,
+          AIMEE_STREAM_HARD_CAP_MS + 5_000,
           'aimee prefill stream',
         )
           .then(async (streamed) => {
@@ -805,7 +826,7 @@ export default function PepTalkScreen() {
       try {
         const streamed = await withTimeout(
           streamAimeeResponse(text, context),
-          AIMEE_RESPONSE_TIMEOUT_MS,
+          AIMEE_STREAM_HARD_CAP_MS + 5_000,
           'aimee stream',
         );
         if (streamed) return;
@@ -884,7 +905,7 @@ export default function PepTalkScreen() {
         try {
           const streamed = await withTimeout(
             streamAimeeResponse(reply, context),
-            AIMEE_RESPONSE_TIMEOUT_MS,
+            AIMEE_STREAM_HARD_CAP_MS + 5_000,
             'aimee quick-reply stream',
           );
           if (streamed) return;
