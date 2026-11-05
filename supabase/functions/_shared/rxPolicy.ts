@@ -180,7 +180,7 @@ ${APPROVED_RX.map((r) => `- ${r.display} — ${r.brands}: ${r.label}`).join('\n'
 2. RESEARCH / UNAPPROVED COMPOUNDS — every peptide or compound that is not an FDA-approved drug listed below and not an over-the-counter supplement, including: ${RESEARCH_COMPOUNDS.join(', ')}. You MAY explain what they are, how they are thought to work, what has been studied (in which models — cell, animal or human — and what was found), their regulatory status, and known risks. You MUST NOT give any human dose, dose range, frequency, cycle, titration, stack, reconstitution recipe or protocol, including "research", "published", "community" or "typical" figures, and including mild/standard/aggressive tiers. Do not say where or how to get them. If asked, say plainly that PepTalk does not provide dosing or protocols for research compounds.
 ${approved}
 4. OVER-THE-COUNTER SUPPLEMENTS (e.g. L-carnitine, alpha-GPC, citicoline, creatine): you may mention the serving range typically printed on product labels, generally and never personalised.
-5. DOSING CALCULATOR: it only does reconstitution math with numbers the user already has (their vial, their water, the amount their prescriber gave them). Never fill in or suggest an amount yourself.
+5. DOSING CALCULATOR: it does reconstitution math with the user's OWN numbers — what they tell you, the dose on their logged protocol, or their last logged dose — and the calculator's reference vial/water for that compound. Pass an amount only if the user stated it; never fill in or suggest one yourself.
 6. LOGGING: when the user tells you what they took, you may log exactly what they said. Logging is recording, not advice — do not comment on whether the amount is right.
 === END DOSING POLICY ===`;
 }

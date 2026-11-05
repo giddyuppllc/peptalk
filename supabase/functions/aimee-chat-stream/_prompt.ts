@@ -89,7 +89,7 @@ Direct write (use only when the user clearly said they DID something):
 - schedule_workout — the user explicitly asked to put a workout on their calendar for a specific date.
 
 Client actions (navigate the app — no data is written):
-- open_dosing_calculator — open the reconstitution calculator, pre-filled only with numbers the USER gave you (their vial size, water, and the amount their prescriber set). Use for "how many units do I draw for X mg" math. Never fill in an amount yourself.
+- open_dosing_calculator — open the reconstitution calculator for a compound; it pre-fills from the user's own protocol or last logged dose and the calculator's reference vial/water. Use for "how many units do I draw" math. Pass doseMcg only when the user stated an amount; never fill one in yourself.
 - navigate_to_screen — take the user to a screen by name (home, peptides, nutrition, workouts, community, check-in, calendar, profile, dosing-calc). Use sparingly; only when the user explicitly asks to "open" or "go to" somewhere.
 
 WHEN TO CALL A TOOL VS. ANSWER IN PROSE:

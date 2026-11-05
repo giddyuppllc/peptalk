@@ -220,7 +220,7 @@ export const AIMEE_TOOLS: GrokTool[] = [
       name: 'propose_log_field',
       description: [
         'Propose adding a single structured field to TODAY\'s check-in log.',
-        'Call this when the user mentions a data point in chat that they haven\'t logged — e.g. "slept great" → sleepQuality=5; "energy is low today" → energy=2.',
+        'Call this when the user mentions a data point in chat that they haven\'t logged — e.g. "I slept 7 hours" → sleepHours=7; "slept great" → sleepQuality=5; "energy is low today" → energy=2.',
         'The proposal is saved as a PENDING action — the user must tap Confirm before anything writes.',
         'Returns a pending_action_id.',
       ].join(' '),
@@ -229,13 +229,11 @@ export const AIMEE_TOOLS: GrokTool[] = [
         properties: {
           field: {
             type: 'string',
-            // Matches check_ins: sleep is a 1-5 quality score (no hours
-            // column); symptoms are stored as side_effect_tags.
-            enum: ['mood', 'energy', 'sleepQuality', 'weightLbs', 'symptoms', 'notes'],
+            enum: ['mood', 'energy', 'sleepHours', 'sleepQuality', 'weightLbs', 'symptoms', 'notes'],
           },
           value: {
             description:
-              'The value to set. 1-5 scale for mood/energy/sleepQuality; pounds for weightLbs; string for notes; array of strings for symptoms.',
+              'The value to set. Hours (0-24) for sleepHours; 1-5 scale for mood/energy/sleepQuality; pounds for weightLbs; string for notes; array of strings for symptoms.',
           },
         },
         required: ['field', 'value'],
@@ -301,8 +299,8 @@ export const AIMEE_TOOLS: GrokTool[] = [
     function: {
       name: 'open_dosing_calculator',
       description: [
-        'Open the reconstitution calculator, pre-filled ONLY with numbers the user gave you: their vial size, their water, and the amount their prescriber set.',
-        'Call this for "how many units do I draw for X mg" style math. Never put in an amount the user did not state — Aimee does not suggest doses (see the dosing policy).',
+        'Open the reconstitution calculator for a compound. It pre-fills from the user\'s OWN data — the amount they state, else the dose on their logged protocol, else their last logged dose — and the calculator\'s reference vial/water for that compound.',
+        'Call this for "how many units do I draw" style math. Pass doseMcg only if the user stated an amount; never put in an amount you chose (see the dosing policy).',
         'The client navigates to /doses/calculator with the deep-link params; no server state changes.',
       ].join(' '),
       parameters: {
@@ -439,6 +437,27 @@ export const AIMEE_TOOLS: GrokTool[] = [
 //   - requires_confirm + pending_action_id  → client shows confirm modal
 //   - client_action: { type, ... }          → client executes a deep link
 
+/**
+ * Columns added by migration 20261105020000 (check_ins.sleep_hours/symptoms,
+ * profiles.height_cm/weight_kg/gender). Each query asks for them and, if the
+ * database does not have them yet, asks again without — so the tools work
+ * before and after the migration and the deploy order cannot break them.
+ */
+export function isMissingColumn(err: { code?: string; message?: string } | null | undefined): boolean {
+  if (!err) return false;
+  return err.code === '42703' || err.code === 'PGRST204' || /column .* does not exist|could not find the .* column/i.test(err.message ?? '');
+}
+
+async function selectTolerant(
+  run: (cols: string) => PromiseLike<{ data: any; error: any }>,
+  base: string[],
+  optional: string[],
+): Promise<{ data: any; error: any }> {
+  const full = await run([...base, ...optional].join(', '));
+  if (!isMissingColumn(full?.error)) return full;
+  return run(base.join(', '));
+}
+
 export async function execSuggestWorkout(
   supabase: any,
   _userId: string,
@@ -515,26 +534,33 @@ export async function execSummarizePattern(
     requestedSignals.includes('energy') ||
     requestedSignals.includes('sleep')
   ) {
-    const { data: checkins } = await supabase
-      .from('check_ins')
-      // check_ins has sleep_quality (1-5), not sleep_hours. Selecting a column
-      // that does not exist failed the whole query, and the null result read
-      // as "No check-ins logged" for every user — the "I'll pull your trends"
-      // answers that came back with nothing (production, 2026-11).
-      .select('date, mood, energy, sleep_quality')
-      .eq('user_id', userId)
-      .gte('date', since)
-      .order('date', { ascending: false })
-      .limit(200);
+    // sleep_hours arrives with migration 20261105020000. Asking for it before
+    // the column existed failed the whole query, and the null result read as
+    // "No check-ins logged" for everyone — the "I'll pull your trends" answers
+    // that came back with nothing (production, 2026-11).
+    const { data: checkins } = await selectTolerant(
+      (cols) =>
+        supabase
+          .from('check_ins')
+          .select(cols)
+          .eq('user_id', userId)
+          .gte('date', since)
+          .order('date', { ascending: false })
+          .limit(200),
+      ['date', 'mood', 'energy', 'sleep_quality'],
+      ['sleep_hours'],
+    );
     if (checkins && checkins.length > 0) {
       const mood = checkins.map((c: any) => c.mood).filter((v: any) => typeof v === 'number');
       const energy = checkins.map((c: any) => c.energy).filter((v: any) => typeof v === 'number');
-      const sleep = checkins.map((c: any) => c.sleep_quality).filter((v: any) => typeof v === 'number');
+      const sleepQ = checkins.map((c: any) => c.sleep_quality).filter((v: any) => typeof v === 'number');
+      const sleepH = checkins.map((c: any) => Number(c.sleep_hours)).filter((v: number) => Number.isFinite(v) && v > 0);
       summary.checkins = {
         count: checkins.length,
         avgMood: mood.length ? round2(mean(mood)) : null,
         avgEnergy: energy.length ? round2(mean(energy)) : null,
-        avgSleepQuality1to5: sleep.length ? round2(mean(sleep)) : null,
+        avgSleepHours: sleepH.length ? round2(mean(sleepH)) : null,
+        avgSleepQuality1to5: sleepQ.length ? round2(mean(sleepQ)) : null,
       };
     } else {
       summary.checkins = { count: 0, note: 'No check-ins logged in this window.' };
@@ -634,23 +660,29 @@ export async function execGetUserMetrics(
   _input: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   // Pull the latest of each thing in parallel.
-  // Columns checked against production 2026-11-05. profiles has no
-  // height_cm/weight_kg/dob/gender and check_ins no sleep_hours/symptoms; each
-  // missing column failed its whole query, so this tool returned nulls for
-  // everyone. Body stats live in health_profiles.profile (the app's JSON).
+  // The tool's designed fields. height_cm / weight_kg / gender (profiles) and
+  // sleep_hours / symptoms (check_ins) come with migration 20261105020000 and
+  // are read when present; dob is the existing profiles.date_of_birth. Every
+  // body field falls back to the user's health profile, so nothing is lost
+  // before the migration or for accounts the backfill could not fill.
   const [profileRes, latestCheckin, activeProtocols, latestDose, healthRes] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('subscription_tier')
-      .eq('id', userId)
-      .single(),
-    supabase
-      .from('check_ins')
-      .select('date, mood, energy, sleep_quality, weight_lbs, side_effect_tags, notes')
-      .eq('user_id', userId)
-      .order('date', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+    selectTolerant(
+      (cols) => supabase.from('profiles').select(cols).eq('id', userId).maybeSingle(),
+      ['subscription_tier', 'date_of_birth'],
+      ['height_cm', 'weight_kg', 'gender'],
+    ),
+    selectTolerant(
+      (cols) =>
+        supabase
+          .from('check_ins')
+          .select(cols)
+          .eq('user_id', userId)
+          .order('date', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ['date', 'mood', 'energy', 'sleep_quality', 'weight_lbs', 'side_effect_tags', 'notes'],
+      ['sleep_hours', 'symptoms'],
+    ),
     supabase
       .from('active_protocols')
       .select('peptide_name, dose_amount, dose_unit, route, frequency, start_date')
@@ -672,16 +704,21 @@ export async function execGetUserMetrics(
       .maybeSingle(),
   ]);
 
+  const pr = (profileRes?.data ?? {}) as Record<string, any>;
   const hp = (healthRes?.data?.profile ?? {}) as Record<string, any>;
   const body = (hp.bodyMetrics ?? {}) as Record<string, unknown>;
-  const pick = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  const num = (v: unknown) => (v != null && Number.isFinite(Number(v)) ? Number(v) : null);
+  const inches = num(body.heightInches);
+  const lbs = num(body.weightLbs);
 
   return {
     profile: {
-      subscriptionTier: profileRes?.data?.subscription_tier ?? null,
-      weightLbs: pick(body.weightLbs),
-      heightInches: pick(body.heightInches),
-      bodyFatPercent: pick(body.bodyFatPercent),
+      subscription_tier: pr.subscription_tier ?? null,
+      height_cm: num(pr.height_cm) ?? (inches != null ? Math.round(inches * 2.54 * 10) / 10 : null),
+      weight_kg: num(pr.weight_kg) ?? (lbs != null ? Math.round(lbs * 0.45359237 * 10) / 10 : null),
+      dob: pr.date_of_birth ?? (typeof hp.dateOfBirth === 'string' ? hp.dateOfBirth : null),
+      gender: pr.gender ?? (typeof hp.biologicalSex === 'string' ? hp.biologicalSex : null),
+      body_fat_percent: num(body.bodyFatPercent),
     },
     latestCheckin: latestCheckin?.data ?? null,
     activeProtocols: activeProtocols?.data ?? [],
@@ -715,20 +752,31 @@ export async function execDraftMealTemplate(
   };
 
   /*
-   * Confirmed on the device, like log_meal. This used to be a server-held
-   * pending action whose confirm inserted into meal_entries directly — and the
-   * app's meal log never reads meal_entries back, so a confirmed template
-   * appeared nowhere the user could see it. The client now shows the same
-   * "Meal template" confirm card and, on Confirm, adds it through useMealStore
-   * (which syncs it), exactly as a hand-logged meal.
+   * Both halves, as designed:
+   *  - the server keeps the template record (aimee_pending_actions, as before);
+   *  - the app's confirm card adds it to the user's saved meals (My Meals) and
+   *    logs it through useMealStore, which syncs it.
+   * The old confirm inserted straight into meal_entries, which the app's meal
+   * log never reads back, so a confirmed template appeared nowhere the user
+   * could see it. No requires_confirm here: the client card is the one confirm
+   * (two would render two cards).
    */
-  void supabase;
-  void userId;
-  void conversationId;
+  const { data, error } = await supabase
+    .from('aimee_pending_actions')
+    .insert({
+      user_id: userId,
+      conversation_id: conversationId,
+      tool_name: 'draft_meal_template',
+      input,
+      output,
+    })
+    .select('id')
+    .single();
   return {
     ok: true,
+    template_record_id: error ? null : data?.id ?? null,
     preview: output,
-    message: `Drafted "${String(input.title ?? 'meal')}" — tap Confirm to add it to today's log.`,
+    message: `Drafted "${String(input.title ?? 'meal')}" — tap Confirm to save it to My Meals and today's log.`,
     client_action: { type: 'draft_meal_template', payload: output },
   };
 }
@@ -795,11 +843,15 @@ export async function execProposeLogField(
     const n = Number(value);
     if (!Number.isFinite(n) || n < 1 || n > 5) return { error: 'mood/energy must be 1-5' };
   }
+  if (field === 'sleepHours') {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 0 || n > 24) return { error: 'sleepHours must be 0-24' };
+  }
   if (field === 'sleepQuality') {
     const n = Number(value);
     if (!Number.isFinite(n) || n < 1 || n > 5) return { error: 'sleepQuality must be 1-5' };
   }
-  if (!['mood', 'energy', 'sleepQuality', 'weightLbs', 'symptoms', 'notes'].includes(field)) {
+  if (!['mood', 'energy', 'sleepHours', 'sleepQuality', 'weightLbs', 'symptoms', 'notes'].includes(field)) {
     return { error: `unknown field ${field}` };
   }
   if (field === 'weightLbs') {
@@ -924,16 +976,74 @@ export function execScheduleWorkout(
   };
 }
 
-export function execOpenDosingCalculator(
+/** A logged amount in micrograms, or null for units the calculator cannot take (IU). */
+function toMcg(amount: unknown, unit: unknown): number | null {
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const u = String(unit ?? '').toLowerCase();
+  if (u === 'mcg' || u === 'µg' || u === 'ug') return n;
+  if (u === 'mg') return Math.round(n * 1000 * 1000) / 1000;
+  return null;
+}
+
+/**
+ * Open the calculator pre-filled from the USER's own data:
+ *   - the amount they stated in chat, else
+ *   - the dose on their active protocol for that compound, else
+ *   - their most recent logged dose of it;
+ *   - vial size and water: what they stated, else the calculator's own
+ *     reference for that compound (it fills those itself from peptideId).
+ * Never an amount Aimee chose for them (dosing policy, rxPolicy.ts).
+ */
+export async function execOpenDosingCalculator(
+  supabase: any,
+  userId: string,
   input: Record<string, unknown>,
-): Record<string, unknown> {
+): Promise<Record<string, unknown>> {
   const params = new URLSearchParams();
-  // v3 calculator at /doses/calculator reads `peptideId`, `doseMcg`,
-  // `vialMg`, `waterMl` from query params. Old /calculators/dosing was
-  // retired — v3 is feature-complete per §14.
-  if (typeof input.peptideId === 'string') params.set('peptideId', input.peptideId);
-  else if (typeof input.peptideName === 'string') params.set('peptideId', input.peptideName);
-  if (typeof input.doseMcg === 'number') params.set('doseMcg', String(input.doseMcg));
+  const peptideId =
+    typeof input.peptideId === 'string' ? input.peptideId : typeof input.peptideName === 'string' ? input.peptideName : '';
+  if (peptideId) params.set('peptideId', peptideId);
+
+  let doseMcg: number | null = typeof input.doseMcg === 'number' && input.doseMcg > 0 ? input.doseMcg : null;
+  let doseSource: 'stated' | 'protocol' | 'dose_log' | null = doseMcg != null ? 'stated' : null;
+  if (doseMcg == null && peptideId && supabase) {
+    const key = peptideId.toLowerCase();
+    try {
+      const { data: protos } = await supabase
+        .from('active_protocols')
+        .select('peptide_id, peptide_name, dose_amount, dose_unit')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .limit(20);
+      const proto = (protos ?? []).find(
+        (p: any) => String(p.peptide_id ?? '').toLowerCase() === key || String(p.peptide_name ?? '').toLowerCase() === key,
+      );
+      const fromProto = proto ? toMcg(proto.dose_amount, proto.dose_unit) : null;
+      if (fromProto != null) {
+        doseMcg = fromProto;
+        doseSource = 'protocol';
+      } else {
+        const { data: doses } = await supabase
+          .from('dose_logs')
+          .select('peptide_id, peptide_name, amount, unit, date')
+          .eq('user_id', userId)
+          .order('date', { ascending: false })
+          .limit(50);
+        const last = (doses ?? []).find(
+          (d: any) => String(d.peptide_id ?? '').toLowerCase() === key || String(d.peptide_name ?? '').toLowerCase() === key,
+        );
+        const fromLog = last ? toMcg(last.amount, last.unit) : null;
+        if (fromLog != null) {
+          doseMcg = fromLog;
+          doseSource = 'dose_log';
+        }
+      }
+    } catch {
+      /* no prefill — the calculator still opens */
+    }
+  }
+  if (doseMcg != null) params.set('doseMcg', String(doseMcg));
   if (typeof input.vialMg === 'number') params.set('vialMg', String(input.vialMg));
   if (typeof input.waterMl === 'number') params.set('waterMl', String(input.waterMl));
 
@@ -943,7 +1053,13 @@ export function execOpenDosingCalculator(
   return {
     ok: true,
     client_action: { type: 'navigate', path },
-    message: 'Opening the dosing calculator…',
+    prefilledFrom: doseSource,
+    message:
+      doseSource === 'protocol'
+        ? 'Opening the calculator with the dose from your protocol…'
+        : doseSource === 'dose_log'
+          ? 'Opening the calculator with your last logged dose…'
+          : 'Opening the dosing calculator…',
   };
 }
 
@@ -1151,7 +1267,7 @@ export async function executeTool(
     case 'schedule_workout':
       return execScheduleWorkout(toolInput);
     case 'open_dosing_calculator':
-      return execOpenDosingCalculator(toolInput);
+      return execOpenDosingCalculator(ctx.supabase, ctx.userId, toolInput);
     case 'navigate_to_screen':
       return execNavigateToScreen(toolInput);
     case 'log_water':

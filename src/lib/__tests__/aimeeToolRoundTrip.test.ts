@@ -36,29 +36,55 @@ const PROD_COLUMNS: Record<string, string[]> = {
   meal_entries: 'id user_id date meal_type timestamp foods quick_log notes created_at source'.split(' '),
   dose_logs: 'id user_id peptide_id peptide_name amount unit route date time site batch_number notes created_at source'.split(' '),
   active_protocols: 'id user_id peptide_id peptide_name dose_amount dose_unit route frequency start_date end_date is_active created_at'.split(' '),
-  profiles: 'id email name first_name last_name avatar_url subscription_tier is_pro favorite_peptides created_at updated_at'.split(' '),
+  profiles: 'id email name first_name last_name avatar_url subscription_tier is_pro favorite_peptides created_at updated_at share_anonymized_data username display_name is_plus age_range age_attested_at age_gate_min phone date_of_birth address_line1 address_line2 city region postal_code country welcome_email_sent_at leaderboard_opt_in'.split(' '),
   health_profiles: 'user_id profile setup_complete current_step updated_at'.split(' '),
   exercises_library: 'id name muscles priority level location gender metrics created_at'.split(' '),
   aimee_pending_actions: 'id user_id conversation_id tool_name input output status created_at expires_at resolved_at'.split(' '),
 };
 
-/** A Supabase stand-in that records every table + column a query names. */
-function recordingDb() {
-  const calls: { table: string; columns: string[] }[] = [];
+/** Columns migration 20261105020000 adds, read from the migration file itself. */
+const MIGRATION_SQL = readFileSync(join(ROOT, 'supabase', 'migrations', '20261105020000_aimee_tool_columns.sql'), 'utf8');
+function migrationColumns(table: string): string[] {
+  const block =
+    MIGRATION_SQL.split(`ALTER TABLE public.${table}`)
+      .slice(1)
+      .map((seg) => seg.split(';')[0])
+      .find((seg) => /ADD COLUMN/.test(seg)) ?? '';
+  return [...block.matchAll(/ADD COLUMN IF NOT EXISTS (\w+)/g)].map((m) => m[1]);
+}
+const AFTER_MIGRATION: Record<string, string[]> = Object.fromEntries(
+  Object.entries(PROD_COLUMNS).map(([t, cols]) => [t, [...cols, ...migrationColumns(t)]]),
+);
+
+/**
+ * A Supabase stand-in that records every table + column a query names and,
+ * like PostgREST, fails a query that names a column the schema lacks (42703).
+ * `schema` = production today, or production after the migration.
+ */
+function recordingDb(
+  schema: Record<string, string[]> = AFTER_MIGRATION,
+  rows: Record<string, unknown[]> = {},
+) {
+  const calls: { table: string; columns: string[]; failed: boolean }[] = [];
   const builder = (table: string): any => {
+    let failed = false;
+    const result = () =>
+      failed ? { data: null, error: { code: '42703', message: 'column does not exist' } } : { data: rows[table] ?? [], error: null };
     const b: any = {
       select: (cols: string) => {
-        calls.push({ table, columns: cols.split(',').map((c) => c.trim()).filter(Boolean) });
+        const columns = cols.split(',').map((c) => c.trim()).filter(Boolean);
+        failed = columns.some((c) => !(schema[table] ?? []).includes(c));
+        calls.push({ table, columns, failed });
         return b;
       },
       eq: () => b, gte: () => b, order: () => b, limit: () => b, in: () => b, overlaps: () => b,
       insert: (row: Record<string, unknown>) => {
-        calls.push({ table, columns: Object.keys(row) });
+        calls.push({ table, columns: Object.keys(row), failed: false });
         return b;
       },
-      single: async () => ({ data: { id: 'x' }, error: null }),
-      maybeSingle: async () => ({ data: null, error: null }),
-      then: (r: any) => r({ data: [], error: null }),
+      single: async () => (failed ? result() : { data: { id: 'x' }, error: null }),
+      maybeSingle: async () => (failed ? result() : { data: (rows[table] ?? [])[0] ?? null, error: null }),
+      then: (r: any, j?: any) => Promise.resolve(result()).then(r, j),
     };
     return b;
   };
@@ -82,16 +108,35 @@ describe('every tool the model can call', () => {
     }
   });
 
-  it('queries only columns that exist in production', async () => {
+  it('after the migration: reads the designed columns, and every column exists', async () => {
     for (const name of ['summarize_pattern', 'get_user_metrics', 'suggest_workout']) {
-      const { calls, db } = recordingDb();
+      const { calls, db } = recordingDb(AFTER_MIGRATION);
       await executeTool(name, { muscles: ['Chest'] }, ctx(db));
-      for (const c of calls) {
-        const known = PROD_COLUMNS[c.table];
-        expect({ name, table: c.table, known: !!known }).toEqual({ name, table: c.table, known: true });
-        for (const col of c.columns) expect({ name, table: c.table, col, ok: known.includes(col) }).toMatchObject({ ok: true });
-      }
+      for (const c of calls) expect({ name, table: c.table, failed: c.failed }).toMatchObject({ failed: false });
     }
+    const { calls, db } = recordingDb(AFTER_MIGRATION);
+    await executeTool('get_user_metrics', {}, ctx(db));
+    const asked = calls.flatMap((c) => c.columns);
+    for (const col of ['height_cm', 'weight_kg', 'gender', 'date_of_birth', 'sleep_hours', 'symptoms']) expect(asked).toContain(col);
+  });
+
+  it('before the migration: tolerates the missing columns and still answers', async () => {
+    const rows = {
+      check_ins: [{ date: TODAY, mood: 4, energy: 3, sleep_quality: 4 }],
+      health_profiles: [{ profile: { bodyMetrics: { heightInches: 65, weightLbs: 150 }, dateOfBirth: '1990-01-01', biologicalSex: 'female' } }],
+      profiles: [{ subscription_tier: 'pro', date_of_birth: null }],
+    };
+    const trends = await executeTool('summarize_pattern', { signals: ['mood', 'sleep'] }, ctx(recordingDb(PROD_COLUMNS, rows).db));
+    expect(trends.checkins).toMatchObject({ count: 1, avgMood: 4, avgSleepQuality1to5: 4 });
+    const metrics = await executeTool('get_user_metrics', {}, ctx(recordingDb(PROD_COLUMNS, rows).db));
+    // Falls back to the health profile, so nothing is lost before the backfill.
+    expect(metrics.profile).toMatchObject({ height_cm: 165.1, weight_kg: 68, dob: '1990-01-01', gender: 'female' });
+  });
+
+  it('after the migration: sleep hours are averaged', async () => {
+    const rows = { check_ins: [{ date: TODAY, mood: 4, energy: 3, sleep_quality: 4, sleep_hours: 7.5 }] };
+    const trends = await executeTool('summarize_pattern', { signals: ['sleep'] }, ctx(recordingDb(AFTER_MIGRATION, rows).db));
+    expect(trends.checkins).toMatchObject({ avgSleepHours: 7.5 });
   });
 });
 
@@ -120,6 +165,16 @@ describe('client-action tools: server output → app handler', () => {
     const meal = sanitizeLogMeal(ca.payload);
     expect(meal?.mealType).toBe('lunch');
     expect(meal?.foods[0]).toMatchObject({ foodName: 'Eggs', calories: 140, proteinGrams: 12 });
+  });
+
+  it('draft_meal_template keeps its server record', async () => {
+    const { calls, db } = recordingDb();
+    const out = await executeTool('draft_meal_template', { mealType: 'lunch', title: 'Bowl', items: [{ name: 'Rice' }] }, ctx(db));
+    expect(out.template_record_id).toBe('x');
+    expect(out.requires_confirm).toBeUndefined(); // one confirm card, the client's
+    expect(calls.some((c) => c.table === 'aimee_pending_actions')).toBe(true);
+    expect(SCREEN_SRC).toMatch(/action\.tool === 'draft_meal_template'[\s\S]{0,400}saveAimeeMealTemplate\(action\.preview\)[\s\S]{0,80}applyLogMealAction\(action\.preview\)/);
+    expect(SCREEN_SRC).toMatch(/addMealTemplateAction\(\{/);
   });
 
   it('draft_meal_template → confirm card → sanitizeLogMeal (shows in the meal log)', async () => {
@@ -159,13 +214,29 @@ describe('client-action tools: server output → app handler', () => {
     expect(sanitizeAddToPantry(ca.payload)[0]).toMatchObject({ name: 'Eggs' });
   });
 
-  it('open_dosing_calculator → an allowed, real route; never invents a dose', async () => {
-    const ca = await action('open_dosing_calculator', { peptideId: 'bpc-157', vialMg: 5, waterMl: 2 });
-    expect(ca.type).toBe('navigate');
-    expect(isAllowedNavigationPath(ca.path!)).toBe(true);
-    expect(ca.path).not.toMatch(/doseMcg/);
+  it('open_dosing_calculator → an allowed, real route, pre-filled only from the user\'s own data', async () => {
+    const open = async (input: Record<string, unknown>, rows: Record<string, unknown[]> = {}) => {
+      const out = await executeTool('open_dosing_calculator', input, ctx(recordingDb(AFTER_MIGRATION, rows).db));
+      const ca = out.client_action as { type: string; path: string };
+      expect(ca.type).toBe('navigate');
+      expect(isAllowedNavigationPath(ca.path)).toBe(true);
+      return { path: ca.path, from: out.prefilledFrom };
+    };
+    // What the user said wins.
+    expect(await open({ peptideId: 'bpc-157', doseMcg: 300, vialMg: 5, waterMl: 2 })).toMatchObject({ from: 'stated' });
+    // Else their active protocol (mg → mcg)...
+    const proto = await open({ peptideId: 'bpc-157' }, { active_protocols: [{ peptide_id: 'bpc-157', dose_amount: 0.25, dose_unit: 'mg' }] });
+    expect(proto).toMatchObject({ from: 'protocol' });
+    expect(proto.path).toMatch(/doseMcg=250/);
+    // ...else their last logged dose.
+    const log = await open({ peptideId: 'selank' }, { dose_logs: [{ peptide_id: 'selank', amount: 300, unit: 'mcg', date: TODAY }] });
+    expect(log).toMatchObject({ from: 'dose_log' });
+    expect(log.path).toMatch(/doseMcg=300/);
+    // No data of theirs → no dose; the calculator fills vial/water from its reference.
+    const none = await open({ peptideId: 'bpc-157' });
+    expect(none.path).toBe('/doses/calculator?peptideId=bpc-157');
     const desc = AIMEE_TOOLS.find((t) => t.function.name === 'open_dosing_calculator')!.function.description;
-    expect(desc).toMatch(/Never put in an amount the user did not state/);
+    expect(desc).toMatch(/never put in an amount you chose/);
   });
 
   it('navigate_to_screen: every advertised screen maps to an allowed route that exists', () => {
@@ -192,11 +263,19 @@ describe('propose_log_field: model enum → confirm function → real columns', 
   const tool = AIMEE_TOOLS.find((t) => t.function.name === 'propose_log_field')!;
   const fields = (tool.function.parameters as any).properties.field.enum as string[];
 
-  it('every field the model may propose maps to a check_ins column that exists', () => {
+  it('the designed fields are all there, and each maps to a column that exists after the migration', () => {
+    expect(fields).toEqual(expect.arrayContaining(['mood', 'energy', 'sleepHours', 'sleepQuality', 'weightLbs', 'symptoms', 'notes']));
     for (const f of fields) {
       expect({ f, column: map[f] }).toEqual({ f, column: expect.any(String) });
-      expect({ f, ok: PROD_COLUMNS.check_ins.includes(map[f]) }).toEqual({ f, ok: true });
+      expect({ f, ok: AFTER_MIGRATION.check_ins.includes(map[f]) }).toEqual({ f, ok: true });
     }
+    expect(map).toMatchObject({ sleepHours: 'sleep_hours', symptoms: 'symptoms', sleepQuality: 'sleep_quality' });
+  });
+
+  it('before the migration a new column falls back or says so — never a crash', () => {
+    expect(confirmSrc).toMatch(/symptoms: 'side_effect_tags'/);
+    expect(confirmSrc).toMatch(/sleep_hours: null/);
+    expect(confirmSrc).toMatch(/can be saved once the database update/);
   });
 
   it('queues a pending action the confirm card can show', async () => {

@@ -231,15 +231,17 @@ async function commitLogField(
   let value = output.value;
   const today = output.date ?? new Date().toISOString().slice(0, 10);
 
-  // Real check_ins columns (checked against production 2026-11-05). The old
-  // map pointed sleepHours and symptoms at columns that do not exist, so
-  // confirming either failed with a database error.
+  // check_ins.sleep_hours and .symptoms arrive with migration 20261105020000
+  // (they never existed, so confirming either failed). Until it runs, symptoms
+  // fall back to side_effect_tags and sleep hours report that they cannot be
+  // saved yet — see FALLBACK_COLUMN below.
   const fieldMap: Record<string, string> = {
     mood: 'mood',
     energy: 'energy',
+    sleepHours: 'sleep_hours',
     sleepQuality: 'sleep_quality',
     weightLbs: 'weight_lbs',
-    symptoms: 'side_effect_tags',
+    symptoms: 'symptoms',
     notes: 'notes',
   };
   const dbField = fieldMap[field];
@@ -263,6 +265,12 @@ async function commitLogField(
       throw new Error(`${field} must be 1-5`);
     }
     value = Math.round(n);
+  } else if (field === 'sleepHours') {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 0 || n > 24) {
+      throw new Error('sleepHours must be 0-24');
+    }
+    value = Math.round(n * 100) / 100;
   } else if (field === 'weightLbs') {
     const n = Number(value);
     if (!Number.isFinite(n) || n < 40 || n > 800) {
@@ -291,34 +299,42 @@ async function commitLogField(
     .eq('date', today)
     .maybeSingle();
 
-  if (existing?.id) {
-    const { error } = await supabase
+  const write = async (column: string) => {
+    if (existing?.id) {
+      const { error } = await supabase.from('check_ins').update({ [column]: value }).eq('id', existing.id);
+      return { id: existing.id, error, created: false };
+    }
+    const { data: inserted, error } = await supabase
       .from('check_ins')
-      .update({ [dbField]: value })
-      .eq('id', existing.id);
-    if (error) throw new Error(`check_ins update failed: ${error.message}`);
-    return { check_in_id: existing.id, field: dbField, value };
-  }
-
-  // The app keys check-ins as `checkin-<date>` (useCheckinStore), so use the
-  // same id — a default uuid made a second row for the day once the app synced
-  // its own entry. That id has no user in it and is the table's primary key,
-  // so another account may already hold it for this date; then fall back to a
-  // generated id rather than fail the confirm.
-  const insertRow = (id?: string) =>
-    supabase
-      .from('check_ins')
-      .insert({ ...(id ? { id } : {}), user_id: userId, date: today, [dbField]: value })
+      .insert({ user_id: userId, date: today, [column]: value })
       .select('id')
       .single();
-  let { data: inserted, error: insertErr } = await insertRow(`checkin-${today}`);
-  if (insertErr && (insertErr.code === '23505' || /duplicate key/i.test(insertErr.message ?? ''))) {
-    ({ data: inserted, error: insertErr } = await insertRow());
+    return { id: inserted?.id, error, created: true };
+  };
+
+  let column = dbField;
+  let res = await write(column);
+  if (res.error && isMissingColumn(res.error) && FALLBACK_COLUMN[dbField] !== undefined) {
+    const alt = FALLBACK_COLUMN[dbField];
+    if (alt === null) {
+      throw new Error(`${field} can be saved once the database update (20261105020000) is applied`);
+    }
+    column = alt;
+    res = await write(column);
   }
-  if (insertErr) {
-    throw new Error(`check_ins insert failed: ${insertErr.message}`);
-  }
-  return { check_in_id: inserted?.id, field: dbField, value, created: true };
+  if (res.error) throw new Error(`check_ins ${res.created ? 'insert' : 'update'} failed: ${res.error.message}`);
+  return { check_in_id: res.id, field: column, value, ...(res.created ? { created: true } : {}) };
+}
+
+/** Where a new column's value goes before migration 20261105020000 runs. */
+const FALLBACK_COLUMN: Record<string, string | null> = {
+  symptoms: 'side_effect_tags',
+  sleep_hours: null,
+};
+
+function isMissingColumn(err: { code?: string; message?: string } | null | undefined): boolean {
+  if (!err) return false;
+  return err.code === '42703' || err.code === 'PGRST204' || /column .* does not exist|could not find the .* column/i.test(err.message ?? '');
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────

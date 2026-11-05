@@ -184,6 +184,7 @@ export default function PepTalkScreen() {
   const logAppetiteAction = useAppetiteLogStore((s) => s.logAppetite);
   const addPantryItemAction = usePantryStore((s) => s.addItem);
   const addPlannedWorkoutAction = useWorkoutStore((s) => s.addPlannedLog);
+  const addMealTemplateAction = useMealStore((s) => s.addMealTemplate);
   // §17 — Aimee write-actions are Pro-gated. Free tier still gets
   // read-only Q&A from the FAB / Centerpiece / Persistent Chip; the
   // confirm-card flow upgrades to an upsell when a write would have
@@ -403,6 +404,30 @@ export default function PepTalkScreen() {
       addMealAction(safe as any);
     },
     [addMealAction],
+  );
+
+  /** Aimee's drafted meal → a saved template in My Meals, same shape the app saves. */
+  const saveAimeeMealTemplate = useCallback(
+    (payload: Record<string, unknown>) => {
+      const meal = sanitizeLogMeal(payload);
+      if (!meal) return;
+      const now = new Date().toISOString();
+      const sum = (k: 'calories' | 'proteinGrams' | 'carbsGrams' | 'fatGrams') =>
+        Math.round(meal.foods.reduce((n, f) => n + (Number(f[k]) || 0) * (Number(f.servings) || 1), 0));
+      addMealTemplateAction({
+        id: `aimee-tpl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim().slice(0, 120) : 'Aimee meal',
+        defaultMealType: meal.mealType,
+        foods: meal.foods as never,
+        totalCalories: sum('calories'),
+        totalProteinGrams: sum('proteinGrams'),
+        totalCarbsGrams: sum('carbsGrams'),
+        totalFatGrams: sum('fatGrams'),
+        createdAt: now,
+        updatedAt: now,
+      });
+    },
+    [addMealTemplateAction],
   );
 
   const applyScheduleWorkoutAction = useCallback(
@@ -978,9 +1003,12 @@ export default function PepTalkScreen() {
                       if (!logged) {
                         return { ok: false, error: 'Not logged — safety check declined' };
                       }
-                    } else if (action.tool === 'log_meal' || action.tool === 'draft_meal_template') {
-                      // A confirmed template is logged as today's meal through
-                      // the meal store, so it shows in the meal log and syncs.
+                    } else if (action.tool === 'draft_meal_template') {
+                      // Both, as designed: saved to My Meals (the template
+                      // library) and logged as today's meal (meal store syncs it).
+                      saveAimeeMealTemplate(action.preview);
+                      applyLogMealAction(action.preview);
+                    } else if (action.tool === 'log_meal') {
                       applyLogMealAction(action.preview);
                     } else if (action.tool === 'schedule_workout') {
                       applyScheduleWorkoutAction(action.preview);
@@ -1014,6 +1042,7 @@ export default function PepTalkScreen() {
       applyLogWaterAction,
       applyLogAppetiteAction,
       applyAddToPantryAction,
+      saveAimeeMealTemplate,
       router,
     ],
   );

@@ -78,7 +78,7 @@ WHAT YOU CAN DO:
 - Explain what lab results mean (factually) and how they relate to tracked health data
 - Build workout plans using the exercise database
 - Create meal plans and suggest foods based on macro targets
-- Explain how peptides are handled and stored, including which should not be mixed in one vial
+- Help users build peptide stacks — flag which peptides denature each other, which have synergy
 - Navigate users to screens in the app (---NAV_ACTION--- tags below)
 - Point the user at the control that logs data — you cannot write it on this path
 
