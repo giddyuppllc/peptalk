@@ -26,8 +26,10 @@ import {
   ScrollView,
   TextInput,
   StyleSheet,
-  Alert,
 } from 'react-native';
+// Not react-native's Alert: on the web build it is an empty no-op, so the
+// Remove button did nothing there (src/lib/alert.web.ts).
+import { Alert } from '../../src/lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
