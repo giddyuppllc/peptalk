@@ -204,7 +204,8 @@ function scrubAnonAuthor(r: any, currentUserId: string | null) {
 }
 
 async function getSupa() {
-  const { supabase } = await import('../services/supabase');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { supabase } = require('../services/supabase');
   return supabase as any;
 }
 
@@ -808,10 +809,14 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
 
   toggleReaction: async (target, presentlyReacted) => {
     try {
-      await authedFetch('community-react', {
+      const res = await authedFetch<any>('community-react', {
         ...target,
         action: presentlyReacted ? 'remove' : 'add',
       });
+      // authedFetch RETURNS the function's refusal (e.g. no handle yet) rather
+      // than throwing; treating it as success showed a reaction that was
+      // never saved.
+      if (res?.error) return { ok: false, error: res.error };
       // Keep cached membership in sync so re-entering a post (or a sibling
       // ReactionRow) reflects the new state without a re-hydrate. P3.11.
       const key = target.commentId ?? target.postId;
@@ -872,7 +877,8 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
 
   followUser: async (userId) => {
     try {
-      await authedFetch('community-follow', { followedId: userId, action: 'follow' });
+      const res = await authedFetch<any>('community-follow', { followedId: userId, action: 'follow' });
+      if (res?.error) return { ok: false, error: res.error };
       set({ followedUserIds: Array.from(new Set([...get().followedUserIds, userId])) });
       return { ok: true };
     } catch (err: any) {
@@ -882,7 +888,8 @@ export const useCommunityStore = create<CommunityState>()((set, get) => ({
 
   unfollowUser: async (userId) => {
     try {
-      await authedFetch('community-follow', { followedId: userId, action: 'unfollow' });
+      const res = await authedFetch<any>('community-follow', { followedId: userId, action: 'unfollow' });
+      if (res?.error) return { ok: false, error: res.error };
       set({ followedUserIds: get().followedUserIds.filter((id) => id !== userId) });
       return { ok: true };
     } catch (err: any) {
