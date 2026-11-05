@@ -56,7 +56,7 @@ export const useWorkoutTemplateStore = create<WorkoutTemplateState & WorkoutTemp
 
       addTemplate: (name, exercises) => {
         const template: WorkoutTemplate = {
-          id: `tmpl-${Date.now()}`,
+          id: `tmpl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           name,
           exercises,
           createdAt: new Date().toISOString(),

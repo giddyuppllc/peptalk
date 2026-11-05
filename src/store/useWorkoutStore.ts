@@ -322,7 +322,7 @@ export const useWorkoutStore = create<WorkoutState & WorkoutActions>()(
         const now = startDate.toISOString();
         set({
           inProgress: {
-            id: `wlog-${Date.now()}`,
+            id: `wlog-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
             // Local-date key, not the UTC ISO slice: an evening workout in the
             // Americas must group to today, not roll over to tomorrow in UTC.
             date: toLocalDateKey(startDate),

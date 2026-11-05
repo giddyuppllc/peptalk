@@ -316,7 +316,7 @@ export default function FoodScannerScreen() {
     // per-row caps as sanitizeLogMeal so the scan surface can't bypass
     // the chat sanitize pipeline.
     addMeal({
-      id: `scan-${Date.now()}`,
+      id: `scan-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       date: today,
       mealType: selectedMealType as any,
       foods: result.items.slice(0, 20).map((item, i) => ({

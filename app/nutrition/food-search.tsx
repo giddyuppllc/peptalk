@@ -512,7 +512,7 @@ function CustomFoodModal({ visible, onClose, onSave }: CustomFoodModalProps) {
     const scale = servingG > 0 ? 100 / servingG : 1;
 
     const food: UnifiedFood = {
-      id: `custom-${Date.now()}`,
+      id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name: name.trim(),
       brand: brand.trim() || undefined,
       source: 'local',
