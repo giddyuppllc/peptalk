@@ -11,6 +11,13 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doseCadence } from '../../supabase/functions/_shared/doseCadence';
+import {
+  webPushSupported,
+  saveWebDoseReminder,
+  deleteWebDoseReminder,
+  deleteAllWebDoseReminders,
+} from './webPush';
 
 // ---------------------------------------------------------------------------
 // Dynamic module loading — safe for Expo Go
@@ -67,6 +74,9 @@ function isAvailable(): boolean {
  * while expo-notifications is disabled (see file header for why).
  */
 export function notificationsAvailable(): boolean {
+  // On web, reminders exist when the browser can take web push (see webPush.ts;
+  // on iOS only once the PWA is on the Home Screen).
+  if (Platform.OS === 'web') return webPushSupported();
   return isAvailable();
 }
 
@@ -308,6 +318,10 @@ export async function scheduleDoseReminder(
   // Monday. Optional for legacy callers (falls back to Monday/anchor=today).
   anchorDate?: string,
 ): Promise<string> {
+  // Web: a schedule row the web-dose-reminders function reads (webPush.ts).
+  if (Platform.OS === 'web') {
+    return saveWebDoseReminder(peptideId, peptideName, time, frequency, anchorDate);
+  }
   if (!isAvailable()) return '';
 
   // Stable per-peptide prefix lets cancelDoseReminders(peptideId) sweep
@@ -348,6 +362,7 @@ export async function scheduleDoseReminder(
 
 /** Cancel all dose reminders scheduled for a specific peptide. */
 export async function cancelDoseRemindersFor(peptideId: string): Promise<void> {
+  if (Platform.OS === 'web') return deleteWebDoseReminder(peptideId);
   if (!isAvailable()) return;
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   const prefix = `dose-${peptideId}`;
@@ -363,6 +378,7 @@ export async function cancelDoseRemindersFor(peptideId: string): Promise<void> {
 // ─── Cancel All Reminders ────────────────────────────────────────────────────
 
 export async function cancelAllReminders(): Promise<void> {
+  if (Platform.OS === 'web') return deleteAllWebDoseReminders();
   if (!isAvailable()) return;
   await Notifications.cancelAllScheduledNotificationsAsync();
 }
@@ -370,6 +386,11 @@ export async function cancelAllReminders(): Promise<void> {
 // ─── Cancel Reminders By Tag ─────────────────────────────────────────────────
 
 export async function cancelRemindersByTag(tag: string): Promise<void> {
+  // Web only has dose reminders; the dose toggle sweeps with 'dose-'.
+  if (Platform.OS === 'web') {
+    if (tag === 'dose-' || tag === 'dose') return deleteAllWebDoseReminders();
+    return;
+  }
   if (!isAvailable()) return;
 
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
@@ -871,51 +892,30 @@ function buildTriggersForFrequency(
     channelId,
   });
 
-  // Expo weekday convention: 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat.
-  // Derive the protocol's start weekday so weekly/multi-day cadences fire
-  // on the user's real dosing day instead of a hardcoded Monday. JS
-  // getDay() is 0=Sun..6=Sat → +1 for Expo's 1=Sun..7=Sat. Falls back to
-  // Monday (2) when no anchor is supplied (legacy callers).
-  const anchor = parseAnchorDate(anchorDate);
-  const anchorWeekday = anchor ? anchor.getDay() + 1 : 2;
-  // Shift an Expo weekday forward by `days`, wrapping within 1..7.
-  const shift = (weekday: number, days: number) => ((weekday - 1 + days) % 7) + 1;
-
-  switch (frequency) {
+  // The cadence (which days) is shared with the web-push sender
+  // (supabase/functions/_shared/doseCadence.ts) so native and web remind on the
+  // same days. Expo weekdays are 1=Sun..7=Sat; the cadence uses JS 0=Sun..6=Sat.
+  const cadence = doseCadence(frequency, anchorDate);
+  if (__DEV__ && !KNOWN_FREQUENCIES.has(frequency)) {
+    console.warn('[notif] unknown frequency, defaulting to daily:', frequency);
+  }
+  switch (cadence.kind) {
     case 'daily':
       return [{ type: dailyType, hour: hours, minute: minutes, channelId }];
     case 'weekly':
-    case 'custom':
-      // Fire weekly on the protocol's actual start weekday.
-      return [wk(anchorWeekday)];
+      return cadence.weekdays.map((d) => wk(d + 1));
     case 'biweekly':
       // Every 2 weeks — the OS has no native biweekly repeat, so emit a
       // bounded series of one-shot DATE triggers 14 days apart starting
       // from the anchor. Re-activating the protocol reschedules the set.
-      return buildBiweeklyDateTriggers(anchor, hours, minutes, channelId);
-    case 'biw': // 2x per week — start weekday + 3 days later.
-    case 'twice_weekly':
-      return [wk(anchorWeekday), wk(shift(anchorWeekday, 3))];
-    case 'tiw': // 3x per week — start weekday + 2 + 4 days.
-    case 'thrice_weekly':
-    case 'triweekly':
-      return [wk(anchorWeekday), wk(shift(anchorWeekday, 2)), wk(shift(anchorWeekday, 4))];
-    case 'eod':
-    case 'every_other_day':
-      // OS doesn't model every-other-day natively. Approximate as 4×/week
-      // (close to the 3.5×/week target), spaced from the start weekday.
-      return [
-        wk(anchorWeekday),
-        wk(shift(anchorWeekday, 2)),
-        wk(shift(anchorWeekday, 4)),
-        wk(shift(anchorWeekday, 6)),
-      ];
-    default:
-      // Unknown frequency — fall back to daily and log so we notice.
-      if (__DEV__) console.warn('[notif] unknown frequency, defaulting to daily:', frequency);
-      return [{ type: dailyType, hour: hours, minute: minutes, channelId }];
+      return buildBiweeklyDateTriggers(parseAnchorDate(anchorDate), hours, minutes, channelId);
   }
 }
+
+const KNOWN_FREQUENCIES = new Set([
+  'daily', 'weekly', 'custom', 'biweekly', 'biw', 'twice_weekly', 'tiw',
+  'thrice_weekly', 'triweekly', 'eod', 'every_other_day',
+]);
 
 /** Number of biweekly occurrences to pre-schedule (~4 months). The
  *  protocol is rescheduled on every (re)activation, so this only needs

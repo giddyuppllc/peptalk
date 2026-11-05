@@ -123,3 +123,45 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+/* ── Dose reminders (web push) ────────────────────────────────────────────
+ * Sent by the web-dose-reminders edge function. The payload is JSON:
+ *   { title, body, url, tag }
+ * Same wording as the native reminder. Clicking opens (or focuses) the app on
+ * the dose calendar — the screen native reminders route to.
+ */
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : '' };
+  }
+  const title = data.title || 'Dose Reminder';
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || 'Time to take your scheduled dose.',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      // One notification per dose: a re-send for the same dose replaces it.
+      tag: data.tag || undefined,
+      data: { url: data.url || '/calendar' },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = new URL((event.notification.data && event.notification.data.url) || '/calendar', self.location.origin);
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) {
+        if (new URL(w.url).origin === target.origin && 'focus' in w) {
+          if ('navigate' in w) w.navigate(target.href).catch(() => {});
+          return w.focus();
+        }
+      }
+      return self.clients.openWindow ? self.clients.openWindow(target.href) : undefined;
+    }),
+  );
+});
